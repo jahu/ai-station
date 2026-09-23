@@ -62,8 +62,8 @@ def cpu() -> dict:
     global _previous_cpu
     stat = Path("/proc/stat").read_text().splitlines()[0].split()
     values = [int(item) for item in stat[1:]]
-    idle = values[3]
-    total = sum(values)
+    idle = values[3] + values[4]  # Include iowait; guest times are already in user/nice.
+    total = sum(values[:8])
     percent = None
     if _previous_cpu is not None:
         prev_idle, prev_total = _previous_cpu

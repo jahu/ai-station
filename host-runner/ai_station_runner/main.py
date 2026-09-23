@@ -2,6 +2,7 @@
 
 import fcntl
 import os
+import signal
 import socket
 from pathlib import Path
 
@@ -37,6 +38,14 @@ def main() -> None:
             os.chmod(path, 0o600)
             listener.listen(128)
             try:
+                # Uvicorn replays termination signals after graceful shutdown.
+                # Convert that replay to normal unwinding so the socket and
+                # ownership lock are always cleaned up.
+                def terminate(_signum, _frame):
+                    raise SystemExit(0)
+
+                signal.signal(signal.SIGTERM, terminate)
+                signal.signal(signal.SIGINT, terminate)
                 uvicorn.Server(uvicorn.Config(app, log_level="info")).run(sockets=[listener])
             finally:
                 path.unlink(missing_ok=True)

@@ -1,6 +1,6 @@
 # Security model
 
-> Implementation status: this document includes the target architecture. The initial operational slice is the durable run API, fake worker execution, private runner transport, process ownership, telemetry, and diagnostics. Image/chat/coding/agent modules are preserved drafts; their workload APIs are not enabled yet. See README for runnable commands and limitations.
+> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. Image/chat/coding/agent modules are preserved drafts; their workload APIs are not enabled yet. See README for runnable commands and limitations.
 
 
 AI Station is a single-user workstation application. The default network exposure is loopback only. There is no authentication on that localhost MVP. Do not publish port 8765 on a LAN or the public internet until authentication exists.

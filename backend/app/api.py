@@ -3,6 +3,7 @@
 import asyncio
 import json
 from contextlib import asynccontextmanager
+from datetime import timedelta
 from pathlib import Path
 from typing import Annotated
 from urllib.parse import urlsplit
@@ -12,14 +13,14 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.config import get_settings
-from app.db import migrate, session_factory, session_scope
+from app.db import migrate, session_factory, session_scope, utcnow
 from app.events import event_dict, list_events
-from app.models import Artifact, Run
+from app.models import Artifact, Run, Setting, WorkerRow
 from app.redact import redact_obj
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, request_cancel, run_dict
@@ -175,6 +176,30 @@ def enqueue_test(body: TestRunBody, session: DB):
 @app.get("/api/system/hardware")
 def hardware():
     return RunnerClient(timeout=8).hardware()
+
+
+@app.get("/api/system/status")
+def system_status(session: DB):
+    counts = dict(session.execute(select(Run.status, func.count()).group_by(Run.status)).all())
+    cutoff = utcnow() - timedelta(seconds=get_settings().lease_seconds)
+    workers = session.scalars(select(WorkerRow).order_by(WorkerRow.last_heartbeat.desc()).limit(50))
+    scheduler = session.get(Setting, "scheduler_heartbeat")
+    heartbeat = scheduler.value.get("at") if scheduler else None
+    return {
+        "counts": counts,
+        "workers": [
+            {
+                "id": row.id,
+                "available": row.last_heartbeat >= cutoff,
+                "last_heartbeat": row.last_heartbeat.isoformat(),
+            }
+            for row in workers
+        ],
+        "scheduler": {
+            "available": bool(heartbeat and heartbeat >= cutoff.isoformat()),
+            "last_heartbeat": heartbeat,
+        },
+    }
 
 
 @app.get("/api/system/diagnostics")

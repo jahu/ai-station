@@ -1,0 +1,58 @@
+name: ai-station
+
+x-control-plane: &control-plane
+  image: ai-station:local
+  build: .
+  user: "${AI_STATION_UID:-1000}:${AI_STATION_GID:-1000}"
+  init: true
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=128m
+  environment: &environment
+    AI_STATION_DATA_DIR: /data
+    AI_STATION_RUNNER_SOCKET: /runner/runner.sock
+    AI_STATION_LLM_BASE_URL: ${AI_STATION_LLM_CONTAINER_BASE_URL:-http://host.docker.internal:8080/v1}
+    AI_STATION_LLM_MODEL: ${AI_STATION_LLM_MODEL:-}
+    AI_STATION_LLM_API_KEY: ${AI_STATION_LLM_API_KEY:-}
+    AI_STATION_ENABLE_TEST_EXECUTOR: ${AI_STATION_ENABLE_TEST_EXECUTOR:-false}
+  volumes:
+    - type: bind
+      source: ${AI_STATION_DATA_HOST_PATH:-./data}
+      target: /data
+      bind:
+        create_host_path: false
+    - type: bind
+      source: ${AI_STATION_RUNNER_SOCKET_DIR:-./data/runtime/runner}
+      target: /runner
+      read_only: true
+      bind:
+        create_host_path: false
+  extra_hosts:
+    - host.docker.internal:host-gateway
+
+services:
+  ai-station:
+    <<: *control-plane
+    ports:
+      - "127.0.0.1:${AI_STATION_PORT:-8765}:8765"
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8765/api/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+  worker:
+    <<: *control-plane
+    command: [python, -m, app.worker_main]
+    depends_on:
+      ai-station:
+        condition: service_healthy
+  scheduler:
+    <<: *control-plane
+    command: [python, -m, app.scheduler_main]
+    depends_on:
+      ai-station:
+        condition: service_healthy

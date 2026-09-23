@@ -1,6 +1,6 @@
 # Architecture
 
-> Implementation status: this document includes the target architecture. The initial operational slice is the durable run API, fake worker execution, private runner transport, process ownership, telemetry, and diagnostics. Image/chat/coding/agent modules are preserved drafts; their workload APIs are not enabled yet. See README for runnable commands and limitations.
+> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. Image/chat/coding/agent modules are preserved drafts; their workload APIs are not enabled yet. See README for runnable commands and limitations.
 
 
 AI Station is a local-first AI workstation control plane. It is a modular monolith with one deliberate process boundary: a Dockerized control plane and a native Host Runner.
