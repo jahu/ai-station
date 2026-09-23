@@ -1,0 +1,140 @@
+"""SQLite engine, WAL, and Alembic migrations."""
+
+from __future__ import annotations
+
+import fcntl
+from collections.abc import Iterator
+from datetime import UTC, datetime
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
+from sqlalchemy import DateTime, Engine, create_engine, event
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.types import TypeDecorator
+
+from app.config import get_settings
+
+_engine: Engine | None = None
+_session_factory: sessionmaker[Session] | None = None
+
+
+class UTCDateTime(TypeDecorator):
+    """Store naive UTC, return timezone-aware UTC."""
+
+    impl = DateTime
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=UTC)
+        return value.astimezone(UTC).replace(tzinfo=None)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value.astimezone(UTC)
+
+
+def utcnow() -> datetime:
+    return datetime.now(UTC)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+def _apply_sqlite_pragmas(dbapi_connection, _connection_record) -> None:
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.execute("PRAGMA busy_timeout=5000")
+    cursor.close()
+
+
+def get_engine() -> Engine:
+    global _engine, _session_factory
+    if _engine is None:
+        settings = get_settings()
+        url = settings.sqlite_url()
+        if url.startswith("sqlite:///"):
+            path = Path(url.removeprefix("sqlite:///"))
+            if path.parent and str(path.parent) not in ("", "."):
+                path.parent.mkdir(parents=True, exist_ok=True)
+        connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
+        kwargs = {"connect_args": connect_args, "pool_pre_ping": True}
+        _engine = create_engine(url, **kwargs)
+        if url.startswith("sqlite"):
+            event.listen(_engine, "connect", _apply_sqlite_pragmas)
+            # sqlite3's legacy transaction mode otherwise leaves SELECT outside
+            # the transaction. A short, explicit transaction serializes claims,
+            # event sequencing, resource reservations, and scheduler ticks.
+            event.listen(_engine, "connect", _disable_legacy_transactions)
+            event.listen(_engine, "begin", _begin_immediate)
+        _session_factory = sessionmaker(bind=_engine, expire_on_commit=False, class_=Session)
+    return _engine
+
+
+def _disable_legacy_transactions(connection, _record) -> None:
+    connection.isolation_level = None
+
+
+def _begin_immediate(connection) -> None:
+    connection.exec_driver_sql("BEGIN IMMEDIATE")
+
+
+def session_factory() -> sessionmaker[Session]:
+    get_engine()
+    assert _session_factory is not None
+    return _session_factory
+
+
+def session_scope() -> Iterator[Session]:
+    factory = session_factory()
+    session = factory()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+def reset_engine() -> None:
+    global _engine, _session_factory
+    if _engine is not None:
+        _engine.dispose()
+    _engine = None
+    _session_factory = None
+
+
+def alembic_config() -> Config:
+    backend_dir = Path(__file__).resolve().parent.parent
+    cfg = Config(str(backend_dir / "alembic.ini"))
+    cfg.set_main_option("script_location", str(backend_dir / "alembic"))
+    cfg.set_main_option("sqlalchemy.url", get_settings().sqlite_url().replace("%", "%%"))
+    return cfg
+
+
+def migrate() -> None:
+    settings = get_settings()
+    settings.data_dir.mkdir(parents=True, exist_ok=True)
+    (settings.data_dir / "db").mkdir(parents=True, exist_ok=True)
+    for name in (
+        "artifacts",
+        "uploads",
+        "thumbnails",
+        "logs",
+        "runs",
+        "worktrees",
+        "telemetry",
+        "cache",
+        "runtime",
+    ):
+        (settings.data_dir / name).mkdir(parents=True, exist_ok=True)
+    # Multiple containers can start together. Only one may migrate at a time.
+    with (settings.data_dir / "runtime" / "migrations.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        command.upgrade(alembic_config(), "head")

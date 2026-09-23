@@ -1,0 +1,111 @@
+"""HTTP client for the Host Runner Unix socket."""
+
+from __future__ import annotations
+
+from typing import Any
+
+import httpx
+
+from app.config import get_settings
+
+
+class RunnerUnavailable(Exception):
+    pass
+
+
+class RunnerError(Exception):
+    def __init__(self, status_code: int, detail: str):
+        super().__init__(detail)
+        self.status_code = status_code
+        self.detail = detail
+
+
+class RunnerClient:
+    def __init__(self, socket_path: str | None = None, timeout: float = 30.0):
+        self.socket_path = socket_path or get_settings().runner_socket
+        self.timeout = timeout
+
+    def _client(self) -> httpx.Client:
+        transport = httpx.HTTPTransport(uds=self.socket_path)
+        return httpx.Client(transport=transport, base_url="http://runner", timeout=self.timeout)
+
+    def request(self, method: str, path: str, json: dict | None = None) -> Any:
+        try:
+            with self._client() as client:
+                response = client.request(method, path, json=json)
+        except (httpx.HTTPError, FileNotFoundError, OSError) as exc:
+            raise RunnerUnavailable(str(exc)) from exc
+        if response.status_code >= 400:
+            detail = response.text
+            try:
+                body = response.json()
+                detail = str(body.get("detail", detail))
+            except Exception:
+                pass
+            raise RunnerError(response.status_code, detail)
+        if response.content:
+            return response.json()
+        return {}
+
+    def health(self) -> dict:
+        return self.request("GET", "/health")
+
+    def hardware(self) -> dict:
+        return self.request("GET", "/v1/hardware")
+
+    def diagnostics(self) -> dict:
+        return self.request("GET", "/v1/diagnostics")
+
+    def scan_models(self) -> dict:
+        return self.request("POST", "/v1/models/scan", {})
+
+    def start_photo(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/runs/photo", payload)
+
+    def start_coding(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/runs/coding", payload)
+
+    def inspect_process(self, run_id: str) -> dict:
+        return self.request("GET", f"/v1/process/{run_id}")
+
+    def cancel_process(self, run_id: str) -> dict:
+        return self.request("POST", "/v1/process/cancel", {"run_id": run_id})
+
+    def validate_project(self, repo_path: str) -> dict:
+        return self.request("POST", "/v1/git/validate", {"repo_path": repo_path})
+
+    def git_status(self, repo_path: str) -> dict:
+        return self.request("POST", "/v1/git/status", {"repo_path": repo_path})
+
+    def git_diff(self, repo_path: str, base: str | None = None) -> dict:
+        return self.request("POST", "/v1/git/diff", {"repo_path": repo_path, "base": base})
+
+    def create_worktree(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/git/worktree", payload)
+
+    def remove_worktree(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/git/worktree/remove", payload)
+
+    def git_commit(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/git/commit", payload)
+
+    def create_pr(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/git/pr", payload)
+
+    def read_file(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/fs/read", payload)
+
+    def write_file(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/fs/write", payload)
+
+    def list_dir(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/fs/list", payload)
+
+    def search_files(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/fs/search", payload)
+
+    def apply_patch(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/git/apply", payload)
+
+    def run_project_command(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/project/command", payload)

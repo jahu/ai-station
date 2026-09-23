@@ -1,0 +1,388 @@
+"""Typed Host Runner API. There is no arbitrary shell endpoint."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Annotated
+from uuid import UUID
+
+from fastapi import FastAPI, HTTPException
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+
+from ai_station_runner import __version__
+from ai_station_runner.coding import CodingUnavailable, build_argv
+from ai_station_runner.config import get_settings
+from ai_station_runner.diagnostics import collect_diagnostics
+from ai_station_runner.discovery import scan
+from ai_station_runner.fsops import list_dir, read_file, search_files, write_file
+from ai_station_runner.gitops import (
+    GitError,
+    add_worktree,
+    apply_diff,
+    commit,
+    create_pull_request,
+    diff,
+    remove_worktree,
+    run_project_command,
+    status,
+    validate_repo,
+)
+from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
+from ai_station_runner.processes import ProcessManager, ProcessNotOwned
+from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
+from ai_station_runner.telemetry import collect
+
+app = FastAPI(title="AI Station Host Runner", version=__version__)
+_manager: ProcessManager | None = None
+
+
+def manager() -> ProcessManager:
+    global _manager
+    settings = get_settings()
+    if _manager is None:
+        _manager = ProcessManager(settings.host_data_dir(), settings.cancel_grace_seconds)
+    return _manager
+
+
+def reset_manager() -> None:
+    global _manager
+    _manager = None
+
+
+def canonical_id(value: str) -> str:
+    if str(UUID(value)) != value:
+        raise ValueError("Canonical UUID required")
+    return value
+
+
+RunId = Annotated[str, AfterValidator(canonical_id)]
+
+
+class RequestBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class PhotoBody(RequestBody):
+    run_id: RunId
+    mode: str
+    backend: str | None = None
+    prompt: str = ""
+    negative: str | None = None
+    edit_prompt: str = ""
+    width: int | None = None
+    height: int | None = None
+    steps: int | None = None
+    cfg: float | None = None
+    seed: int | None = None
+    max_side: int | None = None
+    repeats: int | None = 1
+    gpu: str
+    output_relative: str
+    inputs: list[str] = Field(default_factory=list)
+
+
+class CodingBody(RequestBody):
+    run_id: RunId
+    executor: str
+    workspace_relative: str
+    prompt: str
+    model: str = ""
+
+
+class CancelBody(RequestBody):
+    run_id: RunId
+
+
+class RepoBody(BaseModel):
+    repo_path: str
+
+
+class DiffBody(BaseModel):
+    repo_path: str
+    base: str | None = None
+
+
+class WorktreeBody(BaseModel):
+    repo_path: str
+    relative_path: str
+    branch: str
+    base_branch: str
+
+
+class RemoveWorktreeBody(BaseModel):
+    repo_path: str
+    relative_path: str
+    owned: bool = False
+
+
+class CommitBody(BaseModel):
+    repo_path: str
+    branch: str
+    protected: list[str] = Field(default_factory=list)
+    message: str
+
+
+class ApplyBody(BaseModel):
+    repo_path: str
+    diff: str
+
+
+class PullRequestBody(BaseModel):
+    repo_path: str
+    branch: str
+    base: str
+    title: str
+    body: str = ""
+
+
+class CommandBody(BaseModel):
+    repo_path: str
+    argv: list[str]
+    kind: str = "test"
+    allowed: list[list[str]]
+
+
+class FsBody(BaseModel):
+    root: str
+    path: str = "."
+    content: str = ""
+    query: str = ""
+
+
+def _data() -> Path:
+    return get_settings().host_data_dir()
+
+
+def _guard(path: Path) -> Path:
+    try:
+        return ensure_within(path, get_settings().roots())
+    except PathBoundaryError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+
+def _child(relative: str) -> Path:
+    try:
+        return resolve_child(_data(), relative)
+    except PathBoundaryError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "version": __version__, "runner_id": get_settings().runner_id}
+
+
+@app.get("/v1/hardware")
+def hardware():
+    return collect(_data())
+
+
+@app.get("/v1/diagnostics")
+def diagnostics():
+    return collect_diagnostics(get_settings())
+
+
+@app.post("/v1/models/scan")
+def models_scan():
+    roots = []
+    for raw in get_settings().model_roots.split(":"):
+        if raw.strip():
+            roots.append(_guard(Path(raw.strip())))
+    return {"models": scan(roots)}
+
+
+@app.post("/v1/runs/photo")
+def start_photo(body: PhotoBody):
+    settings = get_settings()
+    if not settings.photo_python or not settings.photo_script:
+        raise HTTPException(status_code=409, detail="photo_pipe is not configured")
+    output = _child(body.output_relative)
+    inputs = []
+    for relative in body.inputs:
+        inputs.append(str(_child(relative)))
+    try:
+        argv = build_photo_argv(
+            settings.photo_python,
+            settings.photo_script,
+            mode=body.mode,
+            backend=body.backend,
+            prompt=body.prompt,
+            negative=body.negative,
+            edit_prompt=body.edit_prompt,
+            width=body.width,
+            height=body.height,
+            steps=body.steps,
+            cfg=body.cfg,
+            seed=body.seed,
+            max_side=body.max_side,
+            repeats=body.repeats,
+            device=device_for(body.gpu),
+            output=str(output),
+            inputs=inputs,
+        )
+    except PhotoCommandError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    output.parent.mkdir(parents=True, exist_ok=True)
+    # photo_pipe.py maps --device cuda:N itself. Do not also set CUDA_VISIBLE_DEVICES here.
+    record = manager().start(run_id=body.run_id, argv=argv, cwd=_data(), executor="photo_pipe")
+    record["runner_id"] = settings.runner_id
+    return record
+
+
+@app.post("/v1/runs/coding")
+def start_coding(body: CodingBody):
+    workspace = _child(body.workspace_relative)
+    try:
+        argv = build_argv(body.executor, str(workspace), body.prompt, body.model)
+    except CodingUnavailable as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    record = manager().start(run_id=body.run_id, argv=argv, cwd=workspace, executor=body.executor)
+    record["runner_id"] = get_settings().runner_id
+    return record
+
+
+@app.get("/v1/process/{run_id}")
+def inspect_process(run_id: str):
+    try:
+        return manager().inspect(run_id)
+    except ProcessNotOwned as exc:
+        raise HTTPException(status_code=404, detail="Process is not owned by the runner") from exc
+
+
+@app.post("/v1/process/cancel")
+def cancel(body: CancelBody):
+    try:
+        return manager().cancel(body.run_id)
+    except ProcessNotOwned as exc:
+        raise HTTPException(status_code=404, detail="Process is not owned by the runner") from exc
+
+
+@app.post("/v1/git/validate")
+def git_validate(body: RepoBody):
+    try:
+        return validate_repo(_guard(Path(body.repo_path)))
+    except GitError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/v1/git/status")
+def git_status(body: RepoBody):
+    try:
+        return status(_guard(Path(body.repo_path)))
+    except GitError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/v1/git/diff")
+def git_diff(body: DiffBody):
+    try:
+        return diff(_guard(Path(body.repo_path)), body.base)
+    except GitError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/v1/git/worktree")
+def git_worktree(body: WorktreeBody):
+    dest = _child(body.relative_path)
+    try:
+        return add_worktree(_guard(Path(body.repo_path)), dest, body.branch, body.base_branch)
+    except GitError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/v1/git/worktree/remove")
+def git_worktree_remove(body: RemoveWorktreeBody):
+    dest = _child(body.relative_path)
+    try:
+        return remove_worktree(_guard(Path(body.repo_path)), dest, owned=body.owned)
+    except GitError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/v1/git/commit")
+def git_commit(body: CommitBody):
+    try:
+        return commit(_guard(Path(body.repo_path)), body.branch, body.protected, body.message)
+    except GitError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/v1/git/pr")
+def git_pr(body: PullRequestBody):
+    try:
+        return create_pull_request(
+            _guard(Path(body.repo_path)),
+            body.branch,
+            body.base,
+            body.title,
+            body.body,
+        )
+    except GitError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/v1/git/apply")
+def git_apply(body: ApplyBody):
+    try:
+        return apply_diff(_guard(Path(body.repo_path)), body.diff)
+    except GitError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/v1/project/command")
+def project_command(body: CommandBody):
+    try:
+        return run_project_command(_guard(Path(body.repo_path)), body.argv, body.allowed)
+    except GitError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/v1/fs/read")
+def fs_read(body: FsBody):
+    try:
+        return read_file(_guard(Path(body.root)), body.path)
+    except (FileNotFoundError, PathBoundaryError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.post("/v1/fs/write")
+def fs_write(body: FsBody):
+    try:
+        return write_file(_guard(Path(body.root)), body.path, body.content)
+    except PathBoundaryError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+
+
+@app.post("/v1/fs/list")
+def fs_list(body: FsBody):
+    try:
+        return list_dir(_guard(Path(body.root)), body.path)
+    except (NotADirectoryError, PathBoundaryError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@app.post("/v1/fs/search")
+def fs_search(body: FsBody):
+    try:
+        return search_files(_guard(Path(body.root)), body.query)
+    except (ValueError, PathBoundaryError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+# Retain draft adapters for the next vertical slices, but do not expose writes
+# that trust client-supplied ownership, command allowlists, or branch policies.
+# These routes need durable runner-side authorization before activation.
+_operational = {
+    "/health",
+    "/v1/hardware",
+    "/v1/diagnostics",
+    "/v1/models/scan",
+    "/v1/process/{run_id}",
+    "/v1/process/cancel",
+    "/v1/git/validate",
+    "/v1/git/status",
+    "/v1/git/diff",
+}
+app.router.routes = [
+    route for route in app.router.routes if not route.path.startswith("/v1/") or route.path in _operational
+]
