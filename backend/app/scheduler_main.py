@@ -5,7 +5,8 @@ from __future__ import annotations
 import time
 
 from app.db import migrate, session_factory, utcnow
-from app.runner_client import RunnerClient, RunnerUnavailable
+from app.models import Setting
+from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.schedule import scheduler_tick
 from app.telemetry_store import record_sample
 
@@ -18,10 +19,12 @@ def main() -> None:
         session = factory()
         try:
             scheduler_tick(session)
+            session.commit()
             try:
                 record_sample(session, {"sampled_at": utcnow().isoformat(), **runner.hardware()})
-            except RunnerUnavailable:
+            except (RunnerUnavailable, RunnerError):
                 record_sample(session, {"available": False})
+            session.merge(Setting(key="scheduler_heartbeat", value={"at": utcnow().isoformat()}))
             session.commit()
         finally:
             session.close()

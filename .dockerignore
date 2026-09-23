@@ -1,0 +1,14 @@
+.git
+.venv
+.env
+.env.*
+.tools
+data
+ai-station-data
+**/node_modules
+**/dist
+**/__pycache__
+**/*.egg-info
+.pytest_cache
+.ruff_cache
+reference

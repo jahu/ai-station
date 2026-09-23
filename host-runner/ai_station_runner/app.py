@@ -169,7 +169,12 @@ def _child(relative: str) -> Path:
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "version": __version__, "runner_id": get_settings().runner_id}
+    return {
+        "status": "ok",
+        "version": __version__,
+        "runner_id": get_settings().runner_id,
+        "data_dir": str(_data().resolve()),
+    }
 
 
 @app.get("/v1/hardware")

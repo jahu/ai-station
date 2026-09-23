@@ -1,0 +1,34 @@
+services:
+  ai-station:
+    command: [uvicorn, app.api:app, --host, 0.0.0.0, --port, '8765', --reload, --reload-dir, /app/backend]
+    volumes:
+      - ./backend:/app/backend:ro
+  worker:
+    volumes:
+      - ./backend:/app/backend:ro
+  scheduler:
+    volumes:
+      - ./backend:/app/backend:ro
+  frontend:
+    image: node:22-alpine
+    user: "${AI_STATION_UID:-1000}:${AI_STATION_GID:-1000}"
+    init: true
+    working_dir: /workspace
+    command: [npm, run, dev]
+    environment:
+      npm_config_cache: /tmp/npm
+    volumes:
+      - ./frontend:/workspace
+    ports:
+      - "127.0.0.1:5173:5173"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      ai-station:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:5173').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
