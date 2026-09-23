@@ -21,3 +21,5 @@ dist/
 
 ai-station-data/
 data/
+*.egg-info/
+.tools/

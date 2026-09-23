@@ -1,0 +1,13 @@
+# AI Station contributor guidance
+
+Read `docs/architecture.md`, `docs/security-model.md`, and `README.md` before changing execution boundaries.
+
+- Preserve the modular monolith: Docker control plane, native user-level Host Runner, typed HTTP over a private Unix socket.
+- All workloads use Task → Run → Events → Artifacts. HTTP handlers enqueue; workers execute.
+- Keep app-owned paths relative to the data root. Validate canonical host paths and symlink boundaries.
+- Never expose arbitrary commands, Docker control, or unrestricted host mounts. Never modify external runtimes, models, drivers, or `reference/photo_pipe.py` to make tests pass.
+- New schema changes require Alembic migrations. Use temporary databases and fake executors in normal tests; expensive integrations must be explicitly opted in.
+- Treat unfinished adapters as unavailable until their permissions, cancellation, and recovery contracts are tested. Do not report unexecuted smoke tests as successful.
+- Work on feature/fix branches. PRs target `develop`; review the full diff and pass CI before squash merging. Never push or merge to `main` or `master`.
+- Run `./scripts/check.sh` for backend/runner changes; frontend changes also require lint, typecheck, and a production build. Validate Compose and the Docker image when deployment files change.
+- Keep startup instructions and implementation status accurate. Preserve existing work and make focused changes.
