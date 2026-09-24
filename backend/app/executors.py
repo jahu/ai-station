@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.artifacts import adopt_existing
+from app.chat_executor import ChatExecutor
 from app.config import get_settings
 from app.events import append_event
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
@@ -185,47 +186,6 @@ class LocalCodingExecutor:
         return DONE
 
 
-class ChatExecutor:
-    name = "chat"
-
-    def execute(self, session: Session, run: Run) -> str:
-        transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})
-        conversation = session.get(Conversation, run.conversation_id) if run.conversation_id else None
-        if conversation is None:
-            mark_failed(session, run, "ConversationMissing", "Chat run has no conversation")
-            return DONE
-        model = conversation.model or get_settings().llm_model
-        if not model:
-            mark_failed(session, run, "ModelMissing", "Select a model before sending a message")
-            return DONE
-        messages = _chat_messages(session, conversation)
-        transition(session, run, RunStatus.RUNNING, event_type="executor.started", payload={"model": model})
-        session.commit()
-        parts: list[str] = []
-        try:
-            for token in stream_chat(
-                messages,
-                model=model,
-                temperature=conversation.temperature,
-                max_tokens=conversation.max_tokens,
-            ):
-                if _canceled(session, run):
-                    _save_assistant(session, conversation, "".join(parts), run, partial=True)
-                    transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
-                    return DONE
-                parts.append(token)
-                append_event(session, run.id, "stdout", {"text": token})
-                session.commit()
-        except ProviderError as exc:
-            mark_failed(session, run, "ProviderError", str(exc))
-            return DONE
-        text = "".join(parts)
-        _save_assistant(session, conversation, text, run, partial=False)
-        run.summary = text[:500]
-        transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})
-        return DONE
-
-
 class AgentExecutor:
     name = "agent"
 
@@ -299,7 +259,7 @@ class FakeExecutor:
 
 
 # Activate adapters only after their vertical slice is verified end to end.
-EXECUTORS = {"fake": FakeExecutor(), "photo_pipe": PhotoPipeExecutor()}
+EXECUTORS = {"fake": FakeExecutor(), "photo_pipe": PhotoPipeExecutor(), "chat": ChatExecutor()}
 
 
 def _output_relative(run: Run) -> str:

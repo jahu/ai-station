@@ -4,6 +4,7 @@ A local-first AI workstation control plane. Work is represented by **Task → Ru
 
 ## What works now
 
+- Local chat: persisted conversations, model discovery, streaming Markdown, stop, regeneration, and inspectable Runs.
 - Images: Qwen/Juggernaut Generate, Edit, multi-reference Recompose, and 4× Upscale through the existing photo pipeline.
 - Validated image uploads, artifact Library, source reuse, live stdout/stderr, owned-process cancellation, and explicit image retries.
 - One-command startup of the native runner, API, worker, scheduler, and web UI.
@@ -12,7 +13,7 @@ A local-first AI workstation control plane. Work is represented by **Task → Ru
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory.
 - Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
 
-Earlier chat, coding, agent, memory, and discovery modules are preserved. They are drafts, not operational integrations. Unimplemented workspaces show unavailable states. Coding writes remain disabled until runner-side authorization and worktree ownership are verified.
+Earlier coding, agent, memory, and discovery modules are preserved. They are drafts, not operational integrations. Unimplemented workspaces show unavailable states. Coding writes remain disabled until runner-side authorization and worktree ownership are verified.
 
 ## Prerequisites and installation
 
@@ -41,6 +42,14 @@ Configure `AI_STATION_LLM_BASE_URL` for host diagnostics and `AI_STATION_LLM_CON
 
 Do not commit `.env` or secrets. The UI/API port is bound to localhost; authentication must be introduced before LAN exposure.
 
+## Local chat
+
+Configure `AI_STATION_LLM_CONTAINER_BASE_URL` (normally `http://host.docker.internal:8080/v1`) and optionally `AI_STATION_LLM_MODEL`. The host-side diagnostics URL remains `AI_STATION_LLM_BASE_URL`. An existing llama.cpp or other OpenAI-compatible server must already be running and reachable from Docker; AI Station does not launch or reconfigure it. If required, supply its key through `AI_STATION_LLM_API_KEY`, never in the URL.
+
+Open Chat, select or enter a model name, set a system prompt, and create a conversation. Send with the button or Ctrl/Cmd+Enter. Responses stream into persistent history and link to their Run. Stop closes the active provider connection even if no tokens arrive. Regenerate preserves the previous response and creates a new Run for the same Task. A conversation permits one active Run; settings can be changed when it is idle.
+
+This slice supports text only and local endpoints: localhost, host.docker.internal, loopback/private IPs. Public/cloud URLs and redirects are rejected. Markdown images do not load remote content. Context is a visible bounded policy: the latest 16 eligible messages, at most 56,000 history characters plus the system prompt. Full history remains persisted; the UI shows the latest 200 messages. Rolling summaries, attachments, cloud providers, and coding execution modes are not enabled yet. See [chat execution](docs/local-chat.md).
+
 ## Images
 
 Set `AI_STATION_PHOTO_PYTHON` and `AI_STATION_PHOTO_SCRIPT` to absolute paths for the existing Python environment and `photo_pipe.py`; `AI_STATION_SD_CLI` helps diagnostics. Restart AI Station after changing configuration. The original script remains independent and unchanged.
@@ -66,6 +75,7 @@ docker compose config --quiet
 docker compose -f compose.yaml -f compose.dev.yaml config --quiet
 docker build -t ai-station:local .
 .venv/bin/python scripts/smoke.py # opt-in, temporary Docker deployment and fake executor
+.venv/bin/python scripts/chat_smoke.py # opt-in Chromium test; loopback fake provider, no inference
 ```
 
 Normal tests use temporary databases and disposable processes. They never call AI providers, consume cloud tokens, or generate GPU images. Set `AI_STATION_BROWSER_SMOKE=1 AI_STATION_IMAGE_SMOKE=1` to add the fake image browser flow on a workstation with a discoverable GPU (the fake pipeline never uses that GPU). The Docker smoke test checks the UI/API, native UDS telemetry, worker execution, SSE, restart persistence, and cleanup. Its optional `AI_STATION_BROWSER_SMOKE=1` mode requires Playwright and Chromium separately installed for development; it writes screenshots under `/tmp`.
