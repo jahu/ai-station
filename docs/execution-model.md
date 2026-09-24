@@ -1,6 +1,6 @@
 # Execution model
 
-> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. Image/chat/coding/agent modules are preserved drafts; their workload APIs are not enabled yet. See README for runnable commands and limitations.
+> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Chat/coding/agent modules remain preserved drafts; their workload APIs are not enabled yet. See README for runnable commands and limitations.
 
 
 ## Path
@@ -76,3 +76,9 @@ Default flow: project → new worktree under app data → branch `ai/<id>-<slug>
 ## Streaming
 
 Server-Sent Events replay run events. WebSockets are not used. Clients can reconnect and continue from the last sequence number.
+
+## Image execution contract
+
+Image HTTP handlers validate requests and enqueue durable runs. GPU reservations are committed before dispatch. A transport/server failure after a dispatch attempt leaves state and reservations pending runner inspection; it never frees a potentially occupied GPU. Byte-offset stdout/stderr reads drain all available log chunks before completion. Missing exit status becomes interrupted, never successful. GPU-busy requests return to the queue behind already waiting work. Numeric GPU aliases share the same reservation key.
+
+The Host Runner validates run-specific output paths and app-owned source images, rejects symlink redirection, and rechecks discovered GPU IDs. Photo subprocesses use offline Hugging Face settings. Graceful runner shutdown terminates only its verified managed process groups. Successful output registration includes hashes, thumbnails, actual dimensions, parameters, and parent artifact IDs.

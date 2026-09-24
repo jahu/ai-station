@@ -49,6 +49,7 @@ def register_file(
     artifact.size_bytes = len(data)
     artifact.sha256 = hashlib.sha256(data).hexdigest()
     if artifact_type == "image":
+        artifact.metadata_json = {**artifact.metadata_json, **_dimensions(destination)}
         artifact.thumbnail_relative_path = _thumbnail(settings.data_dir, artifact.id, destination)
     session.flush()
     if run_id:
@@ -92,6 +93,7 @@ def adopt_existing(
     session.add(artifact)
     session.flush()
     if artifact_type == "image":
+        artifact.metadata_json = {**artifact.metadata_json, **_dimensions(path)}
         artifact.thumbnail_relative_path = _thumbnail(settings.data_dir, artifact.id, path)
     if run_id:
         append_event(
@@ -102,6 +104,15 @@ def adopt_existing(
         )
     session.flush()
     return artifact
+
+
+def _dimensions(source: Path) -> dict:
+    from PIL import Image
+
+    with Image.open(source) as image:
+        if image.format not in {"PNG", "JPEG", "WEBP"} or image.width * image.height > 64 * 1024 * 1024:
+            raise ValueError("Unsupported image output")
+        return {"width": image.width, "height": image.height}
 
 
 def _thumbnail(root: Path, artifact_id: str, source: Path) -> str:

@@ -1,6 +1,6 @@
 # Security model
 
-> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. Image/chat/coding/agent modules are preserved drafts; their workload APIs are not enabled yet. See README for runnable commands and limitations.
+> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Chat/coding/agent modules remain preserved drafts; their workload APIs are not enabled yet. See README for runnable commands and limitations.
 
 
 AI Station is a single-user workstation application. The default network exposure is loopback only. There is no authentication on that localhost MVP. Do not publish port 8765 on a LAN or the public internet until authentication exists.
@@ -51,3 +51,7 @@ Discovered llama.cpp, Ollama, or ComfyUI processes are `external`. Discovery nev
 ## Autonomy
 
 Agent drafts are created disabled. The UI shows prompt, tools, permissions, and schedule before enablement. Sensitive side effects pause in `waiting_for_approval`.
+
+## Image boundaries
+
+Only the typed photo endpoint is enabled for host workload launch. It accepts bounded values and writes the fixed UUID path for its Run. Sources must be validated images inside artifact storage, without symlink redirection. Uploads are bounded by request/file size and decoded image dimensions; HTML/SVG are not accepted as images. Artifact delivery uses canonical data-root paths and nosniff headers. Filesystem/Git mutation adapters remain disabled.

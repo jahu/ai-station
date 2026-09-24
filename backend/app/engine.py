@@ -7,6 +7,7 @@ import socket
 from sqlalchemy.orm import Session
 
 from app.db import utcnow
+from app.events import append_event
 from app.executor import Executor
 from app.executors import EXECUTORS
 from app.heartbeat import keep_lease
@@ -55,7 +56,13 @@ def tick(
         session.rollback()
         failed = session.get(type(run), run.id)
         if failed is not None and failed.status not in {"succeeded", "failed", "canceled", "interrupted"}:
-            mark_failed(session, failed, type(exc).__name__, str(exc))
-            release_run_locks(session, failed.id)
+            if failed.metadata_json.get("dispatch_attempted") and not failed.metadata_json.get(
+                "process_confirmed_gone"
+            ):
+                append_event(session, failed.id, "recovery.inspection_required", {"error": str(exc)})
+                failed.lease_expires_at = utcnow()
+            else:
+                mark_failed(session, failed, type(exc).__name__, str(exc))
+                release_run_locks(session, failed.id)
             session.commit()
     return run.id

@@ -8,7 +8,7 @@ from pathlib import Path
 
 import uvicorn
 
-from ai_station_runner.app import app
+from ai_station_runner.app import app, manager
 from ai_station_runner.config import get_settings
 
 
@@ -48,7 +48,10 @@ def main() -> None:
                 signal.signal(signal.SIGINT, terminate)
                 uvicorn.Server(uvicorn.Config(app, log_level="info")).run(sockets=[listener])
             finally:
-                path.unlink(missing_ok=True)
+                try:
+                    manager().shutdown()
+                finally:
+                    path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

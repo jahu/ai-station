@@ -4,6 +4,7 @@ import os
 import signal
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -33,6 +34,26 @@ def browser_smoke(url: str):
         page.get_by_role("heading", name="Every run, accounted for.").wait_for()
         page.get_by_role("link", name="system.self_test", exact=False).click()
         page.get_by_text("run.completed", exact=True).wait_for()
+        if os.environ.get("AI_STATION_IMAGE_SMOKE") == "1":
+            page.goto(f"{url}/#/images")
+            page.get_by_label("Prompt", exact=True).fill("Fake pipeline smoke; no AI model is used")
+            page.screenshot(path="/tmp/ai-station-images.png", full_page=True)
+            page.get_by_role("button", name="Queue generate").click()
+            page.get_by_text("run.completed", exact=True).wait_for(timeout=30000)
+            page.locator(".artifact-card").first.click()
+            page.get_by_role("heading", name="Artifact details").wait_for()
+            page.get_by_role("link", name="Edit", exact=True).click()
+            page.get_by_label("Edit instruction").fill("Fake edit smoke")
+            page.get_by_role("button", name="Queue edit").click()
+            try:
+                page.get_by_text("run.completed", exact=True).wait_for(timeout=30000)
+            except Exception:
+                page.screenshot(path="/tmp/ai-station-image-failure.png", full_page=True)
+                print(page.locator("main").inner_text(), flush=True)
+                raise
+            page.goto(f"{url}/#/library")
+            page.locator(".artifact-card").nth(1).wait_for()
+            page.screenshot(path="/tmp/ai-station-library.png", full_page=True)
         page.set_viewport_size({"width": 390, "height": 844})
         with page.expect_response("**/api/system/hardware"):
             page.goto(url)
@@ -61,6 +82,16 @@ def main():
             "AI_STATION_GID": str(os.getgid()),
             "COMPOSE_PROJECT_NAME": f"ai-station-smoke-{uuid4().hex[:8]}",
         }
+        if os.environ.get("AI_STATION_IMAGE_SMOKE") == "1":
+            # Deliberately replace configured photo integration for this disposable
+            # deployment. This script uses Pillow only, never CUDA or AI models.
+            fake = Path(temporary) / "fake_photo.py"
+            fake.write_text(
+                "import sys\nfrom PIL import Image\n"
+                "print('Fake image pipeline smoke')\n"
+                "Image.new('RGB', (832, 1216), '#426c57').save(sys.argv[sys.argv.index('--out')+1])\n"
+            )
+            env.update(AI_STATION_PHOTO_PYTHON=sys.executable, AI_STATION_PHOTO_SCRIPT=str(fake))
         dev = os.environ.get("AI_STATION_SMOKE_DEV") == "1"
         command = [str(ROOT / "scripts/start.sh"), "--no-build"]
         if dev:

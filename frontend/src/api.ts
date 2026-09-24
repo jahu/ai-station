@@ -7,7 +7,11 @@ export async function api<T>(path: string, options?: RequestInit): Promise<T> {
     throw new Error(
       typeof body.detail === "string"
         ? body.detail
-        : `Request failed (${response.status})`,
+        : Array.isArray(body.detail)
+          ? body.detail
+              .map((issue: { msg?: string }) => issue.msg ?? "Invalid input")
+              .join("; ")
+          : `Request failed (${response.status})`,
     );
   }
   return response.json() as Promise<T>;
@@ -40,6 +44,7 @@ export interface Hardware {
 export interface Run {
   id: string;
   task_id: string;
+  parent_run_id: string | null;
   capability: string;
   executor_type: string;
   execution_target: string;
@@ -98,4 +103,24 @@ export function useStatus() {
     queryFn: () => api<Status>("/system/status"),
     refetchInterval: 5000,
   });
+}
+
+export interface Artifact {
+  id: string;
+  type: string;
+  mime_type: string;
+  original_filename: string;
+  size_bytes: number;
+  created_at: string;
+  run_id: string | null;
+  parent_artifact_ids: string[];
+  metadata: {
+    width?: number;
+    height?: number;
+    mode?: string;
+    backend?: string;
+    prompt?: string;
+    edit_prompt?: string;
+    [key: string]: unknown;
+  };
 }

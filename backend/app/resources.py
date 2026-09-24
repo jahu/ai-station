@@ -46,6 +46,7 @@ def reserve_gpu(session: Session, run: Run, available: list[int]) -> str | None:
         raise ResourceUnknown(f"Unsupported GPU request: {requested}")
     if int(requested) not in available:
         raise ResourceUnknown(f"GPU {requested} is not present. Discovered: {available}")
+    requested = str(int(requested))
     key = f"gpu:{requested}"
     if key in busy:
         return None

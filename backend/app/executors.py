@@ -14,8 +14,9 @@ from app.config import get_settings
 from app.events import append_event
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
 from app.paths import safe_join, validate_relative
+from app.photo_executor import PhotoPipeExecutor
 from app.providers import ProviderError, stream_chat
-from app.resources import ResourceUnknown, release_run_locks, reserve_gpu
+from app.resources import release_run_locks
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import mark_failed, touch_lease, transition
 from app.state import RunStatus
@@ -56,60 +57,6 @@ def _requeue(session: Session, run: Run, reason: str) -> str:
 def _canceled(session: Session, run: Run) -> bool:
     session.refresh(run)
     return run.status == RunStatus.CANCEL_REQUESTED.value
-
-
-class PhotoPipeExecutor:
-    name = "photo_pipe"
-
-    def execute(self, session: Session, run: Run) -> str:
-        runner = _runner()
-        transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})
-        session.commit()
-        if _canceled(session, run):
-            transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
-            return DONE
-        try:
-            indexes = _gpu_indexes(runner)
-            allocated = reserve_gpu(session, run, indexes)
-        except (RunnerUnavailable, ResourceUnknown) as exc:
-            mark_failed(session, run, type(exc).__name__, str(exc))
-            release_run_locks(session, run.id)
-            return DONE
-        if run.requested_gpu not in ("", "none") and allocated is None:
-            return _requeue(session, run, "Requested GPU is busy")
-        output_relative = _output_relative(run)
-        payload = {
-            "run_id": run.id,
-            "mode": run.parameters.get("mode"),
-            "backend": run.parameters.get("backend"),
-            "prompt": run.parameters.get("prompt", ""),
-            "negative": run.parameters.get("negative"),
-            "edit_prompt": run.parameters.get("edit_prompt", ""),
-            "width": run.parameters.get("width"),
-            "height": run.parameters.get("height"),
-            "steps": run.parameters.get("steps"),
-            "cfg": run.parameters.get("cfg"),
-            "seed": run.parameters.get("seed"),
-            "max_side": run.parameters.get("max_side"),
-            "repeats": run.parameters.get("repeats", 1),
-            "gpu": allocated,
-            "output_relative": output_relative,
-            "inputs": run.parameters.get("inputs") or [],
-        }
-        try:
-            started = runner.start_photo(payload)
-        except (RunnerUnavailable, RunnerError) as exc:
-            mark_failed(session, run, type(exc).__name__, str(exc))
-            release_run_locks(session, run.id)
-            return DONE
-        run.pid = started.get("pid")
-        run.process_group_id = started.get("process_group_id")
-        run.runner_id = started.get("runner_id")
-        run.stdout_log = started.get("stdout_log") or ""
-        run.stderr_log = started.get("stderr_log") or ""
-        transition(session, run, RunStatus.RUNNING, event_type="executor.started", payload={"pid": run.pid})
-        session.commit()
-        return _poll_process(session, run, runner, output_relative=output_relative, artifact_type="image")
 
 
 class CodingExecutor:
@@ -352,7 +299,7 @@ class FakeExecutor:
 
 
 # Activate adapters only after their vertical slice is verified end to end.
-EXECUTORS = {"fake": FakeExecutor()}
+EXECUTORS = {"fake": FakeExecutor(), "photo_pipe": PhotoPipeExecutor()}
 
 
 def _output_relative(run: Run) -> str:

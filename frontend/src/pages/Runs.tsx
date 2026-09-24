@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowUpRight, Ban, Radio } from "lucide-react";
-import { api, type Run, type RunEvent, useRuns } from "../api";
+import { api, type Run, type RunEvent, type Artifact, useRuns } from "../api";
 import {
   Badge,
   Empty,
@@ -12,6 +12,7 @@ import {
 } from "../components/common";
 import { Button } from "../components/ui/button";
 import { terminal, time } from "../lib/utils";
+import { ArtifactCards } from "./Library";
 
 export function Runs() {
   const [status, setStatus] = useState("");
@@ -112,6 +113,7 @@ export function Runs() {
 }
 
 export function RunDetail() {
+  const navigate = useNavigate();
   const { id } = useParams();
   const cache = useQueryClient();
   const run = useQuery({
@@ -129,6 +131,15 @@ export function RunDetail() {
       void cache.invalidateQueries({ queryKey: ["run", id] });
       void cache.invalidateQueries({ queryKey: ["runs"] });
     },
+  });
+  const artifacts = useQuery({
+    queryKey: ["run-artifacts", id],
+    queryFn: () => api<Artifact[]>(`/artifacts?run_id=${id}`),
+    refetchInterval: 5000,
+  });
+  const retry = useMutation({
+    mutationFn: () => api<Run>(`/images/runs/${id}/retry`, { method: "POST" }),
+    onSuccess: (next) => navigate(`/runs/${next.id}`),
   });
   const isTerminal = run.data ? terminal.has(run.data.status) : false;
   useEffect(() => {
@@ -170,7 +181,15 @@ export function RunDetail() {
       >
         <span className="mono">{id}</span>
       </PageTitle>
-      <ErrorNotice error={run.error ?? events.error ?? cancel.error} />
+      <ErrorNotice
+        error={
+          run.error ??
+          events.error ??
+          cancel.error ??
+          retry.error ??
+          artifacts.error
+        }
+      />
       {run.isPending ? (
         <Loading />
       ) : (
@@ -195,6 +214,35 @@ export function RunDetail() {
               <div className="notice" role="alert">
                 {run.data.error_message}
               </div>
+            )}
+            {run.data.parent_run_id && (
+              <p>
+                <Link to={`/runs/${run.data.parent_run_id}`}>
+                  View original run →
+                </Link>
+              </p>
+            )}
+            {run.data.executor_type === "photo_pipe" &&
+              ["failed", "canceled", "interrupted"].includes(
+                run.data.status,
+              ) && (
+                <div className="panel content-panel">
+                  <p>
+                    A retry creates a new run with the same parameters and
+                    source images. Inspect logs and any partial output before
+                    repeating an interrupted run.
+                  </p>
+                  <Button
+                    variant="secondary"
+                    disabled={retry.isPending}
+                    onClick={() => retry.mutate()}
+                  >
+                    Retry as a new run
+                  </Button>
+                </div>
+              )}
+            {artifacts.data && artifacts.data.length > 0 && (
+              <ArtifactCards artifacts={artifacts.data} />
             )}
             {run.data.summary && (
               <section className="panel content-panel">
