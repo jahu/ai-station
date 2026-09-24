@@ -95,6 +95,7 @@ def project_dict(project: Project) -> dict:
         "agent_rules": project.agent_rules,
         "pr_policy": project.pr_policy,
         "created_at": iso(project.created_at),
+        "updated_at": iso(project.updated_at),
     }
 
 

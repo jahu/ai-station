@@ -38,6 +38,7 @@ import { RunDetail, Runs } from "./pages/Runs";
 import ImagesWorkspace from "./pages/Images";
 import { Library, ArtifactDetail } from "./pages/Library";
 import System from "./pages/System";
+import { Projects, NewProject, ProjectDetail } from "./pages/Projects";
 
 const groups: { label: string; items: [string, string, LucideIcon][] }[] = [
   {
@@ -219,6 +220,9 @@ export default function App() {
             <Route path="/library/:id" element={<ArtifactDetail />} />
             <Route path="/system" element={<System />} />
             <Route path="/settings" element={<System />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/new" element={<NewProject />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="*" element={<Unavailable />} />
           </Routes>
         </main>

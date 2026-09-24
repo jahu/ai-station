@@ -5,6 +5,7 @@ A local-first AI workstation control plane. Work is represented by **Task → Ru
 ## What works now
 
 - Local chat: persisted conversations, model discovery, streaming Markdown, stop, regeneration, and inspectable Runs.
+- Projects: host-validated repository registration, read-only Git status, persisted branch policies, argv validation commands, and agent guidance.
 - Images: Qwen/Juggernaut Generate, Edit, multi-reference Recompose, and 4× Upscale through the existing photo pipeline.
 - Validated image uploads, artifact Library, source reuse, live stdout/stderr, owned-process cancellation, and explicit image retries.
 - One-command startup of the native runner, API, worker, scheduler, and web UI.
@@ -60,6 +61,12 @@ Models must already be installed/cached. The runner sets Hugging Face offline mo
 
 Failed, canceled, or interrupted image runs may be explicitly retried after the runner confirms the original process is gone. A retry has a new ID/output path, shares the Task, and links to its parent Run. Inspect partial output before retrying an interrupted run; recovery does not automatically adopt orphaned output or repeat generation.
 
+## Projects
+
+Include your repository roots in `AI_STATION_ALLOWED_ROOTS` (colon-separated host paths) and restart the runner. Open Projects → Register project and enter an existing Git repository's host path. The runner checks its canonical root and metadata; registering a subdirectory or symlink cannot create a duplicate project. AI Station's own checkout can be registered the same way.
+
+Project details show the current branch and working-tree changes on explicit refresh. Configure default/integration branches, protected branches, executor preference, test/lint/build commands, and agent guidance. Commands use one JSON argv array per line, such as `["pytest", "-q"]`. Saving does not execute commands or alter the repository. Stale edits and edits during active project Runs are rejected. Repository paths are immutable; removal is not exposed yet. Coding execution, worktree creation, commits, and PR actions remain unavailable. See [Projects](docs/projects.md).
+
 ## Development and verification
 
 ```bash
@@ -76,6 +83,7 @@ docker compose -f compose.yaml -f compose.dev.yaml config --quiet
 docker build -t ai-station:local .
 .venv/bin/python scripts/smoke.py # opt-in, temporary Docker deployment and fake executor
 .venv/bin/python scripts/chat_smoke.py # opt-in Chromium test; loopback fake provider, no inference
+.venv/bin/python scripts/projects_smoke.py # opt-in Chromium + native UDS runner; disposable Git repository
 ```
 
 Normal tests use temporary databases and disposable processes. They never call AI providers, consume cloud tokens, or generate GPU images. Set `AI_STATION_BROWSER_SMOKE=1 AI_STATION_IMAGE_SMOKE=1` to add the fake image browser flow on a workstation with a discoverable GPU (the fake pipeline never uses that GPU). The Docker smoke test checks the UI/API, native UDS telemetry, worker execution, SSE, restart persistence, and cleanup. Its optional `AI_STATION_BROWSER_SMOKE=1` mode requires Playwright and Chromium separately installed for development; it writes screenshots under `/tmp`.
