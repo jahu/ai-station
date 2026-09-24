@@ -2,8 +2,8 @@
 
 ## Automated checks
 
-- Backend and Host Runner: 168 pytest cases passed; Ruff lint and formatting passed.
-- Frontend: ESLint, strict TypeScript, five UI behavior tests, and production build passed.
+- Backend and Host Runner: 186 pytest cases passed; Ruff lint and formatting passed.
+- Frontend: ESLint, strict TypeScript, seven UI behavior tests, and production build passed.
 - Production Docker image and both Compose configurations validated.
 - Production and development Docker deployments (including the Vite proxy): native Unix-socket telemetry, API health, worker execution through a fake executor, SSE replay, persisted history after API container restart, and supervisor cleanup passed.
 - Image Docker/browser smoke: Generate → Library → Edit passed using a Pillow-only fake pipeline; source reuse and artifact rendering were checked. Artifact delivery releases database transactions before streaming. No real model inference was performed.
@@ -12,6 +12,7 @@
 - Local chat browser smoke: model discovery, streaming, Markdown/code rendering, API restart persistence, regeneration, cancellation while the provider is silent, and mobile layout passed. Screenshots were inspected. This uses a fake provider and does not prove real llama.cpp inference.
 
 - Git inspection tests use disposable repositories: command helpers remain uninvoked, the index/configuration stay unchanged, injected options and inherited Git path overrides are rejected, metadata escapes fail, and output/time limits terminate owned subprocesses.
+- Projects: 18 API integration/validation cases cover persisted registration, real Git status, canonical duplicates, root boundaries, concurrent registration, mandatory protections, stale edits, active-run guards, runner outages, and independent database writes during inspection. A Chromium smoke through the native Unix socket additionally passed registration, editing, API restart persistence, stale-editor rejection, runner outage display, and mobile layout. Screenshots were inspected; the disposable repository's index remained unchanged. No coding executor or project validation command was launched.
 
 ## Actual workstation observations
 
