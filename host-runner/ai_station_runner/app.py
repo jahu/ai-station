@@ -17,17 +17,15 @@ from ai_station_runner.config import get_settings
 from ai_station_runner.diagnostics import collect_diagnostics
 from ai_station_runner.discovery import scan
 from ai_station_runner.fsops import list_dir, read_file, search_files, write_file
+from ai_station_runner.gitinspect import diff, status, validate_repo
 from ai_station_runner.gitops import (
     GitError,
     add_worktree,
     apply_diff,
     commit,
     create_pull_request,
-    diff,
     remove_worktree,
     run_project_command,
-    status,
-    validate_repo,
 )
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
@@ -97,13 +95,12 @@ class CancelBody(RequestBody):
     run_id: RunId
 
 
-class RepoBody(BaseModel):
-    repo_path: str
+class RepoBody(RequestBody):
+    repo_path: str = Field(min_length=1, max_length=4096)
 
 
-class DiffBody(BaseModel):
-    repo_path: str
-    base: str | None = None
+class DiffBody(RepoBody):
+    base: str | None = Field(default=None, max_length=200)
 
 
 class WorktreeBody(BaseModel):

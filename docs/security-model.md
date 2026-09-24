@@ -55,3 +55,9 @@ Agent drafts are created disabled. The UI shows prompt, tools, permissions, and 
 ## Image boundaries
 
 Only the typed photo endpoint is enabled for host workload launch. It accepts bounded values and writes the fixed UUID path for its Run. Sources must be validated images inside artifact storage, without symlink redirection. Uploads are bounded by request/file size and decoded image dimensions; HTML/SVG are not accepted as images. Artifact delivery uses canonical data-root paths and nosniff headers. Filesystem/Git mutation adapters remain disabled.
+
+## Read-only Git inspection
+
+The enabled validation/status/diff endpoints use a separate bounded inspection adapter. It rejects option-like revisions, resolves branch/commit identifiers before diffing, clears inherited Git environment overrides, and disables repository fsmonitor commands, filters, text conversion, external diff helpers, hooks, and optional index writes. Git can otherwise run configured helpers even during inspection; see [Git diff options](https://git-scm.com/docs/git-diff#Documentation/git-diff.txt---no-ext-diff) and [fsmonitor configuration](https://git-scm.com/docs/git-config#Documentation/git-config.txt-corefsmonitor).
+
+Worktree roots, common Git metadata, and object stores must resolve inside configured roots. Repositories using alternate object stores or partial-clone fetch configuration are rejected in this slice. Inspections stop after 15 seconds per subprocess or 2 MiB combined output; failure terminates only the owned command group. Simple branch names and commit IDs are accepted as diff bases; revision expressions are not accepted. Draft Git mutations remain disabled and do not share the inspection adapter.
