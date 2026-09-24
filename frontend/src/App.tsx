@@ -32,6 +32,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { useHardware } from "./api";
 import { Empty, PageTitle } from "./components/common";
+import Chat from "./pages/Chat";
 import Dashboard from "./pages/Dashboard";
 import { RunDetail, Runs } from "./pages/Runs";
 import ImagesWorkspace from "./pages/Images";
@@ -211,6 +212,8 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/runs" element={<Runs />} />
             <Route path="/runs/:id" element={<RunDetail />} />
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/chat/:id" element={<Chat />} />
             <Route path="/images" element={<ImagesWorkspace />} />
             <Route path="/library" element={<Library />} />
             <Route path="/library/:id" element={<ArtifactDetail />} />

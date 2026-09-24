@@ -17,6 +17,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from app.chat import router as chat_router
 from app.config import get_settings
 from app.db import migrate, session_factory, session_scope, utcnow
 from app.events import event_dict, list_events
@@ -229,6 +230,7 @@ def artifacts(session: DB, run_id: UUID | None = None, limit: int = Query(100, g
 
 
 app.include_router(image_router)
+app.include_router(chat_router)
 
 dist = get_settings().frontend_dist
 if dist and Path(dist).is_dir():
