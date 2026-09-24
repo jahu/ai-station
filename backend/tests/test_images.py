@@ -230,3 +230,15 @@ def test_truncated_jpeg_is_rejected_before_storage():
         response = client.post("/api/images/uploads", files={"file": ("broken.jpg", data.getvalue()[:-20])})
         assert response.status_code == 422
         assert client.get("/api/artifacts").json() == []
+
+
+def test_file_delivery_releases_database_transaction(session):
+    from uuid import UUID
+
+    from app.images import artifact_file, artifact_thumbnail
+
+    with TestClient(app) as client:
+        source = upload(client)
+    for response in (artifact_file, artifact_thumbnail):
+        assert response(UUID(source["id"]), session).status_code == 200
+        assert not session.in_transaction()

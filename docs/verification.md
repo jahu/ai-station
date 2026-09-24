@@ -2,11 +2,11 @@
 
 ## Automated checks
 
-- Backend and Host Runner: 142 pytest cases passed; Ruff lint and formatting passed.
+- Backend and Host Runner: 143 pytest cases passed; Ruff lint and formatting passed.
 - Frontend: ESLint, strict TypeScript, four UI behavior tests, and production build passed.
 - Production Docker image and both Compose configurations validated.
 - Production and development Docker deployments (including the Vite proxy): native Unix-socket telemetry, API health, worker execution through a fake executor, SSE replay, persisted history after API container restart, and supervisor cleanup passed.
-- Image Docker/browser smoke: Generate → Library → Edit passed using a Pillow-only fake pipeline; source reuse and artifact rendering were checked. The initial browser run timed out on Edit; a second run passed. No real model inference was performed.
+- Image Docker/browser smoke: Generate → Library → Edit passed using a Pillow-only fake pipeline; source reuse and artifact rendering were checked. Artifact delivery releases database transactions before streaming. No real model inference was performed.
 - Chromium: desktop dashboard, command palette navigation, run timeline, and mobile overflow checks passed with no page errors. Desktop and mobile screenshots were inspected.
 
 ## Actual workstation observations

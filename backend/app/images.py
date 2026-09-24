@@ -255,9 +255,13 @@ def artifact_response(artifact: Artifact, *, thumbnail=False):
 
 @router.get("/artifacts/{artifact_id}/file")
 def artifact_file(artifact_id: UUID, session: DB):
-    return artifact_response(get_artifact(session, artifact_id))
+    response = artifact_response(get_artifact(session, artifact_id))
+    session.rollback()  # File delivery may outlive a short SQLite transaction.
+    return response
 
 
 @router.get("/artifacts/{artifact_id}/thumbnail")
 def artifact_thumbnail(artifact_id: UUID, session: DB):
-    return artifact_response(get_artifact(session, artifact_id), thumbnail=True)
+    response = artifact_response(get_artifact(session, artifact_id), thumbnail=True)
+    session.rollback()
+    return response
