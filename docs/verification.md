@@ -2,7 +2,7 @@
 
 ## Automated checks
 
-- Backend and Host Runner: 160 pytest cases passed; Ruff lint and formatting passed.
+- Backend and Host Runner: 168 pytest cases passed; Ruff lint and formatting passed.
 - Frontend: ESLint, strict TypeScript, five UI behavior tests, and production build passed.
 - Production Docker image and both Compose configurations validated.
 - Production and development Docker deployments (including the Vite proxy): native Unix-socket telemetry, API health, worker execution through a fake executor, SSE replay, persisted history after API container restart, and supervisor cleanup passed.
@@ -10,6 +10,8 @@
 - Chromium: desktop dashboard, command palette navigation, run timeline, and mobile overflow checks passed with no page errors. Desktop and mobile screenshots were inspected.
 
 - Local chat browser smoke: model discovery, streaming, Markdown/code rendering, API restart persistence, regeneration, cancellation while the provider is silent, and mobile layout passed. Screenshots were inspected. This uses a fake provider and does not prove real llama.cpp inference.
+
+- Git inspection tests use disposable repositories: command helpers remain uninvoked, the index/configuration stay unchanged, injected options and inherited Git path overrides are rejected, metadata escapes fail, and output/time limits terminate owned subprocesses.
 
 ## Actual workstation observations
 
