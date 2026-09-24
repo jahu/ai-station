@@ -46,7 +46,9 @@ mako==1.4.3
 markupsafe==3.0.3
     # via mako
 pillow==12.3.0
-    # via ai-station (backend/pyproject.toml)
+    # via
+    #   ai-station (backend/pyproject.toml)
+    #   ai-station-runner (host-runner/pyproject.toml)
 pydantic==2.13.5
     # via
     #   ai-station (backend/pyproject.toml)

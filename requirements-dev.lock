@@ -50,7 +50,9 @@ markupsafe==3.0.3
 packaging==26.3
     # via pytest
 pillow==12.3.0
-    # via ai-station (backend/pyproject.toml)
+    # via
+    #   ai-station (backend/pyproject.toml)
+    #   ai-station-runner (host-runner/pyproject.toml)
 pluggy==1.6.0
     # via pytest
 pydantic==2.13.5

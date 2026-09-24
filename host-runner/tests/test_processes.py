@@ -85,3 +85,24 @@ def test_run_id_cannot_escape_storage(tmp_path):
     manager = ProcessManager(tmp_path)
     with pytest.raises(ValueError):
         manager.start(run_id="../escape", argv=["true"], cwd=tmp_path, executor="test")
+
+
+def test_shutdown_stops_owned_work_without_stopping_unrelated_process(tmp_path):
+    manager = ProcessManager(tmp_path, grace_seconds=0.05)
+    unrelated = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    run_ids = [str(uuid4()), str(uuid4())]
+    try:
+        for run_id in run_ids:
+            manager.start(
+                run_id=run_id,
+                argv=[sys.executable, "-c", "import time; time.sleep(30)"],
+                cwd=tmp_path,
+                executor="test",
+            )
+        manager.shutdown()
+        assert all(not manager.inspect(run_id)["alive"] for run_id in run_ids)
+        assert unrelated.poll() is None
+    finally:
+        manager.shutdown()
+        unrelated.terminate()
+        unrelated.wait()

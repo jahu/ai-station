@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
+import threading
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from ai_station_runner import __version__
@@ -34,13 +36,15 @@ from ai_station_runner.telemetry import collect
 
 app = FastAPI(title="AI Station Host Runner", version=__version__)
 _manager: ProcessManager | None = None
+_manager_lock = threading.Lock()
 
 
 def manager() -> ProcessManager:
     global _manager
     settings = get_settings()
-    if _manager is None:
-        _manager = ProcessManager(settings.host_data_dir(), settings.cancel_grace_seconds)
+    with _manager_lock:
+        if _manager is None:
+            _manager = ProcessManager(settings.host_data_dir(), settings.cancel_grace_seconds)
     return _manager
 
 
@@ -64,21 +68,21 @@ class RequestBody(BaseModel):
 
 class PhotoBody(RequestBody):
     run_id: RunId
-    mode: str
-    backend: str | None = None
-    prompt: str = ""
-    negative: str | None = None
-    edit_prompt: str = ""
-    width: int | None = None
-    height: int | None = None
-    steps: int | None = None
-    cfg: float | None = None
-    seed: int | None = None
-    max_side: int | None = None
-    repeats: int | None = 1
-    gpu: str
+    mode: Literal["t2i", "img2img", "recompose", "upscale"]
+    backend: Literal["qwen", "juggernaut"] = "qwen"
+    prompt: str = Field(default="", max_length=10000)
+    negative: str | None = Field(default=None, max_length=10000)
+    edit_prompt: str = Field(default="", max_length=10000)
+    width: int | None = Field(default=None, ge=256, le=2048, multiple_of=32)
+    height: int | None = Field(default=None, ge=256, le=2048, multiple_of=32)
+    steps: int | None = Field(default=None, ge=1, le=150)
+    cfg: float | None = Field(default=None, ge=0, le=30, allow_inf_nan=False)
+    seed: int | None = Field(default=None, ge=0, le=4294967295)
+    max_side: int | None = Field(default=None, ge=256, le=4096, multiple_of=32)
+    repeats: Literal[1] = 1
+    gpu: str = Field(pattern=r"^[0-9]{1,12}$")
     output_relative: str
-    inputs: list[str] = Field(default_factory=list)
+    inputs: list[str] = Field(default_factory=list, max_length=8)
 
 
 class CodingBody(RequestBody):
@@ -201,10 +205,35 @@ def start_photo(body: PhotoBody):
     settings = get_settings()
     if not settings.photo_python or not settings.photo_script:
         raise HTTPException(status_code=409, detail="photo_pipe is not configured")
+    expected = f"artifacts/{body.run_id[:2]}/{body.run_id[2:4]}/{body.run_id}.png"
+    if body.output_relative != expected:
+        raise HTTPException(422, "Output must be the run-owned artifact path")
     output = _child(body.output_relative)
+    # Reject even internal symlink redirection into database/worktree storage.
+    if output != _data().resolve() / expected:
+        raise HTTPException(403, "Output path must not contain symlinks")
+    if int(body.gpu) not in {int(gpu["index"]) for gpu in collect(_data()).get("gpus", [])}:
+        raise HTTPException(422, "GPU is not present")
+    if body.mode == "t2i" and body.inputs:
+        raise HTTPException(422, "Generate does not accept inputs")
     inputs = []
     for relative in body.inputs:
-        inputs.append(str(_child(relative)))
+        source = _child(relative)
+        if not relative.startswith("artifacts/") or source != _data().resolve() / relative:
+            raise HTTPException(403, "Input must be an artifact without symlink redirection")
+        if not source.is_file():
+            raise HTTPException(422, "Input image is missing")
+        from PIL import Image
+
+        try:
+            with Image.open(source) as image:
+                limit = 64 * 1024 * 1024 // (16 if body.mode == "upscale" else 1)
+                if image.format not in {"PNG", "JPEG", "WEBP"} or image.width * image.height > limit:
+                    raise ValueError("Image exceeds supported size or format")
+                image.verify()
+        except (OSError, ValueError, Image.DecompressionBombError) as exc:
+            raise HTTPException(422, "Invalid or oversized input image") from exc
+        inputs.append(str(source))
     try:
         argv = build_photo_argv(
             settings.photo_python,
@@ -229,7 +258,10 @@ def start_photo(body: PhotoBody):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     output.parent.mkdir(parents=True, exist_ok=True)
     # photo_pipe.py maps --device cuda:N itself. Do not also set CUDA_VISIBLE_DEVICES here.
-    record = manager().start(run_id=body.run_id, argv=argv, cwd=_data(), executor="photo_pipe")
+    environment = {**os.environ, "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1", "PYTHONUNBUFFERED": "1"}
+    record = manager().start(
+        run_id=body.run_id, argv=argv, cwd=_data(), executor="photo_pipe", env=environment
+    )
     record["runner_id"] = settings.runner_id
     return record
 
@@ -247,9 +279,13 @@ def start_coding(body: CodingBody):
 
 
 @app.get("/v1/process/{run_id}")
-def inspect_process(run_id: str):
+def inspect_process(
+    run_id: RunId,
+    stdout_offset: Annotated[int | None, Query(ge=0)] = None,
+    stderr_offset: Annotated[int | None, Query(ge=0)] = None,
+):
     try:
-        return manager().inspect(run_id)
+        return manager().inspect(run_id, stdout_offset=stdout_offset, stderr_offset=stderr_offset)
     except ProcessNotOwned as exc:
         raise HTTPException(status_code=404, detail="Process is not owned by the runner") from exc
 
@@ -378,6 +414,7 @@ def fs_search(body: FsBody):
 # that trust client-supplied ownership, command allowlists, or branch policies.
 # These routes need durable runner-side authorization before activation.
 _operational = {
+    "/v1/runs/photo",
     "/health",
     "/v1/hardware",
     "/v1/diagnostics",

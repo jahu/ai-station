@@ -65,8 +65,13 @@ class RunnerClient:
     def start_coding(self, payload: dict) -> dict:
         return self.request("POST", "/v1/runs/coding", payload)
 
-    def inspect_process(self, run_id: str) -> dict:
-        return self.request("GET", f"/v1/process/{run_id}")
+    def inspect_process(
+        self, run_id: str, *, stdout_offset: int | None = None, stderr_offset: int | None = None
+    ) -> dict:
+        query = ""
+        if stdout_offset is not None and stderr_offset is not None:
+            query = f"?stdout_offset={stdout_offset}&stderr_offset={stderr_offset}"
+        return self.request("GET", f"/v1/process/{run_id}{query}")
 
     def cancel_process(self, run_id: str) -> dict:
         return self.request("POST", "/v1/process/cancel", {"run_id": run_id})

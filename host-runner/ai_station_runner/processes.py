@@ -116,7 +116,9 @@ class ProcessManager:
             threading.Thread(target=self._wait, args=(run_id, proc), daemon=True).start()
             return dict(record)
 
-    def inspect(self, run_id: str) -> dict:
+    def inspect(
+        self, run_id: str, *, stdout_offset: int | None = None, stderr_offset: int | None = None
+    ) -> dict:
         with self._lock:
             records = self._load()
             record = records.get(run_id)
@@ -135,12 +137,28 @@ class ProcessManager:
                     else "interrupted"
                 )
                 self._dump(records)
-            return {
+            result = {
                 **record,
                 "alive": alive,
                 "stdout": _read(resolve_child(self.data_dir, record["stdout_log"])),
                 "stderr_tail": _read(resolve_child(self.data_dir, record["stderr_log"]), 4000),
             }
+            for stream, offset in (("stdout", stdout_offset), ("stderr", stderr_offset)):
+                if offset is not None:
+                    path = resolve_child(self.data_dir, record[f"{stream}_log"])
+                    with path.open("rb") as handle:
+                        handle.seek(offset)
+                        chunk = handle.read(65536)
+                    result[stream] = chunk.decode(errors="replace")
+                    result[f"{stream}_offset"] = offset + len(chunk)
+                    result[f"{stream}_more"] = path.stat().st_size > offset + len(chunk)
+            return result
+
+    def shutdown(self) -> None:
+        with self._lock:
+            run_ids = list(self._load())
+        for run_id in run_ids:
+            self.cancel(run_id)
 
     def cancel(self, run_id: str) -> dict:
         with self._lock:

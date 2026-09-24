@@ -34,6 +34,8 @@ import { useHardware } from "./api";
 import { Empty, PageTitle } from "./components/common";
 import Dashboard from "./pages/Dashboard";
 import { RunDetail, Runs } from "./pages/Runs";
+import ImagesWorkspace from "./pages/Images";
+import { Library, ArtifactDetail } from "./pages/Library";
 import System from "./pages/System";
 
 const groups: { label: string; items: [string, string, LucideIcon][] }[] = [
@@ -209,6 +211,9 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/runs" element={<Runs />} />
             <Route path="/runs/:id" element={<RunDetail />} />
+            <Route path="/images" element={<ImagesWorkspace />} />
+            <Route path="/library" element={<Library />} />
+            <Route path="/library/:id" element={<ArtifactDetail />} />
             <Route path="/system" element={<System />} />
             <Route path="/settings" element={<System />} />
             <Route path="*" element={<Unavailable />} />

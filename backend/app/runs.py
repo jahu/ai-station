@@ -121,7 +121,10 @@ def claim_next(session: Session, worker_id: str) -> Run | None:
     settings = get_settings()
     now = utcnow()
     candidate = session.scalar(
-        select(Run).where(Run.status == RunStatus.QUEUED.value).order_by(Run.created_at).limit(1)
+        select(Run)
+        .where(Run.status == RunStatus.QUEUED.value)
+        .order_by(Run.queued_at, Run.created_at)
+        .limit(1)
     )
     if candidate is None:
         return None

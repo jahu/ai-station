@@ -20,6 +20,8 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from app.config import get_settings
 from app.db import migrate, session_factory, session_scope, utcnow
 from app.events import event_dict, list_events
+from app.images import MAX_UPLOAD
+from app.images import router as image_router
 from app.models import Artifact, Run, Setting, WorkerRow
 from app.redact import redact_obj
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
@@ -43,6 +45,12 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1
 
 @app.middleware("http")
 async def local_requests(request: Request, call_next):
+    if request.url.path == "/api/images/uploads" and request.method == "POST":
+        length = request.headers.get("content-length", "")
+        if not length.isdigit():
+            return JSONResponse({"detail": "A Content-Length is required for uploads"}, status_code=411)
+        if int(length) > MAX_UPLOAD + 64 * 1024:
+            return JSONResponse({"detail": "Images must be at most 20 MiB"}, status_code=413)
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
         origin = request.headers.get("origin")
         if origin and urlsplit(origin).hostname not in {"localhost", "127.0.0.1", "::1"}:
@@ -219,6 +227,8 @@ def artifacts(session: DB, run_id: UUID | None = None, limit: int = Query(100, g
         statement = statement.where(Artifact.run_id == str(run_id))
     return [artifact_dict(row) for row in session.scalars(statement)]
 
+
+app.include_router(image_router)
 
 dist = get_settings().frontend_dist
 if dist and Path(dist).is_dir():
