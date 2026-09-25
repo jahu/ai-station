@@ -1,0 +1,11 @@
+# Persistent memory
+
+Memory is control-plane metadata under the application data root. The existing Alembic-managed `memories` and FTS5 tables store content, tags, scope, pin/enabled state, confidence, timestamps and source Run/conversation/message references. No embedding model or separate service is required.
+
+The Memory workspace supports search, scope/target filtering, editing, pinning, disabling, and confirmed deletion. `GET /api/memory` supports literal-token text search, exact tag filtering, pagination and optional disabled entries. SQL filters scope and enabled state before applying the result limit. `POST /api/memory` validates scope targets and compatible provenance references. Sources are immutable after creation; edits and deletion require `expected_updated_at` and reject stale versions with 409. Source-free entries are explicitly user-entered, not attributed to an AI. Linked sources establish provenance, not truth or endorsement.
+
+Chat snapshots enabled, pinned global and matching conversation memory into a new Run's parameters. The snapshot includes the exact context and memory IDs/versions. Retrieval selects at most 20 entries, newest first, within a 12,000-character content budget; oversized entries are skipped. Project, agent, disabled, unpinned and other-conversation entries do not enter Chat. Editing or deleting a memory affects future Runs only; historical Run snapshots remain auditable. Memory content is user-controlled reference context and can be outdated.
+
+Project and agent scopes are stored and searchable; consumers must request their own scope explicitly. No agent silently promotes inferred information into global memory. Rolling summaries are not enabled yet. Existing recent-message window limits remain in force.
+
+Validation uses temporary SQLite databases and fake API requests. It covers FTS index updates/deletion, restart persistence, literal-query escaping, scope-before-limit ordering, source validation, stale edits/deletes, pinned-context isolation and immutable queued Run snapshots. UI tests cover edit conflicts and explicit deletion confirmation.

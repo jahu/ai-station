@@ -1,0 +1,436 @@
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { Pin, Plus, Search } from "lucide-react";
+import { api } from "../api";
+import { Empty, ErrorNotice, Loading, PageTitle } from "../components/common";
+import { Button } from "../components/ui/button";
+
+type Scope = "global" | "project" | "conversation" | "agent";
+interface Entry {
+  id: string;
+  scope: Scope;
+  scope_id: string;
+  memory_type: string;
+  content: string;
+  tags: string[];
+  confidence: number | null;
+  pinned: boolean;
+  enabled: boolean;
+  updated_at: string;
+  created_at: string;
+  source_run_id: string | null;
+  source_conversation_id: string | null;
+  source_message_id: string | null;
+}
+const kinds = [
+  "fact",
+  "decision",
+  "preference",
+  "project_context",
+  "summary",
+  "observation",
+  "procedure",
+];
+const json = (method: string, body: unknown) => ({
+  method,
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(body),
+});
+
+export function Memory() {
+  const [query, setQuery] = useState("");
+  const [scope, setScope] = useState("");
+  const [target, setTarget] = useState("");
+  const [disabled, setDisabled] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const params = new URLSearchParams({
+    q: query,
+    include_disabled: String(disabled),
+    limit: "50",
+    offset: String(offset),
+  });
+  if (scope) params.set("scope", scope);
+  if (target) params.set("scope_id", target);
+  const entries = useQuery({
+    queryKey: ["memory", params.toString()],
+    queryFn: () => api<Entry[]>(`/memory?${params}`),
+  });
+  return (
+    <>
+      <PageTitle
+        eyebrow="CONTEXT / LOCAL MEMORY"
+        title="Memory"
+        action={
+          <Link className="button" to="/memory/new">
+            <Plus size={16} /> Add memory
+          </Link>
+        }
+      >
+        Inspect what AI Station remembers, where it came from, and where it
+        applies.
+      </PageTitle>
+      <section className="panel memory-filters">
+        <label>
+          <Search size={15} /> Search memory
+          <input
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setOffset(0);
+            }}
+            placeholder="Search content and tags…"
+            maxLength={500}
+          />
+        </label>
+        <label>
+          Scope
+          <select
+            value={scope}
+            onChange={(e) => {
+              setScope(e.target.value);
+              setTarget("");
+              setOffset(0);
+            }}
+          >
+            <option value="">All scopes</option>
+            {["global", "project", "conversation", "agent"].map((s) => (
+              <option key={s}>{s}</option>
+            ))}
+          </select>
+        </label>
+        {scope && scope !== "global" && (
+          <label>
+            Scope ID
+            <input
+              value={target}
+              onChange={(e) => {
+                setTarget(e.target.value);
+                setOffset(0);
+              }}
+              placeholder={`${scope} UUID`}
+            />
+          </label>
+        )}
+        <label className="memory-check">
+          <input
+            type="checkbox"
+            checked={disabled}
+            onChange={(e) => {
+              setDisabled(e.target.checked);
+              setOffset(0);
+            }}
+          />{" "}
+          Include disabled
+        </label>
+      </section>
+      <ErrorNotice error={entries.error} />
+      {entries.isPending ? (
+        <Loading />
+      ) : entries.data?.length === 0 ? (
+        <section className="panel">
+          <Empty title="No matching memories">
+            Add an entry or adjust your filters. Nothing is remembered
+            invisibly.
+          </Empty>
+        </section>
+      ) : (
+        <div className="memory-grid">
+          {entries.data?.map((entry) => (
+            <Link
+              className="panel memory-card"
+              to={`/memory/${entry.id}`}
+              key={entry.id}
+            >
+              <div className="row">
+                <span className="tiny-tag">{entry.scope}</span>
+                <span className="muted">
+                  {entry.memory_type.replaceAll("_", " ")}
+                </span>
+                {entry.pinned && <Pin size={15} aria-label="Pinned" />}
+                {!entry.enabled && <span className="tiny-tag">Disabled</span>}
+              </div>
+              <p>{entry.content}</p>
+              <div className="row muted">
+                {entry.tags.map((tag) => (
+                  <span key={tag}>#{tag}</span>
+                ))}
+              </div>
+              <small className="muted">
+                {entry.source_run_id ||
+                entry.source_message_id ||
+                entry.source_conversation_id
+                  ? "Linked source"
+                  : "User entered"}{" "}
+                · {new Date(entry.updated_at).toLocaleString()}
+              </small>
+            </Link>
+          ))}
+        </div>
+      )}
+      <div className="row">
+        <Button
+          disabled={offset === 0}
+          onClick={() => setOffset(Math.max(0, offset - 50))}
+        >
+          Previous
+        </Button>
+        <span className="muted">Page {offset / 50 + 1}</span>
+        <Button
+          disabled={entries.data?.length !== 50}
+          onClick={() => setOffset(offset + 50)}
+        >
+          Next
+        </Button>
+      </div>
+    </>
+  );
+}
+
+export function MemoryDetail() {
+  const { id } = useParams();
+  const entry = useQuery({
+    queryKey: ["memory-entry", id],
+    queryFn: () => api<Entry>(`/memory/${id}`),
+    enabled: Boolean(id),
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+  if (id && entry.isPending) return <Loading />;
+  if (entry.error) return <ErrorNotice error={entry.error} />;
+  return <MemoryEditor key={id ?? "new"} entry={entry.data} />;
+}
+
+function MemoryEditor({ entry }: { entry?: Entry }) {
+  const cache = useQueryClient();
+  const navigate = useNavigate();
+  const [scope, setScope] = useState<Scope>(entry?.scope ?? "global");
+  const [scopeId, setScopeId] = useState(entry?.scope_id ?? "");
+  const [content, setContent] = useState(entry?.content ?? "");
+  const [kind, setKind] = useState(entry?.memory_type ?? "fact");
+  const [tags, setTags] = useState(entry?.tags.join(", ") ?? "");
+  const [pinned, setPinned] = useState(entry?.pinned ?? false);
+  const [enabled, setEnabled] = useState(entry?.enabled ?? true);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [version, setVersion] = useState(entry?.updated_at);
+  const targets = useQuery({
+    queryKey: ["memory-targets", scope],
+    enabled: !entry && (scope === "project" || scope === "conversation"),
+    queryFn: () =>
+      api<{ id: string; name?: string; title?: string }[]>(
+        scope === "project" ? "/projects?limit=500" : "/chat/conversations",
+      ),
+  });
+  const save = useMutation({
+    mutationFn: () =>
+      api<Entry>(
+        entry ? `/memory/${entry.id}` : "/memory",
+        json(entry ? "PUT" : "POST", {
+          content,
+          memory_type: kind,
+          tags: [
+            ...new Set(
+              tags
+                .split(",")
+                .map((t) => t.trim())
+                .filter(Boolean),
+            ),
+          ],
+          pinned,
+          confidence: entry?.confidence ?? null,
+          ...(entry
+            ? { enabled, expected_updated_at: version }
+            : { scope, scope_id: scope === "global" ? null : scopeId }),
+        }),
+      ),
+    onSuccess: (data) => {
+      setVersion(data.updated_at);
+      cache.setQueryData(["memory-entry", data.id], data);
+      void cache.invalidateQueries({ queryKey: ["memory"] });
+      if (!entry) navigate(`/memory/${data.id}`);
+    },
+  });
+  const remove = useMutation({
+    mutationFn: () =>
+      api<void>(
+        `/memory/${entry!.id}`,
+        json("DELETE", { expected_updated_at: version }),
+      ),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["memory"] });
+      navigate("/memory");
+    },
+  });
+  return (
+    <>
+      <PageTitle
+        eyebrow="CONTEXT / INSPECTABLE MEMORY"
+        title={entry ? "Memory entry" : "Add memory"}
+        action={<Link to="/memory">All memories</Link>}
+      >
+        Only enabled, pinned global and conversation entries are included in new
+        Chat Runs. Project and agent memory stays scoped for future consumers.
+      </PageTitle>
+      <ErrorNotice error={save.error ?? remove.error} />
+      <form
+        className="panel memory-editor"
+        onSubmit={(e) => {
+          e.preventDefault();
+          save.mutate();
+        }}
+      >
+        <div className="memory-filters">
+          <label>
+            Scope
+            <select
+              disabled={Boolean(entry)}
+              value={scope}
+              onChange={(e) => {
+                setScope(e.target.value as Scope);
+                setScopeId("");
+              }}
+            >
+              {["global", "project", "conversation", "agent"].map((s) => (
+                <option key={s}>{s}</option>
+              ))}
+            </select>
+          </label>
+          {scope !== "global" && (
+            <label>
+              Scope target
+              {entry || scope === "agent" ? (
+                <input
+                  required
+                  readOnly={Boolean(entry)}
+                  value={scopeId}
+                  onChange={(e) => setScopeId(e.target.value)}
+                  placeholder="Existing scope UUID"
+                />
+              ) : (
+                <select
+                  required
+                  value={scopeId}
+                  onChange={(e) => setScopeId(e.target.value)}
+                >
+                  <option value="">Select {scope}…</option>
+                  {targets.data?.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name ?? t.title} · {t.id.slice(0, 8)}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </label>
+          )}
+          <label>
+            Type
+            <select value={kind} onChange={(e) => setKind(e.target.value)}>
+              {kinds.map((k) => (
+                <option key={k}>{k}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <ErrorNotice error={targets.error} />
+        <label>
+          Content
+          <textarea
+            required
+            rows={9}
+            maxLength={16000}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder="A preference, decision, observation, or procedure worth keeping…"
+          />
+        </label>
+        <label>
+          Tags
+          <input
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="Comma-separated tags"
+          />
+        </label>
+        <div className="row">
+          <label className="memory-check">
+            <input
+              type="checkbox"
+              checked={pinned}
+              onChange={(e) => setPinned(e.target.checked)}
+            />{" "}
+            Pinned context
+          </label>
+          {entry && (
+            <label className="memory-check">
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(e) => setEnabled(e.target.checked)}
+              />{" "}
+              Enabled
+            </label>
+          )}
+        </div>
+        <Button type="submit" disabled={save.isPending || remove.isPending}>
+          {save.isPending ? "Saving…" : "Save memory"}
+        </Button>
+      </form>
+      {entry && (
+        <section className="panel memory-editor">
+          <h2>Provenance</h2>
+          <p>
+            {entry.source_run_id ||
+            entry.source_message_id ||
+            entry.source_conversation_id
+              ? "User-recorded memory linked to the following source. The link does not certify the claim."
+              : "User-entered memory. No AI-generated source is claimed."}
+          </p>
+          <p className="muted">
+            Created {new Date(entry.created_at).toLocaleString()} · Updated{" "}
+            {new Date(version!).toLocaleString()}
+          </p>
+          {entry.source_run_id && (
+            <Link to={`/runs/${entry.source_run_id}`}>
+              Source Run {entry.source_run_id}
+            </Link>
+          )}
+          {entry.source_conversation_id && (
+            <Link to={`/chat/${entry.source_conversation_id}`}>
+              Source conversation
+            </Link>
+          )}
+          {entry.source_message_id && (
+            <code>Message {entry.source_message_id}</code>
+          )}
+          {entry.scope === "project" && (
+            <Link to={`/projects/${entry.scope_id}`}>Scoped project</Link>
+          )}
+          {entry.scope === "conversation" && (
+            <Link to={`/chat/${entry.scope_id}`}>Scoped conversation</Link>
+          )}
+          <p className="muted">
+            Deleting removes this entry and its search index. Existing Run
+            context snapshots remain in audit history.
+          </p>
+          {confirmDelete ? (
+            <div className="row">
+              <Button
+                disabled={remove.isPending || save.isPending}
+                onClick={() => remove.mutate()}
+              >
+                Permanently delete memory
+              </Button>
+              <Button onClick={() => setConfirmDelete(false)}>
+                Keep memory
+              </Button>
+            </div>
+          ) : (
+            <Button onClick={() => setConfirmDelete(true)}>
+              Delete memory…
+            </Button>
+          )}
+        </section>
+      )}
+    </>
+  );
+}

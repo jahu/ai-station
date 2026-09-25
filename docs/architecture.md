@@ -67,3 +67,7 @@ New behavior plugs in at:
 - connector (status and credential reference; no fake integrations)
 - runtime / model discovery (host scan, no mutation)
 - skill (versioned directory under `skills/`)
+
+## Scoped memory integration
+
+The [Memory workspace](memory.md) exposes durable scoped entries with validated provenance and FTS retrieval. Chat snapshots only enabled pinned global and matching conversation entries into new Run parameters; changes never rewrite historical contexts.

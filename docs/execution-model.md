@@ -82,3 +82,7 @@ Server-Sent Events replay run events. WebSockets are not used. Clients can recon
 Image HTTP handlers validate requests and enqueue durable runs. GPU reservations are committed before dispatch. A transport/server failure after a dispatch attempt leaves state and reservations pending runner inspection; it never frees a potentially occupied GPU. Byte-offset stdout/stderr reads drain all available log chunks before completion. Missing exit status becomes interrupted, never successful. GPU-busy requests return to the queue behind already waiting work. Numeric GPU aliases share the same reservation key.
 
 The Host Runner validates run-specific output paths and app-owned source images, rejects symlink redirection, and rechecks discovered GPU IDs. Photo subprocesses use offline Hugging Face settings. Graceful runner shutdown terminates only its verified managed process groups. Successful output registration includes hashes, thumbnails, actual dimensions, parameters, and parent artifact IDs.
+
+## Scoped memory integration
+
+The [Memory workspace](memory.md) exposes durable scoped entries with validated provenance and FTS retrieval. Chat snapshots only enabled pinned global and matching conversation entries into new Run parameters; changes never rewrite historical contexts.

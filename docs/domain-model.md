@@ -85,3 +85,7 @@ A coarse lease such as `gpu:<index>`. The first scheduler policy is one heavy im
 ## Connector
 
 Metadata for an external system: status, capabilities, non-secret configuration, and a secret reference. Secrets are not returned by the API.
+
+## Scoped memory integration
+
+The [Memory workspace](memory.md) exposes durable scoped entries with validated provenance and FTS retrieval. Chat snapshots only enabled pinned global and matching conversation entries into new Run parameters; changes never rewrite historical contexts.
