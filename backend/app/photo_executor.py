@@ -117,7 +117,12 @@ class PhotoPipeExecutor:
                     append_event(session, run.id, stream, {"text": text})
                 offsets[f"{stream}_offset"] = info[f"{stream}_offset"]
             session.commit()
-            if not info["alive"] and not info["stdout_more"] and not info["stderr_more"]:
+            if (
+                not info["alive"]
+                and not info.get("completion_pending")
+                and not info["stdout_more"]
+                and not info["stderr_more"]
+            ):
                 break
             if not info["stdout_more"] and not info["stderr_more"]:
                 time.sleep(0.4)

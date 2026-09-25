@@ -141,3 +141,19 @@ def test_state_machine(source, target):
     else:
         with pytest.raises(InvalidTransition):
             assert_transition(source, target)
+
+
+def test_reaping_pending_preserves_lease_and_gpu_reservation(session):
+    class Reaping:
+        def inspect_process(self, run_id):
+            return {"alive": False, "completion_pending": True, "exit_code": None}
+
+    run = queued(session, requested_gpu="7", retry_class="safe")
+    reserve_gpu(session, run, [7])
+    run.status = "running"
+    run.lease_expires_at = utcnow() - timedelta(seconds=1)
+    session.commit()
+    recover_stale(session, Reaping())
+    assert run.status == "running"
+    assert run.lease_expires_at > utcnow()
+    assert session.scalar(select(ResourceLock)).released_at is None

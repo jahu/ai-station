@@ -63,3 +63,14 @@ An explicit `AI_STATION_REAL_LOCAL_LLM_TESTS=1` smoke used an isolated temporary
 - `scripts/runtimes_smoke.py` passed browser → API → worker → native UDS process observation, truthful unavailable test endpoint, durable registry reload and mobile-width checks. Screenshots inspected.
 - A real read-only process scan completed across 420 visible processes and recognized the existing Ollama process. No process arguments/environment were returned or persisted. This proves observation, not runtime ownership or generation readiness.
 - Regression tests cover PID reuse identity, unsupported processes, output limits, partial scans, cancellation, failed refresh preserving prior data, stable registry IDs and rejected arbitrary probe/mutation requests.
+
+
+## Real image acceptance — 2026-09-25
+
+`scripts/real_images_smoke.py` requires `AI_STATION_REAL_GPU_TESTS=1` plus explicit photo Python/script paths. It uses temporary application data, the API, worker and a private native runner. The adapter enforces Hugging Face/Transformers offline mode; no weights were downloaded and the original script hash was unchanged.
+
+With the existing models on the workstation, these actual executions passed: Qwen generation (29.8 s), Edit (29.6 s), Recompose with one reference (29.6 s), Recompose with two references (29.6 s), Upscale (12.3 s), and Juggernaut generation on the final repeat (11.4 s). Generation used 256×256 and two sampling steps; input references were synthetic color fixtures. These are integration checks, not visual-quality or realistic-workload benchmarks. Results/logs remain in `/tmp/ai-station-real-images-j_3ps729` and `/tmp/ai-station-real-images-pdeev_3y` for this development session.
+
+The first script attempt resolved the venv interpreter symlink incorrectly and failed before inference; the script now preserves the venv path. The first two Juggernaut attempts generated output but exposed a premature interrupted status while native child reaping was pending. Those attempts are not counted as successful end-to-end Runs. The final repeat passed after the completion protocol fix; regressions cover pending reaping, resource retention and artifact registration only after confirmed exit.
+
+Reproduce explicitly: `AI_STATION_REAL_GPU_TESTS=1 AI_STATION_PHOTO_SCRIPT=/your/photo_pipe.py AI_STATION_PHOTO_PYTHON=/your/venv/bin/python .venv/bin/python scripts/real_images_smoke.py`. The script selects a discovered GPU with at least 9000 MiB free, preserves results in a new temporary directory, and supports `--gpu`, `--modes` and `--timeout`.

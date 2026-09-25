@@ -68,7 +68,12 @@ class WorktreeExecutor:
                     append_event(session, run.id, stream, {"text": process[stream]})
                 offsets[f"{stream}_offset"] = process[f"{stream}_offset"]
             session.commit()
-            if not process["alive"] and not process["stdout_more"] and not process["stderr_more"]:
+            if (
+                not process["alive"]
+                and not process.get("completion_pending")
+                and not process["stdout_more"]
+                and not process["stderr_more"]
+            ):
                 break
             if not process["stdout_more"] and not process["stderr_more"]:
                 time.sleep(0.2)
