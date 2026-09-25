@@ -5,6 +5,7 @@ from __future__ import annotations
 PROFILES: dict[str, list[str]] = {
     "read_only": ["filesystem_read", "git_read"],
     "agent_minimal": ["filesystem_read"],
+    "agent_local": [],
     "agent_research": ["filesystem_read", "network_read"],
     "image_generation": ["filesystem_read", "workspace_write"],
     "coding_standard": [

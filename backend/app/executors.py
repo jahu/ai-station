@@ -9,6 +9,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.agent_executor import LocalAgentExecutor
 from app.artifacts import adopt_existing
 from app.chat_executor import ChatExecutor
 from app.config import get_settings
@@ -267,6 +268,7 @@ EXECUTORS = {
     "chat": ChatExecutor(),
     "worktree_prepare": WorktreeExecutor(),
     "model_discovery": ModelDiscoveryExecutor(),
+    "agent": LocalAgentExecutor(),
 }
 
 

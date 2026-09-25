@@ -43,3 +43,15 @@ Real Git preparation passed through the API, worker, native Unix-socket runner, 
 - Browser testing revealed a SQLite/SSE event-loop lock; blocking SSE reads now run in a thread with a private short session. A concurrency regression test and the repeated browser smoke pass.
 - Real metadata-only discovery inspected the workstation's existing `~/AI/models/{llm,image,video}` roots: 18 files (4 LLM, 6 image, 8 video), totaling 86,104,602,180 bytes. No model contents were opened, loaded or modified. This verifies discovery, not inference or runtime compatibility.
 - Migration upgrade/downgrade preserves pre-existing model metadata. Cancellation terminates only the owned scan process and leaves the previous inventory intact.
+
+
+## Local provider acceptance — 2026-09-25
+
+An explicit `AI_STATION_REAL_LOCAL_LLM_TESTS=1` smoke used an isolated temporary application database and the existing local endpoint `http://127.0.0.1:11434/v1`, whose model listing reported `qwen3:8b`. A normal Chat Task/Run executed through the worker and returned `AI Station local check OK.` with `max_tokens=512`, temperature 0 and `/no_think` in the prompt. The assistant response remained readable after resetting the database engine. The first attempt with only 64 output tokens failed with no report text; it was not counted as success. This verifies this local OpenAI-compatible endpoint, not a llama.cpp deployment. The endpoint at port 8080 was unavailable. No runtime was installed or reconfigured.
+
+## Local agent lifecycle — 2026-09-25
+
+- `./scripts/check.sh`: 225 Python tests passed, including scheduler concurrency, one-shot execution, scoped memory, permission enforcement, stale definition edits, provider failure and silent-stream cancellation.
+- Frontend: 13 component tests passed; lint, TypeScript and production build passed. Existing bundle-size advisory remains.
+- `PLAYWRIGHT_BROWSERS_PATH=/tmp/ai-station-browser .venv/bin/python scripts/agents_smoke.py`: passed disabled draft/review, activation, actual worker with fake compatible provider, Markdown artifact, pause, API restart/history persistence, scoped memory navigation, duplication and mobile overflow check. Screenshots inspected locally.
+- Agent inference in these tests used a fake provider. The separate real local Chat completion above is not a real agent or coding-task acceptance claim.

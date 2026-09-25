@@ -17,6 +17,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
+from app.agents_api import router as agent_router
 from app.chat import router as chat_router
 from app.config import get_settings
 from app.db import migrate, session_factory, session_scope, utcnow
@@ -243,6 +244,7 @@ app.include_router(chat_router)
 app.include_router(project_router)
 app.include_router(memory_router)
 app.include_router(model_router)
+app.include_router(agent_router)
 
 dist = get_settings().frontend_dist
 if dist and Path(dist).is_dir():

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import utcnow
 from app.events import append_event
-from app.models import Run, Task
+from app.models import Agent, Run, Task
 from app.state import TERMINAL, InvalidTransition, RunStatus, assert_transition
 
 
@@ -112,6 +112,14 @@ def transition(
         RunStatus.INTERRUPTED,
     }:
         run.finished_at = now
+    if run.agent_id:
+        agent = session.get(Agent, run.agent_id)
+        if agent is not None:
+            agent.last_status = target
+            if target in {RunStatus.FAILED, RunStatus.INTERRUPTED}:
+                agent.failure_count += 1
+            elif target == RunStatus.SUCCEEDED:
+                agent.failure_count = 0
     append_event(session, run.id, event_type, payload or {"status": target})
     session.flush()
     return run
