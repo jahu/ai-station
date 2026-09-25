@@ -5,6 +5,7 @@ A local-first AI workstation control plane. Work is represented by **Task → Ru
 ## What works now
 
 - Local chat: persisted conversations, model discovery, streaming Markdown, stop, regeneration, and inspectable Runs.
+- Agents: disabled natural-language drafts, explicit activation, local reports, scoped context tools, persistent UTC schedules, pause/resume, duplication and execution history.
 - Memory: scoped FTS search, validated provenance, editing, pin/disable controls, and immutable pinned Chat context.
 - Models: managed metadata-only discovery Runs, persistent file observations, category/search/detail views and report artifacts.
 - Projects: host-validated repository registration, read-only Git status, persisted branch policies, argv validation commands, and agent guidance.
@@ -17,7 +18,7 @@ A local-first AI workstation control plane. Work is represented by **Task → Ru
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory.
 - Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
 
-Earlier coding-agent and agent modules are preserved drafts, not operational integrations. Unimplemented workspaces show unavailable states. Coding-agent launches, project command execution, commits, pushes, and PR actions remain disabled.
+Earlier coding-agent modules are preserved drafts, not operational integrations. Unimplemented workspaces show unavailable states. Coding-agent launches, project command execution, commits, pushes, and PR actions remain disabled.
 
 ## Prerequisites and installation
 
@@ -111,14 +112,18 @@ The scheduler enqueues normal runs and samples telemetry. Short SQLite transacti
 
 The runner is not a shell daemon. Its enabled API offers host inspection, validated photo launches, owned worktree preparation, model metadata discovery, and cancellation of recorded, verified process groups. Boot identity, process start ticks, session, and group membership protect against PID reuse. Read-only Git inspection disables repository command helpers and enforces metadata roots, time/output bounds, and revision validation. Partial clones and alternate object stores are not supported for inspection yet. Draft filesystem/Git mutation routes are unavailable. Existing external services are never stopped or imported implicitly. Managed workload containers and remote nodes remain future work.
 
-Uncertain host execution keeps its reservations pending inspection; recovery never blindly repeats side effects. If a worker disappears after dispatch, the run requires inspection when the process is gone. SQLite uses short serialized transactions; multi-node/distributed execution is not implemented. No real Qwen, Juggernaut, Codex, Cursor, or local LLM completion has been smoke-tested yet.
+Uncertain host execution keeps its reservations pending inspection; recovery never blindly repeats side effects. If a worker disappears after dispatch, the run requires inspection when the process is gone. SQLite uses short serialized transactions; multi-node/distributed execution is not implemented. A real local OpenAI-compatible `qwen3:8b` completion and persisted response were verified on 2026-09-25. Real Qwen/Juggernaut image generation and Codex/Cursor coding tasks have not been smoke-tested.
 
 Contributions use reviewed feature PRs to `develop`; `main` is the release branch. See [AGENTS.md](AGENTS.md).
 
 ### Memory workspace
 
-Memory now supports scoped FTS search, provenance inspection, versioned editing, pinning, disabling and confirmed deletion. Enabled pinned global and conversation entries are snapshotted into new Chat Runs. See [memory contracts](docs/memory.md) and the [MVP acceptance ledger](docs/mvp-status.md). Rolling summaries and agent consumers are still pending.
+Memory now supports scoped FTS search, provenance inspection, versioned editing, pinning, disabling and confirmed deletion. Enabled pinned global and conversation entries are snapshotted into new Chat Runs. See [memory contracts](docs/memory.md) and the [MVP acceptance ledger](docs/mvp-status.md). Agents can retrieve enabled entries from their own scope when the memory tool is selected. Rolling summaries are still pending.
 
 ### Models workspace
 
 Models now discovers existing host files through a cancellable worker Run, persists observations and exposes category/search/detail views. Set `AI_STATION_MODEL_ROOTS` to colon-separated host model directories. No weights are loaded or modified. See [discovery contracts](docs/models.md). Runtime management remains unavailable.
+
+### Agents workspace
+
+Describe a task in Agents, inspect and edit the disabled definition, select a local model and tools, then enable it explicitly. Schedules use UTC. Run now, pause, duplicate and execution history share the global Runs inspector. See [agent contracts and limits](docs/agents.md).

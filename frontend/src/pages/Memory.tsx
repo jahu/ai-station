@@ -1,6 +1,11 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { Pin, Plus, Search } from "lucide-react";
 import { api } from "../api";
 import { Empty, ErrorNotice, Loading, PageTitle } from "../components/common";
@@ -39,9 +44,10 @@ const json = (method: string, body: unknown) => ({
 });
 
 export function Memory() {
+  const [searchParams] = useSearchParams();
   const [query, setQuery] = useState("");
-  const [scope, setScope] = useState("");
-  const [target, setTarget] = useState("");
+  const [scope, setScope] = useState(searchParams.get("scope") ?? "");
+  const [target, setTarget] = useState(searchParams.get("scope_id") ?? "");
   const [disabled, setDisabled] = useState(false);
   const [offset, setOffset] = useState(0);
   const params = new URLSearchParams({
@@ -215,10 +221,14 @@ function MemoryEditor({ entry }: { entry?: Entry }) {
   const [version, setVersion] = useState(entry?.updated_at);
   const targets = useQuery({
     queryKey: ["memory-targets", scope],
-    enabled: !entry && (scope === "project" || scope === "conversation"),
+    enabled: !entry && scope !== "global",
     queryFn: () =>
       api<{ id: string; name?: string; title?: string }[]>(
-        scope === "project" ? "/projects?limit=500" : "/chat/conversations",
+        scope === "project"
+          ? "/projects?limit=500"
+          : scope === "agent"
+            ? "/agents?limit=200"
+            : "/chat/conversations",
       ),
   });
   const save = useMutation({
@@ -269,7 +279,8 @@ function MemoryEditor({ entry }: { entry?: Entry }) {
         action={<Link to="/memory">All memories</Link>}
       >
         Only enabled, pinned global and conversation entries are included in new
-        Chat Runs. Project and agent memory stays scoped for future consumers.
+        Chat Runs. Agents can explicitly retrieve their own enabled scoped
+        memories.
       </PageTitle>
       <ErrorNotice error={save.error ?? remove.error} />
       <form
@@ -298,7 +309,7 @@ function MemoryEditor({ entry }: { entry?: Entry }) {
           {scope !== "global" && (
             <label>
               Scope target
-              {entry || scope === "agent" ? (
+              {entry ? (
                 <input
                   required
                   readOnly={Boolean(entry)}

@@ -34,6 +34,7 @@ import { useHardware } from "./api";
 import { Empty, PageTitle } from "./components/common";
 import { Memory, MemoryDetail } from "./pages/Memory";
 import { Models, ModelDetail } from "./pages/Models";
+import { Agents, AgentDetail } from "./pages/Agents";
 import Chat from "./pages/Chat";
 import Dashboard from "./pages/Dashboard";
 import { RunDetail, Runs } from "./pages/Runs";
@@ -224,6 +225,8 @@ export default function App() {
             <Route path="/settings" element={<System />} />
             <Route path="/models" element={<Models />} />
             <Route path="/models/:id" element={<ModelDetail />} />
+            <Route path="/agents" element={<Agents />} />
+            <Route path="/agents/:id" element={<AgentDetail />} />
             <Route path="/memory" element={<Memory />} />
             <Route path="/memory/new" element={<MemoryDetail />} />
             <Route path="/memory/:id" element={<MemoryDetail />} />

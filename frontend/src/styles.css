@@ -1647,3 +1647,63 @@ pre {
     gap: 8px;
   }
 }
+
+.agent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+.agent-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.agent-form input:not([type="checkbox"]),
+.agent-form textarea,
+.agent-form select {
+  width: 100%;
+  min-width: 0;
+  background: #10151b;
+  color: inherit;
+  border: 1px solid #303943;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.agent-form textarea {
+  resize: vertical;
+}
+.agent-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.agent-wide {
+  grid-column: 1 / -1;
+}
+.agent-form .agent-tool {
+  flex-direction: row;
+  align-items: start;
+  margin-top: 12px;
+}
+.agent-tool small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+.agent-goal {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 640px) {
+  .agent-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
