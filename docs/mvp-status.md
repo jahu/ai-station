@@ -14,7 +14,7 @@ Updated 2026-09-25. This is an acceptance ledger, not a claim that the complete 
 | Coding | Preserved inactive drafts; installed Codex/Cursor help inspected | Enforced sandbox, typed authorization, actual adapters, validation, diff UI, opt-in real tasks |
 | Agents | Preserved inactive definitions/scheduler drafts | Draft factory, explicit activation, actual local execution, schedules/history/UI |
 | Memory | Memory CRUD/FTS workspace, provenance, optimistic edits, scoped pinned Chat context | Rolling summaries; integration into future agent runs |
-| Models/runtimes | Runner read-only scan and diagnostics foundations | Persisted registry, discovery Run and Models UI |
+| Models/runtimes | Managed metadata-only discovery Run, persistent file registry, Models UI and read-only diagnostics | Runtime instance registry and final real-root smoke |
 
 Host coding sandbox probe: `bwrap --ro-bind / / --dev /dev --proc /proc --unshare-pid --die-with-parent -- /usr/bin/true` failed with `setting up uid map: Permission denied`. No OS setting was changed. The adapter must not bypass isolation to conceal this limitation. Installed CLI help alone does not prove sandbox enforcement or a successful coding task.
 

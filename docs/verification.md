@@ -35,3 +35,11 @@ Real Git preparation passed through the API, worker, native Unix-socket runner, 
 - Python lint/format and 199 tests passed; frontend lint/typecheck/format/build and 10 UI tests passed.
 - `PLAYWRIGHT_BROWSERS_PATH=/tmp/ai-station-browser .venv/bin/python scripts/memory_smoke.py`: browser CRUD, reload persistence, disable/search, confirmed deletion and mobile-width checks passed against a temporary database. No model call was made.
 - Full feature diff reviewed for source/scope validation, FTS filtering before limit, stale-write protection and immutable Chat context. Production CSS reviewed from desktop/mobile screenshots.
+
+## Managed model discovery (2026-09-25)
+
+- Python lint/format and 207 tests passed; frontend lint/typecheck/format/build and 11 UI tests passed.
+- `PLAYWRIGHT_BROWSERS_PATH=/tmp/ai-station-browser .venv/bin/python scripts/models_smoke.py`: browser → API → worker → native UDS runner → managed scan → persisted registry/artifact passed. Category filtering, reload persistence, unchanged fixture bytes/mtime, mobile width and browser errors were checked. Desktop screenshots inspected.
+- Browser testing revealed a SQLite/SSE event-loop lock; blocking SSE reads now run in a thread with a private short session. A concurrency regression test and the repeated browser smoke pass.
+- Real metadata-only discovery inspected the workstation's existing `~/AI/models/{llm,image,video}` roots: 18 files (4 LLM, 6 image, 8 video), totaling 86,104,602,180 bytes. No model contents were opened, loaded or modified. This verifies discovery, not inference or runtime compatibility.
+- Migration upgrade/downgrade preserves pre-existing model metadata. Cancellation terminates only the owned scan process and leaves the previous inventory intact.

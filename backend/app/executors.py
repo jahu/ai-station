@@ -13,6 +13,7 @@ from app.artifacts import adopt_existing
 from app.chat_executor import ChatExecutor
 from app.config import get_settings
 from app.events import append_event
+from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
 from app.paths import safe_join, validate_relative
 from app.photo_executor import PhotoPipeExecutor
@@ -265,6 +266,7 @@ EXECUTORS = {
     "photo_pipe": PhotoPipeExecutor(),
     "chat": ChatExecutor(),
     "worktree_prepare": WorktreeExecutor(),
+    "model_discovery": ModelDiscoveryExecutor(),
 }
 
 

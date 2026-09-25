@@ -1588,3 +1588,62 @@ pre {
 .memory-card:hover {
   border-color: #b9f48a66;
 }
+
+.model-toolbar,
+.model-card {
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.model-toolbar {
+  display: grid;
+  gap: 16px;
+}
+.model-toolbar label {
+  display: grid;
+  gap: 8px;
+  color: #adb6c0;
+}
+.model-toolbar input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #111315;
+}
+.model-tabs,
+.model-tags {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 8px;
+}
+.model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 20px;
+}
+.model-card {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.model-card h2 {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.model-path {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.model-properties {
+  display: grid;
+  grid-template-columns: minmax(100px, 200px) minmax(0, 1fr);
+  gap: 16px;
+}
+.model-properties dt {
+  color: #969da5;
+}
+@media (max-width: 720px) {
+  .model-properties {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}

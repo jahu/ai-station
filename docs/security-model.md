@@ -67,3 +67,7 @@ Project registration uses this inspection boundary before storing a canonical ho
 ## Memory boundaries
 
 Memory scope/source IDs must resolve to existing records; mismatched source conversations and Runs are rejected. Scope and provenance cannot be reassigned by editing content. Chat consumes only enabled pinned global and matching conversation entries. Historical context remains in Run parameters after disabling or deleting an entry. See [memory contracts](memory.md).
+
+## Model discovery
+
+[Model discovery](models.md) runs as a managed native process through Task → Run → Events → Artifacts. Only host-configured roots are scanned, and only metadata is persisted. Known successful completion is required to update observations; unavailable roots and missing files remain distinguishable. No runtime ownership is inferred.

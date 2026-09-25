@@ -24,6 +24,7 @@ from app.events import event_dict, list_events
 from app.images import MAX_UPLOAD
 from app.images import router as image_router
 from app.memory_api import router as memory_router
+from app.model_registry import router as model_router
 from app.models import Artifact, Run, Setting, WorkerRow
 from app.projects import router as project_router
 from app.redact import redact_obj
@@ -127,6 +128,14 @@ def events(run_id: UUID, session: DB, after: int = Query(0, ge=0)):
     return [event_dict(event) for event in list_events(session, str(run_id), after)]
 
 
+def read_event_batch(run_id: str, cursor: int):
+    # The thread owns and closes its session before yielding anything to SSE.
+    with session_factory()() as current:
+        rows = [event_dict(row) for row in list_events(current, run_id, cursor)]
+        run = current.get(Run, run_id)
+        return rows, run is None or run.status in TERMINAL
+
+
 @app.get("/api/runs/{run_id}/stream")
 def stream(
     run_id: UUID,
@@ -140,11 +149,9 @@ def stream(
     async def replay():
         cursor = max(after, last_event_id or 0)
         while True:
-            # Never retain a database transaction while waiting on an SSE client.
-            with session_factory()() as current:
-                rows = [event_dict(row) for row in list_events(current, str(run_id), cursor)]
-                run = current.get(Run, str(run_id))
-                terminal = run is None or run.status in TERMINAL
+            # SQLite may wait on another request's writer reservation. Keep that
+            # wait off the HTTP event loop so response/dependency cleanup can run.
+            rows, terminal = await asyncio.to_thread(read_event_batch, str(run_id), cursor)
             for row in rows:
                 cursor = row["sequence"]
                 yield f"id: {cursor}\ndata: {json.dumps(row)}\n\n"
@@ -235,6 +242,7 @@ app.include_router(image_router)
 app.include_router(chat_router)
 app.include_router(project_router)
 app.include_router(memory_router)
+app.include_router(model_router)
 
 dist = get_settings().frontend_dist
 if dist and Path(dist).is_dir():
