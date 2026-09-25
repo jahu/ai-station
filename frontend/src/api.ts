@@ -43,6 +43,7 @@ export interface Hardware {
 }
 export interface Run {
   id: string;
+  project_id: string | null;
   task_id: string;
   parent_run_id: string | null;
   capability: string;

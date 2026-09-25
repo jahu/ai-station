@@ -28,7 +28,7 @@ BASE_CONFIG = [
 ]
 
 
-def _read(path: Path, args: list[str], config: list[str] | None = None, *, check=True):
+def git_environment() -> dict:
     # Shell launch environments can carry GIT_DIR, GIT_WORK_TREE, injected config,
     # or external helpers. Inspection always targets the validated repository.
     env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
@@ -41,10 +41,18 @@ def _read(path: Path, args: list[str], config: list[str] | None = None, *, check
         GIT_NO_LAZY_FETCH="1",
         GIT_NO_REPLACE_OBJECTS="1",
     )
+    return env
+
+
+def _read(path: Path, args: list[str], config: list[str] | None = None, *, check=True, shared_group=False):
     command = ["git", *BASE_CONFIG, *(config or []), "-C", str(path), *args]
     try:
         process = subprocess.Popen(
-            command, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True
+            command,
+            env=git_environment(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            start_new_session=not shared_group,
         )
     except OSError as exc:
         raise GitError("Git could not be started") from exc
@@ -74,10 +82,13 @@ def _read(path: Path, args: list[str], config: list[str] | None = None, *, check
     except subprocess.TimeoutExpired as exc:
         raise GitError("Git inspection exceeded its time limit") from exc
     finally:
-        # Only this short-lived owned group can be signaled.
+        # A managed job's inspections stay inside its already-owned group.
         if not completed:
             try:
-                os.killpg(process.pid, signal.SIGKILL)
+                if shared_group:
+                    process.kill()
+                else:
+                    os.killpg(process.pid, signal.SIGKILL)
             except ProcessLookupError:
                 pass
         process.wait()
@@ -92,23 +103,23 @@ def _read(path: Path, args: list[str], config: list[str] | None = None, *, check
 
 
 class Repository:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, *, shared_group=False):
+        if shared_group and os.getpgrp() != os.getpid():
+            raise GitError("Shared Git process groups require a managed group leader")
+        self.shared_group = shared_group
+        self.options = []
         roots = get_settings().roots()
         try:
             self.path = ensure_within(path, roots)
             if not self.path.is_dir():
                 raise GitError("Repository path is not a directory")
-            if _read(self.path, ["rev-parse", "--is-inside-work-tree"]).stdout.strip() != "true":
+            if self.read(["rev-parse", "--is-inside-work-tree"]).stdout.strip() != "true":
                 raise GitError("Path is not a Git worktree")
-            self.path = ensure_within(
-                Path(_read(self.path, ["rev-parse", "--show-toplevel"]).stdout.strip()), roots
-            )
+            self.path = ensure_within(Path(self.read(["rev-parse", "--show-toplevel"]).stdout.strip()), roots)
             self.git_dir = ensure_within(
-                Path(_read(self.path, ["rev-parse", "--absolute-git-dir"]).stdout.strip()), roots
+                Path(self.read(["rev-parse", "--absolute-git-dir"]).stdout.strip()), roots
             )
-            common = _read(
-                self.path, ["rev-parse", "--path-format=absolute", "--git-common-dir"]
-            ).stdout.strip()
+            common = self.read(["rev-parse", "--path-format=absolute", "--git-common-dir"]).stdout.strip()
             self.common_dir = ensure_within(Path(common), roots)
             objects = ensure_within(self.common_dir / "objects", roots)
             ensure_within(self.common_dir / "config", roots)
@@ -117,8 +128,7 @@ class Repository:
                 raise GitError("Repositories using alternate object stores are not supported for inspection")
         except PathBoundaryError as exc:
             raise GitError("Repository metadata is outside the configured roots") from exc
-        config = _read(
-            self.path,
+        config = self.read(
             [
                 "config",
                 "--null",
@@ -129,7 +139,6 @@ class Repository:
         )
         if config.returncode not in (0, 1):
             raise GitError("Could not inspect repository configuration")
-        self.options = []
         drivers = set()
         for entry in config.stdout.split("\0"):
             if not entry:
@@ -148,7 +157,7 @@ class Repository:
             self.options += ["-c", f"filter.{driver}.required=false"]
 
     def read(self, args, *, check=True):
-        return _read(self.path, args, self.options, check=check)
+        return _read(self.path, args, self.options, check=check, shared_group=self.shared_group)
 
     def branch(self):
         result = self.read(["symbolic-ref", "--quiet", "--short", "HEAD"], check=False)

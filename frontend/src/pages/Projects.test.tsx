@@ -76,21 +76,23 @@ it("keeps saved settings visible when live Git inspection is unavailable", async
       json: async () =>
         path.endsWith("/status")
           ? { detail: "Host Runner is unavailable" }
-          : {
-              id: "saved",
-              name: "Saved project",
-              repo_path: "/repos/saved",
-              default_branch: "main",
-              integration_branch: "develop",
-              protected_branches: ["main", "master"],
-              preferred_executor: "codex",
-              test_commands: [],
-              lint_commands: [],
-              build_commands: [],
-              agent_rules: "Preserve the API",
-              pr_policy: {},
-              updated_at: "2026-09-24T12:00:00Z",
-            },
+          : path.endsWith("/worktrees")
+            ? []
+            : {
+                id: "saved",
+                name: "Saved project",
+                repo_path: "/repos/saved",
+                default_branch: "main",
+                integration_branch: "develop",
+                protected_branches: ["main", "master"],
+                preferred_executor: "codex",
+                test_commands: [],
+                lint_commands: [],
+                build_commands: [],
+                agent_rules: "Preserve the API",
+                pr_policy: {},
+                updated_at: "2026-09-24T12:00:00Z",
+              },
     })),
   );
   mount(<ProjectDetail />, "/projects/saved");

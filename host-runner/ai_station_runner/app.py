@@ -31,6 +31,7 @@ from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.telemetry import collect
+from ai_station_runner.worktrees import inspect_worktree, reserve_and_start
 
 app = FastAPI(title="AI Station Host Runner", version=__version__)
 _manager: ProcessManager | None = None
@@ -93,6 +94,35 @@ class CodingBody(RequestBody):
 
 class CancelBody(RequestBody):
     run_id: RunId
+
+
+class PrepareWorktreeBody(RequestBody):
+    run_id: RunId
+    project_id: RunId
+    repo_path: str = Field(min_length=1, max_length=1000)
+    base_branch: str = Field(min_length=1, max_length=200)
+    permissions: list[Literal["filesystem_read", "workspace_write", "git_read", "git_write"]] = Field(
+        max_length=4
+    )
+
+
+@app.post("/v1/runs/worktree")
+def prepare_worktree(body: PrepareWorktreeBody):
+    if set(body.permissions) != {"filesystem_read", "workspace_write", "git_read", "git_write"}:
+        raise HTTPException(403, "Worktree preparation permissions are required")
+    try:
+        record = reserve_and_start(manager(), **body.model_dump(exclude={"permissions"}))
+    except GitError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {**record, "runner_id": get_settings().runner_id}
+
+
+@app.get("/v1/worktrees/{run_id}")
+def worktree_inspection(run_id: UUID):
+    try:
+        return inspect_worktree(manager(), str(run_id))
+    except GitError as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 class RepoBody(RequestBody):
@@ -411,6 +441,8 @@ def fs_search(body: FsBody):
 # that trust client-supplied ownership, command allowlists, or branch policies.
 # These routes need durable runner-side authorization before activation.
 _operational = {
+    "/v1/runs/worktree",
+    "/v1/worktrees/{run_id}",
     "/v1/runs/photo",
     "/health",
     "/v1/hardware",

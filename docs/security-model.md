@@ -54,7 +54,7 @@ Agent drafts are created disabled. The UI shows prompt, tools, permissions, and 
 
 ## Image boundaries
 
-Only the typed photo endpoint is enabled for host workload launch. It accepts bounded values and writes the fixed UUID path for its Run. Sources must be validated images inside artifact storage, without symlink redirection. Uploads are bounded by request/file size and decoded image dimensions; HTML/SVG are not accepted as images. Artifact delivery uses canonical data-root paths and nosniff headers. Filesystem/Git mutation adapters remain disabled.
+The typed photo endpoint accepts bounded values and writes the fixed UUID path for its Run. Sources must be validated images inside artifact storage, without symlink redirection. Uploads are bounded by request/file size and decoded image dimensions; HTML/SVG are not accepted as images. Artifact delivery uses canonical data-root paths and nosniff headers. Draft filesystem/Git mutation adapters remain disabled; owned worktree preparation has a separately validated endpoint described below.
 
 ## Read-only Git inspection
 
@@ -62,4 +62,4 @@ The enabled validation/status/diff endpoints use a separate bounded inspection a
 
 Worktree roots, common Git metadata, and object stores must resolve inside configured roots. Repositories using alternate object stores or partial-clone fetch configuration are rejected in this slice. Inspections stop after 15 seconds per subprocess or 2 MiB combined output; failure terminates only the owned command group. Simple branch names and commit IDs are accepted as diff bases; revision expressions are not accepted. Draft Git mutations remain disabled and do not share the inspection adapter.
 
-Project registration uses this inspection boundary before storing a canonical host path. The control plane never opens repository files directly. Configuration updates keep mandatory protected branches and reject stale versions or active project Runs. Stored argv commands and optional task-branch policy preferences do not expose a command or Git mutation endpoint. See [Projects](projects.md).
+Project registration uses this inspection boundary before storing a canonical host path. The control plane never opens repository files directly. Configuration updates keep mandatory protected branches and reject stale versions or active project Runs. Stored argv commands and optional task-branch policy preferences do not expose a command, commit, push, or PR endpoint. Worktree preparation uses a separate typed Run endpoint with derived paths/branches, a durable runner reservation, explicit capability permissions, and owned-process cancellation. See [Projects](projects.md).

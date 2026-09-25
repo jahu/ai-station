@@ -22,6 +22,7 @@ from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import mark_failed, touch_lease, transition
 from app.state import RunStatus
 from app.tools import get_tool
+from app.worktree_executor import WorktreeExecutor
 
 
 class ExecutorResult(str):
@@ -259,7 +260,12 @@ class FakeExecutor:
 
 
 # Activate adapters only after their vertical slice is verified end to end.
-EXECUTORS = {"fake": FakeExecutor(), "photo_pipe": PhotoPipeExecutor(), "chat": ChatExecutor()}
+EXECUTORS = {
+    "fake": FakeExecutor(),
+    "photo_pipe": PhotoPipeExecutor(),
+    "chat": ChatExecutor(),
+    "worktree_prepare": WorktreeExecutor(),
+}
 
 
 def _output_relative(run: Run) -> str:

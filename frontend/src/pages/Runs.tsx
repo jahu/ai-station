@@ -215,6 +215,16 @@ export function RunDetail() {
                 {run.data.error_message}
               </div>
             )}
+            {run.data.project_id && (
+              <p className="mt">
+                <Link
+                  className="back-link"
+                  to={`/projects/${run.data.project_id}`}
+                >
+                  Open project and worktrees →
+                </Link>
+              </p>
+            )}
             {run.data.parent_run_id && (
               <p>
                 <Link to={`/runs/${run.data.parent_run_id}`}>

@@ -11,9 +11,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import session_scope, utcnow
-from app.models import Project, Run
+from app.models import Project, Run, Worktree
 from app.runner_client import RunnerClient, RunnerError
-from app.serialize import project_dict
+from app.runs import create_run, create_task, run_dict
+from app.serialize import project_dict, worktree_dict
 from app.state import TERMINAL
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -167,3 +168,65 @@ def project_status(project_id: UUID, session: DB):
         raise HTTPException(409, "Repository location changed; inspect the registered host path")
     state = RunnerClient().git_status(path)
     return {**state, "repo_path": path, "checked_at": utcnow().isoformat()}
+
+
+class WorktreeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_updated_at: datetime
+
+
+@router.post("/{project_id}/worktrees", status_code=202)
+def prepare_project_worktree(project_id: UUID, body: WorktreeRequest, session: DB):
+    project = get_project(session, project_id)
+    if project.updated_at != body.expected_updated_at:
+        raise HTTPException(409, "Project settings changed. Reload before preparing a worktree.")
+    if session.scalar(
+        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
+    ):
+        raise HTTPException(409, "This project already has an active Run")
+    task = create_task(
+        session,
+        title=f"Prepare worktree for {project.name}",
+        prompt="Prepare an isolated local Git worktree",
+        capability="coding.prepare",
+        project_id=project.id,
+    )
+    run = create_run(
+        session,
+        task,
+        run_type="worktree",
+        capability="coding.prepare",
+        executor_type="worktree_prepare",
+        execution_target="host",
+        permissions=["filesystem_read", "workspace_write", "git_read", "git_write"],
+        retry_class="inspect",
+        parameters={"repo_path": project.repo_path, "base_branch": project.integration_branch},
+    )
+    relative = f"worktrees/{project.id}/{run.id}"
+    branch = f"ai/{run.id}-workspace"
+    session.add(
+        Worktree(
+            project_id=project.id,
+            run_id=run.id,
+            relative_path=relative,
+            branch=branch,
+            base_branch=project.integration_branch,
+            owned=False,
+        )
+    )
+    run.metadata_json = {"relative_path": relative, "branch": branch}
+    session.commit()
+    return run_dict(run)
+
+
+@router.get("/{project_id}/worktrees")
+def project_worktrees(project_id: UUID, session: DB):
+    get_project(session, project_id)
+    rows = session.execute(
+        select(Worktree, Run.status)
+        .outerjoin(Run, Run.id == Worktree.run_id)
+        .where(Worktree.project_id == str(project_id))
+        .order_by(Worktree.created_at.desc())
+        .limit(100)
+    )
+    return [{**worktree_dict(row), "run_status": status} for row, status in rows]

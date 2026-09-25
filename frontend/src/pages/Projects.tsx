@@ -12,6 +12,7 @@ import {
 import { api } from "../api";
 import { Empty, ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
+import ProjectWorktrees from "./ProjectWorktrees";
 
 interface Project {
   id: string;
@@ -445,6 +446,7 @@ export function ProjectDetail() {
       </PageTitle>
       <ErrorNotice error={project.error} />
       {project.isPending && <Loading />}
+      {project.data && <ProjectWorktrees project={project.data} />}
       {project.data && (
         <div className="image-workspace">
           <section className="panel content-panel">
@@ -518,8 +520,9 @@ export function ProjectDetail() {
               <h2>Execution boundary</h2>
               <p>
                 Commands, agent rules, and Git policy are saved configuration.
-                Coding execution and Git writes are not enabled in this
-                workspace yet.
+                Worktree preparation creates an isolated branch. Coding agents,
+                validation commands, commits, and PR actions are not enabled
+                yet.
               </p>
               <p className="muted">
                 If another editor changes this project, reload the saved

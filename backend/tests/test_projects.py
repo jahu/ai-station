@@ -1,4 +1,6 @@
+import importlib
 import subprocess
+import time
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
@@ -7,7 +9,9 @@ from ai_station_runner.app import app as runner_app
 from ai_station_runner.config import clear_settings_cache
 from app.api import app
 from app.db import reset_engine, session_factory
+from app.engine import tick
 from app.models import Project
+from app.recovery import recover_stale
 from app.runner_client import RunnerClient, RunnerUnavailable
 from app.runs import create_run, create_task, request_cancel
 from fastapi.testclient import TestClient
@@ -212,3 +216,215 @@ def test_host_inspection_never_holds_database_reservation(repository, monkeypatc
     with TestClient(app) as client:
         project = register(client, repository)
         assert client.get(f"/api/projects/{project['id']}/status").status_code == 200
+
+
+@pytest.fixture
+def owned_runner(repository):
+    module = importlib.import_module("ai_station_runner.app")
+    module.reset_manager()
+    yield module.manager()
+    module.manager().shutdown()
+    module.reset_manager()
+
+
+def enqueue_worktree(client, project):
+    response = client.post(
+        f"/api/projects/{project['id']}/worktrees", json={"expected_updated_at": project["updated_at"]}
+    )
+    assert response.status_code == 202, response.text
+    return response.json()
+
+
+def test_owned_worktree_run_preserves_checkout_and_registers_report(repository, owned_runner):
+    (repository / "README.md").write_text("User's uncommitted change\n")
+    original_index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project = register(client, repository)
+        run = enqueue_worktree(client, project)
+        assert run["status"] == "queued"
+        assert "external_ai" not in run["effective_permissions"]
+        with session_factory()() as session:
+            tick(session, "worktree-test")
+        result = client.get(f"/api/runs/{run['id']}").json()
+        assert result["status"] == "succeeded", result
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        assert worktree["owned"] is True
+        assert worktree["branch"] == f"ai/{run['id']}-workspace"
+        assert worktree["run_status"] == "succeeded"
+        destination = owned_runner.data_dir / worktree["relative_path"]
+        assert (destination / "README.md").read_text() == "Original repository\n"
+        (destination / "README.md").write_text("Future agent's isolated change\n")
+        assert (repository / "README.md").read_text() == "User's uncommitted change\n"
+        assert (repository / ".git/index").read_bytes() == original_index
+        artifacts = client.get(f"/api/artifacts?run_id={run['id']}").json()
+        assert artifacts[0]["type"] == "json"
+        assert "git.worktree.created" in client.get(f"/api/runs/{run['id']}/stream").text
+        reset_engine()
+        assert client.get(f"/api/projects/{project['id']}/worktrees").json()[0] == worktree
+
+
+def test_preparation_does_not_run_checkout_hooks_or_filters(repository, owned_runner):
+    marker = repository / "hook-ran"
+    helper = repository / ".git/hooks/post-checkout"
+    helper.write_text(f'#!/bin/sh\ntouch "{marker}"\n')
+    helper.chmod(0o700)
+    # An attributes file in the committed tree exercises checkout filters too.
+    (repository / ".gitattributes").write_text("README.md filter=danger\n")
+    subprocess.run(
+        ["git", "-c", "core.fsmonitor=false", "-C", str(repository), "add", ".gitattributes"], check=True
+    )
+    subprocess.run(
+        ["git", "-c", "core.fsmonitor=false", "-C", str(repository), "commit", "-m", "Attributes"],
+        check=True,
+        capture_output=True,
+    )
+    for key in ("filter.danger.clean", "filter.danger.smudge", "core.fsmonitor"):
+        subprocess.run(["git", "-C", str(repository), "config", key, str(helper)], check=True)
+    assert not marker.exists()
+    with TestClient(app) as client:
+        project = register(client, repository)
+        run = enqueue_worktree(client, project)
+        with session_factory()() as session:
+            tick(session, "worktree-test")
+        assert client.get(f"/api/runs/{run['id']}").json()["status"] == "succeeded"
+    assert not marker.exists()
+
+
+def test_worktree_dispatch_replay_and_conflicts(repository, owned_runner):
+    from uuid import uuid4
+
+    payload = {
+        "run_id": str(uuid4()),
+        "project_id": str(uuid4()),
+        "repo_path": str(repository),
+        "base_branch": "develop",
+        "permissions": ["filesystem_read", "workspace_write", "git_read", "git_write"],
+    }
+    with TestClient(runner_app) as client:
+        started = client.post("/v1/runs/worktree", json=payload)
+        assert started.status_code == 200, started.text
+        replay = client.post("/v1/runs/worktree", json=payload)
+        assert replay.json()["pid"] == started.json()["pid"]
+        assert client.post("/v1/runs/worktree", json={**payload, "base_branch": "main"}).status_code == 409
+        assert client.post("/v1/runs/worktree", json={**payload, "branch": "main"}).status_code == 422
+        assert client.post("/v1/runs/worktree", json={**payload, "permissions": []}).status_code == 403
+
+
+def test_lost_worktree_dispatch_preserves_reservation_for_inspection(repository, owned_runner, monkeypatch):
+    original = RunnerClient.prepare_worktree
+
+    def lost(self, payload):
+        original(self, payload)
+        raise RunnerUnavailable("Response lost after native launch")
+
+    monkeypatch.setattr(RunnerClient, "prepare_worktree", lost)
+    with TestClient(app) as client:
+        project = register(client, repository)
+        run = enqueue_worktree(client, project)
+        with session_factory()() as session:
+            tick(session, "lost-worker")
+        assert client.get(f"/api/runs/{run['id']}").json()["status"] == "preparing"
+        deadline = time.monotonic() + 10
+        while owned_runner.inspect(run["id"])["alive"] and time.monotonic() < deadline:
+            time.sleep(0.02)
+        assert not owned_runner.inspect(run["id"])["alive"]
+        with session_factory()() as session:
+            recover_stale(session)
+            session.commit()
+        assert client.get(f"/api/runs/{run['id']}").json()["status"] == "interrupted"
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        assert not worktree["owned"]
+        assert (owned_runner.data_dir / worktree["relative_path"]).is_dir()
+
+
+def test_worktree_cancellation_only_terminates_owned_group(repository, owned_runner, monkeypatch):
+    import sys
+
+    original_start = owned_runner.start
+
+    def slow(**kwargs):
+        kwargs["argv"] = [sys.executable, "-c", "import time; time.sleep(30)"]
+        return original_start(**kwargs)
+
+    monkeypatch.setattr(owned_runner, "start", slow)
+    original = RunnerClient.prepare_worktree
+    with TestClient(app) as client:
+        project = register(client, repository)
+        run = enqueue_worktree(client, project)
+
+        def cancel_during_dispatch(self, payload):
+            result = original(self, payload)
+            assert client.post(f"/api/runs/{run['id']}/cancel").status_code == 200
+            return result
+
+        monkeypatch.setattr(RunnerClient, "prepare_worktree", cancel_during_dispatch)
+        with session_factory()() as session:
+            tick(session, "cancel-worker")
+        assert client.get(f"/api/runs/{run['id']}").json()["status"] == "canceled"
+        assert not owned_runner.inspect(run["id"])["alive"]
+        assert not client.get(f"/api/projects/{project['id']}/worktrees").json()[0]["owned"]
+
+
+def test_worktree_destination_symlink_and_missing_base_are_rejected(repository, owned_runner):
+    with TestClient(app) as client:
+        project = register(client, repository, integration_branch="missing")
+        run = enqueue_worktree(client, project)
+        with session_factory()() as session:
+            tick(session, "invalid-base")
+        assert client.get(f"/api/runs/{run['id']}").json()["status"] == "failed"
+        current = client.put(f"/api/projects/{project['id']}", json=settings(project)).json()
+        current = client.put(
+            f"/api/projects/{project['id']}", json=settings(current, integration_branch="develop")
+        ).json()
+        run = enqueue_worktree(client, current)
+        root = owned_runner.data_dir / "worktrees"
+        root.mkdir(exist_ok=True)
+        (root / project["id"]).symlink_to(repository, target_is_directory=True)
+        with session_factory()() as session:
+            tick(session, "invalid-path")
+        assert client.get(f"/api/runs/{run['id']}").json()["status"] == "failed"
+        assert not (repository / run["id"]).exists()
+
+
+def test_preparation_timeout_terminates_its_group_and_preserves_manifest(
+    repository, owned_runner, monkeypatch
+):
+    import sys
+
+    original = owned_runner.start
+
+    def expire(**kwargs):
+        run_id = kwargs["run_id"]
+        kwargs["argv"] = [
+            sys.executable,
+            "-c",
+            f"from ai_station_runner import worktree_job as job; job.TIMEOUT=0; job.prepare({run_id!r})",
+        ]
+        return original(**kwargs)
+
+    monkeypatch.setattr(owned_runner, "start", expire)
+    with TestClient(app) as client:
+        project = register(client, repository)
+        run = enqueue_worktree(client, project)
+        with session_factory()() as session:
+            tick(session, "timeout-worker")
+        result = client.get(f"/api/runs/{run['id']}").json()
+        assert result["status"] == "failed", result
+        assert "timed out" in result["error_message"]
+        assert not owned_runner.inspect(run["id"])["alive"]
+        assert (owned_runner.data_dir / f"runtime/worktree-requests/{run['id']}.json").exists()
+
+
+def test_preparation_requires_permissions_before_dispatch(repository, owned_runner, monkeypatch):
+    from app.models import Run
+
+    monkeypatch.setattr(RunnerClient, "prepare_worktree", lambda *_: pytest.fail("Unauthorized dispatch"))
+    with TestClient(app) as client:
+        project = register(client, repository)
+        run = enqueue_worktree(client, project)
+        with session_factory()() as session:
+            session.get(Run, run["id"]).effective_permissions = ["git_read"]
+            session.commit()
+            tick(session, "permission-worker")
+        assert client.get(f"/api/runs/{run['id']}").json()["status"] == "failed"
+        assert not (owned_runner.data_dir / f"runtime/worktree-requests/{run['id']}.json").exists()
