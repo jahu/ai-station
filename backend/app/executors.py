@@ -22,6 +22,7 @@ from app.providers import ProviderError, stream_chat
 from app.resources import release_run_locks
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import mark_failed, touch_lease, transition
+from app.runtime_registry import RuntimeObservationExecutor
 from app.state import RunStatus
 from app.tools import get_tool
 from app.worktree_executor import WorktreeExecutor
@@ -269,6 +270,7 @@ EXECUTORS = {
     "worktree_prepare": WorktreeExecutor(),
     "model_discovery": ModelDiscoveryExecutor(),
     "agent": LocalAgentExecutor(),
+    "runtime_observation": RuntimeObservationExecutor(),
 }
 
 

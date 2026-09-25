@@ -1707,3 +1707,16 @@ pre {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.runtime-summary {
+  padding: 16px 24px;
+  overflow-wrap: anywhere;
+}
+.runtime-item {
+  align-items: flex-start;
+  gap: 16px;
+}
+.runtime-item > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

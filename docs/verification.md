@@ -18,11 +18,11 @@
 
 Docker Engine 29.1.3 and Compose 2.40.3 are available. Two NVIDIA GeForce RTX 3060 GPUs (12 GiB each) were enumerated by `nvidia-smi`; live metrics were read through the native runner into the containerized API. These observations are not architectural assumptions.
 
-The existing photo Python environment, photo pipeline, stable-diffusion.cpp executable, and image/LLM/video model roots are present. The original photo pipeline matches `reference/photo_pipe.py` and was not modified. Codex and Cursor executables are on PATH; Claude Code was not found. Open WebUI is already running in a separate Docker project and was left untouched. Model-server reachability/authentication has not been verified.
+The existing photo Python environment, photo pipeline, stable-diffusion.cpp executable, and image/LLM/video model roots are present. The original photo pipeline matches `reference/photo_pipe.py` and was not modified. Codex and Cursor executables are on PATH; Claude Code was not found. Open WebUI is already running in a separate Docker project and was left untouched. At that stage model-server reachability/authentication had not been verified; see the later local-provider acceptance below.
 
-## Not tested / unavailable
+## Initial foundation limitations (superseded where noted below)
 
-No real image generation/edit/recompose/upscale, coding agent task, or local/cloud model completion was executed. The image adapter is enabled and verified against a Pillow-only fake pipeline in all five mode/backend combinations. Tests cover source lineage, image delivery, thumbnails, complete stdout/stderr chunks, lost dispatch responses, disconnected polling, cancellation during dispatch, permissions, unknown exit codes, retries, and the actual reference CLI parser. Local chat is enabled and verified against HTTP mock streams and a temporary loopback fake provider. Coding/agent adapters remain unavailable. No driver, CUDA, model file, existing AI script, or unrelated service was changed.
+At the initial foundation checkpoint no real image generation/edit/recompose/upscale, coding agent task, or local/cloud model completion had been executed. The image adapter is enabled and verified against a Pillow-only fake pipeline in all five mode/backend combinations. Tests cover source lineage, image delivery, thumbnails, complete stdout/stderr chunks, lost dispatch responses, disconnected polling, cancellation during dispatch, permissions, unknown exit codes, retries, and the actual reference CLI parser. Local chat is enabled and verified against HTTP mock streams and a temporary loopback fake provider. Coding adapters remain unavailable; local agents were enabled in the later lifecycle slice below. No driver, CUDA, model file, existing AI script, or unrelated service was changed.
 
 The frontend build currently reports a bundle-size advisory; this is a local application with a 347 KiB gzip initial JavaScript bundle. The TestClient dependency emits a Starlette/httpx deprecation warning; tests pass. Neither warning is suppressed.
 
@@ -55,3 +55,11 @@ An explicit `AI_STATION_REAL_LOCAL_LLM_TESTS=1` smoke used an isolated temporary
 - Frontend: 13 component tests passed; lint, TypeScript and production build passed. Existing bundle-size advisory remains.
 - `PLAYWRIGHT_BROWSERS_PATH=/tmp/ai-station-browser .venv/bin/python scripts/agents_smoke.py`: passed disabled draft/review, activation, actual worker with fake compatible provider, Markdown artifact, pause, API restart/history persistence, scoped memory navigation, duplication and mobile overflow check. Screenshots inspected locally.
 - Agent inference in these tests used a fake provider. The separate real local Chat completion above is not a real agent or coding-task acceptance claim.
+
+
+## External runtime observations — 2026-09-25
+
+- Python lint/format and 231 tests passed; frontend lint/typecheck/production build and 14 component tests passed.
+- `scripts/runtimes_smoke.py` passed browser → API → worker → native UDS process observation, truthful unavailable test endpoint, durable registry reload and mobile-width checks. Screenshots inspected.
+- A real read-only process scan completed across 420 visible processes and recognized the existing Ollama process. No process arguments/environment were returned or persisted. This proves observation, not runtime ownership or generation readiness.
+- Regression tests cover PID reuse identity, unsupported processes, output limits, partial scans, cancellation, failed refresh preserving prior data, stable registry IDs and rejected arbitrary probe/mutation requests.

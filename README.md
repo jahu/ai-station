@@ -7,6 +7,7 @@ A local-first AI workstation control plane. Work is represented by **Task → Ru
 - Local chat: persisted conversations, model discovery, streaming Markdown, stop, regeneration, and inspectable Runs.
 - Agents: disabled natural-language drafts, explicit activation, local reports, scoped context tools, persistent UTC schedules, pause/resume, duplication and execution history.
 - Memory: scoped FTS search, validated provenance, editing, pin/disable controls, and immutable pinned Chat context.
+- External runtimes: read-only process observations and configured local endpoint health, with durable history and explicit external ownership in System.
 - Models: managed metadata-only discovery Runs, persistent file observations, category/search/detail views and report artifacts.
 - Projects: host-validated repository registration, read-only Git status, persisted branch policies, argv validation commands, and agent guidance.
 - Owned worktree preparation: a queued local Run creates an isolated task branch, captures logs, and records a JSON artifact without changing the active checkout.
@@ -127,3 +128,5 @@ Models now discovers existing host files through a cancellable worker Run, persi
 ### Agents workspace
 
 Describe a task in Agents, inspect and edit the disabled definition, select a local model and tools, then enable it explicitly. Schedules use UTC. Run now, pause, duplicate and execution history share the global Runs inspector. See [agent contracts and limits](docs/agents.md).
+
+Runtime observations are refreshed through a normal Run from **System → Observe runtimes**. Process presence, endpoint availability and model files remain separate. See [runtime observation semantics](docs/runtimes.md).

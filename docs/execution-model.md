@@ -90,3 +90,7 @@ The [Memory workspace](memory.md) exposes durable scoped entries with validated 
 ## Model discovery
 
 [Model discovery](models.md) runs as a managed native process through Task → Run → Events → Artifacts. Only host-configured roots are scanned, and only metadata is persisted. Known successful completion is required to update observations; unavailable roots and missing files remain distinguishable. No runtime ownership is inferred.
+
+## Runtime observations
+
+The [external runtime registry](runtimes.md) records bounded native process observations and the configured local endpoint’s model-discovery health through an explicit worker Run. It grants no runtime management capability and preserves earlier observations after errors.

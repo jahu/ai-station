@@ -31,6 +31,7 @@ from app.projects import router as project_router
 from app.redact import redact_obj
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, request_cancel, run_dict
+from app.runtime_registry import router as runtime_router
 from app.serialize import artifact_dict
 from app.state import TERMINAL, InvalidTransition, RunStatus
 from app.telemetry_store import history
@@ -245,6 +246,7 @@ app.include_router(project_router)
 app.include_router(memory_router)
 app.include_router(model_router)
 app.include_router(agent_router)
+app.include_router(runtime_router)
 
 dist = get_settings().frontend_dist
 if dist and Path(dist).is_dir():

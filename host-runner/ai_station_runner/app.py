@@ -30,6 +30,7 @@ from ai_station_runner.gitops import (
 )
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
+from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.telemetry import collect
 from ai_station_runner.worktrees import inspect_worktree, reserve_and_start
@@ -470,10 +471,19 @@ def fs_search(body: FsBody):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
+@app.get("/v1/runtimes/observe")
+def runtime_observations():
+    try:
+        return observe()
+    except OSError as exc:
+        raise HTTPException(503, "Host process metadata is unavailable") from exc
+
+
 # Retain draft adapters for the next vertical slices, but do not expose writes
 # that trust client-supplied ownership, command allowlists, or branch policies.
 # These routes need durable runner-side authorization before activation.
 _operational = {
+    "/v1/runtimes/observe",
     "/v1/runs/model-scan",
     "/v1/runs/worktree",
     "/v1/worktrees/{run_id}",

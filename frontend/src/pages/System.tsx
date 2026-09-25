@@ -1,3 +1,4 @@
+import RuntimeObservations from "./RuntimeObservations";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw, ShieldCheck } from "lucide-react";
 import { api, type Diagnostic, useHardware, useStatus } from "../api";
@@ -90,6 +91,7 @@ export default function System() {
           </div>
         )}
       </section>
+      <RuntimeObservations />
       <section className="panel mt">
         <div className="panel-heading">
           <h2>Workers</h2>
