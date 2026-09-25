@@ -28,6 +28,7 @@ from ai_station_runner.gitops import (
     remove_worktree,
     run_project_command,
 )
+from ai_station_runner.local_model import router as local_model_router
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
 from ai_station_runner.runtime_observation import observe
@@ -500,3 +501,6 @@ _operational = {
 app.router.routes = [
     route for route in app.router.routes if not route.path.startswith("/v1/") or route.path in _operational
 ]
+
+# This router contains only the two validated local-model operations.
+app.include_router(local_model_router)

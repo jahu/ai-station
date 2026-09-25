@@ -74,3 +74,10 @@ With the existing models on the workstation, these actual executions passed: Qwe
 The first script attempt resolved the venv interpreter symlink incorrectly and failed before inference; the script now preserves the venv path. The first two Juggernaut attempts generated output but exposed a premature interrupted status while native child reaping was pending. Those attempts are not counted as successful end-to-end Runs. The final repeat passed after the completion protocol fix; regressions cover pending reaping, resource retention and artifact registration only after confirmed exit.
 
 Reproduce explicitly: `AI_STATION_REAL_GPU_TESTS=1 AI_STATION_PHOTO_SCRIPT=/your/photo_pipe.py AI_STATION_PHOTO_PYTHON=/your/venv/bin/python .venv/bin/python scripts/real_images_smoke.py`. The script selects a discovered GPU with at least 9000 MiB free, preserves results in a new temporary directory, and supports `--gpu`, `--modes` and `--timeout`.
+
+
+## Docker access to loopback-only inference — 2026-09-25
+
+The isolated `scripts/model_bridge_smoke.py` deployment passed actual Docker API/worker → private Runner socket → host-loopback fake provider completion and silent-stream cancellation. The direct container endpoint was deliberately unreachable. An explicit `--real` repeat with `AI_STATION_REAL_LOCAL_LLM_TESTS=1`, `AI_STATION_LLM_BASE_URL=http://127.0.0.1:11434/v1` and `AI_STATION_LLM_MODEL=qwen3:8b` returned `AI Station bridge OK.` through an ordinary Chat Run. This verifies the existing Ollama compatible endpoint from Docker without changing its bind address; it is not a llama.cpp or coding-agent test.
+
+Both Compose configurations and the production Docker image build passed. Tests cover endpoint mismatch, rejected tools/redirects, secret filtering, upstream stream closure and client disconnect before inference response headers. The preview deployment at port 8765 was left running on its original version.

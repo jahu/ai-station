@@ -44,13 +44,13 @@ Copy `.env.example`; configure existing integrations using host paths. Relative 
 
 The normal launcher uses `data/runtime/runner/runner.sock` with mode `0600` in a private directory; configure `AI_STATION_RUNNER_SOCKET` to place it elsewhere (filename `runner.sock`). Containers run as your uid/gid and mount only application data and the socket directory. The runner can also be started independently with `./scripts/runner-dev.sh`, using its configured socket or the user's XDG runtime directory by default.
 
-Configure `AI_STATION_LLM_BASE_URL` for host diagnostics and `AI_STATION_LLM_CONTAINER_BASE_URL` for container clients. `host.docker.internal` maps to the Linux host gateway. A host service bound exclusively to loopback may not be reachable through that gateway; diagnose reachability before changing any service. No external service is reconfigured automatically.
+Configure `AI_STATION_LLM_BASE_URL` with the host endpoint. Compose defaults to `AI_STATION_LLM_TRANSPORT=runner`, carrying typed model requests over the private socket so loopback-only servers remain reachable without reconfiguration. Direct connections remain available with `AI_STATION_LLM_TRANSPORT=direct` and `AI_STATION_LLM_CONTAINER_BASE_URL`; `host.docker.internal` maps to the Linux host gateway. See [local model bridge](docs/local-model-bridge.md).
 
 Do not commit `.env` or secrets. The UI/API port is bound to localhost; authentication must be introduced before LAN exposure.
 
 ## Local chat
 
-Configure `AI_STATION_LLM_CONTAINER_BASE_URL` (normally `http://host.docker.internal:8080/v1`) and optionally `AI_STATION_LLM_MODEL`. The host-side diagnostics URL remains `AI_STATION_LLM_BASE_URL`. An existing llama.cpp or other OpenAI-compatible server must already be running and reachable from Docker; AI Station does not launch or reconfigure it. If required, supply its key through `AI_STATION_LLM_API_KEY`, never in the URL.
+Configure `AI_STATION_LLM_BASE_URL` (for example `http://127.0.0.1:11434/v1` for Ollama or `http://127.0.0.1:8080/v1` for llama.cpp) and optionally `AI_STATION_LLM_MODEL`. An existing compatible server must already be running; the private runner bridge reaches it on the host, and AI Station does not launch or reconfigure it. If required, supply its key through `AI_STATION_LLM_API_KEY`, never in the URL.
 
 Open Chat, select or enter a model name, set a system prompt, and create a conversation. Send with the button or Ctrl/Cmd+Enter. Responses stream into persistent history and link to their Run. Stop closes the active provider connection even if no tokens arrive. Regenerate preserves the previous response and creates a new Run for the same Task. A conversation permits one active Run; settings can be changed when it is idle.
 
