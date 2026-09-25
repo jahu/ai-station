@@ -293,6 +293,9 @@ class ModelFile(Base):
     capabilities: Mapped[list] = mapped_column(JSON, default=list)
     root_label: Mapped[str] = mapped_column(String(200), default="")
     discovered_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    last_seen_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+    last_scan_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    availability: Mapped[str] = mapped_column(String(20), default="unknown")
 
 
 class ModelDefinition(Base):

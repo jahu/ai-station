@@ -116,3 +116,7 @@ Contributions use reviewed feature PRs to `develop`; `main` is the release branc
 ### Memory workspace
 
 Memory now supports scoped FTS search, provenance inspection, versioned editing, pinning, disabling and confirmed deletion. Enabled pinned global and conversation entries are snapshotted into new Chat Runs. See [memory contracts](docs/memory.md) and the [MVP acceptance ledger](docs/mvp-status.md). Rolling summaries and agent consumers are still pending.
+
+### Models workspace
+
+Models now discovers existing host files through a cancellable worker Run, persists observations and exposes category/search/detail views. Set `AI_STATION_MODEL_ROOTS` to colon-separated host model directories. No weights are loaded or modified. See [discovery contracts](docs/models.md). Runtime management remains unavailable.

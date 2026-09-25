@@ -81,6 +81,8 @@ class ProcessManager:
         with self._lock:
             records = self._load()
             if run_id in records:
+                if records[run_id]["executor"] != executor:
+                    raise ValueError("Run already belongs to a different executor")
                 return self.inspect(run_id)
             log_dir = resolve_child(self.data_dir, f"runs/{run_id}")
             log_dir.mkdir(parents=True, exist_ok=True)

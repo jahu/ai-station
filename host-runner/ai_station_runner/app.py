@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import threading
 from pathlib import Path
 from typing import Annotated, Literal
@@ -115,6 +116,38 @@ def prepare_worktree(body: PrepareWorktreeBody):
     except GitError as exc:
         raise HTTPException(409, str(exc)) from exc
     return {**record, "runner_id": get_settings().runner_id}
+
+
+class ModelScanBody(RequestBody):
+    run_id: RunId
+    permissions: list[Literal["filesystem_read", "manage_models"]] = Field(max_length=2)
+
+
+@app.post("/v1/runs/model-scan")
+def start_model_scan(body: ModelScanBody):
+    if set(body.permissions) != {"filesystem_read", "manage_models"}:
+        raise HTTPException(403, "Model discovery permissions are required")
+    settings = get_settings()
+    if not settings.model_roots.strip():
+        raise HTTPException(409, "No model roots are configured")
+    # Roots come exclusively from host configuration, never from the request.
+    env = {
+        **os.environ,
+        "AI_STATION_DATA_HOST_PATH": str(settings.host_data_dir().resolve()),
+        "AI_STATION_MODEL_ROOTS": settings.model_roots,
+        "PYTHONUNBUFFERED": "1",
+    }
+    try:
+        record = manager().start(
+            run_id=body.run_id,
+            argv=[sys.executable, "-m", "ai_station_runner.discovery_job", body.run_id],
+            cwd=settings.host_data_dir().resolve(),
+            executor="model_discovery",
+            env=env,
+        )
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {**record, "runner_id": settings.runner_id}
 
 
 @app.get("/v1/worktrees/{run_id}")
@@ -441,13 +474,13 @@ def fs_search(body: FsBody):
 # that trust client-supplied ownership, command allowlists, or branch policies.
 # These routes need durable runner-side authorization before activation.
 _operational = {
+    "/v1/runs/model-scan",
     "/v1/runs/worktree",
     "/v1/worktrees/{run_id}",
     "/v1/runs/photo",
     "/health",
     "/v1/hardware",
     "/v1/diagnostics",
-    "/v1/models/scan",
     "/v1/process/{run_id}",
     "/v1/process/cancel",
     "/v1/git/validate",
