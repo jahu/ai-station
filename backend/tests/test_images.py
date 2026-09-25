@@ -242,3 +242,24 @@ def test_file_delivery_releases_database_transaction(session):
     for response in (artifact_file, artifact_thumbnail):
         assert response(UUID(source["id"]), session).status_code == 200
         assert not session.in_transaction()
+
+
+def test_image_waits_for_reaping_before_adopting_output(bridge, monkeypatch):
+    original = RunnerClient.inspect_process
+    pending_seen = []
+
+    def inspect(self, run_id, **offsets):
+        info = original(self, run_id, **offsets)
+        if not info["alive"] and not pending_seen:
+            pending_seen.append(True)
+            info.update(completion_pending=True, status="running", exit_code=None)
+        return info
+
+    monkeypatch.setattr(RunnerClient, "inspect_process", inspect)
+    with TestClient(app) as client:
+        run = client.post("/api/images/runs", json={"mode": "t2i", "prompt": "forest"}).json()
+        with session_factory()() as session:
+            tick(session, "image-test")
+            assert session.get(Run, run["id"]).status == "succeeded"
+        assert pending_seen
+        assert len(client.get(f"/api/artifacts?run_id={run['id']}").json()) == 1

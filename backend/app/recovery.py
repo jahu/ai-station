@@ -49,11 +49,16 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
             append_event(session, run.id, "recovery.runner_unavailable", {})
             touched.append(run.id)
             continue
-        if info.get("alive"):
+        if info.get("alive") or info.get("completion_pending"):
             from app.runs import touch_lease
 
             touch_lease(session, run)
-            append_event(session, run.id, "recovery.process_alive", {"pid": info.get("pid")})
+            append_event(
+                session,
+                run.id,
+                "recovery.completion_pending" if info.get("completion_pending") else "recovery.process_alive",
+                {"pid": info.get("pid"), "completion_pending": info.get("completion_pending", False)},
+            )
             if run.status == RunStatus.CANCEL_REQUESTED:
                 session.commit()
                 try:

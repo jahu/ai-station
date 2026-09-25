@@ -94,3 +94,7 @@ The [Memory workspace](memory.md) exposes durable scoped entries with validated 
 ## Runtime observations
 
 The [external runtime registry](runtimes.md) records bounded native process observations and the configured local endpoint’s model-discovery health through an explicit worker Run. It grants no runtime management capability and preserves earlier observations after errors.
+
+## Native process completion
+
+A native process group can disappear from the live-process scan before `waitpid` exposes its exit status. While the runner still owns the corresponding child object, inspection reports `completion_pending=true`; photo, worktree and model-scan executors keep polling and recovery preserves the lease/resource reservation. This never converts an unknown exit after runner restart into success. Reaping and inspection share a short lock; no blocking process wait holds that lock.

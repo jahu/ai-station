@@ -106,3 +106,65 @@ def test_shutdown_stops_owned_work_without_stopping_unrelated_process(tmp_path):
         manager.shutdown()
         unrelated.terminate()
         unrelated.wait()
+
+
+def test_completion_polling_never_reports_a_successful_child_interrupted(tmp_path, monkeypatch):
+    # Simulate the documented Popen race deterministically: a blocking waiter
+    # owns waitpid while poll must return None. The manager must serialize its
+    # reaping with inspection instead of starting that competing waiter.
+    from threading import Event
+
+    waiter_entered = Event()
+    release_waiter = Event()
+    real_wait = subprocess.Popen.wait
+
+    def held_wait(proc, *args, **kwargs):
+        with proc._waitpid_lock:
+            waiter_entered.set()
+            release_waiter.wait(2)
+        return real_wait(proc, *args, **kwargs)
+
+    monkeypatch.setattr(subprocess.Popen, "wait", held_wait)
+    manager = ProcessManager(tmp_path)
+    run_id = str(uuid4())
+    manager.start(run_id=run_id, argv=[sys.executable, "-c", "pass"], cwd=tmp_path, executor="test")
+    try:
+        deadline = time.monotonic() + 3
+        while time.monotonic() < deadline:
+            record = manager.inspect(run_id)
+            if not record["alive"]:
+                assert record["status"] == "exited"
+                assert record["exit_code"] == 0
+                break
+            time.sleep(0.01)
+        else:
+            raise AssertionError("Child never completed")
+    finally:
+        release_waiter.set()
+        manager.shutdown()
+
+
+def test_unreaped_child_keeps_completion_pending(tmp_path, monkeypatch):
+    manager = ProcessManager(tmp_path)
+    run_id = str(uuid4())
+    manager.start(
+        run_id=run_id,
+        argv=[sys.executable, "-c", "import time; time.sleep(.3)"],
+        cwd=tmp_path,
+        executor="test",
+    )
+    # Native thread-group teardown can make procfs look finished before waitpid
+    # exposes the exit code. Preserve that distinction instead of inventing loss.
+    monkeypatch.setattr("ai_station_runner.processes._group_alive", lambda record: False)
+    record = manager.inspect(run_id)
+    assert not record["alive"] and record["completion_pending"]
+    assert record["status"] == "running" and record["exit_code"] is None
+    deadline = time.monotonic() + 3
+    while time.monotonic() < deadline:
+        record = manager.inspect(run_id)
+        if not record["completion_pending"]:
+            assert record["status"] == "exited" and record["exit_code"] == 0
+            break
+        time.sleep(0.01)
+    else:
+        raise AssertionError("Exit status was never collected")

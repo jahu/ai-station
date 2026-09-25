@@ -127,10 +127,14 @@ class ProcessManager:
             if record is None:
                 raise ProcessNotOwned(run_id)
             alive = _group_alive(record)
-            if not alive and record["status"] in {"running", "cancel_requested"}:
-                proc = self._live.get(run_id)
-                if proc is not None:
-                    record["exit_code"] = proc.poll()
+            proc = self._live.get(run_id)
+            completion_pending = False
+            if not alive and proc is not None:
+                code = proc.poll()
+                completion_pending = code is None
+                if code is not None:
+                    record["exit_code"] = code
+            if not alive and not completion_pending and record["status"] in {"running", "cancel_requested"}:
                 record["status"] = (
                     "canceled"
                     if record["status"] == "cancel_requested"
@@ -142,6 +146,7 @@ class ProcessManager:
             result = {
                 **record,
                 "alive": alive,
+                "completion_pending": completion_pending,
                 "stdout": _read(resolve_child(self.data_dir, record["stdout_log"])),
                 "stderr_tail": _read(resolve_child(self.data_dir, record["stderr_log"]), 4000),
             }
@@ -189,12 +194,20 @@ class ProcessManager:
                 pass
 
     def _wait(self, run_id: str, proc: subprocess.Popen) -> None:
-        code = proc.wait()
-        with self._lock:
-            records = self._load()
-            records[run_id]["exit_code"] = code
-            self._dump(records)
-            self._live.pop(run_id, None)
+        # Popen.wait() holds its internal waitpid lock while blocking. Concurrent
+        # poll() can then return None even after /proc reports the child gone,
+        # causing inspect() to persist a false interruption. Reap and publish
+        # under the same short registry lock used by inspect(), never wait there.
+        while True:
+            with self._lock:
+                code = proc.poll()
+                if code is not None:
+                    records = self._load()
+                    records[run_id]["exit_code"] = code
+                    self._dump(records)
+                    self._live.pop(run_id, None)
+                    return
+            time.sleep(0.05)
 
     def _load(self) -> dict:
         # Fail closed on a corrupt registry instead of forgetting ownership.
