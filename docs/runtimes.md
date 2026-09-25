@@ -1,0 +1,7 @@
+# External runtime observations
+
+The initial Runtime Registry observes existing host processes and the administrator-configured local compatible-provider endpoint. It does not launch, stop, import, restart or reconfigure them. All discovered instances are external. Runtime definitions describe families; instance records describe observations. Model files are separate records and discovery does not infer which weights a process has loaded.
+
+Refresh is an explicit Task → Run performed by the worker. Host Runner reads bounded Linux process metadata through a typed private API; the worker probes only the configured local provider. Process observation means a recognized process was present, not that inference is healthy. Endpoint availability means the models endpoint answered, not a completed generation. Command lines and environment variables are never returned or stored. A failed host observation preserves prior records and reports them as stale by their timestamps. Incomplete scans mark unseen instances unknown rather than stopped.
+
+Process identity includes boot identity, PID and start ticks. Recognized names are deliberately limited to llama-server, Ollama, stable-diffusion server and a Python ComfyUI main script. Recognition is a heuristic, not proof of ownership or permission to signal a process. Gone observations remain inspectable as not observed; no destructive deletion is offered. The registry has no management endpoints.

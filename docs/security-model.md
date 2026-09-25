@@ -75,3 +75,7 @@ Memory scope/source IDs must resolve to existing records; mismatched source conv
 ## Local agents
 
 [Agent lifecycle](agents.md) uses the shared queue, local provider, Run events and Markdown artifacts. Explicit telemetry and own-scope memory tools gather bounded context before inference. Definitions start disabled; unsupported tools block activation. Scheduling is serialized, persistent and non-overlapping.
+
+## Runtime observations
+
+The [external runtime registry](runtimes.md) records bounded native process observations and the configured local endpoint’s model-discovery health through an explicit worker Run. It grants no runtime management capability and preserves earlier observations after errors.
