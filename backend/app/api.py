@@ -23,6 +23,7 @@ from app.db import migrate, session_factory, session_scope, utcnow
 from app.events import event_dict, list_events
 from app.images import MAX_UPLOAD
 from app.images import router as image_router
+from app.memory_api import router as memory_router
 from app.models import Artifact, Run, Setting, WorkerRow
 from app.projects import router as project_router
 from app.redact import redact_obj
@@ -233,6 +234,7 @@ def artifacts(session: DB, run_id: UUID | None = None, limit: int = Query(100, g
 app.include_router(image_router)
 app.include_router(chat_router)
 app.include_router(project_router)
+app.include_router(memory_router)
 
 dist = get_settings().frontend_dist
 if dist and Path(dist).is_dir():

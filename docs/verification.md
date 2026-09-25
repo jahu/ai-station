@@ -29,3 +29,9 @@ The frontend build currently reports a bundle-size advisory; this is a local app
 ## Owned worktree preparation
 
 Real Git preparation passed through the API, worker, native Unix-socket runner, and browser using a disposable repository. The generated worktree contains the selected committed base while the original checkout retains its uncommitted changes and identical index bytes. The Run records logs, ownership, and a JSON artifact. Regression tests cover request replay/conflicts, disabled checkout hooks and filters, lost dispatch responses, symlink destinations, missing bases, capability permissions, cancellation, and bounded runtime. A separate cancellation regression confirms helper Git reads remain in the managed process group. Partial or uncertain preparations are preserved for inspection; no coding CLI, validation command, push, or PR was executed by the application.
+
+## Scoped memory workspace (2026-09-25)
+
+- Python lint/format and 199 tests passed; frontend lint/typecheck/format/build and 10 UI tests passed.
+- `PLAYWRIGHT_BROWSERS_PATH=/tmp/ai-station-browser .venv/bin/python scripts/memory_smoke.py`: browser CRUD, reload persistence, disable/search, confirmed deletion and mobile-width checks passed against a temporary database. No model call was made.
+- Full feature diff reviewed for source/scope validation, FTS filtering before limit, stale-write protection and immutable Chat context. Production CSS reviewed from desktop/mobile screenshots.

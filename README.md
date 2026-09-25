@@ -112,3 +112,7 @@ The runner is not a shell daemon. Its enabled API offers host inspection, valida
 Uncertain host execution keeps its reservations pending inspection; recovery never blindly repeats side effects. If a worker disappears after dispatch, the run requires inspection when the process is gone. SQLite uses short serialized transactions; multi-node/distributed execution is not implemented. No real Qwen, Juggernaut, Codex, Cursor, or local LLM completion has been smoke-tested yet.
 
 Contributions use reviewed feature PRs to `develop`; `main` is the release branch. See [AGENTS.md](AGENTS.md).
+
+### Memory workspace
+
+Memory now supports scoped FTS search, provenance inspection, versioned editing, pinning, disabling and confirmed deletion. Enabled pinned global and conversation entries are snapshotted into new Chat Runs. See [memory contracts](docs/memory.md) and the [MVP acceptance ledger](docs/mvp-status.md). Rolling summaries and agent consumers are still pending.

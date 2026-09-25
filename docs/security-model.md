@@ -63,3 +63,7 @@ The enabled validation/status/diff endpoints use a separate bounded inspection a
 Worktree roots, common Git metadata, and object stores must resolve inside configured roots. Repositories using alternate object stores or partial-clone fetch configuration are rejected in this slice. Inspections stop after 15 seconds per subprocess or 2 MiB combined output; failure terminates only the owned command group. Simple branch names and commit IDs are accepted as diff bases; revision expressions are not accepted. Draft Git mutations remain disabled and do not share the inspection adapter.
 
 Project registration uses this inspection boundary before storing a canonical host path. The control plane never opens repository files directly. Configuration updates keep mandatory protected branches and reject stale versions or active project Runs. Stored argv commands and optional task-branch policy preferences do not expose a command, commit, push, or PR endpoint. Worktree preparation uses a separate typed Run endpoint with derived paths/branches, a durable runner reservation, explicit capability permissions, and owned-process cancellation. See [Projects](projects.md).
+
+## Memory boundaries
+
+Memory scope/source IDs must resolve to existing records; mismatched source conversations and Runs are rejected. Scope and provenance cannot be reassigned by editing content. Chat consumes only enabled pinned global and matching conversation entries. Historical context remains in Run parameters after disabling or deleting an entry. See [memory contracts](memory.md).

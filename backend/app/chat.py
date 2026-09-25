@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import session_scope, utcnow
 from app.local_provider import LocalChatProvider, local_endpoint
-from app.models import Conversation, Message, Run, Task
+from app.models import Conversation, MemoryEntry, Message, Run, Task
 from app.providers import ProviderError
 from app.runs import create_run, create_task, run_dict
 from app.serialize import conversation_dict, message_dict
@@ -175,8 +175,32 @@ def enqueue(session, row, *, user: Message, parent_run_id=None):
         else:
             alternating.append(item)
     context = alternating
-    if row.system_prompt:
-        context.insert(0, {"role": "system", "content": row.system_prompt})
+    pinned = list(
+        session.scalars(
+            select(MemoryEntry)
+            .where(
+                MemoryEntry.enabled.is_(True),
+                MemoryEntry.pinned.is_(True),
+                ((MemoryEntry.scope == "conversation") & (MemoryEntry.scope_id == row.id))
+                | ((MemoryEntry.scope == "global") & (MemoryEntry.scope_id == "")),
+            )
+            .order_by(MemoryEntry.updated_at.desc(), MemoryEntry.id)
+            .limit(20)
+        )
+    )
+    memory_context, memory_sources = [], []
+    memory_budget = 12000
+    for entry in pinned:
+        if len(entry.content) > memory_budget:
+            continue
+        memory_context.append(f"[{entry.scope}/{entry.memory_type}] {entry.content}")
+        memory_sources.append({"id": entry.id, "updated_at": entry.updated_at.isoformat()})
+        memory_budget -= len(entry.content)
+    system = row.system_prompt
+    if memory_context:
+        system += "\n\nUser-pinned reference context (may be outdated):\n" + "\n\n".join(memory_context)
+    if system:
+        context.insert(0, {"role": "system", "content": system.strip()})
     parent = session.get(Run, parent_run_id) if parent_run_id else None
     task = (
         session.get(Task, parent.task_id)
@@ -204,6 +228,7 @@ def enqueue(session, row, *, user: Message, parent_run_id=None):
             "temperature": row.temperature,
             "max_tokens": row.max_tokens,
             "messages": context,
+            "memory_sources": memory_sources,
         },
         permissions=[],
         retry_class="inspect",

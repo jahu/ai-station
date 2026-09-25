@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.db import utcnow
@@ -66,31 +66,42 @@ def search_memory(
     *,
     scope: str | None = None,
     scope_id: str | None = None,
+    tag: str | None = None,
+    include_disabled: bool = False,
     limit: int = 30,
+    offset: int = 0,
 ) -> list[MemoryEntry]:
-    statement = select(MemoryEntry).where(MemoryEntry.enabled.is_(True))
+    statement = select(MemoryEntry)
+    if not include_disabled:
+        statement = statement.where(MemoryEntry.enabled.is_(True))
     if scope:
         statement = statement.where(MemoryEntry.scope == scope)
     if scope_id is not None:
         statement = statement.where(MemoryEntry.scope_id == scope_id)
+    if tag is not None:
+        tags = func.json_each(MemoryEntry.tags).table_valued("value")
+        statement = statement.where(select(tags.c.value).where(tags.c.value == tag).exists())
     if query.strip():
-        rows = session.execute(
+        # Apply scope/enabled filters BEFORE limiting results. Otherwise unrelated
+        # high-ranking entries can hide every match in the requested scope.
+        matches = (
             text(
-                "SELECT memory_id FROM memory_fts WHERE memory_fts MATCH :q "
-                "ORDER BY bm25(memory_fts) LIMIT :limit"
-            ),
-            {"q": _fts_query(query), "limit": limit},
-        ).all()
-        ids = [row[0] for row in rows]
-        if not ids:
-            return []
-        statement = statement.where(MemoryEntry.id.in_(ids))
-        found = list(session.scalars(statement))
-        order = {memory_id: index for index, memory_id in enumerate(ids)}
-        found.sort(key=lambda item: (not item.pinned, order.get(item.id, 999)))
-        return found[:limit]
-    statement = statement.order_by(MemoryEntry.pinned.desc(), MemoryEntry.updated_at.desc()).limit(limit)
-    return list(session.scalars(statement))
+                "SELECT memory_id, bm25(memory_fts) AS relevance FROM memory_fts "
+                "WHERE memory_fts MATCH :memory_query"
+            )
+            .columns(memory_id=MemoryEntry.id.type, relevance=MemoryEntry.confidence.type)
+            .subquery()
+        )
+        statement = (
+            statement.join(matches, MemoryEntry.id == matches.c.memory_id)
+            .order_by(MemoryEntry.pinned.desc(), matches.c.relevance, MemoryEntry.id)
+            .params(memory_query=_fts_query(query))
+        )
+    else:
+        statement = statement.order_by(
+            MemoryEntry.pinned.desc(), MemoryEntry.updated_at.desc(), MemoryEntry.id
+        )
+    return list(session.scalars(statement.limit(limit).offset(offset)))
 
 
 def disable_memory(session: Session, entry_id: str) -> MemoryEntry:
