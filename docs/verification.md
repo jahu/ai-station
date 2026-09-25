@@ -2,8 +2,8 @@
 
 ## Automated checks
 
-- Backend and Host Runner: 186 pytest cases passed; Ruff lint and formatting passed.
-- Frontend: ESLint, strict TypeScript, seven UI behavior tests, and production build passed.
+- Backend and Host Runner: 195 pytest cases passed; Ruff lint and formatting passed.
+- Frontend: ESLint, strict TypeScript, eight UI behavior tests, and production build passed.
 - Production Docker image and both Compose configurations validated.
 - Production and development Docker deployments (including the Vite proxy): native Unix-socket telemetry, API health, worker execution through a fake executor, SSE replay, persisted history after API container restart, and supervisor cleanup passed.
 - Image Docker/browser smoke: Generate → Library → Edit passed using a Pillow-only fake pipeline; source reuse and artifact rendering were checked. Artifact delivery releases database transactions before streaming. No real model inference was performed.
@@ -25,3 +25,7 @@ The existing photo Python environment, photo pipeline, stable-diffusion.cpp exec
 No real image generation/edit/recompose/upscale, coding agent task, or local/cloud model completion was executed. The image adapter is enabled and verified against a Pillow-only fake pipeline in all five mode/backend combinations. Tests cover source lineage, image delivery, thumbnails, complete stdout/stderr chunks, lost dispatch responses, disconnected polling, cancellation during dispatch, permissions, unknown exit codes, retries, and the actual reference CLI parser. Local chat is enabled and verified against HTTP mock streams and a temporary loopback fake provider. Coding/agent adapters remain unavailable. No driver, CUDA, model file, existing AI script, or unrelated service was changed.
 
 The frontend build currently reports a bundle-size advisory; this is a local application with a 347 KiB gzip initial JavaScript bundle. The TestClient dependency emits a Starlette/httpx deprecation warning; tests pass. Neither warning is suppressed.
+
+## Owned worktree preparation
+
+Real Git preparation passed through the API, worker, native Unix-socket runner, and browser using a disposable repository. The generated worktree contains the selected committed base while the original checkout retains its uncommitted changes and identical index bytes. The Run records logs, ownership, and a JSON artifact. Regression tests cover request replay/conflicts, disabled checkout hooks and filters, lost dispatch responses, symlink destinations, missing bases, capability permissions, cancellation, and bounded runtime. A separate cancellation regression confirms helper Git reads remain in the managed process group. Partial or uncertain preparations are preserved for inspection; no coding CLI, validation command, push, or PR was executed by the application.

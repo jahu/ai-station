@@ -82,6 +82,7 @@ def main():
                     else:
                         raise RuntimeError("Runner did not start")
                 api_process = start_api()
+                launch(["app.worker_main"])
                 with sync_playwright() as playwright:
                     browser = playwright.chromium.launch()
                     page = browser.new_page(viewport={"width": 1440, "height": 1040})
@@ -129,6 +130,19 @@ def main():
                     ).wait_for()
                     page.get_by_role("button", name="Reload saved settings").click()
                     page.get_by_role("heading", name="Updated in another editor", exact=True).wait_for()
+                    page.get_by_role("button", name="Prepare isolated worktree").click()
+                    page.get_by_text("succeeded", exact=True).wait_for(timeout=20000)
+                    page.get_by_text("worktree.json", exact=True).wait_for()
+                    page.get_by_role("link", name="Open project and worktrees →").click()
+                    page.get_by_text("Prepared and recorded. Preserved for review.", exact=True).wait_for()
+                    with httpx.Client(base_url=url, trust_env=False) as client:
+                        worktrees = client.get(f"/api/projects/{project['id']}/worktrees").json()
+                        assert len(worktrees) == 1 and worktrees[0]["owned"]
+                        assert (
+                            root / "data" / worktrees[0]["relative_path"] / "README.md"
+                        ).read_text() == "Original repository\n"
+                    assert (repo / "README.md").read_text() == "Changed by the smoke test\n"
+                    page.screenshot(path="/tmp/ai-station-worktree.png", full_page=True)
                     runner.terminate()
                     runner.wait(timeout=10)
                     page.get_by_role("button", name="Refresh", exact=True).click()
@@ -142,7 +156,7 @@ def main():
                     browser.close()
                 assert (repo / ".git/index").read_bytes() == index
                 print(
-                    "PASS: browser registration, real Git over UDS, settings, dirty status, restart persistence, stale edit rejection, runner outage, mobile layout, and unchanged index"
+                    "PASS: browser registration, real Git over UDS, settings, dirty status, restart persistence, stale edit rejection, worker-driven worktree creation/report, runner outage, mobile layout, and unchanged index"
                 )
             except Exception:
                 log.flush()

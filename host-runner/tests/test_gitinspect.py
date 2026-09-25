@@ -1,5 +1,9 @@
+import os
+import signal
 import subprocess
 import sys
+import time
+from uuid import uuid4
 
 import pytest
 from ai_station_runner.app import app
@@ -132,3 +136,47 @@ def test_bounded_inspection_terminates_its_process(repo, monkeypatch, failure):
     with pytest.raises(GitError, match="limit"):
         gitinspect._read(repo, ["version"])
     assert processes[0].poll() is not None
+
+
+def test_managed_job_cancellation_includes_git_inspection_children(repo, tmp_path):
+    from ai_station_runner.processes import ProcessManager, _identity
+
+    pid_file = tmp_path / "inspection.pid"
+    script = f"""
+import subprocess, sys
+from pathlib import Path
+from ai_station_runner.gitinspect import Repository
+original = subprocess.Popen
+def slow(argv, **kwargs):
+    process = original([sys.executable, '-c', 'import time; time.sleep(30)'], **kwargs)
+    Path({str(pid_file)!r}).write_text(str(process.pid))
+    return process
+subprocess.Popen = slow
+Repository(Path({str(repo)!r}), shared_group=True)
+"""
+    manager = ProcessManager(tmp_path / "managed", grace_seconds=0.1)
+    run_id = str(uuid4())
+    child_pid, identity = None, None
+    try:
+        process = manager.start(
+            run_id=run_id, argv=[sys.executable, "-c", script], cwd=repo, executor="inspection-test"
+        )
+        deadline = time.monotonic() + 5
+        while not pid_file.exists() and time.monotonic() < deadline:
+            time.sleep(0.02)
+        child_pid = int(pid_file.read_text())
+        identity = _identity(child_pid)
+        assert os.getpgid(child_pid) == process["process_group_id"]
+        assert not manager.cancel(run_id)["alive"]
+        current = _identity(child_pid)
+        assert current is None or current["state"] in {"Z", "X"}
+    finally:
+        manager.shutdown()
+        current = _identity(child_pid) if child_pid else None
+        if (
+            current
+            and identity
+            and current["start_ticks"] == identity["start_ticks"]
+            and current["state"] not in {"Z", "X"}
+        ):
+            os.kill(child_pid, signal.SIGKILL)

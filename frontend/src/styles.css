@@ -1296,6 +1296,17 @@ pre {
   max-height: 400px;
   overflow: auto;
 }
+.project-worktrees-heading {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.worktree-list article {
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+}
+.worktree-list {
+  margin-top: 20px;
+}
 @media (max-width: 720px) {
   .project-grid,
   .project-form .field-pair {

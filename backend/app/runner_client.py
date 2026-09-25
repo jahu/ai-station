@@ -88,6 +88,12 @@ class RunnerClient:
     def create_worktree(self, payload: dict) -> dict:
         return self.request("POST", "/v1/git/worktree", payload)
 
+    def prepare_worktree(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/runs/worktree", payload)
+
+    def inspect_worktree(self, run_id: str) -> dict:
+        return self.request("GET", f"/v1/worktrees/{run_id}")
+
     def remove_worktree(self, payload: dict) -> dict:
         return self.request("POST", "/v1/git/worktree/remove", payload)
 

@@ -6,6 +6,7 @@ A local-first AI workstation control plane. Work is represented by **Task → Ru
 
 - Local chat: persisted conversations, model discovery, streaming Markdown, stop, regeneration, and inspectable Runs.
 - Projects: host-validated repository registration, read-only Git status, persisted branch policies, argv validation commands, and agent guidance.
+- Owned worktree preparation: a queued local Run creates an isolated task branch, captures logs, and records a JSON artifact without changing the active checkout.
 - Images: Qwen/Juggernaut Generate, Edit, multi-reference Recompose, and 4× Upscale through the existing photo pipeline.
 - Validated image uploads, artifact Library, source reuse, live stdout/stderr, owned-process cancellation, and explicit image retries.
 - One-command startup of the native runner, API, worker, scheduler, and web UI.
@@ -14,7 +15,7 @@ A local-first AI workstation control plane. Work is represented by **Task → Ru
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory.
 - Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
 
-Earlier coding, agent, memory, and discovery modules are preserved. They are drafts, not operational integrations. Unimplemented workspaces show unavailable states. Coding writes remain disabled until runner-side authorization and worktree ownership are verified.
+Earlier coding-agent, agent, memory, and discovery modules are preserved. They are drafts, not operational integrations. Unimplemented workspaces show unavailable states. Coding-agent launches, project command execution, commits, pushes, and PR actions remain disabled.
 
 ## Prerequisites and installation
 
@@ -65,7 +66,9 @@ Failed, canceled, or interrupted image runs may be explicitly retried after the 
 
 Include your repository roots in `AI_STATION_ALLOWED_ROOTS` (colon-separated host paths) and restart the runner. Open Projects → Register project and enter an existing Git repository's host path. The runner checks its canonical root and metadata; registering a subdirectory or symlink cannot create a duplicate project. AI Station's own checkout can be registered the same way.
 
-Project details show the current branch and working-tree changes on explicit refresh. Configure default/integration branches, protected branches, executor preference, test/lint/build commands, and agent guidance. Commands use one JSON argv array per line, such as `["pytest", "-q"]`. Saving does not execute commands or alter the repository. Stale edits and edits during active project Runs are rejected. Repository paths are immutable; removal is not exposed yet. Coding execution, worktree creation, commits, and PR actions remain unavailable. See [Projects](docs/projects.md).
+Project details show the current branch and working-tree changes on explicit refresh. Configure default/integration branches, protected branches, executor preference, test/lint/build commands, and agent guidance. Commands use one JSON argv array per line, such as `["pytest", "-q"]`. Saving does not execute commands or alter the repository. Stale edits and edits during active project Runs are rejected. Repository paths are immutable; removal is not exposed yet. See [Projects](docs/projects.md).
+
+Choose **Prepare isolated worktree** to queue a local Run from the project's existing integration branch. The worker asks the runner to create `ai/<run-id>-workspace` under `worktrees/<project-id>/<run-id>`, leaving your current checkout and index unchanged. The Run captures logs and a JSON report; Projects lists the preserved worktree. Cancellation signals only its owned process group. No coding agent, validation command, commit, push, or PR is launched. Hooks/filters are disabled during preparation, submodules are not initialized, and partial data is preserved for inspection after errors. Custom `core.worktree`, partial clones, and alternate object stores are not supported. See [owned worktrees](docs/worktrees.md).
 
 ## Development and verification
 
@@ -104,7 +107,7 @@ The scheduler enqueues normal runs and samples telemetry. Short SQLite transacti
 
 ## Security boundaries and limitations
 
-The runner is not a shell daemon. Its enabled API offers host inspection, validated photo launches, and cancellation of recorded, verified process groups. Boot identity, process start ticks, session, and group membership protect against PID reuse. Read-only Git inspection disables repository command helpers and enforces metadata roots, time/output bounds, and revision validation. Partial clones and alternate object stores are not supported for inspection yet. Draft filesystem/Git mutation routes are unavailable. Existing external services are never stopped or imported implicitly. Managed workload containers and remote nodes remain future work.
+The runner is not a shell daemon. Its enabled API offers host inspection, validated photo launches, owned worktree preparation, and cancellation of recorded, verified process groups. Boot identity, process start ticks, session, and group membership protect against PID reuse. Read-only Git inspection disables repository command helpers and enforces metadata roots, time/output bounds, and revision validation. Partial clones and alternate object stores are not supported for inspection yet. Draft filesystem/Git mutation routes are unavailable. Existing external services are never stopped or imported implicitly. Managed workload containers and remote nodes remain future work.
 
 Uncertain host execution keeps its reservations pending inspection; recovery never blindly repeats side effects. If a worker disappears after dispatch, the run requires inspection when the process is gone. SQLite uses short serialized transactions; multi-node/distributed execution is not implemented. No real Qwen, Juggernaut, Codex, Cursor, or local LLM completion has been smoke-tested yet.
 
