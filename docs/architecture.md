@@ -92,3 +92,6 @@ Compose defaults to the [typed local-model bridge](local-model-bridge.md) over t
 ## Dashboard activity projection
 
 The dashboard reads bounded summaries of persisted Runs, enabled agents, upcoming schedules, conversations, generated artifacts and runtime observations through `/api/dashboard`. It performs no discovery or execution. Runtime observations retain their original age and source; overdue schedules remain visible without promising an execution time. Hardware and worker/scheduler health retain their separate live endpoints.
+
+
+Conversation summaries use a dedicated persisted coverage/provenance record and the existing scoped Memory model. [Summary updates](conversation-summaries.md) run through the worker and preserve the full conversation history.

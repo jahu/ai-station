@@ -24,6 +24,7 @@ from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import mark_failed, touch_lease, transition
 from app.runtime_registry import RuntimeObservationExecutor
 from app.state import RunStatus
+from app.summary_executor import SummaryExecutor
 from app.tools import get_tool
 from app.worktree_executor import WorktreeExecutor
 
@@ -267,6 +268,7 @@ EXECUTORS = {
     "fake": FakeExecutor(),
     "photo_pipe": PhotoPipeExecutor(),
     "chat": ChatExecutor(),
+    "chat_summary": SummaryExecutor(),
     "worktree_prepare": WorktreeExecutor(),
     "model_discovery": ModelDiscoveryExecutor(),
     "agent": LocalAgentExecutor(),

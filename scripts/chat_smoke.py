@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def main():
-    from playwright.sync_api import sync_playwright
+    from playwright.sync_api import expect, sync_playwright
 
     stop = threading.Event()
     silent_started = threading.Event()
@@ -68,6 +68,7 @@ def main():
             "AI_STATION_DATA_DIR": temporary,
             "AI_STATION_DATA_HOST_PATH": temporary,
             "AI_STATION_DATABASE_URL": "",
+            "AI_STATION_LLM_TRANSPORT": "direct",
             "AI_STATION_LLM_BASE_URL": f"http://127.0.0.1:{provider.server_port}/v1",
             "AI_STATION_LLM_MODEL": "fake-local-model",
             "AI_STATION_LLM_API_KEY": "",
@@ -139,6 +140,32 @@ def main():
                     assert silent_started.wait(20), "Fake provider was not called"
                     page.get_by_role("button", name="Stop", exact=True).click()
                     page.get_by_text("canceled", exact=True).wait_for(timeout=10000)
+                    conversation_id = conversation_url.rsplit("/", 1)[-1]
+                    with httpx.Client(base_url=url, trust_env=False) as api:
+                        for index in range(5):
+                            queued = api.post(
+                                f"/api/chat/conversations/{conversation_id}/messages",
+                                json={"content": f"Summary fixture {index}"},
+                            )
+                            queued.raise_for_status()
+                            deadline = time.monotonic() + 20
+                            while time.monotonic() < deadline:
+                                result = api.get(f"/api/runs/{queued.json()['id']}").json()
+                                if result["status"] in {"succeeded", "failed", "canceled"}:
+                                    break
+                                time.sleep(0.2)
+                            assert result["status"] == "succeeded", result
+                    page.get_by_text("Conversation memory · Recent messages only", exact=True).click()
+                    page.get_by_role("button", name="Update summary", exact=True).click()
+                    expect(
+                        page.get_by_text("Conversation memory · Summary active", exact=True)
+                    ).to_be_visible(timeout=20000)
+                    expect(page.get_by_role("link", name="Edit or disable memory")).to_be_visible()
+                    with httpx.Client(base_url=url, trust_env=False) as api:
+                        summary = api.get(f"/api/chat/conversations/{conversation_id}").json()["summary"]
+                        assert summary["enabled"] and summary["source_message_ids"]
+                        assert api.get(f"/api/runs/{summary['run_id']}").json()["status"] == "succeeded"
+                    page.screenshot(path="/tmp/ai-station-summary.png", full_page=True)
                     page.set_viewport_size({"width": 390, "height": 844})
                     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
                     page.screenshot(path="/tmp/ai-station-chat-mobile.png", full_page=True)

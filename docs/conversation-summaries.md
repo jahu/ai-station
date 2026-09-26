@@ -1,0 +1,7 @@
+# Inspectable rolling conversation summaries
+
+Users explicitly update a conversation summary through a normal local-model Task/Run. Each update combines the previous enabled summary with a bounded next segment of older eligible messages, leaving the newest eight messages verbatim. Failed, canceled or interrupted updates never replace the current summary. Full message history remains intact.
+
+The persisted summary record links its source Run, exact source message IDs, coverage boundary, previous summary and editable conversation-scoped Memory entry. The UI exposes the result and provenance. Disabling or deleting that Memory entry stops its use immediately for future queued requests; older summaries are not silently restored. Already queued Runs keep their immutable context snapshots. Updating a summary while its prior Memory entry changes fails for inspection rather than overwriting that edit.
+
+Chat combines an enabled summary, its recent bounded message window and enabled pinned context. Summary text is marked as potentially imperfect reference material. Scope filtering prevents another conversation's summary from entering the request. Summarization is explicit, local, cancellable and never an invisible extra provider call. One conversation still allows only one active Run. Each update processes at most 200 older messages and 48,000 source characters; an individual older message exceeding this budget requires a later chunking capability. Generated summaries are limited to 8,000 characters. This slice does not automatically schedule summarization.
