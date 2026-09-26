@@ -1,0 +1,21 @@
+# Cursor coding execution
+
+The first Cursor adapter uses a bounded file-edit proposal protocol. The user selects relative UTF-8 file paths and explicitly grants external AI access. The worker first creates a fresh owned worktree. A separate Cursor process receives only the selected text and project guidance in an empty provider workspace, with isolated configuration and existing CLI-managed authentication. It has no enabled tools. AI Station validates the returned file replacements and applies them only to selected paths in the owned worktree, preserving the original checkout. Saved validation runs next and the resulting diff remains available for review. Commits, pushes, PRs and deployment stay outside this adapter.
+
+This approach deliberately limits the first integration: no autonomous repository exploration, arbitrary commands, binary files, deletion, hidden configuration files or unbounded context. The provider is external and displayed as such. Existing Cursor authentication is used by the CLI through its normal configuration reference; AI Station never reads or copies credentials.
+
+On 2026-09-26 a real Cursor CLI fixture returned a structured file-edit proposal using existing login, an empty provider workspace and an empty tool allowlist. No actual repository was edited by this probe. `--exclude-workspace-context` was rejected by the provider for this account; the adapter uses an empty workspace instead. This is provider-adapter evidence, not full Coding acceptance.
+
+## Run and process contract
+
+One Task owns a preparation Run, Cursor Run and (when configured) validation Run. Follow-ups are queued transactionally only after successful completion. Project settings/commands are captured before work begins; agents cannot change them. The provider process uses an empty Git repository to prevent discovery of a parent checkout even when application storage is inside a repository. Tool events and non-text assistant actions cause rejection. Native checked writes happen only after confirmed provider completion and repeated worktree/source identity checks.
+
+Cancellation signals only the owned process group. CLI helpers remaining in that group are drained using Linux pidfds and verified process identity before completion; a CLI failure or malformed reply cannot leave its helpers keeping the Run alive. Provider timeout/output overflow terminates the owned group. Uncertain dispatch or missing exit status requires inspection, never automatic external retry. Interrupted writes may leave partial changes, preserved for inspection without a successful review report or queued validation.
+
+The result includes a JSON report, Git-compatible text patch, file hashes and insertion/deletion counts. Successful coding means checked edits were applied, not that validation passed or a human approved them. No commands configured is explicitly shown as untested. The separate validation Run provides its own status, command results, logs and artifact.
+
+## Verified acceptance (2026-09-26)
+
+`AI_STATION_REAL_CURSOR_TESTS=1 AI_STATION_REAL_SANDBOX_TESTS=1 PLAYWRIGHT_BROWSERS_PATH=/tmp/ai-station-browser .venv/bin/python scripts/projects_smoke.py` passed Chromium → API → worker → native UDS → real external Cursor, two selected file edits, diff review and a successful native sandbox validation command. The disposable original checkout and Git index were unchanged. This is a small real coding task, not evidence of unrestricted autonomous repository development.
+
+The first full attempt revealed an owned background CLI helper remaining after the main process exited. After adding identity-checked helper cleanup, the complete repeat passed. Normal tests cover success, provider failure, cancellation, selected-path/hash boundaries, patch application and helper cleanup without calling external AI. Codex sandbox execution remains unavailable on this machine; no host policy was weakened to enable it.

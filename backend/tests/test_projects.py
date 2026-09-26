@@ -620,3 +620,140 @@ def test_validation_does_not_inherit_runner_credentials(
         with session_factory()() as session:
             tick(session, "environment-validation")
         assert client.get(f"/api/runs/{run['id']}").json()["status"] == "succeeded"
+
+
+@pytest.fixture
+def fake_cursor(validation_sandbox, tmp_path, monkeypatch):
+    import os
+
+    binary_dir = tmp_path / "cursor-bin"
+    binary_dir.mkdir()
+    binary = binary_dir / "cursor-agent"
+    binary.write_text("""#!/usr/bin/python3
+import json, os, pathlib, sys
+args=sys.argv
+assert args[args.index('--allowed-tools')+1] == ''
+assert pathlib.Path.cwd() == pathlib.Path(args[args.index('--workspace')+1])
+assert (pathlib.Path.cwd()/'.git/HEAD').read_text().strip() == 'ref: refs/heads/ai-proposal'
+config=json.loads((pathlib.Path(os.environ['HOME'])/'.cursor/cli-config.json').read_text())
+assert config['permissions']['deny'] == ['Shell(*)','Read(**)','Write(**)']
+assert 'AI_STATION_TEST_SECRET' not in os.environ
+print(json.dumps({'type':'system','subtype':'init','session_id':'fixture','model':'Fake'}))
+result={'summary':'Updated selected source','files':[{'path':'README.md','content':'Updated by Cursor fixture\\n'},{'path':'new.py','content':'print(42)\\n'}]}
+print(json.dumps({'type':'result','subtype':'success','is_error':False,'result':json.dumps(result),'session_id':'fixture'}))
+""")
+    binary.chmod(0o700)
+    # Preserve the fake native helper by placing it next to this CLI too.
+    import shutil
+
+    helper = shutil.which("cursor-agent")
+    (binary_dir / "cursorsandbox").symlink_to(__import__("pathlib").Path(helper).parent / "cursorsandbox")
+    monkeypatch.setenv("PATH", f"{binary_dir}:{os.environ['PATH']}")
+    return binary
+
+
+def coding_request(project, **extra):
+    return {
+        "project_id": project["id"],
+        "expected_updated_at": project["updated_at"],
+        "prompt": "Update selected source files",
+        "files": ["README.md", "new.py"],
+        "external_ai": True,
+        **extra,
+    }
+
+
+def test_cursor_task_prepares_applies_reviews_and_validates_without_touching_checkout(
+    repository, owned_runner, fake_cursor, monkeypatch
+):
+    monkeypatch.setenv("AI_STATION_TEST_SECRET", "disposable")
+    (repository / "README.md").write_text("Original human edit\n")
+    index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project = register(client, repository, test_commands=[["/usr/bin/python3", "new.py"]])
+        response = client.post("/api/coding/cursor", json=coding_request(project))
+        assert response.status_code == 202, response.text
+        preparation = response.json()
+        with session_factory()() as session:
+            tick(session, "coding-prepare")
+        prepared = client.get(f"/api/runs/{preparation['id']}").json()
+        assert prepared["status"] == "succeeded", prepared
+        cursor_id = prepared["metadata"]["coding_run_id"]
+        with session_factory()() as session:
+            tick(session, "coding-cursor")
+        coded = client.get(f"/api/runs/{cursor_id}").json()
+        assert coded["status"] == "succeeded", coded
+        assert coded["metadata"]["review_status"] == "needs_review"
+        assert len(coded["metadata"]["coding_review"]["files"]) == 2
+        assert coded["metadata"]["coding_review"]["provider"]["session_id"] == "fixture"
+        validation_id = coded["metadata"]["validation_run_id"]
+        with session_factory()() as session:
+            tick(session, "coding-validation")
+        assert client.get(f"/api/runs/{validation_id}").json()["status"] == "succeeded"
+        artifacts = client.get(f"/api/artifacts?run_id={cursor_id}").json()
+        assert {item["type"] for item in artifacts} == {"git_diff", "json"}
+        assert len(client.get(f"/api/projects/{project['id']}/worktrees").json()) == 1
+    assert (repository / "README.md").read_text() == "Original human edit\n"
+    assert (repository / ".git/index").read_bytes() == index
+    assert not (repository / "new.py").exists()
+
+
+def test_cursor_requires_external_consent_and_preserves_worktree_on_provider_failure(
+    repository, owned_runner, fake_cursor
+):
+    fake_cursor.write_text("#!/usr/bin/python3\nraise SystemExit(3)\n")
+    with TestClient(app) as client:
+        project = register(client, repository)
+        assert (
+            client.post("/api/coding/cursor", json=coding_request(project, external_ai=False)).status_code
+            == 422
+        )
+        missing = coding_request(project)
+        missing.pop("external_ai")
+        assert client.post("/api/coding/cursor", json=missing).status_code == 422
+        preparation = client.post("/api/coding/cursor", json=coding_request(project)).json()
+        with session_factory()() as session:
+            tick(session, "coding-prepare")
+        prepared = client.get(f"/api/runs/{preparation['id']}").json()
+        cursor_id = prepared["metadata"]["coding_run_id"]
+        with session_factory()() as session:
+            tick(session, "coding-failure")
+        coded = client.get(f"/api/runs/{cursor_id}").json()
+        assert coded["status"] == "failed", coded
+        assert "validation_run_id" not in coded["metadata"]
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        assert (
+            owned_runner.data_dir / worktree["relative_path"] / "README.md"
+        ).read_text() == "Original repository\n"
+
+
+def test_cursor_cancellation_never_queues_validation_or_changes_source(
+    repository, owned_runner, fake_cursor, monkeypatch
+):
+    fake_cursor.write_text("#!/usr/bin/python3\nimport time\ntime.sleep(30)\n")
+    with TestClient(app) as client:
+        project = register(client, repository, test_commands=[["true"]])
+        preparation = client.post("/api/coding/cursor", json=coding_request(project)).json()
+        with session_factory()() as session:
+            tick(session, "prepare-cancel")
+        prepared = client.get(f"/api/runs/{preparation['id']}").json()
+        cursor_id = prepared["metadata"]["coding_run_id"]
+        original = RunnerClient.start_cursor_proposal
+
+        def cancel_during_dispatch(self, body):
+            result = original(self, body)
+            time.sleep(0.5)
+            client.post(f"/api/runs/{cursor_id}/cancel")
+            return result
+
+        monkeypatch.setattr(RunnerClient, "start_cursor_proposal", cancel_during_dispatch)
+        with session_factory()() as session:
+            tick(session, "cancel-cursor")
+        result = client.get(f"/api/runs/{cursor_id}").json()
+        assert result["status"] == "canceled", result
+        assert "validation_run_id" not in result["metadata"]
+        assert not owned_runner.inspect(cursor_id)["alive"]
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        assert (
+            owned_runner.data_dir / worktree["relative_path"] / "README.md"
+        ).read_text() == "Original repository\n"

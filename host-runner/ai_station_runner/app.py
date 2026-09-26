@@ -16,6 +16,7 @@ from ai_station_runner import __version__
 from ai_station_runner.coding import CodingUnavailable, build_argv
 from ai_station_runner.coding_sandbox import SandboxUnavailable
 from ai_station_runner.config import get_settings
+from ai_station_runner.cursor_runs import CursorRequest, cursor_report, start_cursor
 from ai_station_runner.diagnostics import collect_diagnostics
 from ai_station_runner.discovery import scan
 from ai_station_runner.fsops import list_dir, read_file, search_files, write_file
@@ -137,6 +138,25 @@ def project_validation(body: ValidationRequest):
 def project_validation_report(run_id: UUID):
     try:
         return validation_report(manager(), str(run_id))
+    except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.post("/v1/runs/cursor-proposal")
+def cursor_proposal(body: CursorRequest):
+    try:
+        record = start_cursor(manager(), body)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (GitError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {**record, "runner_id": get_settings().runner_id}
+
+
+@app.get("/v1/cursor-proposal/{run_id}")
+def cursor_proposal_report(run_id: UUID):
+    try:
+        return cursor_report(manager(), str(run_id))
     except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc
 
@@ -509,6 +529,8 @@ _operational = {
     "/v1/runs/model-scan",
     "/v1/runs/worktree",
     "/v1/runs/validation",
+    "/v1/runs/cursor-proposal",
+    "/v1/cursor-proposal/{run_id}",
     "/v1/validation/{run_id}",
     "/v1/worktrees/{run_id}",
     "/v1/runs/photo",

@@ -1,3 +1,4 @@
+import CodingReview from "./CodingReview";
 import { useEffect, type FormEvent } from "react";
 import {
   Link,
@@ -428,6 +429,7 @@ export function RunDetail() {
                 <p>{run.data.summary}</p>
               </section>
             )}
+            <CodingReview run={run.data} />
             <ValidationResults events={events.data ?? []} />
             <div className="inspector-grid">
               <section className="panel">

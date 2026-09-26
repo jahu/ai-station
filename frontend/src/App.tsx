@@ -35,6 +35,7 @@ import { Empty, PageTitle } from "./components/common";
 import { Memory, MemoryDetail } from "./pages/Memory";
 import { Models, ModelDetail } from "./pages/Models";
 import { Agents, AgentDetail } from "./pages/Agents";
+import Coding from "./pages/Coding";
 import Chat from "./pages/Chat";
 import Dashboard from "./pages/Dashboard";
 import { RunDetail, Runs } from "./pages/Runs";
@@ -216,6 +217,7 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/runs" element={<Runs />} />
             <Route path="/runs/:id" element={<RunDetail />} />
+            <Route path="/coding" element={<Coding />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/chat/:id" element={<Chat />} />
             <Route path="/images" element={<ImagesWorkspace />} />

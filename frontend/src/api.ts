@@ -61,6 +61,7 @@ export interface Run {
   summary: string;
   error_message: string;
   worker_id: string | null;
+  metadata?: Record<string, unknown>;
 }
 export interface RunEvent {
   id: string;

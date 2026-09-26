@@ -13,6 +13,7 @@ from app.agent_executor import LocalAgentExecutor
 from app.artifacts import adopt_existing
 from app.chat_executor import ChatExecutor
 from app.config import get_settings
+from app.cursor_executor import CursorProposalExecutor
 from app.events import append_event
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
@@ -272,6 +273,7 @@ EXECUTORS = {
     "chat_summary": SummaryExecutor(),
     "worktree_prepare": WorktreeExecutor(),
     "project_validation": ProjectValidationExecutor(),
+    "cursor_proposal": CursorProposalExecutor(),
     "model_discovery": ModelDiscoveryExecutor(),
     "agent": LocalAgentExecutor(),
     "runtime_observation": RuntimeObservationExecutor(),

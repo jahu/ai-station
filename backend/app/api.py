@@ -20,6 +20,7 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from app.agents_api import router as agent_router
 from app.chat import router as chat_router
 from app.config import get_settings
+from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
 from app.db import migrate, session_factory, session_scope, utcnow
 from app.events import event_dict, list_events
@@ -266,6 +267,7 @@ def artifacts(session: DB, run_id: UUID | None = None, limit: int = Query(100, g
     return [artifact_dict(row) for row in session.scalars(statement)]
 
 
+app.include_router(cursor_coding_router)
 app.include_router(dashboard_router)
 app.include_router(image_router)
 app.include_router(chat_router)
