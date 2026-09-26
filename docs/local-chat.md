@@ -10,4 +10,8 @@ Only one active Run is allowed per conversation. Short SQLite transactions seria
 
 Full history remains in SQLite. Conversation lists show the latest 100; message views show the latest 200. UI streaming uses the shared Run SSE endpoint with persistent-message refetching. Markdown never interprets raw HTML, and remote images are rendered as text so merely viewing a response does not fetch external resources.
 
-Text attachments, rolling summaries, multiple configured providers, external AI, and tool execution remain later capabilities. Normal tests and `scripts/chat_smoke.py` use fake providers. No real local-model completion has been executed for this slice.
+Text attachments, rolling summaries, multiple configured providers, external AI, and tool execution remain later capabilities. Normal tests and `scripts/chat_smoke.py` use fake providers. Real local completion, including Docker access through the private runner bridge, is recorded in [verification](verification.md).
+
+## Host loopback model access
+
+Compose defaults to the [typed local-model bridge](local-model-bridge.md) over the existing private Runner socket. Model listing and bounded streamed completions target only the configured local endpoint, with no redirects or caller-selected URL. Canceling a Run closes the upstream response. Direct provider transport remains available for native development and explicitly configured container-reachable endpoints.

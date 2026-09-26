@@ -55,7 +55,7 @@ The Host Runner does not expose an arbitrary shell. Photo, Git, coding CLIs, can
 
 The published UI/API port is `127.0.0.1:8765`. Inside the container the process listens on `0.0.0.0` so Docker's localhost publish mapping works. That internal bind is not host exposure.
 
-Host services such as Ollama are reached as `host.docker.internal`, never as the container's `127.0.0.1`.
+Loopback-only host model services are reached through the private Host Runner bridge. Optional direct container connections use `host.docker.internal` or another configured reachable endpoint; container `127.0.0.1` remains the container itself.
 
 ## Extension points
 
@@ -83,3 +83,7 @@ The [Memory workspace](memory.md) exposes durable scoped entries with validated 
 ## Runtime observations
 
 The [external runtime registry](runtimes.md) records bounded native process observations and the configured local endpoint’s model-discovery health through an explicit worker Run. It grants no runtime management capability and preserves earlier observations after errors.
+
+## Host loopback model access
+
+Compose defaults to the [typed local-model bridge](local-model-bridge.md) over the existing private Runner socket. Model listing and bounded streamed completions target only the configured local endpoint, with no redirects or caller-selected URL. Canceling a Run closes the upstream response. Direct provider transport remains available for native development and explicitly configured container-reachable endpoints.

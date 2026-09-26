@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,6 +31,8 @@ class Settings(BaseSettings):
     bind_host: str = "127.0.0.1"
     port: int = 8765
     llm_base_url: str = "http://127.0.0.1:11434/v1"
+    llm_transport: Literal["direct", "runner"] = "direct"
+    llm_host_base_url: str = ""
     llm_api_key: str = ""
     llm_model: str = ""
     photo_python: str = ""

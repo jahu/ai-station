@@ -11,7 +11,12 @@ from app.providers import ProviderError
 
 
 def local_endpoint() -> str:
-    raw = get_settings().llm_base_url.rstrip("/")
+    settings = get_settings()
+    raw = (
+        settings.llm_host_base_url
+        if settings.llm_transport == "runner" and settings.llm_host_base_url
+        else settings.llm_base_url
+    ).rstrip("/")
     try:
         url = urlsplit(raw)
         _ = url.port
@@ -49,11 +54,27 @@ class LocalChatProvider:
         key = get_settings().llm_api_key
         return {"Authorization": f"Bearer {key}"} if key else {}
 
+    @staticmethod
+    def connection(*, asynchronous=False):
+        settings = get_settings()
+        if settings.llm_transport == "runner":
+            transport = httpx.AsyncHTTPTransport if asynchronous else httpx.HTTPTransport
+            return {"transport": transport(uds=settings.runner_socket)}
+        return {}
+
+    @staticmethod
+    def request_target(endpoint):
+        if get_settings().llm_transport == "runner":
+            return "http://runner/v1/llm", {"X-AI-Station-Endpoint": endpoint}
+        return endpoint, LocalChatProvider.headers()
+
     def models(self) -> list[str]:
-        endpoint = local_endpoint()
+        endpoint, headers = self.request_target(local_endpoint())
         try:
-            with httpx.Client(timeout=5, trust_env=False, follow_redirects=False) as client:
-                with client.stream("GET", endpoint + "/models", headers=self.headers()) as response:
+            with httpx.Client(
+                timeout=8, trust_env=False, follow_redirects=False, **self.connection()
+            ) as client:
+                with client.stream("GET", endpoint + "/models", headers=headers) as response:
                     response.raise_for_status()
                     data = bytearray()
                     for chunk in response.iter_bytes():
@@ -70,15 +91,19 @@ class LocalChatProvider:
     ):
         if endpoint != local_endpoint():
             raise ProviderError("The configured endpoint changed after this run was queued")
+        endpoint, headers = self.request_target(endpoint)
         done = False
         try:
             async with httpx.AsyncClient(
-                timeout=httpx.Timeout(300, connect=10), trust_env=False, follow_redirects=False
+                timeout=httpx.Timeout(300, connect=10),
+                trust_env=False,
+                follow_redirects=False,
+                **self.connection(asynchronous=True),
             ) as client:
                 async with client.stream(
                     "POST",
                     endpoint + "/chat/completions",
-                    headers=self.headers(),
+                    headers=headers,
                     json={
                         "messages": messages,
                         "model": model,
