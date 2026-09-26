@@ -92,10 +92,16 @@ export function useHardware() {
     refetchInterval: 5000,
   });
 }
-export function useRuns(status = "") {
+export function useRuns(status = "", filters: Record<string, string> = {}) {
+  const params = new URLSearchParams();
+  if (status) params.set("status", status);
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) params.set(key, value);
+  }
+  const search = params.toString();
   return useQuery({
-    queryKey: ["runs", status],
-    queryFn: () => api<Run[]>(`/runs${status ? `?status=${status}` : ""}`),
+    queryKey: ["runs", status, search],
+    queryFn: () => api<Run[]>(`/runs${search ? `?${search}` : ""}`),
     refetchInterval: 5000,
   });
 }

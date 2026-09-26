@@ -95,3 +95,8 @@ API regressions verify bounded lists, total counts independent of list limits, e
 Python lint/format and 252 tests passed; frontend lint, TypeScript, 18 component tests and production build passed. Summary tests cover incremental coverage, scope separation, exact sources, canceled silent inference, oversized/failed output, artifact-publication rollback, concurrent memory edits, deletion/disable behavior, persisted reload and migration downgrade/upgrade preserving existing conversations and Memory.
 
 The expanded `scripts/chat_smoke.py` passed browser → API → worker → fake local provider summary generation, an inspectable Memory link and preserved Chat history, alongside earlier stop/regenerate/restart checks. Desktop/mobile screenshots were inspected and no page errors or horizontal overflow occurred. This tests summary orchestration, not real-model summary quality. Normal tests did not launch real inference.
+
+
+## Run history filters — 2026-09-26
+
+254 Python tests and 19 frontend tests passed, with lint, TypeScript and production build. API tests verify combined filters before pagination, allocated-versus-requested GPU matching, inclusive dates and invalid UUID/timezone/range rejection. Chromium verified applying combined filters, URL/reload persistence, empty results and mobile layout against a temporary deployment. Initial frontend validation found an obsolete ambiguous test selector and two lint issues; these were fixed before the passing checks. An early browser attempt used the previous build and was rerun after rebuilding.

@@ -5,15 +5,15 @@ import json
 from contextlib import asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from urllib.parse import urlsplit
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, select, text
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
@@ -101,15 +101,40 @@ def health(session: DB):
 def runs(
     session: DB,
     status: RunStatus | None = None,
-    capability: str | None = None,
+    capability: str | None = Query(None, max_length=120),
+    executor: str | None = Query(None, max_length=80),
+    target: Literal["host", "container", "remote-node"] | None = None,
+    project_id: UUID | None = None,
+    agent_id: UUID | None = None,
+    gpu: str | None = Query(None, max_length=200),
+    created_after: AwareDatetime | None = None,
+    created_before: AwareDatetime | None = None,
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
+    if created_after and created_before and created_after > created_before:
+        raise HTTPException(422, "Created-after must not be later than created-before")
     statement = select(Run).order_by(Run.created_at.desc(), Run.id).limit(limit).offset(offset)
     if status:
         statement = statement.where(Run.status == status)
     if capability:
         statement = statement.where(Run.capability == capability)
+    for column, value in (
+        (Run.executor_type, executor),
+        (Run.execution_target, target),
+        (Run.project_id, str(project_id) if project_id else None),
+        (Run.agent_id, str(agent_id) if agent_id else None),
+    ):
+        if value is not None:
+            statement = statement.where(column == value)
+    if gpu is not None:
+        statement = statement.where(
+            or_(Run.actual_gpu == gpu, (Run.actual_gpu.is_(None)) & (Run.requested_gpu == gpu))
+        )
+    if created_after:
+        statement = statement.where(Run.created_at >= created_after)
+    if created_before:
+        statement = statement.where(Run.created_at <= created_before)
     return [redact_obj(run_dict(run)) for run in session.scalars(statement)]
 
 

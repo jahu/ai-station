@@ -69,10 +69,45 @@ it("requests the selected status and links persisted runs to their inspector", a
       "href",
     ),
   ).toBe("/runs/one");
-  fireEvent.change(screen.getByRole("combobox"), {
+  fireEvent.change(screen.getByRole("combobox", { name: "Filter by status" }), {
     target: { value: "running" },
   });
   await waitFor(() =>
     expect(fetch).toHaveBeenCalledWith("/api/runs?status=running", undefined),
   );
+});
+
+it("restores combined filters from the URL and resets paging when applying a change", async () => {
+  const fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => [] });
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter
+        initialEntries={["/runs?status=failed&executor=chat&offset=100"]}
+      >
+        <Runs />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByText("No runs in this view");
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/runs?status=failed&executor=chat&offset=100",
+    undefined,
+  );
+  fireEvent.click(screen.getByText("More filters"));
+  fireEvent.change(screen.getByLabelText("Capability"), {
+    target: { value: "chat.completion" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Apply filters" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/runs?status=failed&capability=chat.completion&executor=chat",
+      undefined,
+    ),
+  );
+  expect(screen.getByText("Page 1 · up to 100 runs")).toBeTruthy();
 });
