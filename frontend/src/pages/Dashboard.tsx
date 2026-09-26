@@ -1,3 +1,4 @@
+import DashboardActivity from "./DashboardActivity";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -76,6 +77,20 @@ export default function Dashboard() {
       >
         A live view of your local resources and everything in motion.
       </PageTitle>
+      <nav className="dashboard-actions" aria-label="Quick actions">
+        <Button asChild>
+          <Link to="/chat">Chat</Link>
+        </Button>
+        <Button variant="secondary" asChild>
+          <Link to="/images">Generate image</Link>
+        </Button>
+        <Button variant="secondary" asChild>
+          <Link to="/agents">Create agent</Link>
+        </Button>
+        <Button variant="secondary" asChild>
+          <Link to="/projects">Open project</Link>
+        </Button>
+      </nav>
       <ErrorNotice error={hardware.error ?? runs.error ?? status.error} />
       {hardware.isPending && <Loading />}
       <div className="section-label">
@@ -280,6 +295,7 @@ export default function Dashboard() {
           )}
         </section>
       </div>
+      <DashboardActivity />
       <div className="footnote">
         <span className="status-dot" /> Local-first by design. External services
         remain under your control.

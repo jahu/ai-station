@@ -1720,3 +1720,46 @@ pre {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+
+.dashboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.dashboard-activity {
+  margin-top: 20px;
+}
+.dashboard-activity-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.dashboard-activity .activity-list a > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dashboard-activity .activity-list a > .muted {
+  margin-left: auto;
+  font-size: 10px;
+}
+.dashboard-activity .activity-list .badge {
+  flex-shrink: 0;
+}
+.dashboard-thumbnail {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.dashboard-note {
+  padding: 12px 22px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+@media (max-width: 800px) {
+  .dashboard-activity-grid {
+    grid-template-columns: 1fr;
+  }
+}
