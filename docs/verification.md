@@ -81,3 +81,10 @@ Reproduce explicitly: `AI_STATION_REAL_GPU_TESTS=1 AI_STATION_PHOTO_SCRIPT=/your
 The isolated `scripts/model_bridge_smoke.py` deployment passed actual Docker API/worker → private Runner socket → host-loopback fake provider completion and silent-stream cancellation. The direct container endpoint was deliberately unreachable. An explicit `--real` repeat with `AI_STATION_REAL_LOCAL_LLM_TESTS=1`, `AI_STATION_LLM_BASE_URL=http://127.0.0.1:11434/v1` and `AI_STATION_LLM_MODEL=qwen3:8b` returned `AI Station bridge OK.` through an ordinary Chat Run. This verifies the existing Ollama compatible endpoint from Docker without changing its bind address; it is not a llama.cpp or coding-agent test.
 
 Both Compose configurations and the production Docker image build passed. Tests cover endpoint mismatch, rejected tools/redirects, secret filtering, upstream stream closure and client disconnect before inference response headers. The preview deployment at port 8765 was left running on its original version.
+
+
+## Dashboard activity — 2026-09-26
+
+Python lint/format and 243 tests passed; frontend lint, TypeScript, 16 component tests and production build passed. The expanded `scripts/runtimes_smoke.py` checked the Home dashboard in Chromium against a temporary database and real read-only runner telemetry. A scheduled fixture agent and an empty fixture conversation appeared, the conversation link opened the correct record, and the runtime observation report appeared among recent artifacts. No model inference or scheduled agent execution was started by this smoke. Desktop/mobile screenshots were inspected; no horizontal overflow or browser errors occurred.
+
+API regressions verify bounded lists, total counts independent of list limits, executing Runs before queued Runs, exclusion of paused/manual schedules, overdue and stale flags, and omission of prompts from dashboard summaries. The existing bundle-size and TestClient deprecation advisories remain visible.

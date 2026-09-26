@@ -81,9 +81,41 @@ def main():
                         "Observed host runtime families:",
                         sorted({row["runtime_key"] for row in result["items"] if not row["endpoint"]}),
                     )
+                    with httpx.Client(base_url=url, trust_env=False) as api:
+                        agent = api.post(
+                            "/api/agents",
+                            json={
+                                "name": "Dashboard acceptance agent",
+                                "goal": "Fixture only",
+                                "model": "not-executed",
+                                "trigger": "interval",
+                                "interval_seconds": 86400,
+                                "enabled": True,
+                            },
+                        )
+                        agent.raise_for_status()
+                        conversation = api.post(
+                            "/api/chat/conversations",
+                            json={
+                                "title": "Dashboard acceptance conversation",
+                                "model": "not-executed",
+                            },
+                        )
+                        conversation.raise_for_status()
+                    page.goto(url + "/#/")
+                    expect(page.get_by_role("heading", name="Enabled agents · 1")).to_be_visible()
+                    expect(page.get_by_role("heading", name="Upcoming schedules")).to_be_visible()
+                    expect(
+                        page.get_by_role("link", name="Dashboard acceptance conversation", exact=False)
+                    ).to_be_visible()
+                    page.get_by_role("link", name="Dashboard acceptance conversation", exact=False).click()
+                    expect(page).to_have_url(url + "/#/chat/" + conversation.json()["id"])
+                    page.goto(url + "/#/")
+                    expect(page.get_by_role("heading", name="Recent artifacts")).to_be_visible()
+                    page.screenshot(path="/tmp/ai-station-dashboard.png", full_page=True)
                     page.set_viewport_size({"width": 390, "height": 844})
                     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
-                    page.screenshot(path="/tmp/ai-station-runtimes-mobile.png", full_page=True)
+                    page.screenshot(path="/tmp/ai-station-dashboard-mobile.png", full_page=True)
                     assert not errors, errors
                     browser.close()
             finally:
