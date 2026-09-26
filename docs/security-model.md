@@ -83,3 +83,6 @@ The [external runtime registry](runtimes.md) records bounded native process obse
 ## Host loopback model access
 
 Compose defaults to the [typed local-model bridge](local-model-bridge.md) over the existing private Runner socket. Model listing and bounded streamed completions target only the configured local endpoint, with no redirects or caller-selected URL. Canceling a Run closes the upstream response. Direct provider transport remains available for native development and explicitly configured container-reachable endpoints.
+
+
+Saved project test/lint/build commands now run through the worker and a managed native sandbox in an owned worktree. Commands are snapshotted from versioned project settings, Git metadata stays read-only, networking is blocked, and results become events plus a JSON artifact. See [project validation](coding-boundary.md) for limits, recovery and current dependency restrictions. Coding-provider adapters remain disabled.

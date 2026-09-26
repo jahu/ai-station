@@ -215,8 +215,8 @@ function ProjectForm({
           <summary>Validation commands and agent guidance</summary>
           <div className="project-form-section">
             <p className="muted">
-              These trusted commands are saved for future coding Runs. Saving
-              does not execute them. Use one JSON argument array per line.
+              These trusted commands can run in a prepared worktree. Saving does
+              not execute them. Use one JSON argument array per line.
             </p>
             <label>
               Test commands
@@ -520,9 +520,10 @@ export function ProjectDetail() {
               <h2>Execution boundary</h2>
               <p>
                 Commands, agent rules, and Git policy are saved configuration.
-                Worktree preparation creates an isolated branch. Coding agents,
-                validation commands, commits, and PR actions are not enabled
-                yet.
+                Worktree preparation creates an isolated branch. Saved
+                validation commands run inside a native sandbox with read-only
+                Git metadata. Coding agents, commits, and PR actions are not
+                enabled yet.
               </p>
               <p className="muted">
                 If another editor changes this project, reload the saved

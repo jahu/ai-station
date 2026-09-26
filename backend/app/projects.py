@@ -230,3 +230,57 @@ def project_worktrees(project_id: UUID, session: DB):
         .limit(100)
     )
     return [{**worktree_dict(row), "run_status": status} for row, status in rows]
+
+
+@router.post("/{project_id}/worktrees/{worktree_id}/validate", status_code=202)
+def validate_project_worktree(project_id: UUID, worktree_id: UUID, body: WorktreeRequest, session: DB):
+    project = get_project(session, project_id)
+    if project.updated_at != body.expected_updated_at:
+        raise HTTPException(409, "Project settings changed. Reload before validation.")
+    worktree = session.get(Worktree, str(worktree_id))
+    if worktree is None or worktree.project_id != project.id:
+        raise HTTPException(404, "Worktree not found in this project")
+    preparation = session.get(Run, worktree.run_id)
+    if not worktree.owned or preparation is None or preparation.status != "succeeded":
+        raise HTTPException(409, "Worktree preparation must have succeeded")
+    if session.scalar(
+        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
+    ):
+        raise HTTPException(409, "This project already has an active Run")
+    commands = [
+        {"kind": kind, "argv": argv}
+        for kind, group in (
+            ("test", project.test_commands),
+            ("lint", project.lint_commands),
+            ("build", project.build_commands),
+        )
+        for argv in group
+    ]
+    if not commands:
+        raise HTTPException(422, "Save test, lint or build commands in project settings first")
+    task = create_task(
+        session,
+        title=f"Validate {project.name}",
+        prompt="Run saved project validation in an owned worktree",
+        capability="coding.validate",
+        project_id=project.id,
+    )
+    run = create_run(
+        session,
+        task,
+        run_type="validation",
+        capability="coding.validate",
+        executor_type="project_validation",
+        execution_target="host",
+        permissions=["filesystem_read", "workspace_write", "git_read", "shell_project_commands"],
+        retry_class="inspect",
+        parameters={
+            "worktree_id": worktree.id,
+            "worktree_run_id": worktree.run_id,
+            "commands": commands,
+            "project_updated_at": project.updated_at.isoformat(),
+        },
+    )
+    run.parent_run_id = worktree.run_id
+    session.commit()
+    return run_dict(run)

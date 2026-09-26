@@ -14,6 +14,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from ai_station_runner import __version__
 from ai_station_runner.coding import CodingUnavailable, build_argv
+from ai_station_runner.coding_sandbox import SandboxUnavailable
 from ai_station_runner.config import get_settings
 from ai_station_runner.diagnostics import collect_diagnostics
 from ai_station_runner.discovery import scan
@@ -34,6 +35,7 @@ from ai_station_runner.processes import ProcessManager, ProcessNotOwned
 from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.telemetry import collect
+from ai_station_runner.validation import ValidationRequest, start_validation, validation_report
 from ai_station_runner.worktrees import inspect_worktree, reserve_and_start
 
 app = FastAPI(title="AI Station Host Runner", version=__version__)
@@ -118,6 +120,25 @@ def prepare_worktree(body: PrepareWorktreeBody):
     except GitError as exc:
         raise HTTPException(409, str(exc)) from exc
     return {**record, "runner_id": get_settings().runner_id}
+
+
+@app.post("/v1/runs/validation")
+def project_validation(body: ValidationRequest):
+    try:
+        record = start_validation(manager(), body)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (GitError, SandboxUnavailable, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {**record, "runner_id": get_settings().runner_id}
+
+
+@app.get("/v1/validation/{run_id}")
+def project_validation_report(run_id: UUID):
+    try:
+        return validation_report(manager(), str(run_id))
+    except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 class ModelScanBody(RequestBody):
@@ -487,6 +508,8 @@ _operational = {
     "/v1/runtimes/observe",
     "/v1/runs/model-scan",
     "/v1/runs/worktree",
+    "/v1/runs/validation",
+    "/v1/validation/{run_id}",
     "/v1/worktrees/{run_id}",
     "/v1/runs/photo",
     "/health",

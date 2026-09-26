@@ -36,6 +36,15 @@ export default function ProjectWorktrees({
       }),
     onSuccess: (run) => navigate(`/runs/${run.id}`),
   });
+  const validate = useMutation({
+    mutationFn: (worktreeId: string) =>
+      api<Run>(`/projects/${project.id}/worktrees/${worktreeId}/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expected_updated_at: project.updated_at }),
+      }),
+    onSuccess: (run) => navigate(`/runs/${run.id}`),
+  });
   const active = worktrees.data?.some(
     (worktree) => !terminal.has(worktree.run_status),
   );
@@ -65,7 +74,13 @@ export default function ProjectWorktrees({
         permissions. Your active checkout stays in place; no coding agent or
         validation command is launched.
       </p>
-      <ErrorNotice error={worktrees.error ?? prepare.error} />
+      <p className="muted">
+        Run saved validation executes the project's saved test, lint and build
+        commands in a prepared worktree. Network access is blocked; dependencies
+        must already be available there. Logs and the result report appear in
+        the validation Run.
+      </p>
+      <ErrorNotice error={worktrees.error ?? prepare.error ?? validate.error} />
       {worktrees.isPending ? (
         <Loading />
       ) : worktrees.data?.length ? (
@@ -78,6 +93,15 @@ export default function ProjectWorktrees({
                 </Link>
                 <Badge status={worktree.run_status} />
               </div>
+              {worktree.owned && worktree.run_status === "succeeded" && (
+                <Button
+                  variant="secondary"
+                  disabled={validate.isPending || active}
+                  onClick={() => validate.mutate(worktree.id)}
+                >
+                  {validate.isPending ? "Queueing…" : "Run saved validation"}
+                </Button>
+              )}
               <p className="mono">{worktree.branch}</p>
               <p className="mono muted">{worktree.relative_path}</p>
               <p className="muted">

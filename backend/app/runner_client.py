@@ -94,6 +94,12 @@ class RunnerClient:
     def prepare_worktree(self, payload: dict) -> dict:
         return self.request("POST", "/v1/runs/worktree", payload)
 
+    def start_validation(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/runs/validation", payload)
+
+    def validation_report(self, run_id: str) -> dict:
+        return self.request("GET", f"/v1/validation/{run_id}")
+
     def inspect_worktree(self, run_id: str) -> dict:
         return self.request("GET", f"/v1/worktrees/{run_id}")
 

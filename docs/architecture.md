@@ -95,3 +95,6 @@ The dashboard reads bounded summaries of persisted Runs, enabled agents, upcomin
 
 
 Conversation summaries use a dedicated persisted coverage/provenance record and the existing scoped Memory model. [Summary updates](conversation-summaries.md) run through the worker and preserve the full conversation history.
+
+
+Saved project test/lint/build commands now run through the worker and a managed native sandbox in an owned worktree. Commands are snapshotted from versioned project settings, Git metadata stays read-only, networking is blocked, and results become events plus a JSON artifact. See [project validation](coding-boundary.md) for limits, recovery and current dependency restrictions. Coding-provider adapters remain disabled.

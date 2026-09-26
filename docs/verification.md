@@ -100,3 +100,15 @@ The expanded `scripts/chat_smoke.py` passed browser → API → worker → fake 
 ## Run history filters — 2026-09-26
 
 254 Python tests and 19 frontend tests passed, with lint, TypeScript and production build. API tests verify combined filters before pagination, allocated-versus-requested GPU matching, inclusive dates and invalid UUID/timezone/range rejection. Chromium verified applying combined filters, URL/reload persistence, empty results and mobile layout against a temporary deployment. Initial frontend validation found an obsolete ambiguous test selector and two lint issues; these were fixed before the passing checks. An early browser attempt used the previous build and was rerun after rebuilding.
+
+
+## Local agent and preview acceptance — 2026-09-26
+
+A disposable Docker worker → private Runner bridge → existing Ollama `qwen3:8b` agent Run retrieved an agent-scoped fixture memory naming Cobalt and produced a Markdown report naming Cobalt. It was a manual local Run; no scheduled or cloud operation was tested. The temporary deployment was removed.
+
+The user-approved preview upgrade to develop `b06edac` completed at http://127.0.0.1:8765. SQLite backup integrity checked successfully before migration; API, worker and scheduler are healthy and local provider discovery returns `qwen3:8b`. Existing data and the prior checkout were retained. The user authorized subsequent development updates/restarts.
+
+
+## Sandboxed project validation — 2026-09-26
+
+263 Python tests and 20 frontend tests passed, with Python lint/format and frontend format/lint/TypeScript/production build. Five opt-in tests passed through the installed Cursor native sandbox: successful and failed commands, cancellation, timeout termination and sanitized command environment. The standalone probe confirmed workspace writes while outside/Git metadata/global temporary writes and loopback network access were denied. Chromium passed project → saved validation Run → visible command results/JSON artifact, mobile layout, original checkout/index preservation and runner outage behavior. An initial browser attempt used an exact implicit-label selector that included the saved textarea content after remount; correcting that test selector produced the passing run. No coding model or cloud tokens were used.

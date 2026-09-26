@@ -428,3 +428,195 @@ def test_preparation_requires_permissions_before_dispatch(repository, owned_runn
             tick(session, "permission-worker")
         assert client.get(f"/api/runs/{run['id']}").json()["status"] == "failed"
         assert not (owned_runner.data_dir / f"runtime/worktree-requests/{run['id']}.json").exists()
+
+
+@pytest.fixture
+def validation_sandbox(tmp_path, monkeypatch):
+    """A disposable fake helper for CI; real isolation has a separate opt-in probe."""
+    import os
+
+    if os.environ.get("AI_STATION_REAL_SANDBOX_TESTS") == "1":
+        return
+    binaries = tmp_path / "bin"
+    binaries.mkdir()
+    (binaries / "cursor-agent").write_text("#!/bin/sh\nexit 0\n")
+    helper = binaries / "cursorsandbox"
+    helper.write_text(
+        "#!/usr/bin/python3\nimport os,sys\n"
+        "argv=sys.argv[sys.argv.index('--')+1:]\nos.execvpe(argv[0],argv,os.environ)\n"
+    )
+    helper.chmod(0o700)
+    (binaries / "cursor-agent").chmod(0o700)
+    monkeypatch.setenv("PATH", f"{binaries}:{os.environ['PATH']}")
+
+
+def prepared_validation(client, repository, commands):
+    project = register(client, repository, test_commands=commands)
+    preparation = enqueue_worktree(client, project)
+    with session_factory()() as session:
+        tick(session, "prepare-validation")
+    assert client.get(f"/api/runs/{preparation['id']}").json()["status"] == "succeeded"
+    worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+    return project, worktree
+
+
+def enqueue_validation(client, project, worktree, **extra):
+    return client.post(
+        f"/api/projects/{project['id']}/worktrees/{worktree['id']}/validate",
+        json={"expected_updated_at": project["updated_at"], **extra},
+    )
+
+
+@pytest.mark.parametrize("exit_code", [0, 3])
+def test_validation_reports_exit_codes_and_preserves_original_checkout(
+    repository, owned_runner, validation_sandbox, exit_code
+):
+    original_index = (repository / ".git/index").read_bytes()
+    commands = [
+        [
+            "/usr/bin/python3",
+            "-c",
+            f"from pathlib import Path; Path('result.txt').write_text('ok'); print('test output'); raise SystemExit({exit_code})",
+        ]
+    ]
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, commands)
+        response = enqueue_validation(client, project, worktree)
+        assert response.status_code == 202, response.text
+        run = response.json()
+        assert run["parameters"]["commands"] == [{"kind": "test", "argv": commands[0]}]
+        assert enqueue_validation(client, project, worktree).status_code == 409
+        with session_factory()() as session:
+            tick(session, "validation-test")
+        result = client.get(f"/api/runs/{run['id']}").json()
+        assert result["status"] == ("succeeded" if exit_code == 0 else "failed"), result
+        assert result["metadata"]["validation"]["commands"][0]["exit_code"] == exit_code
+        assert result["parent_run_id"] == worktree["run_id"]
+        stream = client.get(f"/api/runs/{run['id']}/stream").text
+        assert "test output" in stream and "validation.completed" in stream and "artifact.created" in stream
+        assert (owned_runner.data_dir / worktree["relative_path"] / "result.txt").read_text() == "ok"
+    assert (repository / ".git/index").read_bytes() == original_index
+    assert not (repository / "result.txt").exists()
+
+
+def test_validation_api_rejects_stale_unowned_injected_commands_and_missing_settings(
+    repository, owned_runner
+):
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, [])
+        assert enqueue_validation(client, project, worktree).status_code == 422
+        assert enqueue_validation(client, project, worktree, commands=[["true"]]).status_code == 422
+        assert (
+            enqueue_validation(
+                client, project, worktree, expected_updated_at="2000-01-01T00:00:00"
+            ).status_code
+            == 409
+        )
+        from app.models import Worktree
+
+        with session_factory()() as session:
+            session.get(Worktree, worktree["id"]).owned = False
+            session.commit()
+        assert enqueue_validation(client, project, worktree).status_code == 409
+
+
+def test_validation_runner_idempotence_permissions_and_cancellation(
+    repository, owned_runner, validation_sandbox, monkeypatch
+):
+    from uuid import uuid4
+
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, [["/usr/bin/sleep", "30"]])
+        payload = {
+            "run_id": str(uuid4()),
+            "project_id": project["id"],
+            "worktree_run_id": worktree["run_id"],
+            "commands": [{"kind": "test", "argv": ["/usr/bin/sleep", "30"]}],
+            "permissions": ["filesystem_read", "workspace_write", "git_read", "shell_project_commands"],
+        }
+        with TestClient(runner_app) as native:
+            assert native.post("/v1/runs/validation", json={**payload, "permissions": []}).status_code == 403
+            assert (
+                native.post(
+                    "/v1/runs/validation",
+                    json={**payload, "commands": [{"kind": "test", "argv": ["bash", "-c", "true"]}]},
+                ).status_code
+                == 422
+            )
+            started = native.post("/v1/runs/validation", json=payload)
+            assert started.status_code == 200, started.text
+            replay = native.post("/v1/runs/validation", json=payload)
+            assert replay.json()["pid"] == started.json()["pid"]
+            assert (
+                native.post(
+                    "/v1/runs/validation", json={**payload, "commands": [{"kind": "test", "argv": ["true"]}]}
+                ).status_code
+                == 409
+            )
+            # Allow the wrapper to dispatch a child before canceling its group.
+            time.sleep(0.5)
+            native.post("/v1/process/cancel", json={"run_id": payload["run_id"]})
+            assert not owned_runner.inspect(payload["run_id"])["alive"]
+            assert native.get(f"/v1/validation/{payload['run_id']}").status_code == 409
+        original = RunnerClient.start_validation
+        response = enqueue_validation(client, project, worktree)
+        run = response.json()
+
+        def cancel_on_dispatch(self, body):
+            result = original(self, body)
+            client.post(f"/api/runs/{run['id']}/cancel")
+            return result
+
+        monkeypatch.setattr(RunnerClient, "start_validation", cancel_on_dispatch)
+        with session_factory()() as session:
+            tick(session, "cancel-validation")
+        assert client.get(f"/api/runs/{run['id']}").json()["status"] == "canceled"
+        assert not owned_runner.inspect(run["id"])["alive"]
+
+
+def test_validation_limits_kill_owned_group_without_publishing_success(
+    repository, owned_runner, validation_sandbox, monkeypatch
+):
+    import sys
+
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, [["/usr/bin/sleep", "30"]])
+        original = owned_runner.start
+
+        def limited(**kwargs):
+            run_id = kwargs["run_id"]
+            kwargs["argv"] = [
+                sys.executable,
+                "-c",
+                f"from ai_station_runner import validation_job as job; job.TIMEOUT=0; job.validate({run_id!r})",
+            ]
+            return original(**kwargs)
+
+        monkeypatch.setattr(owned_runner, "start", limited)
+        response = enqueue_validation(client, project, worktree)
+        run = response.json()
+        with session_factory()() as session:
+            tick(session, "limited-validation")
+        result = client.get(f"/api/runs/{run['id']}").json()
+        assert result["status"] == "failed", result
+        assert "time/output limit" in result["error_message"]
+        assert "validation" not in result["metadata"]
+        assert not owned_runner.inspect(run["id"])["alive"]
+
+
+def test_validation_does_not_inherit_runner_credentials(
+    repository, owned_runner, validation_sandbox, monkeypatch
+):
+    monkeypatch.setenv("AI_STATION_TEST_SECRET", "disposable-fixture")
+    command = [
+        "/usr/bin/python3",
+        "-c",
+        "import os; from pathlib import Path; assert 'AI_STATION_TEST_SECRET' not in os.environ; assert Path(os.environ['HOME']).is_relative_to(Path.cwd()); assert os.environ['HOME']==os.environ['TMPDIR']",
+    ]
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, [command])
+        response = enqueue_validation(client, project, worktree)
+        run = response.json()
+        with session_factory()() as session:
+            tick(session, "environment-validation")
+        assert client.get(f"/api/runs/{run['id']}").json()["status"] == "succeeded"

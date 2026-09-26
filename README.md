@@ -19,7 +19,7 @@ A local-first AI workstation control plane. Work is represented by **Task → Ru
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory.
 - Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
 
-Earlier coding-agent modules are preserved drafts, not operational integrations. Unimplemented workspaces show unavailable states. Coding-agent launches, project command execution, commits, pushes, and PR actions remain disabled.
+Earlier coding-agent modules are preserved drafts, not operational integrations. Unimplemented workspaces show unavailable states. Coding-agent launches, commits, pushes, and PR actions remain disabled. Saved project validation can run in prepared worktrees through the native sandbox.
 
 ## Prerequisites and installation
 
@@ -62,7 +62,7 @@ Set `AI_STATION_PHOTO_PYTHON` and `AI_STATION_PHOTO_SCRIPT` to absolute paths fo
 
 Open Images, select an operation and GPU (or Auto), and submit. The worker creates an ordinary Run, reserves a discovered GPU, and calls the native runner. Images appear in Library with actual dimensions, parameters, and source links. Library actions reuse an image for Edit, Recompose, or Upscale. Uploads accept PNG/JPEG/WebP up to 20 MiB and 64 megapixels; upscale output is capped at 64 megapixels. Qwen's existing pipeline does not use seed/negative-prompt controls, so those controls appear only for Juggernaut.
 
-Models must already be installed/cached. The runner sets Hugging Face offline mode; it never downloads missing Juggernaut weights. The external script still owns its existing cache/temp conventions. No GPU inference has been smoke-tested yet; the full integration is tested with a fake pipeline.
+Models must already be installed/cached. The runner sets Hugging Face offline mode; it never downloads missing Juggernaut weights. The external script still owns its existing cache/temp conventions. All six mode/backend cases passed small real GPU acceptance Runs; normal automated tests use a fake pipeline.
 
 Failed, canceled, or interrupted image runs may be explicitly retried after the runner confirms the original process is gone. A retry has a new ID/output path, shares the Task, and links to its parent Run. Inspect partial output before retrying an interrupted run; recovery does not automatically adopt orphaned output or repeat generation.
 
@@ -73,6 +73,8 @@ Include your repository roots in `AI_STATION_ALLOWED_ROOTS` (colon-separated hos
 Project details show the current branch and working-tree changes on explicit refresh. Configure default/integration branches, protected branches, executor preference, test/lint/build commands, and agent guidance. Commands use one JSON argv array per line, such as `["pytest", "-q"]`. Saving does not execute commands or alter the repository. Stale edits and edits during active project Runs are rejected. Repository paths are immutable; removal is not exposed yet. See [Projects](docs/projects.md).
 
 Choose **Prepare isolated worktree** to queue a local Run from the project's existing integration branch. The worker asks the runner to create `ai/<run-id>-workspace` under `worktrees/<project-id>/<run-id>`, leaving your current checkout and index unchanged. The Run captures logs and a JSON report; Projects lists the preserved worktree. Cancellation signals only its owned process group. No coding agent, validation command, commit, push, or PR is launched. Hooks/filters are disabled during preparation, submodules are not initialized, and partial data is preserved for inspection after errors. Custom `core.worktree`, partial clones, and alternate object stores are not supported. See [owned worktrees](docs/worktrees.md).
+
+Choose **Run saved validation** on a prepared worktree to enqueue its saved test, lint and build commands. The runner requires the installed Cursor native sandbox helper and fails closed if isolation is unavailable. Commands can write only inside the worktree; Git metadata stays read-only and network access is blocked. Dependencies must be installed within the worktree or available in system runtime paths. The Run includes live logs, cancellation, command exit codes and a JSON report. See [validation boundary](docs/coding-boundary.md).
 
 ## Development and verification
 
