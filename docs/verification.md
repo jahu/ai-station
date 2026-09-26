@@ -88,3 +88,10 @@ Both Compose configurations and the production Docker image build passed. Tests 
 Python lint/format and 243 tests passed; frontend lint, TypeScript, 16 component tests and production build passed. The expanded `scripts/runtimes_smoke.py` checked the Home dashboard in Chromium against a temporary database and real read-only runner telemetry. A scheduled fixture agent and an empty fixture conversation appeared, the conversation link opened the correct record, and the runtime observation report appeared among recent artifacts. No model inference or scheduled agent execution was started by this smoke. Desktop/mobile screenshots were inspected; no horizontal overflow or browser errors occurred.
 
 API regressions verify bounded lists, total counts independent of list limits, executing Runs before queued Runs, exclusion of paused/manual schedules, overdue and stale flags, and omission of prompts from dashboard summaries. The existing bundle-size and TestClient deprecation advisories remain visible.
+
+
+## Conversation summaries — 2026-09-26
+
+Python lint/format and 252 tests passed; frontend lint, TypeScript, 18 component tests and production build passed. Summary tests cover incremental coverage, scope separation, exact sources, canceled silent inference, oversized/failed output, artifact-publication rollback, concurrent memory edits, deletion/disable behavior, persisted reload and migration downgrade/upgrade preserving existing conversations and Memory.
+
+The expanded `scripts/chat_smoke.py` passed browser → API → worker → fake local provider summary generation, an inspectable Memory link and preserved Chat history, alongside earlier stop/regenerate/restart checks. Desktop/mobile screenshots were inspected and no page errors or horizontal overflow occurred. This tests summary orchestration, not real-model summary quality. Normal tests did not launch real inference.

@@ -351,3 +351,19 @@ class Setting(Base):
 
     key: Mapped[str] = mapped_column(String(120), primary_key=True)
     value: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class ConversationSummary(Base):
+    __tablename__ = "conversation_summaries"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), index=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"), unique=True)
+    memory_id: Mapped[str | None] = mapped_column(
+        ForeignKey("memories.id", ondelete="SET NULL"), nullable=True
+    )
+    covered_message_id: Mapped[str] = mapped_column(ForeignKey("messages.id"))
+    covered_created_at: Mapped[Any] = mapped_column(UTCDateTime)
+    source_message_ids: Mapped[list] = mapped_column(JSON)
+    previous_summary_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)

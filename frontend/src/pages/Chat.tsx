@@ -1,3 +1,4 @@
+import ConversationSummary, { type Summary } from "./ConversationSummary";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -35,7 +36,11 @@ type Message = {
   error_message: string;
   metadata: { partial?: boolean; superseded?: boolean };
 };
-type Detail = Conversation & { messages: Message[]; active_run: Run | null };
+type Detail = Conversation & {
+  messages: Message[];
+  active_run: Run | null;
+  summary: Summary | null;
+};
 type Provider = {
   id: string;
   name: string;
@@ -365,6 +370,11 @@ function ConversationView({
           label="Save settings"
         />
       </details>
+      <ConversationSummary
+        conversationId={conversation.id}
+        summary={conversation.summary}
+        busy={busy}
+      />
       <div className="chat-transcript" aria-live="polite">
         {!messages.length && (
           <Empty title="A fresh perspective starts here">

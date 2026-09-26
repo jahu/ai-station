@@ -54,7 +54,7 @@ Configure `AI_STATION_LLM_BASE_URL` (for example `http://127.0.0.1:11434/v1` for
 
 Open Chat, select or enter a model name, set a system prompt, and create a conversation. Send with the button or Ctrl/Cmd+Enter. Responses stream into persistent history and link to their Run. Stop closes the active provider connection even if no tokens arrive. Regenerate preserves the previous response and creates a new Run for the same Task. A conversation permits one active Run; settings can be changed when it is idle.
 
-This slice supports text only and local endpoints: localhost, host.docker.internal, loopback/private IPs. Public/cloud URLs and redirects are rejected. Markdown images do not load remote content. Context is a visible bounded policy: the latest 16 eligible messages, at most 56,000 history characters plus the system prompt. Full history remains persisted; the UI shows the latest 200 messages. Rolling summaries, attachments, cloud providers, and coding execution modes are not enabled yet. See [chat execution](docs/local-chat.md).
+This slice supports text only and local endpoints: localhost, host.docker.internal, loopback/private IPs. Public/cloud URLs and redirects are rejected. Markdown images do not load remote content. Context is a visible bounded policy: the latest 16 eligible messages, at most 56,000 history characters plus the system prompt. Full history remains persisted; the UI shows the latest 200 messages. Inspectable rolling summaries can be updated explicitly from Conversation memory. Attachments, cloud providers, and coding execution modes are not enabled yet. See [chat execution](docs/local-chat.md).
 
 ## Images
 
@@ -119,7 +119,7 @@ Contributions use reviewed feature PRs to `develop`; `main` is the release branc
 
 ### Memory workspace
 
-Memory now supports scoped FTS search, provenance inspection, versioned editing, pinning, disabling and confirmed deletion. Enabled pinned global and conversation entries are snapshotted into new Chat Runs. See [memory contracts](docs/memory.md) and the [MVP acceptance ledger](docs/mvp-status.md). Agents can retrieve enabled entries from their own scope when the memory tool is selected. Rolling summaries are still pending.
+Memory now supports scoped FTS search, provenance inspection, versioned editing, pinning, disabling and confirmed deletion. Enabled pinned global and conversation entries are snapshotted into new Chat Runs. See [memory contracts](docs/memory.md) and the [MVP acceptance ledger](docs/mvp-status.md). Agents can retrieve enabled entries from their own scope when the memory tool is selected. Conversation memory now supports [explicit rolling summary updates](docs/conversation-summaries.md), with source Runs, preserved history and editable/disableable scoped Memory.
 
 ### Models workspace
 

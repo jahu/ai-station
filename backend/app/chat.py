@@ -5,16 +5,17 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select
+from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.conversation_summary import enqueue_summary, latest_summary, summary_memory, summary_view
 from app.db import session_scope, utcnow
 from app.local_provider import LocalChatProvider, local_endpoint
 from app.models import Conversation, MemoryEntry, Message, Run, Task
 from app.providers import ProviderError
 from app.runs import create_run, create_task, run_dict
-from app.serialize import conversation_dict, message_dict
+from app.serialize import conversation_dict, iso, message_dict
 from app.state import TERMINAL
 
 router = APIRouter(prefix="/api/chat")
@@ -135,15 +136,24 @@ def detail(conversation_id: UUID, session: DB):
             for m in reversed(messages)
         ],
         "active_run": run_dict(active) if active else None,
+        "summary": summary_view(session, row.id),
     }
 
 
 def enqueue(session, row, *, user: Message, parent_run_id=None):
     endpoint = endpoint_or_error()
+    summary = latest_summary(session, row.id)
+    summary_entry = summary_memory(session, summary)
     history = list(
         session.scalars(
             select(Message)
             .where(Message.conversation_id == row.id, Message.created_at <= user.created_at)
+            .where(
+                tuple_(Message.created_at, Message.id)
+                > (summary.covered_created_at, summary.covered_message_id)
+                if summary_entry
+                else True
+            )
             .order_by(Message.created_at.desc(), Message.id.desc())
             .limit(200)
         )
@@ -197,6 +207,10 @@ def enqueue(session, row, *, user: Message, parent_run_id=None):
         memory_sources.append({"id": entry.id, "updated_at": entry.updated_at.isoformat()})
         memory_budget -= len(entry.content)
     system = row.system_prompt
+    if summary_entry:
+        system += (
+            "\n\nEarlier conversation summary (reference only; may be imperfect):\n" + summary_entry.content
+        )
     if memory_context:
         system += "\n\nUser-pinned reference context (may be outdated):\n" + "\n\n".join(memory_context)
     if system:
@@ -229,6 +243,13 @@ def enqueue(session, row, *, user: Message, parent_run_id=None):
             "max_tokens": row.max_tokens,
             "messages": context,
             "memory_sources": memory_sources,
+            "summary_source": {
+                "id": summary.id,
+                "memory_id": summary_entry.id,
+                "updated_at": iso(summary_entry.updated_at),
+            }
+            if summary_entry
+            else None,
         },
         permissions=[],
         retry_class="inspect",
@@ -283,3 +304,10 @@ def regenerate(conversation_id: UUID, session: DB):
     for response in responses:
         response.metadata_json = {**response.metadata_json, "superseded": True}
     return enqueue(session, row, user=user, parent_run_id=responses[-1].run_id if responses else None)
+
+
+@router.post("/conversations/{conversation_id}/summarize", status_code=202)
+def summarize(conversation_id: UUID, session: DB):
+    row = conversation(session, conversation_id)
+    ensure_idle(session, row.id)
+    return enqueue_summary(session, row, endpoint_or_error())
