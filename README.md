@@ -133,3 +133,5 @@ Runtime observations are refreshed through a normal Run from **System → Observ
 
 
 The Home workspace combines live hardware with saved activity: active/queued Runs, enabled agents, scheduled work, recent conversations and generated artifacts. Runtime cards distinguish process observations from endpoint checks and flag stale data. Quick actions open the relevant workspaces without starting a workload.
+
+Runs supports combined status, capability, executor, execution target, project, agent, GPU and creation-time filters. Filters are kept in the page URL and paging makes older history accessible. Dates are entered in local time and submitted with an explicit timezone.

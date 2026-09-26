@@ -116,6 +116,20 @@ def main():
                     page.set_viewport_size({"width": 390, "height": 844})
                     assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
                     page.screenshot(path="/tmp/ai-station-dashboard-mobile.png", full_page=True)
+                    page.goto(url + "/#/runs")
+                    page.get_by_text("More filters", exact=True).click()
+                    page.get_by_label("Capability", exact=True).fill("runtimes.observe")
+                    page.get_by_role("button", name="Apply filters").click()
+                    expect(page.get_by_role("link", name="runtimes.observe", exact=False)).to_be_visible()
+                    assert "capability=runtimes.observe" in page.url
+                    page.reload()
+                    page.get_by_text("More filters", exact=True).click()
+                    expect(page.get_by_label("Capability", exact=True)).to_have_value("runtimes.observe")
+                    page.get_by_label("Executor", exact=True).fill("nonexistent-executor")
+                    page.get_by_role("button", name="Apply filters").click()
+                    expect(page.get_by_role("heading", name="No runs in this view")).to_be_visible()
+                    assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+                    page.screenshot(path="/tmp/ai-station-run-filters-mobile.png", full_page=True)
                     assert not errors, errors
                     browser.close()
             finally:

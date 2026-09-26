@@ -8,7 +8,7 @@ Updated 2026-09-26. This is an acceptance ledger, not a claim that the complete 
 | Dashboard/system | Real two-GPU telemetry and native diagnostics; history charts; bounded active Runs, agents, schedules, conversations, artifacts and aged runtime observations | Final clean-start acceptance |
 | Images/library | Generate, edit, recompose, upscale; uploads, artifacts, live logs, cancellation, retry; fake pipeline integration | All six real GPU mode/backend cases passed at smoke-test sizes; broader quality/performance evaluation remains |
 | Chat | Durable local compatible-provider streaming, stop/regenerate, restart; fake streaming/browser tests; real local qwen3:8b completion and persisted response; Docker → private runner bridge → loopback-only Ollama verified | Attachments; optional automatic summary scheduling |
-| Runs | Durable lifecycle, events/SSE, worker leases/recovery, managed cancellation | Remaining filters and coding/agent result integration |
+| Runs | Durable lifecycle, events/SSE, worker leases/recovery, managed cancellation | Combined filters/paging completed; coding result integration remains |
 | Projects | Host-validated registry, policies, trusted command configuration, Git status | Actual coding execution and review |
 | Worktrees | Worker-driven, runner-owned reservations, managed Git process, report artifact; disposable real Git tests | Agent edits, validation, diff review, self-development acceptance |
 | Coding | Preserved inactive drafts; installed Codex/Cursor help inspected | Enforced sandbox, typed authorization, actual adapters, validation, diff UI, opt-in real tasks |

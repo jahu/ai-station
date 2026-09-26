@@ -1,5 +1,10 @@
-import { useEffect, useState } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useEffect, type FormEvent } from "react";
+import {
+  Link,
+  useParams,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowUpRight, Ban, Radio } from "lucide-react";
 import { api, type Run, type RunEvent, type Artifact, useRuns } from "../api";
@@ -15,8 +20,62 @@ import { terminal, time } from "../lib/utils";
 import { ArtifactCards } from "./Library";
 
 export function Runs() {
-  const [status, setStatus] = useState("");
-  const query = useRuns(status);
+  const [params, setParams] = useSearchParams();
+  const status = params.get("status") ?? "";
+  const offset = Math.max(0, Number(params.get("offset")) || 0);
+  const filters = Object.fromEntries(
+    [
+      "capability",
+      "executor",
+      "target",
+      "project_id",
+      "agent_id",
+      "gpu",
+      "created_after",
+      "created_before",
+      "offset",
+    ].map((key) => [key, params.get(key) ?? ""]),
+  );
+  const query = useRuns(status, filters);
+  const projects = useQuery({
+    queryKey: ["run-filter-projects"],
+    queryFn: () => api<{ id: string; name: string }[]>("/projects"),
+  });
+  const agents = useQuery({
+    queryKey: ["run-filter-agents"],
+    queryFn: () => api<{ id: string; name: string }[]>("/agents?limit=200"),
+  });
+  function filter(key: string, value: string) {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    if (key !== "offset") next.delete("offset");
+    setParams(next, { replace: true });
+  }
+  function apply(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const values = new FormData(event.currentTarget);
+    const next = new URLSearchParams();
+    if (status) next.set("status", status);
+    for (const [key, value] of values.entries()) {
+      if (!String(value).trim()) continue;
+      next.set(
+        key,
+        key.startsWith("created_")
+          ? new Date(String(value)).toISOString()
+          : String(value).trim(),
+      );
+    }
+    setParams(next);
+  }
+  function localDate(value: string) {
+    if (!value) return "";
+    const date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return "";
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+  }
   return (
     <>
       <PageTitle
@@ -28,7 +87,10 @@ export function Runs() {
       <div className="toolbar">
         <label>
           Filter by status{" "}
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <select
+            value={status}
+            onChange={(e) => filter("status", e.target.value)}
+          >
             <option value="">All statuses</option>
             {[
               "queued",
@@ -48,9 +110,97 @@ export function Runs() {
             ))}
           </select>
         </label>
-        <span className="muted">Latest 100 runs</span>
+        <span className="muted">
+          Page {Math.floor(offset / 100) + 1} · up to 100 runs
+        </span>
       </div>
-      <ErrorNotice error={query.error} />
+      <details className="panel run-filters">
+        <summary>More filters</summary>
+        <form
+          key={params.toString()}
+          onSubmit={apply}
+          className="run-filter-form"
+        >
+          {[
+            ["capability", "Capability"],
+            ["executor", "Executor"],
+            ["gpu", "GPU ID"],
+          ].map(([key, label]) => (
+            <label key={key}>
+              {label}
+              <input
+                name={key}
+                defaultValue={params.get(key) ?? ""}
+                placeholder="Exact match"
+              />
+            </label>
+          ))}
+          {[
+            ["project_id", "Project", projects.data],
+            ["agent_id", "Agent", agents.data],
+          ].map(([key, label, rows]) => {
+            const field = String(key);
+            const items = (rows ?? []) as { id: string; name: string }[];
+            const selected = params.get(field) ?? "";
+            return (
+              <label key={field}>
+                {String(label)}
+                <select name={field} defaultValue={selected}>
+                  <option value="">All</option>
+                  {selected && !items.some((row) => row.id === selected) && (
+                    <option value={selected}>{selected}</option>
+                  )}
+                  {items.map((row) => (
+                    <option key={row.id} value={row.id}>
+                      {row.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            );
+          })}
+          <label>
+            Execution target
+            <select name="target" defaultValue={params.get("target") ?? ""}>
+              <option value="">All targets</option>
+              <option value="host">Host</option>
+              <option value="container">Container</option>
+              <option value="remote-node">Remote node</option>
+            </select>
+          </label>
+          <label>
+            Created after (local time)
+            <input
+              type="datetime-local"
+              name="created_after"
+              defaultValue={localDate(params.get("created_after") ?? "")}
+            />
+          </label>
+          <label>
+            Created before (local time)
+            <input
+              type="datetime-local"
+              name="created_before"
+              defaultValue={localDate(params.get("created_before") ?? "")}
+            />
+          </label>
+          <div className="row">
+            <Button type="submit">Apply filters</Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setParams({})}
+            >
+              Reset filters
+            </Button>
+          </div>
+        </form>
+        <p className="muted">
+          GPU matches the allocation, or the requested GPU before allocation.
+          Filters combine; dates include their boundaries.
+        </p>
+      </details>
+      <ErrorNotice error={query.error ?? projects.error ?? agents.error} />
       {query.isPending ? (
         <Loading />
       ) : (
@@ -108,6 +258,24 @@ export function Runs() {
           )}
         </section>
       )}
+      <div className="toolbar">
+        <Button
+          variant="secondary"
+          disabled={offset === 0 || query.isPending}
+          onClick={() => filter("offset", String(Math.max(0, offset - 100)))}
+        >
+          Previous page
+        </Button>
+        <Button
+          variant="secondary"
+          disabled={
+            query.isPending || !!query.error || (query.data?.length ?? 0) < 100
+          }
+          onClick={() => filter("offset", String(offset + 100))}
+        >
+          Next page
+        </Button>
+      </div>
     </>
   );
 }
