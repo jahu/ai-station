@@ -26,6 +26,7 @@ from app.runtime_registry import RuntimeObservationExecutor
 from app.state import RunStatus
 from app.summary_executor import SummaryExecutor
 from app.tools import get_tool
+from app.validation_executor import ProjectValidationExecutor
 from app.worktree_executor import WorktreeExecutor
 
 
@@ -270,6 +271,7 @@ EXECUTORS = {
     "chat": ChatExecutor(),
     "chat_summary": SummaryExecutor(),
     "worktree_prepare": WorktreeExecutor(),
+    "project_validation": ProjectValidationExecutor(),
     "model_discovery": ModelDiscoveryExecutor(),
     "agent": LocalAgentExecutor(),
     "runtime_observation": RuntimeObservationExecutor(),

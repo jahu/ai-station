@@ -143,6 +143,22 @@ def main():
                         ).read_text() == "Original repository\n"
                     assert (repo / "README.md").read_text() == "Changed by the smoke test\n"
                     page.screenshot(path="/tmp/ai-station-worktree.png", full_page=True)
+                    if os.environ.get("AI_STATION_REAL_SANDBOX_TESTS") == "1":
+                        page.get_by_label("Test commands").fill('["/usr/bin/python3", "-c", "print(42)"]')
+                        page.get_by_role("button", name="Save project settings").click()
+                        page.get_by_text("Project settings saved.", exact=True).wait_for()
+                        page.get_by_role("button", name="Run saved validation").click()
+                        page.get_by_text("1/1 project commands passed.", exact=True).wait_for(timeout=20000)
+                        page.get_by_role("heading", name="Project validation", exact=True).wait_for()
+                        page.get_by_text("validation.json", exact=True).wait_for()
+                        page.set_viewport_size({"width": 390, "height": 844})
+                        assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+                        page.screenshot(path="/tmp/ai-station-validation-mobile.png", full_page=True)
+                        page.get_by_role("link", name="Open project and worktrees →").click()
+                        page.get_by_role("heading", name="Updated in another editor", exact=True).wait_for()
+                        print(
+                            "PASS: real sandbox validation, command result UI, JSON artifact and mobile layout"
+                        )
                     runner.terminate()
                     runner.wait(timeout=10)
                     page.get_by_role("button", name="Refresh", exact=True).click()

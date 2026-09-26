@@ -428,6 +428,7 @@ export function RunDetail() {
                 <p>{run.data.summary}</p>
               </section>
             )}
+            <ValidationResults events={events.data ?? []} />
             <div className="inspector-grid">
               <section className="panel">
                 <div className="panel-heading">
@@ -486,5 +487,32 @@ export function RunDetail() {
         )
       )}
     </>
+  );
+}
+
+function ValidationResults({ events }: { events: RunEvent[] }) {
+  const results = events.filter(
+    (event) => event.event_type === "validation.completed",
+  );
+  if (!results.length) return null;
+  return (
+    <section className="panel content-panel">
+      <h2>Project validation</h2>
+      {results.map((event) => (
+        <article key={event.id} className="mt">
+          <div className="row spread">
+            <strong>{String(event.payload.kind)}</strong>
+            <Badge
+              status={event.payload.exit_code === 0 ? "succeeded" : "failed"}
+            />
+          </div>
+          <pre>{JSON.stringify(event.payload.argv)}</pre>
+          <p className="muted">
+            Exit {String(event.payload.exit_code)} ·{" "}
+            {String(event.payload.duration_seconds)} seconds
+          </p>
+        </article>
+      ))}
+    </section>
   );
 }
