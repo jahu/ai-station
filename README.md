@@ -10,6 +10,7 @@ A local-first AI workstation control plane. Work is represented by **Task → Ru
 - External runtimes: read-only process observations and configured local endpoint health, with durable history and explicit external ownership in System.
 - Models: managed metadata-only discovery Runs, persistent file observations, category/search/detail views and report artifacts.
 - Projects: host-validated repository registration, read-only Git status, persisted branch policies, argv validation commands, and agent guidance.
+- Cursor coding: explicit external-AI consent, selected-file proposals in a fresh worktree, checked writes, diff review and automatic saved validation.
 - Owned worktree preparation: a queued local Run creates an isolated task branch, captures logs, and records a JSON artifact without changing the active checkout.
 - Images: Qwen/Juggernaut Generate, Edit, multi-reference Recompose, and 4× Upscale through the existing photo pipeline.
 - Validated image uploads, artifact Library, source reuse, live stdout/stderr, owned-process cancellation, and explicit image retries.
@@ -19,7 +20,7 @@ A local-first AI workstation control plane. Work is represented by **Task → Ru
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory.
 - Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
 
-Earlier coding-agent modules are preserved drafts, not operational integrations. Unimplemented workspaces show unavailable states. Coding-agent launches, commits, pushes, and PR actions remain disabled. Saved project validation can run in prepared worktrees through the native sandbox.
+The bounded Cursor adapter is operational. Other coding-agent modules remain inactive drafts; commits, pushes and PR actions are not exposed. Saved project validation runs in prepared worktrees through the native sandbox.
 
 ## Prerequisites and installation
 
@@ -76,6 +77,12 @@ Choose **Prepare isolated worktree** to queue a local Run from the project's exi
 
 Choose **Run saved validation** on a prepared worktree to enqueue its saved test, lint and build commands. The runner requires the installed Cursor native sandbox helper and fails closed if isolation is unavailable. Commands can write only inside the worktree; Git metadata stays read-only and network access is blocked. Dependencies must be installed within the worktree or available in system runtime paths. The Run includes live logs, cancellation, command exit codes and a JSON report. See [validation boundary](docs/coding-boundary.md).
 
+## Coding with Cursor
+
+Open Coding, select a registered project, describe a change and list up to ten relative UTF-8 file paths (existing or new). Explicitly approve sending the prompt, project guidance and selected contents to external Cursor AI. A fresh task branch/worktree starts from the configured integration branch. Cursor proposes complete replacements with tools disabled; the runner checks paths and source hashes before applying them. Inspect the linked Coding Run for the summary, changed files, diff and downloadable patch, then follow its separate validation Run for test/lint/build results. The worktree remains available under the application data root for human review.
+
+The installed, authenticated `cursor-agent` CLI is required. Credentials are used by the CLI and never copied by AI Station. The initial adapter allows at most 32 KB per file and 64 KB of selected context, with a five-minute provider limit. Hidden/configuration credential paths, binary edits, deletion and autonomous repository exploration are unsupported. Saved validation additionally needs Cursor's installed native sandbox helper and worktree-local or system dependencies. No commit, push, merge or restart follows a coding result. Codex, Claude Code and local coding remain unavailable. See [Cursor execution and limits](docs/coding-cursor.md).
+
 ## Development and verification
 
 ```bash
@@ -113,9 +120,9 @@ The scheduler enqueues normal runs and samples telemetry. Short SQLite transacti
 
 ## Security boundaries and limitations
 
-The runner is not a shell daemon. Its enabled API offers host inspection, validated photo launches, owned worktree preparation, model metadata discovery, and cancellation of recorded, verified process groups. Boot identity, process start ticks, session, and group membership protect against PID reuse. Read-only Git inspection disables repository command helpers and enforces metadata roots, time/output bounds, and revision validation. Partial clones and alternate object stores are not supported for inspection yet. Draft filesystem/Git mutation routes are unavailable. Existing external services are never stopped or imported implicitly. Managed workload containers and remote nodes remain future work.
+The runner is not a shell daemon. Its enabled API offers host inspection, validated photo launches, owned worktree preparation, model metadata discovery, bounded Cursor proposals, sandboxed saved validation, and cancellation of recorded, verified process groups. Boot identity, process start ticks, session, and group membership protect against PID reuse. Read-only Git inspection disables repository command helpers and enforces metadata roots, time/output bounds, and revision validation. Partial clones and alternate object stores are not supported for inspection yet. Draft filesystem/Git mutation routes are unavailable. Existing external services are never stopped or imported implicitly. Managed workload containers and remote nodes remain future work.
 
-Uncertain host execution keeps its reservations pending inspection; recovery never blindly repeats side effects. If a worker disappears after dispatch, the run requires inspection when the process is gone. SQLite uses short serialized transactions; multi-node/distributed execution is not implemented. A real local OpenAI-compatible `qwen3:8b` completion and persisted response were verified on 2026-09-25. Real Qwen/Juggernaut generation, Edit, one/multiple-reference Recompose and Upscale passed small GPU acceptance Runs. Codex/Cursor coding tasks have not been smoke-tested.
+Uncertain host execution keeps its reservations pending inspection; recovery never blindly repeats side effects. If a worker disappears after dispatch, the run requires inspection when the process is gone. SQLite uses short serialized transactions; multi-node/distributed execution is not implemented. A real local OpenAI-compatible `qwen3:8b` completion and persisted response were verified on 2026-09-25. Real Qwen/Juggernaut generation, Edit, one/multiple-reference Recompose and Upscale passed small GPU acceptance Runs. A real Cursor selected-file coding task passed with diff review and sandboxed validation. Codex remains unavailable; no real Codex task has passed.
 
 Contributions use reviewed feature PRs to `develop`; `main` is the release branch. See [AGENTS.md](AGENTS.md).
 

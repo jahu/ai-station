@@ -159,6 +159,38 @@ def main():
                         print(
                             "PASS: real sandbox validation, command result UI, JSON artifact and mobile layout"
                         )
+                    if os.environ.get("AI_STATION_REAL_CURSOR_TESTS") == "1":
+                        page.get_by_label("Test commands").fill('["/usr/bin/python3", "new.py"]')
+                        page.get_by_role("button", name="Save project settings").click()
+                        page.get_by_text("Project settings saved.", exact=True).wait_for()
+                        page.goto(url + "/#/coding")
+                        page.get_by_role("combobox").select_option(project["id"])
+                        page.get_by_label("Task", exact=True).fill(
+                            "Replace README.md with exactly 'AI Station coding acceptance\\n' (one line with a trailing newline), and create new.py with exactly 'print(42)\\n'. Return both selected file replacements."
+                        )
+                        page.get_by_label("Selected files").fill("README.md\nnew.py")
+                        page.get_by_role("checkbox").check()
+                        page.get_by_role("button", name="Create worktree and start Cursor").click()
+                        page.get_by_role("link", name="Open Cursor execution →").wait_for(timeout=20000)
+                        page.get_by_role("link", name="Open Cursor execution →").click()
+                        page.get_by_role("heading", name="Changes awaiting review").wait_for(timeout=120000)
+                        page.get_by_text("changes.diff", exact=True).wait_for()
+                        page.screenshot(path="/tmp/ai-station-coding-review.png", full_page=True)
+                        page.get_by_role("link", name="Inspect validation results →").click()
+                        page.get_by_text("1/1 project commands passed.", exact=True).wait_for(timeout=20000)
+                        page.get_by_role("link", name="Open project and worktrees →").click()
+                        page.get_by_role("heading", name="Updated in another editor", exact=True).wait_for()
+                        with httpx.Client(base_url=url, trust_env=False) as client:
+                            owned = client.get(f"/api/projects/{project['id']}/worktrees").json()
+                            assert len(owned) == 2
+                            latest = root / "data" / owned[0]["relative_path"]
+                            assert (latest / "README.md").read_text() == "AI Station coding acceptance\n"
+                            assert (latest / "new.py").read_text() == "print(42)\n"
+                        assert (repo / "README.md").read_text() == "Changed by the smoke test\n"
+                        assert not (repo / "new.py").exists()
+                        print(
+                            "PASS: real external Cursor, fresh worktree, checked edits, diff UI, native validation and unchanged active checkout"
+                        )
                     runner.terminate()
                     runner.wait(timeout=10)
                     page.get_by_role("button", name="Refresh", exact=True).click()

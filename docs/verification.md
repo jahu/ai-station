@@ -112,3 +112,10 @@ The user-approved preview upgrade to develop `b06edac` completed at http://127.0
 ## Sandboxed project validation — 2026-09-26
 
 263 Python tests and 20 frontend tests passed, with Python lint/format and frontend format/lint/TypeScript/production build. Five opt-in tests passed through the installed Cursor native sandbox: successful and failed commands, cancellation, timeout termination and sanitized command environment. The standalone probe confirmed workspace writes while outside/Git metadata/global temporary writes and loopback network access were denied. Chromium passed project → saved validation Run → visible command results/JSON artifact, mobile layout, original checkout/index preservation and runner outage behavior. An initial browser attempt used an exact implicit-label selector that included the saved textarea content after remount; correcting that test selector produced the passing run. No coding model or cloud tokens were used.
+
+
+## Bounded Cursor coding — 2026-09-26
+
+283 Python tests and 21 frontend tests passed, with Python lint/format and frontend format/lint/TypeScript/production build. The opt-in real Cursor browser test passed fresh worktree preparation, two selected source edits, Git-compatible diff/JSON artifacts, the review UI and automatic saved validation through the installed native sandbox. The original dirty checkout and index were unchanged. Mobile review output was inspected; provider cloud inference was explicitly enabled only for this test.
+
+An initial end-to-end attempt found a background Cursor helper keeping its owned process group alive after the main CLI exited. Identity-checked pidfd cleanup fixed this; regressions cover success, nonzero exit, invalid output, inherited pipes and an unrelated process remaining untouched. The complete real test then passed. Existing bundle-size and TestClient deprecation advisories remain. No Codex execution is claimed.

@@ -136,4 +136,7 @@ class WorktreeExecutor:
         run.metadata_json = {**run.metadata_json, "worktree": report}
         run.summary = f"Prepared {worktree.branch}; no coding agent or validation command was launched."
         transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})
+        from app.cursor_coding import queue_cursor
+
+        queue_cursor(session, run, worktree)
         return "done"

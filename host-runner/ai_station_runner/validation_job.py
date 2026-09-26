@@ -24,7 +24,7 @@ def execute_command(argv, workspace, env, *, deadline):
     started = time.monotonic()
     size = 0
     with subprocess.Popen(
-        argv, cwd=workspace, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        argv, cwd=workspace, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ) as proc:
         with selectors.DefaultSelector() as selector:
             selector.register(proc.stdout, selectors.EVENT_READ, sys.stdout.buffer)
