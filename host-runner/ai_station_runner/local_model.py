@@ -130,10 +130,14 @@ async def send_until_disconnect(client, upstream, incoming):
 async def completion(body: Completion, expected: ExpectedEndpoint, incoming: Request):
     url = endpoint(expected)
     client = upstream_client()
+    return await forward_completion(body, incoming, url, client, headers())
+
+
+async def forward_completion(body, incoming, url, client, request_headers):
     response = None
     try:
         request = client.build_request(
-            "POST", url + "/chat/completions", headers=headers(), json=body.model_dump()
+            "POST", url + "/chat/completions", headers=request_headers, json=body.model_dump()
         )
         response = await send_until_disconnect(client, request, incoming)
         response.raise_for_status()

@@ -26,6 +26,7 @@ from app.db import migrate, session_factory, session_scope, utcnow
 from app.events import event_dict, list_events
 from app.images import MAX_UPLOAD
 from app.images import router as image_router
+from app.llama import router as llama_router
 from app.memory_api import router as memory_router
 from app.model_registry import router as model_router
 from app.models import Artifact, Run, Setting, WorkerRow
@@ -276,6 +277,7 @@ app.include_router(memory_router)
 app.include_router(model_router)
 app.include_router(agent_router)
 app.include_router(runtime_router)
+app.include_router(llama_router)
 
 dist = get_settings().frontend_dist
 if dist and Path(dist).is_dir():

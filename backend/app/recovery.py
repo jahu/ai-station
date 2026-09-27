@@ -36,6 +36,32 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
     touched: list[str] = []
     for run in stale:
         session.commit()
+        if run.executor_type in {"llama_load", "llama_stop"}:
+            # The native create/start/stop journal is keyed by immutable runtime
+            # identity. Resuming it cannot create another container or restart an
+            # exited model. Keep all reservations until confirmed stop/readiness.
+            session.refresh(run)
+            if (
+                run.status not in INSPECT_STATUSES
+                or run.lease_expires_at is None
+                or run.lease_expires_at >= now
+            ):
+                continue
+            canceled = run.status == RunStatus.CANCEL_REQUESTED.value
+            transition(
+                session,
+                run,
+                RunStatus.INTERRUPTED,
+                event_type="run.interrupted",
+                payload={"reason": "Resume owned llama.cpp lifecycle inspection"},
+            )
+            run.metadata_json = {**run.metadata_json, "cancel_on_resume": canceled}
+            run.finished_at = None
+            run.worker_id = None
+            run.lease_expires_at = None
+            transition(session, run, RunStatus.QUEUED, event_type="run.requeued", payload={"recovery": True})
+            touched.append(run.id)
+            continue
         info = _inspect(runner, run.id)
         session.refresh(run)
         if run.status not in INSPECT_STATUSES or run.lease_expires_at is None or run.lease_expires_at >= now:

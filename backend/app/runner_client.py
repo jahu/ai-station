@@ -47,6 +47,15 @@ class RunnerClient:
             return response.json()
         return {}
 
+    def load_llama(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/llama/load", payload)
+
+    def inspect_llama(self, instance_id: str) -> dict:
+        return self.request("GET", f"/v1/llama/{instance_id}")
+
+    def stop_llama(self, instance_id: str) -> dict:
+        return self.request("POST", f"/v1/llama/{instance_id}/stop", {"permissions": ["manage_models"]})
+
     def health(self) -> dict:
         return self.request("GET", "/health")
 

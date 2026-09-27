@@ -8,7 +8,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 
 - Platform assistant: the default conversation routes instructions to images, agent drafts and explicitly scoped Cursor tasks, showing ordinary Runs and image results inline. Existing workspaces remain available. See [orchestrator contracts and roadmap](docs/orchestrator.md).
 
-- Local chat: persisted conversations, model discovery, streaming Markdown, bounded text attachments, stop, regeneration, and inspectable Runs.
+- Local chat: persisted conversations, selectable managed llama.cpp GGUFs across multiple GPUs alongside Ollama/compatible providers, model discovery, streaming Markdown, bounded text attachments, stop, regeneration, and inspectable Runs.
 - Agents: disabled natural-language drafts, explicit activation, local reports, scoped context tools, persistent UTC schedules, pause/resume, duplication and execution history.
 - Memory: scoped FTS search, validated provenance, editing, pin/disable controls, and immutable pinned Chat context.
 - External runtimes: read-only process observations and configured local endpoint health, with durable history and explicit external ownership in System.
@@ -54,6 +54,8 @@ Configure `AI_STATION_LLM_BASE_URL` with the host endpoint. Compose defaults to 
 Do not commit `.env` or secrets. The UI/API port is bound to localhost; authentication must be introduced before LAN exposure.
 
 ## Local chat
+
+Expand **Local model files · llama.cpp** in conversation settings to load a discovered GGUF, choose GPUs and context size, then select it for the conversation. Multiple selected GPUs share the model by layers. Stop unloads only AI Station's owned instance. Use Models to scan configured roots first. The Runner uses the already-installed image selected by `AI_STATION_LLAMA_IMAGE` and never pulls models or images automatically. See [runtime lifecycle](docs/managed-llama.md).
 
 Configure `AI_STATION_LLM_BASE_URL` (for example `http://127.0.0.1:11434/v1` for Ollama or `http://127.0.0.1:8080/v1` for llama.cpp) and optionally `AI_STATION_LLM_MODEL`. An existing compatible server must already be running; the private runner bridge reaches it on the host, and AI Station does not launch or reconfigure it. If required, supply its key through `AI_STATION_LLM_API_KEY`, never in the URL.
 

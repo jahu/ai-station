@@ -46,6 +46,18 @@ def local_endpoint() -> str:
     return raw
 
 
+def model_endpoint(model, session=None):
+    if not model.startswith("llamacpp:"):
+        return local_endpoint()
+    from app.db import session_factory
+    from app.llama import model_endpoint as resolve
+
+    if session is not None:
+        return resolve(model, session)
+    with session_factory()() as current:
+        return resolve(model, current)
+
+
 class LocalChatProvider:
     key = "local-openai-compatible"
 
@@ -55,9 +67,9 @@ class LocalChatProvider:
         return {"Authorization": f"Bearer {key}"} if key else {}
 
     @staticmethod
-    def connection(*, asynchronous=False):
+    def connection(*, asynchronous=False, managed=False):
         settings = get_settings()
-        if settings.llm_transport == "runner":
+        if settings.llm_transport == "runner" or managed:
             transport = httpx.AsyncHTTPTransport if asynchronous else httpx.HTTPTransport
             return {"transport": transport(uds=settings.runner_socket)}
         return {}
@@ -89,16 +101,22 @@ class LocalChatProvider:
     async def stream(
         self, *, endpoint: str, messages: list[dict], model: str, temperature: float, max_tokens: int
     ):
-        if endpoint != local_endpoint():
+        if endpoint != model_endpoint(model):
             raise ProviderError("The configured endpoint changed after this run was queued")
-        endpoint, headers = self.request_target(endpoint)
+        managed = model.startswith("llamacpp:")
+        if managed:
+            instance_id = endpoint.removeprefix("llamacpp:")
+            endpoint, headers = "http://runner/v1/llama/" + instance_id, {}
+            model = instance_id
+        else:
+            endpoint, headers = self.request_target(endpoint)
         done = False
         try:
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(300, connect=10),
                 trust_env=False,
                 follow_redirects=False,
-                **self.connection(asynchronous=True),
+                **self.connection(asynchronous=True, managed=managed),
             ) as client:
                 async with client.stream(
                     "POST",

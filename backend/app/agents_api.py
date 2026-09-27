@@ -14,7 +14,7 @@ from app.agent_schema import AgentSettings
 from app.agent_tools import AGENT_TOOLS, effective_permissions
 from app.db import session_scope, utcnow
 from app.factory import draft_agent
-from app.local_provider import local_endpoint
+from app.local_provider import model_endpoint
 from app.models import Agent, Project, Run
 from app.providers import ProviderError
 from app.runs import run_dict
@@ -47,7 +47,7 @@ def validate_target(body, session):
         raise HTTPException(422, "Project does not exist")
     if body.enabled:
         try:
-            local_endpoint()
+            model_endpoint(body.model, session)
         except ProviderError as exc:
             raise HTTPException(409, str(exc)) from exc
 

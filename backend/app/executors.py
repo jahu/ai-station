@@ -16,6 +16,7 @@ from app.chat_executor import ChatExecutor
 from app.config import get_settings
 from app.cursor_executor import CursorProposalExecutor
 from app.events import append_event
+from app.llama import LlamaExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
 from app.paths import safe_join, validate_relative
@@ -270,6 +271,8 @@ class FakeExecutor:
 EXECUTORS = {
     "fake": FakeExecutor(),
     "orchestrator": AssistantExecutor(),
+    "llama_load": LlamaExecutor("load"),
+    "llama_stop": LlamaExecutor("stop"),
     "photo_pipe": PhotoPipeExecutor(),
     "chat": ChatExecutor(),
     "chat_summary": SummaryExecutor(),

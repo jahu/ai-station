@@ -1,3 +1,4 @@
+import LlamaModels from "./LlamaModels";
 import { emptyOptions } from "./assistant-options";
 import AssistantActions, {
   AssistantResults,
@@ -28,6 +29,7 @@ type Conversation = {
   execution_mode?: "local" | "orchestrator";
   title: string;
   model: string;
+  model_label?: string;
   system_prompt: string;
   temperature: number;
   max_tokens: number;
@@ -154,7 +156,7 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
               <span>
                 <strong>{row.title}</strong>
                 <small>
-                  {row.model} · {time(row.updated_at)}
+                  {row.model_label ?? row.model} · {time(row.updated_at)}
                 </small>
               </span>
             </Link>
@@ -234,6 +236,7 @@ function SettingsForm({
   submit: (body: unknown) => void;
   label: string;
 }) {
+  const modelInput = useRef<HTMLInputElement>(null);
   return (
     <form
       className="image-form chat-settings"
@@ -274,6 +277,7 @@ function SettingsForm({
         <label>
           Model
           <input
+            ref={modelInput}
             name="model"
             list="chat-models"
             required
@@ -287,6 +291,12 @@ function SettingsForm({
             <option key={model} value={model} />
           ))}
         </datalist>
+        <LlamaModels
+          busy={pending}
+          onSelect={(model) => {
+            if (modelInput.current) modelInput.current.value = model;
+          }}
+        />
         <label>
           System prompt
           <textarea
@@ -397,7 +407,9 @@ function ConversationView({
       <div className="chat-heading">
         <div>
           <h2>{conversation.title}</h2>
-          <span className="muted">{conversation.model}</span>{" "}
+          <span className="muted">
+            {conversation.model_label ?? conversation.model}
+          </span>{" "}
           <span className="chip">LOCAL</span>
         </div>
         {conversation.active_run && (

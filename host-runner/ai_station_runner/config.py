@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     photo_python: str = ""
     photo_script: str = ""
     sd_cli: str = ""
+    llama_image: str = "ghcr.io/ggml-org/llama.cpp:server-cuda"
     model_roots: str = ""
     allowed_roots: str = ""
     llm_base_url: str = "http://127.0.0.1:11434/v1"

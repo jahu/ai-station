@@ -30,6 +30,7 @@ from ai_station_runner.gitops import (
     remove_worktree,
     run_project_command,
 )
+from ai_station_runner.llama_runtime import router as llama_router
 from ai_station_runner.local_model import router as local_model_router
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
@@ -549,3 +550,6 @@ app.router.routes = [
 
 # This router contains only the two validated local-model operations.
 app.include_router(local_model_router)
+
+
+app.include_router(llama_router)

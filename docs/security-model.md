@@ -86,3 +86,7 @@ Compose defaults to the [typed local-model bridge](local-model-bridge.md) over t
 
 
 Saved project test/lint/build commands now run through the worker and a managed native sandbox in an owned worktree. Commands are snapshotted from versioned project settings, Git metadata stays read-only, networking is blocked, and results become events plus a JSON artifact. See [project validation](coding-boundary.md) for limits, recovery and current dependency restrictions. The [bounded Cursor adapter](coding-cursor.md) adds explicit external-AI consent, checked selected-file writes, review artifacts and a separate validation Run; other provider adapters remain disabled.
+
+## Managed llama.cpp containers
+
+The [llama.cpp adapter](managed-llama.md) is the first enabled container runtime executor. Only the native Runner invokes Docker with fixed argv templates. It pins an already-installed image ID, disables automatic pulls and networking, drops capabilities, runs as the host user and mounts a single validated model read-only plus private socket storage. Container IDs, ownership labels and immutable manifests constrain inspection/stop. Manifests are outside the container-writable mount. Inference accepts runtime IDs through the private Runner socket, never caller URLs.
