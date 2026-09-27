@@ -27,4 +27,7 @@ AI_STATION_REAL_SANDBOX_TESTS=1 .venv/bin/python scripts/coding_sandbox_smoke.py
 AI_STATION_REAL_SANDBOX_TESTS=1 .venv/bin/python -m pytest -q backend/tests/test_projects.py -k 'validation_reports or validation_runner or validation_limits or validation_does_not_inherit'
 ```
 
-The installed Codex sandbox separately failed a read-only probe with `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`. No OS/AppArmor setting was changed. Cursor validation isolation does not prove that Cursor CLI built-in tools, plugins or provider authentication meet the coding-agent contract; that adapter remains disabled.
+The installed Codex sandbox separately failed a read-only probe with `bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted`. No OS/AppArmor setting was changed. Cursor validation isolation does not prove that Cursor CLI built-in tools, plugins or provider authentication meet the coding-agent contract; unrestricted CLI tool execution remains disabled. The separate [bounded Cursor proposal adapter](coding-cursor.md) uses an empty workspace and no enabled provider tools.
+
+
+Each validation command receives its own exclusive policy file outside the writable worktree. The installed native sandbox consumes this file at launch; the original request policy remains as audit evidence. Test/lint/build sequences therefore retain the same restrictions for every command, including commands after a failed check.

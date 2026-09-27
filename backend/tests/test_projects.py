@@ -442,7 +442,8 @@ def validation_sandbox(tmp_path, monkeypatch):
     (binaries / "cursor-agent").write_text("#!/bin/sh\nexit 0\n")
     helper = binaries / "cursorsandbox"
     helper.write_text(
-        "#!/usr/bin/python3\nimport os,sys\n"
+        "#!/usr/bin/python3\nimport os,sys,pathlib\n"
+        "policy=pathlib.Path(sys.argv[sys.argv.index('--policy')+1]); policy.read_text(); policy.unlink()\n"
         "argv=sys.argv[sys.argv.index('--')+1:]\nos.execvpe(argv[0],argv,os.environ)\n"
     )
     helper.chmod(0o700)
@@ -477,23 +478,30 @@ def test_validation_reports_exit_codes_and_preserves_original_checkout(
             "/usr/bin/python3",
             "-c",
             f"from pathlib import Path; Path('result.txt').write_text('ok'); print('test output'); raise SystemExit({exit_code})",
-        ]
+        ],
+        [
+            "/usr/bin/python3",
+            "-c",
+            "from pathlib import Path; assert Path('result.txt').read_text() == 'ok'; print('second command passed')",
+        ],
     ]
     with TestClient(app) as client:
         project, worktree = prepared_validation(client, repository, commands)
         response = enqueue_validation(client, project, worktree)
         assert response.status_code == 202, response.text
         run = response.json()
-        assert run["parameters"]["commands"] == [{"kind": "test", "argv": commands[0]}]
+        assert run["parameters"]["commands"] == [{"kind": "test", "argv": argv} for argv in commands]
         assert enqueue_validation(client, project, worktree).status_code == 409
         with session_factory()() as session:
             tick(session, "validation-test")
         result = client.get(f"/api/runs/{run['id']}").json()
         assert result["status"] == ("succeeded" if exit_code == 0 else "failed"), result
-        assert result["metadata"]["validation"]["commands"][0]["exit_code"] == exit_code
+        assert [item["exit_code"] for item in result["metadata"]["validation"]["commands"]] == [exit_code, 0]
         assert result["parent_run_id"] == worktree["run_id"]
         stream = client.get(f"/api/runs/{run['id']}/stream").text
         assert "test output" in stream and "validation.completed" in stream and "artifact.created" in stream
+        assert "second command passed" in stream
+        assert (owned_runner.data_dir / f"runtime/validation/{run['id']}.policy.json").exists()
         assert (owned_runner.data_dir / worktree["relative_path"] / "result.txt").read_text() == "ok"
     assert (repository / ".git/index").read_bytes() == original_index
     assert not (repository / "result.txt").exists()
