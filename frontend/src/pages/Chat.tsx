@@ -254,6 +254,7 @@ function SettingsForm({
         <label>
           Mode
           <select
+            aria-label="Mode"
             name="execution_mode"
             defaultValue={defaults.execution_mode ?? "local"}
           >

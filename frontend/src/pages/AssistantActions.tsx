@@ -142,6 +142,7 @@ export default function AssistantActions({
       <label>
         Action
         <select
+          aria-label="Action"
           value={value.action}
           onChange={(e) => {
             onChange({ ...value, action: e.target.value, coding: null });
