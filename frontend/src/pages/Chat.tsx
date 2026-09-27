@@ -1,3 +1,4 @@
+import TextAttachments, { type TextAttachment } from "./TextAttachments";
 import ConversationSummary, { type Summary } from "./ConversationSummary";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -34,7 +35,12 @@ type Message = {
   run_id: string | null;
   run_status: string | null;
   error_message: string;
-  metadata: { partial?: boolean; superseded?: boolean };
+  metadata: {
+    partial?: boolean;
+    superseded?: boolean;
+    user_text?: string;
+    attachments?: { id: string; name: string; size_bytes: number }[];
+  };
 };
 type Detail = Conversation & {
   messages: Message[];
@@ -299,6 +305,8 @@ function ConversationView({
 }) {
   const cache = useQueryClient();
   const [draft, setDraft] = useState("");
+  const [attachments, setAttachments] = useState<TextAttachment[]>([]);
+  const [readingAttachment, setReadingAttachment] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const [clipboardError, setClipboardError] = useState<Error | null>(null);
   const refresh = () => {
@@ -311,10 +319,11 @@ function ConversationView({
     mutationFn: () =>
       api<Run>(`/chat/conversations/${conversation.id}/messages`, {
         method: "POST",
-        ...json({ content: draft }),
+        ...json({ content: draft, attachments }),
       }),
     onSuccess: () => {
       setDraft("");
+      setAttachments([]);
       refresh();
     },
   });
@@ -339,7 +348,10 @@ function ConversationView({
     onSuccess: refresh,
   });
   const busy =
-    !!conversation.active_run || send.isPending || regenerate.isPending;
+    !!conversation.active_run ||
+    send.isPending ||
+    regenerate.isPending ||
+    readingAttachment;
   const messages = conversation.messages;
   const last = messages.at(-1);
   useEffect(() => {
@@ -411,7 +423,7 @@ function ConversationView({
                   ),
                 }}
               >
-                {message.content ||
+                {(message.metadata.user_text ?? message.content) ||
                   (message.role === "assistant"
                     ? message.run_status &&
                       ["failed", "canceled", "interrupted"].includes(
@@ -422,6 +434,18 @@ function ConversationView({
                     : "")}
               </Markdown>
             </div>
+            {message.metadata.attachments?.map((attachment) => (
+              <p key={attachment.id}>
+                <a
+                  className="text-link"
+                  href={`/api/artifacts/${attachment.id}/file`}
+                >
+                  {attachment.name}
+                </a>
+                {" · "}
+                {attachment.size_bytes} bytes · saved attachment
+              </p>
+            ))}
             {message.role === "assistant" && (
               <div className="message-actions">
                 {message.run_status && <Badge status={message.run_status} />}{" "}
@@ -490,6 +514,12 @@ function ConversationView({
                 if (draft.trim() && !busy) send.mutate();
               }
             }}
+          />
+          <TextAttachments
+            attachments={attachments}
+            onChange={setAttachments}
+            busy={busy}
+            onReading={setReadingAttachment}
           />
           <div className="row spread">
             <span className="muted">

@@ -124,3 +124,8 @@ An initial end-to-end attempt found a background Cursor helper keeping its owned
 ## Multiple native validation commands — 2026-09-27
 
 The first AI Station self-development attempt applied its documentation proposal in an owned worktree but failed validation: the provider omitted a final newline, and the native helper consumed the shared policy before command two. This attempt is not a passed acceptance test. The prompt now encodes exact content as JSON; each validation command receives a fresh exclusive policy. Two opt-in real native-sandbox regression cases passed, including a second command after a failing first command. The fake CI helper now models policy consumption. The complete self-development repeat remains pending deployment of this correction.
+
+
+## Local Chat text attachments — 2026-09-27
+
+293 Python tests and 23 frontend tests passed, with lint/format, TypeScript and production build. A Chromium fake-provider smoke confirmed selected file contents in the actual provider request, a persisted download link after API restart, regeneration, summaries, silent-provider cancellation and mobile layout. The attachment was a synthetic Python snippet; no real model inference or external transmission was used. Backend regressions verify bounded input, rejection before persistence, safe text downloads, hashes/provenance, immutable regeneration context, conversation separation and summary coverage of attached text.

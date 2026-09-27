@@ -1,0 +1,59 @@
+import { useState } from "react";
+import { afterEach, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import TextAttachments, { type TextAttachment } from "./TextAttachments";
+
+afterEach(cleanup);
+function Composer() {
+  const [items, setItems] = useState<TextAttachment[]>([]);
+  const [reading, setReading] = useState(false);
+  return (
+    <>
+      <TextAttachments
+        attachments={items}
+        onChange={setItems}
+        busy={reading}
+        onReading={setReading}
+      />
+      <button disabled={reading}>Send</button>
+    </>
+  );
+}
+function file(name: string, bytes: Uint8Array) {
+  const value = new File([new ArrayBuffer(bytes.length)], name);
+  Object.defineProperty(value, "arrayBuffer", {
+    value: async () => bytes.buffer,
+  });
+  return value;
+}
+it("previews selected text and supports removing it before sending", async () => {
+  render(<Composer />);
+  fireEvent.change(screen.getByLabelText("Attach text files"), {
+    target: {
+      files: [file("code.py", new TextEncoder().encode("print(42)\n"))],
+    },
+  });
+  expect(screen.getByRole("button", { name: "Send" })).toHaveProperty(
+    "disabled",
+    true,
+  );
+  await screen.findByText("print(42)");
+  expect(screen.getByRole("button", { name: "Send" })).toHaveProperty(
+    "disabled",
+    false,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Remove code.py" }));
+  expect(screen.queryByText("print(42)")).toBeNull();
+});
+it("rejects binary and oversized files without adding them", async () => {
+  render(<Composer />);
+  fireEvent.change(screen.getByLabelText("Attach text files"), {
+    target: { files: [file("bad.bin", new Uint8Array([0]))] },
+  });
+  await screen.findByText("bad.bin is not a supported text file.");
+  expect(screen.queryByRole("button", { name: "Remove bad.bin" })).toBeNull();
+  fireEvent.change(screen.getByLabelText("Attach text files"), {
+    target: { files: [file("large.txt", new Uint8Array(16001))] },
+  });
+  await screen.findByText("large.txt exceeds 16 KB.");
+});

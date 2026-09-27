@@ -4,7 +4,7 @@ A local-first AI workstation control plane. Work is represented by **Task → Ru
 
 ## What works now
 
-- Local chat: persisted conversations, model discovery, streaming Markdown, stop, regeneration, and inspectable Runs.
+- Local chat: persisted conversations, model discovery, streaming Markdown, bounded text attachments, stop, regeneration, and inspectable Runs.
 - Agents: disabled natural-language drafts, explicit activation, local reports, scoped context tools, persistent UTC schedules, pause/resume, duplication and execution history.
 - Memory: scoped FTS search, validated provenance, editing, pin/disable controls, and immutable pinned Chat context.
 - External runtimes: read-only process observations and configured local endpoint health, with durable history and explicit external ownership in System.
@@ -55,7 +55,9 @@ Configure `AI_STATION_LLM_BASE_URL` (for example `http://127.0.0.1:11434/v1` for
 
 Open Chat, select or enter a model name, set a system prompt, and create a conversation. Send with the button or Ctrl/Cmd+Enter. Responses stream into persistent history and link to their Run. Stop closes the active provider connection even if no tokens arrive. Regenerate preserves the previous response and creates a new Run for the same Task. A conversation permits one active Run; settings can be changed when it is idle.
 
-This slice supports text only and local endpoints: localhost, host.docker.internal, loopback/private IPs. Public/cloud URLs and redirects are rejected. Markdown images do not load remote content. Context is a visible bounded policy: the latest 16 eligible messages, at most 56,000 history characters plus the system prompt. Full history remains persisted; the UI shows the latest 200 messages. Inspectable rolling summaries can be updated explicitly from Conversation memory. Attachments, cloud providers, and coding execution modes are not enabled yet. See [chat execution](docs/local-chat.md).
+This slice supports text, UTF-8 file attachments and local endpoints: localhost, host.docker.internal, loopback/private IPs. Public/cloud URLs and redirects are rejected. Markdown images do not load remote content. Context is a visible bounded policy: the latest 16 eligible messages, at most 56,000 history characters plus the system prompt. Full history remains persisted; the UI shows the latest 200 messages. Inspectable rolling summaries can be updated explicitly from Conversation memory. Image/PDF attachments, cloud Chat providers, and coding execution modes inside Chat are not enabled yet. See [chat execution](docs/local-chat.md).
+
+Attach up to four UTF-8 text/code files in the Chat composer (16 KB per file, 24 KB combined). Preview or remove them before sending; the prompt and serialized attachment context share a 32,000-character limit. Files become general text artifacts with hashes and message/Run provenance, remain downloadable after restart, and are included in regeneration and explicit summaries. Downloads use plain text and attachment disposition even for an HTML filename. See [Chat attachments](docs/chat-attachments.md).
 
 ## Images
 
