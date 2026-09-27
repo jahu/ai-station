@@ -1801,3 +1801,36 @@ pre {
 .run-filters > p {
   font-size: 11px;
 }
+
+.assistant-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0;
+}
+.assistant-images > div {
+  max-width: 320px;
+  display: grid;
+  gap: 8px;
+}
+.assistant-images img {
+  max-width: 100%;
+  width: 260px;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 10px;
+}
+.assistant-actions {
+  border: 0;
+  padding: 0;
+  margin: 12px 0;
+}
+.assistant-actions label {
+  display: grid;
+  gap: 8px;
+}
+.assistant-results {
+  border-left: 2px solid var(--accent);
+  padding-left: 12px;
+  margin-top: 12px;
+}

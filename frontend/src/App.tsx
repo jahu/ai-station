@@ -48,7 +48,7 @@ const groups: { label: string; items: [string, string, LucideIcon][] }[] = [
   {
     label: "",
     items: [
-      ["/", "Home", House],
+      ["/home", "Home", House],
       ["/chat", "Chat", MessageSquare],
     ],
   },
@@ -113,7 +113,7 @@ export default function App() {
   const page =
     destinations.find(
       ([path]) => path !== "/" && location.pathname.startsWith(path),
-    )?.[1] ?? "Home";
+    )?.[1] ?? "Chat";
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -214,12 +214,13 @@ export default function App() {
         </header>
         <main id="main" tabIndex={-1}>
           <Routes>
-            <Route path="/" element={<Dashboard />} />
+            <Route path="/" element={<Chat assistant />} />
+            <Route path="/home" element={<Dashboard />} />
             <Route path="/runs" element={<Runs />} />
             <Route path="/runs/:id" element={<RunDetail />} />
             <Route path="/coding" element={<Coding />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/chat/:id" element={<Chat />} />
+            <Route path="/chat" element={<Chat assistant />} />
+            <Route path="/chat/:id" element={<Chat assistant />} />
             <Route path="/images" element={<ImagesWorkspace />} />
             <Route path="/library" element={<Library />} />
             <Route path="/library/:id" element={<ArtifactDetail />} />
