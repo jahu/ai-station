@@ -2,9 +2,11 @@
 
 A local-first AI workstation control plane. Work is represented by **Task → Run → Events → Artifacts**, with a Dockerized control plane and a native, user-level Host Runner.
 
-The first local MVP is usable; see the [acceptance report and current limits](docs/mvp-acceptance.md).
+Development targets the [complete product vision](docs/product-completion.md). Earlier [local acceptance evidence](docs/mvp-acceptance.md) records verified milestones, not completion of that vision.
 
 ## What works now
+
+- Platform assistant: the default conversation routes instructions to images, agent drafts and explicitly scoped Cursor tasks, showing ordinary Runs and image results inline. Existing workspaces remain available. See [orchestrator contracts and roadmap](docs/orchestrator.md).
 
 - Local chat: persisted conversations, model discovery, streaming Markdown, bounded text attachments, stop, regeneration, and inspectable Runs.
 - Agents: disabled natural-language drafts, explicit activation, local reports, scoped context tools, persistent UTC schedules, pause/resume, duplication and execution history.

@@ -37,6 +37,12 @@ class CursorTask(BaseModel):
 
 @router.post("/cursor", status_code=202)
 def create_cursor_task(body: CursorTask, session: Annotated[Session, Depends(session_scope)]):
+    run = enqueue_cursor_task(session, body)
+    session.commit()
+    return run_dict(run)
+
+
+def enqueue_cursor_task(session, body: CursorTask, *, task=None, parent_run_id=None):
     project = get_project(session, body.project_id)
     if project.updated_at != body.expected_updated_at:
         raise HTTPException(409, "Project settings changed. Reload before starting a coding task.")
@@ -44,13 +50,14 @@ def create_cursor_task(body: CursorTask, session: Annotated[Session, Depends(ses
         select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
     ):
         raise HTTPException(409, "This project already has an active Run")
-    task = create_task(
+    task = task or create_task(
         session,
         title=body.prompt[:200],
         prompt=body.prompt,
         capability="coding.cursor",
         project_id=project.id,
     )
+    task.project_id = project.id
     request = {
         "prompt": body.prompt,
         "files": body.files,
@@ -70,6 +77,8 @@ def create_cursor_task(body: CursorTask, session: Annotated[Session, Depends(ses
         session,
         task,
         run_type="worktree",
+        project_id=project.id,
+        parent_run_id=parent_run_id,
         capability="coding.prepare",
         executor_type="worktree_prepare",
         execution_target="host",
@@ -99,8 +108,7 @@ def create_cursor_task(body: CursorTask, session: Annotated[Session, Depends(ses
         "next_executor": "cursor_proposal",
         "execution_location": "external",
     }
-    session.commit()
-    return run_dict(run)
+    return run
 
 
 def queue_cursor(session, preparation, worktree):
@@ -111,6 +119,7 @@ def queue_cursor(session, preparation, worktree):
         session,
         preparation.task,
         run_type="coding",
+        project_id=preparation.project_id,
         capability="coding.cursor",
         executor_type="cursor_proposal",
         execution_target="host",
@@ -133,6 +142,7 @@ def queue_validation(session, coding_run):
         session,
         coding_run.task,
         run_type="validation",
+        project_id=coding_run.project_id,
         capability="coding.validate",
         executor_type="project_validation",
         execution_target="host",

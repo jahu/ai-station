@@ -137,6 +137,12 @@ def get_artifact(session: Session, artifact_id: UUID) -> Artifact:
 
 @router.post("/images/runs", status_code=202)
 def enqueue_image(body: ImageRequest, session: DB):
+    run = create_image_run(session, body)
+    session.commit()
+    return run_dict(run)
+
+
+def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=None):
     parents = [get_artifact(session, item) for item in body.input_artifact_ids]
     for parent in parents:
         if parent.artifact_type != "image":
@@ -159,7 +165,7 @@ def enqueue_image(body: ImageRequest, session: DB):
         "upscale": "image.upscale",
     }[body.mode]
     prompt = body.edit_prompt if body.mode == "img2img" else body.prompt
-    task = create_task(
+    task = task or create_task(
         session, title=prompt[:80] or "Upscale image", prompt=prompt, capability=capability, intent="image"
     )
     parameters = body.model_dump(mode="json", exclude={"input_artifact_ids", "gpu"})
@@ -180,9 +186,9 @@ def enqueue_image(body: ImageRequest, session: DB):
         requested_resources={"gpu": body.gpu},
         permissions=permissions_for("image_generation"),
         retry_class="safe",
+        parent_run_id=parent_run_id,
     )
-    session.commit()
-    return run_dict(run)
+    return run
 
 
 @router.post("/images/uploads", status_code=201)

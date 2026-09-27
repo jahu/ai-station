@@ -1,6 +1,6 @@
 """Conversation intent, immutable run context, and inspectable message history."""
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
+from app.assistant import AssistantInputs, enqueue_assistant, task_results
 from app.chat_attachments import TextAttachment, link_attachments, message_content, save_attachments
 from app.config import get_settings
 from app.conversation_summary import enqueue_summary, latest_summary, summary_memory, summary_view
@@ -25,6 +26,7 @@ DB = Annotated[Session, Depends(session_scope)]
 
 class ConversationBody(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    execution_mode: Literal["local", "orchestrator"] = "local"
     title: str = Field(default="New conversation", min_length=1, max_length=300)
     model: str = Field(min_length=1, max_length=200)
     system_prompt: str = Field(default="", max_length=8000)
@@ -32,7 +34,7 @@ class ConversationBody(BaseModel):
     max_tokens: int = Field(default=2048, ge=1, le=8192)
 
 
-class MessageBody(BaseModel):
+class MessageBody(AssistantInputs):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     content: str = Field(min_length=1, max_length=32000)
     attachments: list[TextAttachment] = Field(default_factory=list, max_length=4)
@@ -98,7 +100,7 @@ def conversations(session: DB):
 @router.post("/conversations", status_code=201)
 def create_conversation(body: ConversationBody, session: DB):
     endpoint_or_error()
-    row = Conversation(**body.model_dump(), provider=LocalChatProvider.key, execution_mode="local")
+    row = Conversation(**body.model_dump(), provider=LocalChatProvider.key)
     session.add(row)
     session.commit()
     return conversation_dict(row)
@@ -139,6 +141,7 @@ def detail(conversation_id: UUID, session: DB):
                 **message_dict(m),
                 "run_status": runs[m.run_id].status if m.run_id in runs else None,
                 "error_message": runs[m.run_id].error_message if m.run_id in runs else "",
+                **task_results(session, m, runs.get(m.run_id)),
             }
             for m in reversed(messages)
         ],
@@ -147,7 +150,7 @@ def detail(conversation_id: UUID, session: DB):
     }
 
 
-def enqueue(session, row, *, user: Message, parent_run_id=None):
+def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
     endpoint = endpoint_or_error()
     summary = latest_summary(session, row.id)
     summary_entry = summary_memory(session, summary)
@@ -178,8 +181,14 @@ def enqueue(session, row, *, user: Message, parent_run_id=None):
             continue
         if len(message.content) + 2 > budget or len(context) >= 16:
             break
-        context.append({"role": message.role, "content": message.content})
-        budget -= len(message.content) + 2
+        content = message.content
+        if message.metadata_json.get("orchestration") and message.run_id:
+            result = task_results(session, message, session.get(Run, message.run_id))
+            content += "\nRecorded task results: " + str(result.get("steps", []))[:8000]
+        if len(content) + 2 > budget:
+            break
+        context.append({"role": message.role, "content": content})
+        budget -= len(content) + 2
     context.reverse()
     # A window may begin midway through a turn. Templates commonly require
     # user/assistant alternation after the optional system message.
@@ -273,7 +282,8 @@ def enqueue(session, row, *, user: Message, parent_run_id=None):
     row.updated_at = utcnow()
     if row.title == "New conversation":
         row.title = intent[:80]
-    session.commit()
+    if commit:
+        session.commit()
     return run_dict(run)
 
 
@@ -295,6 +305,10 @@ def send(conversation_id: UUID, body: MessageBody, session: DB):
             **user.metadata_json,
             "attachments": save_attachments(session, user, body.attachments),
         }
+    if row.execution_mode == "orchestrator":
+        return enqueue_assistant(session, row, user, body)
+    if body.image_artifact_ids or body.action != "auto" or body.coding:
+        raise HTTPException(422, "Select Platform assistant mode to use capability actions")
     return enqueue(session, row, user=user)
 
 
@@ -302,6 +316,8 @@ def send(conversation_id: UUID, body: MessageBody, session: DB):
 def regenerate(conversation_id: UUID, session: DB):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
+    if row.execution_mode == "orchestrator":
+        raise HTTPException(409, "Send a new instruction to repeat an assistant action explicitly")
     user = session.scalar(
         select(Message)
         .where(Message.conversation_id == row.id, Message.role == "user")

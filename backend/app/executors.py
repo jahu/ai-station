@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.agent_executor import LocalAgentExecutor
 from app.artifacts import adopt_existing
+from app.assistant import AssistantExecutor
 from app.chat_executor import ChatExecutor
 from app.config import get_settings
 from app.cursor_executor import CursorProposalExecutor
@@ -268,6 +269,7 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 EXECUTORS = {
     "fake": FakeExecutor(),
+    "orchestrator": AssistantExecutor(),
     "photo_pipe": PhotoPipeExecutor(),
     "chat": ChatExecutor(),
     "chat_summary": SummaryExecutor(),

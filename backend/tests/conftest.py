@@ -5,6 +5,11 @@ from app.db import migrate, reset_engine, session_factory
 
 @pytest.fixture(autouse=True)
 def isolated_db(tmp_path, monkeypatch):
+    from ai_station_runner.config import Settings as RunnerSettings
+    from app.config import Settings
+
+    monkeypatch.setitem(Settings.model_config, "env_file", None)
+    monkeypatch.setitem(RunnerSettings.model_config, "env_file", None)
     monkeypatch.setenv("AI_STATION_DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("AI_STATION_DATABASE_URL", "")
     monkeypatch.setenv("AI_STATION_ENABLE_TEST_EXECUTOR", "true")

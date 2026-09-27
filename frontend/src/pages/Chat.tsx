@@ -1,3 +1,8 @@
+import { emptyOptions } from "./assistant-options";
+import AssistantActions, {
+  AssistantResults,
+  type ActionResult,
+} from "./AssistantActions";
 import TextAttachments, { type TextAttachment } from "./TextAttachments";
 import ConversationSummary, { type Summary } from "./ConversationSummary";
 import { useEffect, useRef, useState } from "react";
@@ -20,6 +25,7 @@ import { time } from "../lib/utils";
 
 type Conversation = {
   id: string;
+  execution_mode?: "local" | "orchestrator";
   title: string;
   model: string;
   system_prompt: string;
@@ -27,7 +33,7 @@ type Conversation = {
   max_tokens: number;
   updated_at: string;
 };
-type Message = {
+type Message = ActionResult & {
   id: string;
   role: string;
   content: string;
@@ -36,6 +42,10 @@ type Message = {
   run_status: string | null;
   error_message: string;
   metadata: {
+    orchestration?: boolean;
+    routing_only?: boolean;
+    agent_id?: string;
+    images?: { id: string; name: string }[];
     partial?: boolean;
     superseded?: boolean;
     user_text?: string;
@@ -62,7 +72,7 @@ const json = (body: unknown) => ({
   body: JSON.stringify(body),
 });
 
-export default function Chat() {
+export default function Chat({ assistant = false }: { assistant?: boolean }) {
   const { id } = useParams();
   const cache = useQueryClient();
   const navigate = useNavigate();
@@ -110,9 +120,13 @@ export default function Chat() {
   });
   return (
     <>
-      <PageTitle eyebrow="WORKSPACE / CHAT" title="Think it through.">
-        Persistent conversations with your configured local model. Every
-        response has a Run.
+      <PageTitle
+        eyebrow="WORKSPACE / CHAT"
+        title={assistant ? "What shall we create?" : "Think it through."}
+      >
+        {assistant
+          ? "One conversation for your workstation. Create images, prepare agents, code in projects and inspect the results here."
+          : "Persistent conversations with your configured local model. Every response has a Run."}
       </PageTitle>
       <ErrorNotice
         error={
@@ -125,7 +139,7 @@ export default function Chat() {
       <div className="chat-layout">
         <aside className="panel chat-history">
           <Button asChild>
-            <Link to="/chat">
+            <Link to={assistant ? "/" : "/chat"}>
               <Plus size={15} />
               New conversation
             </Link>
@@ -156,8 +170,9 @@ export default function Chat() {
             <div className="content-panel">
               <h2>Start a conversation</h2>
               <p className="muted">
-                Local OpenAI-compatible server, including llama.cpp. Configure
-                the endpoint in Settings or your environment.
+                Choose Platform assistant to let this conversation use AI
+                Station capabilities, or Conversation only to talk with the
+                model.
               </p>
               {provider.data && (
                 <>
@@ -174,6 +189,7 @@ export default function Chat() {
                   <SettingsForm
                     key={provider.data.default_model}
                     defaults={{
+                      execution_mode: assistant ? "orchestrator" : "local",
                       title: "New conversation",
                       model: provider.data.default_model,
                       system_prompt: "",
@@ -225,6 +241,7 @@ function SettingsForm({
         e.preventDefault();
         const fields = new FormData(e.currentTarget);
         submit({
+          execution_mode: fields.get("execution_mode"),
           title: fields.get("title"),
           model: fields.get("model"),
           system_prompt: fields.get("system_prompt"),
@@ -234,6 +251,17 @@ function SettingsForm({
       }}
     >
       <fieldset disabled={pending}>
+        <label>
+          Mode
+          <select
+            aria-label="Mode"
+            name="execution_mode"
+            defaultValue={defaults.execution_mode ?? "local"}
+          >
+            <option value="orchestrator">Platform assistant</option>
+            <option value="local">Conversation only</option>
+          </select>
+        </label>
         <label>
           Conversation title
           <input
@@ -305,6 +333,8 @@ function ConversationView({
 }) {
   const cache = useQueryClient();
   const [draft, setDraft] = useState("");
+  const [options, setOptions] = useState(emptyOptions);
+  const orchestrator = conversation.execution_mode === "orchestrator";
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [readingAttachment, setReadingAttachment] = useState(false);
   const end = useRef<HTMLDivElement>(null);
@@ -319,11 +349,16 @@ function ConversationView({
     mutationFn: () =>
       api<Run>(`/chat/conversations/${conversation.id}/messages`, {
         method: "POST",
-        ...json({ content: draft, attachments }),
+        ...json({
+          content: draft,
+          attachments,
+          ...(orchestrator ? options : {}),
+        }),
       }),
     onSuccess: () => {
       setDraft("");
       setAttachments([]);
+      setOptions(emptyOptions);
       refresh();
     },
   });
@@ -390,96 +425,120 @@ function ConversationView({
       <div className="chat-transcript" aria-live="polite">
         {!messages.length && (
           <Empty title="A fresh perspective starts here">
-            Send a message to your local model. No external provider is
-            selected.
+            {orchestrator
+              ? "Describe what you want done. Attach image references, create an agent or select a project for coding."
+              : "Send a message to your local model. No external provider is selected."}
           </Empty>
         )}
-        {messages.map((message) => (
-          <article
-            className={`chat-message ${message.role} ${message.metadata.superseded ? "superseded" : ""}`}
-            key={message.id}
-          >
-            <div className="row spread">
-              <strong>
-                {message.role === "user" ? "You" : "Local AI"}
-                {message.metadata.superseded ? " · Previous response" : ""}
-              </strong>
-              <small className="muted">{time(message.created_at)}</small>
-            </div>
-            <div className="markdown">
-              <Markdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight]}
-                components={{
-                  img: ({ alt }) => (
-                    <span className="muted">
-                      [Image: {alt ?? "remote media"}]
-                    </span>
-                  ),
-                  a: ({ href, children }) => (
-                    <a href={href} target="_blank" rel="noreferrer">
-                      {children}
-                    </a>
-                  ),
-                }}
-              >
-                {(message.metadata.user_text ?? message.content) ||
-                  (message.role === "assistant"
-                    ? message.run_status &&
-                      ["failed", "canceled", "interrupted"].includes(
-                        message.run_status,
-                      )
-                      ? "No response text was returned."
-                      : "Waiting for response…"
-                    : "")}
-              </Markdown>
-            </div>
-            {message.metadata.attachments?.map((attachment) => (
-              <p key={attachment.id}>
-                <a
-                  className="text-link"
-                  href={`/api/artifacts/${attachment.id}/file`}
-                >
-                  {attachment.name}
-                </a>
-                {" · "}
-                {attachment.size_bytes} bytes · saved attachment
-              </p>
-            ))}
-            {message.role === "assistant" && (
-              <div className="message-actions">
-                {message.run_status && <Badge status={message.run_status} />}{" "}
-                {message.metadata.partial && message.content && (
-                  <span className="muted">Partial response</span>
-                )}
-                {message.run_id && (
-                  <Link to={`/runs/${message.run_id}`}>Inspect run</Link>
-                )}
-                <button
-                  className="icon-button"
-                  aria-label="Copy response"
-                  disabled={!message.content}
-                  onClick={() => {
-                    void navigator.clipboard
-                      .writeText(message.content)
-                      .catch(() =>
-                        setClipboardError(
-                          new Error(
-                            "Clipboard unavailable. Select and copy the response text.",
-                          ),
-                        ),
-                      );
+        {messages
+          .filter((message) => !message.metadata.routing_only)
+          .map((message) => (
+            <article
+              className={`chat-message ${message.role} ${message.metadata.superseded ? "superseded" : ""}`}
+              key={message.id}
+            >
+              <div className="row spread">
+                <strong>
+                  {message.role === "user"
+                    ? "You"
+                    : orchestrator
+                      ? "AI Station"
+                      : "Local AI"}
+                  {message.metadata.superseded ? " · Previous response" : ""}
+                </strong>
+                <small className="muted">{time(message.created_at)}</small>
+              </div>
+              <div className="markdown">
+                <Markdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeHighlight]}
+                  components={{
+                    img: ({ alt }) => (
+                      <span className="muted">
+                        [Image: {alt ?? "remote media"}]
+                      </span>
+                    ),
+                    a: ({ href, children }) => (
+                      <a href={href} target="_blank" rel="noreferrer">
+                        {children}
+                      </a>
+                    ),
                   }}
                 >
-                  <Copy size={14} />
-                </button>
+                  {(message.metadata.user_text ?? message.content) ||
+                    (message.role === "assistant"
+                      ? message.run_status &&
+                        ["failed", "canceled", "interrupted"].includes(
+                          message.run_status,
+                        )
+                        ? "No response text was returned."
+                        : "Waiting for response…"
+                      : "")}
+                </Markdown>
               </div>
-            )}
-            {message.error_message && (
-              <p className="notice">{message.error_message}</p>
-            )}
-          </article>
-        ))}
+              <div className="assistant-images">
+                {message.metadata.images?.map((image, index) => (
+                  <img
+                    key={`${image.id}-${index}`}
+                    src={`/api/artifacts/${image.id}/file`}
+                    alt={`Reference ${index + 1}: ${image.name}`}
+                  />
+                ))}
+              </div>
+              {message.metadata.agent_id && (
+                <p>
+                  <Link to={`/agents/${message.metadata.agent_id}`}>
+                    Review and enable agent
+                  </Link>
+                </p>
+              )}
+              <AssistantResults result={message} />
+              {message.metadata.attachments?.map((attachment) => (
+                <p key={attachment.id}>
+                  <a
+                    className="text-link"
+                    href={`/api/artifacts/${attachment.id}/file`}
+                  >
+                    {attachment.name}
+                  </a>
+                  {" · "}
+                  {attachment.size_bytes} bytes · saved attachment
+                </p>
+              ))}
+              {message.role === "assistant" && (
+                <div className="message-actions">
+                  {message.run_status && <Badge status={message.run_status} />}{" "}
+                  {message.metadata.partial && message.content && (
+                    <span className="muted">Partial response</span>
+                  )}
+                  {message.run_id && (
+                    <Link to={`/runs/${message.run_id}`}>Inspect run</Link>
+                  )}
+                  <button
+                    className="icon-button"
+                    aria-label="Copy response"
+                    disabled={!message.content}
+                    onClick={() => {
+                      void navigator.clipboard
+                        .writeText(message.content)
+                        .catch(() =>
+                          setClipboardError(
+                            new Error(
+                              "Clipboard unavailable. Select and copy the response text.",
+                            ),
+                          ),
+                        );
+                    }}
+                  >
+                    <Copy size={14} />
+                  </button>
+                </div>
+              )}
+              {message.error_message && (
+                <p className="notice">{message.error_message}</p>
+              )}
+            </article>
+          ))}
         <div ref={end} />
       </div>
       <div className="chat-composer">
@@ -503,7 +562,11 @@ function ConversationView({
           </label>
           <textarea
             id="chat-draft"
-            placeholder="Ask your local model…"
+            placeholder={
+              orchestrator
+                ? "Describe your task — or drop reference images below…"
+                : "Ask your local model…"
+            }
             rows={3}
             maxLength={32000}
             value={draft}
@@ -515,10 +578,18 @@ function ConversationView({
               }
             }}
           />
+          {orchestrator && (
+            <AssistantActions
+              value={options}
+              onChange={setOptions}
+              busy={busy || attachments.length > 0}
+              onUploading={setReadingAttachment}
+            />
+          )}
           <TextAttachments
             attachments={attachments}
             onChange={setAttachments}
-            busy={busy}
+            busy={busy || options.image_artifact_ids.length > 0}
             onReading={setReadingAttachment}
           />
           <div className="row spread">
@@ -546,7 +617,7 @@ function ConversationView({
             )}
           </div>
         </form>
-        {!!messages.length && !busy && (
+        {!!messages.length && !busy && !orchestrator && (
           <Button
             variant="ghost"
             disabled={regenerate.isPending}

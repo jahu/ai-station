@@ -98,3 +98,11 @@ Conversation summaries use a dedicated persisted coverage/provenance record and 
 
 
 Saved project test/lint/build commands now run through the worker and a managed native sandbox in an owned worktree. Commands are snapshotted from versioned project settings, Git metadata stays read-only, networking is blocked, and results become events plus a JSON artifact. See [project validation](coding-boundary.md) for limits, recovery and current dependency restrictions. The [bounded Cursor adapter](coding-cursor.md) adds explicit external-AI consent, checked selected-file writes, review artifacts and a separate validation Run; other provider adapters remain disabled.
+
+## Reviewed Git progression
+
+The planned [reviewed commits](reviewed-commits.md) will extend a completed coding Task with a user-approved Git Run. Approval data binds the exact review and validation snapshot; the native Runner owns checked commit publication and its interruption journal. The [full-product ledger](product-completion.md) tracks the remaining acceptance increments.
+
+## Conversation orchestration
+
+The default entry point is the [platform assistant](orchestrator.md). Dedicated workspaces remain available. Conversation intent is compiled into typed capability actions, dispatched as ordinary Runs, and projected back into the conversation with live state and artifacts. The assistant shares domain services with workspaces; it cannot bypass their permissions, resource scheduling or native boundaries.
