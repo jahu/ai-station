@@ -375,3 +375,23 @@ def test_loading_another_model_evicts_idle_runtime(managed):
             assert session.get(Run, second["id"]).status == "succeeded"
             assert active_locks(session) == {"gpu:2", "gpu:7"}
             assert sorted(i.status for i in instances(session)) == ["ready", "stopped"]
+
+
+@pytest.mark.parametrize("filename", ["mmproj-model.gguf", "model-MMProj-F16.gguf"])
+def test_vision_projector_is_not_a_standalone_chat_model(filename):
+    with session_factory()() as session:
+        model = ModelFile(
+            host_path="/models/" + filename,
+            filename=filename,
+            format="gguf",
+            category="llm",
+            availability="present",
+            size_bytes=1000,
+            mtime=1,
+        )
+        session.add(model)
+        session.commit()
+        model_id = model.id
+    with TestClient(app) as client:
+        assert client.get("/api/llama").json()["models"] == []
+        assert client.post("/api/llama/load", json={"model_file_id": model_id, "gpus": []}).status_code == 422

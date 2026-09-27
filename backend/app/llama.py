@@ -1,5 +1,6 @@
 """Model selection and durable ownership of llama.cpp runtime lifecycle."""
 
+import re
 import time
 from pathlib import PurePosixPath
 from typing import Annotated
@@ -41,6 +42,16 @@ def instances(session):
     )
 
 
+def loadable_model(row):
+    return bool(
+        row
+        and row.category == "llm"
+        and row.format == "gguf"
+        and row.availability == "present"
+        and not re.search(r"(^|[-_.])mmproj([-_.]|$)", row.filename, re.IGNORECASE)
+    )
+
+
 @router.get("")
 def catalog(session: DB):
     return {
@@ -61,6 +72,7 @@ def catalog(session: DB):
                 .order_by(ModelFile.filename)
                 .limit(200)
             )
+            if loadable_model(row)
         ],
         "instances": [runtime_dict(row) for row in instances(session)],
     }
@@ -75,8 +87,8 @@ def load(body: LoadModel, session: DB):
 
 def enqueue_load(body, session, *, task=None, allow_stopping=False):
     model = session.get(ModelFile, str(body.model_file_id))
-    if model is None or model.category != "llm" or model.format != "gguf" or model.availability != "present":
-        raise HTTPException(422, "Choose a present GGUF from the model registry")
+    if not loadable_model(model):
+        raise HTTPException(422, "Choose a present language-model GGUF; mmproj files are vision companions")
     if len(set(body.gpus)) != len(body.gpus):
         raise HTTPException(422, "Choose distinct GPUs")
     for instance in instances(session):
@@ -341,12 +353,8 @@ def model_endpoint(model, session, *, allow_pending=False):
             return instance.endpoint
     if allow_pending:
         row = session.get(ModelFile, file_id)
-        if (
-            row
-            and row.availability == "present"
-            and row.format == "gguf"
-            and row.category == "llm"
-            and any(i.metadata_json.get("model_file_id") == file_id for i in instances(session))
+        if loadable_model(row) and any(
+            i.metadata_json.get("model_file_id") == file_id for i in instances(session)
         ):
             return "llamacpp:pending:" + file_id
     raise ProviderError("Load the selected model with llama.cpp before sending a message")
