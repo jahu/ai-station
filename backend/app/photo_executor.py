@@ -45,6 +45,10 @@ class PhotoPipeExecutor:
             run.finished_at = None
             run.worker_id = None
             run.lease_expires_at = None
+            if run.requested_gpu != "none":
+                from app.llama import evict_idle_models
+
+                evict_idle_models(session, run, indexes)
             return "requeued"
         output = f"artifacts/{run.id[:2]}/{run.id[2:4]}/{run.id}.png"
         payload = {

@@ -6,12 +6,12 @@ from datetime import timedelta
 from typing import Any
 
 from sqlalchemy import select, update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 
 from app.config import get_settings
 from app.db import utcnow
 from app.events import append_event
-from app.models import Agent, Run, Task
+from app.models import Agent, Run, RunDependency, Task
 from app.state import TERMINAL, InvalidTransition, RunStatus, assert_transition
 
 
@@ -128,9 +128,15 @@ def transition(
 def claim_next(session: Session, worker_id: str) -> Run | None:
     settings = get_settings()
     now = utcnow()
+    prerequisite = aliased(Run)
+    blocked = (
+        select(RunDependency.run_id)
+        .join(prerequisite, prerequisite.id == RunDependency.prerequisite_id)
+        .where(prerequisite.status.not_in(TERMINAL))
+    )
     candidate = session.scalar(
         select(Run)
-        .where(Run.status == RunStatus.QUEUED.value)
+        .where(Run.status == RunStatus.QUEUED.value, Run.id.not_in(blocked))
         .order_by(Run.queued_at, Run.created_at)
         .limit(1)
     )

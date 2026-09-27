@@ -31,6 +31,7 @@ from app.memory_api import router as memory_router
 from app.model_registry import router as model_router
 from app.models import Artifact, Run, Setting, WorkerRow
 from app.projects import router as project_router
+from app.providers import ProviderError
 from app.redact import redact_obj
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, request_cancel, run_dict
@@ -74,6 +75,11 @@ async def local_requests(request: Request, call_next):
 @app.exception_handler(InvalidTransition)
 async def invalid_transition(_request, error):
     return JSONResponse({"detail": str(error)}, status_code=409)
+
+
+@app.exception_handler(ProviderError)
+async def provider_unavailable(_request, error):
+    return JSONResponse({"detail": redact_obj(str(error))}, status_code=409)
 
 
 @app.exception_handler(RunnerUnavailable)

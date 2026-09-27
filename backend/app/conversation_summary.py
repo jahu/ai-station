@@ -130,5 +130,8 @@ def enqueue_summary(session, row, endpoint):
             "previous_memory_updated_at": iso(memory.updated_at) if memory else None,
         },
     )
+    from app.llama import prepare_consumer
+
+    prepare_consumer(session, run)
     session.commit()
     return run_dict(run)

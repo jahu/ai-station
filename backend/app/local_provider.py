@@ -53,7 +53,7 @@ def model_endpoint(model, session=None):
     from app.llama import model_endpoint as resolve
 
     if session is not None:
-        return resolve(model, session)
+        return resolve(model, session, allow_pending=True)
     with session_factory()() as current:
         return resolve(model, current)
 

@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.db import session_scope, utcnow
 from app.events import append_event
-from app.models import ModelFile, ResourceLock, Run, RuntimeInstance
+from app.models import ModelFile, ResourceLock, Run, RuntimeInstance, Task
 from app.permissions import require
 from app.resources import active_locks, release_run_locks
 from app.runner_client import RunnerClient, RunnerError
@@ -68,6 +68,12 @@ def catalog(session: DB):
 
 @router.post("/load", status_code=202)
 def load(body: LoadModel, session: DB):
+    run = enqueue_load(body, session)
+    session.commit()
+    return run_dict(run)
+
+
+def enqueue_load(body, session, *, task=None, allow_stopping=False):
     model = session.get(ModelFile, str(body.model_file_id))
     if model is None or model.category != "llm" or model.format != "gguf" or model.availability != "present":
         raise HTTPException(422, "Choose a present GGUF from the model registry")
@@ -77,6 +83,7 @@ def load(body: LoadModel, session: DB):
         if instance.metadata_json.get("model_file_id") == model.id and instance.status not in {
             "stopped",
             "failed",
+            *(["stopping"] if allow_stopping else []),
         }:
             raise HTTPException(409, "This model already has a runtime; inspect it before loading again")
     instance = RuntimeInstance(
@@ -88,7 +95,7 @@ def load(body: LoadModel, session: DB):
     )
     session.add(instance)
     session.flush()
-    task = create_task(
+    task = task or create_task(
         session,
         title="Load " + model.filename,
         prompt="Load an existing local GGUF with llama.cpp",
@@ -115,8 +122,7 @@ def load(body: LoadModel, session: DB):
     )
     instance.endpoint = "llamacpp:" + instance.id
     instance.metadata_json = {**instance.metadata_json, "load_run_id": run.id, "operation_run_id": run.id}
-    session.commit()
-    return run_dict(run)
+    return run
 
 
 @router.post("/{instance_id}/stop", status_code=202)
@@ -132,7 +138,13 @@ def stop(instance_id: UUID, session: DB):
     consumers = session.scalars(select(Run).where(Run.status.not_in(TERMINAL)))
     if any(r.parameters.get("endpoint") == instance.endpoint for r in consumers):
         raise HTTPException(409, "Stop the model's active conversation or agent Run first")
-    task = create_task(
+    run = enqueue_stop(session, instance)
+    session.commit()
+    return run_dict(run)
+
+
+def enqueue_stop(session, instance, *, task=None):
+    task = task or create_task(
         session,
         title="Stop " + instance.name,
         prompt="Unload only this owned runtime",
@@ -151,8 +163,7 @@ def stop(instance_id: UUID, session: DB):
     )
     instance.status = "stopping"
     instance.metadata_json = {**instance.metadata_json, "operation_run_id": run.id}
-    session.commit()
-    return run_dict(run)
+    return run
 
 
 def reserve(session, run, indexes):
@@ -219,6 +230,7 @@ class LlamaExecutor:
                 run.queued_at = utcnow()
                 run.finished_at = None
                 run.lease_expires_at = None
+                evict_idle_models(session, run, indexes, desired=set(run.parameters["gpus"]))
                 session.commit()
                 return "requeued"
         session.refresh(run)
@@ -317,7 +329,7 @@ def reconcile(session, runner):
             session.commit()
 
 
-def model_endpoint(model, session):
+def model_endpoint(model, session, *, allow_pending=False):
     from app.providers import ProviderError
 
     try:
@@ -327,4 +339,81 @@ def model_endpoint(model, session):
     for instance in instances(session):
         if instance.status == "ready" and instance.metadata_json.get("model_file_id") == file_id:
             return instance.endpoint
+    if allow_pending:
+        row = session.get(ModelFile, file_id)
+        if (
+            row
+            and row.availability == "present"
+            and row.format == "gguf"
+            and row.category == "llm"
+            and any(i.metadata_json.get("model_file_id") == file_id for i in instances(session))
+        ):
+            return "llamacpp:pending:" + file_id
     raise ProviderError("Load the selected model with llama.cpp before sending a message")
+
+
+def prepare_consumer(session, run):
+    """Reuse a pending load or reload with the user's last saved GPU/context selection."""
+    from app.dependencies import depend_on
+    from app.providers import ProviderError
+
+    model = run.parameters.get("model") or run.parameters.get("definition", {}).get("model", "")
+    if not model.startswith("llamacpp:"):
+        return
+    file_id = model.removeprefix("llamacpp:")
+    matching = [i for i in instances(session) if i.metadata_json.get("model_file_id") == file_id]
+    matching.sort(
+        key=lambda i: (session.get(Run, i.metadata_json["load_run_id"]).created_at, i.id), reverse=True
+    )
+    instance = next((i for i in matching if i.status in {"ready", "queued", "loading"}), None)
+    if instance is None:
+        if not matching:
+            raise ProviderError("Choose GPUs and load this model once in conversation settings")
+        if any(i.status == "unknown" for i in matching):
+            raise ProviderError("Inspect the model runtime before loading it again")
+        preset = matching[0].metadata_json
+        try:
+            load_run = enqueue_load(
+                LoadModel(model_file_id=file_id, gpus=preset["gpus"], context_size=preset["context_size"]),
+                session,
+                task=session.get(Task, run.task_id),
+                allow_stopping=True,
+            )
+        except HTTPException as exc:
+            raise ProviderError(str(exc.detail)) from exc
+        for old in matching:
+            if old.status == "stopping":
+                operation = session.get(Run, old.metadata_json["operation_run_id"])
+                depend_on(session, load_run, operation)
+        instance = session.get(RuntimeInstance, load_run.parameters["instance_id"])
+    if instance.status != "ready":
+        depend_on(session, run, session.get(Run, instance.metadata_json["load_run_id"]))
+    run.parameters = {**run.parameters, "endpoint": instance.endpoint}
+
+
+def evict_idle_models(session, run, indexes, *, desired=None):
+    """Queue owned idle runtime stops to make room; never touch external services."""
+    from app.dependencies import depend_on
+
+    if desired is None:
+        desired = set(indexes) if run.requested_gpu == "auto" else {int(run.requested_gpu)}
+    consumers = list(session.scalars(select(Run).where(Run.status.not_in(TERMINAL))))
+    for instance in instances(session):
+        if instance.status != "ready" or not desired.intersection(instance.metadata_json.get("gpus", [])):
+            continue
+        if any(
+            r.parameters.get("endpoint") == instance.endpoint
+            or r.parameters.get("instance_id") == instance.id
+            for r in consumers
+        ):
+            continue
+        stop_run = enqueue_stop(session, instance, task=session.get(Task, run.task_id))
+        depend_on(session, run, stop_run)
+        append_event(
+            session,
+            run.id,
+            "runtime.eviction_requested",
+            {"instance_id": instance.id, "stop_run_id": stop_run.id},
+        )
+        if run.requested_gpu == "auto":
+            break

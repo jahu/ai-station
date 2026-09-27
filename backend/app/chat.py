@@ -292,6 +292,9 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
         retry_class="inspect",
         parent_run_id=parent_run_id,
     )
+    from app.llama import prepare_consumer
+
+    prepare_consumer(session, run)
     response = Message(
         conversation_id=row.id, role="assistant", content="", run_id=run.id, metadata_json={"partial": True}
     )

@@ -67,6 +67,9 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
         retry_class="inspect",
         triggered_by=triggered_by,
     )
+    from app.llama import prepare_consumer
+
+    prepare_consumer(session, run)
     now = utcnow()
     agent.last_run_at, agent.last_status = now, "queued"
     if agent.trigger == "datetime":
@@ -103,7 +106,9 @@ def scheduler_tick(session: Session) -> list[str]:
                 agent.next_run_at = compute_next(agent)
             continue
         try:
-            created.append(launch_agent(session, agent, triggered_by="scheduler"))
+            with session.begin_nested():
+                run_id = launch_agent(session, agent, triggered_by="scheduler")
+            created.append(run_id)
         except (ValueError, ProviderError):
             agent.enabled, agent.next_run_at, agent.last_status = False, None, "misconfigured"
     return created

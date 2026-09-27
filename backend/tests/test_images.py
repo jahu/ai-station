@@ -263,3 +263,49 @@ def test_image_waits_for_reaping_before_adopting_output(bridge, monkeypatch):
             assert session.get(Run, run["id"]).status == "succeeded"
         assert pending_seen
         assert len(client.get(f"/api/artifacts?run_id={run['id']}").json()) == 1
+
+
+def test_photo_worker_unloads_idle_model_before_dispatch(bridge, monkeypatch):
+    from app.models import ResourceLock, RuntimeInstance
+    from app.runs import create_run, create_task
+
+    with session_factory()() as session:
+        task = create_task(session, title="model", prompt="", capability="runtime.load")
+        load = create_run(
+            session, task, run_type="runtime", capability="runtime.load", executor_type="llama_load"
+        )
+        load.status = "succeeded"
+        instance = RuntimeInstance(
+            runtime_key="llama.cpp",
+            name="model",
+            ownership="managed",
+            status="ready",
+            metadata_json={"gpus": [7], "load_run_id": load.id},
+        )
+        session.add(instance)
+        session.flush()
+        instance.endpoint = "llamacpp:" + instance.id
+        session.add(ResourceLock(resource_key="gpu:7", run_id=load.id))
+        session.commit()
+    stopped = []
+
+    def stop(_, instance_id):
+        stopped.append(instance_id)
+        return {"status": "stopped", "alive": False}
+
+    monkeypatch.setattr(RunnerClient, "stop_llama", stop)
+    with TestClient(app) as client:
+        image = client.post(
+            "/api/images/runs", json={"mode": "t2i", "backend": "qwen", "prompt": "forest", "gpu": "auto"}
+        ).json()
+        with session_factory()() as session:
+            assert tick(session, "image-test") == image["id"]
+            assert session.get(Run, image["id"]).status == "queued"
+            assert active_locks(session) == {"gpu:7"}
+            stop_id = tick(session, "image-test")
+            assert session.get(Run, stop_id).executor_type == "llama_stop"
+            assert stopped == [instance.id]
+            assert tick(session, "image-test") == image["id"]
+            assert session.get(Run, image["id"]).status == "succeeded"
+            assert not active_locks(session)
+        assert len(client.get(f"/api/artifacts?run_id={image['id']}").json()) == 1

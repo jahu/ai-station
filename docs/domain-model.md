@@ -96,3 +96,7 @@ The [Memory workspace](memory.md) exposes durable scoped entries with validated 
 
 
 `ConversationSummary` records an incremental coverage boundary, exact message sources, preceding summary, source Run and editable scoped Memory entry. Removing memory clears its reference; historical provenance remains.
+
+## RunDependency
+
+A composite (run_id, prerequisite_id) edge orders Runs, including shared model loads across Tasks. Edges are added only to queued Runs, reject cycles, and are separate from parent_run_id. Dependencies survive restarts; all prerequisites must succeed before execution.

@@ -55,7 +55,7 @@ Do not commit `.env` or secrets. The UI/API port is bound to localhost; authenti
 
 ## Local chat
 
-Expand **Local model files · llama.cpp** in conversation settings to load a discovered GGUF, choose GPUs and context size, then select it for the conversation. Multiple selected GPUs share the model by layers. Stop unloads only AI Station's owned instance. Use Models to scan configured roots first. The Runner uses the already-installed image selected by `AI_STATION_LLAMA_IMAGE` and never pulls models or images automatically. See [runtime lifecycle](docs/managed-llama.md).
+Expand **Local model files · llama.cpp** in conversation settings to load a discovered GGUF, choose GPUs and context size, then select it for the conversation. Multiple selected GPUs share the model by layers. Stop unloads only AI Station's owned instance. Later messages automatically reload that model with its saved GPU/context settings. Image generation and other model loads can evict idle managed models; active conversations remain protected. Use Models to scan configured roots first. The Runner uses the already-installed image selected by `AI_STATION_LLAMA_IMAGE` and never pulls models or images automatically. See [runtime lifecycle](docs/managed-llama.md).
 
 Configure `AI_STATION_LLM_BASE_URL` (for example `http://127.0.0.1:11434/v1` for Ollama or `http://127.0.0.1:8080/v1` for llama.cpp) and optionally `AI_STATION_LLM_MODEL`. An existing compatible server must already be running; the private runner bridge reaches it on the host, and AI Station does not launch or reconfigure it. If required, supply its key through `AI_STATION_LLM_API_KEY`, never in the URL.
 
