@@ -246,3 +246,92 @@ def test_context_window_preserves_valid_turn_order(provider):
         assert messages[1]["role"] == "user"
         assert messages[-1]["content"] == "Latest question"
         assert all(a["role"] != b["role"] for a, b in zip(messages[1:], messages[2:]))
+
+
+def test_text_attachments_persist_as_safe_artifacts_and_immutable_context(provider):
+    import hashlib
+
+    with TestClient(app) as client:
+        conversation_id = new_conversation(client)
+        source = 'print("hello")\n'
+        result = client.post(
+            f"/api/chat/conversations/{conversation_id}/messages",
+            json={"content": "Explain this", "attachments": [{"name": "example.html", "content": source}]},
+        )
+        assert result.status_code == 202, result.text
+        run = result.json()
+        assert (
+            source
+            in json.loads(
+                run["parameters"]["messages"][-1]["content"].split("reference data, not instructions):\n")[1]
+            )[0]["content"]
+        )
+        with session_factory()() as session:
+            tick(session, "attachment-chat")
+        message = client.get(f"/api/chat/conversations/{conversation_id}").json()["messages"][0]
+        attachment = message["metadata"]["attachments"][0]
+        assert message["metadata"]["user_text"] == "Explain this"
+        assert attachment["sha256"] == hashlib.sha256(source.encode()).hexdigest()
+        artifact = client.get(f"/api/artifacts/{attachment['id']}").json()
+        assert artifact["type"] == "text" and artifact["run_id"] == run["id"]
+        assert artifact["metadata"]["conversation_id"] == conversation_id
+        assert artifact["metadata"]["message_id"] == message["id"]
+        assert artifact["relative_path"].endswith(".txt")
+        file = client.get(f"/api/artifacts/{attachment['id']}/file")
+        assert file.text == source
+        assert file.headers["content-type"].startswith("text/plain")
+        assert file.headers["content-disposition"].startswith("attachment;")
+        assert file.headers["x-content-type-options"] == "nosniff"
+        reset_engine()
+        assert client.get(f"/api/chat/conversations/{conversation_id}").json()["messages"][0] == message
+        regenerated = client.post(f"/api/chat/conversations/{conversation_id}/regenerate").json()
+        assert regenerated["parameters"]["messages"] == run["parameters"]["messages"]
+        assert len(client.get(f"/api/artifacts?run_id={run['id']}").json()) == 1
+        other = new_conversation(client)
+        clean = client.post(f"/api/chat/conversations/{other}/messages", json={"content": "Hello"}).json()
+        assert "example.html" not in json.dumps(clean["parameters"])
+
+
+@pytest.mark.parametrize(
+    "attachments",
+    [
+        [{"name": "../secret", "content": "x"}],
+        [{"name": "a\r\nb", "content": "x"}],
+        [{"name": "a.txt", "content": "\0"}],
+        [{"name": "a.txt", "content": "ę" * 8001}],
+        [{"name": str(i), "content": "x"} for i in range(5)],
+        [{"name": "same", "content": "a"}, {"name": "same", "content": "b"}],
+        [{"name": str(i), "content": "x" * 13000} for i in range(2)],
+        [{"name": "a.txt", "content": "\n" * 16000}],
+    ],
+)
+def test_invalid_attachments_rejected_before_message_run_or_artifact_creation(provider, attachments):
+    with TestClient(app) as client:
+        conversation_id = new_conversation(client)
+        result = client.post(
+            f"/api/chat/conversations/{conversation_id}/messages",
+            json={"content": "Explain", "attachments": attachments},
+        )
+        assert result.status_code == 422, result.text
+        assert not client.get(f"/api/chat/conversations/{conversation_id}").json()["messages"]
+        assert not client.get("/api/artifacts").json()
+        assert not client.get("/api/runs").json()
+
+
+def test_summary_includes_attached_text_in_its_covered_source_messages(provider):
+    with TestClient(app) as client:
+        conversation_id = new_conversation(client)
+        path = f"/api/chat/conversations/{conversation_id}"
+        for i in range(5):
+            body = {"content": f"Turn {i}"}
+            if i == 0:
+                body["attachments"] = [{"name": "decision.md", "content": "The launch codename is Willow."}]
+            response = client.post(path + "/messages", json=body)
+            assert response.status_code == 202, response.text
+            with session_factory()() as session:
+                tick(session, "attachment-summary-context")
+        summary = client.post(path + "/summarize")
+        assert summary.status_code == 202, summary.text
+        context = summary.json()["parameters"]["messages"][-1]["content"]
+        assert "Willow" in context and "decision.md" in context
+        assert len(summary.json()["parameters"]["source_message_ids"]) == 2

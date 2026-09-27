@@ -4,10 +4,11 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
+from app.chat_attachments import TextAttachment, link_attachments, message_content, save_attachments
 from app.config import get_settings
 from app.conversation_summary import enqueue_summary, latest_summary, summary_memory, summary_view
 from app.db import session_scope, utcnow
@@ -34,6 +35,12 @@ class ConversationBody(BaseModel):
 class MessageBody(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     content: str = Field(min_length=1, max_length=32000)
+    attachments: list[TextAttachment] = Field(default_factory=list, max_length=4)
+
+    @model_validator(mode="after")
+    def validate_context(self):
+        message_content(self.content, self.attachments)
+        return self
 
 
 def endpoint_or_error():
@@ -215,14 +222,15 @@ def enqueue(session, row, *, user: Message, parent_run_id=None):
         system += "\n\nUser-pinned reference context (may be outdated):\n" + "\n\n".join(memory_context)
     if system:
         context.insert(0, {"role": "system", "content": system.strip()})
+    intent = user.metadata_json.get("user_text", user.content)
     parent = session.get(Run, parent_run_id) if parent_run_id else None
     task = (
         session.get(Task, parent.task_id)
         if parent
         else create_task(
             session,
-            title=user.content[:80],
-            prompt=user.content,
+            title=intent[:80],
+            prompt=intent,
             capability="chat.completion",
             intent="chat",
             conversation_id=row.id,
@@ -261,9 +269,10 @@ def enqueue(session, row, *, user: Message, parent_run_id=None):
     session.add(response)
     if user.run_id is None:
         user.run_id = run.id
+        link_attachments(session, user, run)
     row.updated_at = utcnow()
     if row.title == "New conversation":
-        row.title = user.content[:80]
+        row.title = intent[:80]
     session.commit()
     return run_dict(run)
 
@@ -272,9 +281,20 @@ def enqueue(session, row, *, user: Message, parent_run_id=None):
 def send(conversation_id: UUID, body: MessageBody, session: DB):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
-    user = Message(conversation_id=row.id, role="user", content=body.content, metadata_json={})
+    endpoint_or_error()  # Reject invalid configuration before persisting attachment files.
+    user = Message(
+        conversation_id=row.id,
+        role="user",
+        content=message_content(body.content, body.attachments),
+        metadata_json={"user_text": body.content} if body.attachments else {},
+    )
     session.add(user)
     session.flush()
+    if body.attachments:
+        user.metadata_json = {
+            **user.metadata_json,
+            "attachments": save_attachments(session, user, body.attachments),
+        }
     return enqueue(session, row, user=user)
 
 

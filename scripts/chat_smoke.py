@@ -20,6 +20,7 @@ def main():
 
     stop = threading.Event()
     silent_started = threading.Event()
+    provider_requests = []
 
     class Provider(BaseHTTPRequestHandler):
         def log_message(self, *args):
@@ -33,6 +34,7 @@ def main():
 
         def do_POST(self):
             body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            provider_requests.append(body)
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
             self.end_headers()
@@ -121,16 +123,27 @@ def main():
                     page.on("pageerror", lambda e: errors.append(str(e)))
                     page.goto(url + "/#/chat")
                     page.get_by_role("button", name="Create conversation").click()
+                    page.get_by_label("Attach text files").set_input_files(
+                        {
+                            "name": "fixture.py",
+                            "mimeType": "text/plain",
+                            "buffer": b"print('attachment fixture')\n",
+                        }
+                    )
+                    page.get_by_role("button", name="Remove fixture.py").wait_for()
                     page.get_by_label("Message", exact=True).fill("Hello")
                     page.get_by_role("button", name="Send", exact=True).click()
                     page.get_by_text("fake local chat", exact=True).wait_for(timeout=20000)
                     page.get_by_text("succeeded", exact=True).wait_for()
+                    page.get_by_role("link", name="fixture.py", exact=True).wait_for()
+                    assert "attachment fixture" in provider_requests[0]["messages"][-1]["content"]
                     page.screenshot(path="/tmp/ai-station-chat.png", full_page=True)
                     conversation_url = page.url
                     api_process.terminate()
                     api_process.wait(timeout=10)
                     start_api()
                     page.goto(conversation_url)
+                    page.get_by_role("link", name="fixture.py", exact=True).wait_for()
                     page.get_by_text("fake local chat", exact=True).wait_for()
                     page.get_by_role("button", name="Regenerate last response").click()
                     page.get_by_text("Local AI · Previous response", exact=True).wait_for()
@@ -172,7 +185,7 @@ def main():
                     assert not errors, errors
                     browser.close()
                 print(
-                    "PASS: local chat discovery, streaming, Markdown, restart persistence, regeneration, silent-provider cancellation, and mobile layout"
+                    "PASS: local chat discovery, streaming, Markdown, text attachments/provider context, restart persistence, regeneration, silent-provider cancellation, and mobile layout"
                 )
             except Exception:
                 log.flush()
