@@ -10,7 +10,7 @@ Only one active Run is allowed per conversation. Short SQLite transactions seria
 
 Full history remains in SQLite. Conversation lists show the latest 100; message views show the latest 200. UI streaming uses the shared Run SSE endpoint with persistent-message refetching. Markdown never interprets raw HTML, and remote images are rendered as text so merely viewing a response does not fetch external resources.
 
-[Rolling summaries](conversation-summaries.md) are explicit local-model Runs. Enabled summaries are snapshotted into future context; covered messages no longer consume the recent window. Text attachments, multiple configured providers, external AI, and tool execution remain later capabilities. Normal tests and `scripts/chat_smoke.py` use fake providers. Real local completion, including Docker access through the private runner bridge, is recorded in [verification](verification.md).
+[Rolling summaries](conversation-summaries.md) are explicit local-model Runs. Enabled summaries are snapshotted into future context; covered messages no longer consume the recent window. [Bounded text attachments](chat-attachments.md) are supported. Multiple configured providers, external Chat AI and tool execution remain later capabilities. Normal tests and `scripts/chat_smoke.py` use fake providers. Real local completion, including Docker access through the private runner bridge, is recorded in [verification](verification.md).
 
 ## Host loopback model access
 

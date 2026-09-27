@@ -129,3 +129,10 @@ The first AI Station self-development attempt applied its documentation proposal
 ## Local Chat text attachments — 2026-09-27
 
 293 Python tests and 23 frontend tests passed, with lint/format, TypeScript and production build. A Chromium fake-provider smoke confirmed selected file contents in the actual provider request, a persisted download link after API restart, regeneration, summaries, silent-provider cancellation and mobile layout. The attachment was a synthetic Python snippet; no real model inference or external transmission was used. Backend regressions verify bounded input, rejection before persistence, safe text downloads, hashes/provenance, immutable regeneration context, conversation separation and summary coverage of attached text.
+
+
+## Final local deployment and self-development — 2026-09-27
+
+Reviewed implementation `3926405` was deployed with a verified SQLite backup and retained release checkouts. The final Docker image and fresh isolated fake-executor/browser/restart/shutdown smoke passed. API, native Runner, worker/scheduler and local provider discovery are healthy. Real model/runtime scans observed 18 files and three runtime instances without modifying external resources.
+
+The user-approved real Cursor self-development repeat passed: preparation `c2e12ab4-aef7-44b4-9350-e0463dafb65d`, coding `a5ed6ac9-956c-41c5-9630-9a69d91e9210`, validation `f550e8b0-b41e-4142-bee7-ae04dc5a032d`. The documentation proposal's hash matched exactly, both Python syntax commands passed, and active HEAD/status/index were unchanged. The preserved worktree still awaits human review; no proposal commit/merge/deployment occurred. See [scope and limitations](mvp-acceptance.md).

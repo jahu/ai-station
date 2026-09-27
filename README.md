@@ -2,6 +2,8 @@
 
 A local-first AI workstation control plane. Work is represented by **Task → Run → Events → Artifacts**, with a Dockerized control plane and a native, user-level Host Runner.
 
+The first local MVP is usable; see the [acceptance report and current limits](docs/mvp-acceptance.md).
+
 ## What works now
 
 - Local chat: persisted conversations, model discovery, streaming Markdown, bounded text attachments, stop, regeneration, and inspectable Runs.
