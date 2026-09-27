@@ -179,6 +179,17 @@ def request_cancel(session: Session, run: Run) -> Run:
     if run.status == RunStatus.CANCEL_REQUESTED:
         return run
     run.cancellation_requested_at = utcnow()
+    if (
+        run.status == RunStatus.QUEUED
+        and run.executor_type in {"llama_load", "llama_stop"}
+        and run.metadata_json.get("dispatch_attempted")
+    ):
+        # A resumed lifecycle operation may still own a container. Let the next
+        # claim confirm its stop instead of declaring a queued run canceled.
+        run.metadata_json = {**run.metadata_json, "cancel_on_resume": True}
+        append_event(session, run.id, "run.cancel_requested", {"awaiting_owned_runtime_stop": True})
+        session.flush()
+        return run
     if run.status in {RunStatus.QUEUED.value}:
         return transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
     if run.status in {RunStatus.CLAIMED.value, RunStatus.PREPARING.value, RunStatus.RUNNING.value}:

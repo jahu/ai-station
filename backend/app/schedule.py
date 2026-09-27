@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from app.agent_schema import AgentSettings
 from app.agent_tools import AGENT_TOOLS, effective_permissions
 from app.db import utcnow
-from app.local_provider import local_endpoint
+from app.local_provider import model_endpoint
 from app.models import Agent, Run
 from app.providers import ProviderError
 from app.runs import create_run, create_task
@@ -45,7 +45,7 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
     )
     if not definition.model or any(not AGENT_TOOLS[name].operational for name in definition.tools):
         raise ValueError("Agent model or tools are not operational")
-    endpoint = local_endpoint()
+    endpoint = model_endpoint(agent.model, session)
     task = create_task(
         session,
         title=agent.name,

@@ -14,7 +14,7 @@ from sqlalchemy import select
 
 from app.db import utcnow
 from app.events import append_event
-from app.local_provider import LocalChatProvider, local_endpoint
+from app.local_provider import LocalChatProvider, model_endpoint
 from app.models import Artifact, Conversation, Message, Run
 from app.providers import ProviderError
 from app.runs import create_run, create_task, run_dict, transition
@@ -92,7 +92,7 @@ def enqueue_assistant(session, conversation, user, body):
             **body.model_dump(mode="json", exclude={"attachments"}),
             "user_message_id": user.id,
             "model": conversation.model,
-            "endpoint": local_endpoint(),
+            "endpoint": model_endpoint(conversation.model, session),
         },
         permissions=["manage_agents"] + (["external_ai"] if body.coding else []),
     )

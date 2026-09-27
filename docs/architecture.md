@@ -106,3 +106,7 @@ The planned [reviewed commits](reviewed-commits.md) will extend a completed codi
 ## Conversation orchestration
 
 The default entry point is the [platform assistant](orchestrator.md). Dedicated workspaces remain available. Conversation intent is compiled into typed capability actions, dispatched as ordinary Runs, and projected back into the conversation with live state and artifacts. The assistant shares domain services with workspaces; it cannot bypass their permissions, resource scheduling or native boundaries.
+
+## Owned llama.cpp instances
+
+[Managed llama.cpp](managed-llama.md) loads discovered GGUF files into an owned container through the native Runner. Inference uses a private Unix socket, selected GPUs remain reserved for the runtime lifetime, and a separate stop Run releases them after confirmed termination. The configured Ollama/OpenAI-compatible endpoint remains available alongside it.

@@ -19,9 +19,13 @@ it("creates a conversation with explicit local model settings", async () => {
             endpoint: "http://localhost:8080/v1",
             location: "local",
           }
-        : options?.method === "POST"
-          ? { id: "new" }
-          : [],
+        : path.endsWith("/llama")
+          ? { models: [], instances: [] }
+          : path.endsWith("/hardware")
+            ? { gpus: [] }
+            : options?.method === "POST"
+              ? { id: "new" }
+              : [],
   }));
   vi.stubGlobal("fetch", fetch);
   const cache = new QueryClient({

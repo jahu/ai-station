@@ -13,8 +13,8 @@ from app.chat_attachments import TextAttachment, link_attachments, message_conte
 from app.config import get_settings
 from app.conversation_summary import enqueue_summary, latest_summary, summary_memory, summary_view
 from app.db import session_scope, utcnow
-from app.local_provider import LocalChatProvider, local_endpoint
-from app.models import Conversation, MemoryEntry, Message, Run, Task
+from app.local_provider import LocalChatProvider, local_endpoint, model_endpoint
+from app.models import Conversation, MemoryEntry, Message, ModelFile, Run, Task
 from app.providers import ProviderError
 from app.runs import create_run, create_task, run_dict
 from app.serialize import conversation_dict, iso, message_dict
@@ -45,9 +45,9 @@ class MessageBody(AssistantInputs):
         return self
 
 
-def endpoint_or_error():
+def endpoint_or_error(model=None, session=None):
     try:
-        return local_endpoint()
+        return model_endpoint(model, session) if model else local_endpoint()
     except ProviderError as exc:
         raise HTTPException(409, str(exc)) from exc
 
@@ -59,6 +59,17 @@ def conversation(session, conversation_id):
     return row
 
 
+def conversation_view(session, row):
+    label = row.model
+    if row.model.startswith("llamacpp:"):
+        from pathlib import PurePosixPath
+
+        model = session.get(ModelFile, row.model.removeprefix("llamacpp:"))
+        if model:
+            label = f"{PurePosixPath(model.host_path).parent.name} · {model.filename}"
+    return {**conversation_dict(row), "model_label": label}
+
+
 def ensure_idle(session, conversation_id):
     active = session.scalar(
         select(Run).where(Run.conversation_id == conversation_id, Run.status.not_in(TERMINAL))
@@ -68,7 +79,7 @@ def ensure_idle(session, conversation_id):
 
 
 @router.get("/provider")
-def provider():
+def provider(session: DB):
     endpoint = endpoint_or_error()
     try:
         models = LocalChatProvider().models()
@@ -76,6 +87,15 @@ def provider():
     except ProviderError as exc:
         models = []
         status, error = "unavailable", str(exc)
+    from app.llama import instances
+
+    models += [
+        "llamacpp:" + row.metadata_json["model_file_id"]
+        for row in instances(session)
+        if row.status == "ready"
+    ]
+    if models:
+        status = "available"
     configured = get_settings().llm_model
     return {
         "id": LocalChatProvider.key,
@@ -92,18 +112,18 @@ def provider():
 @router.get("/conversations")
 def conversations(session: DB):
     return [
-        conversation_dict(row)
+        conversation_view(session, row)
         for row in session.scalars(select(Conversation).order_by(Conversation.updated_at.desc()).limit(100))
     ]
 
 
 @router.post("/conversations", status_code=201)
 def create_conversation(body: ConversationBody, session: DB):
-    endpoint_or_error()
+    endpoint_or_error(body.model, session)
     row = Conversation(**body.model_dump(), provider=LocalChatProvider.key)
     session.add(row)
     session.commit()
-    return conversation_dict(row)
+    return conversation_view(session, row)
 
 
 @router.patch("/conversations/{conversation_id}")
@@ -114,7 +134,7 @@ def edit_conversation(conversation_id: UUID, body: ConversationBody, session: DB
         setattr(row, key, value)
     row.updated_at = utcnow()
     session.commit()
-    return conversation_dict(row)
+    return conversation_view(session, row)
 
 
 @router.get("/conversations/{conversation_id}")
@@ -135,7 +155,7 @@ def detail(conversation_id: UUID, session: DB):
         for r in session.scalars(select(Run).where(Run.id.in_([m.run_id for m in messages if m.run_id])))
     }
     return {
-        **conversation_dict(row),
+        **conversation_view(session, row),
         "messages": [
             {
                 **message_dict(m),
@@ -151,7 +171,7 @@ def detail(conversation_id: UUID, session: DB):
 
 
 def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
-    endpoint = endpoint_or_error()
+    endpoint = endpoint_or_error(row.model, session)
     summary = latest_summary(session, row.id)
     summary_entry = summary_memory(session, summary)
     history = list(
@@ -291,7 +311,7 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
 def send(conversation_id: UUID, body: MessageBody, session: DB):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
-    endpoint_or_error()  # Reject invalid configuration before persisting attachment files.
+    endpoint_or_error(row.model, session)  # Validate the selected runtime before attachments.
     user = Message(
         conversation_id=row.id,
         role="user",
@@ -346,4 +366,4 @@ def regenerate(conversation_id: UUID, session: DB):
 def summarize(conversation_id: UUID, session: DB):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
-    return enqueue_summary(session, row, endpoint_or_error())
+    return enqueue_summary(session, row, endpoint_or_error(row.model, session))

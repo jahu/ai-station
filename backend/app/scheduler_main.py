@@ -5,6 +5,7 @@ from __future__ import annotations
 import time
 
 from app.db import migrate, session_factory, utcnow
+from app.llama import reconcile
 from app.models import Setting
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.schedule import scheduler_tick
@@ -21,6 +22,7 @@ def main() -> None:
             scheduler_tick(session)
             session.commit()
             try:
+                reconcile(session, runner)
                 record_sample(session, {"sampled_at": utcnow().isoformat(), **runner.hardware()})
             except (RunnerUnavailable, RunnerError):
                 record_sample(session, {"available": False})
