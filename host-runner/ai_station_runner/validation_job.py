@@ -11,7 +11,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from ai_station_runner.coding_sandbox import validation_argv
+from ai_station_runner.coding_sandbox import validation_argv, write_policy
 from ai_station_runner.gitinspect import Repository
 from ai_station_runner.validation import load_request, request_path
 from ai_station_runner.worktrees import load_manifest, owned_path
@@ -83,11 +83,15 @@ def validate(run_id):
         "PYTHONNOUSERSITE": "1",
         "PYTHONDONTWRITEBYTECODE": "1",
     }
-    policy = request_path(run_id, "policy.json")
     results = []
     deadline = time.monotonic() + 900
     for index, command in enumerate(body.commands):
         print(f"Validation {index + 1}/{len(body.commands)}: {command.kind} {command.argv!r}", flush=True)
+        # The native helper consumes its policy file on startup. Each command
+        # gets a fresh exclusive file outside the writable workspace; retain the
+        # original request policy as audit evidence rather than reusing it.
+        policy = request_path(run_id, "policy.json").with_name(f"{run_id}.{index}.policy.json")
+        write_policy(policy, workspace, repository.common_dir)
         result = execute_command(validation_argv(policy, command.argv), workspace, env, deadline=deadline)
         results.append({"kind": command.kind, "argv": command.argv, **result})
     report = {

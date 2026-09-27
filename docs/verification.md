@@ -119,3 +119,8 @@ The user-approved preview upgrade to develop `b06edac` completed at http://127.0
 283 Python tests and 21 frontend tests passed, with Python lint/format and frontend format/lint/TypeScript/production build. The opt-in real Cursor browser test passed fresh worktree preparation, two selected source edits, Git-compatible diff/JSON artifacts, the review UI and automatic saved validation through the installed native sandbox. The original dirty checkout and index were unchanged. Mobile review output was inspected; provider cloud inference was explicitly enabled only for this test.
 
 An initial end-to-end attempt found a background Cursor helper keeping its owned process group alive after the main CLI exited. Identity-checked pidfd cleanup fixed this; regressions cover success, nonzero exit, invalid output, inherited pipes and an unrelated process remaining untouched. The complete real test then passed. Existing bundle-size and TestClient deprecation advisories remain. No Codex execution is claimed.
+
+
+## Multiple native validation commands — 2026-09-27
+
+The first AI Station self-development attempt applied its documentation proposal in an owned worktree but failed validation: the provider omitted a final newline, and the native helper consumed the shared policy before command two. This attempt is not a passed acceptance test. The prompt now encodes exact content as JSON; each validation command receives a fresh exclusive policy. Two opt-in real native-sandbox regression cases passed, including a second command after a failing first command. The fake CI helper now models policy consumption. The complete self-development repeat remains pending deployment of this correction.
