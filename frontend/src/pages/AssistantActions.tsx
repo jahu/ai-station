@@ -61,6 +61,15 @@ export function AssistantResults({ result }: { result: ActionResult }) {
                 />
               </a>
             )}
+            {artifact.type === "video" && (
+              <video
+                controls
+                preload="metadata"
+                src={`/api/artifacts/${artifact.id}/file`}
+                aria-label="Generated avatar video"
+                style={{ maxWidth: "100%" }}
+              />
+            )}
             {artifact.type === "audio" && (
               <audio
                 controls
@@ -167,6 +176,7 @@ export default function AssistantActions({
           <option value="audio.speech">
             Speech · read this message in Polish
           </option>
+          <option value="avatar.animate">Animate portrait with speech</option>
           <option value="agent.create">Create agent</option>
           <option value="coding.cursor">Coding with Cursor</option>
         </select>

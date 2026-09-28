@@ -14,6 +14,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from ai_station_runner import __version__
 from ai_station_runner.audio import AudioRequest, start_audio
+from ai_station_runner.avatars import AvatarRequest, start_avatar
 from ai_station_runner.coding import CodingUnavailable, build_argv
 from ai_station_runner.coding_sandbox import SandboxUnavailable
 from ai_station_runner.config import get_settings
@@ -560,5 +561,13 @@ app.include_router(llama_router)
 def audio_run(body: AudioRequest):
     try:
         return {**start_audio(manager(), body), "runner_id": get_settings().runner_id}
+    except PathBoundaryError as exc:
+        raise HTTPException(403, str(exc)) from exc
+
+
+@app.post("/v1/runs/avatar")
+def avatar_run(body: AvatarRequest):
+    try:
+        return {**start_avatar(manager(), body), "runner_id": get_settings().runner_id}
     except PathBoundaryError as exc:
         raise HTTPException(403, str(exc)) from exc

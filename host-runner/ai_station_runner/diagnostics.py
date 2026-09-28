@@ -73,6 +73,12 @@ def collect_diagnostics(settings) -> dict:
         file_check("photo_pipe", settings.photo_script),
         file_check("chatterbox_script", settings.chatterbox_script),
         file_check("chatterbox_python", settings.chatterbox_python),
+        file_check("echomimic_python", settings.echomimic_python),
+        file_check(
+            "echomimic_entry",
+            str(Path(settings.echomimic_dir) / "infer_flash.py") if settings.echomimic_dir else "",
+        ),
+        directory_check("echomimic_models", settings.echomimic_models),
         file_check("photo python", settings.photo_python),
         file_check("sd-cli", settings.sd_cli),
         http_check("llama.cpp / OpenAI-compatible endpoint", settings.llm_base_url),
