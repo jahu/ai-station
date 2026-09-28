@@ -51,6 +51,10 @@ def artifact_dict(artifact: Artifact) -> dict:
         "metadata": artifact.metadata_json,
         "parent_artifact_ids": artifact.parent_artifact_ids,
         "thumbnail_relative_path": artifact.thumbnail_relative_path,
+        "title": artifact.title,
+        "notes": artifact.notes,
+        "library_updated_at": iso(artifact.library_updated_at),
+        "trashed_at": iso(artifact.trashed_at),
     }
 
 

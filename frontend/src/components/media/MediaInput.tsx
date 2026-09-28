@@ -60,7 +60,9 @@ export default function MediaInput({
       a.type === kind &&
       (kind !== "image" || ["image/png", "image/jpeg"].includes(a.mime_type)) &&
       (kind !== "audio" || a.mime_type === "audio/wav") &&
-      a.original_filename.toLowerCase().includes(search.toLowerCase()),
+      `${a.title ?? ""} ${a.original_filename}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
   );
   return (
     <div className="media-input">
@@ -97,7 +99,9 @@ export default function MediaInput({
             </>
           )}
           <span title={source.data?.original_filename}>
-            {source.data?.original_filename || "Loading reference…"}
+            {source.data?.title ||
+              source.data?.original_filename ||
+              "Loading reference…"}
           </span>
         </div>
       ) : (
@@ -191,7 +195,7 @@ export default function MediaInput({
                   ) : (
                     <AudioLines size={18} />
                   )}
-                  <span>{a.original_filename}</span>
+                  <span>{a.title || a.original_filename}</span>
                 </button>
               ))}
             </div>

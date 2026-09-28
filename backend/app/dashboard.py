@@ -50,7 +50,7 @@ def overview(session: DB):
     ).all()
     artifacts = session.scalars(
         select(Artifact)
-        .where(Artifact.run_id.is_not(None))
+        .where(Artifact.run_id.is_not(None), Artifact.trashed_at.is_(None))
         .order_by(Artifact.created_at.desc(), Artifact.id)
         .limit(6)
     ).all()

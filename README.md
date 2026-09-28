@@ -18,14 +18,15 @@ Development targets the [complete product vision](docs/product-completion.md). E
 - Owned worktree preparation: a queued local Run creates an isolated task branch, captures logs, and records a JSON artifact without changing the active checkout.
 - Audio: local Polish speech with the installed Chatterbox pipeline, bounded WAV voice references, cancelable Runs and playable Library artifacts. See [speech setup](docs/audio.md).
 - Images: Qwen/Juggernaut Generate, Edit, multi-reference Recompose, and 4× Upscale through the existing photo pipeline.
-- Validated image uploads, artifact Library, source reuse, live stdout/stderr, owned-process cancellation, and explicit image retries.
+- Library: image/WAV import, search and type filters, editable names and notes, reversible Trash, source reuse and preserved Run history. See [Library management](docs/library.md).
+- Avatars and Video: local EchoMimic portrait animation from an image and speech, with inline playback and reusable Library outputs.
 - One-command startup of the native runner, API, worker, scheduler, and web UI.
 - Live GPU/CPU/RAM/storage dashboard, telemetry history, worker health, and read-only diagnostics.
 - Durable run state, atomic claims, leases, cancellation, conservative recovery, event replay over SSE, and a run inspector.
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory.
 - Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
 
-The bounded Cursor adapter is operational. Other coding-agent modules remain inactive drafts; commits, pushes and PR actions are not exposed. Saved project validation runs in prepared worktrees through the native sandbox.
+The bounded Cursor adapter is operational. Other coding-agent modules remain inactive drafts; reviewed changes can be committed to the owned task branch; pushes and PR actions are not yet exposed. Saved project validation runs in prepared worktrees through the native sandbox.
 
 ## Prerequisites and installation
 

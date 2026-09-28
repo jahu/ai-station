@@ -101,7 +101,7 @@ Saved project test/lint/build commands now run through the worker and a managed 
 
 ## Reviewed Git progression
 
-The planned [reviewed commits](reviewed-commits.md) will extend a completed coding Task with a user-approved Git Run. Approval data binds the exact review and validation snapshot; the native Runner owns checked commit publication and its interruption journal. The [full-product ledger](product-completion.md) tracks the remaining acceptance increments.
+[Reviewed commits](coding-commits.md) extend a completed coding Task with a user-approved Git Run. Approval data binds the exact review and validation snapshot; the native Runner owns checked commit publication and its interruption journal. The [full-product ledger](product-completion.md) tracks the remaining acceptance increments.
 
 ## Conversation orchestration
 
@@ -120,3 +120,5 @@ Speech and images share the owned-process media executor lifecycle; capability a
 Portrait animation uses the same owned-process media lifecycle as images and speech. The native EchoMimic adapter runs offline with CPU offload; Video and Avatars expose the real `avatar.animate` capability, and MP4 results retain image/audio lineage. See [avatar execution](avatars.md).
 
 Reviewed Coding commits use `coding.commit` Runs and a typed native job. A private Git index limits the commit to verified review snapshots; compare-and-swap advances only the owned task ref. Worktree manifests retain their original base and current owned HEAD. NativeJobExecutor shares the existing dispatch/poll/cancel lifecycle with Cursor proposals.
+
+[Library management](library.md) separates versioned user annotations and reversible Trash from immutable execution provenance. Run history and source lineage retain access to artifacts in Trash.
