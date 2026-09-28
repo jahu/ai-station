@@ -15,6 +15,7 @@ from app.assistant import AssistantExecutor
 from app.audio import AudioExecutor
 from app.avatars import AvatarExecutor
 from app.chat_executor import ChatExecutor
+from app.commit_executor import ReviewedCommitExecutor
 from app.config import get_settings
 from app.cursor_executor import CursorProposalExecutor
 from app.events import append_event
@@ -278,6 +279,7 @@ EXECUTORS = {
     "photo_pipe": PhotoPipeExecutor(),
     "chatterbox": AudioExecutor(),
     "echomimic": AvatarExecutor(),
+    "reviewed_commit": ReviewedCommitExecutor(),
     "chat": ChatExecutor(),
     "chat_summary": SummaryExecutor(),
     "worktree_prepare": WorktreeExecutor(),

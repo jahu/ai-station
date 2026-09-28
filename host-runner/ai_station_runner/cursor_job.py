@@ -100,7 +100,7 @@ def execute(run_id):
         or record["project_id"] != str(body.project_id)
         or str(repo.common_dir) != record["common_dir"]
         or repo.branch() != record["branch"]
-        or repo.read(["rev-parse", "HEAD"]).stdout.strip() != record["base_commit"]
+        or repo.read(["rev-parse", "HEAD"]).stdout.strip() != record.get("head_commit", record["base_commit"])
     ):
         raise ValueError("Worktree ownership changed")
     lock_path = owned_path(f"runtime/validation-worktrees/{body.worktree_run_id}.lock")
@@ -123,7 +123,8 @@ def execute(run_id):
     if (
         current.common_dir != repo.common_dir
         or current.branch() != record["branch"]
-        or current.read(["rev-parse", "HEAD"]).stdout.strip() != record["base_commit"]
+        or current.read(["rev-parse", "HEAD"]).stdout.strip()
+        != record.get("head_commit", record["base_commit"])
     ):
         raise ValueError("Worktree changed while Cursor was running")
     report = apply_proposal(workspace, selected, proposal)
@@ -132,7 +133,7 @@ def execute(run_id):
         project_id=str(body.project_id),
         worktree_run_id=str(body.worktree_run_id),
         branch=record["branch"],
-        base_commit=record["base_commit"],
+        base_commit=record.get("head_commit", record["base_commit"]),
         provider=provider,
         execution_location="external",
     )

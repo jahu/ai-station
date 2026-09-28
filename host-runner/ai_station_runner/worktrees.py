@@ -46,6 +46,7 @@ def load_manifest(run_id: str) -> dict:
         or record["relative_path"] != f"worktrees/{project_id}/{run_id}"
         or record["branch"] != f"ai/{run_id}-workspace"
         or not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", record["base_commit"])
+        or not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", record.get("head_commit", record["base_commit"]))
         or record["state"] not in {"reserved", "preparing", "ready"}
     ):
         raise GitError("Worktree reservation is inconsistent with its owner")
@@ -164,7 +165,8 @@ def inspect_worktree(manager: ProcessManager, run_id: str) -> dict:
             worktree.path != destination
             or str(worktree.common_dir) != record["common_dir"]
             or worktree.branch() != record["branch"]
-            or worktree.read(["rev-parse", "--verify", "HEAD"]).stdout.strip() != record["base_commit"]
+            or worktree.read(["rev-parse", "--verify", "HEAD"]).stdout.strip()
+            != record.get("head_commit", record["base_commit"])
         ):
             raise GitError("Prepared worktree no longer matches its ownership record")
     return record
