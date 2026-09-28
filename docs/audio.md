@@ -15,3 +15,5 @@ The platform assistant accepts a WAV voice reference with the explicit Speech ac
 Real application acceptance: isolated API upload → queued Run `93a9893f-b8ca-4880-ba67-d8dfc2cabcdb` → native Chatterbox → 3.76-second mono 24 kHz WAV artifact → inline file response and released GPU reservation. The original reference and installed environment were unchanged.
 
 Real browser acceptance (2026-09-28): Audio upload and generation, decoded WAV playback in Library, and an assistant speech child Run with inline playback all passed without browser JavaScript errors. These checks establish playable output, not a subjective pronunciation assessment.
+
+The Audio workspace keeps composition and output side by side. Voice references support drag/drop, file selection and Library reuse. Generation shows its live state, stop action and playable result in place; the Run inspector remains available for logs. The result's Run ID is preserved in the URL for reopening after navigation or refresh. GPU selection lives in Advanced settings.

@@ -1,24 +1,43 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import Avatars from "./Avatars";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-it("queues portrait and speech with selected video settings", async () => {
+it("selects existing inputs, queues video and keeps the live result beside the form", async () => {
+  const artifacts = [
+    {
+      id: "portrait",
+      type: "image",
+      mime_type: "image/png",
+      original_filename: "Portrait.png",
+    },
+    {
+      id: "speech",
+      type: "audio",
+      mime_type: "audio/wav",
+      original_filename: "Speech.wav",
+    },
+  ];
   const fetch = vi.fn(async (path: string) => ({
     ok: true,
     json: async () =>
       path.endsWith("/hardware")
         ? { gpus: [] }
-        : path.endsWith("/runs")
-          ? { id: "avatar" }
-          : [
-              { id: "portrait", type: "image", original_filename: "Portrait" },
-              { id: "speech", type: "audio", original_filename: "Speech" },
-            ],
+        : path.includes("/runs")
+          ? { id: "avatar", status: "queued" }
+          : path.endsWith("/artifacts")
+            ? artifacts
+            : artifacts.find((a) => path.endsWith(a.id)),
   }));
   vi.stubGlobal("fetch", fetch);
   render(
@@ -28,27 +47,33 @@ it("queues portrait and speech with selected video settings", async () => {
       }
     >
       <MemoryRouter>
-        <Routes>
-          <Route path="/" element={<Avatars />} />
-          <Route path="/runs/:id" element={<h1>Run inspector</h1>} />
-        </Routes>
+        <Avatars />
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  await screen.findByRole("option", { name: "Portrait" }, { timeout: 5000 });
-  fireEvent.change(screen.getByLabelText("Portrait from Library"), {
-    target: { value: "portrait" },
-  });
-  fireEvent.change(screen.getByLabelText("Speech from Library"), {
-    target: { value: "speech" },
-  });
+  fireEvent.click(
+    screen.getAllByRole("button", { name: "Choose from Library" })[0],
+  );
+  fireEvent.click(
+    await within(
+      screen.getByRole("region", { name: "Portrait library" }),
+    ).findByRole("button", { name: "Portrait.png" }, { timeout: 5000 }),
+  );
+  fireEvent.click(
+    screen.getAllByRole("button", { name: "Choose from Library" })[1],
+  );
+  fireEvent.click(
+    await within(
+      screen.getByRole("region", { name: "Speech recording library" }),
+    ).findByRole("button", { name: "Speech.wav" }),
+  );
   fireEvent.change(screen.getByLabelText("Resolution"), {
     target: { value: "256" },
   });
   fireEvent.click(
     screen.getByRole("button", { name: "Generate avatar video" }),
   );
-  await screen.findByRole("heading", { name: "Run inspector" });
+  await screen.findByText("Waiting for an available GPU");
   expect(fetch).toHaveBeenCalledWith(
     "/api/avatars/runs",
     expect.objectContaining({
@@ -64,4 +89,30 @@ it("queues portrait and speech with selected video settings", async () => {
       }),
     }),
   );
+});
+it("restores a completed video from the workspace URL", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path.includes("/artifacts?")
+          ? [{ id: "movie", type: "video" }]
+          : path.includes("/runs/")
+            ? { id: "done", status: "succeeded" }
+            : { gpus: [] },
+    })),
+  );
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={["/avatars?run=done"]}>
+        <Avatars />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const video = await screen.findByLabelText("Generated video");
+  expect(video.getAttribute("src")).toBe("/api/artifacts/movie/file");
+  expect(
+    screen.getByRole("link", { name: "Open in Library" }).getAttribute("href"),
+  ).toBe("/library/movie");
 });
