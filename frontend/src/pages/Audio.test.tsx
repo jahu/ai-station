@@ -7,21 +7,26 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import Audio from "./Audio";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-it("uploads a voice reference and queues an inspectable speech Run", async () => {
+it("keeps speech generation in the workspace with visible progress and stop", async () => {
   const fetch = vi.fn(async (path: string) => ({
     ok: true,
     json: async () =>
       path.endsWith("/hardware")
-        ? { gpus: [{ index: 7, name: "GPU" }] }
-        : path.endsWith("/runs")
-          ? { id: "speech" }
-          : { id: "voice", original_filename: "reference.wav", type: "audio" },
+        ? { gpus: [] }
+        : path.includes("/runs")
+          ? { id: "speech", status: "queued" }
+          : {
+              id: "voice",
+              original_filename: "reference.wav",
+              type: "audio",
+              mime_type: "audio/wav",
+            },
   }));
   vi.stubGlobal("fetch", fetch);
   render(
@@ -30,11 +35,8 @@ it("uploads a voice reference and queues an inspectable speech Run", async () =>
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <MemoryRouter initialEntries={["/audio"]}>
-        <Routes>
-          <Route path="/audio" element={<Audio />} />
-          <Route path="/runs/:id" element={<h1>Run inspector</h1>} />
-        </Routes>
+      <MemoryRouter>
+        <Audio />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -43,7 +45,7 @@ it("uploads a voice reference and queues an inspectable speech Run", async () =>
       .getByRole("button", { name: "Generate speech" })
       .hasAttribute("disabled"),
   ).toBe(true);
-  fireEvent.change(screen.getByLabelText("Voice reference · WAV"), {
+  fireEvent.change(screen.getByLabelText("Upload speech"), {
     target: {
       files: [new File(["wav"], "reference.wav", { type: "audio/wav" })],
     },
@@ -53,7 +55,12 @@ it("uploads a voice reference and queues an inspectable speech Run", async () =>
     target: { value: "Witaj" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Generate speech" }));
-  await screen.findByRole("heading", { name: "Run inspector" });
+  await screen.findByText("Waiting for an available GPU");
+  expect(
+    screen
+      .getByRole("button", { name: "Generating speech…" })
+      .hasAttribute("disabled"),
+  ).toBe(true);
   await waitFor(() =>
     expect(fetch).toHaveBeenCalledWith(
       "/api/audio/runs",
@@ -64,6 +71,13 @@ it("uploads a voice reference and queues an inspectable speech Run", async () =>
           reference_artifact_id: "voice",
         }),
       }),
+    ),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Stop generation" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/runs/speech/cancel",
+      expect.objectContaining({ method: "POST" }),
     ),
   );
 });

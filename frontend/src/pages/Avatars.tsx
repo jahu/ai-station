@@ -1,14 +1,20 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useNavigate } from "react-router-dom";
-import { api, useHardware, type Artifact, type Run } from "../api";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link, useSearchParams } from "react-router-dom";
+import { Film, Settings2, Sparkles, ArrowUpRight } from "lucide-react";
+import { api, useHardware, type Run } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
+import MediaInput from "../components/media/MediaInput";
+import MediaResult from "../components/media/MediaResult";
+import { mediaBusy, useMediaRun } from "../components/media/media-run";
 
 export default function Avatars({ video = false }: { video?: boolean }) {
-  const navigate = useNavigate();
+  const [search, setSearch] = useSearchParams();
+  const cache = useQueryClient();
   const [image, setImage] = useState("");
   const [audio, setAudio] = useState("");
+  const [uploading, setUploading] = useState(false);
   const [prompt, setPrompt] = useState(
     "A person speaking naturally, static camera.",
   );
@@ -18,32 +24,8 @@ export default function Avatars({ video = false }: { video?: boolean }) {
   const [seed, setSeed] = useState(43);
   const [gpu, setGpu] = useState("auto");
   const hardware = useHardware();
-  const library = useQuery({
-    queryKey: ["avatar-inputs"],
-    queryFn: () => api<Artifact[]>("/artifacts"),
-  });
-  const upload = useMutation({
-    mutationFn: async ({
-      file,
-      kind,
-    }: {
-      file: File;
-      kind: "image" | "audio";
-    }) => {
-      const body = new FormData();
-      body.append("file", file);
-      const artifact = await api<Artifact>(
-        kind === "image" ? "/images/uploads" : "/audio/uploads",
-        { method: "POST", body },
-      );
-      return { artifact, kind };
-    },
-    onSuccess: ({ artifact, kind }) => {
-      if (kind === "image") setImage(artifact.id);
-      else setAudio(artifact.id);
-      void library.refetch();
-    },
-  });
+  const runId = search.get("run") ?? "";
+  const run = useMediaRun(runId);
   const generate = useMutation({
     mutationFn: () =>
       api<Run>("/avatars/runs", {
@@ -60,175 +42,171 @@ export default function Avatars({ video = false }: { video?: boolean }) {
           gpu,
         }),
       }),
-    onSuccess: (run) => navigate(`/runs/${run.id}`),
+    onSuccess: (result) => {
+      cache.setQueryData(["run", result.id], result);
+      setSearch({ run: result.id });
+    },
   });
+  const busy = generate.isPending || mediaBusy(run.data);
   return (
     <>
       <PageTitle
-        eyebrow={video ? "CREATE / LOCAL VIDEO" : "CREATE / LOCAL AVATARS"}
+        eyebrow={video ? "CREATE / VIDEO" : "CREATE / AVATARS"}
         title="Bring a portrait to life."
-      >
-        EchoMimic animates a portrait using your speech recording. Create a
-        short MP4 with synchronized audio, entirely on your workstation.
-      </PageTitle>
-      <ErrorNotice
-        error={
-          upload.error ?? generate.error ?? library.error ?? hardware.error
+        action={
+          <span className="media-runtime">
+            <i />
+            EchoMimic · Local
+          </span>
         }
-      />
-      <form
-        className="panel content-panel"
-        onSubmit={(event) => {
-          event.preventDefault();
-          generate.mutate();
-        }}
       >
-        <fieldset disabled={upload.isPending || generate.isPending}>
-          {(["image", "audio"] as const).map((kind) => (
-            <div key={kind} className="content-panel">
+        Combine a portrait with speech to create a talking avatar. Preview the
+        finished film without leaving your workspace.
+      </PageTitle>
+      <div className="media-workspace">
+        <form
+          className="panel media-composer"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!busy && !uploading) generate.mutate();
+          }}
+        >
+          <div className="media-composer-heading">
+            <Film size={20} />
+            <h2>Create avatar video</h2>
+            <span>01 / Portrait & voice</span>
+          </div>
+          <fieldset disabled={busy || uploading}>
+            <div className="media-source-grid">
+              <MediaInput
+                kind="image"
+                label="Portrait"
+                hint="PNG or JPG · up to 20 MB"
+                value={image}
+                onChange={setImage}
+                disabled={busy || uploading}
+                onBusy={setUploading}
+              />
+              <MediaInput
+                kind="audio"
+                label="Speech recording"
+                hint="WAV · 0.68–60 sec · up to 20 MB"
+                value={audio}
+                onChange={setAudio}
+                disabled={busy || uploading}
+                onBusy={setUploading}
+              />
+            </div>
+            <Link className="media-help-link" to="/audio">
+              Need a voice recording? Create speech in Audio{" "}
+              <ArrowUpRight size={13} />
+            </Link>
+            <label className="media-text-label">
+              <span>
+                Scene & motion <small>Optional direction</small>
+              </span>
+              <textarea
+                aria-label="Scene and motion"
+                required
+                maxLength={2000}
+                rows={3}
+                value={prompt}
+                onChange={(event) => setPrompt(event.target.value)}
+                placeholder="Describe the expression, motion or camera…"
+              />
+            </label>
+            <div className="media-field-pair">
               <label>
-                {kind === "image"
-                  ? "Portrait from Library"
-                  : "Speech from Library"}
+                Quality
                 <select
-                  value={kind === "image" ? image : audio}
-                  onChange={(event) =>
-                    (kind === "image" ? setImage : setAudio)(event.target.value)
-                  }
+                  aria-label="Resolution"
+                  value={size}
+                  onChange={(event) => setSize(Number(event.target.value))}
                 >
-                  <option value="">
-                    Choose {kind === "image" ? "a portrait" : "a WAV recording"}
-                  </option>
-                  {library.data
-                    ?.filter((a) => a.type === kind)
-                    .map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.original_filename || a.id}
-                      </option>
-                    ))}
+                  <option value={256}>Draft · 256 px</option>
+                  <option value={384}>Balanced · 384 px</option>
+                  <option value={512}>Detailed · 512 px</option>
                 </select>
               </label>
               <label>
-                {kind === "image" ? "Upload portrait" : "Upload speech"}
-                <input
-                  type="file"
-                  accept={
-                    kind === "image" ? "image/png,image/jpeg" : "audio/wav,.wav"
-                  }
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    event.target.value = "";
-                    if (file) upload.mutate({ file, kind });
-                  }}
-                />
+                Clip length
+                <select
+                  aria-label="Maximum duration"
+                  value={frames}
+                  onChange={(event) => setFrames(Number(event.target.value))}
+                >
+                  {[17, 33, 49, 65, 81].map((n) => (
+                    <option key={n} value={n}>
+                      Up to {(n / 25).toFixed(2)} seconds
+                    </option>
+                  ))}
+                </select>
               </label>
-              {kind === "image" && image && (
-                <img
-                  src={`/api/artifacts/${image}/thumbnail`}
-                  alt="Portrait preview"
-                  style={{ maxWidth: 256, maxHeight: 256 }}
-                />
-              )}
-              {kind === "audio" && audio && (
-                <audio
-                  controls
-                  preload="metadata"
-                  src={`/api/artifacts/${audio}/file`}
-                  aria-label="Speech preview"
-                />
-              )}
             </div>
-          ))}
-          <label>
-            Scene and motion
-            <textarea
-              required
-              maxLength={2000}
-              value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
-            />
-          </label>
-          <label>
-            Resolution
-            <select
-              aria-label="Resolution"
-              value={size}
-              onChange={(event) => setSize(Number(event.target.value))}
+            <details className="media-advanced">
+              <summary>
+                <Settings2 size={15} />
+                Advanced settings<span>Steps, seed, GPU</span>
+              </summary>
+              <div className="media-field-pair">
+                <label>
+                  Steps
+                  <input
+                    type="number"
+                    min={4}
+                    max={30}
+                    value={steps}
+                    onChange={(event) => setSteps(Number(event.target.value))}
+                  />
+                </label>
+                <label>
+                  Seed
+                  <input
+                    type="number"
+                    min={0}
+                    max={2147483647}
+                    value={seed}
+                    onChange={(event) => setSeed(Number(event.target.value))}
+                  />
+                </label>
+              </div>
+              <label>
+                GPU
+                <select
+                  value={gpu}
+                  onChange={(event) => setGpu(event.target.value)}
+                >
+                  <option value="auto">Auto · available GPU</option>
+                  {hardware.data?.gpus.map((device) => (
+                    <option key={device.index} value={device.index}>
+                      GPU {device.index} · {device.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <ErrorNotice error={hardware.error} />
+            </details>
+            <ErrorNotice error={generate.error} />
+            <Button
+              type="submit"
+              className="media-generate"
+              disabled={!image || !audio || !prompt.trim() || uploading || busy}
             >
-              {[256, 384, 512].map((n) => (
-                <option key={n} value={n}>
-                  {n} × {n} area · preserves aspect ratio
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Maximum duration
-            <select
-              aria-label="Maximum duration"
-              value={frames}
-              onChange={(event) => setFrames(Number(event.target.value))}
-            >
-              {[17, 33, 49, 65, 81].map((n) => (
-                <option key={n} value={n}>
-                  {(n / 25).toFixed(2)} seconds
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Steps
-            <input
-              type="number"
-              min={4}
-              max={30}
-              value={steps}
-              onChange={(event) => setSteps(Number(event.target.value))}
-            />
-          </label>
-          <label>
-            Seed
-            <input
-              type="number"
-              min={0}
-              max={2147483647}
-              value={seed}
-              onChange={(event) => setSeed(Number(event.target.value))}
-            />
-          </label>
-          <label>
-            GPU
-            <select
-              value={gpu}
-              onChange={(event) => setGpu(event.target.value)}
-            >
-              <option value="auto">Auto · available GPU</option>
-              {hardware.data?.gpus.map((device) => (
-                <option key={device.index} value={device.index}>
-                  GPU {device.index} · {device.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <p className="muted">
-            Use a clear portrait and 0.68–60 seconds of PCM WAV speech. The clip
-            uses the start of your recording, capped at the selected duration.
-            Follow progress or cancel in Runs; the result appears in Library.
-          </p>
-          <Button
-            type="submit"
-            disabled={
-              !image ||
-              !audio ||
-              !prompt.trim() ||
-              upload.isPending ||
-              generate.isPending
-            }
-          >
-            Generate avatar video
-          </Button>
-        </fieldset>
-      </form>
+              <Sparkles size={17} />
+              {busy ? "Creating your avatar…" : "Generate avatar video"}
+            </Button>
+            <p className="media-privacy">
+              Uses the start of your recording · preserves portrait proportions.
+            </p>
+          </fieldset>
+        </form>
+        <MediaResult
+          kind="video"
+          runId={runId}
+          run={run.data}
+          error={run.error}
+        />
+      </div>
     </>
   );
 }

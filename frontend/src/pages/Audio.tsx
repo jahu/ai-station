@@ -1,30 +1,24 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { api, useHardware, type Artifact, type Run } from "../api";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
+import { AudioLines, Settings2, Sparkles } from "lucide-react";
+import { api, useHardware, type Run } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
+import MediaInput from "../components/media/MediaInput";
+import MediaResult from "../components/media/MediaResult";
+import { mediaBusy, useMediaRun } from "../components/media/media-run";
 
 export default function Audio() {
-  const [search] = useSearchParams();
+  const [search, setSearch] = useSearchParams();
+  const cache = useQueryClient();
   const [reference, setReference] = useState(search.get("input") ?? "");
   const [text, setText] = useState("");
   const [gpu, setGpu] = useState("auto");
+  const [uploading, setUploading] = useState(false);
   const hardware = useHardware();
-  const navigate = useNavigate();
-  const source = useQuery({
-    queryKey: ["artifact", reference],
-    queryFn: () => api<Artifact>(`/artifacts/${reference}`),
-    enabled: Boolean(reference),
-  });
-  const upload = useMutation({
-    mutationFn: async (file: File) => {
-      const body = new FormData();
-      body.append("file", file);
-      return api<Artifact>("/audio/uploads", { method: "POST", body });
-    },
-    onSuccess: (artifact) => setReference(artifact.id),
-  });
+  const runId = search.get("run") ?? "";
+  const run = useMediaRun(runId);
   const generate = useMutation({
     mutationFn: () =>
       api<Run>("/audio/runs", {
@@ -32,102 +26,106 @@ export default function Audio() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, gpu, reference_artifact_id: reference }),
       }),
-    onSuccess: (run) => navigate(`/runs/${run.id}`),
+    onSuccess: (result) => {
+      cache.setQueryData(["run", result.id], result);
+      setSearch({ run: result.id });
+    },
   });
+  const busy = generate.isPending || mediaBusy(run.data);
   return (
     <>
       <PageTitle
-        eyebrow="CREATE / LOCAL SPEECH"
+        eyebrow="CREATE / AUDIO"
         title="Give your words a voice."
+        action={
+          <span className="media-runtime">
+            <i />
+            Chatterbox · Local
+          </span>
+        }
       >
-        Polish speech with Chatterbox, using a short voice reference. Audio
-        stays on your workstation.
+        Natural Polish speech, shaped by your voice reference. Listen and refine
+        right here.
       </PageTitle>
-      <ErrorNotice
-        error={upload.error ?? generate.error ?? source.error ?? hardware.error}
-      />
-      <form
-        className="panel content-panel"
-        onSubmit={(event) => {
-          event.preventDefault();
-          generate.mutate();
-        }}
-      >
-        <fieldset disabled={upload.isPending || generate.isPending}>
-          <label>
-            Voice reference · WAV
-            <input
-              type="file"
-              accept="audio/wav,.wav"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) upload.mutate(file);
-              }}
+      <div className="media-workspace">
+        <form
+          className="panel media-composer"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!busy && !uploading) generate.mutate();
+          }}
+        >
+          <div className="media-composer-heading">
+            <AudioLines size={20} />
+            <h2>Create speech</h2>
+            <span>01 / Voice & text</span>
+          </div>
+          <fieldset disabled={uploading || busy}>
+            <MediaInput
+              kind="audio"
+              label="Voice reference"
+              hint="WAV · 0.1–60 sec · up to 20 MB"
+              value={reference}
+              onChange={setReference}
+              disabled={uploading || busy}
+              onBusy={setUploading}
             />
-          </label>
-          <p className="muted">
-            Use a clear mono or stereo recording, 0.1–60 seconds, up to 20 MiB.
-          </p>
-          {source.data && (
-            <div className="content-panel">
-              <strong>{source.data.original_filename}</strong>
-              <audio
-                controls
-                preload="metadata"
-                src={`/api/artifacts/${source.data.id}/file`}
-                aria-label="Voice reference preview"
+            <label className="media-text-label">
+              <span>
+                Text to speak <small>{text.length} / 1000</small>
+              </span>
+              <textarea
+                aria-label="Text to speak"
+                required
+                maxLength={1000}
+                rows={6}
+                value={text}
+                onChange={(event) => setText(event.target.value)}
+                placeholder="Write the words you want to hear…"
               />
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setReference("")}
-              >
-                Remove reference
-              </Button>
-            </div>
-          )}
-          <label>
-            Text to speak
-            <textarea
-              required
-              maxLength={1000}
-              rows={6}
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              placeholder="Witaj w AI Station."
-            />
-          </label>
-          <label>
-            GPU
-            <select
-              value={gpu}
-              onChange={(event) => setGpu(event.target.value)}
+            </label>
+            <details className="media-advanced">
+              <summary>
+                <Settings2 size={15} />
+                Advanced settings<span>GPU</span>
+              </summary>
+              <label>
+                GPU
+                <select
+                  value={gpu}
+                  onChange={(event) => setGpu(event.target.value)}
+                >
+                  <option value="auto">Auto · available GPU</option>
+                  {hardware.data?.gpus.map((device) => (
+                    <option key={device.index} value={device.index}>
+                      GPU {device.index} · {device.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <ErrorNotice error={hardware.error} />
+            </details>
+            <ErrorNotice error={generate.error} />
+            <Button
+              type="submit"
+              className="media-generate"
+              disabled={!reference || !text.trim() || uploading || busy}
             >
-              <option value="auto">Auto · available GPU</option>
-              {hardware.data?.gpus.map((device) => (
-                <option key={device.index} value={device.index}>
-                  GPU {device.index} · {device.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <p className="muted">
-            Generation appears in Runs with live logs and cancellation. The
-            resulting WAV is saved in your Library with its reference and text.
-          </p>
-          <Button
-            type="submit"
-            disabled={
-              !reference ||
-              !text.trim() ||
-              upload.isPending ||
-              generate.isPending
-            }
-          >
-            Generate speech
-          </Button>
-        </fieldset>
-      </form>
+              <Sparkles size={17} />
+              {busy ? "Generating speech…" : "Generate speech"}
+            </Button>
+            <p className="media-privacy">
+              Your voice and text stay on this workstation.
+            </p>
+          </fieldset>
+        </form>
+        <MediaResult
+          kind="audio"
+          runId={runId}
+          run={run.data}
+          error={run.error}
+        />
+      </div>
     </>
   );
 }
