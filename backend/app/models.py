@@ -127,6 +127,10 @@ class Artifact(Base):
     metadata_json: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
     parent_artifact_ids: Mapped[list] = mapped_column(JSON, default=list)
     thumbnail_relative_path: Mapped[str] = mapped_column(String(500), default="")
+    title: Mapped[str] = mapped_column(String(200), default="", server_default="")
+    notes: Mapped[str] = mapped_column(Text, default="", server_default="")
+    library_updated_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+    trashed_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True, index=True)
 
 
 class Conversation(Base):

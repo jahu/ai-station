@@ -28,10 +28,11 @@ from app.db import migrate, session_factory, session_scope, utcnow
 from app.events import event_dict, list_events
 from app.images import MAX_UPLOAD
 from app.images import router as image_router
+from app.library import router as library_router
 from app.llama import router as llama_router
 from app.memory_api import router as memory_router
 from app.model_registry import router as model_router
-from app.models import Artifact, Run, Setting, WorkerRow
+from app.models import Run, Setting, WorkerRow
 from app.projects import router as project_router
 from app.providers import ProviderError
 from app.redact import redact_obj
@@ -39,7 +40,6 @@ from app.reviewed_commits import router as commit_router
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, request_cancel, run_dict
 from app.runtime_registry import router as runtime_router
-from app.serialize import artifact_dict
 from app.state import TERMINAL, InvalidTransition, RunStatus
 from app.telemetry_store import history
 
@@ -269,14 +269,6 @@ def telemetry_history(session: DB, limit: int = Query(240, ge=1, le=2000)):
     return history(session, limit)
 
 
-@app.get("/api/artifacts")
-def artifacts(session: DB, run_id: UUID | None = None, limit: int = Query(100, ge=1, le=500)):
-    statement = select(Artifact).order_by(Artifact.created_at.desc()).limit(limit)
-    if run_id:
-        statement = statement.where(Artifact.run_id == str(run_id))
-    return [artifact_dict(row) for row in session.scalars(statement)]
-
-
 app.include_router(cursor_coding_router)
 app.include_router(dashboard_router)
 app.include_router(image_router)
@@ -284,6 +276,7 @@ app.include_router(chat_router)
 app.include_router(audio_router)
 app.include_router(avatar_router)
 app.include_router(commit_router)
+app.include_router(library_router)
 app.include_router(project_router)
 app.include_router(memory_router)
 app.include_router(model_router)

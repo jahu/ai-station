@@ -119,6 +119,10 @@ export interface Artifact {
   type: string;
   mime_type: string;
   original_filename: string;
+  title?: string;
+  notes?: string;
+  library_updated_at?: string | null;
+  trashed_at?: string | null;
   size_bytes: number;
   created_at: string;
   run_id: string | null;
