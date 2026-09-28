@@ -13,6 +13,7 @@ export type CodingScope = {
 export type AssistantOptions = {
   action: string;
   image_artifact_ids: string[];
+  audio_artifact_id?: string | null;
   coding: CodingScope | null;
 };
 type Project = { id: string; name: string; updated_at: string };
@@ -59,6 +60,14 @@ export function AssistantResults({ result }: { result: ActionResult }) {
                   alt={artifact.original_filename || "Generated image"}
                 />
               </a>
+            )}
+            {artifact.type === "audio" && (
+              <audio
+                controls
+                preload="metadata"
+                src={`/api/artifacts/${artifact.id}/file`}
+                aria-label="Generated speech"
+              />
             )}
             <Link to={`/library/${artifact.id}`}>
               {artifact.original_filename || artifact.type}
@@ -155,10 +164,56 @@ export default function AssistantActions({
           <option value="image.edit">Edit image</option>
           <option value="image.recompose">Recompose references</option>
           <option value="image.upscale">Upscale image</option>
+          <option value="audio.speech">
+            Speech · read this message in Polish
+          </option>
           <option value="agent.create">Create agent</option>
           <option value="coding.cursor">Coding with Cursor</option>
         </select>
       </label>
+      <label>
+        Voice reference · WAV
+        <input
+          type="file"
+          accept="audio/wav,.wav"
+          onChange={async (event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file) return;
+            onUploading(true);
+            setError(null);
+            try {
+              const body = new FormData();
+              body.append("file", file);
+              const artifact = await api<Artifact>("/audio/uploads", {
+                method: "POST",
+                body,
+              });
+              onChange({ ...value, audio_artifact_id: artifact.id });
+            } catch (error) {
+              setError(error as Error);
+            } finally {
+              onUploading(false);
+            }
+          }}
+        />
+      </label>
+      {value.audio_artifact_id && (
+        <div>
+          <audio
+            controls
+            preload="metadata"
+            src={`/api/artifacts/${value.audio_artifact_id}/file`}
+            aria-label="Voice reference preview"
+          />
+          <button
+            type="button"
+            onClick={() => onChange({ ...value, audio_artifact_id: null })}
+          >
+            Remove voice reference
+          </button>
+        </div>
+      )}
       <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {

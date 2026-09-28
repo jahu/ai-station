@@ -124,6 +124,8 @@ export interface Artifact {
   run_id: string | null;
   parent_artifact_ids: string[];
   metadata: {
+    text?: string;
+    duration_seconds?: number;
     width?: number;
     height?: number;
     mode?: string;

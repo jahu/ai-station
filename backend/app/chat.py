@@ -330,7 +330,7 @@ def send(conversation_id: UUID, body: MessageBody, session: DB):
         }
     if row.execution_mode == "orchestrator":
         return enqueue_assistant(session, row, user, body)
-    if body.image_artifact_ids or body.action != "auto" or body.coding:
+    if body.image_artifact_ids or body.audio_artifact_id or body.action != "auto" or body.coding:
         raise HTTPException(422, "Select Platform assistant mode to use capability actions")
     return enqueue(session, row, user=user)
 

@@ -71,6 +71,8 @@ def collect_diagnostics(settings) -> dict:
         _nvidia_toolkit(),
         command_version("nvidia-smi"),
         file_check("photo_pipe", settings.photo_script),
+        file_check("chatterbox_script", settings.chatterbox_script),
+        file_check("chatterbox_python", settings.chatterbox_python),
         file_check("photo python", settings.photo_python),
         file_check("sd-cli", settings.sd_cli),
         http_check("llama.cpp / OpenAI-compatible endpoint", settings.llm_base_url),

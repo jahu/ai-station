@@ -114,3 +114,5 @@ The default entry point is the [platform assistant](orchestrator.md). Dedicated 
 ## Runtime prerequisites
 
 RunDependency records durable scheduling prerequisites independently of parent Run provenance. The worker skips blocked Runs, fails consumers of unsuccessful prerequisites, and continues unrelated work. Managed model selection and idle eviction compose ordinary load/stop Runs with Chat, agent, summary and image Runs. See [managed llama.cpp](managed-llama.md).
+
+Speech and images share the owned-process media executor lifecycle; capability adapters provide typed dispatch and output validation. See [local speech](audio.md) for the Chatterbox contract.

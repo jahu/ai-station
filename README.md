@@ -16,6 +16,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 - Projects: host-validated repository registration, read-only Git status, persisted branch policies, argv validation commands, and agent guidance.
 - Cursor coding: explicit external-AI consent, selected-file proposals in a fresh worktree, checked writes, diff review and automatic saved validation.
 - Owned worktree preparation: a queued local Run creates an isolated task branch, captures logs, and records a JSON artifact without changing the active checkout.
+- Audio: local Polish speech with the installed Chatterbox pipeline, bounded WAV voice references, cancelable Runs and playable Library artifacts. See [speech setup](docs/audio.md).
 - Images: Qwen/Juggernaut Generate, Edit, multi-reference Recompose, and 4× Upscale through the existing photo pipeline.
 - Validated image uploads, artifact Library, source reuse, live stdout/stderr, owned-process cancellation, and explicit image retries.
 - One-command startup of the native runner, API, worker, scheduler, and web UI.

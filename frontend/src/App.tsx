@@ -37,6 +37,7 @@ import { Models, ModelDetail } from "./pages/Models";
 import { Agents, AgentDetail } from "./pages/Agents";
 import Coding from "./pages/Coding";
 import Chat from "./pages/Chat";
+import Audio from "./pages/Audio";
 import Dashboard from "./pages/Dashboard";
 import { RunDetail, Runs } from "./pages/Runs";
 import ImagesWorkspace from "./pages/Images";
@@ -236,6 +237,7 @@ export default function App() {
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/new" element={<NewProject />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/audio" element={<Audio />} />
             <Route path="*" element={<Unavailable />} />
           </Routes>
         </main>

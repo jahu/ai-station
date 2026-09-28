@@ -45,3 +45,7 @@ The design above describes the target. Each implementation increment records sep
 The default screen and new Chat conversations offer Platform assistant mode; Conversation only remains selectable and existing conversations keep their mode. Typed actions cover images, disabled agent drafts and explicitly scoped Cursor tasks. Local model routing handles requests without an explicit action or deterministic match. Invalid plans produce clarification without executing a capability. Ordered image uploads, task-step status, generated images and links to coding/validation Runs appear in the transcript. Repeating an action requires a new user turn rather than completion regeneration.
 
 The first increment reuses the configured inference provider. Managed llama.cpp model selection, model switching during a plan, image understanding, whole-repository coding and media adapters follow as separate increments. Ollama remains supported alongside llama.cpp.
+
+## Speech action
+
+`audio.speech` reads the submitted message in Polish using one uploaded WAV voice reference. It creates an ordinary child Run on the same Task; its output is played inline and remains in the Library. The assistant exposes the action explicitly, can route spoken-text requests with a reference, and clarifies missing references or oversized text. This is speech synthesis, not audio transcription or music generation.
