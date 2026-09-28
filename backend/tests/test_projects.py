@@ -765,3 +765,114 @@ def test_cursor_cancellation_never_queues_validation_or_changes_source(
         assert (
             owned_runner.data_dir / worktree["relative_path"] / "README.md"
         ).read_text() == "Original repository\n"
+
+
+def prepared_review(client, repository):
+    project = register(client, repository, test_commands=[["true"]])
+    preparation = client.post("/api/coding/cursor", json=coding_request(project)).json()
+    with session_factory()() as session:
+        tick(session, "commit-prepare")
+        source_id = tick(session, "commit-proposal")
+    return project, preparation, client.get(f"/api/runs/{source_id}").json()
+
+
+def test_reviewed_commit_preserves_checkout_hooks_and_unreviewed_files(repository, owned_runner, fake_cursor):
+    from ai_station_runner.worktrees import inspect_worktree
+
+    original_index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project, preparation, source = prepared_review(client, repository)
+        route = f"/api/coding/runs/{source['id']}/commit"
+        body = {"message": "Accept reviewed changes", "reviewed": True}
+        assert client.post(route, json=body).status_code == 409
+        with session_factory()() as session:
+            tick(session, "commit-validation")
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        path = owned_runner.data_dir / worktree["relative_path"]
+        (path / "unreviewed.txt").write_text("Do not commit this")
+        hook = repository / ".git/hooks/pre-commit"
+        hook.write_text(f'#!/bin/sh\ntouch "{repository}/hook-ran"\nexit 1\n')
+        hook.chmod(0o700)
+        response = client.post(route, json=body)
+        assert response.status_code == 202, response.text
+        run_id = response.json()["id"]
+        with session_factory()() as session:
+            tick(session, "commit-reviewed")
+        result = client.get(f"/api/runs/{run_id}").json()
+        assert result["status"] == "succeeded", result
+        commit = result["metadata"]["git_commit"]["commit"]
+        content = subprocess.run(
+            ["git", "-C", str(path), "show", f"{commit}:new.py"], capture_output=True, text=True, check=True
+        ).stdout
+        assert content == "print(42)\n"
+        status = subprocess.run(
+            ["git", "-C", str(path), "status", "--porcelain"], capture_output=True, text=True, check=True
+        ).stdout
+        assert "README.md" not in status and "new.py" not in status
+        assert "unreviewed.txt" in status
+        assert not (repository / "hook-ran").exists()
+        assert (repository / ".git/index").read_bytes() == original_index
+        assert (repository / "README.md").read_text() == "Original repository\n"
+        assert inspect_worktree(owned_runner, preparation["id"])["head_commit"] == commit
+        assert client.post(route, json=body).status_code == 409
+        assert client.get(f"/api/runs/{source['id']}").json()["metadata"]["review_status"] == "committed"
+        assert "git.commit.created" in client.get(f"/api/runs/{run_id}/stream").text
+        payload = {
+            "run_id": run_id,
+            "project_id": project["id"],
+            "permissions": ["filesystem_read", "git_read", "git_write"],
+            **{
+                key: result["parameters"][key]
+                for key in ("source_run_id", "review_digest", "message", "protected_branches")
+            },
+        }
+        with TestClient(runner_app) as host:
+            assert host.post("/v1/runs/reviewed-commit", json=payload).status_code == 200
+            assert (
+                host.post("/v1/runs/reviewed-commit", json={**payload, "message": "changed"}).status_code
+                == 422
+            )
+            assert (
+                host.post("/v1/runs/reviewed-commit", json={**payload, "permissions": []}).status_code == 403
+            )
+
+
+@pytest.mark.parametrize("change", ["content", "mode", "staged"])
+def test_reviewed_commit_rejects_changed_review(repository, owned_runner, fake_cursor, change):
+    with TestClient(app) as client:
+        project, _, source = prepared_review(client, repository)
+        with session_factory()() as session:
+            tick(session, "validate")
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        path = owned_runner.data_dir / worktree["relative_path"]
+        if change == "content":
+            (path / "README.md").write_text("Changed after review")
+        elif change == "mode":
+            (path / "README.md").chmod(0o755)
+        else:
+            subprocess.run(["git", "-C", str(path), "add", "README.md"], check=True)
+        response = client.post(
+            f"/api/coding/runs/{source['id']}/commit", json={"message": "Reviewed", "reviewed": True}
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "commit-refused")
+        result = client.get(f"/api/runs/{response.json()['id']}").json()
+        assert result["status"] == "failed", result
+        head = subprocess.run(
+            ["git", "-C", str(path), "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+        ).stdout.strip()
+        assert head == source["metadata"]["coding_review"]["base_commit"]
+
+
+def test_commit_requires_review_confirmation_and_project_policy(repository, owned_runner, fake_cursor):
+    with TestClient(app) as client:
+        project, _, source = prepared_review(client, repository)
+        route = f"/api/coding/runs/{source['id']}/commit"
+        assert client.post(route, json={"message": "Not reviewed", "reviewed": False}).status_code == 422
+        with session_factory()() as session:
+            tick(session, "validate")
+            row = session.get(Project, project["id"])
+            row.pr_policy = {**row.pr_policy, "commit_task_branch": False}
+            session.commit()
+        assert client.post(route, json={"message": "Reviewed", "reviewed": True}).status_code == 403

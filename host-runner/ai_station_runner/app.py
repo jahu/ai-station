@@ -36,6 +36,7 @@ from ai_station_runner.llama_runtime import router as llama_router
 from ai_station_runner.local_model import router as local_model_router
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
+from ai_station_runner.reviewed_commits import CommitRequest, commit_report, start_commit
 from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.telemetry import collect
@@ -571,3 +572,21 @@ def avatar_run(body: AvatarRequest):
         return {**start_avatar(manager(), body), "runner_id": get_settings().runner_id}
     except PathBoundaryError as exc:
         raise HTTPException(403, str(exc)) from exc
+
+
+@app.post("/v1/runs/reviewed-commit")
+def reviewed_commit(body: CommitRequest):
+    try:
+        return {**start_commit(manager(), body), "runner_id": get_settings().runner_id}
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (GitError, ValueError, OSError) as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.get("/v1/runs/reviewed-commit/{run_id}/report")
+def reviewed_commit_report(run_id: UUID):
+    try:
+        return commit_report(manager(), str(run_id))
+    except (GitError, ValueError, OSError) as exc:
+        raise HTTPException(422, str(exc)) from exc

@@ -159,3 +159,5 @@ Runs supports combined status, capability, executor, execution target, project, 
 Run `./scripts/check-all.sh` for Python tests/lint, frontend checks/tests/build, Compose validation and a Docker image build. The script stops on the first failure and does not restart the application. GitHub Actions remains available by manual dispatch; automated hosted runs are paused because the maintainer's free credits are exhausted. Per maintainer instruction (2026-09-28), reviewed PRs may merge into `develop` using equivalent successful local checks. Failing code checks are never waived.
 
 Portrait-driven video is available in **Avatars** and **Video**, including assistant dispatch and inline playback. Configure the existing offline EchoMimic installation as described in [avatar execution](docs/avatars.md).
+
+After a Coding proposal and its configured validation pass, inspect the diff and choose **Commit reviewed changes**. This queues a local task-branch commit containing exactly the reviewed file snapshots. Changed files, staged edits and protected branches are rejected. See [reviewed commits](docs/coding-commits.md).

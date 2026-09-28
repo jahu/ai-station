@@ -35,6 +35,7 @@ from app.models import Artifact, Run, Setting, WorkerRow
 from app.projects import router as project_router
 from app.providers import ProviderError
 from app.redact import redact_obj
+from app.reviewed_commits import router as commit_router
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, request_cancel, run_dict
 from app.runtime_registry import router as runtime_router
@@ -282,6 +283,7 @@ app.include_router(image_router)
 app.include_router(chat_router)
 app.include_router(audio_router)
 app.include_router(avatar_router)
+app.include_router(commit_router)
 app.include_router(project_router)
 app.include_router(memory_router)
 app.include_router(model_router)

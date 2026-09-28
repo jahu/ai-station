@@ -1,0 +1,9 @@
+# Reviewed coding commits
+
+A successful coding proposal is review evidence, not permission to integrate it. The next Coding action explicitly queues a local `coding.commit` Run for the reviewed proposal. It snapshots the proposal identity and commit message, requires successful configured validation, and never pushes or merges.
+
+The Runner revalidates the owned worktree, task branch and proposal report. Only reviewed file contents with matching hashes and original executable bits may enter the commit. A private temporary index constructs a tree from the recorded parent and selected snapshots; unrelated worktree files are excluded. Git hooks, signing, filters and automatic maintenance are disabled. The task ref advances using Git's compare-and-swap parent check. The active checkout and protected branches are untouched.
+
+Worktree manifests preserve the original base commit and track the new owned HEAD separately. Dispatch and commit publication are durable side effects: cancellation or a crash near ref advancement requires inspection, never blind retry. The result includes the commit ID, parent, branch and files as a JSON Artifact and structured `git.commit.created` event.
+
+Validation uses disposable real Git repositories and fake coding providers: selected new/modified files commit successfully, unrelated files and the active checkout remain unchanged, hooks do not run, changed content/modes/index are refused, and request replays do not create another commit. The UI was also checked in a browser against a copied existing proposal: diff rendering, explicit acknowledgement and commit action passed without JavaScript errors. Commits use the explicit local identity `AI Station <ai-station@localhost>`.

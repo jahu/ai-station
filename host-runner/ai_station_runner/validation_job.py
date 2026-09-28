@@ -60,7 +60,8 @@ def validate(run_id):
         or record["project_id"] != str(body.project_id)
         or str(repository.common_dir) != record["common_dir"]
         or repository.branch() != record["branch"]
-        or repository.read(["rev-parse", "HEAD"]).stdout.strip() != record["base_commit"]
+        or repository.read(["rev-parse", "HEAD"]).stdout.strip()
+        != record.get("head_commit", record["base_commit"])
     ):
         raise RuntimeError("Worktree ownership changed before validation")
     lock_path = owned_path(f"runtime/validation-worktrees/{body.worktree_run_id}.lock")
