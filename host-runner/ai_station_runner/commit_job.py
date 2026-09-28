@@ -61,6 +61,8 @@ def execute(run_id):
                     "commit.gpgSign=false",
                     "-c",
                     "core.splitIndex=false",
+                    "-c",
+                    "core.sparseCheckout=false",
                     "-C",
                     str(workspace),
                     *args,
@@ -80,7 +82,7 @@ def execute(run_id):
             if mode not in {"100644", "100755"} or bool(actual["mode"] & 0o111) != (mode == "100755"):
                 raise ValueError("Reviewed file mode changed")
             snapshot = root / f"file-{index}"
-            with snapshot.open("x") as handle:
+            with snapshot.open("x", encoding="utf-8", newline="") as handle:
                 handle.write(actual["content"])
             blob = git("hash-object", "-w", "--no-filters", "--", str(snapshot))
             git("update-index", "--add", "--cacheinfo", mode, blob, actual["path"])
