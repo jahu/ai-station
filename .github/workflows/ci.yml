@@ -1,9 +1,7 @@
 name: CI
 on:
-  pull_request:
-    branches: [develop]
-  push:
-    branches: [develop]
+  # Hosted Actions credits are exhausted; local verification is authoritative.
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:

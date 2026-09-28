@@ -7,6 +7,7 @@ import socket
 from sqlalchemy.orm import Session
 
 from app.db import utcnow
+from app.dependencies import failed_prerequisites
 from app.events import append_event
 from app.executor import Executor
 from app.executors import EXECUTORS
@@ -42,6 +43,13 @@ def tick(
         session.commit()
         return None
     session.commit()
+    failures = failed_prerequisites(session, run)
+    if failures:
+        mark_failed(
+            session, run, "PrerequisiteFailed", "Required Runs did not succeed: " + ", ".join(failures)
+        )
+        session.commit()
+        return run.id
     executor = executors.get(run.executor_type)
     if executor is None:
         mark_failed(session, run, "ExecutorMissing", f"No executor named {run.executor_type}")

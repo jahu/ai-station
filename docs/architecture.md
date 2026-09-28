@@ -110,3 +110,7 @@ The default entry point is the [platform assistant](orchestrator.md). Dedicated 
 ## Owned llama.cpp instances
 
 [Managed llama.cpp](managed-llama.md) loads discovered GGUF files into an owned container through the native Runner. Inference uses a private Unix socket, selected GPUs remain reserved for the runtime lifetime, and a separate stop Run releases them after confirmed termination. The configured Ollama/OpenAI-compatible endpoint remains available alongside it.
+
+## Runtime prerequisites
+
+RunDependency records durable scheduling prerequisites independently of parent Run provenance. The worker skips blocked Runs, fails consumers of unsuccessful prerequisites, and continues unrelated work. Managed model selection and idle eviction compose ordinary load/stop Runs with Chat, agent, summary and image Runs. See [managed llama.cpp](managed-llama.md).

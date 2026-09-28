@@ -79,6 +79,8 @@ def test_owned_container_idempotency_multi_gpu_and_stop(runtime):
     assert argv[argv.index("--gpus") + 1] == '"device=GPU-2,GPU-7"'
     assert argv[argv.index("--tensor-split") + 1] == "1,1"
     assert argv[argv.index("--network") + 1] == "none"
+    assert argv[argv.index("--reasoning") + 1] == "off"
+    assert argv[argv.index("--reasoning-budget") + 1] == "0"
     assert argv[argv.index("--user") + 1] == f"{os.getuid()}:{os.getgid()}"
     assert f"type=bind,src={root}/runtime/llama/{body.instance_id}/io,dst=/runtime" in argv
     assert "--privileged" not in argv and "/var/run/docker.sock" not in str(argv)

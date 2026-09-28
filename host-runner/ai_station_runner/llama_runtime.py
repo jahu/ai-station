@@ -258,6 +258,11 @@ def load(body: Load):
                 "--parallel",
                 "1",
                 "--no-webui",
+                # Interactive tasks need final text inside their bounded token budget.
+                "--reasoning",
+                "off",
+                "--reasoning-budget",
+                "0",
             ]
             if len(body.gpus) > 1:
                 args += ["--split-mode", "layer", "--tensor-split", ",".join("1" for _ in body.gpus)]

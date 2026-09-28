@@ -104,3 +104,7 @@ A native process group can disappear from the live-process scan before `waitpid`
 
 
 Saved project test/lint/build commands now run through the worker and a managed native sandbox in an owned worktree. Commands are snapshotted from versioned project settings, Git metadata stays read-only, networking is blocked, and results become events plus a JSON artifact. See [project validation](coding-boundary.md) for limits, recovery and current dependency restrictions. The [bounded Cursor adapter](coding-cursor.md) adds explicit external-AI consent, checked selected-file writes, review artifacts and a separate validation Run; other provider adapters remain disabled.
+
+## Waiting for managed models
+
+Run claims exclude unfinished prerequisites without blocking other queued work. Failed or canceled prerequisites produce PrerequisiteFailed before executor dispatch. A selected managed model reloads from its recorded GPU/context preset; consumers share a pending load. Idle managed llama.cpp instances can be stopped through ordinary Runs for an image or another model. Active and queued consumers prevent eviction. Canceling one waiting consumer leaves shared prerequisites intact.

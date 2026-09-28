@@ -90,3 +90,7 @@ Saved project test/lint/build commands now run through the worker and a managed 
 ## Managed llama.cpp containers
 
 The [llama.cpp adapter](managed-llama.md) is the first enabled container runtime executor. Only the native Runner invokes Docker with fixed argv templates. It pins an already-installed image ID, disables automatic pulls and networking, drops capabilities, runs as the host user and mounts a single validated model read-only plus private socket storage. Container IDs, ownership labels and immutable manifests constrain inspection/stop. Manifests are outside the container-writable mount. Inference accepts runtime IDs through the private Runner socket, never caller URLs.
+
+## Automatic managed-model scheduling
+
+Automatic reload reuses a previously selected GGUF and GPU/context preset. Idle eviction only queues typed stop operations for owned llama.cpp instances; it does not stop external providers. New consumers and eviction are serialized in the metadata transaction. Unknown ownership/state requires inspection instead of duplicate loading. No new shell, mount, network or download permission is granted.

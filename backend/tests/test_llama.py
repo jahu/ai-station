@@ -92,7 +92,7 @@ def test_load_holds_both_gpus_until_stop_and_chat_uses_private_instance(managed,
             client.post(
                 f"/api/chat/conversations/{conv['id']}/messages", json={"content": "Hello"}
             ).status_code
-            == 409
+            == 202
         )
         assert records[instance["id"]]["alive"] is False
 
@@ -235,3 +235,163 @@ def test_cancel_during_model_load_stops_and_releases_both_gpus(managed, monkeypa
             assert session.get(Run, queued["id"]).status == "canceled"
             assert not active_locks(session)
         assert all(not info["alive"] for info in records.values())
+
+
+def test_conversations_share_pending_load_and_reload_saved_preset(managed, monkeypatch):
+    from app.models import RunDependency
+
+    model_id, _ = managed
+
+    async def stream(self, **params):
+        yield "Ready"
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        initial = load(client, model_id)
+        conversations = [
+            client.post("/api/chat/conversations", json={"model": "llamacpp:" + model_id}).json()
+            for _ in range(2)
+        ]
+        chats = [
+            client.post(f"/api/chat/conversations/{c['id']}/messages", json={"content": "Hello"}).json()
+            for c in conversations
+        ]
+        with session_factory()() as session:
+            assert len(list(session.scalars(select(RunDependency)))) == 2
+        assert tick_once() == initial["id"]
+        for chat in chats:
+            assert tick_once() == chat["id"]
+        instance = client.get("/api/llama").json()["instances"][0]
+        stop = client.post(f"/api/llama/{instance['id']}/stop").json()
+        # Queue another turn while stopping. It must wait for stop, then fresh load.
+        queued = client.post(
+            f"/api/chat/conversations/{conversations[0]['id']}/messages", json={"content": "Again"}
+        )
+        assert queued.status_code == 202, queued.text
+        assert tick_once() == stop["id"]
+        reload_id = tick_once()
+        with session_factory()() as session:
+            reload = session.get(Run, reload_id)
+            assert reload.executor_type == "llama_load"
+            assert reload.parameters["gpus"] == [2, 7]
+            assert reload.status == "succeeded"
+        assert tick_once() == queued.json()["id"]
+        assert len(client.get("/api/llama").json()["instances"]) == 2
+
+
+def test_image_evicts_only_idle_owned_model_and_waits_for_stop(managed):
+    from app.llama import evict_idle_models
+    from app.models import RuntimeInstance
+    from app.runs import create_run, create_task
+
+    model_id, _ = managed
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        with session_factory()() as session:
+            session.add(
+                RuntimeInstance(
+                    runtime_key="ollama",
+                    name="external",
+                    ownership="external",
+                    status="ready",
+                    metadata_json={"gpus": [2, 7]},
+                )
+            )
+            task = create_task(session, title="image", prompt="", capability="image.generate")
+            image = create_run(
+                session,
+                task,
+                run_type="image",
+                capability="image.generate",
+                executor_type="fake",
+                requested_gpu="auto",
+            )
+            evict_idle_models(session, image, [2, 7])
+            session.commit()
+            image_id = image.id
+            assert active_locks(session) == {"gpu:2", "gpu:7"}
+        stop_id = tick_once()
+        with session_factory()() as session:
+            assert session.get(Run, stop_id).executor_type == "llama_stop"
+            assert not active_locks(session)
+            assert (
+                session.scalar(select(RuntimeInstance).where(RuntimeInstance.name == "external")).status
+                == "ready"
+            )
+        assert tick_once() == image_id
+
+
+def test_model_with_pending_consumer_cannot_be_evicted(managed):
+    from app.llama import evict_idle_models
+    from app.runs import create_run, create_task
+
+    model_id, _ = managed
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        conv = client.post("/api/chat/conversations", json={"model": "llamacpp:" + model_id}).json()
+        client.post(f"/api/chat/conversations/{conv['id']}/messages", json={"content": "Hello"})
+        with session_factory()() as session:
+            task = create_task(session, title="image", prompt="", capability="image.generate")
+            image = create_run(
+                session,
+                task,
+                run_type="image",
+                capability="image.generate",
+                executor_type="fake",
+                requested_gpu="auto",
+            )
+            evict_idle_models(session, image, [2, 7])
+            assert instances(session)[0].status == "ready"
+            assert not list(session.scalars(select(Run).where(Run.executor_type == "llama_stop")))
+
+
+def test_loading_another_model_evicts_idle_runtime(managed):
+    model_id, _ = managed
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        with session_factory()() as session:
+            other = ModelFile(
+                host_path="/models/other.gguf",
+                filename="other.gguf",
+                format="gguf",
+                category="llm",
+                availability="present",
+                size_bytes=1000,
+                mtime=1,
+            )
+            session.add(other)
+            session.commit()
+            other_id = other.id
+        second = load(client, other_id)
+        assert tick_once() == second["id"]  # requeues behind the owned stop
+        stop_id = tick_once()
+        with session_factory()() as session:
+            assert session.get(Run, stop_id).executor_type == "llama_stop"
+        assert tick_once() == second["id"]
+        with session_factory()() as session:
+            assert session.get(Run, second["id"]).status == "succeeded"
+            assert active_locks(session) == {"gpu:2", "gpu:7"}
+            assert sorted(i.status for i in instances(session)) == ["ready", "stopped"]
+
+
+@pytest.mark.parametrize("filename", ["mmproj-model.gguf", "model-MMProj-F16.gguf"])
+def test_vision_projector_is_not_a_standalone_chat_model(filename):
+    with session_factory()() as session:
+        model = ModelFile(
+            host_path="/models/" + filename,
+            filename=filename,
+            format="gguf",
+            category="llm",
+            availability="present",
+            size_bytes=1000,
+            mtime=1,
+        )
+        session.add(model)
+        session.commit()
+        model_id = model.id
+    with TestClient(app) as client:
+        assert client.get("/api/llama").json()["models"] == []
+        assert client.post("/api/llama/load", json={"model_file_id": model_id, "gpus": []}).status_code == 422

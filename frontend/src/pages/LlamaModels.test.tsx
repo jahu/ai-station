@@ -15,8 +15,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("loads a stored GGUF across discovered GPUs and selects it after readiness", async () => {
-  let ready = false;
+it("selects a queued GGUF immediately so the conversation can wait for its load", async () => {
+  let started = false;
   const select = vi.fn();
   const fetch = vi.fn(async (path: string, options?: RequestInit) => {
     let data: unknown;
@@ -28,7 +28,7 @@ it("loads a stored GGUF across discovered GPUs and selects it after readiness", 
         ],
       };
     else if (options?.method === "POST") {
-      ready = true;
+      started = true;
       data = { id: "load-run" };
     } else
       data = {
@@ -40,11 +40,11 @@ it("loads a stored GGUF across discovered GPUs and selects it after readiness", 
             size_bytes: 16000000000,
           },
         ],
-        instances: ready
+        instances: started
           ? [
               {
                 id: "instance",
-                status: "ready",
+                status: "queued",
                 name: "27B",
                 metadata: {
                   model_file_id: "file",
@@ -85,5 +85,59 @@ it("loads a stored GGUF across discovered GPUs and selects it after readiness", 
       }),
     }),
   );
-  expect(screen.getByRole("button", { name: "Stop model" })).toBeTruthy();
+  expect(
+    await screen.findByRole("link", { name: "Inspect runtime Run / cancel" }),
+  ).toBeTruthy();
+});
+
+it("selects an unloaded model without issuing a load until a message needs it", async () => {
+  const select = vi.fn();
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path.endsWith("/hardware")
+        ? { gpus: [] }
+        : {
+            models: [
+              {
+                id: "file",
+                model_key: "llamacpp:file",
+                name: "27B.gguf",
+                size_bytes: 16000000000,
+              },
+            ],
+            instances: [
+              {
+                id: "old",
+                status: "stopped",
+                name: "27B",
+                metadata: {
+                  model_file_id: "file",
+                  gpus: [2, 7],
+                  load_run_id: "load",
+                },
+              },
+            ],
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <LlamaModels onSelect={select} busy={false} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByText("Local model files · llama.cpp"));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Use · load when needed" }),
+  );
+  expect(select).toHaveBeenCalledWith("llamacpp:file");
+  expect(fetch.mock.calls.every((call) => !call[0].endsWith("/load"))).toBe(
+    true,
+  );
 });

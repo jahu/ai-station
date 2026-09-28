@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, useHardware, type Run } from "../api";
@@ -43,7 +43,6 @@ export default function LlamaModels({
   const [context, setContext] = useState(4096);
   const selected =
     gpus ?? (hardware.data?.gpus ?? []).map((g) => Number(g.index));
-  const pendingSelection = useRef<string | null>(null);
   const [runId, setRunId] = useState<string | null>(null);
   const load = useMutation({
     mutationFn: (model: Model) =>
@@ -57,7 +56,7 @@ export default function LlamaModels({
         }),
       }),
     onSuccess: (run, model) => {
-      pendingSelection.current = model.id;
+      onSelect(model.model_key);
       setRunId(run.id);
       void cache.invalidateQueries({ queryKey: ["llama-models"] });
     },
@@ -70,27 +69,14 @@ export default function LlamaModels({
       void cache.invalidateQueries({ queryKey: ["llama-models"] });
     },
   });
-  useEffect(() => {
-    const model = catalog.data?.models.find(
-      (m) => m.id === pendingSelection.current,
-    );
-    if (
-      model &&
-      catalog.data?.instances.some(
-        (i) => i.metadata.model_file_id === model.id && i.status === "ready",
-      )
-    ) {
-      pendingSelection.current = null;
-      onSelect(model.model_key);
-    }
-  }, [catalog.data, onSelect]);
   return (
     <details className="content-panel">
       <summary>Local model files · llama.cpp</summary>
       <p className="muted">
-        Load a GGUF from your model registry. Selected GPUs share the model;
-        they stay reserved until you stop it. Ollama and other configured
-        providers remain available.
+        Choose GPUs for the first load of a GGUF. Later messages reload it
+        automatically using that selection. Idle models can release GPUs for
+        images or another model; active conversations stay protected. Ollama and
+        other configured providers remain available.
       </p>
       <ErrorNotice
         error={catalog.error ?? hardware.error ?? load.error ?? stop.error}
@@ -143,14 +129,15 @@ export default function LlamaModels({
                 {(model.size_bytes / 1024 ** 3).toFixed(1)} GiB ·{" "}
                 {instance?.status ?? "Stored on disk"}
               </p>
+              {latest && instance?.status !== "unknown" && (
+                <Button type="button" onClick={() => onSelect(model.model_key)}>
+                  {instance?.status === "ready"
+                    ? "Use in this conversation"
+                    : "Use · load when needed"}
+                </Button>
+              )}
               {instance?.status === "ready" ? (
                 <div className="row">
-                  <Button
-                    type="button"
-                    onClick={() => onSelect(model.model_key)}
-                  >
-                    Use in this conversation
-                  </Button>
                   <Button
                     type="button"
                     variant="secondary"

@@ -5,7 +5,19 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    CheckConstraint,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base, UTCDateTime, utcnow
@@ -76,6 +88,14 @@ class Run(Base):
 
     task: Mapped[Task] = relationship(back_populates="runs")
     events: Mapped[list[RunEvent]] = relationship(back_populates="run")
+
+
+class RunDependency(Base):
+    __tablename__ = "run_dependencies"
+    __table_args__ = (CheckConstraint("run_id != prerequisite_id", name="no_self_dependency"),)
+
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"), primary_key=True)
+    prerequisite_id: Mapped[str] = mapped_column(ForeignKey("runs.id"), primary_key=True, index=True)
 
 
 class RunEvent(Base):
