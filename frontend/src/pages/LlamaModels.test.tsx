@@ -65,15 +65,20 @@ it("selects a queued GGUF immediately so the conversation can wait for its load"
       }
     >
       <MemoryRouter>
-        <LlamaModels onSelect={select} busy={false} />
+        <LlamaModels
+          value="qwen"
+          models={["qwen"]}
+          onSelect={select}
+          busy={false}
+        />
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  fireEvent.click(screen.getByText("Local model files · llama.cpp"));
+  fireEvent.click(screen.getByRole("button", { name: "Model" }));
+  fireEvent.click(await screen.findByRole("button", { name: /27B/ }));
+  fireEvent.click(screen.getByText("GPU, context and advanced options"));
   await screen.findByLabelText("GPU 7 · GPU B");
-  fireEvent.click(
-    await screen.findByRole("button", { name: "Load and select" }),
-  );
+  fireEvent.click(await screen.findByRole("button", { name: "Use model" }));
   await waitFor(() => expect(select).toHaveBeenCalledWith("llamacpp:file"));
   expect(fetch).toHaveBeenCalledWith(
     "/api/llama/load",
@@ -86,7 +91,7 @@ it("selects a queued GGUF immediately so the conversation can wait for its load"
     }),
   );
   expect(
-    await screen.findByRole("link", { name: "Inspect runtime Run / cancel" }),
+    await screen.findByRole("link", { name: "Model operation →" }),
   ).toBeTruthy();
 });
 
@@ -128,16 +133,72 @@ it("selects an unloaded model without issuing a load until a message needs it", 
       }
     >
       <MemoryRouter>
-        <LlamaModels onSelect={select} busy={false} />
+        <LlamaModels
+          value="qwen"
+          models={["qwen"]}
+          onSelect={select}
+          busy={false}
+        />
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  fireEvent.click(screen.getByText("Local model files · llama.cpp"));
-  fireEvent.click(
-    await screen.findByRole("button", { name: "Use · load when needed" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Model" }));
+  fireEvent.click(await screen.findByRole("button", { name: /27B/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Use model" }));
   expect(select).toHaveBeenCalledWith("llamacpp:file");
   expect(fetch.mock.calls.every((call) => !call[0].endsWith("/load"))).toBe(
     true,
   );
+});
+
+it("keeps the previous selection when a first load is rejected", async () => {
+  const select = vi.fn();
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
+    ok: options?.method !== "POST",
+    status: options?.method === "POST" ? 409 : 200,
+    json: async () =>
+      options?.method === "POST"
+        ? { detail: "GPU busy; try again" }
+        : path.endsWith("/hardware")
+          ? { gpus: [] }
+          : {
+              models: [
+                {
+                  id: "file",
+                  model_key: "llamacpp:file",
+                  name: "27B.gguf",
+                  size_bytes: 16000000000,
+                },
+              ],
+              instances: [],
+            },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <LlamaModels
+          value="qwen"
+          models={["qwen"]}
+          onSelect={select}
+          busy={false}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Model" }));
+  fireEvent.click(await screen.findByRole("button", { name: /27B/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Use model" }));
+  await screen.findByText("GPU busy; try again");
+  expect(select).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "qwen, local server" }));
+  fireEvent.click(screen.getByRole("button", { name: "Use model" }));
+  expect(select).toHaveBeenCalledWith("qwen");
+  expect(
+    fetch.mock.calls.filter(([, options]) => options?.method === "POST"),
+  ).toHaveLength(1);
 });
