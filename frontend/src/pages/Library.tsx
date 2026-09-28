@@ -119,6 +119,15 @@ export function ArtifactDetail() {
                   alt={prompt || a.original_filename}
                 />
               )}
+              {a.type === "video" && (
+                <video
+                  controls
+                  preload="metadata"
+                  src={`/api/artifacts/${a.id}/file`}
+                  aria-label="Generated video"
+                  style={{ maxWidth: "100%" }}
+                />
+              )}
               {a.type === "audio" && (
                 <audio
                   controls

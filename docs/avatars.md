@@ -1,0 +1,13 @@
+# Local avatar video
+
+Avatars and Video expose the same concrete capability: EchoMimic V3 portrait animation driven by an existing speech recording. This is not a text-to-video model. The default assistant can also dispatch it when a portrait and WAV are attached, or when the avatar action is selected.
+
+`avatar.animate` creates an ordinary Task/Run through `echomimic` and the shared HostMediaExecutor. It reserves one discovered GPU, can evict idle AI Station-owned LLMs, streams logs, cancels only its owned process group, and preserves uncertain work for inspection. Outputs are MP4 video Artifacts with the portrait and audio as parents. Inputs reuse the validated image and PCM WAV upload endpoints. The initial controls bound area to 256/384/512 squared, 17–81 frames at 25 fps, 4–30 steps and an explicit seed. The source aspect ratio and shorter audio duration are preserved by the installed pipeline.
+
+Configure the native Runner with `AI_STATION_ECHOMIMIC_PYTHON`, `AI_STATION_ECHOMIMIC_DIR` (containing infer_flash.py and config/config.yaml), and `AI_STATION_ECHOMIMIC_MODELS` (the existing flash directory containing Wan2.1-Fun-V1.1-1.3B-InP, transformer and chinese-wav2vec2-base). No models are downloaded. Models and the existing installation are left unchanged.
+
+The Runner launches its small `echomimic_entry.py` adapter using the configured external Python environment. It imports the installed inference entry point and substitutes a pipeline subclass whose device-placement method enables sequential CPU offload once. This implements the memory mode declared but unused by the inspected infer_flash.py, avoiding loading every component into VRAM together. No installed source is rewritten. All outputs, temporary mux files and caches use a new application-owned run directory. The adapter decodes the result and verifies an audio track before publishing the UUID-based MP4.
+
+Real installation probe (2026-09-28): existing offline weights and CPU offload generated a 17-frame portrait video at 256-square area with four diffusion steps, using a locally generated Chatterbox WAV. Application/browser acceptance is recorded separately after verification.
+
+Real application/browser acceptance: Run `176feb52-0057-464e-9af5-5d52b17430cd` completed through upload → queued worker → native EchoMimic → video Artifact → browser playback. The 0.68-second result decoded at 256×240 with audio; GPU locks were released and no browser JavaScript errors occurred. The Video workspace route also passed. Cancellation, symlink rejection, permissions, output reuse rejection and assistant child dispatch passed fake-executor integration tests.

@@ -49,3 +49,5 @@ The first increment reuses the configured inference provider. Managed llama.cpp 
 ## Speech action
 
 `audio.speech` reads the submitted message in Polish using one uploaded WAV voice reference. It creates an ordinary child Run on the same Task; its output is played inline and remains in the Library. The assistant exposes the action explicitly, can route spoken-text requests with a reference, and clarifies missing references or oversized text. This is speech synthesis, not audio transcription or music generation.
+
+With one portrait and one WAV, the assistant dispatches `avatar.animate` through the ordinary media Run engine and renders the resulting video inline. The selected action can override automatic routing; no media attachment grants additional permissions.

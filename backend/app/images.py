@@ -255,7 +255,9 @@ def artifact_response(artifact: Artifact, *, thumbnail=False):
         media_type="image/jpeg" if thumbnail else artifact.mime_type,
         filename=artifact.original_filename or path.name,
         content_disposition_type="inline"
-        if is_image or (artifact.artifact_type == "audio" and artifact.mime_type == "audio/wav")
+        if is_image
+        or (artifact.artifact_type == "audio" and artifact.mime_type == "audio/wav")
+        or (artifact.artifact_type == "video" and artifact.mime_type == "video/mp4")
         else "attachment",
         headers={"X-Content-Type-Options": "nosniff"},
     )

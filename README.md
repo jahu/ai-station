@@ -157,3 +157,5 @@ Runs supports combined status, capability, executor, execution target, project, 
 ## Local validation and hosted CI
 
 Run `./scripts/check-all.sh` for Python tests/lint, frontend checks/tests/build, Compose validation and a Docker image build. The script stops on the first failure and does not restart the application. GitHub Actions remains available by manual dispatch; automated hosted runs are paused because the maintainer's free credits are exhausted. Per maintainer instruction (2026-09-28), reviewed PRs may merge into `develop` using equivalent successful local checks. Failing code checks are never waived.
+
+Portrait-driven video is available in **Avatars** and **Video**, including assistant dispatch and inline playback. Configure the existing offline EchoMimic installation as described in [avatar execution](docs/avatars.md).
