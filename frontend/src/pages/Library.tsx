@@ -65,8 +65,8 @@ export function Library() {
           </Button>
         }
       >
-        Generated images and source uploads, with their history intact. Latest
-        100 artifacts.
+        Generated images, speech and source uploads, with their history intact.
+        Latest 100 artifacts.
       </PageTitle>
       <ErrorNotice error={query.error} />
       {query.isPending ? (
@@ -93,7 +93,8 @@ export function ArtifactDetail() {
     queryFn: () => api<Artifact>(`/artifacts/${id}`),
   });
   const a = query.data;
-  const prompt = a?.metadata.edit_prompt || a?.metadata.prompt || "";
+  const prompt =
+    a?.metadata.edit_prompt || a?.metadata.prompt || a?.metadata.text || "";
   return (
     <>
       <Link className="back-link" to="/library">
@@ -116,6 +117,14 @@ export function ArtifactDetail() {
                 <img
                   src={`/api/artifacts/${a.id}/file`}
                   alt={prompt || a.original_filename}
+                />
+              )}
+              {a.type === "audio" && (
+                <audio
+                  controls
+                  preload="metadata"
+                  src={`/api/artifacts/${a.id}/file`}
+                  aria-label="Generated audio"
                 />
               )}
               <a
@@ -150,9 +159,16 @@ export function ArtifactDetail() {
                   ))}
                 </div>
               )}
+              {a.type === "audio" && (
+                <Button asChild variant="secondary">
+                  <Link to={`/audio?input=${a.id}`}>
+                    Use as voice reference
+                  </Link>
+                </Button>
+              )}
               {prompt && (
                 <>
-                  <h3>Prompt</h3>
+                  <h3>{a.type === "audio" ? "Spoken text" : "Prompt"}</h3>
                   <p className="prompt-text">{prompt}</p>
                   <Button
                     variant="ghost"
@@ -169,7 +185,11 @@ export function ArtifactDetail() {
                         );
                     }}
                   >
-                    {copied ? "Copied" : "Copy prompt"}
+                    {copied
+                      ? "Copied"
+                      : a.type === "audio"
+                        ? "Copy text"
+                        : "Copy prompt"}
                   </Button>
                 </>
               )}
@@ -180,14 +200,18 @@ export function ArtifactDetail() {
               )}
               {a.parent_artifact_ids.length > 0 && (
                 <>
-                  <h3>Source images</h3>
+                  <h3>Source artifacts</h3>
                   <div className="source-strip">
                     {a.parent_artifact_ids.map((parent) => (
                       <Link key={parent} to={`/library/${parent}`}>
-                        <img
-                          src={`/api/artifacts/${parent}/thumbnail`}
-                          alt={`Source ${parent.slice(0, 8)}`}
-                        />
+                        {a.type === "image" ? (
+                          <img
+                            src={`/api/artifacts/${parent}/thumbnail`}
+                            alt={`Source ${parent.slice(0, 8)}`}
+                          />
+                        ) : (
+                          `Reference ${parent.slice(0, 8)} →`
+                        )}
                       </Link>
                     ))}
                   </div>

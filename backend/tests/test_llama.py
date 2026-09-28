@@ -395,3 +395,26 @@ def test_vision_projector_is_not_a_standalone_chat_model(filename):
     with TestClient(app) as client:
         assert client.get("/api/llama").json()["models"] == []
         assert client.post("/api/llama/load", json={"model_file_id": model_id, "gpus": []}).status_code == 422
+
+
+def test_explicit_media_action_does_not_load_unused_planner_model(managed):
+    model_id, _ = managed
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        instance = client.get("/api/llama").json()["instances"][0]
+        client.post(f"/api/llama/{instance['id']}/stop")
+        tick_once()
+        conversation = client.post(
+            "/api/chat/conversations",
+            json={"model": "llamacpp:" + model_id, "execution_mode": "orchestrator"},
+        ).json()
+        result = client.post(
+            f"/api/chat/conversations/{conversation['id']}/messages",
+            json={"content": "A forest", "action": "image.generate"},
+        )
+        assert result.status_code == 202, result.text
+        assert tick_once() == result.json()["id"]
+        with session_factory()() as session:
+            assert len(list(session.scalars(select(Run).where(Run.executor_type == "llama_load")))) == 1
+            assert session.scalar(select(Run).where(Run.executor_type == "photo_pipe")).status == "queued"

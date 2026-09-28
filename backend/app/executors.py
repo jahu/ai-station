@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.agent_executor import LocalAgentExecutor
 from app.artifacts import adopt_existing
 from app.assistant import AssistantExecutor
+from app.audio import AudioExecutor
 from app.chat_executor import ChatExecutor
 from app.config import get_settings
 from app.cursor_executor import CursorProposalExecutor
@@ -274,6 +275,7 @@ EXECUTORS = {
     "llama_load": LlamaExecutor("load"),
     "llama_stop": LlamaExecutor("stop"),
     "photo_pipe": PhotoPipeExecutor(),
+    "chatterbox": AudioExecutor(),
     "chat": ChatExecutor(),
     "chat_summary": SummaryExecutor(),
     "worktree_prepare": WorktreeExecutor(),

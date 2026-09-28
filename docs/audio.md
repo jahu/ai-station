@@ -1,0 +1,17 @@
+# Local speech
+
+The Audio workspace queues `audio.speech` Tasks and `chatterbox` Runs. It wraps an administrator-configured installation of `clone_pl.py`, using its inspected `--ref`, `--text` and `--out` arguments. The current adapter produces Polish speech; it does not pretend to support music or other languages.
+
+Uploads accept bounded, decoded PCM WAV references (mono/stereo, 8–96 kHz, 0.1–60 seconds, at most 20 MiB). Inputs and outputs are ordinary audio Artifacts with source lineage. Text is bounded to 1000 characters. The Library can play and reuse a WAV. Text, parameters, GPU, logs and result remain inspectable in Runs.
+
+Configure `AI_STATION_CHATTERBOX_PYTHON`, `AI_STATION_CHATTERBOX_SCRIPT` and `AI_STATION_CHATTERBOX_CACHE` on the native Runner. The cache is an existing Hugging Face home, not a download destination populated by AI Station. Offline environment flags prohibit automatic model downloads. GPU visibility is restricted to the selected discovered device. Original scripts and models are not rewritten.
+
+Photo and speech adapters share HostMediaExecutor for reservations, idle managed-model eviction, dispatch journaling, polling, cancellation and artifact registration. The existing photo argv builder and behavior are retained. The Runner validates UUID ownership, effective read/write permissions, canonical artifact paths, WAV bounds and actual GPU presence before starting an owned process group. Output paths are derived from the Run UUID. Canceled or interrupted work is not blindly retried; uncertain dispatch retains ownership/resource reservations for existing recovery inspection.
+
+Real installation probe (2026-09-28): the existing Chatterbox environment and offline cache generated a 1.68-second, 24 kHz WAV from a local reference and short Polish text. This standalone probe does not yet establish application end-to-end acceptance.
+
+The platform assistant accepts a WAV voice reference with the explicit Speech action and returns the generated audio inline. Ordinary text-only conversation rejects media actions. Mixing voice references with images/documents is rejected; transcription is not implied. Deterministic actions bypass planner-model loading.
+
+Real application acceptance: isolated API upload → queued Run `93a9893f-b8ca-4880-ba67-d8dfc2cabcdb` → native Chatterbox → 3.76-second mono 24 kHz WAV artifact → inline file response and released GPU reservation. The original reference and installed environment were unchanged.
+
+Real browser acceptance (2026-09-28): Audio upload and generation, decoded WAV playback in Library, and an assistant speech child Run with inline playback all passed without browser JavaScript errors. These checks establish playable output, not a subjective pronunciation assessment.
