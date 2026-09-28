@@ -23,3 +23,7 @@ The installed CUDA 13 server image required CUDA 13.3 and failed its driver comp
 Automatic orchestration was also tested on the workstation in an isolated data root: load 9B on one GPU → an ordinary Juggernaut 256×256/4-step image Run queues owned model stop → real image artifact → a new Chat message queues 9B reload → final response “Dwa plus dwa wynosi cztery.” This passed with a 512-token response budget after explicitly disabling thinking for interactive runtimes. Earlier attempts at 512 and 2048 tokens produced no final text with automatic thinking; those attempts were failures, not successful chat acceptance. All smoke-owned containers were stopped afterward; the preview and external Ollama were unaffected.
 
 The chat model catalog excludes files named as `mmproj` companions (case-insensitive tokens separated by dots, dashes or underscores). They remain in the general model registry and are not launched as standalone language models.
+
+## Model selection UX
+
+Chat presents one searchable model picker, grouped into on-disk llama.cpp GGUFs and the configured local server. GPU/context settings are optional advanced controls for a first load. Choosing **Use model** starts that first load as a normal Run; existing saved models reload on demand. The conversation header offers the same picker and preserves other conversation preferences when switching. Busy conversations cannot change models. Failed load requests keep the previous choice, and unknown runtime ownership requires inspection.

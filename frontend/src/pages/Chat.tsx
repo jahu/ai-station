@@ -236,17 +236,19 @@ function SettingsForm({
   submit: (body: unknown) => void;
   label: string;
 }) {
-  const modelInput = useRef<HTMLInputElement>(null);
+  const [model, setModel] = useState(defaults.model);
+  const [modelPending, setModelPending] = useState(false);
   return (
     <form
       className="image-form chat-settings"
       onSubmit={(e) => {
         e.preventDefault();
+        if (pending || modelPending || !model) return;
         const fields = new FormData(e.currentTarget);
         submit({
           execution_mode: fields.get("execution_mode"),
           title: fields.get("title"),
-          model: fields.get("model"),
+          model,
           system_prompt: fields.get("system_prompt"),
           temperature: Number(fields.get("temperature")),
           max_tokens: Number(fields.get("max_tokens")),
@@ -274,28 +276,13 @@ function SettingsForm({
             defaultValue={defaults.title}
           />
         </label>
-        <label>
-          Model
-          <input
-            ref={modelInput}
-            name="model"
-            list="chat-models"
-            required
-            maxLength={200}
-            defaultValue={defaults.model}
-            placeholder="Select or enter a model name"
-          />
-        </label>
-        <datalist id="chat-models">
-          {models.map((model) => (
-            <option key={model} value={model} />
-          ))}
-        </datalist>
         <LlamaModels
+          value={model}
+          label={model === defaults.model ? defaults.model_label : undefined}
+          models={models}
           busy={pending}
-          onSelect={(model) => {
-            if (modelInput.current) modelInput.current.value = model;
-          }}
+          onSelect={setModel}
+          onBusy={setModelPending}
         />
         <label>
           System prompt
@@ -329,7 +316,9 @@ function SettingsForm({
             />
           </label>
         </div>
-        <Button type="submit">{pending ? "Saving…" : label}</Button>
+        <Button type="submit" disabled={modelPending || !model}>
+          {pending ? "Saving…" : label}
+        </Button>
       </fieldset>
     </form>
   );
@@ -347,6 +336,7 @@ function ConversationView({
   const orchestrator = conversation.execution_mode === "orchestrator";
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [readingAttachment, setReadingAttachment] = useState(false);
+  const [modelPending, setModelPending] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const [clipboardError, setClipboardError] = useState<Error | null>(null);
   const refresh = () => {
@@ -396,7 +386,9 @@ function ConversationView({
     !!conversation.active_run ||
     send.isPending ||
     regenerate.isPending ||
-    readingAttachment;
+    readingAttachment ||
+    modelPending ||
+    settings.isPending;
   const messages = conversation.messages;
   const last = messages.at(-1);
   useEffect(() => {
@@ -407,10 +399,24 @@ function ConversationView({
       <div className="chat-heading">
         <div>
           <h2>{conversation.title}</h2>
-          <span className="muted">
-            {conversation.model_label ?? conversation.model}
-          </span>{" "}
-          <span className="chip">LOCAL</span>
+          <LlamaModels
+            compact
+            value={conversation.model}
+            label={conversation.model_label}
+            models={models}
+            busy={busy}
+            onBusy={setModelPending}
+            onSelect={(model) =>
+              settings.mutate({
+                model,
+                execution_mode: conversation.execution_mode,
+                title: conversation.title,
+                system_prompt: conversation.system_prompt,
+                temperature: conversation.temperature,
+                max_tokens: conversation.max_tokens,
+              })
+            }
+          />
         </div>
         {conversation.active_run && (
           <Link to={`/runs/${conversation.active_run.id}`}>
