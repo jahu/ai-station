@@ -13,6 +13,7 @@ from ai_station_runner.config import get_settings
 from ai_station_runner.cursor_runs import cursor_report
 from ai_station_runner.gitinspect import git_environment
 from ai_station_runner.gitops import GitError
+from ai_station_runner.local_coding_runs import local_coding_report
 from ai_station_runner.processes import ProcessNotOwned
 from ai_station_runner.worktrees import inspect_worktree, owned_path
 
@@ -79,7 +80,14 @@ def start_commit(manager, body):
             pass
         else:
             raise GitError("Run already owns a process")
-        review = cursor_report(manager, str(body.source_run_id))
+        source_id = str(body.source_run_id)
+        source = manager.inspect(source_id)
+        if source["executor"] == "cursor_proposal":
+            review = cursor_report(manager, source_id)
+        elif source["executor"] == "local_proposal":
+            review = local_coding_report(manager, source_id)
+        else:
+            raise GitError("A completed coding proposal is required")
         record = inspect_worktree(manager, review["worktree_run_id"])
         if (
             digest(review) != body.review_digest

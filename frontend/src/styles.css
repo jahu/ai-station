@@ -3089,3 +3089,54 @@ pre {
   margin-top: 12px;
   font-size: 11px;
 }
+
+.coding-executor-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.coding-executor-options button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  text-align: left;
+  background: #121713;
+  color: #c0cbb9;
+  border: 1px solid #353e2e;
+  border-radius: 9px;
+}
+.coding-executor-options button[aria-pressed="true"] {
+  border-color: #a4cf7c;
+  background: #273320;
+  color: #d9edca;
+}
+.coding-executor-options strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+}
+.coding-executor-options small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+.coding-executor-options svg {
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .coding-executor-options {
+    grid-template-columns: 1fr;
+  }
+}
+
+.coding-form fieldset {
+  display: grid;
+  gap: 16px;
+}
+.coding-form label:not(.project-checkbox) {
+  display: grid;
+  gap: 8px;
+}

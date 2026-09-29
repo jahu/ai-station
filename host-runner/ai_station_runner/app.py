@@ -33,6 +33,7 @@ from ai_station_runner.gitops import (
     run_project_command,
 )
 from ai_station_runner.llama_runtime import router as llama_router
+from ai_station_runner.local_coding_runs import LocalCodingRequest, local_coding_report, start_local_coding
 from ai_station_runner.local_model import router as local_model_router
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
@@ -161,6 +162,25 @@ def cursor_proposal(body: CursorRequest):
 def cursor_proposal_report(run_id: UUID):
     try:
         return cursor_report(manager(), str(run_id))
+    except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.post("/v1/runs/local-coding-proposal")
+def local_coding_proposal(body: LocalCodingRequest):
+    try:
+        record = start_local_coding(manager(), body)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (GitError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {**record, "runner_id": get_settings().runner_id}
+
+
+@app.get("/v1/local-coding-proposal/{run_id}")
+def local_coding_proposal_report(run_id: UUID):
+    try:
+        return local_coding_report(manager(), str(run_id))
     except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc
 
@@ -533,6 +553,8 @@ _operational = {
     "/v1/runs/model-scan",
     "/v1/runs/worktree",
     "/v1/runs/validation",
+    "/v1/runs/local-coding-proposal",
+    "/v1/local-coding-proposal/{run_id}",
     "/v1/runs/cursor-proposal",
     "/v1/cursor-proposal/{run_id}",
     "/v1/validation/{run_id}",

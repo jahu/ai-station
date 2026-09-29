@@ -108,3 +108,6 @@ Saved project test/lint/build commands now run through the worker and a managed 
 ## Waiting for managed models
 
 Run claims exclude unfinished prerequisites without blocking other queued work. Failed or canceled prerequisites produce PrerequisiteFailed before executor dispatch. A selected managed model reloads from its recorded GPU/context preset; consumers share a pending load. Idle managed llama.cpp instances can be stopped through ordinary Runs for an image or another model. Active and queued consumers prevent eviction. Canceling one waiting consumer leaves shared prerequisites intact.
+
+
+Local coding uses the same worktree preparation, owned process lifecycle, checked proposal artifacts and validation chain as Cursor. `local_proposal` consumes only a configured private inference endpoint or owned llama.cpp runtime, waits for a normal model-load prerequisite when needed, and can be canceled through the shared native process manager. See [local coding](local-coding.md).

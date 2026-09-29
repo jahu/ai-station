@@ -1,4 +1,5 @@
 import importlib
+import os
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -876,3 +877,294 @@ def test_commit_requires_review_confirmation_and_project_policy(repository, owne
             row.pr_policy = {**row.pr_policy, "commit_task_branch": False}
             session.commit()
         assert client.post(route, json={"message": "Reviewed", "reviewed": True}).status_code == 403
+
+
+@pytest.fixture
+def local_coding_bridge(owned_runner, tmp_path, monkeypatch):
+    """Fake inference by default; real forwarding requires explicit smoke-test opt-in."""
+    import json
+    import socketserver
+    import threading
+    from http.server import BaseHTTPRequestHandler
+
+    control = {"mode": "success", "requests": [], "entered": threading.Event(), "release": threading.Event()}
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *_):
+            pass
+
+        def do_POST(self):
+            request = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            control["requests"].append((self.path, request))
+            control["entered"].set()
+            if control["mode"] == "real":
+                import httpx
+
+                assert os.environ.get("AI_STATION_REAL_LOCAL_LLM_TESTS") == "1"
+                instance = os.environ["AI_STATION_SMOKE_LLAMA_INSTANCE"]
+                transport = httpx.HTTPTransport(uds=os.environ["AI_STATION_SMOKE_RUNNER_SOCKET"])
+                with httpx.Client(transport=transport, timeout=300, trust_env=False) as upstream:
+                    with upstream.stream(
+                        "POST",
+                        f"http://runner/v1/llama/{instance}/chat/completions",
+                        json={**request, "model": instance},
+                    ) as response:
+                        self.send_response(response.status_code)
+                        self.send_header("Content-Type", response.headers.get("content-type", ""))
+                        self.end_headers()
+                        for chunk in response.iter_bytes():
+                            self.wfile.write(chunk)
+                            self.wfile.flush()
+                return
+            if control["mode"] == "wait":
+                control["release"].wait(5)
+            proposal = json.dumps(
+                {
+                    "summary": "Local fixture edits",
+                    "files": [
+                        {"path": "README.md", "content": "Local edit\n"},
+                        {"path": "new.py", "content": "print('validation passed')\n"},
+                    ],
+                }
+            )
+            delta = {"content": proposal}
+            if control["mode"] == "tool":
+                delta["tool_calls"] = [{"function": {"name": "shell"}}]
+            events = [
+                {"choices": [{"delta": delta, "finish_reason": None}]},
+                {
+                    "choices": [
+                        {"delta": {}, "finish_reason": "length" if control["mode"] == "truncated" else "stop"}
+                    ]
+                },
+            ]
+            payload = (
+                b"".join(b"data: " + json.dumps(event).encode() + b"\n\n" for event in events)
+                + b"data: [DONE]\n\n"
+            )
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            try:
+                self.wfile.write(payload)
+            except BrokenPipeError:
+                pass
+
+    class Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
+        daemon_threads = True
+
+    socket = str(tmp_path / "local-model.sock")
+    server = Server(socket, Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    monkeypatch.setenv("AI_STATION_RUNNER_SOCKET", socket)
+    clear_settings_cache()
+    yield control
+    control["release"].set()
+    server.shutdown()
+    server.server_close()
+    thread.join(timeout=5)
+    clear_settings_cache()
+
+
+def local_coding_request(project, **extra):
+    return {
+        key: value
+        for key, value in coding_request(project, model="fixture-local", **extra).items()
+        if key != "external_ai"
+    }
+
+
+def prepare_local_coding(client, project):
+    response = client.post("/api/coding/local", json=local_coding_request(project))
+    assert response.status_code == 202, response.text
+    with session_factory()() as session:
+        tick(session, "local-prepare")
+    prepared = client.get(f"/api/runs/{response.json()['id']}").json()
+    assert prepared["status"] == "succeeded", prepared
+    return prepared["metadata"]["coding_run_id"]
+
+
+def test_local_coding_applies_validates_and_commits_only_owned_worktree(
+    repository, owned_runner, local_coding_bridge, validation_sandbox
+):
+    index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project = register(
+            client,
+            repository,
+            test_commands=[["/usr/bin/python3", "new.py"]],
+            pr_policy={"commit_task_branch": True},
+        )
+        run_id = prepare_local_coding(client, project)
+        with session_factory()() as session:
+            tick(session, "local-inference")
+        run = client.get(f"/api/runs/{run_id}").json()
+        assert run["status"] == "succeeded", run
+        assert "external_ai" not in run["effective_permissions"]
+        assert run["metadata"]["execution_location"] == "local"
+        assert run["metadata"]["coding_review"]["provider"]["model"] == "fixture-local"
+        assert {a["type"] for a in client.get(f"/api/artifacts?run_id={run_id}").json()} == {
+            "json",
+            "git_diff",
+        }
+        with session_factory()() as session:
+            tick(session, "local-validation")
+        assert client.get(f"/api/runs/{run['metadata']['validation_run_id']}").json()["status"] == "succeeded"
+        response = client.post(
+            f"/api/coding/runs/{run_id}/commit", json={"reviewed": True, "message": "Accept local edits"}
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "local-commit")
+        committed = client.get(f"/api/runs/{response.json()['id']}").json()
+        assert committed["status"] == "succeeded", committed
+        assert len(local_coding_bridge["requests"]) == 1
+        target, payload = local_coding_bridge["requests"][0]
+        assert target == "/v1/llm/chat/completions" and payload["model"] == "fixture-local"
+        assert "tools" not in payload and "Original repository" in payload["messages"][0]["content"]
+    assert (repository / "README.md").read_text() == "Original repository\n"
+    assert not (repository / "new.py").exists()
+    assert (repository / ".git/index").read_bytes() == index
+
+
+@pytest.mark.parametrize("mode", ["truncated", "tool"])
+def test_local_coding_refuses_unfinished_or_tool_responses(
+    repository, owned_runner, local_coding_bridge, mode
+):
+    local_coding_bridge["mode"] = mode
+    with TestClient(app) as client:
+        project = register(client, repository)
+        run_id = prepare_local_coding(client, project)
+        with session_factory()() as session:
+            tick(session, "local-invalid")
+        run = client.get(f"/api/runs/{run_id}").json()
+        assert run["status"] == "failed", run
+        assert "coding_review" not in run["metadata"]
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        assert (
+            owned_runner.data_dir / worktree["relative_path"] / "README.md"
+        ).read_text() == "Original repository\n"
+        assert client.get(f"/api/artifacts?run_id={run_id}").json() == []
+
+
+def test_local_coding_boundary_and_cancellation(repository, owned_runner, local_coding_bridge, monkeypatch):
+    local_coding_bridge["mode"] = "wait"
+    with TestClient(app) as client:
+        project = register(client, repository)
+        body = local_coding_request(project)
+        for extra in ({"external_ai": True}, {"endpoint": "https://example.com/v1"}, {"shell": "true"}):
+            assert client.post("/api/coding/local", json={**body, **extra}).status_code == 422
+        assert (
+            client.post(
+                "/api/coding/local", json={**body, "expected_updated_at": "2000-01-01T00:00:00Z"}
+            ).status_code
+            == 409
+        )
+        run_id = prepare_local_coding(client, project)
+        assert client.post("/api/coding/local", json=body).status_code == 409
+        original = RunnerClient.start_local_proposal
+
+        def cancel_after_inference_starts(self, payload):
+            with TestClient(runner_app) as native:
+                route = "/v1/runs/local-coding-proposal"
+                assert native.post(route, json={**payload, "permissions": []}).status_code == 403
+                assert (
+                    native.post(route, json={**payload, "endpoint": "https://example.com"}).status_code == 409
+                )
+            result = original(self, payload)
+            assert local_coding_bridge["entered"].wait(5)
+            assert original(self, payload)["pid"] == result["pid"]
+            client.post(f"/api/runs/{run_id}/cancel")
+            return result
+
+        monkeypatch.setattr(RunnerClient, "start_local_proposal", cancel_after_inference_starts)
+        with session_factory()() as session:
+            tick(session, "local-cancel")
+        result = client.get(f"/api/runs/{run_id}").json()
+        assert result["status"] == "canceled", result
+        assert not owned_runner.inspect(run_id)["alive"]
+        assert "coding_review" not in result["metadata"]
+
+
+@pytest.mark.skipif(
+    os.environ.get("AI_STATION_REAL_LOCAL_LLM_TESTS") != "1",
+    reason="Real local inference is explicitly opt-in",
+)
+def test_real_local_coding_proposal(repository, owned_runner, local_coding_bridge):
+    local_coding_bridge["mode"] = "real"
+    index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project = register(client, repository)
+        body = local_coding_request(project)
+        body.update(
+            files=["README.md"],
+            prompt="Replace README.md with exactly the text Local coding smoke passed followed by a newline. Return the required JSON proposal only.",
+        )
+        response = client.post("/api/coding/local", json=body)
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "real-local-prepare")
+        prepared = client.get(f"/api/runs/{response.json()['id']}").json()
+        with session_factory()() as session:
+            tick(session, "real-local-inference")
+        run = client.get(f"/api/runs/{prepared['metadata']['coding_run_id']}").json()
+        assert run["status"] == "succeeded", run
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        assert (
+            owned_runner.data_dir / worktree["relative_path"] / "README.md"
+        ).read_text().strip() == "Local coding smoke passed"
+        assert run["metadata"]["coding_review"]["files"]
+        assert len(local_coding_bridge["requests"]) == 1
+    assert (repository / "README.md").read_text() == "Original repository\n"
+    assert (repository / ".git/index").read_bytes() == index
+
+
+def test_local_coding_reloads_saved_llama_preset_before_inference(repository, owned_runner):
+    from app.llama import LoadModel, enqueue_load
+    from app.models import ModelFile, Run, RunDependency, RuntimeInstance
+
+    with session_factory()() as session:
+        model = ModelFile(
+            host_path="/models/coder.gguf",
+            filename="coder.gguf",
+            format="gguf",
+            category="llm",
+            availability="present",
+            size_bytes=1000,
+            mtime=1,
+        )
+        session.add(model)
+        session.flush()
+        old_load = enqueue_load(LoadModel(model_file_id=model.id, gpus=[2, 7], context_size=4096), session)
+        old_load.status = "succeeded"
+        instance = session.get(RuntimeInstance, old_load.parameters["instance_id"])
+        instance.status = "stopped"
+        model_key = "llamacpp:" + model.id
+        old_id = instance.id
+        session.commit()
+    with TestClient(app) as client:
+        project = register(client, repository)
+        body = {**local_coding_request(project), "model": model_key}
+        response = client.post("/api/coding/local", json=body)
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "prepare-with-model-reload")
+        prepared = client.get(f"/api/runs/{response.json()['id']}").json()
+        assert prepared["status"] == "succeeded", prepared
+        with session_factory()() as session:
+            coding = session.get(Run, prepared["metadata"]["coding_run_id"])
+            dependency = session.scalar(select(RunDependency).where(RunDependency.run_id == coding.id))
+            assert dependency is not None
+            loads = list(
+                session.scalars(select(Run).where(Run.executor_type == "llama_load", Run.status == "queued"))
+            )
+            assert len(loads) == 1
+            load = loads[0]
+            assert load.parameters["gpus"] == [2, 7]
+            assert load.parameters["context_size"] == 4096
+            assert load.parameters["instance_id"] != old_id
+            assert coding.parameters["endpoint"] == "llamacpp:" + load.parameters["instance_id"]
+            assert coding.parameters["model"] == model_key
+            assert coding.status == "queued"
