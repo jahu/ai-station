@@ -510,7 +510,27 @@ function ConversationView({
                   </Link>
                 </p>
               )}
-              <AssistantResults result={message} />
+              <AssistantResults
+                result={message}
+                inputs={options}
+                busy={busy}
+                onUse={
+                  orchestrator
+                    ? (artifact) =>
+                        setOptions((previous) => ({
+                          ...previous,
+                          ...(artifact.type === "image"
+                            ? {
+                                image_artifact_ids: [
+                                  ...previous.image_artifact_ids,
+                                  artifact.id,
+                                ],
+                              }
+                            : { audio_artifact_id: artifact.id }),
+                        }))
+                    : undefined
+                }
+              />
               {message.metadata.attachments?.map((attachment) => (
                 <p key={attachment.id}>
                   <a

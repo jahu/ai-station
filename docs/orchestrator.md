@@ -51,3 +51,9 @@ The first increment reuses the configured inference provider. Managed llama.cpp 
 `audio.speech` reads the submitted message in Polish using one uploaded WAV voice reference. It creates an ordinary child Run on the same Task; its output is played inline and remains in the Library. The assistant exposes the action explicitly, can route spoken-text requests with a reference, and clarifies missing references or oversized text. This is speech synthesis, not audio transcription or music generation.
 
 With one portrait and one WAV, the assistant dispatches `avatar.animate` through the ordinary media Run engine and renders the resulting video inline. The selected action can override automatic routing; no media attachment grants additional permissions.
+
+## Reusing Library inputs
+
+The Chat composer can select existing images and PCM WAV recordings from a searchable, paginated Library picker. Image selections retain their click order, with numbered previews and explicit reorder/remove controls before sending. At most eight image references and one voice recording are attached; existing input IDs cannot be selected twice. The ordinary assistant request validates these IDs and records them in Run parameters, preserving artifact lineage without copying or re-uploading files. Trash is excluded from the picker. Upload and text-attachment validation remain unchanged.
+
+Inline image and WAV results also offer **Use as image/voice reference** for the next message. The action stages an existing artifact ID; it does not execute a new task until the user sends the message. Already-attached images and the eight-image limit are reflected in the result controls.
