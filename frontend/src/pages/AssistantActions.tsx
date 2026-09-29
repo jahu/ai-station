@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { ImagePlus, Mic, X, ArrowLeft, ArrowRight } from "lucide-react";
+import LibraryPicker from "../components/media/LibraryPicker";
+import { Button } from "../components/ui/button";
 import { api, type Artifact } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 
@@ -30,7 +33,17 @@ export type ActionResult = {
   task_status?: string;
 };
 
-export function AssistantResults({ result }: { result: ActionResult }) {
+export function AssistantResults({
+  result,
+  inputs,
+  busy,
+  onUse,
+}: {
+  result: ActionResult;
+  inputs?: AssistantOptions;
+  busy?: boolean;
+  onUse?: (artifact: Artifact) => void;
+}) {
   if (!result.steps) return null;
   return (
     <div className="assistant-results">
@@ -79,8 +92,33 @@ export function AssistantResults({ result }: { result: ActionResult }) {
               />
             )}
             <Link to={`/library/${artifact.id}`}>
-              {artifact.original_filename || artifact.type}
+              {artifact.title || artifact.original_filename || artifact.type}
             </Link>
+            {onUse &&
+              (artifact.type === "image" ||
+                (artifact.type === "audio" &&
+                  artifact.mime_type === "audio/wav")) && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="assistant-reuse-result"
+                  disabled={
+                    busy ||
+                    inputs?.image_artifact_ids.includes(artifact.id) ||
+                    inputs?.audio_artifact_id === artifact.id ||
+                    (artifact.type === "image" &&
+                      (inputs?.image_artifact_ids.length ?? 0) >= 8)
+                  }
+                  onClick={() => onUse(artifact)}
+                >
+                  {inputs?.image_artifact_ids.includes(artifact.id) ||
+                  inputs?.audio_artifact_id === artifact.id
+                    ? "Added to next message"
+                    : artifact.type === "image"
+                      ? "Use as image reference"
+                      : "Use as voice reference"}
+                </Button>
+              )}
           </div>
         ))}
       </div>
@@ -100,6 +138,8 @@ export default function AssistantActions({
   onUploading: (uploading: boolean) => void;
 }) {
   const [error, setError] = useState<Error | null>(null);
+  const imageInput = useRef<HTMLInputElement>(null);
+  const voiceInput = useRef<HTMLInputElement>(null);
   const [projectId, setProjectId] = useState("");
   const [files, setFiles] = useState("");
   const [external, setExternal] = useState(false);
@@ -181,35 +221,80 @@ export default function AssistantActions({
           <option value="coding.cursor">Coding with Cursor</option>
         </select>
       </label>
-      <label>
-        Voice reference · WAV
-        <input
-          type="file"
-          accept="audio/wav,.wav"
-          onChange={async (event) => {
-            const file = event.target.files?.[0];
-            event.target.value = "";
-            if (!file) return;
-            onUploading(true);
-            setError(null);
-            try {
-              const body = new FormData();
-              body.append("file", file);
-              const artifact = await api<Artifact>("/audio/uploads", {
-                method: "POST",
-                body,
-              });
-              onChange({ ...value, audio_artifact_id: artifact.id });
-            } catch (error) {
-              setError(error as Error);
-            } finally {
-              onUploading(false);
-            }
-          }}
+      <div className="assistant-attachment-toolbar">
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => imageInput.current?.click()}
+          disabled={value.image_artifact_ids.length >= 8}
+        >
+          <ImagePlus size={15} /> Add images
+        </Button>
+        <LibraryPicker
+          kind="image"
+          existing={value.image_artifact_ids}
+          limit={8 - value.image_artifact_ids.length}
+          busy={busy}
+          onSelect={(items) =>
+            onChange({
+              ...value,
+              image_artifact_ids: [
+                ...value.image_artifact_ids,
+                ...items.map((a) => a.id),
+              ],
+            })
+          }
         />
-      </label>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => voiceInput.current?.click()}
+        >
+          <Mic size={15} />{" "}
+          {value.audio_artifact_id ? "Replace voice" : "Add voice"}
+        </Button>
+        <LibraryPicker
+          kind="audio"
+          existing={value.audio_artifact_id ? [value.audio_artifact_id] : []}
+          limit={1}
+          busy={busy}
+          onSelect={(items) =>
+            onChange({ ...value, audio_artifact_id: items[0].id })
+          }
+        />
+      </div>
+      <input
+        ref={voiceInput}
+        hidden
+        aria-label="Voice reference · WAV"
+        type="file"
+        accept="audio/wav,.wav"
+        onChange={async (event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file) return;
+          onUploading(true);
+          setError(null);
+          try {
+            const body = new FormData();
+            body.append("file", file);
+            const artifact = await api<Artifact>("/audio/uploads", {
+              method: "POST",
+              body,
+            });
+            onChange({ ...value, audio_artifact_id: artifact.id });
+          } catch (error) {
+            setError(error as Error);
+          } finally {
+            onUploading(false);
+          }
+        }}
+      />
       {value.audio_artifact_id && (
-        <div>
+        <div className="assistant-voice-reference">
+          <span>
+            <Mic size={16} /> Voice reference
+          </span>
           <audio
             controls
             preload="metadata"
@@ -218,44 +303,50 @@ export default function AssistantActions({
           />
           <button
             type="button"
+            className="icon-button"
+            aria-label="Remove voice reference"
             onClick={() => onChange({ ...value, audio_artifact_id: null })}
           >
-            Remove voice reference
+            <X size={16} />
           </button>
         </div>
       )}
       <div
+        className="assistant-reference-area"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
           void upload(Array.from(e.dataTransfer.files));
         }}
       >
-        <label>
-          Image references
-          <input
-            type="file"
-            multiple
-            accept="image/png,image/jpeg,image/webp"
-            onChange={(e) => {
-              const files = Array.from(e.target.files ?? []);
-              e.target.value = "";
-              void upload(files);
-            }}
-          />
-        </label>
+        <input
+          ref={imageInput}
+          hidden
+          aria-label="Image references"
+          type="file"
+          multiple
+          accept="image/png,image/jpeg,image/webp"
+          onChange={(e) => {
+            const files = Array.from(e.target.files ?? []);
+            e.target.value = "";
+            void upload(files);
+          }}
+        />
         <p className="muted">
-          Drop images here. Reference order follows upload order — for example,
-          person first, clothing second.
+          Drop images here. Order matters — for example, person first, clothing
+          second. Use the arrows to reorder.
         </p>
-        <div className="assistant-images">
+        <div className="assistant-reference-strip">
           {value.image_artifact_ids.map((id, index) => (
-            <div key={`${id}-${index}`}>
+            <div className="assistant-reference" key={`${id}-${index}`}>
+              <span className="assistant-reference-number">{index + 1}</span>
               <img
                 src={`/api/artifacts/${id}/file`}
                 alt={`Reference ${index + 1}`}
               />
               <button
+                className="assistant-reference-remove"
+                aria-label={`Remove reference ${index + 1}`}
                 type="button"
                 onClick={() =>
                   onChange({
@@ -266,8 +357,37 @@ export default function AssistantActions({
                   })
                 }
               >
-                Remove reference {index + 1}
+                <X size={14} />
               </button>
+              <div className="assistant-reference-order">
+                <button
+                  type="button"
+                  aria-label={`Move reference ${index + 1} earlier`}
+                  disabled={busy || index === 0}
+                  onClick={() => {
+                    const ids = [...value.image_artifact_ids];
+                    [ids[index - 1], ids[index]] = [ids[index], ids[index - 1]];
+                    onChange({ ...value, image_artifact_ids: ids });
+                  }}
+                >
+                  <ArrowLeft size={13} />
+                </button>
+                <span>Reference {index + 1}</span>
+                <button
+                  type="button"
+                  aria-label={`Move reference ${index + 1} later`}
+                  disabled={
+                    busy || index === value.image_artifact_ids.length - 1
+                  }
+                  onClick={() => {
+                    const ids = [...value.image_artifact_ids];
+                    [ids[index + 1], ids[index]] = [ids[index], ids[index + 1]];
+                    onChange({ ...value, image_artifact_ids: ids });
+                  }}
+                >
+                  <ArrowRight size={13} />
+                </button>
+              </div>
             </div>
           ))}
         </div>

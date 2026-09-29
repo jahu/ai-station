@@ -6,7 +6,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 
 ## What works now
 
-- Platform assistant: the default conversation routes instructions to images, agent drafts and explicitly scoped Cursor tasks, showing ordinary Runs and image results inline. Existing workspaces remain available. See [orchestrator contracts and roadmap](docs/orchestrator.md).
+- Platform assistant: the default conversation routes instructions to images, agent drafts and explicitly scoped Cursor tasks, showing ordinary Runs and media results inline. Images and WAV recordings can be selected from Library or reused directly from conversation results, with ordered image references. Existing workspaces remain available. See [orchestrator contracts and roadmap](docs/orchestrator.md).
 
 - Local chat: persisted conversations, selectable managed llama.cpp GGUFs across multiple GPUs alongside Ollama/compatible providers, model discovery, streaming Markdown, bounded text attachments, stop, regeneration, and inspectable Runs.
 - Agents: disabled natural-language drafts, explicit activation, local reports, scoped context tools, persistent UTC schedules, pause/resume, duplication and execution history.
