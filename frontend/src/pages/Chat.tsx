@@ -1,3 +1,8 @@
+import {
+  WebSearchControl,
+  SearchSources,
+  type WebSources,
+} from "./ChatWebSearch";
 import LlamaModels from "./LlamaModels";
 import { emptyOptions } from "./assistant-options";
 import AssistantActions, {
@@ -44,6 +49,7 @@ type Message = ActionResult & {
   run_status: string | null;
   error_message: string;
   metadata: {
+    web_search?: WebSources;
     orchestration?: boolean;
     routing_only?: boolean;
     agent_id?: string;
@@ -333,6 +339,8 @@ function ConversationView({
   const cache = useQueryClient();
   const [draft, setDraft] = useState("");
   const [options, setOptions] = useState(emptyOptions);
+  const [webEnabled, setWebEnabled] = useState(false);
+  const [webQuery, setWebQuery] = useState("");
   const orchestrator = conversation.execution_mode === "orchestrator";
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [readingAttachment, setReadingAttachment] = useState(false);
@@ -353,10 +361,12 @@ function ConversationView({
           content: draft,
           attachments,
           ...(orchestrator ? options : {}),
+          web_search: { enabled: webEnabled, query: webQuery },
         }),
       }),
     onSuccess: () => {
       setDraft("");
+      setWebQuery("");
       setAttachments([]);
       setOptions(emptyOptions);
       refresh();
@@ -503,6 +513,9 @@ function ConversationView({
                   />
                 ))}
               </div>
+              {message.role === "assistant" && message.metadata.web_search && (
+                <SearchSources result={message.metadata.web_search} />
+              )}
               {message.metadata.agent_id && (
                 <p>
                   <Link to={`/agents/${message.metadata.agent_id}`}>
@@ -619,7 +632,16 @@ function ConversationView({
           {orchestrator && (
             <AssistantActions
               value={options}
-              onChange={setOptions}
+              onChange={(next) => {
+                setOptions(next);
+                if (
+                  !["auto", "chat"].includes(next.action) ||
+                  next.image_artifact_ids.length ||
+                  next.audio_artifact_id ||
+                  next.coding
+                )
+                  setWebEnabled(false);
+              }}
               busy={busy || attachments.length > 0}
               onUploading={setReadingAttachment}
             />
@@ -632,6 +654,19 @@ function ConversationView({
               onChange={setAttachments}
               busy={busy || options.image_artifact_ids.length > 0}
               onReading={setReadingAttachment}
+            />
+          )}
+          {(!orchestrator ||
+            (["auto", "chat"].includes(options.action) &&
+              !options.image_artifact_ids.length &&
+              !options.audio_artifact_id &&
+              !options.coding)) && (
+            <WebSearchControl
+              enabled={webEnabled}
+              query={webQuery}
+              busy={busy}
+              onToggle={setWebEnabled}
+              onQuery={setWebQuery}
             />
           )}
           <div className="row spread">

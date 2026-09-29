@@ -30,3 +30,5 @@ Real local compatible-provider completion was verified; all six real image/GPU s
 - Coding: reviewed task-branch commits; Local AI selected-file proposals now share Cursor's checked worktree/diff/validation workflow. Real 27B Q4 proposal smoke passed; automated coverage includes cancellation and validation/commit. Codex/Claude and autonomous whole-repository exploration remain unfinished.
 
 The central Assistant supports explicit capability routing, local/consented Cursor coding and media results; a general multi-step tool-using orchestrator, external connectors, cloud-provider Chat and multi-node execution are still incomplete. The initial MVP acceptance above must not be read as 100% of the full product specification.
+
+- Optional Chat web search: explicit switch and editable public query, private SearXNG, persisted source cards/events/artifact, cancellation and visible failure. Real browser → search → local 27B response passed. General page browsing and agent web tooling remain separate future work.

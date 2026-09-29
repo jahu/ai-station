@@ -50,7 +50,14 @@ class ChatExecutor:
         return "done"
 
     async def _consume(self, session, run, message):
-        params = run.parameters
+        from app.web_search import context
+
+        messages = await context(session, run, message)
+        if messages is None:
+            transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
+            session.commit()
+            return
+        params = {**run.parameters, "messages": messages}
         stream = LocalChatProvider().stream(
             **{key: params[key] for key in ("endpoint", "messages", "model", "temperature", "max_tokens")}
         )

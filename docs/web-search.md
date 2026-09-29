@@ -1,0 +1,15 @@
+# Optional Chat web search
+
+Web search is a per-message opt-in tool, disabled by default. It runs in the existing worker before local inference and records its query, results, timestamps and failures as Run events plus a JSON artifact. A visible Sources panel links the actual retrieved results independently of model-generated citations. Regeneration reuses the user's explicit search intent. Cancellation closes the search request; an unavailable search service fails the Run rather than pretending the answer is current.
+
+Only the explicit search query (or the current message if no query is supplied) leaves the control plane. Conversation history, memory and attachments are never used as outbound search context. Queries are bounded. Retrieved titles/snippets are untrusted reference data, cannot grant tools/permissions, and are passed to the local model with citation instructions. The tool searches; it does not fetch arbitrary result pages, execute scripts or perform browser automation.
+
+A private SearXNG container provides the JSON search API without account credentials. It has no host ports, host resources, Docker socket or Runner access. Its image is pinned, capabilities dropped and filesystem read-only, with temporary cache and an ephemeral signing secret. No Redis/Valkey is required with the limiter disabled. Only the worker contacts the fixed operator-configured search endpoint. Result links permit HTTP(S) public hosts only; no automatic page fetching occurs.
+
+References: [SearXNG Search API](https://docs.searxng.org/dev/search_api.html), [server configuration](https://docs.searxng.org/admin/settings/settings_server.html), [container installation](https://docs.searxng.org/admin/installation-docker.html). Search engines can throttle requests; such failures remain visible. Normal tests use fake HTTP results and never access the internet.
+
+## Verification
+
+On 2026-09-29, a real Chromium submission in an isolated database dispatched an Assistant Run and Chat Run, searched public llama.cpp documentation through SearXNG and streamed a Polish response from the workstation's managed 27B Q4 llama.cpp model. Five actual source cards persisted after refresh; desktop and mobile layouts passed browser checks. Run `2088778e-6f73-4cec-98f9-9d3a63348602` belongs to that isolated smoke database, not production history. The model was loaded beforehand using its existing two-GPU preset through a normal AI Station Run; no models were downloaded or external runtimes reconfigured.
+
+The exact Compose search service passed startup and health checks as an isolated project and was removed afterward. Automated tests use mock HTTP and model providers and cover opt-in behavior, regeneration, source artifacts, cancellation, missing permissions, malformed/oversized responses, redirects, unsafe links and complete engine failure. Search result snippets can be incomplete; source cards identify what was actually retrieved, independently of the model's prose.

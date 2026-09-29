@@ -126,3 +126,5 @@ Reviewed Coding commits use `coding.commit` Runs and a typed native job. A priva
 [Local coding proposals](local-coding.md) extend the existing owned-worktree proposal and validation flow with local inference through the private Runner bridge. The native snapshot/write boundary and review artifacts are shared across proposal providers.
 
 The central Assistant can route selected-project coding to the conversation's local model through the same local proposal workflow. A coding scope without external consent routes locally; model-generated plans cannot grant Cursor permission. Project/version/file validation remains in the shared coding enqueue boundary.
+
+Optional Chat web search is a permissioned worker tool inside the existing Chat Run. It uses a private SearXNG service and stores sources as events/artifacts before passing untrusted snippets to local inference. The switch is off by default; model-generated routing cannot enable it. See [web search](web-search.md).

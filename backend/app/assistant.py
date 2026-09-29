@@ -20,6 +20,7 @@ from app.providers import ProviderError
 from app.runs import create_run, create_task, run_dict, transition
 from app.serialize import artifact_dict
 from app.state import TERMINAL, RunStatus
+from app.web_search import SearchOptions
 
 Action = Literal[
     "chat",
@@ -62,6 +63,7 @@ class AssistantInputs(BaseModel):
     ] = "auto"
     audio_artifact_id: UUID | None = None
     coding: CodingScope | None = None
+    web_search: SearchOptions = Field(default_factory=SearchOptions)
 
 
 class Plan(BaseModel):
@@ -71,6 +73,16 @@ class Plan(BaseModel):
 
 
 def enqueue_assistant(session, conversation, user, body):
+    if body.web_search.enabled and (
+        body.action not in {"auto", "chat"}
+        or body.coding
+        or body.image_artifact_ids
+        or body.audio_artifact_id
+    ):
+        raise HTTPException(
+            422,
+            "Web search is available for conversation answers. Select Conversation or Auto and remove media/coding scope.",
+        )
     if (body.action.startswith("coding.") or body.coding) and (
         body.image_artifact_ids or body.audio_artifact_id or body.attachments
     ):
@@ -145,6 +157,8 @@ def enqueue_assistant(session, conversation, user, body):
 
 
 def explicit_plan(params):
+    if params.get("web_search", {}).get("enabled"):
+        return Plan(action="chat", reason="Answer using your requested web search and local model.")
     action = params["action"]
     if action != "auto":
         return Plan(action=action, reason="Using your selected action.")
