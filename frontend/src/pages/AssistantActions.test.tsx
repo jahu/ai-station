@@ -200,3 +200,69 @@ it("stages inline results as next-message inputs and prevents duplicate reuse", 
       .hasAttribute("disabled"),
   ).toBe(true);
 });
+
+it("stages local coding scope without granting Cursor consent", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => [
+        {
+          id: "project-1",
+          name: "AI Station",
+          updated_at: "2026-09-29T00:00:00Z",
+        },
+      ],
+    })),
+  );
+  function Composer() {
+    const [value, setValue] = useState(emptyOptions);
+    return (
+      <>
+        <AssistantActions
+          value={value}
+          onChange={setValue}
+          busy={false}
+          onUploading={() => {}}
+        />
+        <output data-testid="scope">{JSON.stringify(value.coding)}</output>
+      </>
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  fireEvent.change(screen.getByLabelText("Action"), {
+    target: { value: "coding.local" },
+  });
+  await screen.findByRole("option", { name: "AI Station" });
+  fireEvent.change(screen.getByLabelText("Project"), {
+    target: { value: "project-1" },
+  });
+  fireEvent.change(screen.getByLabelText("Selected files"), {
+    target: { value: "README.md\nsrc/app.py" },
+  });
+  expect(JSON.parse(screen.getByTestId("scope").textContent!)).toEqual({
+    project_id: "project-1",
+    expected_updated_at: "2026-09-29T00:00:00Z",
+    files: ["README.md", "src/app.py"],
+    external_ai: false,
+  });
+  expect(screen.queryByRole("checkbox")).toBeNull();
+  fireEvent.change(screen.getByLabelText("Action"), {
+    target: { value: "coding.cursor" },
+  });
+  expect(screen.getByTestId("scope").textContent).toBe("null");
+  fireEvent.click(screen.getByRole("checkbox"));
+  expect(JSON.parse(screen.getByTestId("scope").textContent!).external_ai).toBe(
+    true,
+  );
+  fireEvent.change(screen.getByLabelText("Action"), {
+    target: { value: "coding.local" },
+  });
+  expect(JSON.parse(screen.getByTestId("scope").textContent!).external_ai).toBe(
+    false,
+  );
+});

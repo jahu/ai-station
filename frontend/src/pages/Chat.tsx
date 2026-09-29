@@ -624,12 +624,16 @@ function ConversationView({
               onUploading={setReadingAttachment}
             />
           )}
-          <TextAttachments
-            attachments={attachments}
-            onChange={setAttachments}
-            busy={busy || options.image_artifact_ids.length > 0}
-            onReading={setReadingAttachment}
-          />
+          {(!orchestrator ||
+            !options.action.startsWith("coding.") ||
+            attachments.length > 0) && (
+            <TextAttachments
+              attachments={attachments}
+              onChange={setAttachments}
+              busy={busy || options.image_artifact_ids.length > 0}
+              onReading={setReadingAttachment}
+            />
+          )}
           <div className="row spread">
             <span className="muted">
               Ctrl / Cmd + Enter to send · recent context: up to 16 messages

@@ -3140,3 +3140,10 @@ pre {
   display: grid;
   gap: 8px;
 }
+
+.assistant-coding-scope label {
+  margin-top: 12px;
+}
+.assistant-coding-scope p {
+  margin-top: 12px;
+}
