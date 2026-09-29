@@ -124,3 +124,5 @@ Reviewed Coding commits use `coding.commit` Runs and a typed native job. A priva
 [Library management](library.md) separates versioned user annotations and reversible Trash from immutable execution provenance. Run history and source lineage retain access to artifacts in Trash.
 
 [Local coding proposals](local-coding.md) extend the existing owned-worktree proposal and validation flow with local inference through the private Runner bridge. The native snapshot/write boundary and review artifacts are shared across proposal providers.
+
+The central Assistant can route selected-project coding to the conversation's local model through the same local proposal workflow. A coding scope without external consent routes locally; model-generated plans cannot grant Cursor permission. Project/version/file validation remains in the shared coding enqueue boundary.

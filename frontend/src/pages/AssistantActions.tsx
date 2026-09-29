@@ -11,7 +11,7 @@ export type CodingScope = {
   project_id: string;
   expected_updated_at: string;
   files: string[];
-  external_ai: true;
+  external_ai: boolean;
 };
 export type AssistantOptions = {
   action: string;
@@ -146,9 +146,14 @@ export default function AssistantActions({
   const projects = useQuery({
     queryKey: ["coding-projects"],
     queryFn: () => api<Project[]>("/projects?limit=500"),
-    enabled: value.action === "coding.cursor",
+    enabled: value.action.startsWith("coding."),
   });
-  function scope(id: string, paths: string, allow: boolean) {
+  function scope(
+    id: string,
+    paths: string,
+    allow: boolean,
+    action = value.action,
+  ) {
     const project = projects.data?.find((p) => p.id === id);
     const selected = paths
       .split("\n")
@@ -156,13 +161,16 @@ export default function AssistantActions({
       .filter(Boolean);
     onChange({
       ...value,
+      action,
       coding:
-        allow && project && selected.length
+        (action === "coding.local" || (action === "coding.cursor" && allow)) &&
+        project &&
+        selected.length
           ? {
               project_id: project.id,
               expected_updated_at: project.updated_at,
               files: selected,
-              external_ai: true,
+              external_ai: action === "coding.cursor",
             }
           : null,
     });
@@ -203,7 +211,7 @@ export default function AssistantActions({
           aria-label="Action"
           value={value.action}
           onChange={(e) => {
-            onChange({ ...value, action: e.target.value, coding: null });
+            scope(projectId, files, false, e.target.value);
             setExternal(false);
           }}
         >
@@ -218,51 +226,54 @@ export default function AssistantActions({
           </option>
           <option value="avatar.animate">Animate portrait with speech</option>
           <option value="agent.create">Create agent</option>
+          <option value="coding.local">Coding with Local AI</option>
           <option value="coding.cursor">Coding with Cursor</option>
         </select>
       </label>
-      <div className="assistant-attachment-toolbar">
-        <Button
-          type="button"
-          variant="secondary"
-          onClick={() => imageInput.current?.click()}
-          disabled={value.image_artifact_ids.length >= 8}
-        >
-          <ImagePlus size={15} /> Add images
-        </Button>
-        <LibraryPicker
-          kind="image"
-          existing={value.image_artifact_ids}
-          limit={8 - value.image_artifact_ids.length}
-          busy={busy}
-          onSelect={(items) =>
-            onChange({
-              ...value,
-              image_artifact_ids: [
-                ...value.image_artifact_ids,
-                ...items.map((a) => a.id),
-              ],
-            })
-          }
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => voiceInput.current?.click()}
-        >
-          <Mic size={15} />{" "}
-          {value.audio_artifact_id ? "Replace voice" : "Add voice"}
-        </Button>
-        <LibraryPicker
-          kind="audio"
-          existing={value.audio_artifact_id ? [value.audio_artifact_id] : []}
-          limit={1}
-          busy={busy}
-          onSelect={(items) =>
-            onChange({ ...value, audio_artifact_id: items[0].id })
-          }
-        />
-      </div>
+      {!value.action.startsWith("coding.") && (
+        <div className="assistant-attachment-toolbar">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => imageInput.current?.click()}
+            disabled={value.image_artifact_ids.length >= 8}
+          >
+            <ImagePlus size={15} /> Add images
+          </Button>
+          <LibraryPicker
+            kind="image"
+            existing={value.image_artifact_ids}
+            limit={8 - value.image_artifact_ids.length}
+            busy={busy}
+            onSelect={(items) =>
+              onChange({
+                ...value,
+                image_artifact_ids: [
+                  ...value.image_artifact_ids,
+                  ...items.map((a) => a.id),
+                ],
+              })
+            }
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => voiceInput.current?.click()}
+          >
+            <Mic size={15} />{" "}
+            {value.audio_artifact_id ? "Replace voice" : "Add voice"}
+          </Button>
+          <LibraryPicker
+            kind="audio"
+            existing={value.audio_artifact_id ? [value.audio_artifact_id] : []}
+            limit={1}
+            busy={busy}
+            onSelect={(items) =>
+              onChange({ ...value, audio_artifact_id: items[0].id })
+            }
+          />
+        </div>
+      )}
       <input
         ref={voiceInput}
         hidden
@@ -311,93 +322,103 @@ export default function AssistantActions({
           </button>
         </div>
       )}
-      <div
-        className="assistant-reference-area"
-        onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => {
-          e.preventDefault();
-          void upload(Array.from(e.dataTransfer.files));
-        }}
-      >
-        <input
-          ref={imageInput}
-          hidden
-          aria-label="Image references"
-          type="file"
-          multiple
-          accept="image/png,image/jpeg,image/webp"
-          onChange={(e) => {
-            const files = Array.from(e.target.files ?? []);
-            e.target.value = "";
-            void upload(files);
+      {(!value.action.startsWith("coding.") ||
+        value.image_artifact_ids.length > 0) && (
+        <div
+          className="assistant-reference-area"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            void upload(Array.from(e.dataTransfer.files));
           }}
-        />
-        <p className="muted">
-          Drop images here. Order matters — for example, person first, clothing
-          second. Use the arrows to reorder.
-        </p>
-        <div className="assistant-reference-strip">
-          {value.image_artifact_ids.map((id, index) => (
-            <div className="assistant-reference" key={`${id}-${index}`}>
-              <span className="assistant-reference-number">{index + 1}</span>
-              <img
-                src={`/api/artifacts/${id}/file`}
-                alt={`Reference ${index + 1}`}
-              />
-              <button
-                className="assistant-reference-remove"
-                aria-label={`Remove reference ${index + 1}`}
-                type="button"
-                onClick={() =>
-                  onChange({
-                    ...value,
-                    image_artifact_ids: value.image_artifact_ids.filter(
-                      (_, i) => i !== index,
-                    ),
-                  })
-                }
-              >
-                <X size={14} />
-              </button>
-              <div className="assistant-reference-order">
+        >
+          <input
+            ref={imageInput}
+            hidden
+            aria-label="Image references"
+            type="file"
+            multiple
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(e) => {
+              const files = Array.from(e.target.files ?? []);
+              e.target.value = "";
+              void upload(files);
+            }}
+          />
+          <p className="muted">
+            Drop images here. Order matters — for example, person first,
+            clothing second. Use the arrows to reorder.
+          </p>
+          <div className="assistant-reference-strip">
+            {value.image_artifact_ids.map((id, index) => (
+              <div className="assistant-reference" key={`${id}-${index}`}>
+                <span className="assistant-reference-number">{index + 1}</span>
+                <img
+                  src={`/api/artifacts/${id}/file`}
+                  alt={`Reference ${index + 1}`}
+                />
                 <button
+                  className="assistant-reference-remove"
+                  aria-label={`Remove reference ${index + 1}`}
                   type="button"
-                  aria-label={`Move reference ${index + 1} earlier`}
-                  disabled={busy || index === 0}
-                  onClick={() => {
-                    const ids = [...value.image_artifact_ids];
-                    [ids[index - 1], ids[index]] = [ids[index], ids[index - 1]];
-                    onChange({ ...value, image_artifact_ids: ids });
-                  }}
-                >
-                  <ArrowLeft size={13} />
-                </button>
-                <span>Reference {index + 1}</span>
-                <button
-                  type="button"
-                  aria-label={`Move reference ${index + 1} later`}
-                  disabled={
-                    busy || index === value.image_artifact_ids.length - 1
+                  onClick={() =>
+                    onChange({
+                      ...value,
+                      image_artifact_ids: value.image_artifact_ids.filter(
+                        (_, i) => i !== index,
+                      ),
+                    })
                   }
-                  onClick={() => {
-                    const ids = [...value.image_artifact_ids];
-                    [ids[index + 1], ids[index]] = [ids[index], ids[index + 1]];
-                    onChange({ ...value, image_artifact_ids: ids });
-                  }}
                 >
-                  <ArrowRight size={13} />
+                  <X size={14} />
                 </button>
+                <div className="assistant-reference-order">
+                  <button
+                    type="button"
+                    aria-label={`Move reference ${index + 1} earlier`}
+                    disabled={busy || index === 0}
+                    onClick={() => {
+                      const ids = [...value.image_artifact_ids];
+                      [ids[index - 1], ids[index]] = [
+                        ids[index],
+                        ids[index - 1],
+                      ];
+                      onChange({ ...value, image_artifact_ids: ids });
+                    }}
+                  >
+                    <ArrowLeft size={13} />
+                  </button>
+                  <span>Reference {index + 1}</span>
+                  <button
+                    type="button"
+                    aria-label={`Move reference ${index + 1} later`}
+                    disabled={
+                      busy || index === value.image_artifact_ids.length - 1
+                    }
+                    onClick={() => {
+                      const ids = [...value.image_artifact_ids];
+                      [ids[index + 1], ids[index]] = [
+                        ids[index],
+                        ids[index + 1],
+                      ];
+                      onChange({ ...value, image_artifact_ids: ids });
+                    }}
+                  >
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-      {value.action === "coding.cursor" && (
-        <details open>
+      )}
+      {value.action.startsWith("coding.") && (
+        <details open className="assistant-coding-scope">
           <summary>Coding scope</summary>
           <label>
             Project
             <select
+              aria-label="Project"
               value={projectId}
               onChange={(e) => {
                 setProjectId(e.target.value);
@@ -426,18 +447,26 @@ export default function AssistantActions({
               }}
             />
           </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={external}
-              onChange={(e) => {
-                setExternal(e.target.checked);
-                scope(projectId, files, e.target.checked);
-              }}
-            />
-            Allow sending this instruction, project guidance and selected file
-            contents to external Cursor.
-          </label>
+          {value.action === "coding.local" ? (
+            <p className="muted">
+              Uses this conversation's local model. Changes stay in a new
+              worktree; review the diff and validation results here before
+              committing.
+            </p>
+          ) : (
+            <label>
+              <input
+                type="checkbox"
+                checked={external}
+                onChange={(e) => {
+                  setExternal(e.target.checked);
+                  scope(projectId, files, e.target.checked);
+                }}
+              />
+              Allow sending this instruction, project guidance and selected file
+              contents to external Cursor.
+            </label>
+          )}
           <ErrorNotice error={projects.error} />
         </details>
       )}

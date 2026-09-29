@@ -201,7 +201,8 @@ def test_coding_cannot_gain_external_permission_from_model(monkeypatch):
         assert len(detail["messages"][-1]["steps"]) == 1
 
 
-def test_coding_scope_dispatch_and_stale_project_rejection():
+@pytest.mark.parametrize("provider", ["cursor", "local"])
+def test_coding_scope_dispatch_and_stale_project_rejection(provider):
     from app.models import Project
 
     with session_factory()() as session:
@@ -212,13 +213,13 @@ def test_coding_scope_dispatch_and_stale_project_rejection():
             "project_id": project.id,
             "expected_updated_at": project.updated_at.isoformat(),
             "files": ["app.py"],
-            "external_ai": True,
+            "external_ai": provider == "cursor",
         }
     with TestClient(app) as client:
         cid = create(client)
         response = client.post(
             f"/api/chat/conversations/{cid}/messages",
-            json={"content": "Add feature", "action": "coding.cursor", "coding": scope},
+            json={"content": "Add feature", "action": "coding." + provider, "coding": scope},
         )
         assert response.status_code == 202
         step()
@@ -226,9 +227,15 @@ def test_coding_scope_dispatch_and_stale_project_rejection():
         child = detail["active_run"]
         assert child["project_id"] == scope["project_id"]
         assert child["executor_type"] == "worktree_prepare"
-        assert child["parameters"]["cursor"]["files"] == ["app.py"]
-        assert child["parameters"]["cursor"]["guidance"] == "Keep tests passing"
-        assert detail["messages"][-1]["steps"][-1]["location"] == "external"
+        assert child["parameters"]["local_coding" if provider == "local" else "cursor"]["files"] == ["app.py"]
+        assert (
+            child["parameters"]["local_coding" if provider == "local" else "cursor"]["guidance"]
+            == "Keep tests passing"
+        )
+        assert detail["messages"][-1]["steps"][-1]["location"] == (
+            "local" if provider == "local" else "external"
+        )
+        assert ("external_ai" in response.json()["effective_permissions"]) == (provider == "cursor")
         assert client.post(f"/api/runs/{child['id']}/cancel").status_code == 200
         assert (
             client.get(f"/api/chat/conversations/{cid}").json()["messages"][-1]["task_status"] == "canceled"
@@ -236,9 +243,60 @@ def test_coding_scope_dispatch_and_stale_project_rejection():
         scope["expected_updated_at"] = "2000-01-01T00:00:00Z"
         client.post(
             f"/api/chat/conversations/{cid}/messages",
-            json={"content": "Add feature", "action": "coding.cursor", "coding": scope},
+            json={"content": "Add feature", "action": "coding." + provider, "coding": scope},
         )
         step()
         detail = client.get(f"/api/chat/conversations/{cid}").json()
         assert detail["active_run"] is None
         assert "settings changed" in detail["messages"][-1]["content"]
+
+
+@pytest.mark.parametrize("action", ["auto", "coding.cursor", "coding.local"])
+def test_local_coding_scope_cannot_authorize_external_execution(action, monkeypatch):
+    from app.models import Project
+
+    async def unwanted_plan(*args):
+        raise AssertionError("Explicit coding scope should not invoke a planner")
+
+    monkeypatch.setattr(AssistantExecutor, "plan", unwanted_plan)
+    with session_factory()() as session:
+        project = Project(name="local", repo_path="/allowed/local")
+        session.add(project)
+        session.commit()
+        scope = {
+            "project_id": project.id,
+            "expected_updated_at": project.updated_at.isoformat(),
+            "files": ["README.md"],
+        }
+    with TestClient(app) as client:
+        cid = create(client)
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={"content": "Update documentation", "action": action, "coding": scope},
+        )
+        assert response.status_code == 202, response.text
+        assert "external_ai" not in response.json()["effective_permissions"]
+        step()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        child = detail["active_run"]
+        if action == "coding.cursor":
+            assert child is None
+            assert "explicitly allow sharing" in detail["messages"][-1]["content"]
+        else:
+            assert child["parameters"]["local_coding"]["model"] == response.json()["parameters"]["model"]
+            assert "cursor" not in child["parameters"]
+            assert child["metadata"]["next_executor"] == "local_proposal"
+
+
+@pytest.mark.parametrize("action", ["coding.local", "coding.cursor"])
+def test_coding_rejects_media_instead_of_silently_ignoring_it(action):
+    with TestClient(app) as client:
+        cid = create(client)
+        reference = image(client)
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={"content": "Change code", "action": action, "image_artifact_ids": [reference]},
+        )
+        assert response.status_code == 422
+        assert "Remove media" in response.json()["detail"]
+        assert client.get(f"/api/chat/conversations/{cid}").json()["active_run"] is None
