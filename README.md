@@ -169,3 +169,9 @@ After a Coding proposal and its configured validation pass, inspect the diff and
 Open **Coding → Local AI**, choose a project and model using the same llama.cpp/local-server picker as Chat, describe the change and select up to ten source paths. AI Station creates an isolated worktree, applies a checked proposal, runs saved validation and presents the diff for review. No external-AI consent is needed for local execution. See [local coding](docs/local-coding.md) for verified behavior and the opt-in real-model smoke.
 
 In the central Assistant, choose **Coding with Local AI**, select the project and source paths, and send your instruction. It uses the model selected for that conversation and shows progress and review artifacts in the same chat.
+
+### Optional web search
+
+In Chat or the Platform assistant, turn on **Search the web** before sending. Use the optional **Search query** field to send a short public query instead of the message itself. The local model receives up to five result snippets; clickable source cards and the search timestamp remain attached to the answer. Search is off by default, and conversation history and attachments are never sent to search engines.
+
+Normal `./scripts/start.sh` and development startup include a private, pinned SearXNG service with no host port or credentials. `AI_STATION_WEB_SEARCH_URL` overrides the trusted provider endpoint; native development must configure one explicitly. A failed search remains visible and can be canceled. This is web search, not autonomous page browsing. See [contracts and verification](docs/web-search.md).

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 
 @dataclass(frozen=True)
@@ -128,14 +128,23 @@ TOOLS: dict[str, ToolSpec] = {
     ),
     "web_search": ToolSpec(
         name="web_search",
-        description="Web search. Unavailable until a search provider is configured.",
+        description="Opt-in public web search with auditable sources through configured SearXNG.",
         risk_level="medium",
         required_permissions=("network_read",),
         timeout=30,
         execution_target="container",
         operational=False,
-        input_schema=_schema({"query": {"type": "string"}}, ["query"]),
-        output_schema=_schema({}, []),
+        input_schema=_schema({"query": {"type": "string", "minLength": 1, "maxLength": 500}}, ["query"]),
+        output_schema=_schema(
+            {
+                "query": {"type": "string"},
+                "sources": {"type": "array"},
+                "partial": {"type": "boolean"},
+                "searched_at": {"type": "string"},
+                "provider": {"type": "string"},
+            },
+            ["query", "sources", "partial", "searched_at", "provider"],
+        ),
     ),
     "browser": ToolSpec(
         name="browser",
@@ -152,8 +161,17 @@ TOOLS: dict[str, ToolSpec] = {
 
 
 def list_tools() -> list[ToolSpec]:
-    return list(TOOLS.values())
+    return [configured(tool) for tool in TOOLS.values()]
+
+
+def configured(tool: ToolSpec) -> ToolSpec:
+    from app.config import get_settings
+
+    return (
+        replace(tool, operational=bool(get_settings().web_search_url)) if tool.name == "web_search" else tool
+    )
 
 
 def get_tool(name: str) -> ToolSpec | None:
-    return TOOLS.get(name)
+    tool = TOOLS.get(name)
+    return configured(tool) if tool else None

@@ -1,0 +1,13 @@
+use_default_settings:
+  engines:
+    keep_only: [brave, bing, duckduckgo]
+server:
+  limiter: false
+  image_proxy: false
+search:
+  formats: [json]
+  safe_search: 1
+  autocomplete: ""
+outgoing:
+  request_timeout: 7.0
+  max_request_timeout: 10.0

@@ -172,6 +172,7 @@ def detail(conversation_id: UUID, session: DB):
 
 def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
     endpoint = endpoint_or_error(row.model, session)
+    web_search = user.metadata_json.get("web_search")
     summary = latest_summary(session, row.id)
     summary_entry = summary_memory(session, summary)
     history = list(
@@ -273,6 +274,7 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
         executor_type="chat",
         execution_target="container",
         parameters={
+            "web_search": web_search,
             "provider": row.provider,
             "endpoint": endpoint,
             "model": row.model,
@@ -288,7 +290,7 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
             if summary_entry
             else None,
         },
-        permissions=[],
+        permissions=["network_read"] if web_search else [],
         retry_class="inspect",
         parent_run_id=parent_run_id,
     )
@@ -321,6 +323,14 @@ def send(conversation_id: UUID, body: MessageBody, session: DB):
         content=message_content(body.content, body.attachments),
         metadata_json={"user_text": body.content} if body.attachments else {},
     )
+    from app.web_search import selection
+
+    try:
+        search_options = selection(body.web_search, body.content)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    if search_options:
+        user.metadata_json = {**user.metadata_json, "web_search": search_options}
     session.add(user)
     session.flush()
     if body.attachments:

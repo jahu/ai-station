@@ -38,7 +38,7 @@ Runs store an effective permission list. There is no universal full-access flag.
 
 ## Network tools
 
-HTTP fetch is a real tool and is off unless the run has `network_read` (GET) or `network_external` (POST). URLs are resolved and rejected when any address is loopback, private, link-local, reserved, or multicast. That blocks trivial SSRF to the host's model servers and cloud metadata endpoints. Web search and browser automation stay unavailable until a real provider is configured. They are not stubbed as success.
+HTTP fetch is a real tool and is off unless the run has `network_read` (GET) or `network_external` (POST). URLs are resolved and rejected when any address is loopback, private, link-local, reserved, or multicast. That blocks trivial SSRF to the host's model servers and cloud metadata endpoints. Chat web search is an explicit per-message opt-in through a configured private SearXNG service. Only the query leaves the control plane; history, memory and attachments are not sent to search engines. Results are bounded untrusted snippets, with persisted provenance; arbitrary result pages are not fetched. Browser automation remains unavailable.
 
 ## Secrets
 

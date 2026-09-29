@@ -17,6 +17,7 @@ x-control-plane: &control-plane
     AI_STATION_LLM_BASE_URL: ${AI_STATION_LLM_CONTAINER_BASE_URL:-http://host.docker.internal:8080/v1}
     AI_STATION_LLM_TRANSPORT: ${AI_STATION_LLM_TRANSPORT:-runner}
     AI_STATION_LLM_HOST_BASE_URL: ${AI_STATION_LLM_BASE_URL:-http://127.0.0.1:11434/v1}
+    AI_STATION_WEB_SEARCH_URL: ${AI_STATION_WEB_SEARCH_URL:-http://search:8080}
     AI_STATION_LLM_MODEL: ${AI_STATION_LLM_MODEL:-}
     AI_STATION_LLM_API_KEY: ${AI_STATION_LLM_API_KEY:-}
     AI_STATION_ENABLE_TEST_EXECUTOR: ${AI_STATION_ENABLE_TEST_EXECUTOR:-false}
@@ -58,3 +59,31 @@ services:
     depends_on:
       ai-station:
         condition: service_healthy
+
+  search:
+    image: searxng/searxng@sha256:eb2a404db174d33a04cd9f2e519bcae2ca722a58923510652cc1314be94e8e63
+    user: "${AI_STATION_UID:-1000}:${AI_STATION_GID:-1000}"
+    init: true
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 512m
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+      - /var/cache/searxng:rw,noexec,nosuid,size=64m,uid=${AI_STATION_UID:-1000},gid=${AI_STATION_GID:-1000}
+    volumes:
+      - ./config/search/settings.yml:/etc/searxng/settings.yml:ro
+    environment:
+      SEARXNG_SETTINGS_PATH: /etc/searxng/settings.yml
+      GRANIAN_WORKERS: "1"
+      GRANIAN_HOST: "0.0.0.0"
+    entrypoint: [/bin/sh, -c]
+    command:
+      - 'export SEARXNG_SECRET="$$(/usr/local/searxng/.venv/bin/python -c "import secrets; print(secrets.token_hex(32))")"; exec /usr/local/searxng/.venv/bin/granian searx.webapp:app'
+    healthcheck:
+      test: [CMD, /usr/local/searxng/.venv/bin/python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 15s
