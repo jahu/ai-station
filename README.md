@@ -26,7 +26,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory.
 - Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
 
-The bounded Cursor adapter is operational. Other coding-agent modules remain inactive drafts; reviewed changes can be committed to the owned task branch; pushes and PR actions are not yet exposed. Saved project validation runs in prepared worktrees through the native sandbox.
+The bounded Cursor and Local AI adapters are operational. Codex and Claude Code modules remain inactive drafts; reviewed changes can be committed to the owned task branch; pushes and PR actions are not yet exposed. Saved project validation runs in prepared worktrees through the native sandbox.
 
 ## Prerequisites and installation
 
@@ -162,3 +162,8 @@ Run `./scripts/check-all.sh` for Python tests/lint, frontend checks/tests/build,
 Portrait-driven video is available in **Avatars** and **Video**, including assistant dispatch and inline playback. Configure the existing offline EchoMimic installation as described in [avatar execution](docs/avatars.md).
 
 After a Coding proposal and its configured validation pass, inspect the diff and choose **Commit reviewed changes**. This queues a local task-branch commit containing exactly the reviewed file snapshots. Changed files, staged edits and protected branches are rejected. See [reviewed commits](docs/coding-commits.md).
+
+
+### Local coding
+
+Open **Coding → Local AI**, choose a project and model using the same llama.cpp/local-server picker as Chat, describe the change and select up to ten source paths. AI Station creates an isolated worktree, applies a checked proposal, runs saved validation and presents the diff for review. No external-AI consent is needed for local execution. See [local coding](docs/local-coding.md) for verified behavior and the opt-in real-model smoke.

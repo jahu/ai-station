@@ -20,6 +20,7 @@ from app.config import get_settings
 from app.cursor_executor import CursorProposalExecutor
 from app.events import append_event
 from app.llama import LlamaExecutor
+from app.local_coding import LocalProposalExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
 from app.paths import safe_join, validate_relative
@@ -285,6 +286,7 @@ EXECUTORS = {
     "worktree_prepare": WorktreeExecutor(),
     "project_validation": ProjectValidationExecutor(),
     "cursor_proposal": CursorProposalExecutor(),
+    "local_proposal": LocalProposalExecutor(),
     "model_discovery": ModelDiscoveryExecutor(),
     "agent": LocalAgentExecutor(),
     "runtime_observation": RuntimeObservationExecutor(),

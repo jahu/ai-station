@@ -1,3 +1,5 @@
+import LlamaModels from "./LlamaModels";
+import { Cpu, Cloud } from "lucide-react";
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
@@ -19,6 +21,17 @@ export default function Coding() {
   const [files, setFiles] = useState("README.md");
   const [model, setModel] = useState("");
   const [external, setExternal] = useState(false);
+  const [executor, setExecutor] = useState("cursor");
+  const [localModel, setLocalModel] = useState("");
+  const [modelPending, setModelPending] = useState(false);
+  const provider = useQuery({
+    queryKey: ["chat-provider"],
+    queryFn: () =>
+      api<{ models: string[]; default_model: string }>("/chat/provider"),
+    enabled: executor === "local",
+  });
+  const selectedModel = localModel || provider.data?.default_model || "";
+  const local = executor === "local";
   const projects = useQuery({
     queryKey: ["coding-projects"],
     queryFn: () => api<Project[]>("/projects?limit=500"),
@@ -26,7 +39,7 @@ export default function Coding() {
   const project = projects.data?.find((p) => p.id === projectId);
   const create = useMutation({
     mutationFn: () =>
-      api<Run>("/coding/cursor", {
+      api<Run>(`/coding/${executor}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -37,8 +50,8 @@ export default function Coding() {
             .split("\n")
             .map((p) => p.trim())
             .filter(Boolean),
-          model,
-          external_ai: external,
+          model: local ? selectedModel : model,
+          ...(!local ? { external_ai: external } : {}),
         }),
       }),
     onSuccess: (run) => navigate(`/runs/${run.id}`),
@@ -49,19 +62,55 @@ export default function Coding() {
         Propose source changes in a fresh task worktree, then inspect validation
         and the diff.
       </PageTitle>
-      <ErrorNotice error={projects.error ?? create.error} />
+      <ErrorNotice
+        error={
+          projects.error ?? create.error ?? (local ? provider.error : null)
+        }
+      />
       {projects.isPending ? (
         <Loading />
       ) : (
         <div className="image-workspace">
           <form
-            className="panel content-panel image-form"
+            className="panel content-panel image-form coding-form"
             onSubmit={(e) => {
               e.preventDefault();
-              create.mutate();
+              if (!modelPending) create.mutate();
             }}
           >
-            <fieldset disabled={create.isPending}>
+            <fieldset disabled={create.isPending || modelPending}>
+              <div
+                className="coding-executor-options"
+                role="group"
+                aria-label="Coding executor"
+              >
+                <button
+                  type="button"
+                  aria-label="Local AI llama.cpp or local server"
+                  aria-pressed={local}
+                  onClick={() => {
+                    setExecutor("local");
+                    setExternal(false);
+                  }}
+                >
+                  <Cpu size={19} />
+                  <span>
+                    <strong>Local AI</strong>
+                    <small>llama.cpp / local server</small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={!local}
+                  onClick={() => setExecutor("cursor")}
+                >
+                  <Cloud size={19} />
+                  <span>
+                    <strong>Cursor</strong>
+                    <small>External AI · explicit consent</small>
+                  </span>
+                </button>
+              </div>
               <label>
                 Project
                 <select
@@ -104,45 +153,67 @@ export default function Coding() {
                 excluded; existing content is limited to 32 KB per file and 64
                 KB total.
               </p>
-              <label>
-                Cursor model
-                <input
-                  value={model}
-                  maxLength={100}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder="Auto (default)"
+              {local ? (
+                <LlamaModels
+                  value={selectedModel}
+                  models={provider.data?.models ?? []}
+                  busy={create.isPending}
+                  onSelect={setLocalModel}
+                  onBusy={setModelPending}
                 />
-              </label>
-              <label className="project-checkbox">
-                <input
-                  type="checkbox"
-                  checked={external}
-                  onChange={(e) => setExternal(e.target.checked)}
-                  required
-                />
-                Allow sending this task, project guidance and selected file
-                contents to external Cursor AI.
-              </label>
+              ) : (
+                <>
+                  <label>
+                    Cursor model
+                    <input
+                      value={model}
+                      maxLength={100}
+                      onChange={(e) => setModel(e.target.value)}
+                      placeholder="Auto (default)"
+                    />
+                  </label>
+                  <label className="project-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={external}
+                      onChange={(e) => setExternal(e.target.checked)}
+                      required
+                    />
+                    Allow sending this task, project guidance and selected file
+                    contents to external Cursor AI.
+                  </label>
+                </>
+              )}
               <Button
                 type="submit"
-                disabled={!project || !external || !prompt.trim()}
+                disabled={
+                  !project ||
+                  (local ? !selectedModel || modelPending : !external) ||
+                  !prompt.trim()
+                }
               >
                 {create.isPending
                   ? "Queueing…"
-                  : "Create worktree and start Cursor"}
+                  : local
+                    ? "Create worktree and start Local AI"
+                    : "Create worktree and start Cursor"}
               </Button>
             </fieldset>
           </form>
           <aside className="panel content-panel">
-            <span className="chip">EXTERNAL AI · HOST EXECUTION</span>
+            <span className="chip">
+              {local
+                ? "LOCAL AI · HOST EXECUTION"
+                : "EXTERNAL AI · HOST EXECUTION"}
+            </span>
             <h2 className="mt">Review before integration</h2>
             <p>
               A new branch starts from{" "}
               {project?.integration_branch ??
                 "the project's integration branch"}
-              . Cursor proposes file replacements with tools disabled. AI
-              Station checks and applies them only to the selected paths in the
-              new worktree.
+              . {local ? "Your local model" : "Cursor"} proposes file
+              replacements with tools disabled. AI Station checks and applies
+              them only to the selected paths in the new worktree.
             </p>
             <p>
               Saved test, lint and build commands run afterward in the native
@@ -150,13 +221,13 @@ export default function Coding() {
               inspect the separate validation Run and diff before accepting it.
             </p>
             <p>
-              The original checkout stays intact. No commit, push, merge or
-              deployment is performed.
+              The original checkout stays intact. After successful validation,
+              you can review and commit the selected changes to the task branch.
+              Push, merge and deployment remain separate.
             </p>
             <p className="muted">
-              This first adapter supports text replacements, not repository
-              exploration, file deletion or arbitrary agent commands. Codex,
-              Claude Code and local coding adapters remain unavailable.
+              The model can change only the files listed here. Add any new file
+              paths before starting.
             </p>
             <Link className="text-link" to="/projects">
               Configure projects and validation commands →

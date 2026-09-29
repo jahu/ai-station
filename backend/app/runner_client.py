@@ -109,6 +109,12 @@ class RunnerClient:
     def cursor_proposal_report(self, run_id: str) -> dict:
         return self.request("GET", f"/v1/cursor-proposal/{run_id}")
 
+    def start_local_proposal(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/runs/local-coding-proposal", payload)
+
+    def local_proposal_report(self, run_id: str) -> dict:
+        return self.request("GET", f"/v1/local-coding-proposal/{run_id}")
+
     def start_validation(self, payload: dict) -> dict:
         return self.request("POST", "/v1/runs/validation", payload)
 

@@ -30,6 +30,7 @@ from app.images import MAX_UPLOAD
 from app.images import router as image_router
 from app.library import router as library_router
 from app.llama import router as llama_router
+from app.local_coding import router as local_coding_router
 from app.memory_api import router as memory_router
 from app.model_registry import router as model_router
 from app.models import Run, Setting, WorkerRow
@@ -270,6 +271,7 @@ def telemetry_history(session: DB, limit: int = Query(240, ge=1, le=2000)):
 
 
 app.include_router(cursor_coding_router)
+app.include_router(local_coding_router)
 app.include_router(dashboard_router)
 app.include_router(image_router)
 app.include_router(chat_router)

@@ -20,6 +20,7 @@ type Review = {
 };
 
 export default function CodingReview({ run }: { run: Run }) {
+  const local = run.metadata?.execution_location === "local";
   const next = run.metadata?.coding_run_id;
   const validation = run.metadata?.validation_run_id;
   const review = run.metadata?.coding_review as Review | undefined;
@@ -27,11 +28,11 @@ export default function CodingReview({ run }: { run: Run }) {
     return null;
   return (
     <section className="panel content-panel">
-      <span className="chip">EXTERNAL CURSOR AI</span>
+      <span className="chip">{local ? "LOCAL AI" : "EXTERNAL CURSOR AI"}</span>
       {typeof next === "string" && (
         <p>
           <Link className="text-link" to={`/runs/${next}`}>
-            Open Cursor execution →
+            Open {local ? "local coding" : "Cursor"} execution →
           </Link>
         </p>
       )}
