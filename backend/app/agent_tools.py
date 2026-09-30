@@ -1,6 +1,6 @@
 """Only tools implemented for the local agent execution boundary are advertised."""
 
-from app.tools import ToolSpec
+from app.tools import TOOLS, ToolSpec, get_tool
 
 AGENT_TOOLS = {
     "system_snapshot": ToolSpec(
@@ -27,7 +27,6 @@ AGENT_TOOLS = {
     ),
 }
 for key, label in [
-    ("web_search", "Web search"),
     ("http_fetch", "HTTP fetching"),
     ("browser", "Browser automation"),
     ("read_file", "Host file reading"),
@@ -47,3 +46,10 @@ for key, label in [
 
 def effective_permissions(tools):
     return sorted({permission for name in tools for permission in AGENT_TOOLS[name].required_permissions})
+
+
+AGENT_TOOLS["web_search"] = TOOLS["web_search"]
+
+
+def agent_tool(name):
+    return get_tool(name) if name == "web_search" else AGENT_TOOLS[name]

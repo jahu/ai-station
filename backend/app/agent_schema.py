@@ -7,7 +7,7 @@ from uuid import UUID
 from croniter import croniter
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
-from app.agent_tools import AGENT_TOOLS
+from app.agent_tools import AGENT_TOOLS, agent_tool
 from app.db import utcnow
 
 
@@ -20,6 +20,7 @@ class AgentSettings(BaseModel):
     runtime: Literal["openai-compatible"] = "openai-compatible"
     provider: Literal["local-openai-compatible"] = "local-openai-compatible"
     model: str = Field(default="", max_length=200)
+    search_query: str = Field(default="", max_length=500)
     tools: list[str] = Field(default_factory=list, max_length=6)
     skills: list[str] = Field(default_factory=list, max_length=0)
     memory_scope: Literal["agent"] = "agent"
@@ -57,9 +58,11 @@ class AgentSettings(BaseModel):
                 raise ValueError("One-shot time requires an explicit timezone")
             self.run_at = self.run_at.astimezone(timezone.utc)
         if self.enabled:
+            if "web_search" in self.tools and not self.search_query:
+                raise ValueError("web_search requires an explicit public search query before activation")
             if not self.model:
                 raise ValueError("Select a local model before enabling the agent")
-            unavailable = [name for name in self.tools if not AGENT_TOOLS[name].operational]
+            unavailable = [name for name in self.tools if not agent_tool(name).operational]
             if unavailable:
                 raise ValueError("Unavailable tools prevent activation: " + ", ".join(unavailable))
             if self.run_at and self.run_at <= utcnow():

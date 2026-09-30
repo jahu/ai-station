@@ -10,6 +10,7 @@ import {
   PageTitle,
 } from "../components/common";
 import { Button } from "../components/ui/button";
+import LlamaModels from "./LlamaModels";
 import { time } from "../lib/utils";
 
 type Trigger = "manual" | "interval" | "cron" | "datetime";
@@ -21,6 +22,7 @@ interface Agent {
   system_prompt: string;
   model: string;
   tools: string[];
+  search_query: string;
   trigger: Trigger;
   cron_expr: string;
   interval_seconds: number | null;
@@ -62,6 +64,7 @@ export function Agents() {
   const navigate = useNavigate();
   const [instruction, setInstruction] = useState("");
   const [model, setModel] = useState("");
+  const [modelBusy, setModelBusy] = useState(false);
   const [offset, setOffset] = useState(0);
   const agents = useQuery({
     queryKey: ["agents", offset],
@@ -94,7 +97,7 @@ export function Agents() {
         className="panel agent-form"
         onSubmit={(event) => {
           event.preventDefault();
-          draft.mutate();
+          if (!modelBusy) draft.mutate();
         }}
       >
         <h2>Create an agent draft</h2>
@@ -114,26 +117,18 @@ export function Agents() {
             placeholder="Every morning summarize my workstation's GPU and memory usage."
           />
         </label>
-        <label>
-          Local model
-          <input
-            list="agent-models"
-            maxLength={200}
-            value={model}
-            placeholder={
-              provider.data?.default_model || "Configured local model"
-            }
-            onChange={(event) => setModel(event.target.value)}
-          />
-        </label>
-        <datalist id="agent-models">
-          {provider.data?.models.map((name) => (
-            <option key={name} value={name} />
-          ))}
-        </datalist>
+        <LlamaModels
+          value={model || provider.data?.default_model || ""}
+          models={provider.data?.models ?? []}
+          onSelect={setModel}
+          onBusy={setModelBusy}
+          busy={draft.isPending}
+        />
         <ErrorNotice error={draft.error} />
         <div>
-          <Button disabled={draft.isPending || !instruction.trim()}>
+          <Button
+            disabled={draft.isPending || modelBusy || !instruction.trim()}
+          >
             Create draft
           </Button>
         </div>
@@ -318,6 +313,12 @@ export function AgentDetail() {
 function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
   const cache = useQueryClient();
   const [values, setValues] = useState(agent);
+  const [modelBusy, setModelBusy] = useState(false);
+  const provider = useQuery({
+    queryKey: ["chat-provider"],
+    queryFn: () =>
+      api<{ models: string[]; default_model: string }>("/chat/provider"),
+  });
   const tools = useQuery({
     queryKey: ["agent-tools"],
     queryFn: () => api<Tool[]>("/agents/tools"),
@@ -336,6 +337,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           system_prompt: values.system_prompt,
           model: values.model,
           tools: values.tools,
+          search_query: values.search_query ?? "",
           trigger: values.trigger,
           cron_expr: values.trigger === "cron" ? values.cron_expr : "",
           interval_seconds:
@@ -361,7 +363,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
       className="panel agent-form"
       onSubmit={(event) => {
         event.preventDefault();
-        save.mutate();
+        if (!modelBusy && !active && !stale) save.mutate();
       }}
     >
       <h2>Definition</h2>
@@ -390,15 +392,13 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             onChange={(e) => update("name", e.target.value)}
           />
         </label>
-        <label>
-          Model
-          <input
-            required
-            maxLength={200}
-            value={values.model}
-            onChange={(e) => update("model", e.target.value)}
-          />
-        </label>
+        <LlamaModels
+          value={values.model}
+          models={provider.data?.models ?? []}
+          onSelect={(model) => update("model", model)}
+          onBusy={setModelBusy}
+          busy={active || save.isPending}
+        />
         <label className="agent-wide">
           Description
           <input
@@ -500,6 +500,27 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             onChange={(e) => update("output_expectation", e.target.value)}
           />
         </label>
+        {values.tools.includes("web_search") && (
+          <section className="agent-wide agent-search-settings">
+            <h3>Internet research</h3>
+            <label>
+              Public search query
+              <input
+                required
+                maxLength={500}
+                value={values.search_query ?? ""}
+                onChange={(e) => update("search_query", e.target.value)}
+                placeholder="e.g. new open-weight language models GPU benchmarks"
+              />
+            </label>
+            <p className="muted">
+              This exact query is sent to search engines on each execution. Your
+              goal, memory and other context stay with the local model. Review
+              it before enabling the agent.
+            </p>
+            <span className="chip">Network permission · search only</span>
+          </section>
+        )}
         <div className="agent-wide">
           <h3>Tools</h3>
           <p className="muted">
@@ -536,7 +557,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
       </fieldset>
       <ErrorNotice error={save.error ?? tools.error} />
       <div>
-        <Button disabled={active || stale || save.isPending}>
+        <Button disabled={active || stale || modelBusy || save.isPending}>
           Save definition
         </Button>
       </div>

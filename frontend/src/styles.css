@@ -3225,3 +3225,17 @@ pre {
   font-weight: 500;
   line-height: 1.5;
 }
+
+.agent-search-settings {
+  border: 1px solid #526c3b;
+  border-radius: 10px;
+  padding: 18px;
+  background: #1b2418;
+}
+.agent-search-settings label {
+  margin: 14px 0 10px;
+}
+.agent-search-settings p {
+  margin-bottom: 12px;
+  line-height: 1.6;
+}

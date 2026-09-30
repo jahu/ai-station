@@ -128,3 +128,5 @@ Reviewed Coding commits use `coding.commit` Runs and a typed native job. A priva
 The central Assistant can route selected-project coding to the conversation's local model through the same local proposal workflow. A coding scope without external consent routes locally; model-generated plans cannot grant Cursor permission. Project/version/file validation remains in the shared coding enqueue boundary.
 
 Optional Chat web search is a permissioned worker tool inside the existing Chat Run. It uses a private SearXNG service and stores sources as events/artifacts before passing untrusted snippets to local inference. The switch is off by default; model-generated routing cannot enable it. See [web search](web-search.md).
+
+Research agents reuse the same bounded search tool as Chat. An explicit saved query is required before activating web_search, and only that query reaches search engines. Manual and scheduled executions snapshot the query and network permission in ordinary Runs; sources are recorded before local report generation. No browser/page-fetch capability or model-generated network permission is introduced.
