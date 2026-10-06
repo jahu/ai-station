@@ -1,12 +1,12 @@
 # Local coding proposals
 
-The local coding adapter extends the existing bounded proposal workflow: Task → owned worktree preparation → local model proposal → checked file replacements → configured validation → review → optional reviewed commit. The model receives only selected UTF-8 source snapshots and project guidance, through the configured local inference endpoint or an owned llama.cpp instance. It has no tools or shell access.
+The local coding adapter extends the existing bounded proposal workflow: Task → owned worktree preparation → local model proposal → checked file replacements → configured validation → review → optional reviewed commit. The model receives UTF-8 source snapshots and project guidance through the configured local inference endpoint or an owned llama.cpp instance. It can optionally find the relevant files with typed read-only repository tools; it never receives shell access.
 
 The control plane snapshots the model and project configuration. Managed llama.cpp loading is a normal prerequisite Run; active coding consumers protect their model from idle eviction. Native request ownership, process-group cancellation and conservative interrupted-run recovery use the same contracts as Cursor. Model output must be one bounded JSON proposal for selected paths; malformed, truncated, tool-calling or failed responses never authorize writes. Worktree identity and input hashes are checked again after inference.
 
 Local execution requires filesystem_read, workspace_write, git_read and network_read for the configured local inference bridge. It grants no external_ai permission, caller-selected URL, model installation or arbitrary command execution. Secrets remain in the Runner's configured provider; the coding subprocess communicates over its private Unix socket. A confirmed proposal produces the existing diff and JSON review artifacts and queues trusted project validation. Successful generation does not mean successful validation or approval.
 
-Initial scope remains selected-file proposals, not autonomous whole-repository exploration. No automatic retry, push, merge or deployment is introduced. Cancellation/interruption preserves any partial worktree changes for inspection.
+Repository exploration can select the source context automatically; code application remains a checked proposal followed by saved validation. Automatic repair iterations after failed validation are not yet implemented. No automatic retry, push, merge or deployment is introduced. Cancellation/interruption preserves any partial worktree changes for inspection.
 
 The first adapter uses a 2048-token response budget and a five-minute inference deadline. Choose a context size that accommodates the selected source text before first model load. Truncated output is rejected rather than partially applied. Normal integration tests use a fake UDS inference service and real disposable Git repositories; real local-model verification is explicitly opt-in.
 
@@ -23,3 +23,13 @@ AI_STATION_SMOKE_LLAMA_INSTANCE=<ready-instance-uuid> \
 ```
 
 The smoke does not load or stop models, modify registered projects, or create a production conversation. It forwards only the disposable test's source snapshot through the private Runner bridge.
+
+## Automatic source discovery
+
+In Coding → Local AI or Assistant → Coding with Local AI, keep **Let Local AI find the relevant files** enabled. Choose the project/model and describe the task; no manual file list is required. The Runner allocates the usual fresh worktree, then accepts only typed `list_files`, literal `search_files`, `read_file` and `finish` operations. The final selection enters the existing proposal, validation and review path. Disable the switch to retain explicit file selection. Cursor keeps explicit selected-file consent.
+
+Exploration allows up to eight requests within the job's existing five-minute deadline. Listings return 100 paths per page, search examines at most 500 matching paths and returns 30 matching lines, and reads retain the existing 32 KB/file source boundaries. Git supplies tracked paths; hidden/credential paths and symlink escapes are excluded. Model output never becomes a command or endpoint. Invalid operations, incomplete responses and exhausted budgets fail before proposal application. Requests appear in captured output; successful review artifacts preserve all observations and emit `coding.exploration.completed`. Expand Repository exploration in the review to inspect them.
+
+The real-model opt-in test also accepts `AI_STATION_SMOKE_LOCAL_MODEL` and `AI_STATION_SMOKE_LOCAL_ENDPOINT` when using the Runner's already configured local server instead of `AI_STATION_SMOKE_LLAMA_INSTANCE`. Normal tests remain fake-inference only.
+
+Verified 2026-10-06 with the existing local `qwen3:8b` provider: list repository files → read the introduction → select its path → generate and apply the expected replacement in a disposable owned worktree. Original checkout and index remained unchanged. A first real attempt exposed reasoning truncation; structured coding prompts now explicitly request JSON without reasoning, and the corrected real test passed. Fake-provider tests cover the shared validation/commit workflow, malformed operations, path boundaries and cancellation during exploration.

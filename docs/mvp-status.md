@@ -32,3 +32,5 @@ Real local compatible-provider completion was verified; all six real image/GPU s
 The central Assistant supports explicit capability routing, local/consented Cursor coding and media results; a general multi-step tool-using orchestrator, external connectors, cloud-provider Chat and multi-node execution are still incomplete. The initial MVP acceptance above must not be read as 100% of the full product specification.
 
 - Optional Chat web search: explicit switch and editable public query, private SearXNG, persisted source cards/events/artifact, cancellation and visible failure. Real browser → search → local 27B response passed. General page browsing remains future work. Agents now reuse the same search tool with explicit saved queries, ordinary scheduled/manual Runs and full report/source rendering.
+
+- Local Coding and Assistant now support automatic source discovery: typed listing/search/read operations inside the owned worktree, recorded exploration, checked proposals and existing validation/review. Real local Qwen 8B exploration/edit smoke passed with an unchanged original checkout. Multi-iteration repair after failed validation remains unfinished.

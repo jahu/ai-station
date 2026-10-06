@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError, model_validator
 from sqlalchemy import select
 
 from app.db import utcnow
@@ -41,8 +41,17 @@ class CodingScope(BaseModel):
     model_config = ConfigDict(extra="forbid")
     project_id: UUID
     expected_updated_at: datetime
-    files: list[Annotated[str, Field(min_length=1, max_length=300)]] = Field(min_length=1, max_length=10)
+    files: list[Annotated[str, Field(min_length=1, max_length=300)]] = Field(
+        default_factory=list, max_length=10
+    )
     external_ai: bool = False
+    explore: StrictBool = False
+
+    @model_validator(mode="after")
+    def selection(self):
+        if self.explore and (self.external_ai or self.files) or not self.explore and not self.files:
+            raise ValueError("Choose local repository exploration or explicit source files")
+        return self
 
 
 class AssistantInputs(BaseModel):
@@ -331,7 +340,10 @@ class AssistantExecutor:
                     session, body, provider="local", task=run.task, parent_run_id=run.id
                 )
             else:
-                body = CursorTask(**params["coding"], prompt=params["content"])
+                body = CursorTask(
+                    **{key: value for key, value in params["coding"].items() if key != "explore"},
+                    prompt=params["content"],
+                )
                 child = enqueue_cursor_task(session, body, task=run.task, parent_run_id=run.id)
         except (ValidationError, HTTPException, ProviderError) as exc:
             message.content = (

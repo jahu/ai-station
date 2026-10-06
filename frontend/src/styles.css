@@ -3276,3 +3276,16 @@ pre {
   margin: 20px 0 12px;
   color: var(--muted);
 }
+
+.coding-exploration {
+  max-height: 440px;
+  overflow: auto;
+  padding: 16px 0;
+}
+.coding-exploration article {
+  margin-bottom: 16px;
+}
+.coding-exploration pre {
+  max-height: 240px;
+  overflow: auto;
+}

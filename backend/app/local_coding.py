@@ -3,7 +3,7 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import Field
+from pydantic import Field, StrictBool, model_validator
 from sqlalchemy.orm import Session
 
 from app.coding_proposal_executor import CodingProposalExecutor
@@ -18,6 +18,16 @@ router = APIRouter(prefix="/api/coding")
 # Keep common input limits without accepting Cursor's external-AI permission.
 class LocalCodingTask(CodingTask):
     model: str = Field(min_length=1, max_length=200)
+    explore: StrictBool = False
+    files: list[Annotated[str, Field(min_length=1, max_length=300)]] = Field(
+        default_factory=list, max_length=10
+    )
+
+    @model_validator(mode="after")
+    def selection(self):
+        if self.explore and self.files or not self.explore and not self.files:
+            raise ValueError("Choose repository exploration or explicit source files")
+        return self
 
 
 @router.post("/local", status_code=202)
@@ -41,6 +51,7 @@ class LocalProposalExecutor(CodingProposalExecutor):
             "project_id": run.project_id,
             "worktree_run_id": run.parameters["worktree_run_id"],
             "files": run.parameters["files"],
+            "explore": run.parameters.get("explore", False),
             "prompt": run.parameters["prompt"],
             "guidance": run.parameters["guidance"],
             "model": run.parameters["model"],

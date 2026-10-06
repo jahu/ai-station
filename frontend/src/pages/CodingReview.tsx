@@ -10,6 +10,10 @@ import rehypeHighlight from "rehype-highlight";
 import type { Run } from "../api";
 
 type Review = {
+  exploration?: {
+    request: Record<string, unknown>;
+    result: Record<string, unknown>;
+  }[];
   branch: string;
   files: {
     path: string;
@@ -59,6 +63,27 @@ export default function CodingReview({ run }: { run: Run }) {
               No validation commands were configured. This proposal has not been
               tested.
             </p>
+          )}
+          {!!review.exploration?.length && (
+            <details>
+              <summary>
+                Repository exploration · {review.exploration.length} steps
+              </summary>
+              <div className="coding-exploration">
+                {review.exploration.map((step, i) => (
+                  <article key={i}>
+                    <strong>
+                      {i + 1}. {String(step.request.tool)}
+                    </strong>
+                    <pre>{JSON.stringify(step.request, null, 2)}</pre>
+                    <details>
+                      <summary>Observed result</summary>
+                      <pre>{JSON.stringify(step.result, null, 2)}</pre>
+                    </details>
+                  </article>
+                ))}
+              </div>
+            </details>
           )}
           {!review.files.length && <p>No file contents changed.</p>}
           {review.files.map((file) => (

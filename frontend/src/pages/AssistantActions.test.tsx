@@ -241,6 +241,16 @@ it("stages local coding scope without granting Cursor consent", async () => {
   fireEvent.change(screen.getByLabelText("Project"), {
     target: { value: "project-1" },
   });
+  expect(JSON.parse(screen.getByTestId("scope").textContent!)).toMatchObject({
+    files: [],
+    explore: true,
+    external_ai: false,
+  });
+  fireEvent.click(
+    screen.getByRole("checkbox", {
+      name: "Let Local AI find the relevant files",
+    }),
+  );
   fireEvent.change(screen.getByLabelText("Selected files"), {
     target: { value: "README.md\nsrc/app.py" },
   });
@@ -250,7 +260,13 @@ it("stages local coding scope without granting Cursor consent", async () => {
     files: ["README.md", "src/app.py"],
     external_ai: false,
   });
-  expect(screen.queryByRole("checkbox")).toBeNull();
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: "Let Local AI find the relevant files",
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(false);
   fireEvent.change(screen.getByLabelText("Action"), {
     target: { value: "coding.cursor" },
   });

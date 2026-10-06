@@ -17,6 +17,10 @@ from ai_station_runner.local_coding_runs import directory, load_request
 
 def collect_proposal(body, selected):
     message = proposal_prompt(prompt=body.prompt, selected=selected, guidance=body.guidance)
+    return collect_completion(body, message)
+
+
+def collect_completion(body, message):
     managed = body.model.startswith("llamacpp:")
     if managed:
         instance_id = str(UUID(body.endpoint.removeprefix("llamacpp:")))
@@ -27,7 +31,13 @@ def collect_proposal(body, selected):
         headers, model = {"X-AI-Station-Endpoint": body.endpoint}, body.model
     payload = {
         "model": model,
-        "messages": [{"role": "user", "content": message}],
+        "messages": [
+            {
+                "role": "user",
+                "content": message
+                + "\nReturn only the requested JSON, without reasoning or Markdown.\n/no_think",
+            }
+        ],
         "temperature": 0.1,
         "max_tokens": 2048,
         "stream": True,
@@ -89,8 +99,22 @@ def execute(run_id):
     # Bound a silent or stalled stream, including time spent waiting for headers.
     signal.alarm(315)
     body = load_request(run_id)
+    discover = None
+    if body.explore:
+        from ai_station_runner.coding_exploration import explore
+
+        def discover(workspace):
+            return explore(
+                workspace, body.prompt, body.guidance, lambda message: collect_completion(body, message)[0]
+            )
+
     execute_proposal(
-        run_id, body, directory(run_id), lambda selected: collect_proposal(body, selected), location="local"
+        run_id,
+        body,
+        directory(run_id),
+        lambda selected: collect_proposal(body, selected),
+        location="local",
+        discover=discover,
     )
     signal.alarm(0)
 

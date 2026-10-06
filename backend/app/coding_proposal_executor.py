@@ -38,6 +38,16 @@ class CodingProposalExecutor(NativeJobExecutor):
                         "worktree_run_id": run.parameters["worktree_run_id"],
                     },
                 )
+        if report.get("exploration"):
+            append_event(
+                session,
+                run.id,
+                "coding.exploration.completed",
+                {
+                    "steps": len(report["exploration"]),
+                    "selected_files": report["exploration"][-1]["request"]["files"],
+                },
+            )
         append_event(
             session,
             run.id,
