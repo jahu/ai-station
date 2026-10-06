@@ -22,6 +22,7 @@ export default function Coding() {
   const [model, setModel] = useState("");
   const [external, setExternal] = useState(false);
   const [executor, setExecutor] = useState("cursor");
+  const [explore, setExplore] = useState(true);
   const [localModel, setLocalModel] = useState("");
   const [modelPending, setModelPending] = useState(false);
   const provider = useQuery({
@@ -46,12 +47,15 @@ export default function Coding() {
           project_id: projectId,
           expected_updated_at: project?.updated_at,
           prompt,
-          files: files
-            .split("\n")
-            .map((p) => p.trim())
-            .filter(Boolean),
+          files:
+            local && explore
+              ? []
+              : files
+                  .split("\n")
+                  .map((p) => p.trim())
+                  .filter(Boolean),
           model: local ? selectedModel : model,
-          ...(!local ? { external_ai: external } : {}),
+          ...(!local ? { external_ai: external } : { explore }),
         }),
       }),
     onSuccess: (run) => navigate(`/runs/${run.id}`),
@@ -138,21 +142,41 @@ export default function Coding() {
                   placeholder="Describe the change and its acceptance criteria"
                 />
               </label>
-              <label>
-                Selected files
-                <textarea
-                  required
-                  rows={4}
-                  value={files}
-                  onChange={(e) => setFiles(e.target.value)}
-                />
-              </label>
-              <p className="muted">
-                One relative path per line, up to ten UTF-8 source files. New
-                paths are allowed. Hidden configuration and credential paths are
-                excluded; existing content is limited to 32 KB per file and 64
-                KB total.
-              </p>
+              {local && (
+                <label className="project-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={explore}
+                    onChange={(e) => setExplore(e.target.checked)}
+                  />
+                  Let Local AI find the relevant files
+                </label>
+              )}
+              {local && explore ? (
+                <p className="notice">
+                  The model can list, search and read source files inside its
+                  new worktree. It selects the files to edit; you review the
+                  resulting diff and tests.
+                </p>
+              ) : (
+                <>
+                  <label>
+                    Selected files
+                    <textarea
+                      required
+                      rows={4}
+                      value={files}
+                      onChange={(e) => setFiles(e.target.value)}
+                    />
+                  </label>
+                  <p className="muted">
+                    One relative path per line, up to ten UTF-8 source files.
+                    New paths are allowed. Hidden configuration and credential
+                    paths are excluded; existing content is limited to 32 KB per
+                    file and 64 KB total.
+                  </p>
+                </>
+              )}
               {local ? (
                 <LlamaModels
                   value={selectedModel}
@@ -211,9 +235,12 @@ export default function Coding() {
               A new branch starts from{" "}
               {project?.integration_branch ??
                 "the project's integration branch"}
-              . {local ? "Your local model" : "Cursor"} proposes file
-              replacements with tools disabled. AI Station checks and applies
-              them only to the selected paths in the new worktree.
+              .{" "}
+              {local && explore
+                ? "Your local model explores source files using bounded read-only tools, then proposes changes."
+                : "The model proposes changes to your selected files with tools disabled."}{" "}
+              AI Station checks each replacement before applying it in the new
+              worktree.
             </p>
             <p>
               Saved test, lint and build commands run afterward in the native
@@ -226,8 +253,9 @@ export default function Coding() {
               Push, merge and deployment remain separate.
             </p>
             <p className="muted">
-              The model can change only the files listed here. Add any new file
-              paths before starting.
+              {local && explore
+                ? "Repository exploration stays local. Hidden configuration, credentials and symlink escapes are excluded. Exploration steps appear with the review."
+                : "The model can change only the files listed here. Add new file paths before starting."}
             </p>
             <Link className="text-link" to="/projects">
               Configure projects and validation commands →

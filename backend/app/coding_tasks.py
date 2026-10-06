@@ -68,6 +68,7 @@ def enqueue_coding_task(session, body, *, provider="cursor", task=None, parent_r
         from app.local_provider import model_endpoint
 
         request["endpoint"] = model_endpoint(body.model, session)
+        request["explore"] = body.explore
     run = create_run(
         session,
         task,

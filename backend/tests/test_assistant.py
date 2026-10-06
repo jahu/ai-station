@@ -201,8 +201,10 @@ def test_coding_cannot_gain_external_permission_from_model(monkeypatch):
         assert len(detail["messages"][-1]["steps"]) == 1
 
 
-@pytest.mark.parametrize("provider", ["cursor", "local"])
+@pytest.mark.parametrize("provider", ["cursor", "local", "explore"])
 def test_coding_scope_dispatch_and_stale_project_rejection(provider):
+    explore = provider == "explore"
+    provider = "local" if explore else provider
     from app.models import Project
 
     with session_factory()() as session:
@@ -215,6 +217,8 @@ def test_coding_scope_dispatch_and_stale_project_rejection(provider):
             "files": ["app.py"],
             "external_ai": provider == "cursor",
         }
+    if explore:
+        scope.update(files=[], explore=True)
     with TestClient(app) as client:
         cid = create(client)
         response = client.post(
@@ -227,7 +231,9 @@ def test_coding_scope_dispatch_and_stale_project_rejection(provider):
         child = detail["active_run"]
         assert child["project_id"] == scope["project_id"]
         assert child["executor_type"] == "worktree_prepare"
-        assert child["parameters"]["local_coding" if provider == "local" else "cursor"]["files"] == ["app.py"]
+        assert child["parameters"]["local_coding" if provider == "local" else "cursor"]["files"] == (
+            [] if explore else ["app.py"]
+        )
         assert (
             child["parameters"]["local_coding" if provider == "local" else "cursor"]["guidance"]
             == "Keep tests passing"

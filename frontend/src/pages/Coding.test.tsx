@@ -113,7 +113,14 @@ it("queues local coding with the selected model and no external-AI grant", async
   });
   fireEvent.click(screen.getByRole("button", { name: /Local AI llama/ }));
   await screen.findByText("local-model");
-  expect(screen.queryByRole("checkbox")).toBeNull();
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: "Let Local AI find the relevant files",
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  expect(screen.queryByLabelText("Selected files")).toBeNull();
   fireEvent.click(
     screen.getByRole("button", { name: "Create worktree and start Local AI" }),
   );
@@ -125,8 +132,9 @@ it("queues local coding with the selected model and no external-AI grant", async
         project_id: "project",
         expected_updated_at: "version",
         prompt: "Update README",
-        files: ["README.md"],
+        files: [],
         model: "local-model",
+        explore: true,
       }),
     }),
   );

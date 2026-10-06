@@ -12,6 +12,7 @@ export type CodingScope = {
   expected_updated_at: string;
   files: string[];
   external_ai: boolean;
+  explore?: boolean;
 };
 export type AssistantOptions = {
   action: string;
@@ -142,6 +143,7 @@ export default function AssistantActions({
   const voiceInput = useRef<HTMLInputElement>(null);
   const [projectId, setProjectId] = useState("");
   const [files, setFiles] = useState("");
+  const [explore, setExplore] = useState(true);
   const [external, setExternal] = useState(false);
   const projects = useQuery({
     queryKey: ["coding-projects"],
@@ -153,7 +155,9 @@ export default function AssistantActions({
     paths: string,
     allow: boolean,
     action = value.action,
+    auto = explore,
   ) {
+    const localExplore = action === "coding.local" && auto;
     const project = projects.data?.find((p) => p.id === id);
     const selected = paths
       .split("\n")
@@ -165,11 +169,12 @@ export default function AssistantActions({
       coding:
         (action === "coding.local" || (action === "coding.cursor" && allow)) &&
         project &&
-        selected.length
+        (selected.length || localExplore)
           ? {
               project_id: project.id,
               expected_updated_at: project.updated_at,
-              files: selected,
+              files: localExplore ? [] : selected,
+              ...(localExplore ? { explore: true } : {}),
               external_ai: action === "coding.cursor",
             }
           : null,
@@ -434,19 +439,47 @@ export default function AssistantActions({
               ))}
             </select>
           </label>
-          <label>
-            Selected files
-            <textarea
-              rows={3}
-              value={files}
-              placeholder="One repository-relative path per line"
-              onChange={(e) => {
-                setFiles(e.target.value);
-                setExternal(false);
-                scope(projectId, e.target.value, false);
-              }}
-            />
-          </label>
+          {value.action === "coding.local" && (
+            <label className="project-checkbox">
+              <input
+                type="checkbox"
+                checked={explore}
+                onChange={(e) => {
+                  setExplore(e.target.checked);
+                  scope(
+                    projectId,
+                    files,
+                    false,
+                    value.action,
+                    e.target.checked,
+                  );
+                }}
+              />
+              Let Local AI find the relevant files
+            </label>
+          )}
+          {value.action === "coding.local" && explore ? (
+            <p className="muted">
+              Local source exploration in a new worktree. Review selected files
+              and changes in the resulting Run.
+            </p>
+          ) : (
+            <>
+              <label>
+                Selected files
+                <textarea
+                  rows={3}
+                  value={files}
+                  placeholder="One repository-relative path per line"
+                  onChange={(e) => {
+                    setFiles(e.target.value);
+                    setExternal(false);
+                    scope(projectId, e.target.value, false);
+                  }}
+                />
+              </label>
+            </>
+          )}
           {value.action === "coding.local" ? (
             <p className="muted">
               Uses this conversation's local model. Changes stay in a new

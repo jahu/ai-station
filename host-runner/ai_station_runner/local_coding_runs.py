@@ -7,7 +7,7 @@ import sys
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 from ai_station_runner.config import get_settings
 from ai_station_runner.gitops import GitError
@@ -27,8 +27,17 @@ class LocalCodingRequest(BaseModel):
     guidance: str = Field(default="", max_length=32000)
     model: str = Field(min_length=1, max_length=200)
     endpoint: str = Field(min_length=1, max_length=1000)
-    files: list[Annotated[str, Field(min_length=1, max_length=300)]] = Field(min_length=1, max_length=10)
+    files: list[Annotated[str, Field(min_length=1, max_length=300)]] = Field(
+        default_factory=list, max_length=10
+    )
+    explore: StrictBool = False
     permissions: list[str] = Field(max_length=4)
+
+    @model_validator(mode="after")
+    def selection(self):
+        if self.explore and self.files or not self.explore and not self.files:
+            raise ValueError("Choose repository exploration or explicit source files")
+        return self
 
 
 def validate_connection(body):

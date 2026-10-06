@@ -9,7 +9,7 @@ from ai_station_runner.gitinspect import Repository
 from ai_station_runner.worktrees import load_manifest, owned_path
 
 
-def execute_proposal(run_id, body, root, generate, *, location):
+def execute_proposal(run_id, body, root, generate, *, location, discover=None):
     if os.getpgrp() != os.getpid():
         raise RuntimeError("Coding execution requires an owned process group")
     record = load_manifest(str(body.worktree_run_id))
@@ -27,7 +27,11 @@ def execute_proposal(run_id, body, root, generate, *, location):
     lock_path.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
     lock = lock_path.open("a")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    selected = read_selected(workspace, body.files)
+    exploration = []
+    if discover is not None:
+        selected, exploration = discover(workspace)
+    else:
+        selected = read_selected(workspace, body.files)
     print(f"{location.upper()} proposal for {len(selected)} selected files; tools disabled", flush=True)
     text, provider = generate(selected)
     proposal = parse_proposal(text, selected)
@@ -50,6 +54,8 @@ def execute_proposal(run_id, body, root, generate, *, location):
         provider=provider,
         execution_location=location,
     )
+    if exploration:
+        report["exploration"] = exploration
     path = root / "report.json"
     with path.open("x") as handle:
         os.chmod(path, 0o600)

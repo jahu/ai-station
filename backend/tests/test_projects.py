@@ -901,13 +901,21 @@ def local_coding_bridge(owned_runner, tmp_path, monkeypatch):
                 import httpx
 
                 assert os.environ.get("AI_STATION_REAL_LOCAL_LLM_TESTS") == "1"
-                instance = os.environ["AI_STATION_SMOKE_LLAMA_INSTANCE"]
+                instance = os.environ.get("AI_STATION_SMOKE_LLAMA_INSTANCE")
+                model = instance or os.environ["AI_STATION_SMOKE_LOCAL_MODEL"]
+                target = f"http://runner/v1/llama/{instance}" if instance else "http://runner/v1/llm"
+                headers = (
+                    {}
+                    if instance
+                    else {"X-AI-Station-Endpoint": os.environ["AI_STATION_SMOKE_LOCAL_ENDPOINT"]}
+                )
                 transport = httpx.HTTPTransport(uds=os.environ["AI_STATION_SMOKE_RUNNER_SOCKET"])
                 with httpx.Client(transport=transport, timeout=300, trust_env=False) as upstream:
                     with upstream.stream(
                         "POST",
-                        f"http://runner/v1/llama/{instance}/chat/completions",
-                        json={**request, "model": instance},
+                        target + "/chat/completions",
+                        headers=headers,
+                        json={**request, "model": model},
                     ) as response:
                         self.send_response(response.status_code)
                         self.send_header("Content-Type", response.headers.get("content-type", ""))
@@ -927,6 +935,15 @@ def local_coding_bridge(owned_runner, tmp_path, monkeypatch):
                     ],
                 }
             )
+            if control["mode"] == "explore" and "Select source files" in request["messages"][0]["content"]:
+                step = len(control["requests"])
+                proposal = json.dumps(
+                    [
+                        {"tool": "list_files", "prefix": "", "offset": 0},
+                        {"tool": "read_file", "path": "README.md"},
+                        {"tool": "finish", "files": ["README.md", "new.py"]},
+                    ][step - 1]
+                )
             delta = {"content": proposal}
             if control["mode"] == "tool":
                 delta["tool_calls"] = [{"function": {"name": "shell"}}]
@@ -976,8 +993,8 @@ def local_coding_request(project, **extra):
     }
 
 
-def prepare_local_coding(client, project):
-    response = client.post("/api/coding/local", json=local_coding_request(project))
+def prepare_local_coding(client, project, **extra):
+    response = client.post("/api/coding/local", json=local_coding_request(project, **extra))
     assert response.status_code == 202, response.text
     with session_factory()() as session:
         tick(session, "local-prepare")
@@ -1049,7 +1066,10 @@ def test_local_coding_refuses_unfinished_or_tool_responses(
         assert client.get(f"/api/artifacts?run_id={run_id}").json() == []
 
 
-def test_local_coding_boundary_and_cancellation(repository, owned_runner, local_coding_bridge, monkeypatch):
+@pytest.mark.parametrize("explore", [False, True])
+def test_local_coding_boundary_and_cancellation(
+    repository, owned_runner, local_coding_bridge, monkeypatch, explore
+):
     local_coding_bridge["mode"] = "wait"
     with TestClient(app) as client:
         project = register(client, repository)
@@ -1062,7 +1082,7 @@ def test_local_coding_boundary_and_cancellation(repository, owned_runner, local_
             ).status_code
             == 409
         )
-        run_id = prepare_local_coding(client, project)
+        run_id = prepare_local_coding(client, project, **({"explore": True, "files": []} if explore else {}))
         assert client.post("/api/coding/local", json=body).status_code == 409
         original = RunnerClient.start_local_proposal
 
@@ -1092,15 +1112,21 @@ def test_local_coding_boundary_and_cancellation(repository, owned_runner, local_
     os.environ.get("AI_STATION_REAL_LOCAL_LLM_TESTS") != "1",
     reason="Real local inference is explicitly opt-in",
 )
-def test_real_local_coding_proposal(repository, owned_runner, local_coding_bridge):
+@pytest.mark.parametrize("explore", [False, True])
+def test_real_local_coding_proposal(repository, owned_runner, local_coding_bridge, explore):
     local_coding_bridge["mode"] = "real"
     index = (repository / ".git/index").read_bytes()
     with TestClient(app) as client:
         project = register(client, repository)
         body = local_coding_request(project)
         body.update(
-            files=["README.md"],
-            prompt="Replace README.md with exactly the text Local coding smoke passed followed by a newline. Return the required JSON proposal only.",
+            files=[] if explore else ["README.md"],
+            explore=explore,
+            prompt=(
+                "Locate the repository introduction file: first list the files, then read the relevant file, then select it. Replace its entire content with exactly Local coding smoke passed followed by a newline. /no_think"
+                if explore
+                else "Replace README.md with exactly the text Local coding smoke passed followed by a newline. Return the required JSON proposal only."
+            ),
         )
         response = client.post("/api/coding/local", json=body)
         assert response.status_code == 202, response.text
@@ -1116,7 +1142,11 @@ def test_real_local_coding_proposal(repository, owned_runner, local_coding_bridg
             owned_runner.data_dir / worktree["relative_path"] / "README.md"
         ).read_text().strip() == "Local coding smoke passed"
         assert run["metadata"]["coding_review"]["files"]
-        assert len(local_coding_bridge["requests"]) == 1
+        if explore:
+            assert len(run["metadata"]["coding_review"]["exploration"]) >= 2
+            assert len(local_coding_bridge["requests"]) >= 3
+        else:
+            assert len(local_coding_bridge["requests"]) == 1
     assert (repository / "README.md").read_text() == "Original repository\n"
     assert (repository / ".git/index").read_bytes() == index
 
@@ -1168,3 +1198,32 @@ def test_local_coding_reloads_saved_llama_preset_before_inference(repository, ow
             assert coding.parameters["endpoint"] == "llamacpp:" + load.parameters["instance_id"]
             assert coding.parameters["model"] == model_key
             assert coding.status == "queued"
+
+
+def test_local_exploration_selects_files_and_preserves_checkout(
+    repository, owned_runner, local_coding_bridge
+):
+    local_coding_bridge["mode"] = "explore"
+    index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project = register(client, repository)
+        body = local_coding_request(project, files=[], explore=True)
+        response = client.post("/api/coding/local", json=body)
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "exploration-prepare")
+        prepared = client.get(f"/api/runs/{response.json()['id']}").json()
+        with session_factory()() as session:
+            tick(session, "exploration-execute")
+        run = client.get(f"/api/runs/{prepared['metadata']['coding_run_id']}").json()
+        assert run["status"] == "succeeded", run
+        review = run["metadata"]["coding_review"]
+        assert len(review["exploration"]) == 3
+        assert review["exploration"][1]["result"]["content"] == "Original repository\n"
+        assert {item["path"] for item in review["files"]} == {"README.md", "new.py"}
+        assert len(local_coding_bridge["requests"]) == 4
+        assert "coding.exploration.completed" in client.get(f"/api/runs/{run['id']}/stream").text
+        assert client.post("/api/coding/local", json={**body, "explore": False}).status_code == 422
+        assert client.post("/api/coding/local", json={**body, "files": ["README.md"]}).status_code == 422
+    assert (repository / "README.md").read_text() == "Original repository\n"
+    assert (repository / ".git/index").read_bytes() == index
