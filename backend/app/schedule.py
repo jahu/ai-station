@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agent_schema import AgentSettings
-from app.agent_tools import AGENT_TOOLS, effective_permissions
+from app.agent_tools import agent_tool, effective_permissions
 from app.db import utcnow
 from app.local_provider import model_endpoint
 from app.models import Agent, Run
@@ -43,8 +43,10 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
     definition = AgentSettings.model_validate(
         {key: getattr(agent, key) for key in AgentSettings.model_fields} | {"enabled": False}
     )
-    if not definition.model or any(not AGENT_TOOLS[name].operational for name in definition.tools):
+    if not definition.model or any(not agent_tool(name).operational for name in definition.tools):
         raise ValueError("Agent model or tools are not operational")
+    if "web_search" in definition.tools and not definition.search_query:
+        raise ValueError("web_search requires an explicit public search query")
     endpoint = model_endpoint(agent.model, session)
     task = create_task(
         session,

@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agent_schema import AgentSettings
-from app.agent_tools import AGENT_TOOLS, effective_permissions
+from app.agent_tools import AGENT_TOOLS, agent_tool, effective_permissions
 from app.db import session_scope, utcnow
 from app.factory import draft_agent
 from app.local_provider import model_endpoint
@@ -65,7 +65,7 @@ def apply_settings(agent, body):
 
 @router.get("/tools")
 def tools():
-    return [asdict(tool) for tool in AGENT_TOOLS.values()]
+    return [asdict(agent_tool(name)) for name in AGENT_TOOLS]
 
 
 @router.get("")

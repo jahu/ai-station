@@ -35,7 +35,9 @@ it("creates a reviewable draft without enabling or running it", async () => {
         ? { id: "draft" }
         : url.includes("provider")
           ? { models: ["local"], default_model: "local" }
-          : [],
+          : url.endsWith("/llama")
+            ? { models: [], instances: [] }
+            : [],
   }));
   vi.stubGlobal("fetch", fetch);
   mount();
@@ -57,39 +59,43 @@ it("keeps a draft inactive and makes unsupported tools inspectable and removable
   const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
     ok: options === undefined,
     json: async () =>
-      url.endsWith("tools")
-        ? [
-            {
-              name: "web_search",
-              description: "Unavailable search",
-              operational: false,
-              required_permissions: [],
-            },
-          ]
-        : {
-            id: "draft",
-            name: "Draft",
-            description: "",
-            goal: "Research",
-            system_prompt: "",
-            model: "local",
-            tools: ["web_search"],
-            trigger: "manual",
-            cron_expr: "",
-            interval_seconds: null,
-            run_at: null,
-            maximum_runtime: 600,
-            output_expectation: "Report",
-            project_id: null,
-            enabled: false,
-            updated_at: "2026-09-25T12:00:00Z",
-            next_run_at: null,
-            last_run_at: null,
-            last_status: "",
-            failure_count: 0,
-            effective_permissions: [],
-            runs: [],
-          },
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.endsWith("/chat/provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.endsWith("tools")
+            ? [
+                {
+                  name: "web_search",
+                  description: "Unavailable search",
+                  operational: false,
+                  required_permissions: [],
+                },
+              ]
+            : {
+                id: "draft",
+                name: "Draft",
+                description: "",
+                goal: "Research",
+                system_prompt: "",
+                model: "local",
+                tools: ["web_search"],
+                trigger: "manual",
+                cron_expr: "",
+                interval_seconds: null,
+                run_at: null,
+                maximum_runtime: 600,
+                output_expectation: "Report",
+                project_id: null,
+                enabled: false,
+                updated_at: "2026-09-25T12:00:00Z",
+                next_run_at: null,
+                last_run_at: null,
+                last_status: "",
+                failure_count: 0,
+                effective_permissions: [],
+                runs: [],
+              },
   }));
   vi.stubGlobal("fetch", fetch);
   mount(true);
@@ -104,4 +110,68 @@ it("keeps a draft inactive and makes unsupported tools inspectable and removable
   expect((checkbox as HTMLInputElement).checked).toBe(false);
   expect((checkbox as HTMLInputElement).disabled).toBe(true);
   expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
+});
+it("saves a reviewed public query separately from the private goal without activation", async () => {
+  let agent = {
+    id: "draft",
+    name: "Research",
+    description: "",
+    goal: "Private project context",
+    system_prompt: "",
+    model: "local",
+    search_query: "",
+    tools: ["web_search"],
+    trigger: "interval",
+    interval_seconds: 3600,
+    cron_expr: "",
+    run_at: null,
+    maximum_runtime: 600,
+    output_expectation: "Report",
+    project_id: null,
+    enabled: false,
+    updated_at: "2026-09-30T12:00:00Z",
+    next_run_at: null,
+    last_run_at: null,
+    last_status: "",
+    failure_count: 0,
+    effective_permissions: ["network_read"],
+    runs: [],
+  };
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => {
+    if (options) agent = { ...agent, ...JSON.parse(options.body as string) };
+    return {
+      ok: true,
+      json: async () =>
+        url.endsWith("/llama")
+          ? { models: [], instances: [] }
+          : url.endsWith("/chat/provider")
+            ? { models: ["local"], default_model: "local" }
+            : url.endsWith("/tools")
+              ? [
+                  {
+                    name: "web_search",
+                    description: "Search public sources",
+                    operational: true,
+                    required_permissions: ["network_read"],
+                  },
+                ]
+              : agent,
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  const query = await screen.findByLabelText("Public search query");
+  expect((query as HTMLInputElement).required).toBe(true);
+  fireEvent.change(query, { target: { value: "open weight language models" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save definition" }));
+  await vi.waitFor(() =>
+    expect(fetch.mock.calls.filter((c) => c[1])).toHaveLength(1),
+  );
+  const write = fetch.mock.calls.find((c) => c[1])!;
+  expect(JSON.parse(write[1]!.body as string)).toMatchObject({
+    search_query: "open weight language models",
+    goal: "Private project context",
+    enabled: false,
+    tools: ["web_search"],
+  });
 });

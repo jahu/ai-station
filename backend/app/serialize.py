@@ -128,6 +128,7 @@ def agent_dict(agent: Agent) -> dict:
         "provider": agent.provider,
         "model": agent.model,
         "tools": agent.tools,
+        "search_query": agent.search_query,
         "skills": agent.skills,
         "memory_scope": agent.memory_scope,
         "trigger": agent.trigger,

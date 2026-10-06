@@ -251,3 +251,168 @@ def test_tool_permissions_enforced_before_host_access(monkeypatch):
         tick(session, "agent-test")
     assert not called
     assert api.get("/api/runs/" + queued["id"]).json()["status"] == "failed"
+
+
+@pytest.fixture
+def research(monkeypatch):
+    from app import web_search
+    from app.config import clear_settings_cache
+
+    monkeypatch.setenv("AI_STATION_WEB_SEARCH_URL", "http://search:8080")
+    clear_settings_cache()
+    calls, messages = [], []
+
+    async def search(query):
+        calls.append(query)
+        return {
+            "query": query,
+            "provider": "searxng",
+            "searched_at": utcnow().isoformat(),
+            "partial": False,
+            "sources": [
+                {
+                    "id": 1,
+                    "title": "Source",
+                    "url": "https://example.com/research",
+                    "snippet": "Public finding",
+                }
+            ],
+        }
+
+    async def stream(self, **params):
+        messages.append(params["messages"])
+        yield "# Research report\n\n[Source](https://example.com/research)"
+
+    monkeypatch.setattr(web_search, "search", search)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    return calls, messages
+
+
+@pytest.mark.parametrize("scheduled", [False, True])
+def test_agent_web_research_snapshots_public_query_and_retains_sources(research, scheduled):
+    calls, messages = research
+    with TestClient(app) as api:
+        agent = create(
+            api,
+            enabled=True,
+            tools=["web_search"],
+            search_query="public model releases",
+            goal="PRIVATE GOAL: summarize public findings",
+            trigger="interval" if scheduled else "manual",
+            interval_seconds=60 if scheduled else None,
+        )
+        if scheduled:
+            with session_factory()() as session:
+                session.get(Agent, agent["id"]).next_run_at = utcnow() - timedelta(seconds=1)
+                session.commit()
+                run_id = scheduler_tick(session)[0]
+                session.commit()
+        else:
+            run_id = run_now(api, agent)["id"]
+        with session_factory()() as session:
+            # An already-queued Run must retain the reviewed query even if stored settings change.
+            session.get(Agent, agent["id"]).search_query = "different future query"
+            session.commit()
+            tick(session, "research-test")
+        run = api.get("/api/runs/" + run_id).json()
+        assert run["status"] == "succeeded", run
+        assert run["effective_permissions"] == ["network_read"]
+        assert calls == ["public model releases"]
+        assert "PRIVATE GOAL" in str(messages) and "Public finding" in str(messages)
+        assert run["metadata"]["web_search"]["sources"][0]["url"] == "https://example.com/research"
+        artifacts = api.get("/api/artifacts?run_id=" + run_id).json()
+        assert {item["type"] for item in artifacts} == {"markdown", "json"}
+        reset_engine()
+        assert api.get("/api/runs/" + run_id).json()["metadata"]["web_search"]["query"] == calls[0]
+        assert "tool.completed" in api.get("/api/runs/" + run_id + "/stream").text
+
+
+@pytest.mark.parametrize("mode", ["cancel", "timeout", "permission", "failure"])
+def test_agent_search_cancels_bounds_runtime_and_enforces_permission(research, monkeypatch, mode):
+    from app import web_search
+
+    closed = []
+
+    async def search(query):
+        if mode == "permission":
+            raise AssertionError("Unpermitted search")
+        if mode == "failure":
+            raise ProviderError("Search unavailable")
+        try:
+            if mode == "cancel":
+                with session_factory()() as session:
+                    request_cancel(session, session.get(Run, run_id))
+                    session.commit()
+            await asyncio.Future()
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr(web_search, "search", search)
+    if mode == "timeout":
+        import time
+
+        original = web_search.execute_search
+
+        async def short_deadline(session, run, query, **kwargs):
+            return await original(session, run, query, deadline=time.monotonic() + 0.05)
+
+        monkeypatch.setattr(web_search, "execute_search", short_deadline)
+    with TestClient(app) as api:
+        agent = create(api, enabled=True, tools=["web_search"], search_query="public query")
+        run_id = run_now(api, agent)["id"]
+        with session_factory()() as session:
+            if mode == "permission":
+                session.get(Run, run_id).effective_permissions = []
+                session.commit()
+            tick(session, "research-negative")
+        result = api.get("/api/runs/" + run_id).json()
+        assert result["status"] == ("canceled" if mode == "cancel" else "failed"), result
+        assert not research[1]
+        if mode in {"cancel", "timeout"}:
+            assert closed
+        assert api.get("/api/artifacts?run_id=" + run_id).json() == []
+
+
+def test_agent_query_requires_explicit_review_before_activation(research):
+    with TestClient(app) as api:
+        draft = api.post(
+            "/api/agents/draft", json={"instruction": "Every day search the web", "model": "local"}
+        ).json()
+        assert draft["search_query"] == "" and not draft["enabled"]
+        assert (
+            api.post(
+                f"/api/agents/{draft['id']}/enabled",
+                json={"enabled": True, "expected_updated_at": draft["updated_at"]},
+            ).status_code
+            == 422
+        )
+        assert (
+            api.post(
+                "/api/agents",
+                json={
+                    "name": "Test",
+                    "goal": "Goal",
+                    "model": "local",
+                    "tools": ["web_search"],
+                    "search_query": "x" * 501,
+                },
+            ).status_code
+            == 422
+        )
+        registry = {tool["name"]: tool for tool in api.get("/api/agents/tools").json()}
+        assert registry["web_search"]["operational"] and registry["web_search"]["required_permissions"] == [
+            "network_read"
+        ]
+
+
+def test_agent_search_migration_preserves_existing_definitions():
+    from alembic import command
+    from app.db import alembic_config
+
+    with TestClient(app) as api:
+        agent = create(api, tools=["memory_search"])
+        command.downgrade(alembic_config(), "0005")
+        command.upgrade(alembic_config(), "head")
+        saved = api.get("/api/agents/" + agent["id"]).json()
+        assert saved["goal"] == agent["goal"] and saved["tools"] == ["memory_search"]
+        assert saved["search_query"] == ""

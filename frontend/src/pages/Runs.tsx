@@ -1,3 +1,5 @@
+import AgentReport from "./AgentReport";
+import { SearchSources, type WebSources } from "./ChatWebSearch";
 import CodingReview from "./CodingReview";
 import { useEffect, type FormEvent } from "react";
 import {
@@ -423,7 +425,15 @@ export function RunDetail() {
             {artifacts.data && artifacts.data.length > 0 && (
               <ArtifactCards artifacts={artifacts.data} />
             )}
-            {run.data.summary && (
+            {run.data.executor_type === "agent" && artifacts.data && (
+              <AgentReport artifacts={artifacts.data} />
+            )}
+            {run.data.metadata?.web_search && (
+              <SearchSources
+                result={run.data.metadata.web_search as WebSources}
+              />
+            )}
+            {run.data.summary && run.data.executor_type !== "agent" && (
               <section className="panel content-panel">
                 <h2>Result</h2>
                 <p>{run.data.summary}</p>
