@@ -1,7 +1,9 @@
+import RunTimeline from "./RunTimeline";
+import { useRunEvents } from "./useRunEvents";
 import AgentReport from "./AgentReport";
 import { SearchSources, type WebSources } from "./ChatWebSearch";
 import CodingReview from "./CodingReview";
-import { useEffect, type FormEvent } from "react";
+import { type FormEvent } from "react";
 import {
   Link,
   useParams,
@@ -9,7 +11,7 @@ import {
   useSearchParams,
 } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, ArrowUpRight, Ban, Radio } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Ban } from "lucide-react";
 import { api, type Run, type RunEvent, type Artifact, useRuns } from "../api";
 import {
   Badge,
@@ -292,10 +294,7 @@ export function RunDetail() {
     queryFn: () => api<Run>(`/runs/${id}`),
     refetchInterval: 5000,
   });
-  const events = useQuery({
-    queryKey: ["events", id],
-    queryFn: () => api<RunEvent[]>(`/runs/${id}/events`),
-  });
+  const events = useRunEvents(id);
   const cancel = useMutation({
     mutationFn: () => api(`/runs/${id}/cancel`, { method: "POST" }),
     onSuccess: () => {
@@ -313,16 +312,6 @@ export function RunDetail() {
     onSuccess: (next) => navigate(`/runs/${next.id}`),
   });
   const isTerminal = run.data ? terminal.has(run.data.status) : false;
-  useEffect(() => {
-    if (!id) return;
-    const source = new EventSource(`/api/runs/${id}/stream`);
-    source.onmessage = () => {
-      void cache.invalidateQueries({ queryKey: ["events", id] });
-      void cache.invalidateQueries({ queryKey: ["run", id] });
-    };
-    source.addEventListener("end", () => source.close());
-    return () => source.close();
-  }, [id, cache]);
   return (
     <>
       <Link className="back-link" to="/runs">
@@ -442,37 +431,19 @@ export function RunDetail() {
             <CodingReview run={run.data} />
             <ValidationResults events={events.data ?? []} />
             <div className="inspector-grid">
-              <section className="panel">
-                <div className="panel-heading">
-                  <h2>Execution timeline</h2>
-                  <span className="muted row">
-                    <Radio size={14} />
-                    {isTerminal ? "Recorded events" : "Live events"}
-                  </span>
-                </div>
-                <div className="timeline">
-                  {events.data?.map((event) => (
-                    <article key={event.id}>
-                      <span className="timeline-node" />
-                      <div className="row spread">
-                        <strong>{event.event_type}</strong>
-                        <time>
-                          {new Date(event.created_at).toLocaleTimeString()}
-                        </time>
-                      </div>
-                      <pre>
-                        {typeof event.payload.text === "string"
-                          ? event.payload.text
-                          : JSON.stringify(event.payload, null, 2)}
-                      </pre>
-                    </article>
-                  ))}
-                </div>
-              </section>
+              <RunTimeline
+                key={id}
+                events={events.data ?? []}
+                live={!isTerminal}
+              />
               <aside className="panel content-panel">
                 <h2>Execution context</h2>
-                <label>Parameters</label>
-                <pre>{JSON.stringify(run.data.parameters, null, 2)}</pre>
+                <details className="run-parameters">
+                  <summary>Parameters</summary>
+                  <pre tabIndex={0}>
+                    {JSON.stringify(run.data.parameters, null, 2)}
+                  </pre>
+                </details>
                 <label>Effective permissions</label>
                 <div className="chips">
                   {run.data.effective_permissions.length ? (

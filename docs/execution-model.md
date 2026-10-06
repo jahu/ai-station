@@ -111,3 +111,7 @@ Run claims exclude unfinished prerequisites without blocking other queued work. 
 
 
 Local coding uses the same worktree preparation, owned process lifecycle, checked proposal artifacts and validation chain as Cursor. `local_proposal` consumes only a configured private inference endpoint or owned llama.cpp runtime, waits for a normal model-load prerequisite when needed, and can be canceled through the shared native process manager. See [local coding](local-coding.md).
+
+## Run inspector
+
+The inspector separates structured Activity from grouped Output and raw All events. Activity/raw pages show at most 50 events; sequence boundaries keep older pages stable as new events arrive. Full persisted events remain available. SSE resumes after the loaded sequence and merges batches into the cache without re-fetching the entire history per token. Large output, payloads and expandable parameters scroll within bounded panels.
