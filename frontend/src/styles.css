@@ -3239,3 +3239,40 @@ pre {
   margin-bottom: 12px;
   line-height: 1.6;
 }
+
+.run-event-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0 22px 18px;
+}
+.run-event-count {
+  padding: 0 22px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.run-event-list {
+  max-height: 560px;
+  overflow: auto;
+}
+.run-event-list pre {
+  max-height: 240px;
+  overflow: auto;
+}
+.run-output {
+  padding: 0 22px 22px;
+}
+.run-output p {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.run-output pre,
+.run-parameters pre {
+  max-height: 440px;
+  overflow: auto;
+}
+.run-parameters summary {
+  cursor: pointer;
+  margin: 20px 0 12px;
+  color: var(--muted);
+}
