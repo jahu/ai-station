@@ -97,6 +97,9 @@ class ChatExecutor:
             conversation = session.get(Conversation, run.conversation_id)
             conversation.updated_at = utcnow()
             transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})
+            from app.conversation_summary import maybe_enqueue_automatic_summary
+
+            maybe_enqueue_automatic_summary(session, conversation, run)
         finally:
             session.commit()
             if pending is not None:

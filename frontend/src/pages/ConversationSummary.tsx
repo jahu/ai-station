@@ -19,12 +19,29 @@ export default function ConversationSummary({
   conversationId,
   summary,
   busy,
+  autoSummary = false,
+  lastUpdate,
 }: {
   conversationId: string;
   summary: Summary | null;
   busy: boolean;
+  autoSummary?: boolean;
+  lastUpdate?: { id: string; status: string; error_message: string } | null;
 }) {
   const cache = useQueryClient();
+  const policy = useMutation({
+    mutationFn: (enabled: boolean) =>
+      api(`/chat/conversations/${conversationId}/context`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_summary: enabled }),
+      }),
+    onSuccess: () => {
+      void cache.invalidateQueries({
+        queryKey: ["conversation", conversationId],
+      });
+    },
+  });
   const update = useMutation({
     mutationFn: () =>
       api(`/chat/conversations/${conversationId}/summarize`, {
@@ -40,13 +57,31 @@ export default function ConversationSummary({
     <details className="chat-settings-panel">
       <summary>
         Conversation memory ·{" "}
-        {summary?.enabled ? "Summary active" : "Recent messages only"}
+        {autoSummary
+          ? "Automatic updates on"
+          : summary?.enabled
+            ? "Summary active"
+            : "Recent messages only"}
       </summary>
       <div className="content-panel">
         <p className="muted">
           Update the summary of older messages using your local model. The
-          newest eight stay verbatim; full history is preserved. Updates run
-          only when requested.
+          newest eight stay verbatim; full history is preserved.
+        </p>
+        <label className="project-checkbox">
+          <input
+            type="checkbox"
+            checked={autoSummary}
+            disabled={busy || policy.isPending}
+            onChange={(event) => policy.mutate(event.target.checked)}
+          />
+          Automatically maintain conversation memory
+        </label>
+        <p className="muted">
+          After successful replies, your local model summarizes older context
+          when 16 messages or 40,000 characters accumulate. Each update is a
+          visible, cancelable Run. Disabled or deleted memory is not recreated
+          automatically.
         </p>
         <Button
           variant="secondary"
@@ -55,7 +90,15 @@ export default function ConversationSummary({
         >
           {update.isPending ? "Queueing…" : "Update summary"}
         </Button>
-        <ErrorNotice error={update.error} />
+        <ErrorNotice error={policy.error ?? update.error} />
+        {lastUpdate &&
+          ["failed", "canceled", "interrupted"].includes(lastUpdate.status) && (
+            <p className="notice">
+              Last memory update {lastUpdate.status}. Earlier memory and
+              messages are preserved.{" "}
+              <Link to={`/runs/${lastUpdate.id}`}>Inspect update →</Link>
+            </p>
+          )}
         {summary ? (
           <>
             <p className="muted">

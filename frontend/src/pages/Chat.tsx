@@ -61,6 +61,8 @@ type Message = ActionResult & {
   };
 };
 type Detail = Conversation & {
+  auto_summary: boolean;
+  summary_update: { id: string; status: string; error_message: string } | null;
   messages: Message[];
   active_run: Run | null;
   summary: Summary | null;
@@ -431,6 +433,8 @@ function ConversationView({
         {conversation.active_run && (
           <Link to={`/runs/${conversation.active_run.id}`}>
             <Badge status={conversation.active_run.status} />
+            {conversation.active_run.executor_type === "chat_summary" &&
+              " Updating conversation memory…"}
           </Link>
         )}
       </div>
@@ -448,6 +452,8 @@ function ConversationView({
       <ConversationSummary
         conversationId={conversation.id}
         summary={conversation.summary}
+        autoSummary={conversation.auto_summary}
+        lastUpdate={conversation.summary_update}
         busy={busy}
       />
       <div className="chat-transcript" aria-live="polite">

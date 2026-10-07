@@ -4,7 +4,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 from sqlalchemy import select, tuple_
 from sqlalchemy.orm import Session
 
@@ -137,6 +137,21 @@ def edit_conversation(conversation_id: UUID, body: ConversationBody, session: DB
     return conversation_view(session, row)
 
 
+class ContextPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    auto_summary: StrictBool
+
+
+@router.patch("/conversations/{conversation_id}/context")
+def edit_context(conversation_id: UUID, body: ContextPolicy, session: DB):
+    row = conversation(session, conversation_id)
+    ensure_idle(session, row.id)
+    row.auto_summary = body.auto_summary
+    row.updated_at = utcnow()
+    session.commit()
+    return conversation_view(session, row)
+
+
 @router.get("/conversations/{conversation_id}")
 def detail(conversation_id: UUID, session: DB):
     row = conversation(session, conversation_id)
@@ -154,8 +169,21 @@ def detail(conversation_id: UUID, session: DB):
         r.id: r
         for r in session.scalars(select(Run).where(Run.id.in_([m.run_id for m in messages if m.run_id])))
     }
+    summary_run = session.scalar(
+        select(Run)
+        .where(Run.conversation_id == row.id, Run.executor_type == "chat_summary")
+        .order_by(Run.created_at.desc(), Run.id.desc())
+        .limit(1)
+    )
     return {
         **conversation_view(session, row),
+        "summary_update": {
+            "id": summary_run.id,
+            "status": summary_run.status,
+            "error_message": summary_run.error_message,
+        }
+        if summary_run
+        else None,
         "messages": [
             {
                 **message_dict(m),

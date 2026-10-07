@@ -238,3 +238,101 @@ def test_summary_budget_rejects_oversize_output_without_replacing_prior(monkeypa
     execute()
     assert api.get(f"/api/runs/{run['id']}").json()["status"] == "failed"
     assert api.get(path).json()["summary"] == original
+
+
+@pytest.mark.parametrize("enabled,count,expected", [(False, 20, False), (True, 12, False), (True, 14, True)])
+def test_automatic_summary_requires_opt_in_and_threshold(fake, enabled, count, expected):
+    cid = seed(count)
+    api = TestClient(app)
+    path = f"/api/chat/conversations/{cid}"
+    assert api.get(path).json()["auto_summary"] is False
+    assert api.patch(path + "/context", json={"auto_summary": "true"}).status_code == 422
+    assert api.patch(path + "/context", json={"auto_summary": enabled}).status_code == 200
+    reply = api.post(path + "/messages", json={"content": "Continue"}).json()
+    assert api.patch(path + "/context", json={"auto_summary": False}).status_code == 409
+    execute()
+    finished = api.get(f"/api/runs/{reply['id']}").json()
+    assert finished["status"] == "succeeded"
+    active = api.get(path).json()["active_run"]
+    assert bool(active) == expected
+    if expected:
+        assert active["executor_type"] == "chat_summary"
+        assert active["parent_run_id"] == reply["id"]
+        assert active["triggered_by"] == "automatic_context"
+        assert finished["metadata"]["summary_run_id"] == active["id"]
+        assert len(fake) == 1  # Enqueueing does not execute another provider call.
+        execute()
+        detail = api.get(path).json()
+        assert detail["summary"]["enabled"] and not detail["active_run"]
+        reset_engine()
+        assert api.get(path).json()["auto_summary"] is True
+        next_reply = api.post(path + "/messages", json={"content": "What did we decide?"}).json()
+        assert next_reply["parameters"]["summary_source"]["id"] == detail["summary"]["id"]
+        execute()
+        assert api.get(path).json()["active_run"] is None  # Eight recent messages remain below threshold.
+
+
+def test_automatic_summary_does_not_restore_disabled_memory(fake):
+    cid = seed()
+    api = TestClient(app)
+    path = f"/api/chat/conversations/{cid}"
+    api.post(path + "/summarize")
+    execute()
+    summary = api.get(path).json()["summary"]
+    with session_factory()() as session:
+        session.get(MemoryEntry, summary["memory_id"]).enabled = False
+        session.commit()
+    api.patch(path + "/context", json={"auto_summary": True})
+    reply = api.post(path + "/messages", json={"content": "Continue"}).json()
+    execute()
+    assert api.get(f"/api/runs/{reply['id']}").json()["status"] == "succeeded"
+    assert api.get(path).json()["active_run"] is None
+    assert not api.get(path).json()["summary"]["enabled"]
+
+
+@pytest.mark.parametrize("failure", ["reply", "summary", "enqueue"])
+def test_automatic_summary_failure_preserves_successful_reply_without_retry(fake, monkeypatch, failure):
+    cid = seed()
+    api = TestClient(app)
+    path = f"/api/chat/conversations/{cid}"
+    api.patch(path + "/context", json={"auto_summary": True})
+    reply = api.post(path + "/messages", json={"content": "Continue"}).json()
+
+    async def broken(self, **kwargs):
+        raise ProviderError("Unavailable")
+        yield
+
+    def cannot_prepare(*args, **kwargs):
+        raise ProviderError("Model unavailable")
+
+    if failure == "reply":
+        monkeypatch.setattr(LocalChatProvider, "stream", broken)
+    if failure == "enqueue":
+        monkeypatch.setattr("app.llama.prepare_consumer", cannot_prepare)
+    execute()
+    result = api.get(f"/api/runs/{reply['id']}").json()
+    assert result["status"] == ("failed" if failure == "reply" else "succeeded")
+    if failure == "summary":
+        pending = api.get(path).json()["active_run"]
+        monkeypatch.setattr(LocalChatProvider, "stream", broken)
+        execute()
+        assert api.get(f"/api/runs/{pending['id']}").json()["status"] == "failed"
+        assert api.get(path).json()["summary_update"]["status"] == "failed"
+    assert api.get(path).json()["active_run"] is None
+    assert api.get(path).json()["summary"] is None
+    with session_factory()() as session:
+        expected = 2 if failure == "summary" else 1
+        assert session.scalar(select(func.count()).select_from(Run)) == expected
+
+
+def test_automatic_context_migration_defaults_off_and_preserves_history():
+    from alembic import command
+    from app.db import alembic_config
+
+    cid = seed()
+    command.downgrade(alembic_config(), "0006")
+    command.upgrade(alembic_config(), "head")
+    reset_engine()
+    detail = TestClient(app).get(f"/api/chat/conversations/{cid}").json()
+    assert detail["auto_summary"] is False
+    assert len(detail["messages"]) == 20

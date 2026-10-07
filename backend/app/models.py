@@ -144,6 +144,7 @@ class Conversation(Base):
     temperature: Mapped[float] = mapped_column(Float, default=0.7)
     max_tokens: Mapped[int] = mapped_column(Integer, default=2048)
     execution_mode: Mapped[str] = mapped_column(String(40), default="local")
+    auto_summary: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 

@@ -68,6 +68,7 @@ def conversation_dict(conversation: Conversation) -> dict:
         "temperature": conversation.temperature,
         "max_tokens": conversation.max_tokens,
         "execution_mode": conversation.execution_mode,
+        "auto_summary": conversation.auto_summary,
         "created_at": iso(conversation.created_at),
         "updated_at": iso(conversation.updated_at),
     }
