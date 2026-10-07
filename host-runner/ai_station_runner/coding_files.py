@@ -117,33 +117,7 @@ def apply_proposal(workspace: Path, selected: list[dict], proposal: dict) -> dic
             os.replace(temporary, path)
         finally:
             Path(temporary).unlink(missing_ok=True)
-        old = (original["content"] or "").splitlines(keepends=True)
-        new = item["content"].splitlines(keepends=True)
-        lines = list(
-            difflib.unified_diff(
-                old,
-                new,
-                fromfile=json.dumps("a/" + item["path"]) if original["content"] is not None else "/dev/null",
-                tofile=json.dumps("b/" + item["path"]),
-            )
-        )
-        patch = "".join(
-            line if line.endswith("\n") else line + "\n\\ No newline at end of file\n" for line in lines
-        )
-        header = f"diff --git {json.dumps('a/' + item['path'])} {json.dumps('b/' + item['path'])}\n"
-        if original["content"] is None:
-            header += f"new file mode {0o100000 | original['mode']:o}\n"
-        patch = header + patch
-        changes.append(
-            {
-                "path": item["path"],
-                "before_sha256": original["sha256"],
-                "after_sha256": hashlib.sha256(item["content"].encode()).hexdigest(),
-                "diff": patch,
-                "insertions": sum(line.startswith("+") for line in lines[2:]),
-                "deletions": sum(line.startswith("-") for line in lines[2:]),
-            }
-        )
+        changes.append(describe_change(original, item))
     return {"summary": proposal["summary"], "files": changes, "review_status": "needs_review"}
 
 
@@ -162,3 +136,31 @@ def proposal_prompt(*, prompt: str, selected: list[dict], guidance: str) -> str:
     if len(message.encode()) > 100000:
         raise ValueError("Coding prompt and selected context exceed the 100,000 byte transport limit")
     return message
+
+
+def describe_change(original: dict, item: dict) -> dict:
+    old = (original["content"] or "").splitlines(keepends=True)
+    new = item["content"].splitlines(keepends=True)
+    lines = list(
+        difflib.unified_diff(
+            old,
+            new,
+            fromfile=json.dumps("a/" + item["path"]) if original["content"] is not None else "/dev/null",
+            tofile=json.dumps("b/" + item["path"]),
+        )
+    )
+    patch = "".join(
+        line if line.endswith("\n") else line + "\n\\ No newline at end of file\n" for line in lines
+    )
+    header = f"diff --git {json.dumps('a/' + item['path'])} {json.dumps('b/' + item['path'])}\n"
+    if original["content"] is None:
+        header += f"new file mode {0o100000 | original['mode']:o}\n"
+    patch = header + patch
+    return {
+        "path": item["path"],
+        "before_sha256": original["sha256"],
+        "after_sha256": hashlib.sha256(item["content"].encode()).hexdigest(),
+        "diff": patch,
+        "insertions": sum(line.startswith("+") for line in lines[2:]),
+        "deletions": sum(line.startswith("-") for line in lines[2:]),
+    }

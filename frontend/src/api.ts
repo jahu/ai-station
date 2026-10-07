@@ -59,6 +59,7 @@ export interface Run {
   parameters: Record<string, unknown>;
   effective_permissions: string[];
   summary: string;
+  error_type: string;
   error_message: string;
   worker_id: string | null;
   metadata?: Record<string, unknown>;
