@@ -14,6 +14,20 @@ AGENT_TOOLS = {
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
         output_schema={"type": "object"},
     ),
+    "remember_report": ToolSpec(
+        name="remember_report",
+        description="Save successful reports as observations in this agent's own memory, with source Run provenance. Nothing is saved on failure or cancellation.",
+        risk_level="low",
+        required_permissions=("memory_write",),
+        timeout=5,
+        execution_target="container",
+        operational=True,
+        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        output_schema={
+            "type": "object",
+            "properties": {"memory_id": {"type": "string"}, "excerpted": {"type": "boolean"}},
+        },
+    ),
     "memory_search": ToolSpec(
         name="memory_search",
         description="Retrieve enabled memories from this agent's own scope.",

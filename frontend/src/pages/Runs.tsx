@@ -415,7 +415,15 @@ export function RunDetail() {
               <ArtifactCards artifacts={artifacts.data} />
             )}
             {run.data.executor_type === "agent" && artifacts.data && (
-              <AgentReport artifacts={artifacts.data} />
+              <AgentReport
+                artifacts={artifacts.data}
+                memoryId={
+                  typeof run.data.metadata?.memory_entry_id === "string"
+                    ? run.data.metadata.memory_entry_id
+                    : undefined
+                }
+                excerpted={run.data.metadata?.memory_excerpted === true}
+              />
             )}
             {run.data.metadata?.web_search && (
               <SearchSources

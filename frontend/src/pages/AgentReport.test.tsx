@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
 import type { Artifact } from "../api";
 import AgentReport from "./AgentReport";
 
@@ -46,4 +47,31 @@ it("renders a complete Markdown report with links but never fetches remote image
   ).toBe("https://example.org/paper");
   expect(screen.queryByRole("img")).toBeNull();
   expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/artifacts/report/file");
+});
+
+it("links an explicitly retained excerpt to inspectable memory", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, text: async () => "Full report" })),
+  );
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <AgentReport
+          memoryId="saved-observation"
+          excerpted
+          artifacts={[
+            { id: "report", type: "markdown", metadata: {} } as Artifact,
+          ]}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByText("Full report");
+  expect(
+    screen
+      .getByRole("link", { name: "View saved agent memory →" })
+      .getAttribute("href"),
+  ).toBe("/memory/saved-observation");
+  expect(screen.getByText(/Memory contains an excerpt/)).toBeTruthy();
 });

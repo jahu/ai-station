@@ -12,7 +12,7 @@ from app.agent_tools import agent_tool
 from app.artifacts import register_file
 from app.events import append_event
 from app.local_provider import LocalChatProvider
-from app.memory import search_memory
+from app.memory import search_memory, upsert_memory
 from app.permissions import require
 from app.providers import ProviderError
 from app.runner_client import RunnerClient
@@ -42,6 +42,8 @@ class LocalAgentExecutor:
                     raise ValueError(f"Agent tool is unavailable: {name}")
                 for permission in spec.required_permissions:
                     require(run.effective_permissions, permission)
+                if name == "remember_report":
+                    continue
                 if name == "web_search":
                     from app.web_search import execute_search
 
@@ -105,17 +107,70 @@ class LocalAgentExecutor:
             )
             session.commit()
             text = asyncio.run(self._consume(session, run, definition, deadline))
-            if run.status != "canceled":
-                if not text.strip():
-                    raise ProviderError("Provider returned no report text")
-                self._artifact(session, run, text, partial=False)
-                run.summary = text[:500]
-                transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})
+            # Re-read under the short write transaction before final output. A
+            # cancellation arriving at stream completion must win over retention.
+            session.refresh(run)
+            if run.status in {"cancel_requested", "canceled"}:
+                if text and run.status == "cancel_requested":
+                    self._artifact(session, run, text, partial=True)
+                if run.status == "cancel_requested":
+                    transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
+                return "done"
+            if not text.strip():
+                raise ProviderError("Provider returned no report text")
+            self._artifact(session, run, text, partial=False)
+            remember = "remember_report" in definition.tools
+            if remember:
+                append_event(session, run.id, "tool.requested", {"tool": "remember_report"})
+            try:
+                with session.begin_nested():
+                    if remember:
+                        self._remember(session, run, text)
+                    run.summary = text[:500]
+                    transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})
+            except Exception:
+                if remember:
+                    append_event(
+                        session,
+                        run.id,
+                        "tool.failed",
+                        {"tool": "remember_report", "error": "Report retention could not complete"},
+                    )
+                raise
         except Exception as exc:
             session.refresh(run)
             if not self._canceled(session, run):
                 mark_failed(session, run, type(exc).__name__, str(exc) or "Agent runtime limit exceeded")
         return "done"
+
+    @staticmethod
+    def _remember(session, run, text):
+        require(run.effective_permissions, "memory_write")
+        if not run.agent_id:
+            raise ValueError("Report retention requires an agent scope")
+        if run.metadata_json.get("memory_entry_id"):
+            return
+        append_event(session, run.id, "tool.started", {"tool": "remember_report"})
+        excerpted = len(text) > 12000
+        notice = "\n\n[Excerpt: open the source Run for the full report.]"
+        content = text if not excerpted else text[: 12000 - len(notice)] + notice
+        entry = upsert_memory(
+            session,
+            scope="agent",
+            scope_id=run.agent_id,
+            content=content,
+            memory_type="observation",
+            tags=["agent-report"],
+            source_run_id=run.id,
+        )
+        run.metadata_json = {**run.metadata_json, "memory_entry_id": entry.id, "memory_excerpted": excerpted}
+        append_event(
+            session,
+            run.id,
+            "memory.created",
+            {"memory_id": entry.id, "scope": "agent", "scope_id": run.agent_id, "excerpted": excerpted},
+        )
+        append_event(session, run.id, "tool.completed", {"tool": "remember_report", "memory_id": entry.id})
 
     @staticmethod
     def _canceled(session, run):

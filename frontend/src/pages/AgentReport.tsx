@@ -1,10 +1,19 @@
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Artifact } from "../api";
 import { ErrorNotice, Loading } from "../components/common";
 
-export default function AgentReport({ artifacts }: { artifacts: Artifact[] }) {
+export default function AgentReport({
+  artifacts,
+  memoryId,
+  excerpted = false,
+}: {
+  artifacts: Artifact[];
+  memoryId?: string;
+  excerpted?: boolean;
+}) {
   const artifact = artifacts.find((item) => item.type === "markdown");
   const report = useQuery({
     queryKey: ["agent-report", artifact?.id],
@@ -31,6 +40,15 @@ export default function AgentReport({ artifacts }: { artifacts: Artifact[] }) {
           Open report ↗
         </a>
       </div>
+      {memoryId && (
+        <p className="muted">
+          <Link className="text-link" to={`/memory/${memoryId}`}>
+            View saved agent memory →
+          </Link>
+          {excerpted &&
+            " · Memory contains an excerpt; the full report is below."}
+        </p>
+      )}
       <ErrorNotice error={report.error} />
       {report.isPending ? (
         <Loading />

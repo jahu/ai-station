@@ -9,12 +9,12 @@ from app.db import reset_engine, session_factory, utcnow
 from app.engine import tick
 from app.local_provider import LocalChatProvider
 from app.memory import upsert_memory
-from app.models import Agent, Run
+from app.models import Agent, MemoryEntry, Run
 from app.providers import ProviderError
 from app.runs import request_cancel
 from app.schedule import scheduler_tick
 from fastapi.testclient import TestClient
-from sqlalchemy import select
+from sqlalchemy import select, text
 
 
 def create(api, **extra):
@@ -416,3 +416,135 @@ def test_agent_search_migration_preserves_existing_definitions():
         saved = api.get("/api/agents/" + agent["id"]).json()
         assert saved["goal"] == agent["goal"] and saved["tools"] == ["memory_search"]
         assert saved["search_query"] == ""
+
+
+@pytest.mark.parametrize("remember", [False, True])
+def test_report_memory_opt_in_provenance_and_next_scheduled_run(monkeypatch, remember):
+    received = []
+
+    async def complete(self, **kwargs):
+        received.append(kwargs["messages"])
+        yield "Retained observation for tomorrow"
+
+    monkeypatch.setattr(LocalChatProvider, "stream", complete)
+    api = TestClient(app)
+    tools = ["memory_search", "remember_report"] if remember else ["memory_search"]
+    agent = create(api, enabled=True, tools=tools, trigger="interval", interval_seconds=60)
+    queued = run_now(api, agent)
+    with session_factory()() as session:
+        tick(session, "memory-test")
+    run = api.get("/api/runs/" + queued["id"]).json()
+    assert run["status"] == "succeeded"
+    assert ("memory_write" in run["effective_permissions"]) is remember
+    reset_engine()
+    with session_factory()() as session:
+        entries = list(session.scalars(select(MemoryEntry)))
+        assert len(entries) == int(remember)
+        if remember:
+            entry = entries[0]
+            assert entry.scope == "agent" and entry.scope_id == agent["id"]
+            assert entry.source_run_id == run["id"]
+            assert entry.memory_type == "observation" and entry.tags == ["agent-report"]
+            assert not entry.pinned and entry.confidence is None
+            assert run["metadata"]["memory_entry_id"] == entry.id
+            from app.agent_executor import LocalAgentExecutor
+
+            LocalAgentExecutor._remember(session, session.get(Run, run["id"]), "Duplicate")
+            assert len(list(session.scalars(select(MemoryEntry)))) == 1
+        row = session.get(Agent, agent["id"])
+        row.next_run_at = utcnow() - timedelta(seconds=1)
+        session.commit()
+        assert len(scheduler_tick(session)) == 1
+        session.commit()
+        tick(session, "memory-test")
+    assert ("Retained observation" in str(received[1])) is remember
+    other = create(api, name="Different scope", enabled=True, tools=["memory_search"])
+    run_now(api, other)
+    with session_factory()() as session:
+        tick(session, "memory-test")
+    assert "Retained observation" not in str(received[2])
+
+
+@pytest.mark.parametrize(
+    "outcome", ["failed", "canceled", "late_cancel", "missing_permission", "write_failed"]
+)
+def test_unsuccessful_agent_never_retains_memory(monkeypatch, outcome):
+    from app.agent_executor import LocalAgentExecutor
+
+    api = TestClient(app)
+    agent = create(api, enabled=True, tools=["remember_report"])
+    queued = run_now(api, agent)
+
+    def cancel():
+        with session_factory()() as session:
+            request_cancel(session, session.get(Run, queued["id"]))
+            session.commit()
+
+    async def complete(self, **kwargs):
+        assert outcome != "missing_permission", "Inference must not start without permission"
+        yield "An observation"
+        if outcome == "failed":
+            raise ProviderError("Stream failed")
+        if outcome == "canceled":
+            cancel()
+            await asyncio.sleep(1)
+
+    monkeypatch.setattr(LocalChatProvider, "stream", complete)
+    if outcome == "late_cancel":
+        consume = LocalAgentExecutor._consume
+
+        async def late(self, *args):
+            result = await consume(self, *args)
+            cancel()
+            return result
+
+        monkeypatch.setattr(LocalAgentExecutor, "_consume", late)
+    if outcome == "missing_permission":
+        with session_factory()() as session:
+            session.get(Run, queued["id"]).effective_permissions = []
+            session.commit()
+    if outcome == "write_failed":
+
+        def fail_write(*args, **kwargs):
+            upsert_memory(*args, **kwargs)
+            raise RuntimeError("Storage failed after flush")
+
+        monkeypatch.setattr("app.agent_executor.upsert_memory", fail_write)
+    with session_factory()() as session:
+        tick(session, "memory-test")
+    run = api.get("/api/runs/" + queued["id"]).json()
+    assert run["status"] == ("canceled" if "cancel" in outcome else "failed")
+    assert "memory_entry_id" not in run["metadata"]
+    with session_factory()() as session:
+        assert list(session.scalars(select(MemoryEntry))) == []
+        assert session.scalar(text("SELECT count(*) FROM memory_fts")) == 0
+    artifacts = api.get("/api/artifacts?run_id=" + queued["id"]).json()
+    assert len(artifacts) == (0 if outcome == "missing_permission" else 1)
+    if artifacts:
+        assert artifacts[0]["metadata"]["partial"] is (outcome != "write_failed")
+
+
+def test_report_memory_excerpt_and_read_permission_are_independent(monkeypatch):
+    report = "Long observation. " * 1000
+    received = []
+
+    async def complete(self, **kwargs):
+        received.append(kwargs["messages"])
+        yield report
+
+    monkeypatch.setattr(LocalChatProvider, "stream", complete)
+    api = TestClient(app)
+    agent = create(api, enabled=True, tools=["remember_report"])
+    with session_factory()() as session:
+        upsert_memory(session, scope="agent", scope_id=agent["id"], content="Do not retrieve this")
+        session.commit()
+    queued = run_now(api, agent)
+    with session_factory()() as session:
+        tick(session, "memory-test")
+        entry = session.scalar(select(MemoryEntry).where(MemoryEntry.source_run_id == queued["id"]))
+        assert len(entry.content) == 12000 and "[Excerpt:" in entry.content
+    assert "Do not retrieve this" not in str(received[0])
+    run = api.get("/api/runs/" + queued["id"]).json()
+    assert run["status"] == "succeeded" and run["metadata"]["memory_excerpted"] is True
+    artifact = api.get("/api/artifacts?run_id=" + queued["id"]).json()[0]
+    assert api.get(f"/api/artifacts/{artifact['id']}/file").text == report
