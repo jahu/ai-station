@@ -136,4 +136,7 @@ class ProjectValidationExecutor:
                 "ValidationFailed",
                 "One or more project commands failed; inspect the validation report",
             )
+            from app.local_coding import queue_automatic_repair
+
+            queue_automatic_repair(session, run)
         return "done"

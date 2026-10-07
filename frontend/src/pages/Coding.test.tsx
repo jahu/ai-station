@@ -121,6 +121,17 @@ it("queues local coding with the selected model and no external-AI grant", async
     ).checked,
   ).toBe(true);
   expect(screen.queryByLabelText("Selected files")).toBeNull();
+  expect(
+    (
+      screen.getByLabelText("Automatic repair", {
+        exact: false,
+      }) as HTMLSelectElement
+    ).value,
+  ).toBe("0");
+  fireEvent.change(
+    screen.getByLabelText("Automatic repair", { exact: false }),
+    { target: { value: "2" } },
+  );
   fireEvent.click(
     screen.getByRole("button", { name: "Create worktree and start Local AI" }),
   );
@@ -135,6 +146,7 @@ it("queues local coding with the selected model and no external-AI grant", async
         files: [],
         model: "local-model",
         explore: true,
+        max_repair_attempts: 2,
       }),
     }),
   );

@@ -23,6 +23,7 @@ export default function Coding() {
   const [external, setExternal] = useState(false);
   const [executor, setExecutor] = useState("cursor");
   const [explore, setExplore] = useState(true);
+  const [repairAttempts, setRepairAttempts] = useState(0);
   const [localModel, setLocalModel] = useState("");
   const [modelPending, setModelPending] = useState(false);
   const provider = useQuery({
@@ -55,7 +56,9 @@ export default function Coding() {
                   .map((p) => p.trim())
                   .filter(Boolean),
           model: local ? selectedModel : model,
-          ...(!local ? { external_ai: external } : { explore }),
+          ...(!local
+            ? { external_ai: external }
+            : { explore, max_repair_attempts: repairAttempts }),
         }),
       }),
     onSuccess: (run) => navigate(`/runs/${run.id}`),
@@ -150,6 +153,28 @@ export default function Coding() {
                     onChange={(e) => setExplore(e.target.checked)}
                   />
                   Let Local AI find the relevant files
+                </label>
+              )}
+              {local && (
+                <label>
+                  Automatic repair
+                  <select
+                    value={repairAttempts}
+                    onChange={(event) =>
+                      setRepairAttempts(Number(event.target.value))
+                    }
+                  >
+                    <option value={0}>Off — I will request repairs</option>
+                    <option value={1}>Try once if validation fails</option>
+                    <option value={2}>
+                      Try up to twice if validation fails
+                    </option>
+                  </select>
+                  <small>
+                    Uses the same local model and files. Saved checks run after
+                    each attempt. Stops on cancellation or execution failure;
+                    committing always requires review.
+                  </small>
                 </label>
               )}
               {local && explore ? (

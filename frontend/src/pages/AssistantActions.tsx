@@ -13,6 +13,7 @@ export type CodingScope = {
   files: string[];
   external_ai: boolean;
   explore?: boolean;
+  max_repair_attempts?: number;
 };
 export type AssistantOptions = {
   action: string;
@@ -144,6 +145,7 @@ export default function AssistantActions({
   const [projectId, setProjectId] = useState("");
   const [files, setFiles] = useState("");
   const [explore, setExplore] = useState(true);
+  const [repairAttempts, setRepairAttempts] = useState(0);
   const [external, setExternal] = useState(false);
   const projects = useQuery({
     queryKey: ["coding-projects"],
@@ -156,6 +158,7 @@ export default function AssistantActions({
     allow: boolean,
     action = value.action,
     auto = explore,
+    repairs = repairAttempts,
   ) {
     const localExplore = action === "coding.local" && auto;
     const project = projects.data?.find((p) => p.id === id);
@@ -175,6 +178,9 @@ export default function AssistantActions({
               expected_updated_at: project.updated_at,
               files: localExplore ? [] : selected,
               ...(localExplore ? { explore: true } : {}),
+              ...(action === "coding.local" && repairs > 0
+                ? { max_repair_attempts: repairs }
+                : {}),
               external_ai: action === "coding.cursor",
             }
           : null,
@@ -456,6 +462,34 @@ export default function AssistantActions({
                 }}
               />
               Let Local AI find the relevant files
+            </label>
+          )}
+          {value.action === "coding.local" && (
+            <label>
+              Automatic repair
+              <select
+                value={repairAttempts}
+                onChange={(event) => {
+                  const attempts = Number(event.target.value);
+                  setRepairAttempts(attempts);
+                  scope(
+                    projectId,
+                    files,
+                    false,
+                    value.action,
+                    explore,
+                    attempts,
+                  );
+                }}
+              >
+                <option value={0}>Off — I will request repairs</option>
+                <option value={1}>Try once if validation fails</option>
+                <option value={2}>Try up to twice if validation fails</option>
+              </select>
+              <small>
+                Same local model, files and saved checks. Commit still requires
+                your review.
+              </small>
             </label>
           )}
           {value.action === "coding.local" && explore ? (
