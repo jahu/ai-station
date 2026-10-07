@@ -9,7 +9,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 - Platform assistant: the default conversation routes instructions to images, agent drafts and explicitly scoped Cursor tasks, showing ordinary Runs and media results inline. Images and WAV recordings can be selected from Library or reused directly from conversation results, with ordered image references. Existing workspaces remain available. See [orchestrator contracts and roadmap](docs/orchestrator.md).
 
 - Local chat: persisted conversations, selectable managed llama.cpp GGUFs across multiple GPUs alongside Ollama/compatible providers, model discovery, streaming Markdown, bounded text attachments, stop, regeneration, and inspectable Runs.
-- Agents: disabled natural-language drafts, explicit activation, local reports, scoped context tools, persistent UTC schedules, pause/resume, duplication and execution history.
+- Agents: disabled natural-language drafts, explicit activation, local reports, opt-in report memory with source Runs, scoped context tools, persistent UTC schedules, pause/resume, duplication and execution history.
 - Memory: scoped FTS search, validated provenance, editing, pin/disable controls, and immutable pinned Chat context.
 - External runtimes: read-only process observations and configured local endpoint health, with durable history and explicit external ownership in System.
 - Models: managed metadata-only discovery Runs, persistent file observations, category/search/detail views and report artifacts.

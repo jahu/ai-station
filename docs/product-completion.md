@@ -10,7 +10,7 @@ The development target is the complete AI Station vision, confirmed on 2026-09-2
 | Media | Existing image pipeline, local Chatterbox speech, EchoMimic portrait video, inline media workspaces and searchable Library with annotations and reversible Trash | General video and music adapters, real runtime/model selection and shared artifact lineage |
 | Models and runtimes | Model discovery, external observations, owned multi-GPU llama.cpp, automatic reload and idle eviction | Broader runtime adapters, model definitions/presets/compatibility, explicit installation, extended process controls and health |
 | Connectors and tools | Registry/permission foundations and optional public search | HTTP/browser, GitHub and user-configured email/calendar/social integrations, secret references, audit and approvals |
-| Memory | Scoped provenance, FTS, pinned context and explicit summaries | Workflow/agent memory production, managed rolling context, optional embeddings with explicit model setup |
+| Memory | Scoped provenance, FTS, pinned context, explicit summaries and opt-in agent report memory | Workflow memory production, managed rolling context, optional embeddings with explicit model setup |
 | Nodes and operations | Portable local Docker control plane and private native Runner | Authenticated node registration/transport, target-aware resources, authentication before LAN exposure, packaging/upgrade/recovery and long-running reliability |
 | UX and observability | Workspaces, command palette, Runs/events/artifacts, telemetry | Unified actionable activity, rich coding review/actions, keyboard workflows, accessibility and end-to-end acceptance across enabled capabilities |
 

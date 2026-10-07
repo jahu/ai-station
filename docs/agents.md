@@ -11,7 +11,7 @@ The Agents workspace supports draft review/editing, explicit enablement, Run now
 
 The local endpoint comes from administrator configuration, never agent output. The local model uses the shared compatible-provider stream with a bounded output and runtime; host telemetry has an eight-second request timeout. Partial reports are preserved on failure/cancellation. Scheduled Runs have no automatic retry, and missed worker leases become interrupted rather than repeating inference invisibly. A one-shot launch disables its schedule immediately. Interval/cron agents keep their saved cadence when Run now is used.
 
-No external AI, browser, email, file editing, arbitrary shell, or automatic memory writing is enabled in this slice. Agents do not control runtime processes. Existing generic draft adapters remain unregistered.
+No external AI, browser, email, file editing, or arbitrary shell is enabled in this slice. Agents do not control runtime processes. Existing generic draft adapters remain unregistered.
 
 ## Scheduled internet research
 
@@ -22,3 +22,10 @@ The worker enforces cancellation and the overall agent deadline while searching.
 Both draft creation and definition editing reuse Chat's searchable local-server/llama.cpp model picker, including saved multi-GPU presets. Scheduled executions use the existing owned-runtime scheduling path. Each execution creates a report; change-only notification policies and arbitrary browser research are not implemented.
 
 Verified 2026-09-30: real Chromium definition editing → private SearXNG public search → existing multi-GPU llama.cpp 27B → Polish report and recorded source cards. Run `cb11cc6e-721d-4a86-acb6-294071c8ea27` used an isolated database; the report survived an API restart. Manual and scheduled query snapshots, cancellation, deadlines, permissions, migration and UI behavior also have automated coverage.
+
+
+## Remembering reports
+
+Select **Remember reports** in the definition to grant scoped `memory_write`. Every successful manual or scheduled Run stores an observation in that agent's own memory with source Run provenance. Select **memory_search** separately to include previous enabled memories in future reports. Neither option is enabled implicitly; stored observations are not verified facts and are never promoted to global memory.
+
+Run details link directly to the saved entry. Memory supports editing, disabling and deleting it. Reports longer than 12,000 characters retain an explicitly labeled excerpt; the full Markdown artifact remains available. Saving memory and marking the Run successful share a database transaction. Failed or canceled Runs preserve partial report artifacts but create no memory. Worker recovery never silently retries the write or inference.

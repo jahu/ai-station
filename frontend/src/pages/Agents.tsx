@@ -521,11 +521,19 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             <span className="chip">Network permission · search only</span>
           </section>
         )}
+        {values.tools.includes("remember_report") && (
+          <p className="notice agent-wide">
+            Successful reports will be stored in this agent’s memory with their
+            source Run. They are observations, not verified facts. Select
+            memory_search to use them on future runs. You can edit, disable or
+            delete them in Memory.
+          </p>
+        )}
         <div className="agent-wide">
           <h3>Tools</h3>
           <p className="muted">
-            Selected tools gather context before the local model writes its
-            report. Unavailable tools prevent activation.
+            Context tools run before inference; Remember reports runs after a
+            successful report. Unavailable tools prevent activation.
           </p>
           {tools.data?.map((tool) => (
             <label className="agent-tool" key={tool.name}>
@@ -545,7 +553,11 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                 }
               />
               <span>
-                <strong>{tool.name}</strong>{" "}
+                <strong>
+                  {tool.name === "remember_report"
+                    ? "Remember reports"
+                    : tool.name}
+                </strong>{" "}
                 {!tool.operational && "— Unavailable"}
                 <small>
                   {tool.description} {tool.required_permissions.join(", ")}
