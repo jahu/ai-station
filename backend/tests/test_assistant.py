@@ -217,6 +217,8 @@ def test_coding_scope_dispatch_and_stale_project_rejection(provider):
             "files": ["app.py"],
             "external_ai": provider == "cursor",
         }
+    if provider == "local":
+        scope["max_repair_attempts"] = 2
     if explore:
         scope.update(files=[], explore=True)
     with TestClient(app) as client:
@@ -231,6 +233,8 @@ def test_coding_scope_dispatch_and_stale_project_rejection(provider):
         child = detail["active_run"]
         assert child["project_id"] == scope["project_id"]
         assert child["executor_type"] == "worktree_prepare"
+        if provider == "local":
+            assert child["parameters"]["local_coding"]["max_repair_attempts"] == 2
         assert child["parameters"]["local_coding" if provider == "local" else "cursor"]["files"] == (
             [] if explore else ["app.py"]
         )

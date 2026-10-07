@@ -69,6 +69,7 @@ def enqueue_coding_task(session, body, *, provider="cursor", task=None, parent_r
 
         request["endpoint"] = model_endpoint(body.model, session)
         request["explore"] = body.explore
+        request["max_repair_attempts"] = body.max_repair_attempts
     run = create_run(
         session,
         task,

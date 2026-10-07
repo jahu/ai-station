@@ -5,13 +5,14 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import Field, StrictBool, model_validator
+from pydantic import Field, StrictBool, StrictInt, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.coding_proposal_executor import CodingProposalExecutor
 from app.coding_tasks import CodingTask, enqueue_coding_task
 from app.db import session_scope
+from app.events import append_event
 from app.models import Run, RunEvent, Worktree
 from app.providers import ProviderError
 from app.runs import create_run, run_dict
@@ -24,6 +25,7 @@ router = APIRouter(prefix="/api/coding")
 class LocalCodingTask(CodingTask):
     model: str = Field(min_length=1, max_length=200)
     explore: StrictBool = False
+    max_repair_attempts: StrictInt = Field(default=0, ge=0, le=2)
     files: list[Annotated[str, Field(min_length=1, max_length=300)]] = Field(
         default_factory=list, max_length=10
     )
@@ -47,6 +49,12 @@ def create_local_task(body: LocalCodingTask, session: Annotated[Session, Depends
 
 @router.post("/runs/{source_id}/repair", status_code=202)
 def repair_local_task(source_id: UUID, session: Annotated[Session, Depends(session_scope)]):
+    run = enqueue_local_repair(session, source_id)
+    session.commit()
+    return run_dict(run)
+
+
+def enqueue_local_repair(session, source_id):
     source = session.get(Run, str(source_id))
     if source is None:
         raise HTTPException(404, "Coding Run not found")
@@ -104,6 +112,7 @@ def repair_local_task(source_id: UUID, session: Annotated[Session, Depends(sessi
         "explore": False,
         "repair_source_run_id": source.id,
         "repair_validation_run_id": validation.id,
+        "repair_attempt": source.parameters.get("repair_attempt", 0) + 1,
     }
     run = create_run(
         session,
@@ -130,8 +139,41 @@ def repair_local_task(source_id: UUID, session: Annotated[Session, Depends(sessi
         "worktree": source.metadata_json.get("worktree", {}),
     }
     source.metadata_json = {**source.metadata_json, "repair_run_id": run.id, "review_status": "superseded"}
-    session.commit()
-    return run_dict(run)
+    validation.metadata_json = {**validation.metadata_json, "repair_run_id": run.id}
+    append_event(
+        session,
+        source.id,
+        "coding.repair.queued",
+        {"run_id": run.id, "attempt": parameters["repair_attempt"]},
+    )
+    return run
+
+
+def queue_automatic_repair(session, validation):
+    if validation.status != "failed" or validation.error_type != "ValidationFailed":
+        return
+    source = session.get(Run, validation.parent_run_id) if validation.parent_run_id else None
+    if not source or source.executor_type != "local_proposal":
+        return
+    budget = source.parameters.get("max_repair_attempts", 0)
+    if not budget or validation.metadata_json.get("repair_run_id"):
+        return
+    if source.parameters.get("repair_attempt", 0) >= budget:
+        append_event(session, validation.id, "coding.repair.exhausted", {"maximum_attempts": budget})
+        validation.metadata_json = {**validation.metadata_json, "repair_budget_exhausted": True}
+        return
+    try:
+        with session.begin_nested():
+            repair = enqueue_local_repair(session, source.id)
+            append_event(
+                session,
+                validation.id,
+                "coding.repair.queued",
+                {"run_id": repair.id, "attempt": repair.parameters["repair_attempt"], "automatic": True},
+            )
+    except HTTPException as exc:
+        # Keep the failed validation/report even if runtime preparation is unavailable.
+        append_event(session, validation.id, "coding.repair.unavailable", {"reason": str(exc.detail)})
 
 
 class LocalProposalExecutor(CodingProposalExecutor):

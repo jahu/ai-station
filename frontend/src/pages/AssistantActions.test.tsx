@@ -267,6 +267,20 @@ it("stages local coding scope without granting Cursor consent", async () => {
       }) as HTMLInputElement
     ).checked,
   ).toBe(false);
+  expect(
+    (
+      screen.getByLabelText("Automatic repair", {
+        exact: false,
+      }) as HTMLSelectElement
+    ).value,
+  ).toBe("0");
+  fireEvent.change(
+    screen.getByLabelText("Automatic repair", { exact: false }),
+    { target: { value: "2" } },
+  );
+  expect(
+    JSON.parse(screen.getByTestId("scope").textContent!).max_repair_attempts,
+  ).toBe(2);
   fireEvent.change(screen.getByLabelText("Action"), {
     target: { value: "coding.cursor" },
   });
@@ -275,6 +289,9 @@ it("stages local coding scope without granting Cursor consent", async () => {
   expect(JSON.parse(screen.getByTestId("scope").textContent!).external_ai).toBe(
     true,
   );
+  expect(
+    JSON.parse(screen.getByTestId("scope").textContent!).max_repair_attempts,
+  ).toBeUndefined();
   fireEvent.change(screen.getByLabelText("Action"), {
     target: { value: "coding.local" },
   });

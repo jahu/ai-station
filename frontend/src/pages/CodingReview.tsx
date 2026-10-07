@@ -54,6 +54,14 @@ export default function CodingReview({ run }: { run: Run }) {
             Agent completion is not a correctness verdict. Review the changes
             and validation before integrating this branch.
           </p>
+          {Number(run.parameters?.max_repair_attempts ?? 0) > 0 && (
+            <p className="muted">
+              Repair attempts: {Number(run.parameters?.repair_attempt ?? 0)} ·
+              Automatic limit: {Number(run.parameters?.max_repair_attempts)}.
+              Each attempt preserves the original model, file scope and
+              validation commands.
+            </p>
+          )}
           {typeof validation === "string" ? (
             <ValidationActions run={run} validationId={validation} />
           ) : (
@@ -221,7 +229,8 @@ function ValidationActions({
       api<Run>(`/coding/runs/${run.id}/repair`, { method: "POST" }),
     onSuccess: (result) => navigate(`/runs/${result.id}`),
   });
-  const next = run.metadata?.repair_run_id;
+  const next =
+    run.metadata?.repair_run_id ?? validation.data?.metadata?.repair_run_id;
   return (
     <div className="content-panel">
       <p>
@@ -231,6 +240,12 @@ function ValidationActions({
         </Link>
       </p>
       <ErrorNotice error={validation.error || repair.error} />
+      {validation.data?.metadata?.repair_budget_exhausted === true && (
+        <p className="notice">
+          Automatic repair limit reached. Inspect the latest diff and failures
+          before requesting another attempt.
+        </p>
+      )}
       {typeof next === "string" ? (
         <p>
           This attempt was superseded.{" "}

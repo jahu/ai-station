@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, ValidationError, model_validator
 from sqlalchemy import select
 
 from app.db import utcnow
@@ -46,11 +46,14 @@ class CodingScope(BaseModel):
     )
     external_ai: bool = False
     explore: StrictBool = False
+    max_repair_attempts: StrictInt = Field(default=0, ge=0, le=2)
 
     @model_validator(mode="after")
     def selection(self):
         if self.explore and (self.external_ai or self.files) or not self.explore and not self.files:
             raise ValueError("Choose local repository exploration or explicit source files")
+        if self.external_ai and self.max_repair_attempts:
+            raise ValueError("Automatic repair is available only for local coding")
         return self
 
 
@@ -341,7 +344,11 @@ class AssistantExecutor:
                 )
             else:
                 body = CursorTask(
-                    **{key: value for key, value in params["coding"].items() if key != "explore"},
+                    **{
+                        key: value
+                        for key, value in params["coding"].items()
+                        if key not in {"explore", "max_repair_attempts"}
+                    },
                     prompt=params["content"],
                 )
                 child = enqueue_cursor_task(session, body, task=run.task, parent_run_id=run.id)
@@ -440,6 +447,18 @@ def task_results(session, message, run):
             .limit(40)
         )
     )
+    by_id = {step.id: step for step in steps}
+    superseded = set()
+    for step in steps:
+        replacement = by_id.get(step.metadata_json.get("repair_run_id"))
+        if (
+            step.executor_type == "project_validation"
+            and step.status == "failed"
+            and replacement
+            and replacement.executor_type == "local_proposal"
+            and replacement.parent_run_id == step.id
+        ):
+            superseded.add(step.id)
     return {
         "steps": [
             {
@@ -456,7 +475,11 @@ def task_results(session, message, run):
         "task_status": next(
             (step.status for step in steps if step.status not in TERMINAL),
             next(
-                (step.status for step in steps if step.status in {"failed", "interrupted", "canceled"}),
+                (
+                    step.status
+                    for step in steps
+                    if step.id not in superseded and step.status in {"failed", "interrupted", "canceled"}
+                ),
                 "succeeded",
             ),
         ),

@@ -1334,3 +1334,122 @@ def test_local_repair_preserves_scope_revalidates_and_commits_cumulative_diff(
     assert (repository / "README.md").read_text() == "Original repository\n"
     assert not (repository / "new.py").exists()
     assert (repository / ".git/index").read_bytes() == index
+
+
+@pytest.mark.parametrize("budget,succeed", [(0, False), (1, False), (2, False), (2, True)])
+def test_local_automatic_repair_is_opt_in_bounded_and_stops_on_success(
+    repository, owned_runner, local_coding_bridge, validation_sandbox, budget, succeed
+):
+    from app.models import Run
+
+    with TestClient(app) as client:
+        project = register(
+            client,
+            repository,
+            test_commands=[
+                [
+                    "/usr/bin/python3",
+                    "-c",
+                    "import subprocess; assert subprocess.check_output(['/usr/bin/python3', 'new.py']).strip() == b'42'",
+                ]
+            ],
+        )
+        source_id = prepare_local_coding(client, project, max_repair_attempts=budget)
+        with session_factory()() as session:
+            tick(session, "first-proposal")
+        if succeed:
+            local_coding_bridge["proposal"] = {
+                "summary": "Repair result",
+                "files": [{"path": "new.py", "content": "print(42)\n"}],
+            }
+        for _ in range(7):
+            with session_factory()() as session:
+                tick(session, "bounded-repair")
+        with session_factory()() as session:
+            runs = list(
+                session.scalars(select(Run).where(Run.project_id == project["id"]).order_by(Run.created_at))
+            )
+            proposals = [r for r in runs if r.executor_type == "local_proposal"]
+            validations = [r for r in runs if r.executor_type == "project_validation"]
+            assert len(proposals) == 1 + (1 if succeed else budget)
+            assert len(validations) == len(proposals)
+            assert all(r.status == "succeeded" for r in proposals)
+            assert all(r.parameters["max_repair_attempts"] == budget for r in proposals)
+            assert proposals[-1].parameters.get("repair_attempt", 0) == (1 if succeed else budget)
+            assert validations[-1].status == ("succeeded" if succeed else "failed")
+            from types import SimpleNamespace
+
+            from app.assistant import task_results
+
+            projected = task_results(
+                session, SimpleNamespace(metadata_json={"orchestration": True}), proposals[0]
+            )
+            assert projected["task_status"] == ("succeeded" if succeed else "failed")
+            assert any(step["status"] == "failed" for step in projected["steps"])
+            assert bool(validations[-1].metadata_json.get("repair_budget_exhausted")) is (
+                bool(budget) and not succeed
+            )
+            if budget:
+                first = session.get(Run, source_id)
+                assert first.metadata_json["review_status"] == "superseded"
+                assert validations[0].metadata_json["repair_run_id"] == first.metadata_json["repair_run_id"]
+            assert all(r.parameters["commands"] == proposals[0].parameters["commands"] for r in proposals)
+    assert (repository / "README.md").read_text() == "Original repository\n"
+
+
+@pytest.mark.parametrize("stop", ["cancel", "unavailable"])
+def test_automatic_repair_preserves_failed_validation_or_cancellation_without_extra_runs(
+    repository, owned_runner, local_coding_bridge, validation_sandbox, monkeypatch, stop
+):
+    from app.models import Run
+    from app.providers import ProviderError
+
+    with TestClient(app) as client:
+        project = register(
+            client, repository, test_commands=[["/usr/bin/python3", "-c", "raise AssertionError('expected')"]]
+        )
+        source_id = prepare_local_coding(client, project, max_repair_attempts=2)
+        with session_factory()() as session:
+            tick(session, "initial-proposal")
+        source = client.get(f"/api/runs/{source_id}").json()
+        validation_id = source["metadata"]["validation_run_id"]
+        if stop == "cancel":
+            client.post(f"/api/runs/{validation_id}/cancel")
+        else:
+
+            def unavailable(*args):
+                raise ProviderError("Runtime requires inspection")
+
+            monkeypatch.setattr("app.llama.prepare_consumer", unavailable)
+        with session_factory()() as session:
+            tick(session, "validation")
+            assert (
+                session.scalar(select(func.count()).select_from(Run).where(Run.project_id == project["id"]))
+                == 3
+            )
+            source = session.get(Run, source_id)
+            validation = session.get(Run, validation_id)
+            assert "repair_run_id" not in source.metadata_json
+            assert validation.status == ("canceled" if stop == "cancel" else "failed")
+            if stop == "unavailable":
+                assert validation.metadata_json["validation"]["commands"][0]["exit_code"] != 0
+        if stop == "unavailable":
+            events = client.get(f"/api/runs/{validation_id}/events").json()
+            assert any(e["event_type"] == "coding.repair.unavailable" for e in events)
+
+
+@pytest.mark.parametrize("budget", [-1, 3, True, "1"])
+def test_local_repair_budget_rejects_unbounded_or_coerced_values(budget):
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/coding/local",
+            json={
+                "project_id": "00000000-0000-0000-0000-000000000001",
+                "expected_updated_at": "2026-10-07T12:00:00Z",
+                "prompt": "Change source",
+                "files": ["source.py"],
+                "model": "local",
+                "max_repair_attempts": budget,
+            },
+        )
+        assert response.status_code == 422
