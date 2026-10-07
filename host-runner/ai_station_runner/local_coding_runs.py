@@ -31,6 +31,7 @@ class LocalCodingRequest(BaseModel):
         default_factory=list, max_length=10
     )
     explore: StrictBool = False
+    repair_source_run_id: UUID | None = None
     permissions: list[str] = Field(max_length=4)
 
     @model_validator(mode="after")
@@ -94,6 +95,20 @@ def start_local_coding(manager, body: LocalCodingRequest):
         record = inspect_worktree(manager, str(body.worktree_run_id))
         if record["state"] != "ready" or record["project_id"] != str(body.project_id):
             raise GitError("Local coding requires this project's ready owned worktree")
+        if body.repair_source_run_id:
+            previous = local_coding_report(manager, str(body.repair_source_run_id))
+            if (
+                previous["base_commit"] != record.get("head_commit", record["base_commit"])
+                or previous["project_id"] != str(body.project_id)
+                or previous["worktree_run_id"] != str(body.worktree_run_id)
+            ):
+                raise GitError("Repair source belongs to another worktree")
+            previous_body = load_request(str(body.repair_source_run_id))
+            files = previous_body.files
+            if previous_body.explore:
+                files = previous["exploration"][-1]["request"]["files"]
+            if body.explore or body.files != files or body.model != previous_body.model:
+                raise GitError("Repair must preserve the original local model and file scope")
         validate_connection(body)
         with request.open("x") as handle:
             os.chmod(request, 0o600)

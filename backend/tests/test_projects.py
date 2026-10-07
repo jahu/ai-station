@@ -944,6 +944,8 @@ def local_coding_bridge(owned_runner, tmp_path, monkeypatch):
                         {"tool": "finish", "files": ["README.md", "new.py"]},
                     ][step - 1]
                 )
+            if control.get("proposal"):
+                proposal = json.dumps(control["proposal"])
             delta = {"content": proposal}
             if control["mode"] == "tool":
                 delta["tool_calls"] = [{"function": {"name": "shell"}}]
@@ -1226,4 +1228,109 @@ def test_local_exploration_selects_files_and_preserves_checkout(
         assert client.post("/api/coding/local", json={**body, "explore": False}).status_code == 422
         assert client.post("/api/coding/local", json={**body, "files": ["README.md"]}).status_code == 422
     assert (repository / "README.md").read_text() == "Original repository\n"
+    assert (repository / ".git/index").read_bytes() == index
+
+
+@pytest.mark.parametrize("explore", [False, True])
+@pytest.mark.parametrize("cancel_repair", [False, True])
+def test_local_repair_preserves_scope_revalidates_and_commits_cumulative_diff(
+    repository, owned_runner, local_coding_bridge, validation_sandbox, explore, cancel_repair, monkeypatch
+):
+    index = (repository / ".git/index").read_bytes()
+    local_coding_bridge["mode"] = "explore" if explore else "success"
+    with TestClient(app) as client:
+        # Initial fixture prints a string; validation requires a numeric result.
+        project = register(
+            client,
+            repository,
+            test_commands=[
+                [
+                    "/usr/bin/python3",
+                    "-c",
+                    "import subprocess; assert subprocess.check_output(['/usr/bin/python3', 'new.py']).strip() == b'42'",
+                ]
+            ],
+            pr_policy={"commit_task_branch": True},
+        )
+        run_id = prepare_local_coding(client, project, **({"explore": True, "files": []} if explore else {}))
+        with session_factory()() as session:
+            tick(session, "initial-code")
+        route = f"/api/coding/runs/{run_id}/repair"
+        assert client.post(route).status_code == 409  # Validation is still pending.
+        with session_factory()() as session:
+            tick(session, "initial-validation")
+        source = client.get(f"/api/runs/{run_id}").json()
+        validation_id = source["metadata"]["validation_run_id"]
+        assert client.get(f"/api/runs/{validation_id}").json()["status"] == "failed"
+        local_coding_bridge["proposal"] = {
+            "summary": "Fix expected numeric output",
+            "files": [{"path": "new.py", "content": "print(42)\n"}],
+        }
+        response = client.post(route)
+        assert response.status_code == 202, response.text
+        repair = response.json()
+        assert repair["parent_run_id"] == validation_id and repair["task_id"] == source["task_id"]
+        assert repair["parameters"]["commands"] == source["parameters"]["commands"]
+        assert repair["parameters"]["files"] == ["README.md", "new.py"]
+        assert repair["parameters"]["explore"] is False
+        assert "external_ai" not in repair["effective_permissions"]
+        assert client.post(route).status_code == 409
+        assert (
+            client.post(
+                f"/api/coding/runs/{run_id}/commit", json={"reviewed": True, "message": "Stale"}
+            ).status_code
+            == 409
+        )
+        original_start = RunnerClient.start_local_proposal
+        if cancel_repair:
+            local_coding_bridge["mode"] = "wait"
+            local_coding_bridge["entered"].clear()
+
+        def checked_start(self, payload):
+            with TestClient(runner_app) as native:
+                native_route = "/v1/runs/local-coding-proposal"
+                assert native.post(native_route, json={**payload, "files": ["other.py"]}).status_code == 409
+                assert native.post(native_route, json={**payload, "model": "different"}).status_code == 409
+                assert native.post(native_route, json={**payload, "permissions": []}).status_code == 403
+            process = original_start(self, payload)
+            assert original_start(self, payload)["pid"] == process["pid"]
+            if cancel_repair:
+                assert local_coding_bridge["entered"].wait(5)
+                assert client.post(f"/api/runs/{repair['id']}/cancel").status_code == 200
+            return process
+
+        monkeypatch.setattr(RunnerClient, "start_local_proposal", checked_start)
+        with session_factory()() as session:
+            tick(session, "repair-code")
+        repaired = client.get(f"/api/runs/{repair['id']}").json()
+        if cancel_repair:
+            assert repaired["status"] == "canceled", repaired
+            assert not owned_runner.inspect(repair["id"])["alive"]
+            assert "coding_review" not in repaired["metadata"]
+            assert (repository / ".git/index").read_bytes() == index
+            return
+        assert repaired["status"] == "succeeded", repaired
+        review = repaired["metadata"]["coding_review"]
+        assert {f["path"] for f in review["files"]} == {"README.md", "new.py"}
+        assert "Original repository" in next(f["diff"] for f in review["files"] if f["path"] == "README.md")
+        assert "validation passed" not in next(f["diff"] for f in review["files"] if f["path"] == "new.py")
+        assert "AssertionError" in local_coding_bridge["requests"][-1][1]["messages"][0]["content"]
+        with session_factory()() as session:
+            tick(session, "repair-validation")
+        assert (
+            client.get(f"/api/runs/{repaired['metadata']['validation_run_id']}").json()["status"]
+            == "succeeded"
+        )
+        assert client.post(f"/api/coding/runs/{repair['id']}/repair").status_code == 409
+        commit = client.post(
+            f"/api/coding/runs/{repair['id']}/commit",
+            json={"reviewed": True, "message": "Accept repaired changes"},
+        )
+        assert commit.status_code == 202, commit.text
+        with session_factory()() as session:
+            tick(session, "repair-commit")
+        result = client.get(f"/api/runs/{commit.json()['id']}").json()
+        assert result["status"] == "succeeded", result
+    assert (repository / "README.md").read_text() == "Original repository\n"
+    assert not (repository / "new.py").exists()
     assert (repository / ".git/index").read_bytes() == index

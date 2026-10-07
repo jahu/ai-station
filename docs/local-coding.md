@@ -6,7 +6,7 @@ The control plane snapshots the model and project configuration. Managed llama.c
 
 Local execution requires filesystem_read, workspace_write, git_read and network_read for the configured local inference bridge. It grants no external_ai permission, caller-selected URL, model installation or arbitrary command execution. Secrets remain in the Runner's configured provider; the coding subprocess communicates over its private Unix socket. A confirmed proposal produces the existing diff and JSON review artifacts and queues trusted project validation. Successful generation does not mean successful validation or approval.
 
-Repository exploration can select the source context automatically; code application remains a checked proposal followed by saved validation. Automatic repair iterations after failed validation are not yet implemented. No automatic retry, push, merge or deployment is introduced. Cancellation/interruption preserves any partial worktree changes for inspection.
+Repository exploration can select the source context automatically; code application remains a checked proposal followed by saved validation. Failed validation now offers an explicit local repair action; autonomous repair iterations remain unimplemented. No automatic retry, push, merge or deployment is introduced. Cancellation/interruption preserves any partial worktree changes for inspection.
 
 The first adapter uses a 2048-token response budget and a five-minute inference deadline. Choose a context size that accommodates the selected source text before first model load. Truncated output is rejected rather than partially applied. Normal integration tests use a fake UDS inference service and real disposable Git repositories; real local-model verification is explicitly opt-in.
 
@@ -33,3 +33,12 @@ Exploration allows up to eight requests within the job's existing five-minute de
 The real-model opt-in test also accepts `AI_STATION_SMOKE_LOCAL_MODEL` and `AI_STATION_SMOKE_LOCAL_ENDPOINT` when using the Runner's already configured local server instead of `AI_STATION_SMOKE_LLAMA_INSTANCE`. Normal tests remain fake-inference only.
 
 Verified 2026-10-06 with the existing local `qwen3:8b` provider: list repository files → read the introduction → select its path → generate and apply the expected replacement in a disposable owned worktree. Original checkout and index remained unchanged. A first real attempt exposed reasoning truncation; structured coding prompts now explicitly request JSON without reasoning, and the corrected real test passed. Fake-provider tests cover the shared validation/commit workflow, malformed operations, path boundaries and cancellation during exploration.
+
+
+## Repair failed validation
+
+When a completed Local AI proposal has confirmed failing project checks, its review shows **Repair with Local AI**. One click queues a new cancellable Run in the same owned worktree. It reuses the original model, selected files (including automatically discovered context), project guidance and snapshotted commands. The prompt includes bounded, redacted failure output; output is reference data, never a command or permission grant.
+
+The new Run links to the failed validation and previous attempt. Its review compares all scoped files against the task base, including changes from earlier attempts. Validation runs again with the original commands. Old proposals become superseded and cannot be committed; accepting the latest successful result still requires explicit review. No automatic retry, cloud model, extra file scope, push or merge is introduced. Cancellation or uncertainty preserves work for inspection and never starts another attempt silently.
+
+Normal integration coverage uses fake local inference, the fake sandbox helper and real disposable Git worktrees. It verifies selected/discovered scope, failure diagnostics, native scope checks, dispatch replay, cancellation, cumulative diffs, passing revalidation and the final reviewed commit. This is not a real-model repair smoke test.

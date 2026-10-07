@@ -38,6 +38,8 @@ def enqueue(source_id: UUID, body: ReviewedCommit, session: Annotated[Session, D
         or not review.get("files")
     ):
         raise HTTPException(409, "A completed proposal with reviewed changes is required")
+    if source.metadata_json.get("repair_run_id"):
+        raise HTTPException(409, "This proposal was superseded by a repair; review the latest Run")
     if source.metadata_json.get("commit_run_id"):
         raise HTTPException(409, "A commit was already requested; inspect that Run")
     project = session.get(Project, source.project_id)

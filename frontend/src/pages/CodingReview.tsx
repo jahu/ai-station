@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { GitCommitHorizontal, Check } from "lucide-react";
 import { api } from "../api";
 import { Button } from "../components/ui/button";
@@ -43,9 +43,11 @@ export default function CodingReview({ run }: { run: Run }) {
       {review && (
         <>
           <h2 className="mt">
-            {run.metadata?.review_status === "committed"
-              ? "Reviewed changes committed"
-              : "Changes awaiting review"}
+            {run.metadata?.repair_run_id
+              ? "Previous attempt"
+              : run.metadata?.review_status === "committed"
+                ? "Reviewed changes committed"
+                : "Changes awaiting review"}
           </h2>
           <p className="mono">{review.branch}</p>
           <p>
@@ -53,15 +55,23 @@ export default function CodingReview({ run }: { run: Run }) {
             and validation before integrating this branch.
           </p>
           {typeof validation === "string" ? (
-            <p>
-              <Link className="text-link" to={`/runs/${validation}`}>
-                Inspect validation results →
-              </Link>
-            </p>
+            <ValidationActions run={run} validationId={validation} />
           ) : (
             <p className="notice">
               No validation commands were configured. This proposal has not been
               tested.
+            </p>
+          )}
+          {typeof run.metadata?.repair_source_run_id === "string" && (
+            <p className="muted">
+              This review includes all changes from the task base, including the
+              previous proposal.{" "}
+              <Link
+                className="text-link"
+                to={`/runs/${run.metadata.repair_source_run_id}`}
+              >
+                Previous attempt →
+              </Link>
             </p>
           )}
           {!!review.exploration?.length && (
@@ -104,9 +114,10 @@ export default function CodingReview({ run }: { run: Run }) {
               </div>
             </details>
           ))}
-          {review.files.length > 0 && run.status === "succeeded" && (
-            <CommitReview run={run} />
-          )}
+          {review.files.length > 0 &&
+            run.status === "succeeded" &&
+            typeof validation !== "string" &&
+            !run.metadata?.repair_run_id && <CommitReview run={run} />}
         </>
       )}
     </section>
@@ -184,5 +195,72 @@ function CommitReview({ run }: { run: Run }) {
         remain separate actions.
       </p>
     </form>
+  );
+}
+
+function ValidationActions({
+  run,
+  validationId,
+}: {
+  run: Run;
+  validationId: string;
+}) {
+  const navigate = useNavigate();
+  const validation = useQuery({
+    queryKey: ["run", validationId],
+    queryFn: () => api<Run>(`/runs/${validationId}`),
+    refetchInterval: (query) =>
+      ["succeeded", "failed", "canceled", "interrupted"].includes(
+        query.state.data?.status ?? "",
+      )
+        ? false
+        : 3000,
+  });
+  const repair = useMutation({
+    mutationFn: () =>
+      api<Run>(`/coding/runs/${run.id}/repair`, { method: "POST" }),
+    onSuccess: (result) => navigate(`/runs/${result.id}`),
+  });
+  const next = run.metadata?.repair_run_id;
+  return (
+    <div className="content-panel">
+      <p>
+        <Link className="text-link" to={`/runs/${validationId}`}>
+          Validation:{" "}
+          {validation.data?.status.replaceAll("_", " ") ?? "loading"} →
+        </Link>
+      </p>
+      <ErrorNotice error={validation.error || repair.error} />
+      {typeof next === "string" ? (
+        <p>
+          This attempt was superseded.{" "}
+          <Link className="text-link" to={`/runs/${next}`}>
+            Open repair →
+          </Link>
+        </p>
+      ) : run.executor_type === "local_proposal" &&
+        run.status === "succeeded" &&
+        !run.metadata?.commit_run_id &&
+        validation.data?.status === "failed" &&
+        validation.data.error_type === "ValidationFailed" ? (
+        <>
+          <p className="muted">
+            Let the same local model fix the failing checks in this task
+            worktree. It receives the saved validation results and original file
+            scope. Tests run again; you review the updated diff before
+            committing.
+          </p>
+          <Button disabled={repair.isPending} onClick={() => repair.mutate()}>
+            {repair.isPending ? "Queuing repair…" : "Repair with Local AI"}
+          </Button>
+        </>
+      ) : null}
+      {!next &&
+        validation.data?.status === "succeeded" &&
+        run.status === "succeeded" &&
+        !!(run.metadata?.coding_review as Review)?.files.length && (
+          <CommitReview run={run} />
+        )}
+    </div>
   );
 }
