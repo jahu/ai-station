@@ -258,11 +258,11 @@ function ProjectForm({
           </div>
         </details>
         <details>
-          <summary>Future Git workflow policy</summary>
+          <summary>Git workflow policy</summary>
           <div className="project-form-section">
             <p className="muted">
-              Stored preferences for future task branches. Force push,
-              production PRs, and automatic merge remain disabled.
+              Reviewed commits and GitHub publication follow these rules. Force
+              push, production PRs, and automatic merge remain disabled.
             </p>
             {(
               [

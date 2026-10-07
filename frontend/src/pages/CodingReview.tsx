@@ -28,7 +28,14 @@ export default function CodingReview({ run }: { run: Run }) {
   const next = run.metadata?.coding_run_id;
   const validation = run.metadata?.validation_run_id;
   const review = run.metadata?.coding_review as Review | undefined;
-  if (!next && !review && run.metadata?.execution_location !== "external")
+  if (
+    !next &&
+    !review &&
+    (!["cursor_proposal", "local_proposal", "worktree_prepare"].includes(
+      run.executor_type,
+    ) ||
+      run.metadata?.execution_location !== "external")
+  )
     return null;
   return (
     <section className="panel content-panel">

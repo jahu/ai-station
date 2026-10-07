@@ -1453,3 +1453,326 @@ def test_local_repair_budget_rejects_unbounded_or_coerced_values(budget):
             },
         )
         assert response.status_code == 422
+
+
+@pytest.fixture
+def fake_github(repository, validation_sandbox, tmp_path, monkeypatch):
+    """Network-free Git/GitHub boundary; other Git commands use real disposable objects."""
+    import json
+    import shutil
+
+    git = shutil.which("git")
+    parent = subprocess.check_output([git, "-C", str(repository), "rev-parse", "HEAD"], text=True).strip()
+    subprocess.run(
+        [git, "-C", str(repository), "remote", "add", "origin", "https://github.com/fixture/example.git"],
+        check=True,
+    )
+    binaries = tmp_path / "github-bin"
+    binaries.mkdir()
+    control = tmp_path / "github-control.json"
+    control.write_text(json.dumps({"parent": parent, "mode": "success"}))
+    calls = tmp_path / "github-calls.jsonl"
+    script = (
+        """#!/usr/bin/python3
+import sys,os,json,pathlib,subprocess,time
+control=pathlib.Path(CONTROL); calls=pathlib.Path(CALLS); real_git=REAL_GIT
+args=sys.argv[1:]; state=json.loads(control.read_text()); name=pathlib.Path(sys.argv[0]).name
+if name=='git' and not any(op in args for op in ['push','ls-remote']):
+ os.execv(real_git,[real_git,*args])
+with calls.open('a') as f:f.write(json.dumps({'tool':name,'args':args})+'\\n')
+assert os.environ['GIT_CONFIG_GLOBAL']=='/dev/null'
+assert os.environ['GIT_CONFIG_NOSYSTEM']=='1'
+assert os.environ['GH_HOST']=='github.com'
+assert pathlib.Path(os.environ['GIT_DIR']).name=='export.git'
+assert not any(a.startswith('--force') for a in args)
+if name=='git':
+ op='push' if 'push' in args else 'ls-remote'; index=args.index(op)
+ # Real Git must see no source/global URL rewrites or injected helpers.
+ result=subprocess.run([real_git,*args[:index],'config','--get-regexp','^url\\\\.'],capture_output=True)
+ assert result.returncode==1,result.stdout
+ assert 'https://github.com/fixture/example.git' in args
+ if op=='ls-remote':
+  ref=args[-1]
+  if ref=='refs/heads/develop':
+   print(('0'*40 if state['mode']=='bad_base' else state['parent'])+'\\t'+ref);sys.exit(0)
+  sys.exit(2)
+ state['push_started']=True;control.write_text(json.dumps(state))
+ if state['mode']=='wait':
+  while True:time.sleep(1)
+ if state['mode']=='push_error':
+  print('DISPOSABLE_SECRET_DO_NOT_LOG',file=sys.stderr);sys.exit(7)
+ sha,ref=args[-1].split(':',1)
+ assert ref.startswith('refs/heads/ai/')
+ assert subprocess.check_output([real_git,'cat-file','-t',sha],text=True).strip()=='commit'
+ state['pushed']=sha;control.write_text(json.dumps(state));sys.exit(0)
+assert args[:2]==['pr','create']
+assert '--draft' in args and '--no-maintainer-edit' in args
+assert args[args.index('--repo')+1]=='fixture/example'
+assert args[args.index('--base')+1]=='develop'
+assert args[args.index('--head')+1].startswith('ai/')
+assert pathlib.Path(args[args.index('--body-file')+1]).read_text()=='Verified project checks.'
+if state['mode']=='pr_error':sys.exit(9)
+print('https://github.com/fixture/example/pull/17')
+""".replace("CONTROL", repr(str(control)))
+        .replace("CALLS", repr(str(calls)))
+        .replace("REAL_GIT", repr(git))
+    )
+    for name in ("git", "gh"):
+        executable = binaries / name
+        executable.write_text(script)
+        executable.chmod(0o700)
+    monkeypatch.setenv("PATH", f"{binaries}:{os.environ['PATH']}")
+    yield control, calls
+
+
+def prepared_publication(client, repository):
+    project = register(
+        client,
+        repository,
+        test_commands=[["/usr/bin/python3", "new.py"]],
+        pr_policy={"commit_task_branch": True, "push_task_branch": True, "pr_to_integration": True},
+    )
+    source_id = prepare_local_coding(client, project)
+    with session_factory()() as session:
+        tick(session, "publication-proposal")
+        tick(session, "publication-validation")
+    response = client.post(
+        f"/api/coding/runs/{source_id}/commit", json={"reviewed": True, "message": "Reviewed feature"}
+    )
+    assert response.status_code == 202, response.text
+    with session_factory()() as session:
+        tick(session, "publication-commit")
+    committed = client.get(f"/api/runs/{response.json()['id']}").json()
+    assert committed["status"] == "succeeded", committed
+    return project, committed
+
+
+@pytest.mark.parametrize("mode", ["success", "pr_error", "push_error", "bad_base", "revoked", "cancel"])
+def test_reviewed_publication_preserves_checkout_approval_and_partial_progress(
+    repository, owned_runner, local_coding_bridge, fake_github, mode, monkeypatch
+):
+    import json
+
+    from app.models import Approval, Run
+
+    control, calls = fake_github
+    state = json.loads(control.read_text())
+    state["mode"] = "wait" if mode == "cancel" else mode
+    control.write_text(json.dumps(state))
+    before = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project, committed = prepared_publication(client, repository)
+        # Neither source hooks nor URL rewrites may affect the network operation.
+        marker = repository / "unwanted-hook"
+        hooks = repository / ".git/unsafe-hooks"
+        hooks.mkdir()
+        hook = hooks / "pre-push"
+        hook.write_text(f"#!/bin/sh\ntouch {marker}\n")
+        hook.chmod(0o700)
+        subprocess.run(["git", "-C", str(repository), "config", "core.hooksPath", str(hooks)], check=True)
+        subprocess.run(
+            [
+                "git",
+                "-C",
+                str(repository),
+                "config",
+                "url.https://invalid.invalid/.insteadOf",
+                "https://github.com/",
+            ],
+            check=True,
+        )
+        route = f"/api/coding/runs/{committed['id']}/publication"
+        preview = client.get(route)
+        assert preview.status_code == 200, preview.text
+        info = preview.json()
+        assert info["repository"] == "fixture/example" and info["base"] == "develop"
+        body = {key: info[key] for key in ("repository", "commit", "base", "expected_updated_at")}
+        body.update(approved=True, title="Reviewed improvement", body="Verified project checks.")
+        assert client.post(route, json={**body, "approved": False}).status_code == 422
+        assert client.post(route, json={**body, "force": True}).status_code == 422
+        with session_factory()() as session:
+            row = session.get(Project, project["id"])
+            row.pr_policy = {**row.pr_policy, "push_task_branch": False}
+            session.commit()
+        assert client.post(route, json=body).status_code == 403
+        assert client.get(route).json()["blocked_reason"]
+        with session_factory()() as session:
+            row = session.get(Project, project["id"])
+            row.pr_policy = {**row.pr_policy, "push_task_branch": True}
+            session.commit()
+        assert client.post(route, json={**body, "base": "main"}).status_code == 409
+        assert client.post(route, json={**body, "commit": "0" * 40}).status_code == 409
+        response = client.post(route, json=body)
+        assert response.status_code == 202, response.text
+        run_id = response.json()["id"]
+        assert client.post(route, json=body).status_code == 409
+        with session_factory()() as session:
+            run = session.get(Run, run_id)
+            approval = session.get(Approval, run.parameters["approval_id"])
+            assert approval.resolution == "granted" and approval.payload["commit"] == info["commit"]
+            if mode == "revoked":
+                approval.resolution = "denied"
+                session.commit()
+            if mode == "cancel":
+                from app.runner_client import RunnerError
+
+                original = RunnerClient.request
+
+                def cancel_on_push(self, method, path, payload=None):
+                    if method != "POST" or path != "/v1/runs/github-publication":
+                        return original(self, method, path, payload)
+                    with pytest.raises(RunnerError) as denied:
+                        original(self, method, path, {**payload, "permissions": []})
+                    assert denied.value.status_code == 403
+                    process = original(self, method, path, payload)
+                    assert original(self, method, path, payload)["pid"] == process["pid"]
+                    with pytest.raises(RunnerError):
+                        original(self, method, path, {**payload, "title": "Changed request"})
+                    deadline = time.monotonic() + 10
+                    while not json.loads(control.read_text()).get("push_started"):
+                        assert time.monotonic() < deadline
+                        time.sleep(0.05)
+                    assert client.post(f"/api/runs/{run_id}/cancel").status_code == 200
+                    return process
+
+                monkeypatch.setattr(RunnerClient, "request", cancel_on_push)
+            tick(session, "publication")
+        result = client.get(f"/api/runs/{run_id}").json()
+        expected = "canceled" if mode == "cancel" else "succeeded" if mode == "success" else "failed"
+        assert result["status"] == expected, result
+        assert "DISPOSABLE_SECRET" not in str(result)
+        assert not marker.exists()
+        if mode == "success":
+            assert result["metadata"]["publication"]["pr_url"] == "https://github.com/fixture/example/pull/17"
+            artifacts = client.get(f"/api/artifacts?run_id={run_id}").json()
+            assert artifacts[0]["original_filename"] == "github-publication.json"
+            from datetime import timedelta
+
+            from app.db import utcnow
+
+            # Simulate loss of the worker's final transaction after the remote
+            # action completed. Recovery must never dispatch another publication.
+            external_calls = calls.read_text()
+            with session_factory()() as session:
+                row = session.get(Run, run_id)
+                row.status = "running"
+                row.finished_at = None
+                row.lease_expires_at = utcnow() - timedelta(seconds=60)
+                session.commit()
+                assert run_id in recover_stale(session, RunnerClient())
+                session.commit()
+                assert session.get(Run, run_id).status == "interrupted"
+                tick(session, "recovery-check")
+            assert calls.read_text() == external_calls
+        elif mode == "pr_error":
+            assert result["metadata"]["publication_progress"]["stage"] == "pr_requested"
+            assert json.loads(control.read_text())["pushed"] == info["commit"]
+        elif mode == "push_error":
+            assert result["metadata"]["publication_progress"]["stage"] == "push_started"
+        elif mode == "cancel":
+            assert not owned_runner.inspect(run_id)["alive"]
+            assert result["metadata"]["publication_progress"]["stage"] == "push_started"
+            assert not json.loads(control.read_text()).get("pushed")
+        elif mode == "revoked":
+            assert not calls.exists()
+        elif mode == "bad_base":
+            assert '"push"' not in calls.read_text()
+    assert (repository / ".git/index").read_bytes() == before
+    assert (repository / "README.md").read_text() == "Original repository\n"
+
+
+@pytest.mark.skipif(
+    os.environ.get("AI_STATION_REAL_GITHUB_TESTS") != "1", reason="Explicit real GitHub opt-in required"
+)
+def test_real_github_publication(repository, owned_runner, local_coding_bridge):
+    """One disposable draft PR in the explicitly selected repository; no real inference."""
+    import json
+    from pathlib import Path
+
+    source = Path(os.environ["AI_STATION_GITHUB_SMOKE_SOURCE"]).resolve()
+    target = os.environ["AI_STATION_GITHUB_SMOKE_REPOSITORY"]
+    origin = subprocess.check_output(
+        ["git", "-C", str(source), "remote", "get-url", "origin"], text=True
+    ).strip()
+    from ai_station_runner.publication import github_repository
+
+    assert github_repository(origin) == target
+    evidence = Path(os.environ["AI_STATION_GITHUB_SMOKE_EVIDENCE"])
+    evidence.parent.mkdir(parents=True, exist_ok=True)
+    for args in (
+        ["fetch", str(source), "develop"],
+        ["reset", "--hard", "FETCH_HEAD"],
+        ["remote", "add", "origin", origin],
+    ):
+        subprocess.run(["git", "-C", str(repository), *args], check=True, capture_output=True)
+    before = (repository / ".git/index").read_bytes()
+    path = "docs/publication-smoke.md"
+    assert not (repository / path).exists()
+    local_coding_bridge["proposal"] = {
+        "summary": "Disposable publication acceptance fixture",
+        "files": [
+            {"path": path, "content": "# Publication acceptance\n\nDisposable draft PR; do not merge.\n"}
+        ],
+    }
+    with TestClient(app) as client:
+        project = register(
+            client,
+            repository,
+            pr_policy={"commit_task_branch": True, "push_task_branch": True, "pr_to_integration": True},
+        )
+        source_id = prepare_local_coding(client, project, files=[path])
+        with session_factory()() as session:
+            tick(session, "real-publication-fixture")
+        commit = client.post(
+            f"/api/coding/runs/{source_id}/commit",
+            json={"reviewed": True, "message": "test: disposable GitHub publication acceptance"},
+        )
+        assert commit.status_code == 202, commit.text
+        with session_factory()() as session:
+            tick(session, "real-publication-commit")
+        route = f"/api/coding/runs/{commit.json()['id']}/publication"
+        response = client.get(route)
+        assert response.status_code == 200, response.text
+        preview = response.json()
+        assert preview["repository"] == target and preview["base"] == "develop"
+        assert preview["branch"].startswith("ai/")
+        payload = {key: preview[key] for key in ("repository", "commit", "base", "expected_updated_at")}
+        payload.update(
+            approved=True,
+            title="test: disposable AI Station publication acceptance",
+            body="Real owned Git/Host Runner publication with fake local inference. Disposable draft; do not merge.",
+        )
+        publication = client.post(route, json=payload)
+        assert publication.status_code == 202, publication.text
+        with session_factory()() as session:
+            tick(session, "real-github-publication")
+        result = client.get(f"/api/runs/{publication.json()['id']}").json()
+        evidence.write_text(json.dumps({"preview": preview, "result": result}, indent=2))
+        evidence.chmod(0o600)
+        assert (repository / ".git/index").read_bytes() == before
+        assert result["status"] == "succeeded", result
+        url = result["metadata"]["publication"]["pr_url"]
+        remote = json.loads(
+            subprocess.check_output(
+                [
+                    "gh",
+                    "pr",
+                    "view",
+                    url,
+                    "--json",
+                    "number,isDraft,baseRefName,headRefName,headRefOid,files",
+                ],
+                text=True,
+            )
+        )
+        assert remote["isDraft"] and remote["baseRefName"] == "develop"
+        assert remote["headRefName"] == preview["branch"] and remote["headRefOid"] == preview["commit"]
+        assert [f["path"] for f in remote["files"]] == [path]
+        subprocess.run(["gh", "pr", "close", url], check=True)
+        ref = f"repos/{target}/git/refs/heads/{preview['branch']}"
+        remote_ref = json.loads(subprocess.check_output(["gh", "api", ref], text=True))
+        assert remote_ref["object"]["sha"] == preview["commit"]
+        subprocess.run(["gh", "api", "--method", "DELETE", ref], check=True)
+        evidence.write_text(
+            json.dumps({"preview": preview, "result": result, "remote": remote, "cleaned_up": True}, indent=2)
+        )

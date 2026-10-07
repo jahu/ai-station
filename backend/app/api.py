@@ -36,6 +36,7 @@ from app.model_registry import router as model_router
 from app.models import Run, Setting, WorkerRow
 from app.projects import router as project_router
 from app.providers import ProviderError
+from app.publication import router as publication_router
 from app.redact import redact_obj
 from app.reviewed_commits import router as commit_router
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
@@ -278,6 +279,7 @@ app.include_router(chat_router)
 app.include_router(audio_router)
 app.include_router(avatar_router)
 app.include_router(commit_router)
+app.include_router(publication_router)
 app.include_router(library_router)
 app.include_router(project_router)
 app.include_router(memory_router)
