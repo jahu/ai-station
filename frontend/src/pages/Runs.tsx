@@ -2,6 +2,7 @@ import RunTimeline from "./RunTimeline";
 import { useRunEvents } from "./useRunEvents";
 import AgentReport from "./AgentReport";
 import { SearchSources, type WebSources } from "./ChatWebSearch";
+import GithubPublication from "./GithubPublication";
 import CodingReview from "./CodingReview";
 import { type FormEvent } from "react";
 import {
@@ -437,6 +438,7 @@ export function RunDetail() {
               </section>
             )}
             <CodingReview run={run.data} />
+            <GithubPublication run={run.data} />
             <ValidationResults events={events.data ?? []} />
             <div className="inspector-grid">
               <RunTimeline

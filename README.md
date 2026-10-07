@@ -26,7 +26,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory.
 - Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
 
-The bounded Cursor and Local AI adapters are operational. Codex and Claude Code modules remain inactive drafts; reviewed changes can be committed to the owned task branch; pushes and PR actions are not yet exposed. Saved project validation runs in prepared worktrees through the native sandbox.
+The bounded Cursor and Local AI adapters are operational. Codex and Claude Code modules remain inactive drafts; reviewed changes can be committed to the owned task branch; approved task-branch pushes and draft GitHub PRs are available from successful commit Runs. Saved project validation runs in prepared worktrees through the native sandbox.
 
 ## Prerequisites and installation
 
@@ -91,7 +91,7 @@ Choose **Run saved validation** on a prepared worktree to enqueue its saved test
 
 Open Coding, select a registered project, describe a change and list up to ten relative UTF-8 file paths (existing or new). Explicitly approve sending the prompt, project guidance and selected contents to external Cursor AI. A fresh task branch/worktree starts from the configured integration branch. Cursor proposes complete replacements with tools disabled; the runner checks paths and source hashes before applying them. Inspect the linked Coding Run for the summary, changed files, diff and downloadable patch, then follow its separate validation Run for test/lint/build results. The worktree remains available under the application data root for human review.
 
-The installed, authenticated `cursor-agent` CLI is required. Credentials are used by the CLI and never copied by AI Station. The initial adapter allows at most 32 KB per file and 64 KB of selected context, with a five-minute provider limit. Hidden/configuration credential paths, binary edits, deletion and autonomous repository exploration are unsupported. Saved validation additionally needs Cursor's installed native sandbox helper and worktree-local or system dependencies. No commit, push, merge or restart follows a coding result. Codex, Claude Code and local coding remain unavailable. See [Cursor execution and limits](docs/coding-cursor.md).
+The installed, authenticated `cursor-agent` CLI is required. Credentials are used by the CLI and never copied by AI Station. The initial adapter allows at most 32 KB per file and 64 KB of selected context, with a five-minute provider limit. Hidden/configuration credential paths, binary edits, deletion and autonomous repository exploration are unsupported. Saved validation additionally needs Cursor's installed native sandbox helper and worktree-local or system dependencies. No commit, push, merge or restart follows a coding result. Codex and Claude Code remain unavailable; Local AI coding uses the same reviewed workflow described below. See [Cursor execution and limits](docs/coding-cursor.md).
 
 ## Development and verification
 
@@ -130,7 +130,7 @@ The scheduler enqueues normal runs and samples telemetry. Short SQLite transacti
 
 ## Security boundaries and limitations
 
-The runner is not a shell daemon. Its enabled API offers host inspection, validated photo launches, owned worktree preparation, model metadata discovery, bounded Cursor proposals, sandboxed saved validation, and cancellation of recorded, verified process groups. Boot identity, process start ticks, session, and group membership protect against PID reuse. Read-only Git inspection disables repository command helpers and enforces metadata roots, time/output bounds, and revision validation. Partial clones and alternate object stores are not supported for inspection yet. Draft filesystem/Git mutation routes are unavailable. Existing external services are never stopped or imported implicitly. Managed workload containers and remote nodes remain future work.
+The runner is not a shell daemon. Its enabled API offers host inspection, validated photo launches, owned worktree preparation, model metadata discovery, bounded Cursor proposals, sandboxed saved validation, and cancellation of recorded, verified process groups. Boot identity, process start ticks, session, and group membership protect against PID reuse. Read-only Git inspection disables repository command helpers and enforces metadata roots, time/output bounds, and revision validation. Partial clones and alternate object stores are not supported for inspection yet. Draft filesystem/Git mutation routes are unavailable. Existing external services are never stopped or imported implicitly. Managed llama.cpp containers are available; additional managed runtime families and remote nodes remain future work.
 
 Uncertain host execution keeps its reservations pending inspection; recovery never blindly repeats side effects. If a worker disappears after dispatch, the run requires inspection when the process is gone. SQLite uses short serialized transactions; multi-node/distributed execution is not implemented. A real local OpenAI-compatible `qwen3:8b` completion and persisted response were verified on 2026-09-25. Real Qwen/Juggernaut generation, Edit, one/multiple-reference Recompose and Upscale passed small GPU acceptance Runs. A real Cursor selected-file coding task passed with diff review and sandboxed validation. Codex remains unavailable; no real Codex task has passed.
 
@@ -142,7 +142,7 @@ Memory now supports scoped FTS search, provenance inspection, versioned editing,
 
 ### Models workspace
 
-Models now discovers existing host files through a cancellable worker Run, persists observations and exposes category/search/detail views. Set `AI_STATION_MODEL_ROOTS` to colon-separated host model directories. No weights are loaded or modified. See [discovery contracts](docs/models.md). Runtime management remains unavailable.
+Models now discovers existing host files through a cancellable worker Run, persists observations and exposes category/search/detail views. Set `AI_STATION_MODEL_ROOTS` to colon-separated host model directories. Discovery does not load or modify weights. Discovered GGUF files can be selected in Chat for managed llama.cpp execution. See [discovery contracts](docs/models.md) and [runtime lifecycle](docs/managed-llama.md).
 
 ### Agents workspace
 
@@ -179,3 +179,5 @@ Normal `./scripts/start.sh` and development startup include a private, pinned Se
 In **Agents**, select **web_search**, enter the public query, choose a local model and save before enabling the schedule. Each execution produces a readable report with recorded sources in Run details. Goals and memory are not sent to search engines. Both agent forms use the same local-server/llama.cpp model picker as Chat.
 
 Local coding and the Assistant offer an optional **Automatic repair** budget of one or two attempts, off by default. After a Local AI coding task fails its saved project validation, open its coding review and choose **Repair with Local AI**. The same model works in the task worktree, using the failing output and original file scope. Checks run again and the cumulative diff remains reviewable before committing. See [local repair](docs/local-coding.md#repair-failed-validation).
+
+Reviewed commits can now be published from their Run details as a task branch and draft GitHub PR, after project policy and exact-scope user approval. Existing host `gh` authentication is reused. See [publication requirements and recovery](docs/github-publication.md).
