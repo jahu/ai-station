@@ -72,3 +72,28 @@ it("makes disabled memory and its provenance explicit while blocking concurrent 
     ).disabled,
   ).toBe(true);
 });
+
+it("saves automatic memory only after an explicit user selection", async () => {
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ auto_summary: true }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  const option = screen.getByRole("checkbox", {
+    name: "Automatically maintain conversation memory",
+  });
+  expect((option as HTMLInputElement).checked).toBe(false);
+  expect(fetch).not.toHaveBeenCalled();
+  fireEvent.click(option);
+  await vi.waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/chat/conversations/conversation/context",
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_summary: true }),
+      },
+    ),
+  );
+});

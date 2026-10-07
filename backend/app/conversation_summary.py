@@ -58,7 +58,7 @@ def eligible_messages(conversation_id):
     )
 
 
-def enqueue_summary(session, row, endpoint):
+def enqueue_summary(session, row, endpoint, *, commit=True, parent_run_id=None, triggered_by="user"):
     prior = latest_summary(session, row.id)
     memory = summary_memory(session, prior)
     recent = list(
@@ -107,6 +107,8 @@ def enqueue_summary(session, row, endpoint):
         executor_type="chat_summary",
         execution_target="container",
         retry_class="inspect",
+        parent_run_id=parent_run_id,
+        triggered_by=triggered_by,
         parameters={
             "provider": row.provider,
             "endpoint": endpoint,
@@ -133,5 +135,51 @@ def enqueue_summary(session, row, endpoint):
     from app.llama import prepare_consumer
 
     prepare_consumer(session, run)
-    session.commit()
+    if commit:
+        session.commit()
     return run_dict(run)
+
+
+def maybe_enqueue_automatic_summary(session, conversation, completed_run):
+    """One bounded update after a successful answer, only with saved user opt-in."""
+    if not conversation.auto_summary or completed_run.metadata_json.get("summary_run_id"):
+        return
+    prior = latest_summary(session, conversation.id)
+    memory = summary_memory(session, prior)
+    # Disabling/deleting a summary is an intentional boundary, not permission to recreate it.
+    if prior and not memory:
+        return
+    statement = eligible_messages(conversation.id)
+    if memory:
+        statement = statement.where(
+            tuple_(Message.created_at, Message.id) > (prior.covered_created_at, prior.covered_message_id)
+        )
+    recent = list(session.scalars(statement.order_by(Message.created_at, Message.id).limit(16)))
+    if len(recent) < 16 and sum(len(m.content) for m in recent) < 40000:
+        return
+    from app.events import append_event
+    from app.providers import ProviderError
+
+    try:
+        with session.begin_nested():
+            summary = enqueue_summary(
+                session,
+                conversation,
+                completed_run.parameters["endpoint"],
+                commit=False,
+                parent_run_id=completed_run.id,
+                triggered_by="automatic_context",
+            )
+    except (HTTPException, ProviderError, ValueError) as exc:
+        append_event(
+            session,
+            completed_run.id,
+            "summary.skipped",
+            {
+                "reason": "Automatic summary could not be queued; use Conversation memory to inspect or update.",
+                "error_type": type(exc).__name__,
+            },
+        )
+        return
+    completed_run.metadata_json = {**completed_run.metadata_json, "summary_run_id": summary["id"]}
+    append_event(session, completed_run.id, "summary.queued", {"run_id": summary["id"], "automatic": True})
