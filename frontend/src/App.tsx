@@ -36,6 +36,7 @@ import { Memory, MemoryDetail } from "./pages/Memory";
 import { Models, ModelDetail } from "./pages/Models";
 import { Agents, AgentDetail } from "./pages/Agents";
 import Coding from "./pages/Coding";
+import CodingSession, { CodingNav } from "./pages/CodingSessions";
 import Chat from "./pages/Chat";
 import Audio from "./pages/Audio";
 import Avatars from "./pages/Avatars";
@@ -156,13 +157,17 @@ export default function App() {
           {groups.map((group) => (
             <div className="nav-group" key={group.label}>
               {group.label && <div className="nav-label">{group.label}</div>}
-              {group.items.map(([path, label, Icon]) => (
-                <NavLink end={path === "/"} to={path} key={path}>
-                  <Icon size={17} />
-                  {label}
-                  {path === "/" && <span className="nav-marker" />}
-                </NavLink>
-              ))}
+              {group.items.map(([path, label, Icon]) =>
+                path === "/coding" ? (
+                  <CodingNav key={path} />
+                ) : (
+                  <NavLink end={path === "/"} to={path} key={path}>
+                    <Icon size={17} />
+                    {label}
+                    {path === "/" && <span className="nav-marker" />}
+                  </NavLink>
+                ),
+              )}
             </div>
           ))}
         </nav>
@@ -221,6 +226,10 @@ export default function App() {
             <Route path="/runs" element={<Runs />} />
             <Route path="/runs/:id" element={<RunDetail />} />
             <Route path="/coding" element={<Coding />} />
+            <Route
+              path="/coding/:id"
+              element={<CodingSession key={location.pathname} />}
+            />
             <Route path="/chat" element={<Chat assistant />} />
             <Route path="/chat/:id" element={<Chat assistant />} />
             <Route path="/images" element={<ImagesWorkspace />} />

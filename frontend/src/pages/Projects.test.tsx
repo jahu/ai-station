@@ -18,6 +18,7 @@ function mount(element: React.ReactNode, path: string) {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="/projects/new" element={element} />
+          <Route path="/coding" element={<h1>Registered repository</h1>} />
           <Route
             path="/projects/:id"
             element={
@@ -37,6 +38,9 @@ it("requires structured commands and registers only after explicit submission", 
   }));
   vi.stubGlobal("fetch", fetch);
   mount(<NewProject />, "/projects/new");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Connect existing repository" }),
+  );
   fireEvent.change(screen.getByLabelText("Project name"), {
     target: { value: "AI Station" },
   });
@@ -101,4 +105,26 @@ it("keeps saved settings visible when live Git inspection is unavailable", async
     (screen.getByLabelText("Agent rules") as HTMLTextAreaElement).value,
   ).toBe("Preserve the API");
   expect(screen.queryByText("Clean")).toBeNull();
+});
+
+it("creates a project using only a name and waits for setup", async () => {
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path === "/api/projects/create"
+        ? { id: "setup" }
+        : { id: "setup", status: "succeeded", project_id: "new-project" },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(<NewProject />, "/projects/new");
+  expect(screen.queryByLabelText(/Repository path/)).toBeNull();
+  fireEvent.change(screen.getByLabelText("Project name"), {
+    target: { value: "My idea" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Create project" }));
+  await screen.findByRole("heading", { name: "Registered repository" });
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/projects/create",
+    expect.objectContaining({ body: JSON.stringify({ name: "My idea" }) }),
+  );
 });

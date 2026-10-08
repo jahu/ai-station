@@ -1,5 +1,11 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Coding from "./Coding";
@@ -8,34 +14,49 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-it.each(["Cursor", "Codex"])(
-  "requires fresh external consent for %s and queues only selected paths",
+it.each(["Cursor", "Codex", "Local AI"])(
+  "starts %s with automatic file discovery and a persistent conversation",
   async (executor) => {
-    const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
+    const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
       ok: true,
       json: async () =>
         options?.method === "POST"
-          ? { id: "prepare" }
-          : [
-              {
-                id: "project",
-                name: "Example",
-                updated_at: "version",
-                integration_branch: "develop",
-              },
-            ],
+          ? { id: "prepare", task_id: "conversation" }
+          : path.includes("/coding/models/")
+            ? {
+                models: [{ id: "available-model", name: "Available model" }],
+                notice: "",
+              }
+            : path.endsWith("/sessions")
+              ? []
+              : path.endsWith("/provider")
+                ? { models: ["local-model"], default_model: "local-model" }
+                : path.endsWith("/llama")
+                  ? { models: [], instances: [] }
+                  : path.endsWith("/hardware")
+                    ? { gpus: [] }
+                    : [
+                        {
+                          id: "project",
+                          name: "Example",
+                          updated_at: "version",
+                          preferred_executor: "cursor",
+                        },
+                      ],
     }));
     vi.stubGlobal("fetch", fetch);
+    const cache = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     render(
-      <QueryClientProvider
-        client={
-          new QueryClient({ defaultOptions: { queries: { retry: false } } })
-        }
-      >
+      <QueryClientProvider client={cache}>
         <MemoryRouter initialEntries={["/coding"]}>
           <Routes>
             <Route path="/coding" element={<Coding />} />
-            <Route path="/runs/prepare" element={<h1>Prepare Run</h1>} />
+            <Route
+              path="/coding/conversation"
+              element={<h1>Coding conversation</h1>}
+            />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>,
@@ -44,122 +65,72 @@ it.each(["Cursor", "Codex"])(
       target: { value: "project" },
     });
     fireEvent.change(screen.getByLabelText("Task"), {
-      target: { value: "Fix selected source" },
+      target: { value: "Build my idea" },
     });
-    if (executor === "Codex") {
-      fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: executor }));
+    expect(screen.queryByLabelText("Files the agent may edit")).toBeNull();
+    if (executor !== "Local AI") {
+      await screen.findByRole("option", { name: "Available model" });
+      const button = screen.getByRole("button", { name: "Start coding" });
+      expect((button as HTMLButtonElement).disabled).toBe(true);
       fireEvent.click(
-        screen.getByRole("button", { name: /Codex.*External AI/ }),
+        screen.getByRole("checkbox", { name: /Allow .* to receive/ }),
       );
-      expect((screen.getByRole("checkbox") as HTMLInputElement).checked).toBe(
-        false,
+      act(() =>
+        cache.setQueryData(
+          ["coding-projects"],
+          [
+            {
+              id: "project",
+              name: "Example",
+              updated_at: "changed",
+              preferred_executor: "codex",
+            },
+          ],
+        ),
       );
+      await vi.waitFor(() =>
+        expect(
+          (
+            screen.getByRole("checkbox", {
+              name: /Allow .* to receive/,
+            }) as HTMLInputElement
+          ).checked,
+        ).toBe(false),
+      );
+      const other = executor === "Cursor" ? "Codex" : "Cursor";
+      fireEvent.click(screen.getByRole("button", { name: other }));
+      expect(
+        (
+          screen.getByRole("checkbox", {
+            name: /Allow .* to receive/,
+          }) as HTMLInputElement
+        ).checked,
+      ).toBe(false);
+      fireEvent.click(screen.getByRole("button", { name: executor }));
+      fireEvent.change(screen.getByLabelText("Model"), {
+        target: { value: "available-model" },
+      });
+      fireEvent.click(
+        screen.getByRole("checkbox", { name: /Allow .* to receive/ }),
+      );
+    } else {
+      await screen.findByRole("option", { name: "local-model" });
     }
-    const button = screen.getByRole("button", {
-      name: `Create worktree and start ${executor}`,
-    });
-    expect((button as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(screen.getByRole("checkbox"));
-    fireEvent.click(button);
-    await screen.findByRole("heading", { name: "Prepare Run" });
-    expect(fetch).toHaveBeenCalledWith(
-      `/api/coding/${executor.toLowerCase()}`,
-      expect.objectContaining({
-        body: JSON.stringify({
-          project_id: "project",
-          expected_updated_at: "version",
-          prompt: "Fix selected source",
-          files: ["README.md"],
-          model: "",
-          external_ai: true,
-        }),
-      }),
+    fireEvent.click(screen.getByRole("button", { name: "Start coding" }));
+    await screen.findByRole("heading", { name: "Coding conversation" });
+    const call = fetch.mock.calls.find(
+      ([path, options]) =>
+        path.startsWith("/api/coding/") && options?.method === "POST",
+    )!;
+    expect(call[0]).toBe(
+      `/api/coding/${executor === "Local AI" ? "local" : executor.toLowerCase()}`,
     );
+    expect(JSON.parse(call[1]!.body as string)).toMatchObject({
+      project_id: "project",
+      files: [],
+      explore: true,
+      model: executor === "Local AI" ? "local-model" : "available-model",
+    });
   },
 );
-
-it("queues local coding with the selected model and no external-AI grant", async () => {
-  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
-    ok: true,
-    json: async () =>
-      options?.method === "POST"
-        ? { id: "local-prepare" }
-        : path.endsWith("/provider")
-          ? { models: ["local-model"], default_model: "local-model" }
-          : path.endsWith("/llama")
-            ? { models: [], instances: [] }
-            : path.endsWith("/hardware")
-              ? { gpus: [] }
-              : [
-                  {
-                    id: "project",
-                    name: "Example",
-                    updated_at: "version",
-                    integration_branch: "develop",
-                  },
-                ],
-  }));
-  vi.stubGlobal("fetch", fetch);
-  render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <MemoryRouter initialEntries={["/coding"]}>
-        <Routes>
-          <Route path="/coding" element={<Coding />} />
-          <Route
-            path="/runs/local-prepare"
-            element={<h1>Local preparation</h1>}
-          />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-  fireEvent.change(await screen.findByLabelText("Project"), {
-    target: { value: "project" },
-  });
-  fireEvent.change(screen.getByLabelText("Task"), {
-    target: { value: "Update README" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: /Local AI llama/ }));
-  await screen.findByText("local-model");
-  expect(
-    (
-      screen.getByRole("checkbox", {
-        name: "Let Local AI find the relevant files",
-      }) as HTMLInputElement
-    ).checked,
-  ).toBe(true);
-  expect(screen.queryByLabelText("Selected files")).toBeNull();
-  expect(
-    (
-      screen.getByLabelText("Automatic repair", {
-        exact: false,
-      }) as HTMLSelectElement
-    ).value,
-  ).toBe("0");
-  fireEvent.change(
-    screen.getByLabelText("Automatic repair", { exact: false }),
-    { target: { value: "2" } },
-  );
-  fireEvent.click(
-    screen.getByRole("button", { name: "Create worktree and start Local AI" }),
-  );
-  await screen.findByRole("heading", { name: "Local preparation" });
-  expect(fetch).toHaveBeenCalledWith(
-    "/api/coding/local",
-    expect.objectContaining({
-      body: JSON.stringify({
-        project_id: "project",
-        expected_updated_at: "version",
-        prompt: "Update README",
-        files: [],
-        model: "local-model",
-        explore: true,
-        max_repair_attempts: 2,
-      }),
-    }),
-  );
-});

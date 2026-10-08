@@ -144,3 +144,5 @@ Reviewed GitHub publication is a separate user-approved Task/Run operation after
 Automatic conversation memory is a saved opt-in policy, default off. A successful Chat Run may enqueue one existing summary Run in the same transaction, linked to that answer. Summary failure cannot change answer success or previous memory; provenance, cancellation and inspection use the established Run lifecycle.
 
 The Codex proposal adapter reuses selected-file snapshot application, native process ownership, validation and reviewed Git progression. It isolates the provider workspace and permission profile from the task worktree; explicit external consent remains required. See [adapter contract](coding-codex.md).
+
+Coding workspaces make Task the durable user-facing coding conversation. Managed project setup and subsequent turns remain ordinary Runs; the Host Runner owns repository creation and isolated worktrees. See [coding workspace design](coding-workspaces.md).

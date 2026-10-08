@@ -1,18 +1,23 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   ArrowLeft,
   FolderGit2,
   GitBranch,
   Plus,
   RefreshCw,
-  ShieldCheck,
 } from "lucide-react";
-import { api } from "../api";
+import { api, type Run } from "../api";
 import { Empty, ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import ProjectWorktrees from "./ProjectWorktrees";
+import { terminal } from "../lib/utils";
 
 interface Project {
   id: string;
@@ -165,53 +170,60 @@ function ProjectForm({
             </small>
           </label>
         )}
-        <div className="field-pair">
-          <label>
-            Default branch
-            <input
-              required
-              maxLength={200}
-              value={defaultBranch}
-              onChange={(e) => setDefaultBranch(e.target.value)}
-            />
-          </label>
-          <label>
-            Integration branch
-            <input
-              required
-              maxLength={200}
-              value={integrationBranch}
-              onChange={(e) => setIntegrationBranch(e.target.value)}
-            />
-          </label>
-        </div>
-        <label>
-          Protected branches
-          <input
-            value={protectedBranches}
-            onChange={(e) => setProtectedBranches(e.target.value)}
-          />
-          <small className="muted">
-            Comma separated. The default branch, main, and master are always
-            protected.
-          </small>
-        </label>
-        <label>
-          Preferred coding executor
-          <select
-            value={executor}
-            onChange={(e) => setExecutor(e.target.value)}
-          >
-            <option value="codex">Codex</option>
-            <option value="cursor">Cursor</option>
-            <option value="claude">Claude Code</option>
-            <option value="local">Local model (experimental)</option>
-          </select>
-          <small className="muted">
-            Preference only. Coding execution is not available yet.
-          </small>
-        </label>
-        <details open={Boolean(project)}>
+        <details>
+          <summary>Advanced repository settings</summary>
+          <div className="project-form-section">
+            <div className="field-pair">
+              <label>
+                Default branch
+                <input
+                  required
+                  maxLength={200}
+                  value={defaultBranch}
+                  onChange={(e) => setDefaultBranch(e.target.value)}
+                />
+              </label>
+              <label>
+                Integration branch
+                <input
+                  required
+                  maxLength={200}
+                  value={integrationBranch}
+                  onChange={(e) => setIntegrationBranch(e.target.value)}
+                />
+              </label>
+            </div>
+            <label>
+              Protected branches
+              <input
+                value={protectedBranches}
+                onChange={(e) => setProtectedBranches(e.target.value)}
+              />
+              <small className="muted">
+                Comma separated. The default branch, main, and master are always
+                protected.
+              </small>
+            </label>
+            <label>
+              Preferred coding executor
+              <select
+                value={executor}
+                onChange={(e) => setExecutor(e.target.value)}
+              >
+                <option value="codex">Codex</option>
+                <option value="cursor">Cursor</option>
+                <option value="claude" disabled>
+                  Claude Code (unavailable)
+                </option>
+                <option value="local">Local model (experimental)</option>
+              </select>
+              <small className="muted">
+                Used when you select Auto in Coding.
+              </small>
+            </label>
+          </div>
+        </details>
+        <details>
           <summary>Validation commands and agent guidance</summary>
           <div className="project-form-section">
             <p className="muted">
@@ -311,7 +323,7 @@ export function Projects() {
           <Button asChild>
             <Link to="/projects/new">
               <Plus size={15} />
-              Register project
+              New project
             </Link>
           </Button>
         }
@@ -350,8 +362,7 @@ export function Projects() {
         ) : (
           <section className="panel">
             <Empty title="No projects on this page">
-              Register an existing Git repository to inspect its state and
-              configure future coding tasks.
+              Create a project by name or connect an existing repository.
             </Empty>
           </section>
         ))
@@ -380,35 +391,145 @@ export function Projects() {
 export function NewProject() {
   const navigate = useNavigate();
   const cache = useQueryClient();
+  const [name, setName] = useState("");
+  const [existing, setExisting] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const runId = params.get("setup");
+  const setup = useQuery({
+    queryKey: ["project-setup", runId],
+    queryFn: () => api<Run>(`/runs/${runId}`),
+    enabled: !!runId,
+    refetchInterval: 1000,
+  });
+  const create = useMutation({
+    mutationFn: () =>
+      api<Run>("/projects/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      }),
+    onSuccess: (run) => setParams({ setup: run.id }),
+  });
+  useEffect(() => {
+    if (setup.data?.status === "succeeded" && setup.data.project_id) {
+      void cache.invalidateQueries({ queryKey: ["projects"] });
+      void cache.invalidateQueries({ queryKey: ["coding-projects"] });
+      navigate(`/coding?project=${setup.data.project_id}`);
+    }
+  }, [setup.data, cache, navigate]);
   return (
     <>
       <Link className="back-link" to="/projects">
         <ArrowLeft size={14} />
         Projects
       </Link>
-      <PageTitle eyebrow="PROJECTS / REGISTER" title="Connect a repository">
-        The repository stays on your host. Registration reads its Git metadata.
+      <PageTitle
+        eyebrow="WORKSPACE / NEW PROJECT"
+        title="Give your project a name"
+      >
+        We’ll take care of the workspace. You can start describing what to build
+        next.
       </PageTitle>
-      <div className="image-workspace">
+      <div className="new-project-grid">
         <section className="panel content-panel">
-          <ProjectForm
-            onSaved={(project) => {
-              void cache.invalidateQueries({ queryKey: ["projects"] });
-              navigate(`/projects/${project.id}`);
-            }}
-          />
+          <div className="project-create-tabs">
+            <button aria-pressed={!existing} onClick={() => setExisting(false)}>
+              Create new
+            </button>
+            <button aria-pressed={existing} onClick={() => setExisting(true)}>
+              Connect existing repository
+            </button>
+          </div>
+          {existing ? (
+            <ProjectForm
+              onSaved={(project) => {
+                void cache.invalidateQueries({ queryKey: ["projects"] });
+                void cache.invalidateQueries({ queryKey: ["coding-projects"] });
+                navigate(`/coding?project=${project.id}`);
+              }}
+            />
+          ) : (
+            <form
+              className="project-quick-create"
+              onSubmit={(e) => {
+                e.preventDefault();
+                create.mutate();
+              }}
+            >
+              <label>
+                Project name
+                <input
+                  required
+                  maxLength={200}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="My next idea"
+                  disabled={!!runId}
+                />
+              </label>
+              <p className="muted">
+                A private local folder, Git history and a Python environment —
+                prepared automatically. No remote repository or downloads.
+              </p>
+              <ErrorNotice error={create.error ?? setup.error} />
+              {setup.data?.error_message && (
+                <p role="alert" className="notice">
+                  {setup.data.error_message}
+                </p>
+              )}
+              {runId ? (
+                <div className="project-setup-progress">
+                  {!terminal.has(setup.data?.status ?? "queued") && <Loading />}
+                  <strong>
+                    {setup.data?.status === "failed" ||
+                    setup.data?.status === "canceled" ||
+                    setup.data?.status === "interrupted"
+                      ? "Setup needs attention"
+                      : "Preparing your project…"}
+                  </strong>
+                  <Link className="text-link" to={`/runs/${runId}`}>
+                    Setup details →
+                  </Link>
+                  {terminal.has(setup.data?.status ?? "queued") && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setParams({})}
+                    >
+                      Create another project
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <Button disabled={!name.trim() || create.isPending}>
+                  <Plus size={16} />
+                  {create.isPending ? "Creating…" : "Create project"}
+                </Button>
+              )}
+            </form>
+          )}
         </section>
-        <aside className="panel content-panel">
-          <ShieldCheck size={22} />
-          <h2 className="mt">You control the workflow</h2>
-          <p>
-            Register a local path inside the runner’s configured roots. Existing
-            files and branches stay in place.
-          </p>
-          <p>
-            Coding agents will use isolated task worktrees when that workflow is
-            available.
-          </p>
+        <aside className="project-onboarding">
+          <FolderGit2 size={32} />
+          <h2>From idea to first change</h2>
+          <ol>
+            <li>
+              <strong>Name your project</strong>
+              <span>AI Station sets up its home on this machine.</span>
+            </li>
+            <li>
+              <strong>Choose your agent</strong>
+              <span>Work locally or use Cursor or Codex.</span>
+            </li>
+            <li>
+              <strong>Describe, review, continue</strong>
+              <span>Return to the conversation whenever you want.</span>
+            </li>
+          </ol>
+          <small className="muted">
+            Branches, validation commands and project rules are available in
+            project settings.
+          </small>
         </aside>
       </div>
     </>

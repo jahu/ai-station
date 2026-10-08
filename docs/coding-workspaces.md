@@ -1,0 +1,19 @@
+# Coding workspaces
+
+The default flow is create a project by name, select an executor/model, describe the outcome and continue in a persistent coding conversation. Existing repositories and branch/validation policies remain advanced settings.
+
+Project creation is a normal host Run. The Runner reserves a UUID-owned directory under application storage, initializes local Git with main/develop branches and a first commit, and creates a project Python environment without installing packages or fetching dependencies. Failed/canceled setup preserves its directory for inspection. The project registry is populated only after confirmed completion. No caller-selected destination or external repository is overwritten.
+
+Coding conversations reuse Task identity and its ordered Runs. Follow-up prompts reuse the owned worktree, carry bounded prior conversation context and re-explore its current source files. A project cannot execute two coding operations concurrently. Superseded proposals cannot be committed; review describes cumulative changes against the task HEAD. Commits and publication remain separate explicit actions.
+
+Automatic file discovery uses the existing bounded list/read/search protocol for Local AI, Cursor and Codex. External providers require explicit consent to sending relevant source and guidance. Their native tools remain disabled: the Runner executes validated read-only operations and checked file replacements. Advanced file selection remains available. Model choices come from installed CLI metadata (Cursor model listing and Codex's model catalog cache); Auto delegates to the selected provider's default and never silently switches to an external provider.
+
+No schema duplication is needed: setup and coding use existing Tasks, Runs, events, review artifacts and worktree ownership. UI presents conversations while retaining technical run details on demand.
+
+## Verification
+
+Disposable-repository integration tests cover actual Git/venv setup, setup cancellation and refusal to overwrite existing directories, both external adapters' automatic exploration, two-turn workspace reuse, stale follow-up rejection, superseded review rejection and cumulative reviewed commits. UI tests cover name-only creation, provider/model selection, consent invalidation on project changes, navigation and follow-up submission. Chromium layout acceptance covers new project, new coding conversation and conversation history at desktop and narrow widths.
+
+A real Codex two-turn test passed against synthetic temporary source files: the agent selected source paths, created a file, added another file on the next instruction and preserved the first result in the same worktree. No private repository source was sent. This does not claim real Cursor exploration acceptance; that path has fake-CLI integration coverage. The real opt-in test is `test_real_codex_workspace_followup` in `backend/tests/test_projects.py`, with `AI_STATION_REAL_CODEX_TESTS=1` and an `AI_STATION_CODING_WORKSPACE_EVIDENCE` output path.
+
+Auto currently follows the saved project executor preference and the selected provider's default model. It is a deterministic default, not an LLM-based task/model classifier. Project environments are created offline; package installation and dependency provisioning remain separate work. The bounded editing contract still applies: at most ten ordinary UTF-8 source paths and 64 KB of context/review per turn, with the same bound on cumulative uncommitted changes. Existing branches and settings are available for advanced use.

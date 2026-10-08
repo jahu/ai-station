@@ -45,12 +45,19 @@ def execute_proposal(run_id, body, root, generate, *, location, discover=None):
         != record.get("head_commit", record["base_commit"])
     ):
         raise ValueError("Worktree changed during inference")
+    cumulative = getattr(body, "cumulative", False)
+    review_paths = [item["path"] for item in selected]
+    if cumulative:
+        dirty = repo.read(["diff", "--name-only", "-z", "HEAD"]).stdout
+        dirty += repo.read(["ls-files", "--others", "--exclude-standard", "-z"]).stdout
+        review_paths = list(dict.fromkeys([*review_paths, *filter(None, dirty.split("\0"))]))
+        read_selected(workspace, review_paths)  # Bound cumulative review before writing.
     report = apply_proposal(workspace, selected, proposal)
-    if getattr(body, "repair_source_run_id", None):
+    if cumulative or getattr(body, "repair_source_run_id", None):
         # Compare every scoped file with the task HEAD, so accepting a repair
         # commits the complete reviewed result, including earlier replacements.
         changes = []
-        for item in read_selected(workspace, [entry["path"] for entry in selected]):
+        for item in read_selected(workspace, review_paths):
             blob = repo.read(["show", f"HEAD:{item['path']}"], check=False)
             original = {**item, "content": None, "sha256": None}
             if blob.returncode == 0:
@@ -63,7 +70,7 @@ def execute_proposal(run_id, body, root, generate, *, location, discover=None):
                     raise ValueError("Repair cannot delete source files")
                 changes.append(describe_change(original, item))
         report["files"] = changes
-        report["repair_source_run_id"] = str(body.repair_source_run_id)
+        report["repair_source_run_id"] = str(getattr(body, "repair_source_run_id", ""))
     report.update(
         run_id=run_id,
         project_id=str(body.project_id),

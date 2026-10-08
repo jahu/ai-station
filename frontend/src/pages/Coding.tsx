@@ -1,45 +1,74 @@
 import LlamaModels from "./LlamaModels";
-import { Cpu, Cloud } from "lucide-react";
+import { Cpu, Cloud, Sparkles, Plus, ArrowUpRight } from "lucide-react";
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Run } from "../api";
 import { ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
+import { CodingHistory } from "./CodingSessions";
 
 type Project = {
   id: string;
   name: string;
   updated_at: string;
-  integration_branch: string;
+  preferred_executor?: string;
 };
-
 export default function Coding() {
   const navigate = useNavigate();
-  const [projectId, setProjectId] = useState("");
+  const cache = useQueryClient();
+  const [params] = useSearchParams();
+  const [projectId, setProjectId] = useState(params.get("project") ?? "");
   const [prompt, setPrompt] = useState("");
-  const [files, setFiles] = useState("README.md");
+  const [files, setFiles] = useState("");
   const [model, setModel] = useState("");
-  const [external, setExternal] = useState(false);
-  const [executor, setExecutor] = useState("cursor");
+  const [approvedScope, setApprovedScope] = useState("");
+  const [choice, setChoice] = useState("auto");
   const [explore, setExplore] = useState(true);
   const [repairAttempts, setRepairAttempts] = useState(0);
   const [localModel, setLocalModel] = useState("");
   const [modelPending, setModelPending] = useState(false);
-  const provider = useQuery({
-    queryKey: ["chat-provider"],
-    queryFn: () =>
-      api<{ models: string[]; default_model: string }>("/chat/provider"),
-    enabled: executor === "local",
-  });
-  const selectedModel = localModel || provider.data?.default_model || "";
-  const local = executor === "local";
-  const externalName = executor === "codex" ? "Codex" : "Cursor";
   const projects = useQuery({
     queryKey: ["coding-projects"],
     queryFn: () => api<Project[]>("/projects?limit=500"),
   });
   const project = projects.data?.find((p) => p.id === projectId);
+  const preferred = project?.preferred_executor;
+  const executor =
+    choice === "auto"
+      ? ["cursor", "codex", "local"].includes(preferred ?? "")
+        ? preferred!
+        : "local"
+      : choice;
+  const scopeKey = JSON.stringify({
+    projectId,
+    version: project?.updated_at,
+    executor,
+    explore,
+    files: explore ? [] : files,
+  });
+  const external = approvedScope === scopeKey;
+  function setExternal(value: boolean) {
+    setApprovedScope(value ? scopeKey : "");
+  }
+  const local = executor === "local";
+  const externalName = executor === "codex" ? "Codex" : "Cursor";
+  const provider = useQuery({
+    queryKey: ["chat-provider"],
+    queryFn: () =>
+      api<{ models: string[]; default_model: string }>("/chat/provider"),
+    enabled: local,
+  });
+  const catalog = useQuery({
+    queryKey: ["coding-models", executor],
+    queryFn: () =>
+      api<{ models: { id: string; name: string }[]; notice: string }>(
+        `/coding/models/${executor}`,
+      ),
+    enabled: !local,
+    staleTime: 120000,
+  });
+  const selectedModel = localModel || provider.data?.default_model || "";
   const create = useMutation({
     mutationFn: () =>
       api<Run>(`/coding/${executor}`, {
@@ -49,104 +78,66 @@ export default function Coding() {
           project_id: projectId,
           expected_updated_at: project?.updated_at,
           prompt,
-          files:
-            local && explore
-              ? []
-              : files
-                  .split("\n")
-                  .map((p) => p.trim())
-                  .filter(Boolean),
+          files: explore
+            ? []
+            : files
+                .split("\n")
+                .map((p) => p.trim())
+                .filter(Boolean),
+          explore,
           model: local ? selectedModel : model,
           ...(!local
             ? { external_ai: external }
-            : { explore, max_repair_attempts: repairAttempts }),
+            : { max_repair_attempts: repairAttempts }),
         }),
       }),
-    onSuccess: (run) => navigate(`/runs/${run.id}`),
+    onSuccess: (run) => {
+      void cache.invalidateQueries({ queryKey: ["coding-sessions"] });
+      navigate(`/coding/${run.task_id}`);
+    },
   });
   return (
     <>
-      <PageTitle eyebrow="CODING / CONTROLLED WORKSPACE" title="Coding task">
-        Propose source changes in a fresh task worktree, then inspect validation
-        and the diff.
-      </PageTitle>
-      <ErrorNotice
-        error={
-          projects.error ?? create.error ?? (local ? provider.error : null)
+      <PageTitle
+        eyebrow="WORKSPACE / CODING"
+        title="What would you like to build?"
+        action={
+          <Button variant="secondary" asChild>
+            <Link to="/projects/new">
+              <Plus size={16} />
+              New project
+            </Link>
+          </Button>
         }
-      />
+      >
+        Pick a project, describe the outcome, and work with your agent in one
+        conversation.
+      </PageTitle>
+      <ErrorNotice error={projects.error ?? create.error} />
       {projects.isPending ? (
         <Loading />
       ) : (
-        <div className="image-workspace">
+        <div className="coding-start-grid">
           <form
             className="panel content-panel image-form coding-form"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!modelPending) create.mutate();
+              create.mutate();
             }}
           >
             <fieldset disabled={create.isPending || modelPending}>
-              <div
-                className="coding-executor-options"
-                role="group"
-                aria-label="Coding executor"
-              >
-                <button
-                  type="button"
-                  aria-label="Local AI llama.cpp or local server"
-                  aria-pressed={local}
-                  onClick={() => {
-                    setExecutor("local");
-                    setExternal(false);
-                  }}
-                >
-                  <Cpu size={19} />
-                  <span>
-                    <strong>Local AI</strong>
-                    <small>llama.cpp / local server</small>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={executor === "cursor"}
-                  onClick={() => {
-                    setExecutor("cursor");
-                    setExternal(false);
-                    setModel("");
-                  }}
-                >
-                  <Cloud size={19} />
-                  <span>
-                    <strong>Cursor</strong>
-                    <small>External AI · explicit consent</small>
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={executor === "codex"}
-                  onClick={() => {
-                    setExecutor("codex");
-                    setExternal(false);
-                    setModel("");
-                  }}
-                >
-                  <Cloud size={19} />
-                  <span>
-                    <strong>Codex</strong>
-                    <small>External AI · explicit consent</small>
-                  </span>
-                </button>
-              </div>
               <label>
                 Project
                 <select
-                  aria-label="Project"
                   required
                   value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
+                  onChange={(e) => {
+                    setProjectId(e.target.value);
+                    setExternal(false);
+                    setModel("");
+                  }}
                 >
-                  <option value="">Select a registered project</option>
+                  <option value="">Choose a project</option>
                   {projects.data?.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
@@ -154,157 +145,216 @@ export default function Coding() {
                   ))}
                 </select>
               </label>
+              {!projects.data?.length && (
+                <p className="notice">
+                  Start with a name — we’ll prepare the folder, Git repository
+                  and Python environment.{" "}
+                  <Link className="text-link" to="/projects/new">
+                    Create your first project →
+                  </Link>
+                </p>
+              )}
+              <div
+                className="coding-executor-options coding-agent-options"
+                role="group"
+                aria-label="Coding executor"
+              >
+                {[
+                  ["auto", "Auto", Sparkles],
+                  ["local", "Local AI", Cpu],
+                  ["cursor", "Cursor", Cloud],
+                  ["codex", "Codex", Cloud],
+                ].map(([id, title, Icon]) => {
+                  const Symbol = Icon as typeof Cpu;
+                  return (
+                    <button
+                      type="button"
+                      key={String(id)}
+                      aria-label={String(title)}
+                      aria-pressed={choice === id}
+                      onClick={() => {
+                        setChoice(String(id));
+                        setExternal(false);
+                        setModel("");
+                      }}
+                    >
+                      <Symbol size={18} />
+                      <span>
+                        <strong>{String(title)}</strong>
+                        <small>
+                          {id === "auto"
+                            ? "Project preference"
+                            : id === "local"
+                              ? "On this machine"
+                              : "External AI"}
+                        </small>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="coding-model-row">
+                <span className="chip">
+                  {localModel &&
+                    !provider.data?.models.includes(localModel) && (
+                      <option value={localModel}>Loaded llama.cpp model</option>
+                    )}
+                  {local
+                    ? "LOCAL AI"
+                    : externalName.toUpperCase() + " · EXTERNAL"}
+                </span>
+                <label>
+                  Model
+                  <select
+                    value={local ? localModel : model}
+                    onChange={(e) =>
+                      local
+                        ? setLocalModel(e.target.value)
+                        : setModel(e.target.value)
+                    }
+                  >
+                    <option value="">
+                      Auto —{" "}
+                      {local ? "configured local model" : "provider default"}
+                    </option>
+                    {local
+                      ? provider.data?.models.map((m) => (
+                          <option key={m} value={m}>
+                            {m}
+                          </option>
+                        ))
+                      : catalog.data?.models
+                          .filter((m) => m.id !== "auto")
+                          .map((m) => (
+                            <option key={m.id} value={m.id}>
+                              {m.name}
+                            </option>
+                          ))}
+                  </select>
+                </label>
+              </div>
+              <ErrorNotice error={local ? provider.error : catalog.error} />
+              {!local && catalog.data?.notice && (
+                <small className="muted">{catalog.data.notice}</small>
+              )}
+              {local && (
+                <details>
+                  <summary>Browse and load local models</summary>
+                  <LlamaModels
+                    value={selectedModel}
+                    models={provider.data?.models ?? []}
+                    busy={create.isPending}
+                    onSelect={setLocalModel}
+                    onBusy={setModelPending}
+                  />
+                </details>
+              )}
               <label>
                 Task
                 <textarea
                   required
                   maxLength={10000}
-                  rows={5}
+                  rows={6}
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Describe the change and its acceptance criteria"
+                  placeholder="Build a website for my studio. Start with a homepage and a contact form…"
                 />
               </label>
-              {local && (
-                <label className="project-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={explore}
-                    onChange={(e) => setExplore(e.target.checked)}
-                  />
-                  Let Local AI find the relevant files
-                </label>
-              )}
-              {local && (
-                <label>
-                  Automatic repair
-                  <select
-                    value={repairAttempts}
-                    onChange={(event) =>
-                      setRepairAttempts(Number(event.target.value))
-                    }
-                  >
-                    <option value={0}>Off — I will request repairs</option>
-                    <option value={1}>Try once if validation fails</option>
-                    <option value={2}>
-                      Try up to twice if validation fails
-                    </option>
-                  </select>
-                  <small>
-                    Uses the same local model and files. Saved checks run after
-                    each attempt. Stops on cancellation or execution failure;
-                    committing always requires review.
-                  </small>
-                </label>
-              )}
-              {local && explore ? (
-                <p className="notice">
-                  The model can list, search and read source files inside its
-                  new worktree. It selects the files to edit; you review the
-                  resulting diff and tests.
-                </p>
-              ) : (
-                <>
-                  <label>
-                    Selected files
-                    <textarea
-                      required
-                      rows={4}
-                      value={files}
-                      onChange={(e) => setFiles(e.target.value)}
-                    />
-                  </label>
-                  <p className="muted">
-                    One relative path per line, up to ten UTF-8 source files.
-                    New paths are allowed. Hidden configuration and credential
-                    paths are excluded; existing content is limited to 32 KB per
-                    file and 64 KB total.
-                  </p>
-                </>
-              )}
-              {local ? (
-                <LlamaModels
-                  value={selectedModel}
-                  models={provider.data?.models ?? []}
-                  busy={create.isPending}
-                  onSelect={setLocalModel}
-                  onBusy={setModelPending}
-                />
-              ) : (
-                <>
-                  <label>
-                    {externalName} model
-                    <input
-                      value={model}
-                      maxLength={100}
-                      onChange={(e) => setModel(e.target.value)}
-                      placeholder="Auto (default)"
-                    />
-                  </label>
+              <details className="coding-advanced">
+                <summary>Advanced settings</summary>
+                <div className="coding-advanced-fields">
                   <label className="project-checkbox">
                     <input
                       type="checkbox"
-                      checked={external}
-                      onChange={(e) => setExternal(e.target.checked)}
-                      required
+                      checked={explore}
+                      onChange={(e) => {
+                        setExplore(e.target.checked);
+                        setExternal(false);
+                      }}
                     />
-                    Allow sending this task, project guidance and selected file
-                    contents to external {externalName} AI.
+                    Let the agent find the relevant files
                   </label>
-                </>
+                  {!explore && (
+                    <label>
+                      Files the agent may edit
+                      <textarea
+                        required
+                        rows={3}
+                        value={files}
+                        onChange={(e) => {
+                          setFiles(e.target.value);
+                          setExternal(false);
+                        }}
+                        placeholder="src/app.py&#10;README.md"
+                      />
+                      <small>
+                        Relative paths, one per line. You can include new files.
+                      </small>
+                    </label>
+                  )}
+                  {local && (
+                    <label>
+                      Repair after failed checks
+                      <select
+                        value={repairAttempts}
+                        onChange={(e) =>
+                          setRepairAttempts(Number(e.target.value))
+                        }
+                      >
+                        <option value={0}>Ask me first</option>
+                        <option value={1}>One attempt</option>
+                        <option value={2}>Up to two attempts</option>
+                      </select>
+                    </label>
+                  )}
+                  <Link
+                    className="text-link"
+                    to={project ? `/projects/${project.id}` : "/projects"}
+                  >
+                    Project settings: branches, checks and rules{" "}
+                    <ArrowUpRight size={13} />
+                  </Link>
+                </div>
+              </details>
+              {!local && (
+                <label className="project-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={external}
+                    onChange={(e) => setExternal(e.target.checked)}
+                    required
+                  />
+                  <span>
+                    Allow {externalName} to receive this conversation, project
+                    guidance and{" "}
+                    {explore
+                      ? "relevant source files found by the agent"
+                      : "the selected files"}
+                    .
+                  </span>
+                </label>
               )}
               <Button
                 type="submit"
                 disabled={
                   !project ||
-                  (local ? !selectedModel || modelPending : !external) ||
-                  !prompt.trim()
+                  !prompt.trim() ||
+                  (local ? !selectedModel || modelPending : !external)
                 }
               >
-                {create.isPending
-                  ? "Queueing…"
-                  : local
-                    ? "Create worktree and start Local AI"
-                    : `Create worktree and start ${externalName}`}
+                {create.isPending ? "Preparing workspace…" : "Start coding"}
+                <ArrowUpRight size={16} />
               </Button>
+              <small className="muted">
+                Changes stay in a separate workspace. Return here for follow-up
+                instructions and review before committing.
+              </small>
             </fieldset>
           </form>
-          <aside className="panel content-panel">
-            <span className="chip">
-              {local
-                ? "LOCAL AI · HOST EXECUTION"
-                : "EXTERNAL AI · HOST EXECUTION"}
-            </span>
-            <h2 className="mt">Review before integration</h2>
-            <p>
-              A new branch starts from{" "}
-              {project?.integration_branch ??
-                "the project's integration branch"}
-              .{" "}
-              {local && explore
-                ? "Your local model explores source files using bounded read-only tools, then proposes changes."
-                : "The model proposes changes to your selected files with tools disabled."}{" "}
-              AI Station checks each replacement before applying it in the new
-              worktree.
-            </p>
-            <p>
-              Saved test, lint and build commands run afterward in the native
-              sandbox. Successful generation means the proposal was applied;
-              inspect the separate validation Run and diff before accepting it.
-            </p>
-            <p>
-              The original checkout stays intact. After successful validation,
-              you can review and commit the selected changes to the task branch.
-              Push, merge and deployment remain separate.
-            </p>
-            <p className="muted">
-              {local && explore
-                ? "Repository exploration stays local. Hidden configuration, credentials and symlink escapes are excluded. Exploration steps appear with the review."
-                : "The model can change only the files listed here. Add new file paths before starting."}
-            </p>
-            <Link className="text-link" to="/projects">
-              Configure projects and validation commands →
-            </Link>
+          <aside className="coding-recent">
+            <h2>Your coding conversations</h2>
+            <p className="muted">Pick up where you left off.</p>
+            <CodingHistory />
           </aside>
         </div>
       )}

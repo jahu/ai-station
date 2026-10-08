@@ -31,6 +31,7 @@ class LocalCodingRequest(BaseModel):
         default_factory=list, max_length=10
     )
     explore: StrictBool = False
+    cumulative: StrictBool = False
     repair_source_run_id: UUID | None = None
     permissions: list[str] = Field(max_length=4)
 

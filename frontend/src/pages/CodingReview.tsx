@@ -60,7 +60,7 @@ export default function CodingReview({ run }: { run: Run }) {
       {review && (
         <>
           <h2 className="mt">
-            {run.metadata?.repair_run_id
+            {run.metadata?.repair_run_id || run.metadata?.continuation_run_id
               ? "Previous attempt"
               : run.metadata?.review_status === "committed"
                 ? "Reviewed changes committed"
@@ -142,7 +142,8 @@ export default function CodingReview({ run }: { run: Run }) {
           {review.files.length > 0 &&
             run.status === "succeeded" &&
             typeof validation !== "string" &&
-            !run.metadata?.repair_run_id && <CommitReview run={run} />}
+            !run.metadata?.repair_run_id &&
+            !run.metadata?.continuation_run_id && <CommitReview run={run} />}
         </>
       )}
     </section>
@@ -247,7 +248,9 @@ function ValidationActions({
     onSuccess: (result) => navigate(`/runs/${result.id}`),
   });
   const next =
-    run.metadata?.repair_run_id ?? validation.data?.metadata?.repair_run_id;
+    run.metadata?.continuation_run_id ??
+    run.metadata?.repair_run_id ??
+    validation.data?.metadata?.repair_run_id;
   return (
     <div className="content-panel">
       <p>
@@ -267,7 +270,9 @@ function ValidationActions({
         <p>
           This attempt was superseded.{" "}
           <Link className="text-link" to={`/runs/${next}`}>
-            Open repair →
+            {run.metadata?.continuation_run_id
+              ? "Open latest work →"
+              : "Open repair →"}
           </Link>
         </p>
       ) : run.executor_type === "local_proposal" &&

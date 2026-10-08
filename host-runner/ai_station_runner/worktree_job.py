@@ -72,6 +72,13 @@ def prepare(run_id: str) -> None:
         or head != record["base_commit"]
     ):
         raise GitError("Created worktree does not match its reservation")
+    if repository.path == owned_path(f"projects/{record['project_id']}"):
+        subprocess.run(
+            [sys.executable, "-m", "venv", str(destination / ".venv")],
+            env=git_environment(),
+            timeout=90,
+            check=True,
+        )
     record["state"] = "ready"
     save_manifest(record)
     print(f"Worktree ready: {record['relative_path']} on {record['branch']}", flush=True)

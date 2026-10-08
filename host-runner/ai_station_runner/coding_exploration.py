@@ -9,7 +9,11 @@ from ai_station_runner.gitinspect import Repository
 def explore(workspace, prompt, guidance, complete):
     # The newly created worktree contains tracked source only. Git runs with the
     # existing helper/filter/network protections; no directory walk follows links.
-    names = Repository(workspace, shared_group=True).read(["ls-files", "-z"]).stdout.split("\0")
+    names = (
+        Repository(workspace, shared_group=True)
+        .read(["ls-files", "--cached", "--others", "--exclude-standard", "-z"])
+        .stdout.split("\0")
+    )
     paths = []
     for name in names:
         if not name:
