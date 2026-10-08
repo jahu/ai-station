@@ -492,9 +492,36 @@ def test_q8_load_fits_instead_of_forcing_128k(coding_fit):
         assert response.status_code == 202, response.text
         with session_factory()() as session:
             run = session.get(Run, response.json()["id"])
+            from app.models import RuntimeInstance
+
+            instance = session.get(RuntimeInstance, run.parameters["instance_id"])
             assert run.parameters["context_size"] == two_12gb()
             assert run.parameters["cache_type"] == "q8_0"
-            assert run.parameters["requested_context_size"] == 131072
+            assert "requested_context_size" not in run.parameters
+            assert instance.metadata_json["requested_context_size"] == 131072
+
+
+def test_q8_load_does_not_forward_fit_metadata_to_runner(coding_fit, monkeypatch):
+    model_id, records = coding_fit
+    seen = []
+
+    def load(_, body):
+        seen.append(body)
+        records[body["instance_id"]] = {"status": "ready", "alive": True, "gpus": body["gpus"]}
+        return records[body["instance_id"]]
+
+    monkeypatch.setattr(RunnerClient, "load_llama", load)
+    monkeypatch.setattr(RunnerClient, "inspect_llama", lambda _, identity: records[identity])
+    with TestClient(app) as client:
+        client.post(
+            "/api/llama/load",
+            json={"model_file_id": model_id, "gpus": [2, 7], "context_size": 131072, "cache_type": "q8_0"},
+        )
+        tick_once()
+    assert seen
+    assert "requested_context_size" not in seen[0]
+    assert seen[0]["context_size"] == two_12gb()
+    assert seen[0]["cache_type"] == "q8_0"
 
 
 def test_invalid_cache_type_and_context_rejected(managed):

@@ -1244,6 +1244,70 @@ def test_local_coding_reloads_saved_llama_preset_before_inference(repository, ow
             assert coding.status == "queued"
 
 
+def test_local_coding_followup_after_undispatched_load_failure(repository, owned_runner, monkeypatch):
+    from app.llama import LoadModel, enqueue_load, fit_coding_context
+    from app.models import ModelFile, Run, RuntimeInstance
+
+    weights = int(15.4 * 1024**3)
+    monkeypatch.setattr("app.llama.gpu_memory_totals", lambda gpus: [12288.0, 12288.0])
+    with session_factory()() as session:
+        model = ModelFile(
+            host_path="/models/coder.gguf",
+            filename="coder.gguf",
+            format="gguf",
+            category="llm",
+            availability="present",
+            size_bytes=weights,
+            mtime=1,
+        )
+        session.add(model)
+        session.flush()
+        old_load = enqueue_load(LoadModel(model_file_id=model.id, gpus=[2, 7], context_size=4096), session)
+        old_load.status = "succeeded"
+        instance = session.get(RuntimeInstance, old_load.parameters["instance_id"])
+        instance.status = "stopped"
+        model_key = "llamacpp:" + model.id
+        session.commit()
+    with TestClient(app) as client:
+        project = register(client, repository)
+        response = client.post(
+            "/api/coding/local", json={**local_coding_request(project), "model": model_key}
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "prepare-before-failed-load")
+        prepared = client.get(f"/api/runs/{response.json()['id']}").json()
+        coding_id = prepared["metadata"]["coding_run_id"]
+        with session_factory()() as session:
+            load = session.scalar(
+                select(Run).where(Run.executor_type == "llama_load", Run.status == "queued")
+            )
+            instance = session.get(RuntimeInstance, load.parameters["instance_id"])
+            instance.status = "failed"
+            load.status = "failed"
+            load.error_type = "RuntimeRejected"
+            load.error_message = "Runner rejected extra load fields"
+            session.commit()
+            assert tick(session, "coding-after-failed-load") == coding_id
+        failed = client.get(f"/api/runs/{coding_id}").json()
+        assert failed["status"] == "failed"
+        assert failed["error_type"] == "PrerequisiteFailed"
+        follow = client.post(
+            f"/api/coding/sessions/{prepared['task_id']}/messages",
+            json={"prompt": "Retry the website", "expected_run_id": coding_id, "external_ai": False},
+        )
+        assert follow.status_code == 202, follow.text
+        assert follow.json()["parameters"]["worktree_id"] == failed["parameters"]["worktree_id"]
+        with session_factory()() as session:
+            retry_load = session.scalar(
+                select(Run).where(Run.executor_type == "llama_load", Run.status == "queued")
+            )
+            expected = fit_coding_context(gpus=[2, 7], size_bytes=weights, gpu_memory_mib=[12288.0, 12288.0])
+            assert retry_load.parameters["context_size"] == expected
+            assert retry_load.parameters["cache_type"] == "q8_0"
+            assert "requested_context_size" not in retry_load.parameters
+
+
 def test_local_exploration_selects_files_and_preserves_checkout(
     repository, owned_runner, local_coding_bridge
 ):
