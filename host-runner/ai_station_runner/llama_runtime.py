@@ -8,6 +8,7 @@ import re
 import subprocess
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Literal
 from uuid import UUID
 
 import httpx
@@ -30,7 +31,8 @@ class Load(BaseModel):
     size_bytes: int = Field(gt=0)
     mtime: float = Field(gt=0, allow_inf_nan=False)
     gpus: list[int] = Field(max_length=16)
-    context_size: int = Field(default=4096, ge=512, le=32768, multiple_of=256)
+    context_size: int = Field(default=4096, ge=512, le=262144, multiple_of=256)
+    cache_type: Literal["f16", "q8_0"] = "f16"
     permissions: list[str]
 
 
@@ -172,7 +174,7 @@ def load(body: Load):
         request = body.model_dump(mode="json")
         if (folder / "manifest.json").exists():
             record = manifest(body.instance_id)
-            if record["request"] != request or record.get("desired") == "stopped":
+            if {"cache_type": "f16", **record["request"]} != request or record.get("desired") == "stopped":
                 raise HTTPException(409, "Runtime identity is immutable")
         else:
             settings = get_settings()
@@ -264,6 +266,17 @@ def load(body: Load):
                 "--reasoning-budget",
                 "0",
             ]
+            if body.cache_type == "q8_0":
+                args += [
+                    "--cache-type-k",
+                    "q8_0",
+                    "--cache-type-v",
+                    "q8_0",
+                    "--flash-attn",
+                    "on",
+                    "--fit",
+                    "off",
+                ]
             if len(body.gpus) > 1:
                 args += ["--split-mode", "layer", "--tensor-split", ",".join("1" for _ in body.gpus)]
             cid = docker(*args)

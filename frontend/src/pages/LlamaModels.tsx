@@ -58,6 +58,7 @@ export default function LlamaModels({
   busy,
   onBusy,
   compact = false,
+  coding = false,
 }: {
   value: string;
   label?: string;
@@ -66,6 +67,7 @@ export default function LlamaModels({
   busy: boolean;
   onBusy?: (busy: boolean) => void;
   compact?: boolean;
+  coding?: boolean;
 }) {
   const cache = useQueryClient();
   const hardware = useHardware();
@@ -73,7 +75,7 @@ export default function LlamaModels({
   const [draft, setDraft] = useState(value);
   const [search, setSearch] = useState("");
   const [gpus, setGpus] = useState<number[] | null>(null);
-  const [context, setContext] = useState(4096);
+  const [context, setContext] = useState(coding ? 131072 : 4096);
   const [runId, setRunId] = useState<string | null>(null);
   const catalog = useQuery({
     queryKey: ["llama-models"],
@@ -109,6 +111,7 @@ export default function LlamaModels({
           model_file_id: model.id,
           gpus: selectedGpus,
           context_size: context,
+          ...(coding ? { cache_type: "q8_0" } : {}),
         }),
       }),
     onMutate: () => onBusy?.(true),
@@ -140,7 +143,7 @@ export default function LlamaModels({
         !!hardware.error ||
         !Number.isInteger(context) ||
         context < 512 ||
-        context > 32768 ||
+        context > 262144 ||
         context % 256 !== 0));
   const matches = (name: string) =>
     name.toLowerCase().includes(search.toLowerCase());
@@ -360,7 +363,7 @@ export default function LlamaModels({
                       <input
                         type="number"
                         min={512}
-                        max={32768}
+                        max={262144}
                         step={256}
                         value={instance?.metadata.context_size ?? context}
                         onChange={(e) => setContext(Number(e.target.value))}

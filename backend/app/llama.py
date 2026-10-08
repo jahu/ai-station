@@ -3,7 +3,7 @@
 import re
 import time
 from pathlib import PurePosixPath
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -29,7 +29,8 @@ class LoadModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
     model_file_id: UUID
     gpus: list[Annotated[int, Field(ge=0)]] = Field(max_length=16)
-    context_size: int = Field(default=4096, ge=512, le=32768, multiple_of=256)
+    context_size: int = Field(default=4096, ge=512, le=262144, multiple_of=256)
+    cache_type: Literal["f16", "q8_0"] = "f16"
 
 
 def instances(session):
@@ -103,7 +104,12 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False):
         name=model.filename,
         ownership="managed",
         status="queued",
-        metadata_json={"model_file_id": model.id, "gpus": body.gpus, "context_size": body.context_size},
+        metadata_json={
+            "model_file_id": model.id,
+            "gpus": body.gpus,
+            "context_size": body.context_size,
+            "cache_type": body.cache_type,
+        },
     )
     session.add(instance)
     session.flush()
@@ -130,6 +136,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False):
             "mtime": model.mtime,
             "gpus": body.gpus,
             "context_size": body.context_size,
+            "cache_type": body.cache_type,
         },
     )
     instance.endpoint = "llamacpp:" + instance.id
@@ -374,6 +381,26 @@ def prepare_consumer(session, run):
         key=lambda i: (session.get(Run, i.metadata_json["load_run_id"]).created_at, i.id), reverse=True
     )
     instance = next((i for i in matching if i.status in {"ready", "queued", "loading"}), None)
+    coding_context = 131072 if run.executor_type == "local_proposal" else 0
+    if instance is not None and instance.metadata_json.get("context_size", 4096) < coding_context:
+        consumers = session.scalars(select(Run).where(Run.status.not_in(TERMINAL), Run.id != run.id))
+        if any(r.parameters.get("endpoint") == instance.endpoint for r in consumers):
+            raise ProviderError("Wait for the model's active work before preparing its larger Coding context")
+        previous_load = session.get(Run, instance.metadata_json["load_run_id"])
+        stop_run = enqueue_stop(session, instance, task=session.get(Task, run.task_id))
+        if previous_load.status not in TERMINAL:
+            depend_on(session, stop_run, previous_load)
+        append_event(
+            session,
+            run.id,
+            "runtime.context_upgrade",
+            {
+                "previous_context": instance.metadata_json.get("context_size", 4096),
+                "context_size": coding_context,
+                "cache_type": "q8_0",
+            },
+        )
+        instance = None
     if instance is None:
         if not matching:
             raise ProviderError("Choose GPUs and load this model once in conversation settings")
@@ -382,7 +409,12 @@ def prepare_consumer(session, run):
         preset = matching[0].metadata_json
         try:
             load_run = enqueue_load(
-                LoadModel(model_file_id=file_id, gpus=preset["gpus"], context_size=preset["context_size"]),
+                LoadModel(
+                    model_file_id=file_id,
+                    gpus=preset["gpus"],
+                    context_size=max(preset["context_size"], coding_context),
+                    cache_type="q8_0" if coding_context else preset.get("cache_type", "f16"),
+                ),
                 session,
                 task=session.get(Task, run.task_id),
                 allow_stopping=True,

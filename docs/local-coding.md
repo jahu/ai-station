@@ -52,3 +52,8 @@ Each attempt uses the same model, original file scope, worktree and saved valida
 
 
 On 2026-10-08 a real three-file website proposal hit the former 2048-token cap after 122 seconds of inference. Model loading and exploration had succeeded; complete-response validation correctly prevented any write. The proposal budget and overall deadline now accommodate longer local generation, while truncated responses still fail before applying files and identify the output/context limit explicitly.
+
+
+## Coding context and GPU memory
+
+Managed llama.cpp Coding runs request at least 131,072 context tokens with Q8 KV cache and Flash Attention. When an idle owned runtime has a smaller context, a stop → load prerequisite chain replaces it on the same saved GPUs before coding starts. Active consumers prevent replacement. Failed loads block coding instead of silently reducing context or offloading layers. External local servers retain their administrator-configured context. The picker accepts up to 262,144 context tokens; actual fit depends on the model and available VRAM. Source snapshot limits remain separate from the model context capacity.
