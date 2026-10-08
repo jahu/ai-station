@@ -261,7 +261,7 @@ def test_coding_scope_dispatch_and_stale_project_rejection(provider):
         assert "settings changed" in detail["messages"][-1]["content"]
 
 
-@pytest.mark.parametrize("action", ["auto", "coding.cursor", "coding.local"])
+@pytest.mark.parametrize("action", ["auto", "coding.cursor", "coding.codex", "coding.local"])
 def test_local_coding_scope_cannot_authorize_external_execution(action, monkeypatch):
     from app.models import Project
 
@@ -289,7 +289,7 @@ def test_local_coding_scope_cannot_authorize_external_execution(action, monkeypa
         step()
         detail = client.get(f"/api/chat/conversations/{cid}").json()
         child = detail["active_run"]
-        if action == "coding.cursor":
+        if action in {"coding.cursor", "coding.codex"}:
             assert child is None
             assert "explicitly allow sharing" in detail["messages"][-1]["content"]
         else:
@@ -298,7 +298,7 @@ def test_local_coding_scope_cannot_authorize_external_execution(action, monkeypa
             assert child["metadata"]["next_executor"] == "local_proposal"
 
 
-@pytest.mark.parametrize("action", ["coding.local", "coding.cursor"])
+@pytest.mark.parametrize("action", ["coding.local", "coding.cursor", "coding.codex"])
 def test_coding_rejects_media_instead_of_silently_ignoring_it(action):
     with TestClient(app) as client:
         cid = create(client)
@@ -310,3 +310,35 @@ def test_coding_rejects_media_instead_of_silently_ignoring_it(action):
         assert response.status_code == 422
         assert "Remove media" in response.json()["detail"]
         assert client.get(f"/api/chat/conversations/{cid}").json()["active_run"] is None
+
+
+@pytest.mark.parametrize("selected,action", [("cursor", "codex"), ("codex", "cursor"), ("codex", "codex")])
+def test_external_coding_scope_binds_the_selected_provider(selected, action):
+    from app.models import Project
+
+    with session_factory()() as session:
+        project = Project(name="fixture", repo_path="/allowed/fixture")
+        session.add(project)
+        session.commit()
+        scope = {
+            "project_id": project.id,
+            "expected_updated_at": project.updated_at.isoformat(),
+            "files": ["README.md"],
+            "external_ai": True,
+            "executor": selected,
+        }
+    with TestClient(app) as client:
+        cid = create(client)
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={"content": "Update documentation", "action": f"coding.{action}", "coding": scope},
+        )
+        assert response.status_code == 202, response.text
+        step()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        if selected == action:
+            assert detail["active_run"]["metadata"]["next_executor"] == "codex_proposal"
+            assert "codex" in detail["active_run"]["parameters"]
+        else:
+            assert detail["active_run"] is None
+            assert "explicitly allow sharing" in detail["messages"][-1]["content"]

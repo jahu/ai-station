@@ -32,6 +32,7 @@ Action = Literal[
     "avatar.animate",
     "agent.create",
     "coding.cursor",
+    "coding.codex",
     "coding.local",
     "clarify",
 ]
@@ -45,6 +46,7 @@ class CodingScope(BaseModel):
         default_factory=list, max_length=10
     )
     external_ai: bool = False
+    executor: Literal["cursor", "codex"] = "cursor"
     explore: StrictBool = False
     max_repair_attempts: StrictInt = Field(default=0, ge=0, le=2)
 
@@ -71,6 +73,7 @@ class AssistantInputs(BaseModel):
         "avatar.animate",
         "agent.create",
         "coding.cursor",
+        "coding.codex",
         "coding.local",
     ] = "auto"
     audio_artifact_id: UUID | None = None
@@ -175,7 +178,11 @@ def explicit_plan(params):
     if action != "auto":
         return Plan(action=action, reason="Using your selected action.")
     if params.get("coding"):
-        action = "coding.cursor" if params["coding"].get("external_ai") else "coding.local"
+        action = (
+            "coding." + params["coding"].get("executor", "cursor")
+            if params["coding"].get("external_ai")
+            else "coding.local"
+        )
         return Plan(action=action, reason="Using your selected project and coding scope.")
     prompt = params["content"].strip().lower()
     if params.get("audio_artifact_id") and len(params["image_artifact_ids"]) == 1:
@@ -207,6 +214,7 @@ image.upscale: enlarge one attached image;
 agent.create: create a persistent agent definition, including requests whose agent goal mentions images/code;
 coding.local: implement changes in a registered software project with the local conversation model;
 coding.cursor: implement changes only with explicit external Cursor consent in the coding scope;
+coding.codex: implement changes only with explicit external Codex consent in the coding scope;
 audio.speech: read the user message aloud in Polish with the attached WAV voice reference;
 avatar.animate: animate one attached portrait using one attached speech WAV;
 clarify: missing intent or request needs capabilities not listed here, including general text-to-video/music generation
@@ -315,43 +323,56 @@ class AssistantExecutor:
             message.metadata_json = {**message.metadata_json, "agent_id": agent.id}
             message.content = f"{plan.reason}\n\nAgent definition saved. Review its model, tools and schedule, then enable it in Agents."
             append_event(session, run.id, "agent.draft.created", {"agent_id": agent.id})
-        elif plan.action in {"coding.cursor", "coding.local"}:
-            self.coding(session, run, message, local=plan.action == "coding.local")
+        elif plan.action in {"coding.cursor", "coding.codex", "coding.local"}:
+            self.coding(session, run, message, provider=plan.action.split(".")[1])
         run.summary = message.content[:1000]
         transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload=run.metadata_json)
         session.commit()
         return "done"
 
-    def coding(self, session, run, message, *, local=False):
-        from app.cursor_coding import CursorTask, enqueue_cursor_task
+    def coding(self, session, run, message, *, provider="cursor"):
+        from app.codex_coding import CodexTask
+        from app.coding_tasks import enqueue_coding_task
+        from app.cursor_coding import CursorTask
+
+        local = provider == "local"
 
         params = run.parameters
         if local and (not params.get("coding") or params["coding"].get("external_ai")):
             message.content = "Select Local AI coding, a project and the files it may change, then send your instruction. The conversation model will propose edits in a new worktree."
             return
-        if not local and (not params.get("coding") or "external_ai" not in run.effective_permissions):
-            message.content = "Select the project and files in Coding scope and explicitly allow sharing with Cursor, then send your instruction."
+        if not local and (
+            not params.get("coding")
+            or "external_ai" not in run.effective_permissions
+            or params["coding"].get("executor", "cursor") != provider
+        ):
+            message.content = f"Select the project and files in Coding scope and explicitly allow sharing with {provider.title()}, then send your instruction."
             return
         try:
             if local:
-                from app.coding_tasks import enqueue_coding_task
                 from app.local_coding import LocalCodingTask
 
-                scope = {key: value for key, value in params["coding"].items() if key != "external_ai"}
+                scope = {
+                    key: value
+                    for key, value in params["coding"].items()
+                    if key not in {"external_ai", "executor"}
+                }
                 body = LocalCodingTask(**scope, prompt=params["content"], model=params["model"])
                 child = enqueue_coding_task(
                     session, body, provider="local", task=run.task, parent_run_id=run.id
                 )
             else:
-                body = CursorTask(
+                body = (CodexTask if provider == "codex" else CursorTask)(
                     **{
                         key: value
                         for key, value in params["coding"].items()
-                        if key not in {"explore", "max_repair_attempts"}
+                        if key not in {"explore", "max_repair_attempts", "executor"}
                     },
                     prompt=params["content"],
                 )
-                child = enqueue_cursor_task(session, body, task=run.task, parent_run_id=run.id)
+                child = enqueue_coding_task(
+                    session, body, provider=provider, task=run.task, parent_run_id=run.id
+                )
         except (ValidationError, HTTPException, ProviderError) as exc:
             message.content = (
                 exc.detail
@@ -363,7 +384,7 @@ class AssistantExecutor:
             return
         run.project_id = child.project_id
         run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
-        provider = "local AI" if local else "external Cursor"
+        provider = "local AI" if local else "external " + provider.title()
         message.content = f"Queued an isolated worktree and {provider} task. Coding and configured validation results will appear here."
 
     async def plan(self, session, run):
@@ -383,7 +404,11 @@ class AssistantExecutor:
                             "reference_image_count": len(params["image_artifact_ids"]),
                             "voice_reference_attached": bool(params.get("audio_artifact_id")),
                             "coding_scope_selected": bool(params.get("coding")),
+                            "external_coding_executor": params.get("coding", {}).get("executor", "cursor")
+                            if params.get("coding") and params["coding"].get("external_ai")
+                            else None,
                             "external_cursor_allowed": bool(params.get("coding", {}).get("external_ai"))
+                            and params["coding"].get("executor", "cursor") == "cursor"
                             if params.get("coding")
                             else False,
                         },

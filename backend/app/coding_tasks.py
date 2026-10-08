@@ -32,7 +32,7 @@ class CodingTask(BaseModel):
 
 def enqueue_coding_task(session, body, *, provider="cursor", task=None, parent_run_id=None):
     local = provider == "local"
-    if provider not in {"cursor", "local"}:
+    if provider not in {"cursor", "codex", "local"}:
         raise ValueError("Unsupported coding provider")
     project = get_project(session, body.project_id)
     if project.updated_at != body.expected_updated_at:
@@ -45,7 +45,7 @@ def enqueue_coding_task(session, body, *, provider="cursor", task=None, parent_r
         session,
         title=body.prompt[:200],
         prompt=body.prompt,
-        capability="coding.local" if local else "coding.cursor",
+        capability=f"coding.{provider}",
         project_id=project.id,
     )
     task.project_id = project.id
@@ -84,7 +84,7 @@ def enqueue_coding_task(session, body, *, provider="cursor", task=None, parent_r
         parameters={
             "repo_path": project.repo_path,
             "base_branch": project.integration_branch,
-            "local_coding" if local else "cursor": request,
+            "local_coding" if local else provider: request,
         },
     )
     branch = f"ai/{run.id}-workspace"
@@ -102,7 +102,7 @@ def enqueue_coding_task(session, body, *, provider="cursor", task=None, parent_r
     run.metadata_json = {
         "relative_path": relative,
         "branch": branch,
-        "next_executor": "local_proposal" if local else "cursor_proposal",
+        "next_executor": "local_proposal" if local else f"{provider}_proposal",
         "execution_location": "local" if local else "external",
     }
     return run
@@ -110,7 +110,8 @@ def enqueue_coding_task(session, body, *, provider="cursor", task=None, parent_r
 
 def queue_proposal(session, preparation, worktree):
     local = "local_coding" in preparation.parameters
-    request = preparation.parameters.get("local_coding" if local else "cursor")
+    provider = "local" if local else "codex" if "codex" in preparation.parameters else "cursor"
+    request = preparation.parameters.get("local_coding" if local else provider)
     if not request:
         return
     run = create_run(
@@ -118,8 +119,8 @@ def queue_proposal(session, preparation, worktree):
         preparation.task,
         run_type="coding",
         project_id=preparation.project_id,
-        capability="coding.local" if local else "coding.cursor",
-        executor_type="local_proposal" if local else "cursor_proposal",
+        capability=f"coding.{provider}",
+        executor_type="local_proposal" if local else f"{provider}_proposal",
         execution_target="host",
         permissions=[
             "filesystem_read",
@@ -140,9 +141,7 @@ def queue_proposal(session, preparation, worktree):
         "worktree": preparation.metadata_json["worktree"],
     }
     preparation.metadata_json = {**preparation.metadata_json, "coding_run_id": run.id}
-    preparation.summary = (
-        f"Prepared {worktree.branch}; {'Local AI' if local else 'External Cursor'} proposal queued."
-    )
+    preparation.summary = f"Prepared {worktree.branch}; {'Local AI' if local else 'External ' + provider.title()} proposal queued."
 
 
 def queue_validation(session, coding_run):

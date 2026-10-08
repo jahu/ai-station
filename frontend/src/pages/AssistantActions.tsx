@@ -12,6 +12,7 @@ export type CodingScope = {
   expected_updated_at: string;
   files: string[];
   external_ai: boolean;
+  executor?: "cursor" | "codex";
   explore?: boolean;
   max_repair_attempts?: number;
 };
@@ -170,7 +171,8 @@ export default function AssistantActions({
       ...value,
       action,
       coding:
-        (action === "coding.local" || (action === "coding.cursor" && allow)) &&
+        (action === "coding.local" ||
+          (["coding.cursor", "coding.codex"].includes(action) && allow)) &&
         project &&
         (selected.length || localExplore)
           ? {
@@ -181,7 +183,10 @@ export default function AssistantActions({
               ...(action === "coding.local" && repairs > 0
                 ? { max_repair_attempts: repairs }
                 : {}),
-              external_ai: action === "coding.cursor",
+              external_ai: action !== "coding.local",
+              ...(action === "coding.codex"
+                ? { executor: "codex" as const }
+                : {}),
             }
           : null,
     });
@@ -239,6 +244,7 @@ export default function AssistantActions({
           <option value="agent.create">Create agent</option>
           <option value="coding.local">Coding with Local AI</option>
           <option value="coding.cursor">Coding with Cursor</option>
+          <option value="coding.codex">Coding with Codex</option>
         </select>
       </label>
       {!value.action.startsWith("coding.") && (
@@ -531,7 +537,8 @@ export default function AssistantActions({
                 }}
               />
               Allow sending this instruction, project guidance and selected file
-              contents to external Cursor.
+              contents to external{" "}
+              {value.action === "coding.codex" ? "Codex" : "Cursor"}.
             </label>
           )}
           <ErrorNotice error={projects.error} />
