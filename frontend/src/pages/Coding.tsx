@@ -264,6 +264,14 @@ export default function Coding() {
                     />
                     Let the agent find the relevant files
                   </label>
+                  {local && explore && (
+                    <small>
+                      Local AI may GET public pages from URLs in the task and,
+                      when the Host Runner has search configured, query the
+                      public web. Private and loopback addresses are blocked.
+                      JavaScript is not executed; this is not a browser.
+                    </small>
+                  )}
                   {!explore && (
                     <label>
                       Files the agent may edit

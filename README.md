@@ -166,7 +166,7 @@ After a Coding proposal and its configured validation pass, inspect the diff and
 
 ### Local coding
 
-Open **Coding → Local AI**, choose a project and model using the same llama.cpp/local-server picker as Chat, describe the change and let Local AI find the relevant files, or select up to ten source paths explicitly. AI Station creates an isolated worktree, applies a checked proposal, runs saved validation and presents the diff for review. No external-AI consent is needed for local execution. See [local coding](docs/local-coding.md) for verified behavior and the opt-in real-model smoke.
+Open **Coding → Local AI**, choose a project and model using the same llama.cpp/local-server picker as Chat, describe the change and let Local AI find the relevant files, or select up to ten source paths explicitly. With automatic discovery, Local AI may GET public pages named in the task (private/loopback blocked; no browser). AI Station creates an isolated worktree, applies a checked proposal, runs saved validation and presents the diff for review. No external-AI consent is needed for local execution. See [local coding](docs/local-coding.md) for verified behavior and the opt-in real-model smoke.
 
 In the central Assistant, choose **Coding with Local AI**, select the project and enable automatic source discovery or specify source paths, then send your instruction. It uses the model selected for that conversation and shows progress and review artifacts in the same chat.
 

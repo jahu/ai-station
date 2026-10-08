@@ -246,6 +246,7 @@ it("stages local coding scope without granting Cursor consent", async () => {
     explore: true,
     external_ai: false,
   });
+  expect(screen.getByText(/Local AI may GET public pages/)).toBeTruthy();
   fireEvent.click(
     screen.getByRole("checkbox", {
       name: "Let Local AI find the relevant files",

@@ -131,6 +131,7 @@ it.each(["Cursor", "Codex", "Local AI"])(
         screen.getByRole("checkbox", { name: /Allow .* to receive/ }),
       );
     } else {
+      expect(screen.getByText(/Local AI may GET public pages/)).toBeTruthy();
       fireEvent.click(await screen.findByRole("button", { name: "Model" }));
       await screen.findByRole("button", { name: "local-model, local server" });
       fireEvent.click(
