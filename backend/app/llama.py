@@ -3,7 +3,7 @@
 import re
 import time
 from pathlib import PurePosixPath
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -25,11 +25,144 @@ router = APIRouter(prefix="/api/llama")
 DB = Annotated[Session, Depends(session_scope)]
 
 
+CODING_CONTEXT_CEILING = 131072
+CODING_CONTEXT_FLOOR = 4096
+CODING_CONTEXT_FALLBACK = 16384
+_VRAM_USABLE_FRACTION = 0.85
+_CUDA_OVERHEAD_MIB_PER_GPU = 768
+
+
 class LoadModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
     model_file_id: UUID
     gpus: list[Annotated[int, Field(ge=0)]] = Field(max_length=16)
-    context_size: int = Field(default=4096, ge=512, le=32768, multiple_of=256)
+    context_size: int = Field(default=4096, ge=512, le=262144, multiple_of=256)
+    cache_type: Literal["f16", "q8_0"] = "f16"
+
+
+def q8_kv_bytes_per_token(size_bytes: int) -> int:
+    """Conservative Q8 KV bytes/token from GGUF size; 27–32B GQA is much hungrier than 7B."""
+    gib = max(0.0, size_bytes) / (1024**3)
+    return int(max(24.0, min(160.0, 8 + 7.5 * gib)) * 1024)
+
+
+def fit_coding_context(
+    *,
+    gpus: list[int],
+    size_bytes: int,
+    gpu_memory_mib: list[float] | None = None,
+    ceiling: int = CODING_CONTEXT_CEILING,
+    failed_sizes: list[int] | tuple[int, ...] = (),
+    proven_success: int | None = None,
+) -> int:
+    """Largest GPU-resident Q8 context. 131072 is a ceiling, never a default load size."""
+    limit = min(CODING_CONTEXT_CEILING, max(CODING_CONTEXT_FLOOR, (int(ceiling) // 256) * 256))
+    failed = {max(CODING_CONTEXT_FLOOR, (int(size) // 256) * 256) for size in failed_sizes if size}
+    if not gpus:
+        return min(limit, CODING_CONTEXT_FLOOR)
+    missing_vram = (
+        gpu_memory_mib is None
+        or len(gpu_memory_mib) != len(gpus)
+        or any(value is None for value in gpu_memory_mib)
+    )
+    if missing_vram:
+        computed = proven_success or CODING_CONTEXT_FALLBACK
+    else:
+        kv_mib = (
+            _VRAM_USABLE_FRACTION * sum(float(value) for value in gpu_memory_mib)
+            - size_bytes / (1024 * 1024)
+            - _CUDA_OVERHEAD_MIB_PER_GPU * len(gpus)
+        )
+        if kv_mib <= 0:
+            computed = CODING_CONTEXT_FLOOR
+        else:
+            computed = int((kv_mib * 1024 * 1024) / q8_kv_bytes_per_token(size_bytes))
+        if proven_success:
+            computed = max(computed, proven_success)
+    computed = min(limit, max(CODING_CONTEXT_FLOOR, (int(computed) // 256) * 256))
+    while computed in failed and computed > CODING_CONTEXT_FLOOR:
+        halved = (computed // 2 // 256) * 256
+        computed = CODING_CONTEXT_FLOOR if halved < CODING_CONTEXT_FLOOR else halved
+    return computed
+
+
+def gpu_memory_totals(gpus: list[int]) -> list[float] | None:
+    if not gpus:
+        return []
+    try:
+        hardware = RunnerClient().hardware()
+    except Exception:
+        return None
+    by_index = {}
+    for gpu in hardware.get("gpus") or []:
+        try:
+            by_index[int(gpu["index"])] = gpu.get("memory_total_mib")
+        except (TypeError, ValueError, KeyError):
+            continue
+    totals = []
+    for index in gpus:
+        value = by_index.get(index)
+        if value is None:
+            return None
+        try:
+            totals.append(float(value))
+        except (TypeError, ValueError):
+            return None
+    return totals
+
+
+def _q8_history(session, model_file_id, gpus):
+    for instance in instances(session):
+        meta = instance.metadata_json or {}
+        if (
+            meta.get("model_file_id") == model_file_id
+            and list(meta.get("gpus") or []) == list(gpus)
+            and meta.get("cache_type", "f16") == "q8_0"
+        ):
+            yield instance
+
+
+def failed_context_sizes(session, model_file_id, gpus) -> list[int]:
+    sizes = []
+    for instance in _q8_history(session, model_file_id, gpus):
+        if instance.metadata_json.get("context_fit") != "too_large":
+            continue
+        raw = instance.metadata_json.get("failed_context_size") or instance.metadata_json.get("context_size")
+        try:
+            size = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if size:
+            sizes.append(size)
+    return sizes
+
+
+def proven_context_size(session, model_file_id, gpus) -> int | None:
+    best = None
+    for instance in _q8_history(session, model_file_id, gpus):
+        if (
+            instance.status not in {"ready", "stopped"}
+            or instance.metadata_json.get("context_fit") == "too_large"
+        ):
+            continue
+        try:
+            size = int(instance.metadata_json.get("context_size") or 0)
+        except (TypeError, ValueError):
+            continue
+        if size:
+            best = size if best is None else max(best, size)
+    return best
+
+
+def coding_context_target(session, model, gpus, *, ceiling=CODING_CONTEXT_CEILING) -> int:
+    return fit_coding_context(
+        gpus=gpus,
+        size_bytes=model.size_bytes,
+        gpu_memory_mib=gpu_memory_totals(gpus),
+        ceiling=ceiling,
+        failed_sizes=failed_context_sizes(session, model.id, gpus),
+        proven_success=proven_context_size(session, model.id, gpus),
+    )
 
 
 def instances(session):
@@ -91,6 +224,13 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False):
         raise HTTPException(422, "Choose a present language-model GGUF; mmproj files are vision companions")
     if len(set(body.gpus)) != len(body.gpus):
         raise HTTPException(422, "Choose distinct GPUs")
+    requested_context = body.context_size
+    if body.cache_type == "q8_0":
+        body = body.model_copy(
+            update={
+                "context_size": coding_context_target(session, model, body.gpus, ceiling=body.context_size)
+            }
+        )
     for instance in instances(session):
         if instance.metadata_json.get("model_file_id") == model.id and instance.status not in {
             "stopped",
@@ -103,7 +243,13 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False):
         name=model.filename,
         ownership="managed",
         status="queued",
-        metadata_json={"model_file_id": model.id, "gpus": body.gpus, "context_size": body.context_size},
+        metadata_json={
+            "model_file_id": model.id,
+            "gpus": body.gpus,
+            "context_size": body.context_size,
+            "cache_type": body.cache_type,
+            "requested_context_size": requested_context,
+        },
     )
     session.add(instance)
     session.flush()
@@ -130,6 +276,8 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False):
             "mtime": model.mtime,
             "gpus": body.gpus,
             "context_size": body.context_size,
+            "cache_type": body.cache_type,
+            "requested_context_size": requested_context,
         },
     )
     instance.endpoint = "llamacpp:" + instance.id
@@ -198,10 +346,40 @@ def reserve(session, run, indexes):
     return True
 
 
+def _allocation_error(error: str) -> bool:
+    text = (error or "").lower()
+    return any(
+        marker in text
+        for marker in (
+            "out of memory",
+            "oom",
+            "failed to allocate",
+            "cuda malloc",
+            "insufficient memory",
+            "kv cache",
+            "not enough memory",
+        )
+    )
+
+
 def update_instance(session, instance, info):
     instance.status = info["status"]
     instance.updated_at = utcnow()
-    instance.metadata_json = {**instance.metadata_json, "observation": info}
+    meta = {**instance.metadata_json, "observation": info}
+    n_ctx = info.get("n_ctx")
+    if info["status"] == "ready" and isinstance(n_ctx, int) and n_ctx > 0:
+        queued = int(meta.get("context_size") or n_ctx)
+        meta["context_size"] = n_ctx
+        if n_ctx < queued:
+            meta["context_fit"] = "too_large"
+            meta["failed_context_size"] = queued
+        else:
+            meta["context_fit"] = "ok"
+        if isinstance(info.get("n_ctx_train"), int) and info["n_ctx_train"] > 0:
+            meta["n_ctx_train"] = info["n_ctx_train"]
+    elif info["status"] == "failed" and _allocation_error(str(info.get("error") or "")):
+        meta["context_fit"] = "too_large"
+    instance.metadata_json = meta
     if not info.get("alive") and info["status"] in {"stopped", "failed"}:
         release_run_locks(session, instance.metadata_json["load_run_id"])
 
@@ -286,12 +464,17 @@ class LlamaExecutor:
                     return "done"
                 if info["status"] == "ready" and self.operation == "load" and not canceled:
                     run.summary = f"{instance.name} ready on GPUs {run.parameters['gpus']}"
-                    append_event(
-                        session,
-                        run.id,
-                        "runtime.ready",
-                        {"instance_id": instance.id, "gpus": run.parameters["gpus"]},
-                    )
+                    payload = {
+                        "instance_id": instance.id,
+                        "gpus": run.parameters["gpus"],
+                        "context_size": instance.metadata_json.get("context_size"),
+                        "cache_type": instance.metadata_json.get("cache_type", "f16"),
+                    }
+                    if isinstance(info.get("n_ctx"), int) and info["n_ctx"] > 0:
+                        payload["n_ctx"] = info["n_ctx"]
+                    if isinstance(info.get("n_ctx_train"), int) and info["n_ctx_train"] > 0:
+                        payload["n_ctx_train"] = info["n_ctx_train"]
+                    append_event(session, run.id, "runtime.ready", payload)
                     transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
                     return "done"
                 session.commit()
@@ -374,6 +557,44 @@ def prepare_consumer(session, run):
         key=lambda i: (session.get(Run, i.metadata_json["load_run_id"]).created_at, i.id), reverse=True
     )
     instance = next((i for i in matching if i.status in {"ready", "queued", "loading"}), None)
+    coding = run.executor_type == "local_proposal"
+    target = 0
+    if coding:
+        row = session.get(ModelFile, file_id)
+        if not loadable_model(row):
+            raise ProviderError("Choose a present language-model GGUF; mmproj files are vision companions")
+        source = instance or (matching[0] if matching else None)
+        if source is None:
+            raise ProviderError("Choose GPUs and load this model once in conversation settings")
+        target = coding_context_target(session, row, source.metadata_json["gpus"])
+    needs_upgrade = bool(
+        instance is not None
+        and target
+        and (
+            instance.metadata_json.get("cache_type", "f16") != "q8_0"
+            or instance.metadata_json.get("context_size", 4096) < target
+        )
+    )
+    if needs_upgrade:
+        consumers = session.scalars(select(Run).where(Run.status.not_in(TERMINAL), Run.id != run.id))
+        if any(r.parameters.get("endpoint") == instance.endpoint for r in consumers):
+            raise ProviderError("Wait for the model's active work before preparing its larger Coding context")
+        previous_load = session.get(Run, instance.metadata_json["load_run_id"])
+        stop_run = enqueue_stop(session, instance, task=session.get(Task, run.task_id))
+        if previous_load.status not in TERMINAL:
+            depend_on(session, stop_run, previous_load)
+        append_event(
+            session,
+            run.id,
+            "runtime.context_upgrade",
+            {
+                "previous_context": instance.metadata_json.get("context_size", 4096),
+                "context_size": target,
+                "cache_type": "q8_0",
+                "context_ceiling": CODING_CONTEXT_CEILING,
+            },
+        )
+        instance = None
     if instance is None:
         if not matching:
             raise ProviderError("Choose GPUs and load this model once in conversation settings")
@@ -382,7 +603,12 @@ def prepare_consumer(session, run):
         preset = matching[0].metadata_json
         try:
             load_run = enqueue_load(
-                LoadModel(model_file_id=file_id, gpus=preset["gpus"], context_size=preset["context_size"]),
+                LoadModel(
+                    model_file_id=file_id,
+                    gpus=preset["gpus"],
+                    context_size=CODING_CONTEXT_CEILING if coding else preset["context_size"],
+                    cache_type="q8_0" if coding else preset.get("cache_type", "f16"),
+                ),
                 session,
                 task=session.get(Task, run.task_id),
                 allow_stopping=True,

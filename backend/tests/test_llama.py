@@ -274,6 +274,8 @@ def test_conversations_share_pending_load_and_reload_saved_preset(managed, monke
             reload = session.get(Run, reload_id)
             assert reload.executor_type == "llama_load"
             assert reload.parameters["gpus"] == [2, 7]
+            assert reload.parameters["context_size"] == 4096
+            assert reload.parameters["cache_type"] == "f16"
             assert reload.status == "succeeded"
         assert tick_once() == queued.json()["id"]
         assert len(client.get("/api/llama").json()["instances"]) == 2
@@ -418,3 +420,295 @@ def test_explicit_media_action_does_not_load_unused_planner_model(managed):
         with session_factory()() as session:
             assert len(list(session.scalars(select(Run).where(Run.executor_type == "llama_load")))) == 1
             assert session.scalar(select(Run).where(Run.executor_type == "photo_pipe")).status == "queued"
+
+
+WEIGHTS_27B = int(15.4 * 1024**3)
+
+
+def two_12gb():
+    from app.llama import fit_coding_context
+
+    return fit_coding_context(gpus=[2, 7], size_bytes=WEIGHTS_27B, gpu_memory_mib=[12288.0, 12288.0])
+
+
+@pytest.fixture
+def coding_fit(managed, monkeypatch):
+    model_id, records = managed
+    monkeypatch.setattr(
+        "app.llama.gpu_memory_totals", lambda gpus: [12288.0, 12288.0] if list(gpus) == [2, 7] else None
+    )
+    with session_factory()() as session:
+        session.get(ModelFile, model_id).size_bytes = WEIGHTS_27B
+        session.commit()
+    return model_id, records
+
+
+def proposal(session, model_id):
+    from app.runs import create_run, create_task
+
+    task = create_task(session, title="code", prompt="website", capability="coding.local")
+    return create_run(
+        session,
+        task,
+        run_type="coding",
+        capability="coding.local",
+        executor_type="local_proposal",
+        parameters={"model": "llamacpp:" + model_id},
+    )
+
+
+def test_two_12gb_27b_q8_does_not_select_128k():
+    from app.llama import CODING_CONTEXT_FALLBACK, fit_coding_context
+
+    fitted = two_12gb()
+    assert fitted != 131072
+    assert 16384 <= fitted <= 32768
+    assert (
+        fit_coding_context(gpus=[0, 1], size_bytes=WEIGHTS_27B, gpu_memory_mib=[24576.0, 24576.0]) == 131072
+    )
+    assert fit_coding_context(gpus=[], size_bytes=WEIGHTS_27B, gpu_memory_mib=[], ceiling=131072) == 4096
+    assert (
+        fit_coding_context(gpus=[2, 7], size_bytes=WEIGHTS_27B, gpu_memory_mib=None)
+        == CODING_CONTEXT_FALLBACK
+    )
+    assert (
+        fit_coding_context(gpus=[2, 7], size_bytes=WEIGHTS_27B, gpu_memory_mib=None, proven_success=32768)
+        == 32768
+    )
+    smaller = fit_coding_context(
+        gpus=[2, 7], size_bytes=WEIGHTS_27B, gpu_memory_mib=[12288.0, 12288.0], failed_sizes=[fitted]
+    )
+    assert smaller < fitted
+    assert smaller != 131072
+
+
+def test_q8_load_fits_instead_of_forcing_128k(coding_fit):
+    model_id, _ = coding_fit
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/llama/load",
+            json={"model_file_id": model_id, "gpus": [2, 7], "context_size": 131072, "cache_type": "q8_0"},
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            run = session.get(Run, response.json()["id"])
+            assert run.parameters["context_size"] == two_12gb()
+            assert run.parameters["cache_type"] == "q8_0"
+            assert run.parameters["requested_context_size"] == 131072
+
+
+def test_invalid_cache_type_and_context_rejected(managed):
+    model_id, _ = managed
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/api/llama/load", json={"model_file_id": model_id, "gpus": [2, 7], "cache_type": "q4_0"}
+            ).status_code
+            == 422
+        )
+        assert (
+            client.post(
+                "/api/llama/load", json={"model_file_id": model_id, "gpus": [2, 7], "context_size": 1000}
+            ).status_code
+            == 422
+        )
+        assert (
+            client.post(
+                "/api/llama/load", json={"model_file_id": model_id, "gpus": [2, 7], "context_size": 262400}
+            ).status_code
+            == 422
+        )
+
+
+def test_idle_smaller_runtime_upgrades_to_fitted_q8(coding_fit):
+    from app.llama import prepare_consumer
+    from app.models import RunDependency, RuntimeInstance
+
+    model_id, _ = coding_fit
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        with session_factory()() as session:
+            previous = instances(session)[0]
+            run = proposal(session, model_id)
+            prepare_consumer(session, run)
+            session.commit()
+            loads = list(session.scalars(select(Run).where(Run.executor_type == "llama_load")))
+            assert len(loads) == 2
+            fresh = next(item for item in loads if item.parameters["instance_id"] != previous.id)
+            assert fresh.parameters["context_size"] == two_12gb()
+            assert fresh.parameters["cache_type"] == "q8_0"
+            assert session.get(RuntimeInstance, previous.id).status == "stopping"
+            assert session.scalar(
+                select(RunDependency).where(
+                    RunDependency.run_id == fresh.id,
+                    RunDependency.prerequisite_id == previous.metadata_json["operation_run_id"],
+                )
+            )
+            assert session.scalar(
+                select(RunDependency).where(
+                    RunDependency.run_id == run.id, RunDependency.prerequisite_id == fresh.id
+                )
+            )
+
+
+def test_active_consumer_blocks_coding_context_upgrade(coding_fit):
+    from app.llama import prepare_consumer
+    from app.providers import ProviderError
+    from app.runs import create_run, create_task
+
+    model_id, _ = coding_fit
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        with session_factory()() as session:
+            instance = instances(session)[0]
+            busy = create_task(session, title="chat", prompt="hi", capability="chat.completion")
+            create_run(
+                session,
+                busy,
+                run_type="chat",
+                capability="chat.completion",
+                executor_type="chat",
+                parameters={"model": "llamacpp:" + model_id, "endpoint": instance.endpoint},
+            )
+            with pytest.raises(ProviderError, match="active work"):
+                prepare_consumer(session, proposal(session, model_id))
+
+
+def test_pending_load_finishes_before_coding_stop(coding_fit):
+    from app.llama import prepare_consumer
+    from app.models import RunDependency
+
+    model_id, _ = coding_fit
+    with TestClient(app) as client:
+        queued = load(client, model_id)
+        with session_factory()() as session:
+            run = proposal(session, model_id)
+            prepare_consumer(session, run)
+            session.commit()
+            stop = session.scalar(select(Run).where(Run.executor_type == "llama_stop"))
+            fresh = next(
+                item
+                for item in session.scalars(select(Run).where(Run.executor_type == "llama_load"))
+                if item.id != queued["id"]
+            )
+            assert session.scalar(
+                select(RunDependency).where(
+                    RunDependency.run_id == stop.id, RunDependency.prerequisite_id == queued["id"]
+                )
+            )
+            assert session.scalar(
+                select(RunDependency).where(
+                    RunDependency.run_id == fresh.id, RunDependency.prerequisite_id == stop.id
+                )
+            )
+
+
+def test_already_large_q8_runtime_is_reused(coding_fit):
+    from app.llama import prepare_consumer
+
+    model_id, _ = coding_fit
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        with session_factory()() as session:
+            instance = instances(session)[0]
+            instance.metadata_json = {
+                **instance.metadata_json,
+                "context_size": two_12gb(),
+                "cache_type": "q8_0",
+            }
+            session.commit()
+            run = proposal(session, model_id)
+            prepare_consumer(session, run)
+            session.commit()
+            assert run.parameters["endpoint"] == instance.endpoint
+            assert len(list(session.scalars(select(Run).where(Run.executor_type == "llama_load")))) == 1
+            assert not list(session.scalars(select(Run).where(Run.executor_type == "llama_stop")))
+
+
+def test_stopped_reload_uses_fitted_q8_not_saved_4096(coding_fit):
+    from app.llama import prepare_consumer
+
+    model_id, _ = coding_fit
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        client.post(f"/api/llama/{client.get('/api/llama').json()['instances'][0]['id']}/stop")
+        tick_once()
+        with session_factory()() as session:
+            run = proposal(session, model_id)
+            prepare_consumer(session, run)
+            session.commit()
+            fresh = next(
+                item
+                for item in session.scalars(select(Run).where(Run.executor_type == "llama_load"))
+                if item.status == "queued"
+            )
+            assert fresh.parameters["context_size"] == two_12gb()
+            assert fresh.parameters["cache_type"] == "q8_0"
+
+
+def test_known_failed_context_is_not_retried(coding_fit):
+    from app.llama import LoadModel, enqueue_load, fit_coding_context, prepare_consumer
+    from app.models import RuntimeInstance
+
+    model_id, _ = coding_fit
+    fitted = two_12gb()
+    with session_factory()() as session:
+        failed = enqueue_load(
+            LoadModel(model_file_id=model_id, gpus=[2, 7], context_size=131072, cache_type="q8_0"), session
+        )
+        instance = session.get(RuntimeInstance, failed.parameters["instance_id"])
+        instance.status = "failed"
+        instance.metadata_json = {**instance.metadata_json, "context_fit": "too_large"}
+        session.commit()
+        assert instance.metadata_json["context_size"] == fitted
+        run = proposal(session, model_id)
+        prepare_consumer(session, run)
+        session.commit()
+        fresh = next(
+            item
+            for item in session.scalars(select(Run).where(Run.executor_type == "llama_load"))
+            if item.id != failed.id
+        )
+        expected = fit_coding_context(
+            gpus=[2, 7], size_bytes=WEIGHTS_27B, gpu_memory_mib=[12288.0, 12288.0], failed_sizes=[fitted]
+        )
+        assert fresh.parameters["context_size"] == expected
+        assert expected < fitted
+
+
+def test_ready_runtime_persists_observed_n_ctx(coding_fit, monkeypatch):
+    model_id, records = coding_fit
+    fitted = two_12gb()
+
+    def load_with_meta(_, body):
+        records[body["instance_id"]] = {
+            "status": "ready",
+            "alive": True,
+            "gpus": body["gpus"],
+            "n_ctx": body["context_size"],
+            "n_ctx_train": 262144,
+        }
+        return records[body["instance_id"]]
+
+    monkeypatch.setattr(RunnerClient, "load_llama", load_with_meta)
+    monkeypatch.setattr(RunnerClient, "inspect_llama", lambda _, identity: records[identity])
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/llama/load",
+            json={"model_file_id": model_id, "gpus": [2, 7], "context_size": 131072, "cache_type": "q8_0"},
+        )
+        tick_once()
+        instance = client.get("/api/llama").json()["instances"][0]
+        assert instance["metadata"]["context_size"] == fitted
+        assert instance["metadata"]["n_ctx_train"] == 262144
+        assert instance["metadata"]["observation"]["n_ctx"] == fitted
+        assert instance["metadata"]["observation"]["n_ctx_train"] == 262144
+        events = client.get(f"/api/runs/{response.json()['id']}/events").json()
+        ready = next(event for event in events if event["event_type"] == "runtime.ready")
+        assert ready["payload"]["n_ctx"] == fitted
+        assert ready["payload"]["n_ctx_train"] == 262144
+        assert ready["payload"]["context_size"] == fitted

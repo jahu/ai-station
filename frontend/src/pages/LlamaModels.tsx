@@ -21,9 +21,11 @@ type Instance = {
     model_file_id: string;
     gpus: number[];
     context_size?: number;
+    cache_type?: string;
+    n_ctx_train?: number;
     load_run_id: string;
     operation_run_id?: string;
-    observation?: { error?: string };
+    observation?: { error?: string; n_ctx?: number };
   };
 };
 type Catalog = { models: Model[]; instances: Instance[] };
@@ -58,6 +60,7 @@ export default function LlamaModels({
   busy,
   onBusy,
   compact = false,
+  coding = false,
 }: {
   value: string;
   label?: string;
@@ -66,6 +69,7 @@ export default function LlamaModels({
   busy: boolean;
   onBusy?: (busy: boolean) => void;
   compact?: boolean;
+  coding?: boolean;
 }) {
   const cache = useQueryClient();
   const hardware = useHardware();
@@ -73,7 +77,7 @@ export default function LlamaModels({
   const [draft, setDraft] = useState(value);
   const [search, setSearch] = useState("");
   const [gpus, setGpus] = useState<number[] | null>(null);
-  const [context, setContext] = useState(4096);
+  const [context, setContext] = useState(coding ? 131072 : 4096);
   const [runId, setRunId] = useState<string | null>(null);
   const catalog = useQuery({
     queryKey: ["llama-models"],
@@ -109,6 +113,7 @@ export default function LlamaModels({
           model_file_id: model.id,
           gpus: selectedGpus,
           context_size: context,
+          ...(coding ? { cache_type: "q8_0" } : {}),
         }),
       }),
     onMutate: () => onBusy?.(true),
@@ -140,7 +145,7 @@ export default function LlamaModels({
         !!hardware.error ||
         !Number.isInteger(context) ||
         context < 512 ||
-        context > 32768 ||
+        context > 262144 ||
         context % 256 !== 0));
   const matches = (name: string) =>
     name.toLowerCase().includes(search.toLowerCase());
@@ -319,7 +324,9 @@ export default function LlamaModels({
                   <p>
                     {instance
                       ? "This model keeps its saved GPU and context settings when reloaded."
-                      : "The first load uses these GPUs. Selecting several cards splits model layers across them; no cards uses the CPU."}
+                      : coding
+                        ? "The first Coding load asks for the largest Q8 context that fits the selected GPUs, up to this ceiling. Layers stay on those GPUs; 128k is not a guarantee."
+                        : "The first load uses these GPUs. Selecting several cards splits model layers across them; no cards uses the CPU."}
                   </p>
                   <fieldset
                     disabled={
@@ -356,16 +363,30 @@ export default function LlamaModels({
                       <p>CPU execution selected.</p>
                     )}
                     <label>
-                      Context size
+                      {coding ? "Context ceiling" : "Context size"}
                       <input
                         type="number"
                         min={512}
-                        max={32768}
+                        max={262144}
                         step={256}
                         value={instance?.metadata.context_size ?? context}
                         onChange={(e) => setContext(Number(e.target.value))}
                       />
                     </label>
+                    {instance?.metadata.context_size != null && (
+                      <p>
+                        Loaded context:{" "}
+                        {instance.metadata.context_size.toLocaleString()}
+                        {instance.metadata.observation?.n_ctx != null &&
+                        instance.metadata.observation.n_ctx !==
+                          instance.metadata.context_size
+                          ? ` · runtime reports ${instance.metadata.observation.n_ctx.toLocaleString()}`
+                          : ""}
+                        {instance.metadata.n_ctx_train
+                          ? ` · trained ${instance.metadata.n_ctx_train.toLocaleString()}`
+                          : ""}
+                      </p>
+                    )}
                   </fieldset>
                   {instance?.status === "ready" && (
                     <Button

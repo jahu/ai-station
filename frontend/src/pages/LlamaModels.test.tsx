@@ -80,16 +80,15 @@ it("selects a queued GGUF immediately so the conversation can wait for its load"
   await screen.findByLabelText("GPU 7 · GPU B");
   fireEvent.click(await screen.findByRole("button", { name: "Use model" }));
   await waitFor(() => expect(select).toHaveBeenCalledWith("llamacpp:file"));
-  expect(fetch).toHaveBeenCalledWith(
-    "/api/llama/load",
-    expect.objectContaining({
-      body: JSON.stringify({
-        model_file_id: "file",
-        gpus: [2, 7],
-        context_size: 4096,
-      }),
-    }),
-  );
+  const load = fetch.mock.calls.find((call) => call[0] === "/api/llama/load");
+  expect(load).toBeTruthy();
+  const body = JSON.parse((load?.[1] as RequestInit).body as string);
+  expect(body).toEqual({
+    model_file_id: "file",
+    gpus: [2, 7],
+    context_size: 4096,
+  });
+  expect(body.cache_type).toBeUndefined();
   expect(
     await screen.findByRole("link", { name: "Model operation →" }),
   ).toBeTruthy();
@@ -201,4 +200,70 @@ it("keeps the previous selection when a first load is rejected", async () => {
   expect(
     fetch.mock.calls.filter(([, options]) => options?.method === "POST"),
   ).toHaveLength(1);
+});
+
+it("coding picker sends q8_0 and a 128k ceiling without promising that size", async () => {
+  const select = vi.fn();
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    let data: unknown;
+    if (path.endsWith("/hardware"))
+      data = {
+        gpus: [
+          { index: 2, name: "GPU A" },
+          { index: 7, name: "GPU B" },
+        ],
+      };
+    else if (options?.method === "POST") data = { id: "load-run" };
+    else
+      data = {
+        models: [
+          {
+            id: "file",
+            model_key: "llamacpp:file",
+            name: "27B.gguf",
+            size_bytes: 16000000000,
+          },
+        ],
+        instances: [],
+      };
+    return { ok: true, json: async () => data };
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <LlamaModels
+          coding
+          value="qwen"
+          models={["qwen"]}
+          onSelect={select}
+          busy={false}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Model" }));
+  fireEvent.click(await screen.findByRole("button", { name: /27B/ }));
+  fireEvent.click(screen.getByText("GPU, context and advanced options"));
+  expect(
+    screen.getByText(/largest Q8 context that fits the selected GPUs/),
+  ).toBeTruthy();
+  expect(screen.getByText("Context ceiling")).toBeTruthy();
+  fireEvent.click(await screen.findByRole("button", { name: "Use model" }));
+  await waitFor(() => expect(select).toHaveBeenCalledWith("llamacpp:file"));
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/llama/load",
+    expect.objectContaining({
+      body: JSON.stringify({
+        model_file_id: "file",
+        gpus: [2, 7],
+        context_size: 131072,
+        cache_type: "q8_0",
+      }),
+    }),
+  );
 });

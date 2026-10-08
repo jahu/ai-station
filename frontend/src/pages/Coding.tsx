@@ -203,6 +203,7 @@ export default function Coding() {
                   <div className="coding-local-model">
                     <span>Model</span>
                     <LlamaModels
+                      coding
                       value={selectedModel}
                       models={provider.data?.models ?? []}
                       busy={create.isPending}
@@ -210,8 +211,9 @@ export default function Coding() {
                       onBusy={setModelPending}
                     />
                     <small className="muted">
-                      Choose a model from your disk with llama.cpp or from your
-                      local server.
+                      Managed llama.cpp loads the largest Q8 context that fits
+                      the selected GPUs. 128k is a ceiling, not a guarantee.
+                      Local-server context is configured separately.
                     </small>
                   </div>
                 ) : (

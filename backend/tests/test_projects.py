@@ -948,16 +948,18 @@ def local_coding_bridge(owned_runner, tmp_path, monkeypatch):
                 )
             if control.get("proposal"):
                 proposal = json.dumps(control["proposal"])
+            truncated = control["mode"] == "truncated"
+            if control["mode"] == "budget":
+                # Fake provider with four characters per token: honor the requested cap.
+                limit = request["max_tokens"] * 4
+                truncated = len(proposal) > limit
+                proposal = proposal[:limit]
             delta = {"content": proposal}
             if control["mode"] == "tool":
                 delta["tool_calls"] = [{"function": {"name": "shell"}}]
             events = [
                 {"choices": [{"delta": delta, "finish_reason": None}]},
-                {
-                    "choices": [
-                        {"delta": {}, "finish_reason": "length" if control["mode"] == "truncated" else "stop"}
-                    ]
-                },
+                {"choices": [{"delta": {}, "finish_reason": "length" if truncated else "stop"}]},
             ]
             payload = (
                 b"".join(b"data: " + json.dumps(event).encode() + b"\n\n" for event in events)
@@ -1044,10 +1046,40 @@ def test_local_coding_applies_validates_and_commits_only_owned_worktree(
         assert len(local_coding_bridge["requests"]) == 1
         target, payload = local_coding_bridge["requests"][0]
         assert target == "/v1/llm/chat/completions" and payload["model"] == "fixture-local"
+        assert payload["max_tokens"] == 8192
         assert "tools" not in payload and "Original repository" in payload["messages"][0]["content"]
     assert (repository / "README.md").read_text() == "Original repository\n"
     assert not (repository / "new.py").exists()
     assert (repository / ".git/index").read_bytes() == index
+
+
+def test_local_coding_can_complete_multi_file_output_beyond_old_budget(
+    repository, owned_runner, local_coding_bridge
+):
+    import json
+
+    files = [
+        {"path": "README.md", "content": "Website implementation details.\n" * 220},
+        {"path": "new.py", "content": "# Complete application source\n" * 220},
+    ]
+    local_coding_bridge.update(
+        mode="budget", proposal={"summary": "Complete multi-file proposal", "files": files}
+    )
+    assert 2048 * 4 < len(json.dumps(local_coding_bridge["proposal"])) < 8192 * 4
+    with TestClient(app) as client:
+        project = register(client, repository)
+        run_id = prepare_local_coding(client, project)
+        with session_factory()() as session:
+            tick(session, "local-large-output")
+        run = client.get(f"/api/runs/{run_id}").json()
+        assert run["status"] == "succeeded", run
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        for item in files:
+            assert (owned_runner.data_dir / worktree["relative_path"] / item["path"]).read_text() == item[
+                "content"
+            ]
+    assert (repository / "README.md").read_text() == "Original repository\n"
+    assert not (repository / "new.py").exists()
 
 
 @pytest.mark.parametrize("mode", ["truncated", "tool"])
@@ -1063,6 +1095,9 @@ def test_local_coding_refuses_unfinished_or_tool_responses(
         run = client.get(f"/api/runs/{run_id}").json()
         assert run["status"] == "failed", run
         assert "coding_review" not in run["metadata"]
+        if mode == "truncated":
+            assert "8192 tokens" in run["error_message"]
+            assert "No proposal was applied" in run["error_message"]
         worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
         assert (
             owned_runner.data_dir / worktree["relative_path"] / "README.md"
@@ -1155,10 +1190,12 @@ def test_real_local_coding_proposal(repository, owned_runner, local_coding_bridg
     assert (repository / ".git/index").read_bytes() == index
 
 
-def test_local_coding_reloads_saved_llama_preset_before_inference(repository, owned_runner):
-    from app.llama import LoadModel, enqueue_load
+def test_local_coding_reloads_saved_llama_preset_before_inference(repository, owned_runner, monkeypatch):
+    from app.llama import LoadModel, enqueue_load, fit_coding_context
     from app.models import ModelFile, Run, RunDependency, RuntimeInstance
 
+    weights = int(15.4 * 1024**3)
+    monkeypatch.setattr("app.llama.gpu_memory_totals", lambda gpus: [12288.0, 12288.0])
     with session_factory()() as session:
         model = ModelFile(
             host_path="/models/coder.gguf",
@@ -1166,7 +1203,7 @@ def test_local_coding_reloads_saved_llama_preset_before_inference(repository, ow
             format="gguf",
             category="llm",
             availability="present",
-            size_bytes=1000,
+            size_bytes=weights,
             mtime=1,
         )
         session.add(model)
@@ -1196,8 +1233,11 @@ def test_local_coding_reloads_saved_llama_preset_before_inference(repository, ow
             )
             assert len(loads) == 1
             load = loads[0]
+            expected = fit_coding_context(gpus=[2, 7], size_bytes=weights, gpu_memory_mib=[12288.0, 12288.0])
             assert load.parameters["gpus"] == [2, 7]
-            assert load.parameters["context_size"] == 4096
+            assert load.parameters["context_size"] == expected
+            assert load.parameters["cache_type"] == "q8_0"
+            assert expected != 131072
             assert load.parameters["instance_id"] != old_id
             assert coding.parameters["endpoint"] == "llamacpp:" + load.parameters["instance_id"]
             assert coding.parameters["model"] == model_key
