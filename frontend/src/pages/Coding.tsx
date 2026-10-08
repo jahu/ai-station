@@ -195,59 +195,47 @@ export default function Coding() {
               </div>
               <div className="coding-model-row">
                 <span className="chip">
-                  {localModel &&
-                    !provider.data?.models.includes(localModel) && (
-                      <option value={localModel}>Loaded llama.cpp model</option>
-                    )}
                   {local
                     ? "LOCAL AI"
                     : externalName.toUpperCase() + " · EXTERNAL"}
                 </span>
-                <label>
-                  Model
-                  <select
-                    value={local ? localModel : model}
-                    onChange={(e) =>
-                      local
-                        ? setLocalModel(e.target.value)
-                        : setModel(e.target.value)
-                    }
-                  >
-                    <option value="">
-                      Auto —{" "}
-                      {local ? "configured local model" : "provider default"}
-                    </option>
-                    {local
-                      ? provider.data?.models.map((m) => (
-                          <option key={m} value={m}>
-                            {m}
+                {local ? (
+                  <div className="coding-local-model">
+                    <span>Model</span>
+                    <LlamaModels
+                      value={selectedModel}
+                      models={provider.data?.models ?? []}
+                      busy={create.isPending}
+                      onSelect={setLocalModel}
+                      onBusy={setModelPending}
+                    />
+                    <small className="muted">
+                      Choose a model from your disk with llama.cpp or from your
+                      local server.
+                    </small>
+                  </div>
+                ) : (
+                  <label>
+                    Model
+                    <select
+                      value={model}
+                      onChange={(e) => setModel(e.target.value)}
+                    >
+                      <option value="">Auto — provider default</option>
+                      {catalog.data?.models
+                        .filter((m) => m.id !== "auto")
+                        .map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name}
                           </option>
-                        ))
-                      : catalog.data?.models
-                          .filter((m) => m.id !== "auto")
-                          .map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.name}
-                            </option>
-                          ))}
-                  </select>
-                </label>
+                        ))}
+                    </select>
+                  </label>
+                )}
               </div>
               <ErrorNotice error={local ? provider.error : catalog.error} />
               {!local && catalog.data?.notice && (
                 <small className="muted">{catalog.data.notice}</small>
-              )}
-              {local && (
-                <details>
-                  <summary>Browse and load local models</summary>
-                  <LlamaModels
-                    value={selectedModel}
-                    models={provider.data?.models ?? []}
-                    busy={create.isPending}
-                    onSelect={setLocalModel}
-                    onBusy={setModelPending}
-                  />
-                </details>
               )}
               <label>
                 Task

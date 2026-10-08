@@ -3328,7 +3328,8 @@ pre {
   align-items: center;
   gap: 18px;
 }
-.coding-model-row label {
+.coding-model-row label,
+.coding-local-model {
   flex: 1;
   min-width: 0;
 }
@@ -3574,4 +3575,10 @@ pre {
   .project-create-tabs {
     flex-wrap: wrap;
   }
+}
+
+.coding-local-model {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
 }
