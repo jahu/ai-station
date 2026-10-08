@@ -470,6 +470,14 @@ export default function AssistantActions({
               Let Local AI find the relevant files
             </label>
           )}
+          {value.action === "coding.local" && explore && (
+            <small>
+              Local AI may GET public pages from URLs in the task and, when the
+              Host Runner has search configured, query the public web. Private
+              and loopback addresses are blocked. JavaScript is not executed;
+              this is not a browser.
+            </small>
+          )}
           {value.action === "coding.local" && (
             <label>
               Automatic repair

@@ -1,4 +1,4 @@
-"""Tool-free local coding inference through the private Runner bridge."""
+"""Local coding inference through the private Runner bridge."""
 
 import json
 import os
@@ -120,7 +120,11 @@ def execute(run_id):
 
         def discover(workspace):
             return explore(
-                workspace, body.prompt, body.guidance, lambda message: collect_completion(body, message)[0]
+                workspace,
+                body.prompt,
+                body.guidance,
+                lambda message: collect_completion(body, message)[0],
+                web=True,
             )
 
     execute_proposal(

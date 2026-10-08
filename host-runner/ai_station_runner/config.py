@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     allowed_roots: str = ""
     llm_base_url: str = "http://127.0.0.1:11434/v1"
     llm_api_key: str = ""
+    web_search_url: str = ""
     cancel_grace_seconds: float = 3.0
     runner_id: str = "local"
 

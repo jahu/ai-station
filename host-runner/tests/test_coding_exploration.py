@@ -2,6 +2,7 @@ import json
 from types import SimpleNamespace
 
 import pytest
+from ai_station_runner import public_http
 from ai_station_runner.coding_exploration import explore
 
 
@@ -70,6 +71,99 @@ def test_exploration_has_a_finite_request_budget(workspace):
         calls.append(message)
         return '{"tool":"list_files","prefix":"","offset":0}'
 
-    with pytest.raises(ValueError, match="eight requests"):
+    with pytest.raises(ValueError, match="8 requests"):
         explore(workspace, "Task", "", complete)
     assert len(calls) == 8
+
+
+def test_exploration_without_web_rejects_fetch_and_search(workspace):
+    for action in (
+        {"tool": "fetch_url", "url": "https://www.koratimber.com/"},
+        {"tool": "web_search", "query": "Kora Timber"},
+    ):
+        with pytest.raises(ValueError, match="Unsupported"):
+            explore(workspace, "Task", "", lambda _: json.dumps(action))
+
+
+def test_local_web_exploration_fetches_public_pages(workspace, monkeypatch):
+    monkeypatch.setattr(
+        public_http,
+        "fetch_public",
+        lambda url: {
+            "url": url,
+            "status": 200,
+            "text": "Kora Timber company",
+            "links": [],
+            "untrusted": True,
+        },
+    )
+    monkeypatch.setattr(public_http, "configured_search_url", lambda: "")
+    actions = iter(
+        [
+            {"tool": "list_files", "prefix": "", "offset": 0},
+            {"tool": "fetch_url", "url": "https://www.koratimber.com/"},
+            {"tool": "finish", "files": ["index.html"]},
+        ]
+    )
+    messages = []
+
+    def complete(message):
+        messages.append(message)
+        return json.dumps(next(actions))
+
+    selected, trace = explore(workspace, "Build the Kora Timber site", "", complete, web=True)
+    assert selected[0]["path"] == "index.html"
+    assert trace[1]["result"]["text"] == "Kora Timber company"
+    assert "fetch_url" in messages[0]
+    assert "web_search" not in messages[0]
+    assert "There is no shell, browser or external service" not in messages[0]
+
+
+def test_local_web_exploration_can_search_when_configured(workspace, monkeypatch):
+    monkeypatch.setattr(public_http, "configured_search_url", lambda: "http://127.0.0.1:8878")
+    monkeypatch.setattr(
+        public_http,
+        "search_web",
+        lambda query: {
+            "query": query,
+            "sources": [{"url": "https://www.koratimber.com/"}],
+            "untrusted": True,
+        },
+    )
+    actions = iter(
+        [
+            {"tool": "web_search", "query": "Kora Timber"},
+            {"tool": "finish", "files": ["index.html"]},
+        ]
+    )
+    _, trace = explore(workspace, "Build the site", "", lambda _: json.dumps(next(actions)), web=True)
+    assert trace[0]["result"]["sources"][0]["url"] == "https://www.koratimber.com/"
+
+
+def test_local_web_exploration_fails_closed_on_private_fetch(workspace, monkeypatch):
+    def refuse(url):
+        raise ValueError("fetch_url requires a public http(s) URL")
+
+    monkeypatch.setattr(public_http, "fetch_public", refuse)
+    monkeypatch.setattr(public_http, "configured_search_url", lambda: "")
+    with pytest.raises(ValueError, match="public http"):
+        explore(
+            workspace,
+            "Task",
+            "",
+            lambda _: json.dumps({"tool": "fetch_url", "url": "http://127.0.0.1/"}),
+            web=True,
+        )
+
+
+def test_web_exploration_has_a_twelve_request_budget(workspace, monkeypatch):
+    monkeypatch.setattr(public_http, "configured_search_url", lambda: "")
+    calls = []
+
+    def complete(message):
+        calls.append(message)
+        return '{"tool":"list_files","prefix":"","offset":0}'
+
+    with pytest.raises(ValueError, match="12 requests"):
+        explore(workspace, "Task", "", complete, web=True)
+    assert len(calls) == 12
