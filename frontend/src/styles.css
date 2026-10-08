@@ -3293,6 +3293,7 @@ pre {
 .coding-form .project-checkbox,
 .chat-settings-panel .project-checkbox {
   display: flex;
+  flex-direction: row;
   align-items: flex-start;
   gap: 10px;
   color: #c0cbb9;
