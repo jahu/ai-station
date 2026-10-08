@@ -16,7 +16,7 @@ from ai_station_runner.owned_children import stop_owned_children
 TIMEOUT = 300
 
 
-def collect_proposal(argv, env, cwd):
+def collect_proposal(argv, env, cwd, *, parse=proposal_result, label="Cursor", stderr=True):
     lines = []
     invalid_event = False
     buffer = b""
@@ -32,7 +32,7 @@ def collect_proposal(argv, env, cwd):
             while selector.get_map() or process.poll() is None:
                 if time.monotonic() - started > TIMEOUT or size > 2 * 1024 * 1024:
                     print(
-                        "Cursor exceeded time/output limit; inspect preserved worktree",
+                        f"{label} exceeded time/output limit; inspect preserved worktree",
                         file=sys.stderr,
                         flush=True,
                     )
@@ -49,7 +49,10 @@ def collect_proposal(argv, env, cwd):
                         continue
                     size += len(chunk)
                     if key.data == "stderr":
-                        print(chunk.decode("utf-8", errors="replace"), end="", file=sys.stderr, flush=True)
+                        if stderr:
+                            print(
+                                chunk.decode("utf-8", errors="replace"), end="", file=sys.stderr, flush=True
+                            )
                         continue
                     buffer += chunk
                     while b"\n" in buffer:
@@ -65,12 +68,26 @@ def collect_proposal(argv, env, cwd):
                                 continue
                             if item.get("type") != "thinking":
                                 lines.append(item)
-                            if item.get("type") in {"system", "connection", "retry"}:
+                            if item.get("type") in {
+                                "system",
+                                "connection",
+                                "retry",
+                                "thread.started",
+                                "turn.started",
+                                "turn.completed",
+                            }:
                                 print(
                                     json.dumps(
                                         {
                                             key: item.get(key)
-                                            for key in ("type", "subtype", "session_id", "model")
+                                            for key in (
+                                                "type",
+                                                "subtype",
+                                                "session_id",
+                                                "thread_id",
+                                                "model",
+                                                "usage",
+                                            )
                                         }
                                     ),
                                     flush=True,
@@ -79,10 +96,10 @@ def collect_proposal(argv, env, cwd):
             if buffer.strip():
                 lines.append(json.loads(buffer))
             if process.wait() != 0:
-                raise RuntimeError("Cursor exited unsuccessfully; no proposal was applied")
+                raise RuntimeError(f"{label} exited unsuccessfully; no proposal was applied")
     if invalid_event:
-        raise ValueError("Cursor returned invalid structured events; no changes applied")
-    return proposal_result(lines)
+        raise ValueError(f"{label} returned invalid structured events; no changes applied")
+    return parse(lines)
 
 
 def execute(run_id):

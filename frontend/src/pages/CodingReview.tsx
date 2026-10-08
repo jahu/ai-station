@@ -27,23 +27,33 @@ export default function CodingReview({ run }: { run: Run }) {
   const local = run.metadata?.execution_location === "local";
   const next = run.metadata?.coding_run_id;
   const validation = run.metadata?.validation_run_id;
+  const externalName =
+    run.executor_type === "codex_proposal" ||
+    run.metadata?.next_executor === "codex_proposal"
+      ? "Codex"
+      : "Cursor";
   const review = run.metadata?.coding_review as Review | undefined;
   if (
     !next &&
     !review &&
-    (!["cursor_proposal", "local_proposal", "worktree_prepare"].includes(
-      run.executor_type,
-    ) ||
+    (![
+      "cursor_proposal",
+      "codex_proposal",
+      "local_proposal",
+      "worktree_prepare",
+    ].includes(run.executor_type) ||
       run.metadata?.execution_location !== "external")
   )
     return null;
   return (
     <section className="panel content-panel">
-      <span className="chip">{local ? "LOCAL AI" : "EXTERNAL CURSOR AI"}</span>
+      <span className="chip">
+        {local ? "LOCAL AI" : `EXTERNAL ${externalName.toUpperCase()} AI`}
+      </span>
       {typeof next === "string" && (
         <p>
           <Link className="text-link" to={`/runs/${next}`}>
-            Open {local ? "local coding" : "Cursor"} execution →
+            Open {local ? "local coding" : externalName} execution →
           </Link>
         </p>
       )}

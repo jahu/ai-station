@@ -15,6 +15,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from ai_station_runner import __version__
 from ai_station_runner.audio import AudioRequest, start_audio
 from ai_station_runner.avatars import AvatarRequest, start_avatar
+from ai_station_runner.codex_runs import CodexRequest, codex_report, start_codex
 from ai_station_runner.coding import CodingUnavailable, build_argv
 from ai_station_runner.coding_sandbox import SandboxUnavailable
 from ai_station_runner.config import get_settings
@@ -653,4 +654,23 @@ def github_publication_progress(run_id: UUID):
     try:
         return publication_progress(str(run_id))
     except (GitError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.post("/v1/runs/codex-proposal")
+def codex_proposal(body: CodexRequest):
+    try:
+        record = start_codex(manager(), body)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (GitError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {**record, "runner_id": get_settings().runner_id}
+
+
+@app.get("/v1/codex-proposal/{run_id}")
+def codex_proposal_report(run_id: UUID):
+    try:
+        return codex_report(manager(), str(run_id))
+    except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc

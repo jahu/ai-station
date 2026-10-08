@@ -9,6 +9,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from ai_station_runner.codex_runs import codex_report
 from ai_station_runner.config import get_settings
 from ai_station_runner.cursor_runs import cursor_report
 from ai_station_runner.gitinspect import git_environment
@@ -82,7 +83,9 @@ def start_commit(manager, body):
             raise GitError("Run already owns a process")
         source_id = str(body.source_run_id)
         source = manager.inspect(source_id)
-        if source["executor"] == "cursor_proposal":
+        if source["executor"] == "codex_proposal":
+            review = codex_report(manager, source_id)
+        elif source["executor"] == "cursor_proposal":
             review = cursor_report(manager, source_id)
         elif source["executor"] == "local_proposal":
             review = local_coding_report(manager, source_id)

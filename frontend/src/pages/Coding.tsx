@@ -34,6 +34,7 @@ export default function Coding() {
   });
   const selectedModel = localModel || provider.data?.default_model || "";
   const local = executor === "local";
+  const externalName = executor === "codex" ? "Codex" : "Cursor";
   const projects = useQuery({
     queryKey: ["coding-projects"],
     queryFn: () => api<Project[]>("/projects?limit=500"),
@@ -108,12 +109,31 @@ export default function Coding() {
                 </button>
                 <button
                   type="button"
-                  aria-pressed={!local}
-                  onClick={() => setExecutor("cursor")}
+                  aria-pressed={executor === "cursor"}
+                  onClick={() => {
+                    setExecutor("cursor");
+                    setExternal(false);
+                    setModel("");
+                  }}
                 >
                   <Cloud size={19} />
                   <span>
                     <strong>Cursor</strong>
+                    <small>External AI · explicit consent</small>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={executor === "codex"}
+                  onClick={() => {
+                    setExecutor("codex");
+                    setExternal(false);
+                    setModel("");
+                  }}
+                >
+                  <Cloud size={19} />
+                  <span>
+                    <strong>Codex</strong>
                     <small>External AI · explicit consent</small>
                   </span>
                 </button>
@@ -213,7 +233,7 @@ export default function Coding() {
               ) : (
                 <>
                   <label>
-                    Cursor model
+                    {externalName} model
                     <input
                       value={model}
                       maxLength={100}
@@ -229,7 +249,7 @@ export default function Coding() {
                       required
                     />
                     Allow sending this task, project guidance and selected file
-                    contents to external Cursor AI.
+                    contents to external {externalName} AI.
                   </label>
                 </>
               )}
@@ -245,7 +265,7 @@ export default function Coding() {
                   ? "Queueing…"
                   : local
                     ? "Create worktree and start Local AI"
-                    : "Create worktree and start Cursor"}
+                    : `Create worktree and start ${externalName}`}
               </Button>
             </fieldset>
           </form>

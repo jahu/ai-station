@@ -15,6 +15,7 @@ from app.assistant import AssistantExecutor
 from app.audio import AudioExecutor
 from app.avatars import AvatarExecutor
 from app.chat_executor import ChatExecutor
+from app.codex_coding import CodexProposalExecutor
 from app.commit_executor import ReviewedCommitExecutor
 from app.config import get_settings
 from app.cursor_executor import CursorProposalExecutor
@@ -288,6 +289,7 @@ EXECUTORS = {
     "worktree_prepare": WorktreeExecutor(),
     "project_validation": ProjectValidationExecutor(),
     "cursor_proposal": CursorProposalExecutor(),
+    "codex_proposal": CodexProposalExecutor(),
     "local_proposal": LocalProposalExecutor(),
     "model_discovery": ModelDiscoveryExecutor(),
     "agent": LocalAgentExecutor(),

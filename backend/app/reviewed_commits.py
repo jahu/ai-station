@@ -33,7 +33,7 @@ def enqueue(source_id: UUID, body: ReviewedCommit, session: Annotated[Session, D
     review = source.metadata_json.get("coding_review")
     if (
         source.status != "succeeded"
-        or source.executor_type not in {"cursor_proposal", "local_proposal"}
+        or source.executor_type not in {"cursor_proposal", "codex_proposal", "local_proposal"}
         or not review
         or not review.get("files")
     ):

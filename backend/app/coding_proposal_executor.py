@@ -73,3 +73,19 @@ class CodingProposalExecutor(NativeJobExecutor):
 
         queue_validation(session, run)
         return "done"
+
+
+class SelectedFileProposalExecutor(CodingProposalExecutor):
+    """Shared typed snapshot payload for external text-proposal providers."""
+
+    def payload(self, run):
+        return {
+            "run_id": run.id,
+            "project_id": run.project_id,
+            "worktree_run_id": run.parameters["worktree_run_id"],
+            "files": run.parameters["files"],
+            "prompt": run.parameters["prompt"],
+            "guidance": run.parameters["guidance"],
+            "model": run.parameters["model"],
+            "permissions": run.effective_permissions,
+        }

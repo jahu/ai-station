@@ -1776,3 +1776,171 @@ def test_real_github_publication(repository, owned_runner, local_coding_bridge):
         evidence.write_text(
             json.dumps({"preview": preview, "result": result, "remote": remote, "cleaned_up": True}, indent=2)
         )
+
+
+@pytest.fixture
+def fake_codex(validation_sandbox, tmp_path, monkeypatch):
+    binary = tmp_path / "codex"
+    binary.write_text("""#!/usr/bin/python3
+import json,os,pathlib,sys,time
+args=sys.argv[1:]
+if '--help' in args:
+ print('--ignore-user-config --ignore-rules --strict-config --ephemeral');sys.exit(0)
+assert '--ignore-user-config' in args and '--ignore-rules' in args
+assert '--strict-config' in args and '--ephemeral' in args
+assert 'approval_policy="never"' in args
+assert 'permissions.ai_station_proposal.network.enabled=false' in args
+assert 'features.skip_host_skill_discovery=true' in args
+assert 'web_search="disabled"' in args
+assert not list(pathlib.Path.cwd().iterdir())
+assert pathlib.Path.cwd()==pathlib.Path(args[args.index('-C')+1])
+assert 'AI_STATION_TEST_SECRET' not in os.environ
+mode=args[args.index('--model')+1] if '--model' in args else 'success'
+if mode=='wait':
+ pathlib.Path(__file__).with_suffix('.started').write_text('started')
+ while True:time.sleep(1)
+if mode=='failure':
+ print('DISPOSABLE_SECRET_DO_NOT_LOG',file=sys.stderr);sys.exit(2)
+print(json.dumps({'type':'thread.started','thread_id':'fixture-thread'}))
+if mode=='tool':print(json.dumps({'type':'item.completed','item':{'type':'command_execution','command':'forbidden'}}))
+proposal={'summary':'Codex fixture changes','files':[{'path':'README.md','content':'Codex fixture\\n'},{'path':'new.py','content':'print(42)\\n'}]}
+print(json.dumps({'type':'item.completed','item':{'type':'agent_message','text':json.dumps(proposal)}}))
+print(json.dumps({'type':'turn.completed','usage':{'output_tokens':15}}))
+""")
+    binary.chmod(0o700)
+    monkeypatch.setenv("PATH", f"{tmp_path}:{os.environ['PATH']}")
+    monkeypatch.setenv("AI_STATION_TEST_SECRET", "private-test-fixture")
+    return binary
+
+
+@pytest.mark.parametrize("mode", ["success", "tool", "failure", "wait"])
+def test_codex_owned_proposal_validation_commit_and_cancellation(
+    repository, owned_runner, fake_codex, mode, monkeypatch
+):
+    index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project = register(
+            client,
+            repository,
+            test_commands=[["/usr/bin/python3", "new.py"]],
+            pr_policy={"commit_task_branch": True},
+        )
+        body = coding_request(project, model=mode)
+        assert client.post("/api/coding/codex", json={**body, "external_ai": False}).status_code == 422
+        request = client.post("/api/coding/codex", json=body)
+        assert request.status_code == 202, request.text
+        with session_factory()() as session:
+            tick(session, "codex-worktree")
+        prepared = client.get(f"/api/runs/{request.json()['id']}").json()
+        source_id = prepared["metadata"]["coding_run_id"]
+        if mode == "wait":
+            original = RunnerClient.request
+
+            def cancel_on_start(self, method, path, payload=None):
+                result = original(self, method, path, payload)
+                if method == "POST" and path == "/v1/runs/codex-proposal":
+                    deadline = time.monotonic() + 10
+                    while not fake_codex.with_suffix(".started").exists():
+                        assert time.monotonic() < deadline
+                        time.sleep(0.05)
+                    assert original(self, method, path, payload)["pid"] == result["pid"]
+                    assert client.post(f"/api/runs/{source_id}/cancel").status_code == 200
+                return result
+
+            monkeypatch.setattr(RunnerClient, "request", cancel_on_start)
+        with session_factory()() as session:
+            tick(session, "codex-proposal")
+        result = client.get(f"/api/runs/{source_id}").json()
+        assert result["executor_type"] == "codex_proposal"
+        assert result["status"] == (
+            "succeeded" if mode == "success" else "canceled" if mode == "wait" else "failed"
+        ), result
+        if mode == "success":
+            assert result["metadata"]["coding_review"]["provider"]["thread_id"] == "fixture-thread"
+            with session_factory()() as session:
+                tick(session, "codex-validation")
+            validation = client.get(f"/api/runs/{result['metadata']['validation_run_id']}").json()
+            assert validation["status"] == "succeeded", validation
+            committed = client.post(
+                f"/api/coding/runs/{source_id}/commit",
+                json={"reviewed": True, "message": "Reviewed Codex fixture"},
+            )
+            assert committed.status_code == 202, committed.text
+            with session_factory()() as session:
+                tick(session, "codex-commit")
+            final = client.get(f"/api/runs/{committed.json()['id']}").json()
+            assert final["status"] == "succeeded", final
+        else:
+            assert (
+                owned_runner.data_dir / prepared["metadata"]["relative_path"] / "README.md"
+            ).read_text() == "Original repository\n"
+            assert not client.get(f"/api/artifacts?run_id={source_id}").json()
+        assert not owned_runner.inspect(source_id)["alive"]
+        assert (repository / ".git/index").read_bytes() == index
+        assert (repository / "README.md").read_text() == "Original repository\n"
+
+
+@pytest.mark.skipif(
+    os.environ.get("AI_STATION_REAL_CODEX_TESTS") != "1", reason="Explicit real Codex opt-in required"
+)
+def test_real_codex_selected_file_proposal(repository, owned_runner, validation_sandbox):
+    """Only synthetic disposable files reach the installed authenticated CLI."""
+    import json
+    from pathlib import Path
+
+    index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project = register(
+            client,
+            repository,
+            test_commands=[["/usr/bin/python3", "new.py"]],
+            pr_policy={"commit_task_branch": True},
+        )
+        request = client.post(
+            "/api/coding/codex",
+            json=coding_request(
+                project,
+                model=os.environ.get("AI_STATION_SMOKE_CODEX_MODEL", ""),
+                prompt="Return a JSON coding proposal. Replace README.md with exactly 'Codex acceptance passed\\n' and create new.py containing exactly 'print(42)\\n'. Do not use tools. These are synthetic acceptance fixtures.",
+            ),
+        )
+        assert request.status_code == 202, request.text
+        with session_factory()() as session:
+            tick(session, "real-codex-worktree")
+        prepared = client.get(f"/api/runs/{request.json()['id']}").json()
+        source_id = prepared["metadata"]["coding_run_id"]
+        with session_factory()() as session:
+            tick(session, "real-codex-proposal")
+        proposal = client.get(f"/api/runs/{source_id}").json()
+        evidence = Path(os.environ["AI_STATION_CODEX_SMOKE_EVIDENCE"])
+        evidence.parent.mkdir(parents=True, exist_ok=True)
+        evidence.write_text(json.dumps({"proposal": proposal}, indent=2))
+        evidence.chmod(0o600)
+        assert proposal["status"] == "succeeded", proposal
+        with session_factory()() as session:
+            tick(session, "real-codex-validation")
+        validation = client.get(f"/api/runs/{proposal['metadata']['validation_run_id']}").json()
+        assert validation["status"] == "succeeded", validation
+        assert proposal["metadata"]["coding_review"]["provider"]["thread_id"]
+        committed = client.post(
+            f"/api/coding/runs/{source_id}/commit",
+            json={"reviewed": True, "message": "Accept synthetic Codex fixture"},
+        )
+        assert committed.status_code == 202, committed.text
+        with session_factory()() as session:
+            tick(session, "real-codex-commit")
+        commit = client.get(f"/api/runs/{committed.json()['id']}").json()
+        assert commit["status"] == "succeeded", commit
+        assert (repository / "README.md").read_text() == "Original repository\n"
+        assert (repository / ".git/index").read_bytes() == index
+        evidence.write_text(
+            json.dumps(
+                {
+                    "proposal": proposal,
+                    "validation": validation,
+                    "commit": commit,
+                    "original_unchanged": True,
+                },
+                indent=2,
+            )
+        )

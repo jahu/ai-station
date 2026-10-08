@@ -3092,7 +3092,7 @@ pre {
 
 .coding-executor-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin-bottom: 8px;
 }
@@ -3288,4 +3288,21 @@ pre {
 .coding-exploration pre {
   max-height: 240px;
   overflow: auto;
+}
+
+.coding-form .project-checkbox,
+.chat-settings-panel .project-checkbox {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: #c0cbb9;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.coding-form .project-checkbox input,
+.chat-settings-panel .project-checkbox input {
+  width: auto;
+  flex: 0 0 auto;
+  margin-top: 3px;
+  accent-color: #b9f58b;
 }

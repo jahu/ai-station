@@ -293,6 +293,14 @@ it("stages local coding scope without granting Cursor consent", async () => {
     JSON.parse(screen.getByTestId("scope").textContent!).max_repair_attempts,
   ).toBeUndefined();
   fireEvent.change(screen.getByLabelText("Action"), {
+    target: { value: "coding.codex" },
+  });
+  expect(screen.getByTestId("scope").textContent).toBe("null");
+  fireEvent.click(screen.getByRole("checkbox"));
+  expect(JSON.parse(screen.getByTestId("scope").textContent!).executor).toBe(
+    "codex",
+  );
+  fireEvent.change(screen.getByLabelText("Action"), {
     target: { value: "coding.local" },
   });
   expect(JSON.parse(screen.getByTestId("scope").textContent!).external_ai).toBe(
