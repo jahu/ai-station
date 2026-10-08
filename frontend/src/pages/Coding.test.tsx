@@ -32,7 +32,23 @@ it.each(["Cursor", "Codex", "Local AI"])(
               : path.endsWith("/provider")
                 ? { models: ["local-model"], default_model: "local-model" }
                 : path.endsWith("/llama")
-                  ? { models: [], instances: [] }
+                  ? {
+                      models: [
+                        {
+                          id: "gguf",
+                          name: "27B Uncensored",
+                          model_key: "llamacpp:gguf",
+                          size_bytes: 16000000000,
+                        },
+                      ],
+                      instances: [
+                        {
+                          id: "runtime",
+                          status: "stopped",
+                          metadata: { model_file_id: "gguf", gpus: [0, 1] },
+                        },
+                      ],
+                    }
                   : path.endsWith("/hardware")
                     ? { gpus: [] }
                     : [
@@ -115,7 +131,17 @@ it.each(["Cursor", "Codex", "Local AI"])(
         screen.getByRole("checkbox", { name: /Allow .* to receive/ }),
       );
     } else {
-      await screen.findByRole("option", { name: "local-model" });
+      fireEvent.click(await screen.findByRole("button", { name: "Model" }));
+      await screen.findByRole("button", { name: "local-model, local server" });
+      fireEvent.click(
+        await screen.findByRole("button", {
+          name: /27B Uncensored, llama.cpp/,
+        }),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Use model" }));
+      expect(
+        screen.getByRole("button", { name: "Model" }).textContent,
+      ).toContain("27B Uncensored");
     }
     fireEvent.click(screen.getByRole("button", { name: "Start coding" }));
     await screen.findByRole("heading", { name: "Coding conversation" });
@@ -130,7 +156,7 @@ it.each(["Cursor", "Codex", "Local AI"])(
       project_id: "project",
       files: [],
       explore: true,
-      model: executor === "Local AI" ? "local-model" : "available-model",
+      model: executor === "Local AI" ? "llamacpp:gguf" : "available-model",
     });
   },
 );
