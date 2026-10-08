@@ -5,7 +5,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 from sqlalchemy import select
 
 from app.models import Run, Worktree
@@ -19,8 +19,17 @@ class CodingTask(BaseModel):
     project_id: UUID
     expected_updated_at: datetime
     prompt: str = Field(min_length=1, max_length=10000)
-    files: list[Annotated[str, Field(min_length=1, max_length=300)]] = Field(min_length=1, max_length=10)
+    files: list[Annotated[str, Field(min_length=1, max_length=300)]] = Field(
+        default_factory=list, max_length=10
+    )
+    explore: StrictBool = False
     model: str = Field(default="", max_length=100, pattern=r"^[A-Za-z0-9._:/ -]*$")
+
+    @model_validator(mode="after")
+    def selection(self):
+        if self.explore and self.files or not self.explore and not self.files:
+            raise ValueError("Choose automatic file discovery or explicit source files")
+        return self
 
     @field_validator("prompt")
     @classmethod
@@ -52,6 +61,7 @@ def enqueue_coding_task(session, body, *, provider="cursor", task=None, parent_r
     request = {
         "prompt": body.prompt,
         "files": body.files,
+        "explore": body.explore,
         "model": body.model,
         "guidance": project.agent_rules,
         "commands": [

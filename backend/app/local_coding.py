@@ -61,7 +61,11 @@ def enqueue_local_repair(session, source_id):
     review = source.metadata_json.get("coding_review")
     if source.executor_type != "local_proposal" or source.status != "succeeded" or not review:
         raise HTTPException(409, "A completed local coding proposal is required")
-    if source.metadata_json.get("repair_run_id") or source.metadata_json.get("commit_run_id"):
+    if (
+        source.metadata_json.get("repair_run_id")
+        or source.metadata_json.get("commit_run_id")
+        or source.metadata_json.get("continuation_run_id")
+    ):
         raise HTTPException(409, "This proposal already has a repair or commit; inspect that Run")
     validation = session.get(Run, source.metadata_json.get("validation_run_id", ""))
     if (
@@ -187,6 +191,7 @@ class LocalProposalExecutor(CodingProposalExecutor):
             "project_id": run.project_id,
             "worktree_run_id": run.parameters["worktree_run_id"],
             "files": run.parameters["files"],
+            "cumulative": run.parameters.get("cumulative", False),
             "explore": run.parameters.get("explore", False),
             "repair_source_run_id": run.parameters.get("repair_source_run_id"),
             "prompt": run.parameters["prompt"],

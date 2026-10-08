@@ -649,6 +649,8 @@ assert config['permissions']['deny'] == ['Shell(*)','Read(**)','Write(**)']
 assert 'AI_STATION_TEST_SECRET' not in os.environ
 print(json.dumps({'type':'system','subtype':'init','session_id':'fixture','model':'Fake'}))
 result={'summary':'Updated selected source','files':[{'path':'README.md','content':'Updated by Cursor fixture\\n'},{'path':'new.py','content':'print(42)\\n'}]}
+if 'SECOND_TURN' in args[-1]:result={'summary':'Second turn','files':[{'path':'more.py','content':'print(43)\\n'}]}
+if args[-1].startswith('Select source files'):result={'tool':'finish','files':['more.py'] if 'SECOND_TURN' in args[-1] else ['README.md','new.py']}
 print(json.dumps({'type':'result','subtype':'success','is_error':False,'result':json.dumps(result),'session_id':'fixture'}))
 """)
     binary.chmod(0o700)
@@ -1804,6 +1806,10 @@ if mode=='failure':
 print(json.dumps({'type':'thread.started','thread_id':'fixture-thread'}))
 if mode=='tool':print(json.dumps({'type':'item.completed','item':{'type':'command_execution','command':'forbidden'}}))
 proposal={'summary':'Codex fixture changes','files':[{'path':'README.md','content':'Codex fixture\\n'},{'path':'new.py','content':'print(42)\\n'}]}
+if 'SECOND_TURN' in args[-1]:
+ proposal={'summary':'Second turn','files':[{'path':'more.py','content':'print(43)\\n'}]}
+if args[-1].startswith('Select source files'):
+ proposal={'tool':'finish','files':['more.py'] if 'SECOND_TURN' in args[-1] else ['README.md','new.py']}
 print(json.dumps({'type':'item.completed','item':{'type':'agent_message','text':json.dumps(proposal)}}))
 print(json.dumps({'type':'turn.completed','usage':{'output_tokens':15}}))
 """)
@@ -1944,3 +1950,197 @@ def test_real_codex_selected_file_proposal(repository, owned_runner, validation_
                 indent=2,
             )
         )
+
+
+def test_name_only_project_setup_and_isolated_environment(repository, owned_runner):
+    from pathlib import Path
+
+    with TestClient(app) as client:
+        assert client.post("/api/projects/create", json={"name": "   "}).status_code == 422
+        assert (
+            client.post(
+                "/api/projects/create", json={"name": "New", "repo_path": str(repository)}
+            ).status_code
+            == 422
+        )
+        response = client.post("/api/projects/create", json={"name": "My new idea"})
+        assert response.status_code == 202, response.text
+        run_id = response.json()["id"]
+        assert not client.get("/api/projects").json()
+        with session_factory()() as session:
+            tick(session, "project-setup")
+        run = client.get(f"/api/runs/{run_id}").json()
+        assert run["status"] == "succeeded", run
+        project = client.get(f"/api/projects/{run['project_id']}").json()
+        repo = Path(project["repo_path"])
+        assert repo == owned_runner.data_dir / "projects" / project["id"]
+        assert (repo / ".venv/bin/python").exists()
+        assert (
+            subprocess.check_output(["git", "-C", str(repo), "branch", "--show-current"], text=True).strip()
+            == "develop"
+        )
+        assert subprocess.check_output(["git", "-C", str(repo), "status", "--porcelain"], text=True) == ""
+        prepare = enqueue_worktree(client, project)
+        with session_factory()() as session:
+            tick(session, "managed-worktree")
+        prepared = client.get(f"/api/runs/{prepare['id']}").json()
+        assert prepared["status"] == "succeeded", prepared
+        assert (owned_runner.data_dir / prepared["metadata"]["relative_path"] / ".venv/bin/python").exists()
+        assert (repository / "README.md").read_text() == "Original repository\n"
+
+
+@pytest.mark.parametrize("provider", ["codex", "cursor"])
+def test_coding_conversation_continues_same_worktree_and_supersedes_review(
+    repository, owned_runner, provider, request
+):
+    request.getfixturevalue("fake_" + provider)
+    with TestClient(app) as client:
+        project = register(client, repository)
+        response = client.post(
+            f"/api/coding/{provider}", json=coding_request(project, files=[], explore=True)
+        )
+        assert response.status_code == 202, response.text
+        preparation = response.json()
+        for worker in ("prepare", "first-turn"):
+            with session_factory()() as session:
+                tick(session, worker)
+        path = f"/api/coding/sessions/{preparation['task_id']}"
+        detail = client.get(path).json()
+        source = next(r for r in detail["runs"] if r["executor_type"] == f"{provider}_proposal")
+        assert source["status"] == "succeeded", source
+        assert source["metadata"]["coding_review"]["exploration"]
+        assert client.get("/api/coding/sessions").json()[0]["id"] == preparation["task_id"]
+        assert client.get("/api/coding/sessions?offset=1").json() == []
+        body = {"prompt": "SECOND_TURN add another file", "expected_run_id": source["id"]}
+        assert client.post(path + "/messages", json=body).status_code == 422
+        response = client.post(path + "/messages", json={**body, "external_ai": True})
+        assert response.status_code == 202, response.text
+        second = response.json()
+        assert second["parameters"]["worktree_run_id"] == source["parameters"]["worktree_run_id"]
+        assert client.post(path + "/messages", json={**body, "external_ai": True}).status_code == 409
+        assert (
+            client.post(
+                f"/api/coding/runs/{source['id']}/commit", json={"reviewed": True, "message": "Old review"}
+            ).status_code
+            == 409
+        )
+        with session_factory()() as session:
+            tick(session, "followup")
+        final = client.get(f"/api/runs/{second['id']}").json()
+        assert final["status"] == "succeeded", final
+        assert {f["path"] for f in final["metadata"]["coding_review"]["files"]} == {
+            "README.md",
+            "new.py",
+            "more.py",
+        }
+        reset_engine()
+        assert (
+            len([r for r in client.get(path).json()["runs"] if r["executor_type"] == f"{provider}_proposal"])
+            == 2
+        )
+        assert (repository / "README.md").read_text() == "Original repository\n"
+        accepted = client.post(
+            f"/api/coding/runs/{second['id']}/commit", json={"reviewed": True, "message": "Both turns"}
+        )
+        assert accepted.status_code == 202, accepted.text
+        with session_factory()() as session:
+            tick(session, "commit-both-turns")
+        assert client.get(f"/api/runs/{accepted.json()['id']}").json()["status"] == "succeeded"
+
+
+def test_project_setup_cancellation_and_no_destination_overwrite(repository, owned_runner, monkeypatch):
+    import sys
+
+    original_start = owned_runner.start
+
+    def slow(**kwargs):
+        kwargs["argv"] = [sys.executable, "-c", "import time; time.sleep(30)"]
+        return original_start(**kwargs)
+
+    monkeypatch.setattr(owned_runner, "start", slow)
+    original = RunnerClient.request
+    with TestClient(app) as client:
+        run = client.post("/api/projects/create", json={"name": "Canceled idea"}).json()
+
+        def cancel(self, method, path, payload=None):
+            result = original(self, method, path, payload)
+            if method == "POST" and path == "/v1/projects/create":
+                assert original(self, method, path, payload)["pid"] == result["pid"]
+                assert client.post(f"/api/runs/{run['id']}/cancel").status_code == 200
+            return result
+
+        monkeypatch.setattr(RunnerClient, "request", cancel)
+        with session_factory()() as session:
+            tick(session, "cancel-project")
+        assert client.get(f"/api/runs/{run['id']}").json()["status"] == "canceled"
+        assert not owned_runner.inspect(run["id"])["alive"]
+        assert not client.get("/api/projects").json()
+    monkeypatch.setattr(RunnerClient, "request", original)
+    from uuid import uuid4
+
+    from ai_station_runner.project_setup import ProjectSetup, start_setup
+
+    project_id = str(uuid4())
+    dest = owned_runner.data_dir / "projects" / project_id
+    dest.mkdir(parents=True)
+    (dest / "keep.txt").write_text("user data")
+    body = ProjectSetup(
+        run_id=uuid4(), project_id=project_id, name="Existing", permissions=["workspace_write", "git_write"]
+    )
+    from ai_station_runner.gitops import GitError
+
+    with pytest.raises(GitError, match="destination already exists"):
+        start_setup(owned_runner, body)
+    assert (dest / "keep.txt").read_text() == "user data"
+    with pytest.raises(PermissionError):
+        start_setup(owned_runner, body.model_copy(update={"permissions": []}))
+
+
+@pytest.mark.skipif(
+    os.environ.get("AI_STATION_REAL_CODEX_TESTS") != "1", reason="Explicit real Codex opt-in required"
+)
+def test_real_codex_workspace_followup(repository, owned_runner):
+    """Two turns with automatic source discovery; synthetic temporary files only."""
+    import json
+    from pathlib import Path
+
+    with TestClient(app) as client:
+        project = register(client, repository)
+        response = client.post(
+            "/api/coding/codex",
+            json=coding_request(
+                project,
+                files=[],
+                explore=True,
+                prompt="Synthetic acceptance: create hello.py containing exactly print('Hello Station') and keep README.md unchanged. Explore only these two paths. Return the requested JSON operation/proposal.",
+            ),
+        )
+        assert response.status_code == 202, response.text
+        task_id = response.json()["task_id"]
+        for worker in ("real-prepare", "real-first"):
+            with session_factory()() as session:
+                tick(session, worker)
+        detail = client.get(f"/api/coding/sessions/{task_id}").json()
+        first = next(r for r in detail["runs"] if r["executor_type"] == "codex_proposal")
+        assert first["status"] == "succeeded", first
+        response = client.post(
+            f"/api/coding/sessions/{task_id}/messages",
+            json={
+                "expected_run_id": first["id"],
+                "external_ai": True,
+                "prompt": "Now create second.py containing exactly print('Second turn'), preserve hello.py and README.md. This is a synthetic continuation test.",
+            },
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "real-second")
+        second = client.get(f"/api/runs/{response.json()['id']}").json()
+        assert second["status"] == "succeeded", second
+        names = {x["path"] for x in second["metadata"]["coding_review"]["files"]}
+        assert {"hello.py", "second.py"} <= names
+        assert first["parameters"]["worktree_run_id"] == second["parameters"]["worktree_run_id"]
+        assert (repository / "README.md").read_text() == "Original repository\n"
+        path = Path(os.environ["AI_STATION_CODING_WORKSPACE_EVIDENCE"])
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"first": first, "second": second, "original_unchanged": True}, indent=2))
+        path.chmod(0o600)

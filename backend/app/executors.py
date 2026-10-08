@@ -26,6 +26,7 @@ from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
 from app.paths import safe_join, validate_relative
 from app.photo_executor import PhotoPipeExecutor
+from app.project_setup import ProjectSetupExecutor
 from app.providers import ProviderError, stream_chat
 from app.publication import GithubPublicationExecutor
 from app.resources import release_run_locks
@@ -275,6 +276,7 @@ class FakeExecutor:
 
 # Activate adapters only after their vertical slice is verified end to end.
 EXECUTORS = {
+    "project_setup": ProjectSetupExecutor(),
     "fake": FakeExecutor(),
     "orchestrator": AssistantExecutor(),
     "llama_load": LlamaExecutor("load"),

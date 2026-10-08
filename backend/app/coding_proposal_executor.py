@@ -84,6 +84,8 @@ class SelectedFileProposalExecutor(CodingProposalExecutor):
             "project_id": run.project_id,
             "worktree_run_id": run.parameters["worktree_run_id"],
             "files": run.parameters["files"],
+            "cumulative": run.parameters.get("cumulative", False),
+            "explore": run.parameters.get("explore", False),
             "prompt": run.parameters["prompt"],
             "guidance": run.parameters["guidance"],
             "model": run.parameters["model"],

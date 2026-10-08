@@ -1,0 +1,358 @@
+import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, NavLink, useParams } from "react-router-dom";
+import {
+  ChevronDown,
+  Code2,
+  Plus,
+  ArrowUpRight,
+  Send,
+  Square,
+} from "lucide-react";
+import { api, type Run } from "../api";
+import {
+  Badge,
+  Empty,
+  ErrorNotice,
+  Loading,
+  PageTitle,
+} from "../components/common";
+import { Button } from "../components/ui/button";
+import { terminal, time } from "../lib/utils";
+import CodingReview from "./CodingReview";
+import GithubPublication from "./GithubPublication";
+
+type SessionRow = {
+  id: string;
+  title: string;
+  project_name: string;
+  status: string;
+  active_run_id: string | null;
+  latest_proposal_id: string | null;
+};
+function useSessions(offset = 0) {
+  return useQuery({
+    queryKey: ["coding-sessions", offset],
+    queryFn: () =>
+      api<SessionRow[]>(`/coding/sessions${offset ? `?offset=${offset}` : ""}`),
+    refetchInterval: 10000,
+  });
+}
+export function CodingHistory() {
+  const [offset, setOffset] = useState(0);
+  const q = useSessions(offset);
+  return (
+    <>
+      <ErrorNotice error={q.error} />
+      {q.isPending ? (
+        <Loading />
+      ) : q.data?.length ? (
+        <div className="coding-history">
+          {q.data.map((s) => (
+            <Link
+              className="panel coding-history-item"
+              key={s.id}
+              to={`/coding/${s.id}`}
+            >
+              <span className="row spread">
+                <small>{s.project_name}</small>
+                <Badge status={s.status} />
+              </span>
+              <strong>{s.title}</strong>
+              <span className="text-link">
+                Open conversation <ArrowUpRight size={13} />
+              </span>
+            </Link>
+          ))}
+        </div>
+      ) : (
+        <Empty title="A fresh start">
+          Your tasks and follow-up conversations will appear here.
+        </Empty>
+      )}
+      <div className="row mt">
+        <Button
+          variant="secondary"
+          disabled={!offset}
+          onClick={() => setOffset(Math.max(0, offset - 30))}
+        >
+          Newer
+        </Button>
+        <small className="muted">Page {offset / 30 + 1}</small>
+        <Button
+          variant="secondary"
+          disabled={q.isPending || q.data?.length !== 30}
+          onClick={() => setOffset(offset + 30)}
+        >
+          Older
+        </Button>
+      </div>
+    </>
+  );
+}
+export function CodingNav() {
+  const [open, setOpen] = useState(true);
+  const q = useSessions();
+  return (
+    <div className="coding-nav">
+      <div className="coding-nav-heading">
+        <NavLink to="/coding">
+          <Code2 size={17} />
+          Coding
+        </NavLink>
+        <button
+          aria-label="Toggle coding conversations"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          <ChevronDown
+            size={14}
+            style={{ transform: open ? undefined : "rotate(-90deg)" }}
+          />
+        </button>
+      </div>
+      {open && (
+        <div className="coding-nav-tasks">
+          <NavLink end to="/coding">
+            <Plus size={12} />
+            New conversation
+          </NavLink>
+          {q.data?.slice(0, 12).map((s) => (
+            <NavLink
+              key={s.id}
+              to={`/coding/${s.id}`}
+              title={`${s.project_name}: ${s.title}`}
+            >
+              <span className={`status-dot ${s.active_run_id ? "" : "idle"}`} />
+              <span>{s.title}</span>
+            </NavLink>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+export default function CodingSession() {
+  const { id } = useParams();
+  const cache = useQueryClient();
+  const [prompt, setPrompt] = useState("");
+  const [external, setExternal] = useState(false);
+  const q = useQuery({
+    queryKey: ["coding-session", id],
+    queryFn: () => api<SessionRow & { runs: Run[] }>(`/coding/sessions/${id}`),
+    refetchInterval: 2000,
+  });
+  const runs = q.data?.runs ?? [];
+  const proposals = runs.filter((r) =>
+    ["cursor_proposal", "codex_proposal", "local_proposal"].includes(
+      r.executor_type,
+    ),
+  );
+  const latest = proposals.at(-1);
+  const end = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    end.current?.scrollIntoView?.({ block: "end" });
+  }, [proposals.length]);
+  const active = [...runs].reverse().find((r) => !terminal.has(r.status));
+  const isExternal = latest?.metadata?.execution_location === "external";
+  const send = useMutation({
+    mutationFn: () =>
+      api<Run>(`/coding/sessions/${id}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          expected_run_id: latest?.id,
+          external_ai: external,
+        }),
+      }),
+    onSuccess: () => {
+      setPrompt("");
+      setExternal(false);
+      void cache.invalidateQueries({ queryKey: ["coding-session", id] });
+      void cache.invalidateQueries({ queryKey: ["coding-sessions"] });
+    },
+  });
+  const cancel = useMutation({
+    mutationFn: () => api(`/runs/${active?.id}/cancel`, { method: "POST" }),
+    onSuccess: () =>
+      void cache.invalidateQueries({ queryKey: ["coding-session", id] }),
+  });
+  return (
+    <>
+      <PageTitle
+        eyebrow={q.data?.project_name ?? "CODING"}
+        title={q.data?.title ?? "Coding conversation"}
+        action={
+          <Button variant="secondary" asChild>
+            <Link to="/coding">
+              <Plus size={15} />
+              New conversation
+            </Link>
+          </Button>
+        }
+      >
+        Your instructions, the agent’s results and the same workspace across
+        every turn.
+      </PageTitle>
+      <ErrorNotice error={q.error ?? send.error ?? cancel.error} />
+      {q.isPending ? (
+        <Loading />
+      ) : (
+        q.data && (
+          <div className="coding-conversation">
+            <div className="coding-turns">
+              {!proposals.length && (
+                <div className="panel content-panel">
+                  <p>Preparing your workspace…</p>
+                  {runs.map((r) => (
+                    <Link className="text-link" key={r.id} to={`/runs/${r.id}`}>
+                      {r.status} · Inspect setup →
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {proposals.map((r) => (
+                <article className="coding-turn" key={r.id}>
+                  <div className="coding-instruction">
+                    <small>You · {time(r.created_at)}</small>
+                    <p>
+                      {String(
+                        r.parameters.user_prompt ??
+                          r.parameters.original_prompt ??
+                          r.parameters.prompt ??
+                          "",
+                      )}
+                    </p>
+                  </div>
+                  <div className="panel content-panel coding-answer">
+                    <div className="row spread">
+                      <strong>
+                        {r.executor_type === "local_proposal"
+                          ? "Local AI"
+                          : r.executor_type === "codex_proposal"
+                            ? "Codex"
+                            : "Cursor"}
+                      </strong>
+                      <Badge status={r.status} />
+                    </div>
+                    <p>
+                      {r.summary ||
+                        r.error_message ||
+                        (!terminal.has(r.status)
+                          ? "Working on your request…"
+                          : "No completed result. Inspect execution details below.")}
+                    </p>
+                    <Link className="text-link" to={`/runs/${r.id}`}>
+                      Execution details and logs <ArrowUpRight size={13} />
+                    </Link>
+                    {r.id === latest?.id &&
+                      r.metadata?.coding_review !== undefined && (
+                        <details className="coding-inline-review">
+                          <summary>Review changed files and validation</summary>
+                          <CodingReview run={r} />
+                        </details>
+                      )}
+                  </div>
+                </article>
+              ))}
+              {runs
+                .filter(
+                  (r) =>
+                    r.executor_type === "project_validation" ||
+                    r.executor_type === "reviewed_commit" ||
+                    r.executor_type === "github_publication",
+                )
+                .map((r) => (
+                  <details key={r.id} className="panel coding-check-result">
+                    <summary>
+                      <Badge status={r.status} />
+                      {r.executor_type === "project_validation"
+                        ? "Project checks"
+                        : r.executor_type === "reviewed_commit"
+                          ? "Reviewed commit"
+                          : "GitHub publication"}
+                    </summary>
+                    <p>{r.summary || r.error_message}</p>
+                    <Link className="text-link" to={`/runs/${r.id}`}>
+                      Inspect result →
+                    </Link>
+                    {r.executor_type === "reviewed_commit" && (
+                      <GithubPublication run={r} />
+                    )}
+                  </details>
+                ))}
+              <div ref={end} />
+            </div>
+            <form
+              className="panel coding-reply"
+              onSubmit={(e) => {
+                e.preventDefault();
+                send.mutate();
+              }}
+            >
+              <div className="row spread">
+                <strong>
+                  {active ? "Agent is working" : "Continue the conversation"}
+                </strong>
+                {active && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={cancel.isPending}
+                    onClick={() => cancel.mutate()}
+                  >
+                    <Square size={12} />
+                    Stop
+                  </Button>
+                )}
+              </div>
+              <textarea
+                aria-label="Follow-up instruction"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                maxLength={4000}
+                rows={3}
+                placeholder="What should we change or build next?"
+                disabled={!!active || !latest}
+              />
+              {isExternal && (
+                <label className="coding-turn-consent">
+                  <input
+                    type="checkbox"
+                    checked={external}
+                    onChange={(e) => setExternal(e.target.checked)}
+                  />
+                  <span>
+                    Share this turn and relevant source with{" "}
+                    {latest?.executor_type === "codex_proposal"
+                      ? "Codex"
+                      : "Cursor"}
+                    .
+                  </span>
+                </label>
+              )}
+              <div className="row spread">
+                <small className="muted">
+                  Same project · same workspace · history preserved
+                </small>
+                <Button
+                  disabled={
+                    !!active ||
+                    !latest ||
+                    !prompt.trim() ||
+                    send.isPending ||
+                    (isExternal && !external)
+                  }
+                >
+                  <Send size={14} />
+                  {send.isPending ? "Sending…" : "Send"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        )
+      )}
+    </>
+  );
+}

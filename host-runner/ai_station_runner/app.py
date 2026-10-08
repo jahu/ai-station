@@ -17,6 +17,7 @@ from ai_station_runner.audio import AudioRequest, start_audio
 from ai_station_runner.avatars import AvatarRequest, start_avatar
 from ai_station_runner.codex_runs import CodexRequest, codex_report, start_codex
 from ai_station_runner.coding import CodingUnavailable, build_argv
+from ai_station_runner.coding_models import coding_models
 from ai_station_runner.coding_sandbox import SandboxUnavailable
 from ai_station_runner.config import get_settings
 from ai_station_runner.cursor_runs import CursorRequest, cursor_report, start_cursor
@@ -38,6 +39,7 @@ from ai_station_runner.local_coding_runs import LocalCodingRequest, local_coding
 from ai_station_runner.local_model import router as local_model_router
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
+from ai_station_runner.project_setup import ProjectSetup, setup_report, start_setup
 from ai_station_runner.publication import (
     PublicationRequest,
     publication_progress,
@@ -674,3 +676,28 @@ def codex_proposal_report(run_id: UUID):
         return codex_report(manager(), str(run_id))
     except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc
+
+
+@app.post("/v1/projects/create")
+def create_owned_project(body: ProjectSetup):
+    try:
+        return {**start_setup(manager(), body), "runner_id": get_settings().runner_id}
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/projects/created/{run_id}")
+def created_project(run_id: UUID):
+    try:
+        return setup_report(manager(), str(run_id))
+    except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/coding/models/{provider}")
+def coding_model_catalog(provider: str):
+    if provider not in {"cursor", "codex"}:
+        raise HTTPException(404, "Coding provider not found")
+    return coding_models(provider)

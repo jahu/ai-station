@@ -22,6 +22,7 @@ from app.audio import router as audio_router
 from app.avatars import router as avatar_router
 from app.chat import router as chat_router
 from app.codex_coding import router as codex_router
+from app.coding_sessions import router as coding_sessions_router
 from app.config import get_settings
 from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
@@ -35,6 +36,7 @@ from app.local_coding import router as local_coding_router
 from app.memory_api import router as memory_router
 from app.model_registry import router as model_router
 from app.models import Run, Setting, WorkerRow
+from app.project_setup import router as project_setup_router
 from app.projects import router as project_router
 from app.providers import ProviderError
 from app.publication import router as publication_router
@@ -281,8 +283,10 @@ app.include_router(audio_router)
 app.include_router(avatar_router)
 app.include_router(commit_router)
 app.include_router(codex_router)
+app.include_router(coding_sessions_router)
 app.include_router(publication_router)
 app.include_router(library_router)
+app.include_router(project_setup_router)
 app.include_router(project_router)
 app.include_router(memory_router)
 app.include_router(model_router)

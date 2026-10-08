@@ -106,13 +106,37 @@ def execute(run_id):
     body = load_request(run_id)
     root = directory(run_id)
 
-    def generate(selected):
+    counter = 0
+
+    def complete(message=None, selected=None):
+        nonlocal counter
+        counter += 1
         argv, env, workspace = prepare_cursor(
-            root / "provider", prompt=body.prompt, selected=selected, guidance=body.guidance, model=body.model
+            root / f"provider-{counter}",
+            prompt=body.prompt,
+            selected=selected or [],
+            guidance=body.guidance,
+            model=body.model,
         )
+        if message is not None:
+            argv[-1] = message
         return collect_proposal(argv, env, workspace)
 
-    execute_proposal(run_id, body, root, generate, location="external")
+    discover = None
+    if body.explore:
+        from ai_station_runner.coding_exploration import explore
+
+        def discover(workspace):
+            return explore(workspace, body.prompt, body.guidance, lambda message: complete(message)[0])
+
+    execute_proposal(
+        run_id,
+        body,
+        root,
+        lambda selected: complete(selected=selected),
+        location="external",
+        discover=discover,
+    )
 
 
 if __name__ == "__main__":
