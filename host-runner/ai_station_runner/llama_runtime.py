@@ -127,6 +127,53 @@ def socket_path(instance_id):
     return path
 
 
+def _positive_int(value):
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        return None
+    return value
+
+
+def query_runtime_metadata(client) -> dict:
+    """Read running context from llama.cpp. Never persist or return the chat template."""
+    observed = {}
+
+    def take(source, *keys):
+        if not isinstance(source, dict):
+            return
+        for key in keys:
+            value = _positive_int(source.get(key))
+            if value is not None:
+                observed[key] = value
+
+    try:
+        response = client.get("http://llama/v1/models")
+        if response.status_code == 200:
+            payload = response.json()
+            entries = payload.get("data") or payload.get("models") or []
+            item = (
+                entries[0] if isinstance(entries, list) and entries and isinstance(entries[0], dict) else {}
+            )
+            take(item, "n_ctx", "n_ctx_train", "n_params")
+            take(
+                item.get("meta") if isinstance(item.get("meta"), dict) else {},
+                "n_ctx",
+                "n_ctx_train",
+                "n_params",
+            )
+    except (httpx.HTTPError, ValueError, TypeError):
+        pass
+    try:
+        response = client.get("http://llama/props")
+        if response.status_code == 200:
+            payload = response.json()
+            settings = payload.get("default_generation_settings")
+            take(settings if isinstance(settings, dict) else {}, "n_ctx")
+            take(payload, "n_ctx_train")
+    except (httpx.HTTPError, ValueError, TypeError):
+        pass
+    return observed
+
+
 def snapshot(instance_id):
     record = manifest(instance_id)
     if record.get("request") is None:
@@ -141,6 +188,7 @@ def snapshot(instance_id):
         status = "failed"
     if record.get("desired") == "stopped" and not alive:
         status = "stopped"
+    observed = {}
     if alive:
         try:
             with httpx.Client(
@@ -148,12 +196,13 @@ def snapshot(instance_id):
             ) as client:
                 if client.get("http://llama/health").status_code == 200:
                     status = "ready"
+                    observed = query_runtime_metadata(client)
         except httpx.HTTPError:
             pass
     error = record.get("error") or state.get("Error", "")
     if status == "failed" and not error:
         error = docker("logs", "--tail", "40", item["Id"])[-3000:]
-    return {
+    result = {
         "runner_id": get_settings().runner_id,
         "status": status,
         "alive": alive,
@@ -163,6 +212,10 @@ def snapshot(instance_id):
         "error": error,
         "gpus": record["request"]["gpus"],
     }
+    for key in ("n_ctx", "n_ctx_train", "n_params"):
+        if key in observed:
+            result[key] = observed[key]
+    return result
 
 
 @router.post("/load")
@@ -174,7 +227,12 @@ def load(body: Load):
         request = body.model_dump(mode="json")
         if (folder / "manifest.json").exists():
             record = manifest(body.instance_id)
-            if {"cache_type": "f16", **record["request"]} != request or record.get("desired") == "stopped":
+            saved = record.get("request")
+            if (
+                saved is None
+                or {"cache_type": "f16", **saved} != request
+                or record.get("desired") == "stopped"
+            ):
                 raise HTTPException(409, "Runtime identity is immutable")
         else:
             settings = get_settings()

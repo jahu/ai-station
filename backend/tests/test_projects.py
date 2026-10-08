@@ -1190,10 +1190,12 @@ def test_real_local_coding_proposal(repository, owned_runner, local_coding_bridg
     assert (repository / ".git/index").read_bytes() == index
 
 
-def test_local_coding_reloads_saved_llama_preset_before_inference(repository, owned_runner):
-    from app.llama import LoadModel, enqueue_load
+def test_local_coding_reloads_saved_llama_preset_before_inference(repository, owned_runner, monkeypatch):
+    from app.llama import LoadModel, enqueue_load, fit_coding_context
     from app.models import ModelFile, Run, RunDependency, RuntimeInstance
 
+    weights = int(15.4 * 1024**3)
+    monkeypatch.setattr("app.llama.gpu_memory_totals", lambda gpus: [12288.0, 12288.0])
     with session_factory()() as session:
         model = ModelFile(
             host_path="/models/coder.gguf",
@@ -1201,7 +1203,7 @@ def test_local_coding_reloads_saved_llama_preset_before_inference(repository, ow
             format="gguf",
             category="llm",
             availability="present",
-            size_bytes=1000,
+            size_bytes=weights,
             mtime=1,
         )
         session.add(model)
@@ -1231,8 +1233,11 @@ def test_local_coding_reloads_saved_llama_preset_before_inference(repository, ow
             )
             assert len(loads) == 1
             load = loads[0]
+            expected = fit_coding_context(gpus=[2, 7], size_bytes=weights, gpu_memory_mib=[12288.0, 12288.0])
             assert load.parameters["gpus"] == [2, 7]
-            assert load.parameters["context_size"] == 4096
+            assert load.parameters["context_size"] == expected
+            assert load.parameters["cache_type"] == "q8_0"
+            assert expected != 131072
             assert load.parameters["instance_id"] != old_id
             assert coding.parameters["endpoint"] == "llamacpp:" + load.parameters["instance_id"]
             assert coding.parameters["model"] == model_key

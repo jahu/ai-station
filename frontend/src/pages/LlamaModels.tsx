@@ -21,9 +21,11 @@ type Instance = {
     model_file_id: string;
     gpus: number[];
     context_size?: number;
+    cache_type?: string;
+    n_ctx_train?: number;
     load_run_id: string;
     operation_run_id?: string;
-    observation?: { error?: string };
+    observation?: { error?: string; n_ctx?: number };
   };
 };
 type Catalog = { models: Model[]; instances: Instance[] };
@@ -322,7 +324,9 @@ export default function LlamaModels({
                   <p>
                     {instance
                       ? "This model keeps its saved GPU and context settings when reloaded."
-                      : "The first load uses these GPUs. Selecting several cards splits model layers across them; no cards uses the CPU."}
+                      : coding
+                        ? "The first Coding load asks for the largest Q8 context that fits the selected GPUs, up to this ceiling. Layers stay on those GPUs; 128k is not a guarantee."
+                        : "The first load uses these GPUs. Selecting several cards splits model layers across them; no cards uses the CPU."}
                   </p>
                   <fieldset
                     disabled={
@@ -359,7 +363,7 @@ export default function LlamaModels({
                       <p>CPU execution selected.</p>
                     )}
                     <label>
-                      Context size
+                      {coding ? "Context ceiling" : "Context size"}
                       <input
                         type="number"
                         min={512}
@@ -369,6 +373,20 @@ export default function LlamaModels({
                         onChange={(e) => setContext(Number(e.target.value))}
                       />
                     </label>
+                    {instance?.metadata.context_size != null && (
+                      <p>
+                        Loaded context:{" "}
+                        {instance.metadata.context_size.toLocaleString()}
+                        {instance.metadata.observation?.n_ctx != null &&
+                        instance.metadata.observation.n_ctx !==
+                          instance.metadata.context_size
+                          ? ` · runtime reports ${instance.metadata.observation.n_ctx.toLocaleString()}`
+                          : ""}
+                        {instance.metadata.n_ctx_train
+                          ? ` · trained ${instance.metadata.n_ctx_train.toLocaleString()}`
+                          : ""}
+                      </p>
+                    )}
                   </fieldset>
                   {instance?.status === "ready" && (
                     <Button

@@ -211,8 +211,9 @@ export default function Coding() {
                       onBusy={setModelPending}
                     />
                     <small className="muted">
-                      Managed llama.cpp prepares a 128k Coding context with Q8
-                      KV cache. Local-server context is configured separately.
+                      Managed llama.cpp loads the largest Q8 context that fits
+                      the selected GPUs. 128k is a ceiling, not a guarantee.
+                      Local-server context is configured separately.
                     </small>
                   </div>
                 ) : (
