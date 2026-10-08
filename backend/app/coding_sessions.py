@@ -95,9 +95,11 @@ def followup(task_id: UUID, body: Followup, session: DB):
     source = next((r for r in reversed(runs) if r.executor_type in PROPOSALS), None)
     if not source or source.id != str(body.expected_run_id):
         raise HTTPException(409, "Conversation changed. Reload before continuing.")
-    if source.status != "succeeded" and not (
-        source.status in {"failed", "canceled"} and source.metadata_json.get("process_confirmed_gone")
-    ):
+    failed_before_dispatch = source.status in {"failed", "canceled"} and (
+        source.metadata_json.get("process_confirmed_gone")
+        or not source.metadata_json.get("dispatch_attempted")
+    )
+    if source.status != "succeeded" and not failed_before_dispatch:
         raise HTTPException(409, "Inspect the previous execution before continuing")
     if session.scalar(
         select(Run.id).where(Run.project_id == task.project_id, Run.status.not_in(TERMINAL)).limit(1)

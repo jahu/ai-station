@@ -277,7 +277,6 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False):
             "gpus": body.gpus,
             "context_size": body.context_size,
             "cache_type": body.cache_type,
-            "requested_context_size": requested_context,
         },
     )
     instance.endpoint = "llamacpp:" + instance.id
@@ -429,13 +428,26 @@ class LlamaExecutor:
         run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}
         instance.status = "loading" if self.operation == "load" else "stopping"
         session.commit()
-        payload = {**run.parameters, "run_id": run.id, "permissions": run.effective_permissions}
+        request = {
+            key: run.parameters[key]
+            for key in (
+                "instance_id",
+                "model_path",
+                "size_bytes",
+                "mtime",
+                "gpus",
+                "context_size",
+                "cache_type",
+            )
+            if key in run.parameters
+        }
+        request.update(run_id=run.id, permissions=run.effective_permissions)
         deadline = time.monotonic() + max(
             0, 600 - (utcnow() - (run.started_at or run.created_at)).total_seconds()
         )
         try:
             if self.operation == "load" and run.status != "cancel_requested":
-                info = runner.load_llama(payload)
+                info = runner.load_llama(request)
             else:
                 info = runner.stop_llama(instance.id)
             run.pid = info.get("pid")
