@@ -101,13 +101,13 @@ it("requires confirmation before queueing owned worktree removal", async () => {
     </QueryClientProvider>,
   );
   fireEvent.click(
-    await screen.findByRole("button", { name: "Remove worktree…" }),
+    await screen.findByRole("button", { name: /Remove worktree/ }),
   );
   expect(
     fetch.mock.calls.filter(([, options]) => options?.method === "POST"),
   ).toHaveLength(0);
   fireEvent.click(
-    screen.getByRole("button", { name: "Permanently remove worktree" }),
+    screen.getByRole("button", { name: /Permanently remove worktree/ }),
   );
   await screen.findByRole("heading", { name: "Removal Run" });
   expect(fetch).toHaveBeenCalledWith(
@@ -166,7 +166,7 @@ it("pins a scheduled worktree so automatic expiry stops", async () => {
     </QueryClientProvider>,
   );
   fireEvent.click(
-    await screen.findByRole("button", { name: "Don't auto-remove" }),
+    await screen.findByRole("button", { name: /Don't auto-remove/ }),
   );
   await screen.findByText("Prepared and recorded. Kept until you remove it.");
   expect(fetch).toHaveBeenCalledWith(
@@ -216,17 +216,14 @@ it("queues dependency install for a ready owned worktree without sending command
               />
             }
           />
-          <Route
-            path="/runs/dependencies"
-            element={<h1>Dependency Run</h1>}
-          />
+          <Route path="/runs/dependencies" element={<h1>Dependency Run</h1>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   );
   fireEvent.click(
     await screen.findByRole("button", {
-      name: "Install project dependencies",
+      name: /Install project dependencies/,
     }),
   );
   await screen.findByRole("heading", { name: "Dependency Run" });
@@ -283,7 +280,7 @@ it("queues saved validation for a ready owned worktree without sending commands"
     </QueryClientProvider>,
   );
   fireEvent.click(
-    await screen.findByRole("button", { name: "Run saved validation" }),
+    await screen.findByRole("button", { name: /Run saved validation/ }),
   );
   await screen.findByRole("heading", { name: "Validation Run" });
   expect(fetch).toHaveBeenCalledWith(
@@ -293,4 +290,83 @@ it("queues saved validation for a ready owned worktree without sending commands"
       body: '{"expected_updated_at":"version"}',
     }),
   );
+});
+
+it("moves through prepared worktrees with arrow keys", async () => {
+  const row = {
+    run_status: "succeeded",
+    owned: true,
+    removed_at: null,
+    expires_at: null,
+    relative_path: "worktrees/project/task",
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => [
+        {
+          ...row,
+          id: "tree-one",
+          run_id: "run-one",
+          branch: "ai/one-workspace",
+        },
+        {
+          ...row,
+          id: "tree-two",
+          run_id: "run-two",
+          branch: "ai/two-workspace",
+        },
+      ],
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/projects/one"]}>
+        <Routes>
+          <Route
+            path="/projects/one"
+            element={
+              <ProjectWorktrees
+                project={{
+                  id: "one",
+                  updated_at: "version",
+                  integration_branch: "develop",
+                }}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const first = await screen.findByRole("link", {
+    name: "Inspect ai/one-workspace tree-one",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect ai/two-workspace tree-two",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(
+    screen.getByRole("region", { name: "Prepared worktrees" }),
+  ).toBeTruthy();
+  fireEvent.keyDown(first.closest(".worktree-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(
+    screen
+      .getByRole("link", { name: "Inspect ai/two-workspace tree-two" })
+      .closest("[data-list-index]"),
+  );
+  fireEvent.keyDown(second.closest(".worktree-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
 });

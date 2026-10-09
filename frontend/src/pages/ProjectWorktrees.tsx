@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { GitBranch } from "lucide-react";
@@ -6,6 +6,7 @@ import { api, type Run } from "../api";
 import { Badge, Empty, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { terminal } from "../lib/utils";
+import { useListKeyboard } from "./useListKeyboard";
 
 interface Worktree {
   id: string;
@@ -17,6 +18,178 @@ interface Worktree {
   owned: boolean;
   removed_at: string | null;
   expires_at: string | null;
+}
+
+function WorktreeCards({
+  worktrees,
+  busy,
+  confirmId,
+  setConfirmId,
+  dependenciesPending,
+  validatePending,
+  keepPending,
+  removePending,
+  onDependencies,
+  onValidate,
+  onKeep,
+  onRemove,
+}: {
+  worktrees: Worktree[];
+  busy: boolean;
+  confirmId: string | null;
+  setConfirmId: (id: string | null) => void;
+  dependenciesPending: boolean;
+  validatePending: boolean;
+  keepPending: boolean;
+  removePending: boolean;
+  onDependencies: (id: string) => void;
+  onValidate: (id: string) => void;
+  onKeep: (id: string) => void;
+  onRemove: (id: string) => void;
+}) {
+  const headingId = useId();
+  const labelId = useId();
+  const navigate = useNavigate();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    worktrees,
+    (worktree) => worktree.id,
+  );
+  const selected = worktrees[index];
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key !== "Enter" || event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input")) return;
+    if (selected?.run_id) {
+      event.preventDefault();
+      navigate(`/runs/${selected.run_id}`);
+    }
+  };
+  return (
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId} className="sr-only">
+        Prepared worktrees
+      </h3>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a worktree while the list is focused. Enter inspects
+        its preparation Run. Install, validate, keep and remove stay on the
+        selected row.
+      </p>
+      <div
+        ref={listRef}
+        className="worktree-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {worktrees.map((worktree, i) => {
+          const current = i === index;
+          const shortId = worktree.id.slice(0, 8);
+          const action = (verb: string) =>
+            `${verb} ${worktree.branch} ${shortId}`;
+          return (
+            <article key={worktree.id} {...itemProps(i, worktree.id)}>
+              <div className="row spread">
+                <Link
+                  className="text-link"
+                  to={`/runs/${worktree.run_id}`}
+                  tabIndex={current ? 0 : -1}
+                  aria-label={action("Inspect")}
+                >
+                  Inspect preparation Run →
+                </Link>
+                <Badge
+                  status={worktree.removed_at ? "removed" : worktree.run_status}
+                />
+              </div>
+              {worktree.owned &&
+                worktree.run_status === "succeeded" &&
+                !worktree.removed_at && (
+                  <>
+                    <Button
+                      variant="secondary"
+                      tabIndex={current ? 0 : -1}
+                      disabled={busy}
+                      aria-label={action("Install project dependencies")}
+                      onClick={() => onDependencies(worktree.id)}
+                    >
+                      {dependenciesPending
+                        ? "Queueing…"
+                        : "Install project dependencies"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      tabIndex={current ? 0 : -1}
+                      disabled={busy}
+                      aria-label={action("Run saved validation")}
+                      onClick={() => onValidate(worktree.id)}
+                    >
+                      {validatePending ? "Queueing…" : "Run saved validation"}
+                    </Button>
+                    {worktree.expires_at && (
+                      <Button
+                        variant="secondary"
+                        tabIndex={current ? 0 : -1}
+                        disabled={busy}
+                        aria-label={action("Don't auto-remove")}
+                        onClick={() => onKeep(worktree.id)}
+                      >
+                        {keepPending ? "Saving…" : "Don't auto-remove"}
+                      </Button>
+                    )}
+                  </>
+                )}
+              {!worktree.removed_at &&
+                (confirmId === worktree.id ? (
+                  <div className="row">
+                    <Button
+                      tabIndex={current ? 0 : -1}
+                      disabled={busy}
+                      aria-label={action("Permanently remove worktree")}
+                      onClick={() => onRemove(worktree.id)}
+                    >
+                      {removePending
+                        ? "Queueing…"
+                        : "Permanently remove worktree"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      tabIndex={current ? 0 : -1}
+                      aria-label={action("Keep worktree")}
+                      onClick={() => setConfirmId(null)}
+                    >
+                      Keep worktree
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    tabIndex={current ? 0 : -1}
+                    disabled={busy}
+                    aria-label={action("Remove worktree")}
+                    onClick={() => setConfirmId(worktree.id)}
+                  >
+                    Remove worktree…
+                  </Button>
+                ))}
+              <p className="mono">{worktree.branch}</p>
+              <p className="mono muted">{worktree.relative_path}</p>
+              <p className="muted">
+                {worktree.removed_at
+                  ? "Removed. The local task branch and owned checkout are gone; GitHub remotes were not changed."
+                  : worktree.owned
+                    ? worktree.expires_at
+                      ? `Prepared and recorded. Unused, it is removed automatically after ${new Date(worktree.expires_at).toLocaleString()}.`
+                      : "Prepared and recorded. Kept until you remove it."
+                    : terminal.has(worktree.run_status)
+                      ? "Preparation was not confirmed. Inspect the Run and any partial data before removing."
+                      : "Preparation has not completed yet."}
+              </p>
+            </article>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 export default function ProjectWorktrees({
@@ -148,91 +321,20 @@ export default function ProjectWorktrees({
       {worktrees.isPending ? (
         <Loading />
       ) : worktrees.data?.length ? (
-        <div className="worktree-list">
-          {worktrees.data.map((worktree) => (
-            <article key={worktree.id}>
-              <div className="row spread">
-                <Link className="text-link" to={`/runs/${worktree.run_id}`}>
-                  Inspect preparation Run →
-                </Link>
-                <Badge
-                  status={worktree.removed_at ? "removed" : worktree.run_status}
-                />
-              </div>
-              {worktree.owned &&
-                worktree.run_status === "succeeded" &&
-                !worktree.removed_at && (
-                  <>
-                    <Button
-                      variant="secondary"
-                      disabled={busy}
-                      onClick={() => dependencies.mutate(worktree.id)}
-                    >
-                      {dependencies.isPending
-                        ? "Queueing…"
-                        : "Install project dependencies"}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      disabled={busy}
-                      onClick={() => validate.mutate(worktree.id)}
-                    >
-                      {validate.isPending ? "Queueing…" : "Run saved validation"}
-                    </Button>
-                    {worktree.expires_at && (
-                      <Button
-                        variant="secondary"
-                        disabled={busy}
-                        onClick={() => keep.mutate(worktree.id)}
-                      >
-                        {keep.isPending ? "Saving…" : "Don't auto-remove"}
-                      </Button>
-                    )}
-                  </>
-                )}
-              {!worktree.removed_at &&
-                (confirmId === worktree.id ? (
-                  <div className="row">
-                    <Button
-                      disabled={busy}
-                      onClick={() => remove.mutate(worktree.id)}
-                    >
-                      {remove.isPending
-                        ? "Queueing…"
-                        : "Permanently remove worktree"}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setConfirmId(null)}
-                    >
-                      Keep worktree
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() => setConfirmId(worktree.id)}
-                  >
-                    Remove worktree…
-                  </Button>
-                ))}
-              <p className="mono">{worktree.branch}</p>
-              <p className="mono muted">{worktree.relative_path}</p>
-              <p className="muted">
-                {worktree.removed_at
-                  ? "Removed. The local task branch and owned checkout are gone; GitHub remotes were not changed."
-                  : worktree.owned
-                    ? worktree.expires_at
-                      ? `Prepared and recorded. Unused, it is removed automatically after ${new Date(worktree.expires_at).toLocaleString()}.`
-                      : "Prepared and recorded. Kept until you remove it."
-                    : terminal.has(worktree.run_status)
-                      ? "Preparation was not confirmed. Inspect the Run and any partial data before removing."
-                      : "Preparation has not completed yet."}
-              </p>
-            </article>
-          ))}
-        </div>
+        <WorktreeCards
+          worktrees={worktrees.data}
+          busy={busy}
+          confirmId={confirmId}
+          setConfirmId={setConfirmId}
+          dependenciesPending={dependencies.isPending}
+          validatePending={validate.isPending}
+          keepPending={keep.isPending}
+          removePending={remove.isPending}
+          onDependencies={(id) => dependencies.mutate(id)}
+          onValidate={(id) => validate.mutate(id)}
+          onKeep={(id) => keep.mutate(id)}
+          onRemove={(id) => remove.mutate(id)}
+        />
       ) : (
         <Empty title="No worktrees prepared">
           Prepare a separate checkout for an upcoming coding task. Unused owned

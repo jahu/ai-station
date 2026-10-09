@@ -280,3 +280,7 @@ Frontend lint, TypeScript, 115 component tests and production build passed. Runt
 ## Chat providers keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 116 component tests and production build passed. Registered chat providers form one keyboard sequence (arrows, Home, End). Remove names include the provider name and short id and stay on the selected row. There is no inspectable provider Run. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Project worktrees keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 117 component tests and production build passed. Prepared worktrees form one keyboard sequence (arrows, Home, End, Enter inspects the preparation Run). Inspect, install, validate, keep and remove names include the branch and short id. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
