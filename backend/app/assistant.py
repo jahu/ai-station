@@ -225,7 +225,11 @@ def enqueue_assistant(session, conversation, user, body):
     if explicit_plan(run.parameters) is None:
         prepare_consumer(session, run)
     user.run_id = run.id
-    user.metadata_json = {**user.metadata_json, "images": images}
+    user.metadata_json = {
+        **user.metadata_json,
+        "images": images,
+        "execution_mode": "orchestrator",
+    }
     from app.chat_attachments import link_attachments
 
     link_attachments(session, user, run)

@@ -37,11 +37,16 @@ class MessageBody(AssistantInputs):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     content: str = Field(min_length=1, max_length=32000)
     attachments: list[TextAttachment] = Field(default_factory=list, max_length=4)
+    execution_mode: Literal["auto", "local", "orchestrator"] = "auto"
 
     @model_validator(mode="after")
     def validate_context(self):
         message_content(self.content, self.attachments)
         return self
+
+
+def turn_execution_mode(conversation, body) -> str:
+    return conversation.execution_mode if body.execution_mode == "auto" else body.execution_mode
 
 
 def conversation(session, conversation_id):
@@ -281,6 +286,7 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
         execution_target="container",
         parameters={
             "web_search": web_search,
+            "execution_mode": "local",
             **snapshot,
             "model": row.model,
             "temperature": row.temperature,
@@ -343,10 +349,25 @@ def send(conversation_id: UUID, body: MessageBody, session: DB):
             **user.metadata_json,
             "attachments": save_attachments(session, user, body.attachments),
         }
-    if row.execution_mode == "orchestrator":
+    mode = turn_execution_mode(row, body)
+    user.metadata_json = {
+        **user.metadata_json,
+        "execution_mode": mode,
+        "execution_mode_override": body.execution_mode,
+    }
+    if mode == "orchestrator":
         return enqueue_assistant(session, row, user, body)
-    if body.image_artifact_ids or body.audio_artifact_id or body.action != "auto" or body.coding:
-        raise HTTPException(422, "Select Platform assistant mode to use capability actions")
+    if (
+        body.image_artifact_ids
+        or body.audio_artifact_id
+        or body.action != "auto"
+        or body.coding
+        or body.commit
+        or body.publish
+        or body.load
+        or body.stop
+    ):
+        raise HTTPException(422, "Select Platform assistant for this turn to use capability actions")
     return enqueue(session, row, user=user)
 
 
@@ -354,8 +375,6 @@ def send(conversation_id: UUID, body: MessageBody, session: DB):
 def regenerate(conversation_id: UUID, session: DB):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
-    if row.execution_mode == "orchestrator":
-        raise HTTPException(409, "Send a new instruction to repeat an assistant action explicitly")
     user = session.scalar(
         select(Message)
         .where(Message.conversation_id == row.id, Message.role == "user")
@@ -364,6 +383,8 @@ def regenerate(conversation_id: UUID, session: DB):
     )
     if user is None:
         raise HTTPException(409, "There is no user message to regenerate")
+    if user.metadata_json.get("execution_mode", row.execution_mode) == "orchestrator":
+        raise HTTPException(409, "Send a new instruction to repeat an assistant action explicitly")
     responses = list(
         session.scalars(
             select(Message)
