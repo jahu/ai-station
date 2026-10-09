@@ -388,3 +388,7 @@ Frontend lint, TypeScript, 152 component tests and production build passed. Boun
 ## Chat search toggle keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 153 component tests and production build passed. The Chat Search the web toggle reuses `useListKeyboard` with a unique Search name. Space or Enter selects it and does not send. Query, sources, opt-in search and browser automation remain unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Memory pin/disable keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 154 component tests and production build passed. Memory pin and enabled flags reuse `useListKeyboard` with unique Memory names. Space or Enter selects the focused row and does not invent a Run. Disabled or unpinned entries still leave historical Chat snapshots unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

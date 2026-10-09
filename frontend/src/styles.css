@@ -1668,6 +1668,14 @@ section:has(> .memory-grid) > .dashboard-note {
 .memory-editor .memory-check {
   display: flex;
 }
+.memory-choice-list:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.memory-choice-list > div[aria-current="true"] {
+  background: rgba(185, 245, 139, 0.08);
+  border-radius: 6px;
+}
 .memory-editor code {
   overflow-wrap: anywhere;
 }
