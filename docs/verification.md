@@ -456,3 +456,7 @@ Frontend lint, TypeScript, 197 component tests and production build passed. Codi
 ## Images operation keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 200 component tests and production build passed. Images Generate/Edit/Recompose/Upscale tabs reuse `useListKeyboard` with unique Operation names. Space or Enter selects the focused operation and does not queue a photo Run. Edit, Recompose and Upscale still force Qwen. Generate backend radios remain the existing Qwen/Juggernaut sequence. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant coding project keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 200 component tests and production build passed. Assistant coding scope reuses the Coding `ProjectChoiceList` with unique Project names. Space or Enter selects a registered project and does not send. Preferred executor remains a displayed hint. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
