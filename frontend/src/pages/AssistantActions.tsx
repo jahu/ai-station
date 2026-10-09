@@ -19,6 +19,8 @@ import { parseFilePaths } from "./filePaths";
 import { GpuChoiceList } from "./GpuChoiceList";
 import { ActionChoiceList } from "./ActionChoiceList";
 import { ProjectChoiceList } from "./ProjectChoiceList";
+import { GgufChoiceList } from "./GgufChoiceList";
+import { RuntimeChoiceList } from "./RuntimeChoiceList";
 
 export type CodingScope = {
   project_id: string;
@@ -846,23 +848,15 @@ export default function AssistantActions({
             a file or GPUs.
           </p>
           <ErrorNotice error={catalog.error ?? hardware.error} />
-          <label>
-            GGUF model
-            <select
-              aria-label="GGUF model"
+          <div>
+            <span>GGUF model</span>
+            <GgufChoiceList
+              models={catalog.data?.models ?? []}
               value={value.load?.model_file_id ?? ""}
-              onChange={(event) =>
-                setLoad(event.target.value, selectedLoadGpus, loadContext)
-              }
-            >
-              <option value="">Select a discovered language-model GGUF</option>
-              {catalog.data?.models.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              disabled={busy}
+              onChange={(id) => setLoad(id, selectedLoadGpus, loadContext)}
+            />
+          </div>
           {!catalog.isPending && !catalog.data?.models.length && (
             <p className="notice">
               No language-model GGUFs are discovered yet. Scan model folders in
@@ -911,21 +905,15 @@ export default function AssistantActions({
             finish. External runtimes are not touched.
           </p>
           <ErrorNotice error={catalog.error} />
-          <label>
-            Runtime
-            <select
-              aria-label="Owned runtime"
+          <div>
+            <span>Runtime</span>
+            <RuntimeChoiceList
+              instances={ownedInstances}
               value={value.stop?.instance_id ?? ""}
-              onChange={(event) => setStop(event.target.value)}
-            >
-              <option value="">Select an owned llama.cpp instance</option>
-              {ownedInstances.map((instance) => (
-                <option key={instance.id} value={instance.id}>
-                  {instance.name} · {instance.status}
-                </option>
-              ))}
-            </select>
-          </label>
+              disabled={busy}
+              onChange={setStop}
+            />
+          </div>
           {!ownedInstances.length && (
             <p className="notice">
               No owned llama.cpp instance is loaded. External servers cannot be

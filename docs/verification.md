@@ -460,3 +460,7 @@ Frontend lint, TypeScript, 200 component tests and production build passed. Imag
 ## Assistant coding project keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 200 component tests and production build passed. Assistant coding scope reuses the Coding `ProjectChoiceList` with unique Project names. Space or Enter selects a registered project and does not send. Preferred executor remains a displayed hint. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant GGUF and owned-runtime keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 207 component tests and production build passed. Assistant load/unload radios reuse `useListKeyboard` with unique GGUF and Runtime names. Space or Enter selects a discovered language-model GGUF or an owned llama.cpp instance and does not send. External/Ollama servers and stopped instances stay off the unload list. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
