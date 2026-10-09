@@ -945,6 +945,13 @@ pre {
   top: 10px;
   left: 10px;
 }
+main:focus {
+  outline: none;
+}
+main:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
 @media (min-width: 1500px) {
   main {
     padding: 42px 50px;

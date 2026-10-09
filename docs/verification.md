@@ -180,3 +180,7 @@ Frontend lint, TypeScript, 90 component tests and production build passed. Home 
 ## Loopback operator session — 2026-10-09
 
 `./scripts/check.sh`: 670 Python tests passed (5 skipped), including session issue on password store, 401 without the `ais_operator` cookie, public health/login, login/logout, and unpublished LAN bind. Frontend lint, TypeScript, 91 component tests and production build passed. Node registration still requires the loopback session and does not open a LAN listener. Remote nodes still do not execute work. Claude Code remains untested and unavailable.
+
+## Workspace keyboard routing — 2026-10-09
+
+Frontend lint, TypeScript, 93 component tests and production build passed. Skip link focuses `#main`. Control K opens the command palette; choosing Home activity moves focus into the workspace. No Python changes in this slice. Broader workspace accessibility remains open. LAN publish and remote execution stay unpublished. Claude Code remains untested and unavailable.
