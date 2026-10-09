@@ -92,6 +92,112 @@ const json = (body: unknown) => ({
   body: JSON.stringify(body),
 });
 
+function ConversationHistory({
+  conversations,
+  currentId,
+  newTo,
+  pending,
+}: {
+  conversations: Conversation[];
+  currentId?: string;
+  newTo: string;
+  pending: boolean;
+}) {
+  const headingId = useId();
+  const labelId = useId();
+  const listRef = useRef<HTMLDivElement>(null);
+  const [selectedKey, setSelectedKey] = useState(
+    currentId || conversations[0]?.id || "",
+  );
+  const found = conversations.findIndex((row) => row.id === selectedKey);
+  const currentFound = conversations.findIndex((row) => row.id === currentId);
+  const index =
+    found >= 0 ? found : currentFound >= 0 ? currentFound : 0;
+  const focusItem = (next: number) => {
+    const clamped = Math.max(0, Math.min(conversations.length - 1, next));
+    const row = conversations[clamped];
+    if (!row) return;
+    setSelectedKey(row.id);
+    const link = listRef.current?.querySelector<HTMLElement>(
+      `[data-conversation-index="${clamped}"]`,
+    );
+    link?.focus();
+    link?.scrollIntoView?.({ block: "nearest" });
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      event.preventDefault();
+      focusItem(index + 1);
+    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      event.preventDefault();
+      focusItem(index - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      focusItem(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      focusItem(conversations.length - 1);
+    }
+  };
+  return (
+    <aside className="panel chat-history">
+      <Button asChild>
+        <Link to={newTo}>
+          <Plus size={15} aria-hidden="true" />
+          New conversation
+        </Link>
+      </Button>
+      {conversations.length ? (
+        <section aria-labelledby={headingId}>
+          <h2 id={headingId} className="sr-only">
+            Conversations
+          </h2>
+          <p id={labelId} className="dashboard-note">
+            Arrow keys choose a conversation while the list is focused. Enter
+            opens it.
+          </p>
+          <div
+            ref={listRef}
+            className="chat-conversations"
+            aria-labelledby={labelId}
+            onKeyDown={onKeyDown}
+          >
+            {conversations.map((row, i) => {
+              const current = i === index;
+              return (
+                <Link
+                  className={row.id === currentId ? "selected" : ""}
+                  key={row.id}
+                  to={`/chat/${row.id}`}
+                  aria-label={`Inspect ${row.title} ${row.id.slice(0, 8)}`}
+                  aria-current={current ? "true" : undefined}
+                  tabIndex={current ? 0 : -1}
+                  data-conversation-index={i}
+                  onFocus={() => setSelectedKey(row.id)}
+                >
+                  <MessageSquare size={15} aria-hidden="true" />
+                  <span>
+                    <strong>{row.title}</strong>
+                    <small>
+                      {row.model_label ?? row.model} · {time(row.updated_at)}
+                    </small>
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      ) : (
+        !pending && (
+          <p className="muted">
+            Your conversations will stay here after a restart.
+          </p>
+        )
+      )}
+    </aside>
+  );
+}
+
 export default function Chat({ assistant = false }: { assistant?: boolean }) {
   const { id } = useParams();
   const cache = useQueryClient();
@@ -170,34 +276,12 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
         }
       />
       <div className="chat-layout">
-        <aside className="panel chat-history">
-          <Button asChild>
-            <Link to={assistant ? "/" : "/chat"}>
-              <Plus size={15} />
-              New conversation
-            </Link>
-          </Button>
-          {conversations.data?.map((row) => (
-            <Link
-              className={id === row.id ? "selected" : ""}
-              key={row.id}
-              to={`/chat/${row.id}`}
-            >
-              <MessageSquare size={15} />
-              <span>
-                <strong>{row.title}</strong>
-                <small>
-                  {row.model_label ?? row.model} · {time(row.updated_at)}
-                </small>
-              </span>
-            </Link>
-          ))}
-          {!conversations.isPending && !conversations.data?.length && (
-            <p className="muted">
-              Your conversations will stay here after a restart.
-            </p>
-          )}
-        </aside>
+        <ConversationHistory
+          conversations={conversations.data ?? []}
+          currentId={id}
+          newTo={assistant ? "/" : "/chat"}
+          pending={conversations.isPending}
+        />
         <section className="chat-main panel">
           {!id ? (
             <div className="content-panel">

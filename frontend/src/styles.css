@@ -1387,13 +1387,26 @@ main:focus-visible {
   max-height: 75vh;
   overflow: auto;
 }
-.chat-history > a:not(.button) {
+.chat-history .dashboard-note {
+  padding: 4px 0 8px;
+}
+.chat-conversations {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chat-conversations:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.chat-history .chat-conversations a {
   display: flex;
   gap: 10px;
   padding: 12px 8px;
   border-radius: 6px;
 }
-.chat-history > a.selected {
+.chat-history .chat-conversations a.selected,
+.chat-history .chat-conversations a[aria-current="true"] {
   background: #b9f48a10;
   color: #b9f48a;
 }
