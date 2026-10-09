@@ -340,3 +340,7 @@ Frontend lint, TypeScript, 131 component tests and production build passed. Work
 ## Agent execution history keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 132 component tests and production build passed. Agent execution history is one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names including capability or step tool and short Run id. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Search sources keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 133 component tests and production build passed. Retrieved search source cards are one keyboard sequence (arrows, Home, End, Enter opens the public URL) with unique Source names including title and id. Rel stays `noopener noreferrer`. This is search, not browser automation. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
