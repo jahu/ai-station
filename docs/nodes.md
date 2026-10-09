@@ -14,8 +14,12 @@ Uvicorn inside the container still listens on all container interfaces so Docker
 
 `GET /api/operator-auth` reports `lan_bind_allowed: false` and `lan_exposure` of `disabled` (loopback), `forbidden` (non-loopback without a password) or `unpublished` (password present, transport still off).
 
-## Node inventory
+## Node inventory and invitations
 
-`GET /api/nodes` returns the local Host Runner only (`transport: unix-socket`). `remote_registration` is `unavailable`. There is no join token, TCP listener, or target-aware remote resource claim.
+`GET /api/nodes` always includes this workstation's Host Runner (`transport: unix-socket`). After an operator password is stored, `POST /api/nodes/invitations` creates a pending remote node and returns a one-time `aisn_` token. Only the HMAC-SHA256 of that token is persisted. Later GETs omit the token.
 
-This inventory is a control-plane GET, not a Task/Run. Changing the password is a setting write, not a workload.
+`POST /api/nodes/register` accepts the token on the existing loopback API, marks the node `registered`, and consumes the token. `POST /api/nodes/{id}/revoke` clears pending or registered remotes. The local node cannot be revoked.
+
+`remote_registration` is `loopback-token`. Transport for remotes stays `unpublished`. Registration does not open a LAN listener, extra TCP port, or target-aware remote resource claim. A registered remote still has no network path into this control plane.
+
+Invitations and revocation are control-plane writes, not Task/Run workloads. Changing the operator password is a setting write, not a workload.

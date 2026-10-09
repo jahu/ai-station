@@ -16,7 +16,6 @@ from app.db import session_scope
 from app.models import Setting
 
 router = APIRouter(prefix="/api/operator-auth", tags=["operator"])
-nodes_router = APIRouter(prefix="/api/nodes", tags=["nodes"])
 DB = Annotated[Session, Depends(session_scope)]
 SETUP_KEY = "operator_auth"
 ALGORITHM = "pbkdf2-sha256"
@@ -159,27 +158,3 @@ def clear_password(body: ClearBody, session: DB):
         session.delete(row)
     session.commit()
     return public_status(session)
-
-
-@nodes_router.get("")
-def nodes(session: DB):
-    status = public_status(session)
-    return {
-        "items": [
-            {
-                "id": "local",
-                "name": "This workstation",
-                "kind": "host-runner",
-                "transport": "unix-socket",
-                "ownership": "local",
-                "authenticated": True,
-            }
-        ],
-        "remote_registration": "unavailable",
-        "lan_exposure": status["lan_exposure"],
-        "summary": (
-            "Only the private local Host Runner is registered. Remote node registration and LAN "
-            "transport stay unpublished until operator authentication is paired with an enabled "
-            "non-loopback listener. That listener is not enabled."
-        ),
-    }

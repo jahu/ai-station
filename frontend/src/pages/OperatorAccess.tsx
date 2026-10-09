@@ -18,7 +18,10 @@ type NodeRow = {
   kind: string;
   transport: string;
   ownership: string;
+  status?: string;
   authenticated: boolean;
+  token_issued?: boolean;
+  token?: string;
 };
 
 type NodesPayload = {
@@ -46,6 +49,7 @@ export default function OperatorAccess() {
   });
   const [password, setPassword] = useState("");
   const [current, setCurrent] = useState("");
+  const [issuedToken, setIssuedToken] = useState("");
   const save = useMutation({
     mutationFn: () =>
       api<OperatorStatus>(
@@ -72,6 +76,21 @@ export default function OperatorAccess() {
       setPassword("");
       setCurrent("");
       void cache.invalidateQueries({ queryKey: ["operator-auth"] });
+      void cache.invalidateQueries({ queryKey: ["nodes"] });
+    },
+  });
+  const invite = useMutation({
+    mutationFn: (name: string) =>
+      api<NodeRow>("/nodes/invitations", json("POST", { name })),
+    onSuccess: (row) => {
+      setIssuedToken(row.token ?? "");
+      void cache.invalidateQueries({ queryKey: ["nodes"] });
+    },
+  });
+  const revoke = useMutation({
+    mutationFn: (id: string) =>
+      api<NodeRow>(`/nodes/${id}/revoke`, json("POST", {})),
+    onSuccess: () => {
       void cache.invalidateQueries({ queryKey: ["nodes"] });
     },
   });
@@ -174,7 +193,7 @@ export default function OperatorAccess() {
           </div>
         </div>
         <p className="muted">{nodes.data?.summary}</p>
-        <ErrorNotice error={nodes.error} />
+        <ErrorNotice error={nodes.error ?? invite.error ?? revoke.error} />
         <div className="diagnostic-list">
           {nodes.data?.items.map((node) => (
             <div key={node.id}>
@@ -182,14 +201,51 @@ export default function OperatorAccess() {
                 <strong>{node.name}</strong>
                 <p>
                   {node.kind} · {node.transport} · {node.ownership}
+                  {node.status ? ` · ${node.status}` : ""}
                 </p>
               </div>
-              <Badge
-                status={node.authenticated ? "available" : "unavailable"}
-              />
+              <div className="row">
+                <Badge
+                  status={node.authenticated ? "available" : "unavailable"}
+                />
+                {node.id !== "local" && node.status !== "revoked" ? (
+                  <Button
+                    variant="secondary"
+                    disabled={revoke.isPending}
+                    onClick={() => revoke.mutate(node.id)}
+                  >
+                    Revoke
+                  </Button>
+                ) : null}
+              </div>
             </div>
           ))}
         </div>
+        {issuedToken ? (
+          <p>
+            One-time invitation token (not stored in the list):{" "}
+            <code>{issuedToken}</code>
+          </p>
+        ) : null}
+        <form
+          className="image-form mt"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const fields = new FormData(event.currentTarget);
+            invite.mutate(String(fields.get("name") ?? "").trim());
+          }}
+        >
+          <label>
+            Remote node name
+            <input name="name" required maxLength={200} />
+          </label>
+          <Button
+            type="submit"
+            disabled={invite.isPending || !status.data?.configured}
+          >
+            {invite.isPending ? "Issuing…" : "Issue invitation"}
+          </Button>
+        </form>
       </section>
     </>
   );

@@ -101,9 +101,10 @@ def test_nodes_list_is_local_host_runner_only():
     payload = client.get("/api/nodes").json()
     assert [item["id"] for item in payload["items"]] == ["local"]
     assert payload["items"][0]["transport"] == "unix-socket"
-    assert payload["remote_registration"] == "unavailable"
+    assert payload["remote_registration"] == "loopback-token"
+    assert payload["lan_bind_allowed"] is False
     assert payload["lan_exposure"] == "disabled"
-    assert "unpublished" in payload["summary"].lower() or "not enabled" in payload["summary"].lower()
+    assert "unpublished" in payload["summary"].lower()
 
 
 def test_compose_publish_addresses_stay_on_loopback():
