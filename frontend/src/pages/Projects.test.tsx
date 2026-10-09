@@ -164,6 +164,86 @@ it("moves through the project list with arrow keys", async () => {
   expect(first.tabIndex).toBe(0);
 });
 
+it("moves through Git policy checkboxes without inventing a Run", async () => {
+  const fetch = vi.fn(async (path: string) => ({
+    ok: !path.endsWith("/status"),
+    json: async () =>
+      path.endsWith("/status")
+        ? { detail: "Host Runner is unavailable" }
+        : path.endsWith("/worktrees")
+          ? []
+          : {
+              id: "saved",
+              name: "Saved project",
+              repo_path: "/repos/saved",
+              default_branch: "main",
+              integration_branch: "develop",
+              protected_branches: ["main", "master"],
+              preferred_executor: "codex",
+              test_commands: [],
+              lint_commands: [],
+              build_commands: [],
+              agent_rules: "",
+              pr_policy: {
+                commit_task_branch: true,
+                push_task_branch: false,
+                pr_to_integration: false,
+              },
+              updated_at: "2026-10-09T12:00:00Z",
+            },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(<ProjectDetail />, "/projects/saved");
+  fireEvent.click(await screen.findByText("Git workflow policy"));
+  const commit = screen.getByLabelText("Policy commit_task_branch");
+  const push = screen.getByLabelText("Policy push_task_branch");
+  const pullRequest = screen.getByLabelText("Policy pr_to_integration");
+  expect(commit.tabIndex).toBe(0);
+  expect(push.tabIndex).toBe(-1);
+  expect(pullRequest.tabIndex).toBe(-1);
+  expect(screen.getByText(/There is no inspectable policy Run/)).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: /Allow commits on task branches/i,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  fireEvent.keyDown(commit.closest(".policy-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: /Allow commits on task branches/i,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(false);
+  fireEvent.keyDown(commit.closest(".policy-choice-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(push.tabIndex).toBe(0);
+  expect(commit.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(push);
+  fireEvent.keyDown(push.closest(".policy-choice-list") as HTMLElement, {
+    key: " ",
+  });
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: /Allow pushing task branches/i,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  fireEvent.keyDown(push.closest(".policy-choice-list") as HTMLElement, {
+    key: "End",
+  });
+  expect(pullRequest.tabIndex).toBe(0);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).includes("/runs")),
+  ).toBe(true);
+});
+
 it("creates a project using only a name and waits for setup", async () => {
   const fetch = vi.fn(async (path: string) => ({
     ok: true,

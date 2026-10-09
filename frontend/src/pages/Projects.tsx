@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link,
@@ -53,6 +53,21 @@ const policyDefaults = {
 };
 const commandText = (commands: string[][]) =>
   commands.map((command) => JSON.stringify(command)).join("\n");
+type GitPolicy = typeof policyDefaults;
+const gitPolicyItems = [
+  {
+    key: "commit_task_branch" as const,
+    title: "Allow commits on task branches",
+  },
+  {
+    key: "push_task_branch" as const,
+    title: "Allow pushing task branches",
+  },
+  {
+    key: "pr_to_integration" as const,
+    title: "Allow PRs to the integration branch",
+  },
+];
 function parseCommands(text: string): string[][] {
   return text
     .split("\n")
@@ -77,6 +92,69 @@ function parseCommands(text: string): string[][] {
       }
       return command;
     });
+}
+
+function PolicyChoiceList({
+  policy,
+  onChange,
+}: {
+  policy: GitPolicy;
+  onChange: (policy: GitPolicy) => void;
+}) {
+  const labelId = useId();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    gitPolicyItems,
+    (item) => item.key,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    const item = gitPolicyItems[index];
+    if (!item) return;
+    event.preventDefault();
+    onChange({ ...policy, [item.key]: !policy[item.key] });
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a Git policy while the list is focused. Space or Enter
+        selects it. Saving still does not commit, push, or open a PR. There is
+        no inspectable policy Run.
+      </p>
+      <div
+        ref={listRef}
+        className="policy-choice-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {gitPolicyItems.map((item, i) => {
+          const current = i === index;
+          return (
+            <div
+              key={item.key}
+              aria-label={`Policy ${item.key}`}
+              {...itemProps(i, item.key)}
+            >
+              <label className="project-checkbox">
+                <input
+                  type="checkbox"
+                  checked={policy[item.key]}
+                  tabIndex={current ? 0 : -1}
+                  onChange={(event) =>
+                    onChange({ ...policy, [item.key]: event.target.checked })
+                  }
+                />
+                {item.title}
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
 }
 
 function ProjectForm({
@@ -277,24 +355,10 @@ function ProjectForm({
               Reviewed commits and GitHub publication follow these rules. Force
               push, production PRs, and automatic merge remain disabled.
             </p>
-            {(
-              [
-                ["commit_task_branch", "Allow commits on task branches"],
-                ["push_task_branch", "Allow pushing task branches"],
-                ["pr_to_integration", "Allow PRs to the integration branch"],
-              ] as const
-            ).map(([key, label]) => (
-              <label className="project-checkbox" key={key}>
-                <input
-                  type="checkbox"
-                  checked={policy[key]}
-                  onChange={(e) =>
-                    setPolicy({ ...policy, [key]: e.target.checked })
-                  }
-                />
-                {label}
-              </label>
-            ))}
+            <PolicyChoiceList
+              policy={policy}
+              onChange={(next) => setPolicy(next)}
+            />
           </div>
         </details>
         <Button type="submit">
