@@ -14,6 +14,7 @@ import { ConsentChoiceList } from "./ConsentChoiceList";
 import { PublicationChoiceList } from "./PublicationChoiceList";
 import { ReviewChoiceList } from "./ReviewChoiceList";
 import { ExploreChoiceList } from "./ExploreChoiceList";
+import { RepairChoiceList } from "./RepairChoiceList";
 import { parseFilePaths } from "./filePaths";
 import { GpuChoiceList } from "./GpuChoiceList";
 
@@ -995,12 +996,12 @@ export default function AssistantActions({
             </small>
           )}
           {value.action === "coding.local" && (
-            <label>
-              Automatic repair
-              <select
+            <div>
+              <span>Automatic repair</span>
+              <RepairChoiceList
                 value={repairAttempts}
-                onChange={(event) => {
-                  const attempts = Number(event.target.value);
+                disabled={busy}
+                onChange={(attempts) => {
                   setRepairAttempts(attempts);
                   scope(
                     projectId,
@@ -1011,16 +1012,8 @@ export default function AssistantActions({
                     attempts,
                   );
                 }}
-              >
-                <option value={0}>Off — I will request repairs</option>
-                <option value={1}>Try once if validation fails</option>
-                <option value={2}>Try up to twice if validation fails</option>
-              </select>
-              <small>
-                Same local model, files and saved checks. Commit still requires
-                your review.
-              </small>
-            </label>
+              />
+            </div>
           )}
           {value.action === "coding.local" && explore ? (
             <p className="muted">

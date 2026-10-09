@@ -10,6 +10,7 @@ import { CodingHistory } from "./CodingSessions";
 import { FileChoiceList } from "./FileChoiceList";
 import { ConsentChoiceList } from "./ConsentChoiceList";
 import { ExploreChoiceList } from "./ExploreChoiceList";
+import { RepairChoiceList } from "./RepairChoiceList";
 import { parseFilePaths } from "./filePaths";
 
 type Project = {
@@ -283,19 +284,14 @@ export default function Coding() {
                     />
                   )}
                   {local && (
-                    <label>
-                      Repair after failed checks
-                      <select
+                    <div>
+                      <span>Repair after failed checks</span>
+                      <RepairChoiceList
                         value={repairAttempts}
-                        onChange={(e) =>
-                          setRepairAttempts(Number(e.target.value))
-                        }
-                      >
-                        <option value={0}>Ask me first</option>
-                        <option value={1}>One attempt</option>
-                        <option value={2}>Up to two attempts</option>
-                      </select>
-                    </label>
+                        disabled={create.isPending || modelPending}
+                        onChange={setRepairAttempts}
+                      />
+                    </div>
                   )}
                   <Link
                     className="text-link"
