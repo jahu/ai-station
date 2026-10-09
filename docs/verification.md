@@ -268,3 +268,7 @@ Frontend lint, TypeScript, 112 component tests and production build passed. Obse
 ## Coding conversations keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 113 component tests and production build passed. Coding conversation cards form one keyboard sequence (arrows, Home, End, Enter opens). Inspect names include the session title and short id. Decorative open icons stay out of the tab order. The list is a labelled Coding conversations landmark. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Connectors list keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 114 component tests and production build passed. Named HTTP GET connectors form one keyboard sequence (arrows, Home, End, Enter inspects the last check when one exists). Inspect, Check GET and Remove names include the connector name and short id. Browser/GitHub/email adapters stay listed as unavailable and are not in that inspect sequence. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

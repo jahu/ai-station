@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
+import { useListKeyboard } from "./useListKeyboard";
 
 type ConnectorInfo = {
   id: string;
@@ -38,7 +39,108 @@ function secretLabel(row: ConnectorInfo) {
   return row.secret_source === "env" ? row.secret_ref : "Secret stored";
 }
 
+function ConnectorCards({
+  connectors,
+  checkPending,
+  removePending,
+  onCheck,
+  onRemove,
+}: {
+  connectors: ConnectorInfo[];
+  checkPending: boolean;
+  removePending: boolean;
+  onCheck: (id: string) => void;
+  onRemove: (id: string, name: string) => void;
+}) {
+  const headingId = useId();
+  const labelId = useId();
+  const navigate = useNavigate();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    connectors,
+    (row) => row.id,
+  );
+  const selected = connectors[index];
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key !== "Enter" || event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input")) return;
+    if (selected?.last_run_id) {
+      event.preventDefault();
+      navigate(`/runs/${selected.last_run_id}`);
+    }
+  };
+  return (
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId} className="sr-only">
+        Named connectors
+      </h3>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a connector while the list is focused. Enter inspects
+        its last check when one exists. Check GET and Remove stay on the
+        selected row.
+      </p>
+      <div
+        ref={listRef}
+        className="diagnostic-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {connectors.map((row, i) => {
+          const current = i === index;
+          const shortId = row.id.slice(0, 8);
+          return (
+            <div key={row.id} {...itemProps(i, row.id)}>
+              <div>
+                <strong>{row.name}</strong>
+                <p>
+                  {row.kind} GET · <span className="mono">{row.url}</span>
+                </p>
+              </div>
+              <div className="row">
+                <Badge
+                  status={row.health === "healthy" ? "available" : row.status}
+                />
+                <span className="muted">{secretLabel(row)}</span>
+                {row.last_run_id && (
+                  <Link
+                    className="text-link"
+                    to={`/runs/${row.last_run_id}`}
+                    tabIndex={current ? 0 : -1}
+                    aria-label={`Inspect ${row.name} ${shortId}`}
+                  >
+                    Open last check →
+                  </Link>
+                )}
+                <Button
+                  variant="secondary"
+                  tabIndex={current ? 0 : -1}
+                  disabled={checkPending || !row.enabled}
+                  aria-label={`Check GET ${row.name} ${shortId}`}
+                  onClick={() => onCheck(row.id)}
+                >
+                  Check GET
+                </Button>
+                <Button
+                  variant="secondary"
+                  tabIndex={current ? 0 : -1}
+                  disabled={removePending}
+                  aria-label={`Remove ${row.name} ${shortId}`}
+                  onClick={() => onRemove(row.id, row.name)}
+                >
+                  Remove
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function Connectors() {
+  const unavailableId = useId();
   const navigate = useNavigate();
   const cache = useQueryClient();
   const connectors = useQuery({
@@ -71,6 +173,7 @@ export default function Connectors() {
     mutationFn: (id: string) => api(`/connectors/${id}`, { method: "DELETE" }),
     onSuccess: () => void cache.invalidateQueries({ queryKey: ["connectors"] }),
   });
+  const unavailable = kinds.data?.filter((item) => !item.operational) ?? [];
   return (
     <section className="panel mt">
       <div className="panel-heading">
@@ -97,57 +200,35 @@ export default function Connectors() {
           remove.error
         }
       />
-      <div className="diagnostic-list">
-        {kinds.data
-          ?.filter((item) => !item.operational)
-          .map((item) => (
-            <div key={item.kind}>
-              <div>
-                <strong>{item.kind}</strong>
-                <p>{item.summary}</p>
+      {unavailable.length > 0 && (
+        <section aria-labelledby={unavailableId}>
+          <h3 id={unavailableId} className="sr-only">
+            Unavailable adapters
+          </h3>
+          <div className="diagnostic-list">
+            {unavailable.map((item) => (
+              <div key={item.kind}>
+                <div>
+                  <strong>{item.kind}</strong>
+                  <p>{item.summary}</p>
+                </div>
+                <Badge status="unavailable" />
               </div>
-              <Badge status="unavailable" />
-            </div>
-          ))}
-        {connectors.data?.map((row) => (
-          <div key={row.id}>
-            <div>
-              <strong>{row.name}</strong>
-              <p>
-                {row.kind} GET · <span className="mono">{row.url}</span>
-              </p>
-            </div>
-            <div className="row">
-              <Badge
-                status={row.health === "healthy" ? "available" : row.status}
-              />
-              <span className="muted">{secretLabel(row)}</span>
-              {row.last_run_id && (
-                <Link className="text-link" to={`/runs/${row.last_run_id}`}>
-                  Open last check →
-                </Link>
-              )}
-              <Button
-                variant="secondary"
-                disabled={check.isPending || !row.enabled}
-                onClick={() => check.mutate(row.id)}
-              >
-                Check GET
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={remove.isPending}
-                onClick={() => {
-                  if (window.confirm(`Remove ${row.name}?`))
-                    remove.mutate(row.id);
-                }}
-              >
-                Remove
-              </Button>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </section>
+      )}
+      {!!connectors.data?.length && (
+        <ConnectorCards
+          connectors={connectors.data}
+          checkPending={check.isPending}
+          removePending={remove.isPending}
+          onCheck={(id) => check.mutate(id)}
+          onRemove={(id, name) => {
+            if (window.confirm(`Remove ${name}?`)) remove.mutate(id);
+          }}
+        />
+      )}
       <form
         className="image-form mt"
         onSubmit={(event) => {
