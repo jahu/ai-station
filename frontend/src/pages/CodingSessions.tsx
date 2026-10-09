@@ -21,6 +21,7 @@ import { Button } from "../components/ui/button";
 import { terminal, time } from "../lib/utils";
 import CodingReview from "./CodingReview";
 import GithubPublication from "./GithubPublication";
+import { ConsentChoiceList } from "./ConsentChoiceList";
 import { useListKeyboard } from "./useListKeyboard";
 
 type SessionRow = {
@@ -348,12 +349,12 @@ export default function CodingSession() {
                 disabled={!!active || !latest}
               />
               {isExternal && (
-                <label className="coding-turn-consent">
-                  <input
-                    type="checkbox"
-                    checked={external}
-                    onChange={(e) => setExternal(e.target.checked)}
-                  />
+                <ConsentChoiceList
+                  checked={external}
+                  disabled={!!active || send.isPending}
+                  labelClassName="coding-turn-consent"
+                  onChange={setExternal}
+                >
                   <span>
                     Share this turn and relevant source with{" "}
                     {latest?.executor_type === "codex_proposal"
@@ -361,7 +362,7 @@ export default function CodingSession() {
                       : "Cursor"}
                     .
                   </span>
-                </label>
+                </ConsentChoiceList>
               )}
               <div className="row spread">
                 <small className="muted">

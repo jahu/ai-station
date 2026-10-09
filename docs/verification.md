@@ -400,3 +400,7 @@ Frontend lint, TypeScript, 155 component tests and production build passed. Auto
 ## Project Git policy keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 156 component tests and production build passed. Project Git workflow policy checkboxes reuse `useListKeyboard` with unique Policy names. Space or Enter selects commit, push or integration-PR intent and does not invent a Git Run. Force push, production PRs and automatic merge stay disabled. Saving still does not commit, push or open a PR. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Coding consent keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 159 component tests and production build passed. Coding start, follow-up and assistant external-AI consent reuse `useListKeyboard` with a unique Consent name. Space or Enter selects it and does not start a coding Run or send a follow-up. Local AI still needs no consent. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

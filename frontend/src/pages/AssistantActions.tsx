@@ -10,6 +10,7 @@ import CodingReview from "./CodingReview";
 import GithubPublication from "./GithubPublication";
 import { useListKeyboard } from "./useListKeyboard";
 import { FileChoiceList } from "./FileChoiceList";
+import { ConsentChoiceList } from "./ConsentChoiceList";
 import { parseFilePaths } from "./filePaths";
 import { GpuChoiceList } from "./GpuChoiceList";
 
@@ -1056,19 +1057,18 @@ export default function AssistantActions({
               committing.
             </p>
           ) : (
-            <label>
-              <input
-                type="checkbox"
-                checked={external}
-                onChange={(e) => {
-                  setExternal(e.target.checked);
-                  scope(projectId, files, e.target.checked);
-                }}
-              />
+            <ConsentChoiceList
+              checked={external}
+              disabled={busy}
+              onChange={(next) => {
+                setExternal(next);
+                scope(projectId, files, next);
+              }}
+            >
               Allow sending this instruction, project guidance and selected file
               contents to external{" "}
               {value.action === "coding.codex" ? "Codex" : "Cursor"}.
-            </label>
+            </ConsentChoiceList>
           )}
           <ErrorNotice error={projects.error} />
         </details>
