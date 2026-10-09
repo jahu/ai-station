@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Run } from "../api";
@@ -78,6 +78,87 @@ const schedule = (agent: Agent) =>
       : agent.trigger === "datetime"
         ? `Once: ${time(agent.run_at)}`
         : "Manual";
+
+function AgentCards({ agents }: { agents: Agent[] }) {
+  const headingId = useId();
+  const labelId = useId();
+  const listRef = useRef<HTMLDivElement>(null);
+  const [selectedKey, setSelectedKey] = useState(agents[0]?.id ?? "");
+  const found = agents.findIndex((agent) => agent.id === selectedKey);
+  const index = found >= 0 ? found : 0;
+  const focusItem = (next: number) => {
+    const clamped = Math.max(0, Math.min(agents.length - 1, next));
+    const agent = agents[clamped];
+    if (!agent) return;
+    setSelectedKey(agent.id);
+    const link = listRef.current?.querySelector<HTMLElement>(
+      `[data-agent-index="${clamped}"]`,
+    );
+    link?.focus();
+    link?.scrollIntoView?.({ block: "nearest" });
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      event.preventDefault();
+      focusItem(index + 1);
+    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      event.preventDefault();
+      focusItem(index - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      focusItem(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      focusItem(agents.length - 1);
+    }
+  };
+  return (
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId} className="sr-only">
+        Agents
+      </h2>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose an agent while the list is focused. Enter inspects it.
+      </p>
+      <div
+        ref={listRef}
+        className="memory-grid"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {agents.map((agent, i) => {
+          const current = i === index;
+          return (
+            <Link
+              className="panel memory-card"
+              to={`/agents/${agent.id}`}
+              key={agent.id}
+              aria-label={`Inspect ${agent.name} ${agent.id.slice(0, 8)}`}
+              aria-current={current ? "true" : undefined}
+              tabIndex={current ? 0 : -1}
+              data-agent-index={i}
+              onFocus={() => setSelectedKey(agent.id)}
+            >
+              <div className="row">
+                <span className="tiny-tag">LOCAL</span>
+                <span className="tiny-tag">
+                  {agent.enabled ? "Enabled" : "Paused / draft"}
+                </span>
+              </div>
+              <h2>{agent.name}</h2>
+              <p className="agent-goal">{agent.goal}</p>
+              <p className="muted">
+                {schedule(agent)} · {agent.model || "No model selected"}
+              </p>
+              <p>Last: {agent.last_status || "Never run"}</p>
+              <small className="muted">Next: {time(agent.next_run_at)}</small>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
 export function Agents() {
   const navigate = useNavigate();
@@ -165,29 +246,7 @@ export function Agents() {
           </Empty>
         </section>
       ) : (
-        <div className="memory-grid">
-          {agents.data.map((agent) => (
-            <Link
-              className="panel memory-card"
-              to={`/agents/${agent.id}`}
-              key={agent.id}
-            >
-              <div className="row">
-                <span className="tiny-tag">LOCAL</span>
-                <span className="tiny-tag">
-                  {agent.enabled ? "Enabled" : "Paused / draft"}
-                </span>
-              </div>
-              <h2>{agent.name}</h2>
-              <p className="agent-goal">{agent.goal}</p>
-              <p className="muted">
-                {schedule(agent)} · {agent.model || "No model selected"}
-              </p>
-              <p>Last: {agent.last_status || "Never run"}</p>
-              <small className="muted">Next: {time(agent.next_run_at)}</small>
-            </Link>
-          ))}
-        </div>
+        <AgentCards agents={agents.data} />
       )}
       <div className="row">
         <Button

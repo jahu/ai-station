@@ -1596,6 +1596,13 @@ main:focus-visible {
   gap: 1rem;
   margin: 1rem 0;
 }
+.memory-grid:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+section:has(> .memory-grid) > .dashboard-note {
+  padding: 0 0 12px;
+}
 .memory-card {
   display: grid;
   gap: 1rem;
@@ -1663,8 +1670,12 @@ main:focus-visible {
   flex-wrap: wrap;
   gap: 10px;
 }
-.memory-card:hover {
+.memory-card:hover,
+.memory-card[aria-current="true"] {
   border-color: #b9f48a66;
+}
+.memory-card[aria-current="true"] {
+  background: rgba(185, 245, 139, 0.08);
 }
 
 .model-toolbar,
