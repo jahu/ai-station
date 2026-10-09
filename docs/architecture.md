@@ -107,7 +107,7 @@ Saved project test/lint/build commands now run through the worker and a managed 
 
 ## Reviewed Git progression
 
-[Reviewed commits](coding-commits.md) extend a completed coding Task with a user-approved Git Run. Approval data binds the exact review and validation snapshot; the native Runner owns checked commit publication and its interruption journal. The [full-product ledger](product-completion.md) tracks the remaining acceptance increments.
+[Reviewed commits](coding-commits.md) extend a completed coding Task with a user-approved Git Run. The review acknowledgement reuses the shared list keyboard with a unique Review name; Space or Enter selects it and does not queue a commit. Approval data binds the exact review and validation snapshot; the native Runner owns checked commit publication and its interruption journal. The [full-product ledger](product-completion.md) tracks the remaining acceptance increments.
 
 ## Conversation orchestration
 

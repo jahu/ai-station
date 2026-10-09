@@ -90,6 +90,50 @@ it("requires review acknowledgement and opens the queued commit", async () => {
   );
 });
 
+it("moves through commit review without queueing a commit", () => {
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ id: "commit" }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  const run = {
+    id: "coding",
+    status: "succeeded",
+    summary: "Fix selected files",
+    metadata: {
+      coding_review: {
+        branch: "ai/test",
+        files: [
+          { path: "file.py", diff: "+print(42)", insertions: 1, deletions: 0 },
+        ],
+      },
+    },
+  } as unknown as Run;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <CodingReview run={run} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const option = screen.getByLabelText("Review commit");
+  expect(option.tabIndex).toBe(0);
+  expect(screen.getByText(/There is no inspectable review-ack Run/)).toBeTruthy();
+  fireEvent.keyDown(option.closest(".review-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: /I reviewed the diff/,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).includes("/commit")),
+  ).toBe(true);
+});
+
 it("offers a local repair only after confirmed failing validation", async () => {
   const fetch = vi.fn(async (_url: string, options?: RequestInit) => ({
     ok: true,
