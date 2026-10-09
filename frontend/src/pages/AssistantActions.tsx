@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ImagePlus, Mic, X, ArrowLeft, ArrowRight } from "lucide-react";
@@ -8,6 +8,7 @@ import { api, type Artifact, type Hardware, type Run } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 import CodingReview from "./CodingReview";
 import GithubPublication from "./GithubPublication";
+import { useListKeyboard } from "./useListKeyboard";
 
 export type CodingScope = {
   project_id: string;
@@ -188,6 +189,96 @@ function commitReady(run: Run) {
     run.status === "succeeded" &&
     !!run.metadata?.git_commit &&
     !run.metadata?.publication_run_id
+  );
+}
+
+function ImageReferenceStrip({
+  ids,
+  busy,
+  onChange,
+}: {
+  ids: string[];
+  busy: boolean;
+  onChange: (ids: string[]) => void;
+}) {
+  const labelId = useId();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    ids,
+    (id) => id,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key === "Enter") event.preventDefault();
+  };
+  if (!ids.length) return null;
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose an image reference while the list is focused. Remove
+        and reorder stay on the selected reference. Enter does not send. There
+        is no inspectable reference Run.
+      </p>
+      <div
+        ref={listRef}
+        className="assistant-reference-strip"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {ids.map((id, i) => {
+          const current = i === index;
+          const shortId = id.slice(0, 8);
+          return (
+            <div
+              className="assistant-reference"
+              key={id}
+              aria-label={`Image reference ${i + 1} ${shortId}`}
+              {...itemProps(i, id)}
+            >
+              <span className="assistant-reference-number">{i + 1}</span>
+              <img src={`/api/artifacts/${id}/file`} alt={`Reference ${i + 1}`} />
+              <button
+                className="assistant-reference-remove"
+                aria-label={`Remove reference ${i + 1} ${shortId}`}
+                type="button"
+                tabIndex={current ? 0 : -1}
+                onClick={() => onChange(ids.filter((_, other) => other !== i))}
+              >
+                <X size={14} />
+              </button>
+              <div className="assistant-reference-order">
+                <button
+                  type="button"
+                  aria-label={`Move reference ${i + 1} ${shortId} earlier`}
+                  tabIndex={current ? 0 : -1}
+                  disabled={busy || i === 0}
+                  onClick={() => {
+                    const next = [...ids];
+                    [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                    onChange(next);
+                  }}
+                >
+                  <ArrowLeft size={13} />
+                </button>
+                <span>Reference {i + 1}</span>
+                <button
+                  type="button"
+                  aria-label={`Move reference ${i + 1} ${shortId} later`}
+                  tabIndex={current ? 0 : -1}
+                  disabled={busy || i === ids.length - 1}
+                  onClick={() => {
+                    const next = [...ids];
+                    [next[i + 1], next[i]] = [next[i], next[i + 1]];
+                    onChange(next);
+                  }}
+                >
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
@@ -596,67 +687,13 @@ export default function AssistantActions({
             Drop images here. Order matters — for example, person first,
             clothing second. Use the arrows to reorder.
           </p>
-          <div className="assistant-reference-strip">
-            {value.image_artifact_ids.map((id, index) => (
-              <div className="assistant-reference" key={`${id}-${index}`}>
-                <span className="assistant-reference-number">{index + 1}</span>
-                <img
-                  src={`/api/artifacts/${id}/file`}
-                  alt={`Reference ${index + 1}`}
-                />
-                <button
-                  className="assistant-reference-remove"
-                  aria-label={`Remove reference ${index + 1}`}
-                  type="button"
-                  onClick={() =>
-                    onChange({
-                      ...value,
-                      image_artifact_ids: value.image_artifact_ids.filter(
-                        (_, i) => i !== index,
-                      ),
-                    })
-                  }
-                >
-                  <X size={14} />
-                </button>
-                <div className="assistant-reference-order">
-                  <button
-                    type="button"
-                    aria-label={`Move reference ${index + 1} earlier`}
-                    disabled={busy || index === 0}
-                    onClick={() => {
-                      const ids = [...value.image_artifact_ids];
-                      [ids[index - 1], ids[index]] = [
-                        ids[index],
-                        ids[index - 1],
-                      ];
-                      onChange({ ...value, image_artifact_ids: ids });
-                    }}
-                  >
-                    <ArrowLeft size={13} />
-                  </button>
-                  <span>Reference {index + 1}</span>
-                  <button
-                    type="button"
-                    aria-label={`Move reference ${index + 1} later`}
-                    disabled={
-                      busy || index === value.image_artifact_ids.length - 1
-                    }
-                    onClick={() => {
-                      const ids = [...value.image_artifact_ids];
-                      [ids[index + 1], ids[index]] = [
-                        ids[index],
-                        ids[index + 1],
-                      ];
-                      onChange({ ...value, image_artifact_ids: ids });
-                    }}
-                  >
-                    <ArrowRight size={13} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ImageReferenceStrip
+            ids={value.image_artifact_ids}
+            busy={busy}
+            onChange={(image_artifact_ids) =>
+              onChange({ ...value, image_artifact_ids })
+            }
+          />
         </div>
       )}
       {value.action === "coding.commit" && (

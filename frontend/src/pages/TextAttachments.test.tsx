@@ -69,3 +69,37 @@ it("stages a PDF and image without treating them as UTF-8 text", async () => {
   await screen.findByText(/Pixels are not sent to the model/);
   expect(screen.getByRole("img", { name: "photo.png" })).toBeTruthy();
 });
+it("moves through staged text attachments with arrow keys without sending", async () => {
+  render(<Composer />);
+  fireEvent.change(screen.getByLabelText("Attach files"), {
+    target: {
+      files: [
+        file("code.py", new TextEncoder().encode("print(1)\n")),
+        file("notes.md", new TextEncoder().encode("# notes\n")),
+      ],
+    },
+  });
+  const first = await screen.findByLabelText("Attachment code.py");
+  const second = screen.getByLabelText("Attachment notes.md");
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(
+    screen.getByText(/There is no inspectable attachment Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(first.closest(".chat-attachment-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(document.activeElement).toBe(second);
+  expect(screen.getByRole("button", { name: "Remove notes.md" }).tabIndex).toBe(
+    0,
+  );
+  fireEvent.keyDown(second.closest(".chat-attachment-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(screen.getByLabelText("Attachment notes.md")).toBeTruthy();
+  fireEvent.keyDown(second.closest(".chat-attachment-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});

@@ -44,7 +44,9 @@ it("keeps ordered image uploads and removes one reference", async () => {
   });
   const second = await screen.findByAltText("Reference 2");
   expect(second.getAttribute("src")).toBe("/api/artifacts/image-2/file");
-  fireEvent.click(screen.getByRole("button", { name: "Remove reference 1" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Remove reference 1 image-1" }),
+  );
   expect(screen.getByAltText("Reference 1").getAttribute("src")).toBe(
     "/api/artifacts/image-2/file",
   );
@@ -142,7 +144,7 @@ it("reuses Library images in selection order, reorders them, and attaches a voic
     "/api/artifacts/outfit/file",
   );
   fireEvent.click(
-    screen.getByRole("button", { name: "Move reference 2 earlier" }),
+    screen.getByRole("button", { name: "Move reference 2 person earlier" }),
   );
   expect(screen.getByAltText("Reference 1").getAttribute("src")).toBe(
     "/api/artifacts/person/file",
@@ -463,4 +465,62 @@ it("requires an explicit GGUF before a load action is ready", async () => {
     model_file_id: "gguf-1",
     context_size: 4096,
   });
+});
+
+it("moves through image references with arrow keys without inventing a Run", async () => {
+  let uploaded = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ id: `image-${++uploaded}` }),
+    })),
+  );
+  function Composer() {
+    const [value, setValue] = useState(emptyOptions);
+    return (
+      <AssistantActions
+        value={value}
+        onChange={setValue}
+        busy={false}
+        onUploading={() => {}}
+      />
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  fireEvent.change(screen.getByLabelText("Image references"), {
+    target: {
+      files: [new File(["a"], "person.png"), new File(["b"], "clothing.png")],
+    },
+  });
+  const first = await screen.findByLabelText("Image reference 1 image-1");
+  const second = screen.getByLabelText("Image reference 2 image-2");
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(
+    screen.getByText(/There is no inspectable reference Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(
+    first.closest(".assistant-reference-strip") as HTMLElement,
+    { key: "ArrowRight" },
+  );
+  expect(second.tabIndex).toBe(0);
+  expect(document.activeElement).toBe(second);
+  expect(
+    screen.getByRole("button", { name: "Remove reference 2 image-2" }).tabIndex,
+  ).toBe(0);
+  fireEvent.keyDown(
+    second.closest(".assistant-reference-strip") as HTMLElement,
+    { key: "Enter" },
+  );
+  expect(screen.getByLabelText("Image reference 2 image-2")).toBeTruthy();
+  fireEvent.keyDown(
+    second.closest(".assistant-reference-strip") as HTMLElement,
+    { key: "Home" },
+  );
+  expect(first.tabIndex).toBe(0);
 });
