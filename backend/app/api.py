@@ -50,6 +50,7 @@ from app.project_setup import router as project_setup_router
 from app.projects import router as project_router
 from app.providers import ProviderError
 from app.publication import router as publication_router
+from app.recovery import lease_health
 from app.redact import redact_obj
 from app.reviewed_commits import router as commit_router
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
@@ -304,6 +305,7 @@ def system_status(session: DB):
             "available": bool(heartbeat and heartbeat >= cutoff.isoformat()),
             "last_heartbeat": heartbeat,
         },
+        **lease_health(session),
     }
 
 

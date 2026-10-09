@@ -44,7 +44,7 @@ HTTP fetch is a real tool and is off unless the run has `network_read` (GET) or 
 
 The `operator_auth` setting stores PBKDF2-SHA256 material only. Responses omit password, salt and hash. Rotation and removal require the current password. After the hash exists, the loopback UI/API are gated by `ais_operator` (HMAC in `operator_session`, 12 hours, httpOnly, SameSite=strict, not Secure). Health and login remain public so the workstation can unlock itself. Node invitations require that hash to exist; join tokens are HMAC-SHA256 and returned once. Registration is accepted only on the loopback API and still needs the session. LAN transport stays unpublished.
 
-SQLite backups require `manage_station` and write under the data root. They never restore over the live database. Compose shutdown does not pass `--volumes`. Interrupted-run acknowledgement records inspection only and does not replay side effects. See [operations](operations.md).
+SQLite backups require `manage_station` and write under the data root. They never restore over the live database. Compose shutdown does not pass `--volumes`. Interrupted-run acknowledgement records inspection only and does not replay side effects. Held-lease status is inspect-only and does not recover or restore. See [operations](operations.md).
 
 ## Secrets
 

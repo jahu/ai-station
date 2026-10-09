@@ -120,6 +120,19 @@ export interface Status {
   counts: Record<string, number>;
   workers: { id: string; available: boolean; last_heartbeat: string }[];
   scheduler: { available: boolean; last_heartbeat: string | null };
+  lease_seconds?: number;
+  held_lease_count?: number;
+  stale_lease_count?: number;
+  leases?: {
+    id: string;
+    status: string;
+    worker_id: string | null;
+    executor_type: string;
+    retry_class: string;
+    lease_expires_at: string | null;
+    stale: boolean;
+    replay: boolean;
+  }[];
 }
 
 export function useHardware() {
