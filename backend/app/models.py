@@ -196,6 +196,7 @@ class Worktree(Base):
     owned: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
     removed_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+    expires_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True, index=True)
 
 
 class Agent(Base):

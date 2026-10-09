@@ -262,6 +262,53 @@ def test_owned_worktree_run_preserves_checkout_and_registers_report(repository, 
         assert "git.worktree.created" in client.get(f"/api/runs/{run['id']}/stream").text
         reset_engine()
         assert client.get(f"/api/projects/{project['id']}/worktrees").json()[0] == worktree
+        assert worktree["expires_at"]
+        keep = client.post(
+            f"/api/projects/{project['id']}/worktrees/{worktree['id']}/keep",
+            json={"expected_updated_at": project["updated_at"]},
+        )
+        assert keep.status_code == 200, keep.text
+        assert keep.json()["expires_at"] is None
+
+
+def test_scheduler_expires_due_owned_worktree_and_skips_pinned_or_busy(repository, owned_runner):
+    from datetime import timedelta
+
+    from app.db import utcnow
+    from app.models import Worktree
+    from app.schedule import scheduler_tick
+
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, [["/usr/bin/true"]])
+        assert worktree["expires_at"]
+        with session_factory()() as session:
+            assert scheduler_tick(session) == []
+            session.commit()
+        keep = client.post(
+            f"/api/projects/{project['id']}/worktrees/{worktree['id']}/keep",
+            json={"expected_updated_at": project["updated_at"]},
+        )
+        assert keep.json()["expires_at"] is None
+        with session_factory()() as session:
+            assert scheduler_tick(session) == []
+            session.get(Worktree, worktree["id"]).expires_at = utcnow() - timedelta(days=1)
+            session.commit()
+        with session_factory()() as session:
+            queued = scheduler_tick(session)
+            session.commit()
+        assert len(queued) == 1
+        expiry = client.get(f"/api/runs/{queued[0]}").json()
+        assert expiry["executor_type"] == "worktree_remove"
+        assert expiry["triggered_by"] == "scheduler"
+        assert expiry["parent_run_id"] == worktree["run_id"]
+        with session_factory()() as session:
+            assert scheduler_tick(session) == []
+            session.commit()
+        with session_factory()() as session:
+            tick(session, "expire-worktree")
+        listed = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        assert listed["removed_at"]
+        assert listed["expires_at"] is None
 
 
 def test_preparation_does_not_run_checkout_hooks_or_filters(repository, owned_runner):

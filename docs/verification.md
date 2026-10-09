@@ -143,3 +143,8 @@ The user-approved real Cursor self-development repeat passed: preparation `c2e12
 `./scripts/check.sh`: 538 Python tests passed (5 skipped), including vendor-wheel install through the fake sandbox helper, manifest URL/VCS rejection, stale/unowned API guards, runner replay/permissions/cancellation, and time-limit failure without a success report. Frontend lint, TypeScript, 59 component tests and production build passed. Existing bundle-size and TestClient deprecation advisories remain.
 
 Normal tests never contacted PyPI. Vendor mode installed a disposable local wheel into a worktree `.venv` and imported it. PyPI mode is covered by parser/plan/policy unit tests and public-DNS fail-closed checks, not a live download. Claude Code remains untested and unavailable.
+
+
+## Automatic unused worktree expiry — 2026-10-09
+
+`./scripts/check.sh`: 539 Python tests passed (5 skipped), including scheduled expiry through the existing removal Run, skip of pinned/future/busy cases, and keep pinning. Frontend lint, TypeScript, 60 component tests and production build passed. Existing bundle-size and TestClient deprecation advisories remain. Existing worktrees stay unscheduled. Claude Code remains untested and unavailable.

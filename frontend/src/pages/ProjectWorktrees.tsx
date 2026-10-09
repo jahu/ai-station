@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { GitBranch } from "lucide-react";
 import { api, type Run } from "../api";
@@ -16,6 +16,7 @@ interface Worktree {
   base_branch: string;
   owned: boolean;
   removed_at: string | null;
+  expires_at: string | null;
 }
 
 export default function ProjectWorktrees({
@@ -24,6 +25,7 @@ export default function ProjectWorktrees({
   project: { id: string; updated_at: string; integration_branch: string };
 }) {
   const navigate = useNavigate();
+  const cache = useQueryClient();
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const worktrees = useQuery({
     queryKey: ["project-worktrees", project.id],
@@ -57,6 +59,16 @@ export default function ProjectWorktrees({
       }),
     onSuccess: (run) => navigate(`/runs/${run.id}`),
   });
+  const keep = useMutation({
+    mutationFn: (worktreeId: string) =>
+      api<Worktree>(`/projects/${project.id}/worktrees/${worktreeId}/keep`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expected_updated_at: project.updated_at }),
+      }),
+    onSuccess: () =>
+      cache.invalidateQueries({ queryKey: ["project-worktrees", project.id] }),
+  });
   const remove = useMutation({
     mutationFn: (worktreeId: string) =>
       api<Run>(`/projects/${project.id}/worktrees/${worktreeId}/remove`, {
@@ -73,6 +85,7 @@ export default function ProjectWorktrees({
     prepare.isPending ||
     validate.isPending ||
     dependencies.isPending ||
+    keep.isPending ||
     remove.isPending ||
     active ||
     worktrees.isPending ||
@@ -111,6 +124,13 @@ export default function ProjectWorktrees({
         Logs and the result report appear in the validation Run.
       </p>
       <p className="muted">
+        Unused owned worktrees are removed automatically after seven days of
+        inactivity, using the same removal Run as the explicit button. Coding,
+        validation and dependency Runs refresh that deadline.{" "}
+        <strong>Don&apos;t auto-remove</strong> keeps the checkout until you
+        delete it. Worktrees prepared before expiry existed are kept.
+      </p>
+      <p className="muted">
         Remove deletes only this owned checkout and its local task branch. It
         does not change your current repository, push, or delete GitHub
         branches. Coding conversations that used the worktree cannot continue.
@@ -121,6 +141,7 @@ export default function ProjectWorktrees({
           prepare.error ??
           dependencies.error ??
           validate.error ??
+          keep.error ??
           remove.error
         }
       />
@@ -158,6 +179,15 @@ export default function ProjectWorktrees({
                     >
                       {validate.isPending ? "Queueing…" : "Run saved validation"}
                     </Button>
+                    {worktree.expires_at && (
+                      <Button
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() => keep.mutate(worktree.id)}
+                      >
+                        {keep.isPending ? "Saving…" : "Don't auto-remove"}
+                      </Button>
+                    )}
                   </>
                 )}
               {!worktree.removed_at &&
@@ -193,7 +223,9 @@ export default function ProjectWorktrees({
                 {worktree.removed_at
                   ? "Removed. The local task branch and owned checkout are gone; GitHub remotes were not changed."
                   : worktree.owned
-                    ? "Prepared and recorded. Preserved until you remove it."
+                    ? worktree.expires_at
+                      ? `Prepared and recorded. Unused, it is removed automatically after ${new Date(worktree.expires_at).toLocaleString()}.`
+                      : "Prepared and recorded. Kept until you remove it."
                     : terminal.has(worktree.run_status)
                       ? "Preparation was not confirmed. Inspect the Run and any partial data before removing."
                       : "Preparation has not completed yet."}
@@ -203,8 +235,8 @@ export default function ProjectWorktrees({
         </div>
       ) : (
         <Empty title="No worktrees prepared">
-          Prepare a separate checkout for an upcoming coding task. Owned
-          worktrees stay until you remove them; automatic cleanup is disabled.
+          Prepare a separate checkout for an upcoming coding task. Unused owned
+          worktrees are removed after seven days unless you keep them.
         </Empty>
       )}
     </section>

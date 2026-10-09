@@ -14,6 +14,7 @@ from app.redact import redact_obj
 from app.runner_client import RunnerClient
 from app.runs import create_run, run_dict
 from app.state import TERMINAL
+from app.worktree_expiry import refresh_expiry
 
 router = APIRouter(prefix="/api/coding")
 DB = Annotated[Session, Depends(session_scope)]
@@ -174,5 +175,6 @@ def followup(task_id: UUID, body: Followup, session: DB):
         "review_status": "superseded",
     }
     task.updated_at = utcnow()
+    refresh_expiry(session, worktree_id=worktree.id)
     session.commit()
     return redact_obj(run_dict(run))

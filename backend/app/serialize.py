@@ -115,6 +115,7 @@ def worktree_dict(worktree: Worktree) -> dict:
         "owned": worktree.owned,
         "created_at": iso(worktree.created_at),
         "removed_at": iso(worktree.removed_at),
+        "expires_at": iso(worktree.expires_at),
     }
 
 

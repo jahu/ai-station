@@ -116,6 +116,9 @@ class WorktreeExecutor:
         ):
             raise ValueError("Worktree result does not match the queued reservation")
         worktree.owned = True
+        from app.worktree_expiry import schedule_expiry
+
+        schedule_expiry(worktree)
         report = {
             key: manifest[key]
             for key in ("run_id", "project_id", "branch", "base_branch", "base_commit", "relative_path")
