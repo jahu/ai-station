@@ -136,10 +136,14 @@ it("unifies attention with inspect and stop actions", async () => {
     screen.getByRole("link", { name: "View all conversations" }).getAttribute("href"),
   ).toBe("/chat");
   expect(
-    screen.getByRole("link", { name: "Inspect My conversation" }).getAttribute("href"),
+    screen
+      .getByRole("link", { name: "Inspect My conversation chat" })
+      .getAttribute("href"),
   ).toBe("/chat/chat");
   expect(
-    screen.getByRole("link", { name: "Inspect Report.md" }).getAttribute("href"),
+    screen
+      .getByRole("link", { name: "Inspect Report.md artifact" })
+      .getAttribute("href"),
   ).toBe("/library/artifact");
   expect(
     screen
@@ -341,6 +345,52 @@ it("denies a parked Run from Home without restore or replay", async () => {
       ),
     ).toBe(true),
   );
+});
+
+it("moves through Home activity lists with unique inspect names", async () => {
+  const data = overview();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        ...data,
+        upcoming: [
+          data.upcoming[0],
+          {
+            ...data.upcoming[0],
+            id: "agent-two",
+            name: "Evening digest",
+            overdue: false,
+          },
+        ],
+      }),
+    })),
+  );
+  mount();
+  const first = await screen.findByRole("link", {
+    name: "Inspect scheduled Morning review agent",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect scheduled Evening digest agent-tw",
+  });
+  expect(first.getAttribute("href")).toBe("/agents/agent");
+  expect(second.getAttribute("href")).toBe("/agents/agent-two");
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  fireEvent.keyDown(first.closest("ul") as HTMLElement, { key: "ArrowDown" });
+  expect(second.tabIndex).toBe(0);
+  expect(document.activeElement).toBe(second);
+  expect(
+    screen.getByRole("link", { name: "Inspect Morning review agent" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/agents/agent");
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect observation Ollama runtime" })
+      .getAttribute("href"),
+  ).toBe("/system");
 });
 
 it("shows an error instead of claiming there is no activity", async () => {
