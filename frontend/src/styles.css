@@ -1660,7 +1660,7 @@ pre {
   flex-direction: column;
   gap: 8px;
 }
-.agent-form input:not([type="checkbox"]),
+.agent-form input:not([type="checkbox"]):not([type="radio"]),
 .agent-form textarea,
 .agent-form select {
   width: 100%;
@@ -1685,6 +1685,16 @@ pre {
 }
 .agent-wide {
   grid-column: 1 / -1;
+}
+.agent-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.agent-form legend {
+  font-weight: 600;
+  margin-bottom: 8px;
 }
 .agent-form .agent-tool {
   flex-direction: row;

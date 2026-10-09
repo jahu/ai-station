@@ -20,6 +20,63 @@ from app.runs import mark_failed, transition
 from app.state import RunStatus
 
 
+def execute_context_tool(session, run, definition, name, deadline):
+    spec = agent_tool(name)
+    if name not in {"system_snapshot", "memory_search", "web_search", "http_fetch"} or not spec.operational:
+        raise ValueError(f"Refusing an invented or unavailable agent step: {name}")
+    for permission in spec.required_permissions:
+        require(run.effective_permissions, permission)
+    if name == "web_search":
+        from app.web_search import execute_search
+
+        return asyncio.run(execute_search(session, run, definition.search_query, deadline=deadline))
+    if name == "http_fetch":
+        from app.http_fetch import execute_fetch
+
+        return asyncio.run(execute_fetch(session, run, definition.fetch_urls, deadline=deadline))
+    append_event(session, run.id, "tool.started", {"tool": name})
+    session.commit()
+    try:
+        if name == "system_snapshot":
+            result = RunnerClient(timeout=spec.timeout).hardware()
+        else:
+            entries = search_memory(session, "", scope="agent", scope_id=run.agent_id, limit=20)
+            result = {"scope": "agent", "scope_id": run.agent_id, "entries": []}
+            budget = 12000
+            for entry in entries:
+                if len(entry.content) <= budget:
+                    result["entries"].append(
+                        {
+                            "id": entry.id,
+                            "content": entry.content,
+                            "updated_at": entry.updated_at.isoformat(),
+                        }
+                    )
+                    budget -= len(entry.content)
+        serialized = json.dumps(result, ensure_ascii=False)
+        if len(serialized) > 20000:
+            raise ValueError("Tool result exceeded the context size limit")
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".json") as handle:
+            json.dump(result, handle)
+            handle.flush()
+            register_file(
+                session,
+                source=Path(handle.name),
+                artifact_type="json",
+                mime_type="application/json",
+                original_filename=f"{name}.json",
+                run_id=run.id,
+                metadata={"tool": name},
+            )
+        append_event(session, run.id, "tool.completed", {"tool": name})
+        session.commit()
+        return result
+    except Exception as exc:
+        append_event(session, run.id, "tool.failed", {"tool": name, "error": str(exc)})
+        session.commit()
+        raise
+
+
 class LocalAgentExecutor:
     name = "agent"
 
@@ -33,68 +90,23 @@ class LocalAgentExecutor:
         deadline = time.monotonic() + definition.maximum_runtime
         text = ""
         try:
-            context = []
-            for name in definition.tools:
-                if self._canceled(session, run):
-                    return "done"
-                spec = agent_tool(name)
-                if not spec.operational:
-                    raise ValueError(f"Agent tool is unavailable: {name}")
-                for permission in spec.required_permissions:
-                    require(run.effective_permissions, permission)
-                if name == "remember_report":
-                    continue
-                if name == "web_search":
-                    from app.web_search import execute_search
+            if run.parameters.get("tool"):
+                raise ValueError("The report step cannot execute invented tool commands")
+            raw_deadline = run.parameters.get("deadline_at")
+            if raw_deadline:
+                from datetime import datetime
 
-                    result = asyncio.run(
-                        execute_search(session, run, definition.search_query, deadline=deadline)
-                    )
-                    if result is None:
-                        self._canceled(session, run)
-                        return "done"
-                    context.append({"tool": name, "result": result})
-                    continue
-                if name == "http_fetch":
-                    from app.http_fetch import execute_fetch
+                from app.db import utcnow
 
-                    result = asyncio.run(
-                        execute_fetch(session, run, definition.fetch_urls, deadline=deadline)
-                    )
-                    if result is None:
-                        self._canceled(session, run)
-                        return "done"
-                    context.append({"tool": name, "result": result})
-                    continue
-                append_event(session, run.id, "tool.started", {"tool": name})
-                session.commit()
-                try:
-                    if name == "system_snapshot":
-                        result = RunnerClient(timeout=spec.timeout).hardware()
-                    else:
-                        entries = search_memory(session, "", scope="agent", scope_id=run.agent_id, limit=20)
-                        result = {"scope": "agent", "scope_id": run.agent_id, "entries": []}
-                        budget = 12000
-                        for entry in entries:
-                            if len(entry.content) <= budget:
-                                result["entries"].append(
-                                    {
-                                        "id": entry.id,
-                                        "content": entry.content,
-                                        "updated_at": entry.updated_at.isoformat(),
-                                    }
-                                )
-                                budget -= len(entry.content)
-                    serialized = json.dumps(result, ensure_ascii=False)
-                    if len(serialized) > 20000:
-                        raise ValueError("Tool result exceeded the context size limit")
-                    context.append({"tool": name, "result": result})
-                    append_event(session, run.id, "tool.completed", {"tool": name})
-                    session.commit()
-                except Exception as exc:
-                    append_event(session, run.id, "tool.failed", {"tool": name, "error": str(exc)})
-                    session.commit()
-                    raise
+                remaining = (datetime.fromisoformat(raw_deadline) - utcnow()).total_seconds()
+                if remaining <= 0:
+                    raise ProviderError("Agent runtime limit exceeded before this step started")
+                deadline = time.monotonic() + remaining
+            if "remember_report" in definition.tools:
+                require(run.effective_permissions, "memory_write")
+            from app.agent_workflow import sibling_context
+
+            context = sibling_context(session, run)
             if self._canceled(session, run):
                 return "done"
             from app.skills import SkillError, skill_prompt, verify_snapshots
@@ -128,6 +140,13 @@ class LocalAgentExecutor:
                     "content": f"Goal:\n{definition.goal}\n\nExpected output:\n{definition.output_expectation}\n\nObserved context:\n{json.dumps(context, ensure_ascii=False)}",
                 },
             ]
+            extras = {
+                item["tool"]: item["result"]
+                for item in context
+                if item["tool"] in {"web_search", "http_fetch"}
+            }
+            if extras:
+                run.metadata_json = {**run.metadata_json, **extras}
             run.parameters = {**run.parameters, "messages": messages, "tool_context": context}
             transition(
                 session,

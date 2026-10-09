@@ -1,6 +1,6 @@
 # Security model
 
-> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Local agents now have explicit activation, durable schedules, bounded context tools, GET of reviewed public pages and versioned Skills as instruction packs. Bounded Cursor file-edit proposals, review artifacts and separate validation Runs are operational. Other coding adapters remain inactive. See README for runnable commands and limitations.
+> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Local agents now have explicit activation, durable schedules, bounded context tools, GET of reviewed public pages, versioned Skills as instruction packs and sequential or gated workflow steps. Bounded Cursor file-edit proposals, review artifacts and separate validation Runs are operational. Other coding adapters remain inactive. See README for runnable commands and limitations.
 
 
 AI Station is a single-user workstation application. The default network exposure is loopback only. There is no authentication on that localhost MVP. Do not publish port 8765 on a LAN or the public internet until authentication exists.
@@ -74,7 +74,7 @@ Memory scope/source IDs must resolve to existing records; mismatched source conv
 
 ## Local agents
 
-[Agent lifecycle](agents.md) uses the shared queue, local provider, Run events and Markdown artifacts. Explicit telemetry and own-scope memory tools gather bounded context before inference. Versioned Skills are instruction files snapshotted by hash; they cannot add permissions, tools or Host Runner operations. Definitions start disabled; unsupported tools block activation. Scheduling is serialized, persistent and non-overlapping.
+[Agent lifecycle](agents.md) uses the shared queue, local provider, Run events and Markdown artifacts. Explicit telemetry and own-scope memory tools gather bounded context as persisted child Runs before inference. Versioned Skills are instruction files snapshotted by hash; they cannot add permissions, tools or Host Runner operations. A model cannot invent extra workflow steps, tools or commands; unknown keys fail closed without publishing children. Definitions start disabled; unsupported tools block activation. Scheduling is serialized, persistent and non-overlapping.
 
 ## Runtime observations
 

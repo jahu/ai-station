@@ -73,6 +73,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         permission_profile="agent_local",
         enabled=False,
         require_approval=False,
+        workflow_mode="sequential",
         output_expectation="A short report the user can inspect in Runs.",
         notification_policy={"surface": "runs"},
         retry_policy={"auto": False},

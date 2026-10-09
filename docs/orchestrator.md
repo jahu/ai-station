@@ -8,7 +8,7 @@ A submitted turn creates a Task and an orchestration Run. The worker selects a t
 
 An action uses the same domain service as its dedicated workspace. Child Runs inherit Task/conversation provenance and reference their orchestration parent. Image generation, worktree preparation, coding, validation and model loading remain separate inspectable Runs. A planning Run completes when it atomically publishes its child Run; it does not wait while occupying the sole worker. The conversation projects the complete Task tree, errors, validation and artifacts, rather than equating successful planning with successful execution.
 
-Dispatch and its event/message links commit in one short database transaction. Interruption before that commit publishes no action; interruption afterward leaves the durable queued child. Recovery does not blindly replay externally dispatched operations. Cancellation before dispatch prevents child creation; afterward Stop targets the currently active child. Future parallel plans require persisted step dependencies and task-wide cancellation before being enabled.
+Dispatch and its event/message links commit in one short database transaction. Interruption before that commit publishes no action; interruption afterward leaves the durable queued child. Recovery does not blindly replay externally dispatched operations. Cancellation before dispatch prevents child creation; afterward Stop targets the currently active child. Agent workflows now persist sequential or gated step dependencies on ordinary child Runs; the conversation planner still publishes one child per turn. Future parallel conversation plans still require task-wide cancellation before being enabled.
 
 ## Inputs, authority and results
 

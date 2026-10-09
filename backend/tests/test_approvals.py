@@ -8,6 +8,19 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 
+def drain(session, worker="approval-test", limit=30):
+    for _ in range(limit):
+        if tick(session, worker) is None:
+            return
+    raise AssertionError("worker queue did not drain")
+
+
+def workflow_step(api, parent_id, key):
+    parent = api.get("/api/runs/" + parent_id).json()
+    step = next(item for item in parent["workflow"]["steps"] if item["key"] == key)
+    return api.get("/api/runs/" + step["run_id"]).json()
+
+
 def _create(api, **extra):
     result = api.post(
         "/api/agents",
@@ -50,9 +63,10 @@ def test_required_approval_parks_the_run_until_granted(monkeypatch):
     assert granted.json()["status"] == "queued"
     assert granted.json()["approval"]["resolution"] == "granted"
     with session_factory()() as session:
-        tick(session, "approval-test")
+        drain(session, "approval-test")
     done = api.get("/api/runs/" + parked["id"]).json()
-    assert done["status"] == "succeeded"
+    report = workflow_step(api, parked["id"], "report")
+    assert done["status"] == "succeeded" and report["status"] == "succeeded"
     assert received
     assert api.get("/api/agents/" + agent["id"]).json()["last_status"] == "succeeded"
 
@@ -104,5 +118,6 @@ def test_existing_agents_still_run_without_approval(monkeypatch):
     ).json()
     assert queued["status"] == "queued" and queued.get("approval") is None
     with session_factory()() as session:
-        tick(session, "approval-test")
+        drain(session, "approval-test")
     assert api.get("/api/runs/" + queued["id"]).json()["status"] == "succeeded"
+    assert workflow_step(api, queued["id"], "report")["status"] == "succeeded"

@@ -32,6 +32,7 @@ interface Agent {
   maximum_runtime: number;
   output_expectation: string;
   require_approval: boolean;
+  workflow_mode: "sequential" | "gated";
   project_id: string | null;
   enabled: boolean;
   updated_at: string;
@@ -283,8 +284,11 @@ export function AgentDetail() {
           Activation uses the saved definition. Pausing stops future scheduling;
           cancel an active execution from its Run page.
           {agent.require_approval
-            ? " Each Run waits for an explicit approval before tools or inference."
+            ? " Each workflow waits for an explicit approval before any step is published."
             : ""}
+          {agent.workflow_mode === "gated"
+            ? " Gated mode parks the report after context tools so you can inspect those artifacts first."
+            : " Sequential mode runs saved context tools then the report, each as its own Run."}
         </p>
         {agent.runs?.find((run) => run.status === "waiting_for_approval") && (
           <p className="notice">
@@ -322,6 +326,11 @@ export function AgentDetail() {
             <Link className="row" key={run.id} to={`/runs/${run.id}`}>
               <Badge status={run.status} />
               <span>{time(run.created_at)}</span>
+              <span>
+                {run.capability === "agent.step"
+                  ? String(run.parameters?.tool ?? "step")
+                  : run.capability}
+              </span>
               <span className="mono">{run.id.slice(0, 8)}</span>
             </Link>
           ))
@@ -387,6 +396,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           maximum_runtime: values.maximum_runtime,
           output_expectation: values.output_expectation,
           require_approval: values.require_approval ?? false,
+          workflow_mode: values.workflow_mode ?? "sequential",
           project_id: values.project_id,
           enabled: agent.enabled,
         }),
@@ -559,6 +569,46 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             </small>
           </span>
         </label>
+        <fieldset className="agent-wide">
+          <legend>Workflow steps</legend>
+          <p className="muted">
+            Selected context tools become persisted child Runs with
+            dependencies. The model cannot add tools, URLs or shell commands.
+            Cancel stops the currently active child. Remember reports still
+            runs only after a successful report.
+          </p>
+          <label className="agent-tool">
+            <input
+              type="radio"
+              name="workflow_mode"
+              checked={(values.workflow_mode ?? "sequential") === "sequential"}
+              onChange={() => update("workflow_mode", "sequential")}
+            />
+            <span>
+              <strong>Sequential</strong>
+              <small>
+                Context tools then the report. Each step waits for the previous
+                one to succeed.
+              </small>
+            </span>
+          </label>
+          <label className="agent-tool">
+            <input
+              type="radio"
+              name="workflow_mode"
+              checked={values.workflow_mode === "gated"}
+              onChange={() => update("workflow_mode", "gated")}
+            />
+            <span>
+              <strong>Gated</strong>
+              <small>
+                Same sequence, but the report waits in waiting_for_approval
+                after context tools finish so you can inspect their artifacts
+                first.
+              </small>
+            </span>
+          </label>
+        </fieldset>
         {values.tools.includes("web_search") && (
           <section className="agent-wide agent-search-settings">
             <h3>Internet research</h3>
@@ -658,8 +708,9 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         <div className="agent-wide">
           <h3>Tools</h3>
           <p className="muted">
-            Context tools run before inference; Remember reports runs after a
-            successful report. Unavailable tools prevent activation.
+            Context tools become inspectable workflow steps before the report.
+            Remember reports runs after a successful report. Unavailable tools
+            prevent activation.
           </p>
           {tools.data?.map((tool) => (
             <label className="agent-tool" key={tool.name}>

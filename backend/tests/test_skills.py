@@ -10,6 +10,19 @@ from app.skills import SkillError, list_skills, load_skill, snapshot_skills, ver
 from fastapi.testclient import TestClient
 
 
+def drain(session, worker="skill-test", limit=30):
+    for _ in range(limit):
+        if tick(session, worker) is None:
+            return
+    raise AssertionError("worker queue did not drain")
+
+
+def workflow_step(api, parent_id, key):
+    parent = api.get("/api/runs/" + parent_id).json()
+    step = next(item for item in parent["workflow"]["steps"] if item["key"] == key)
+    return api.get("/api/runs/" + step["run_id"]).json()
+
+
 def _skill_dir(skill_id: str) -> Path:
     path = get_settings().data_dir / "skills" / skill_id
     path.mkdir(parents=True, exist_ok=True)
@@ -135,9 +148,10 @@ def test_queued_run_fails_when_installed_skill_changes(monkeypatch):
     snapshots = queued.json()["parameters"]["skill_snapshots"]
     assert snapshots[0]["id"] == "daily-brief"
     path.write_text(path.read_text(encoding="utf-8") + "\nChanged after queue.\n", encoding="utf-8")
+    parent_id = queued.json()["id"]
     with session_factory()() as session:
-        tick(session, "skill-test")
-    failed = api.get("/api/runs/" + queued.json()["id"]).json()
+        drain(session, "skill-test")
+    failed = workflow_step(api, parent_id, "report")
     assert failed["status"] == "failed"
     assert "changed after this run was queued" in failed["error_message"]
     assert received == []
@@ -167,13 +181,13 @@ def test_verified_skill_text_is_injected_and_recorded(monkeypatch):
         f"/api/agents/{agent['id']}/run", json={"expected_updated_at": agent["updated_at"]}
     ).json()
     with session_factory()() as session:
-        tick(session, "skill-test")
-    run = api.get("/api/runs/" + queued["id"]).json()
+        drain(session, "skill-test")
+    run = workflow_step(api, queued["id"], "report")
     assert run["status"] == "succeeded"
     system = received[0]["messages"][0]["content"]
     assert "Cite only supplied observations." in system
     assert "do not grant tools" in system.lower()
-    events = api.get(f"/api/runs/{queued['id']}/events").json()
+    events = api.get(f"/api/runs/{run['id']}/events").json()
     verified = [item for item in events if item["event_type"] == "skills.verified"]
     assert verified and verified[0]["payload"]["skills"][0]["id"] == "daily-brief"
     current = verify_snapshots(run["parameters"]["skill_snapshots"])

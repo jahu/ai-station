@@ -326,6 +326,9 @@ export function RunDetail() {
     },
   });
   const isTerminal = run.data ? terminal.has(run.data.status) : false;
+  const workflowActive = (run.data?.workflow?.steps ?? []).some(
+    (step) => !terminal.has(step.status),
+  );
   return (
     <>
       <Link className="back-link" to="/runs">
@@ -337,7 +340,7 @@ export function RunDetail() {
         title={run.data?.capability ?? "Run details"}
         action={
           run.data &&
-          !isTerminal && (
+          (!isTerminal || workflowActive) && (
             <Button
               variant="secondary"
               disabled={
@@ -430,9 +433,34 @@ export function RunDetail() {
             {run.data.parent_run_id && (
               <p>
                 <Link to={`/runs/${run.data.parent_run_id}`}>
-                  View original run →
+                  View workflow parent →
                 </Link>
               </p>
+            )}
+            {run.data.workflow && (
+              <section className="panel">
+                <h2>Workflow steps</h2>
+                <p className="muted">
+                  {run.data.workflow.mode === "gated"
+                    ? "Gated: the report waits for approval after context tools."
+                    : "Sequential: each step waits for the previous one to succeed."}{" "}
+                  Cancel targets the currently active child.
+                </p>
+                {run.data.workflow.steps.length ? (
+                  run.data.workflow.steps.map((step) => (
+                    <Link className="row" key={step.run_id} to={`/runs/${step.run_id}`}>
+                      <Badge status={step.status} />
+                      <span>{step.key}</span>
+                      {step.gate === "approval" && (
+                        <span className="muted">approval gate</span>
+                      )}
+                      <span className="mono">{step.run_id.slice(0, 8)}</span>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="muted">Steps are published after this workflow Run starts.</p>
+                )}
+              </section>
             )}
             {run.data.executor_type === "photo_pipe" &&
               ["failed", "canceled", "interrupted"].includes(

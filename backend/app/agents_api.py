@@ -18,7 +18,6 @@ from app.factory import draft_agent
 from app.local_provider import model_endpoint
 from app.models import Agent, Project, Run
 from app.providers import ProviderError
-from app.runs import run_dict
 from app.schedule import active_run, compute_next, launch_agent
 from app.serialize import agent_dict
 
@@ -121,7 +120,7 @@ def detail(agent_id: UUID, session: DB):
     runs = session.scalars(
         select(Run).where(Run.agent_id == agent.id).order_by(Run.created_at.desc()).limit(100)
     )
-    return {**definition_dict(agent), "runs": [run_dict(run) for run in runs]}
+    return {**definition_dict(agent), "runs": [run_public(session, run) for run in runs]}
 
 
 @router.put("/{agent_id}")

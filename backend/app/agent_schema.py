@@ -36,6 +36,7 @@ class AgentSettings(BaseModel):
     maximum_runtime: int = Field(default=600, ge=5, le=3600)
     output_expectation: str = Field(default="A concise, factual report.", max_length=4000)
     require_approval: StrictBool = False
+    workflow_mode: Literal["sequential", "gated"] = "sequential"
     enabled: StrictBool = False
 
     @model_validator(mode="after")

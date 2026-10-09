@@ -34,6 +34,11 @@ def run_public(session: Session, run: Run) -> dict:
         from app.serialize import approval_dict
 
         payload["approval"] = approval_dict(approval)
+    from app.agent_workflow import workflow_view
+
+    workflow = workflow_view(session, run)
+    if workflow is not None:
+        payload["workflow"] = workflow
     return payload
 
 
@@ -96,8 +101,9 @@ def resolve_run_approval(session: Session, run: Run, resolution: str) -> Run:
             session, run, RunStatus.CANCELED, event_type="run.canceled", payload={"approval": "denied"}
         )
         return run
-    from app.llama import prepare_consumer
+    if run.executor_type != "agent_workflow":
+        from app.llama import prepare_consumer
 
-    prepare_consumer(session, run)
+        prepare_consumer(session, run)
     transition(session, run, RunStatus.QUEUED, event_type="run.requeued", payload={"approval": "granted"})
     return run

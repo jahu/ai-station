@@ -114,12 +114,15 @@ def transition(
         run.finished_at = now
     if run.agent_id:
         agent = session.get(Agent, run.agent_id)
-        if agent is not None:
+        if agent is not None and not (
+            run.executor_type == "agent_workflow" and target == RunStatus.SUCCEEDED
+        ):
             agent.last_status = target
-            if target in {RunStatus.FAILED, RunStatus.INTERRUPTED}:
-                agent.failure_count += 1
-            elif target == RunStatus.SUCCEEDED:
-                agent.failure_count = 0
+            if run.executor_type != "agent_tool":
+                if target in {RunStatus.FAILED, RunStatus.INTERRUPTED}:
+                    agent.failure_count += 1
+                elif target == RunStatus.SUCCEEDED:
+                    agent.failure_count = 0
     append_event(session, run.id, event_type, payload or {"status": target})
     session.flush()
     return run
@@ -184,6 +187,12 @@ def mark_failed(session: Session, run: Run, error_type: str, message: str) -> No
 def request_cancel(session: Session, run: Run) -> Run:
     if run.status == RunStatus.CANCEL_REQUESTED:
         return run
+    if run.executor_type == "agent_workflow" and run.status in TERMINAL:
+        from app.agent_workflow import active_workflow_child
+
+        child = active_workflow_child(session, run)
+        if child is not None:
+            return request_cancel(session, child)
     run.cancellation_requested_at = utcnow()
     if (
         run.status == RunStatus.QUEUED
