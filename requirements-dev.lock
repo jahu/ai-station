@@ -69,6 +69,8 @@ pydantic-settings==2.15.0
     #   ai-station-runner (host-runner/pyproject.toml)
 pygments==2.21.0
     # via pytest
+pypdf==6.19.0
+    # via ai-station (backend/pyproject.toml)
 pytest==9.1.1
     # via
     #   ai-station (backend/pyproject.toml)

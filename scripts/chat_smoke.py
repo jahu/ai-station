@@ -123,7 +123,7 @@ def main():
                     page.on("pageerror", lambda e: errors.append(str(e)))
                     page.goto(url + "/#/chat")
                     page.get_by_role("button", name="Create conversation").click()
-                    page.get_by_label("Attach text files").set_input_files(
+                    page.get_by_label("Attach files").set_input_files(
                         {
                             "name": "fixture.py",
                             "mimeType": "text/plain",
@@ -185,7 +185,7 @@ def main():
                     assert not errors, errors
                     browser.close()
                 print(
-                    "PASS: local chat discovery, streaming, Markdown, text attachments/provider context, restart persistence, regeneration, silent-provider cancellation, and mobile layout"
+                    "PASS: local chat discovery, streaming, Markdown, attachments/provider context, restart persistence, regeneration, silent-provider cancellation, and mobile layout"
                 )
             except Exception:
                 log.flush()

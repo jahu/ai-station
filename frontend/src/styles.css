@@ -2955,6 +2955,14 @@ pre {
   line-height: 1.8;
   max-width: 580px;
 }
+.chat-attachment-preview {
+  display: block;
+  max-width: 220px;
+  max-height: 160px;
+  margin-top: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
 .library-picker-dialog {
   position: fixed;
   z-index: 101;
