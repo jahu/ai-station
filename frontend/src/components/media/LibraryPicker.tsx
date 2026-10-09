@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { AudioLines, Check, Library, Search, X } from "lucide-react";
 import { api, type Artifact } from "../../api";
 import { ErrorNotice, Loading } from "../common";
 import { Button } from "../ui/button";
+import { useListKeyboard } from "../../pages/useListKeyboard";
 
 export default function LibraryPicker({
   kind,
@@ -42,6 +43,12 @@ export default function LibraryPicker({
     kind === "audio"
       ? a.mime_type === "audio/wav"
       : ["image/png", "image/jpeg", "image/webp"].includes(a.mime_type),
+  );
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    available,
+    (artifact) => artifact.id,
   );
   return (
     <Dialog.Root
@@ -96,64 +103,77 @@ export default function LibraryPicker({
           {query.isPending ? (
             <Loading />
           ) : (
-            <div
-              className="library-picker-grid"
-              role="group"
-              aria-label="Reusable artifacts"
-            >
-              {available.map((a) => {
-                const index = selected.findIndex((item) => item.id === a.id);
-                const attached = existing.includes(a.id);
-                return (
-                  <button
-                    type="button"
-                    key={a.id}
-                    className="library-picker-card"
-                    aria-label={a.title || a.original_filename}
-                    aria-pressed={index >= 0 || attached}
-                    disabled={
-                      busy ||
-                      attached ||
-                      (kind === "image" &&
-                        selected.length >= limit &&
-                        index < 0)
-                    }
-                    onClick={() =>
-                      setSelected(
-                        index >= 0
-                          ? selected.filter((item) => item.id !== a.id)
-                          : kind === "audio"
-                            ? [a]
-                            : [...selected, a],
-                      )
-                    }
-                  >
-                    {kind === "image" ? (
-                      <img src={`/api/artifacts/${a.id}/thumbnail`} alt="" />
-                    ) : (
-                      <div className="library-picker-audio">
-                        <AudioLines size={28} />
-                      </div>
-                    )}
-                    <strong>{a.title || a.original_filename}</strong>
-                    <small>
-                      {attached
-                        ? "Already attached"
-                        : index >= 0
-                          ? `Selected ${index + 1}`
-                          : kind === "image"
-                            ? `${a.metadata.width ?? "?"} × ${a.metadata.height ?? "?"}`
-                            : "PCM WAV"}
-                    </small>
-                    {(index >= 0 || attached) && (
-                      <span className="library-picker-check">
-                        {attached ? <Check size={14} /> : index + 1}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+            <section aria-labelledby={headingId}>
+              <h3 id={headingId} className="sr-only">
+                Reusable artifacts
+              </h3>
+              <p id={labelId} className="dashboard-note">
+                Arrow keys choose an artifact while the grid is focused. Enter
+                selects or deselects it.
+              </p>
+              <div
+                ref={listRef}
+                className="library-picker-grid"
+                role="group"
+                aria-labelledby={labelId}
+                onKeyDown={onKeyDown}
+              >
+                {available.map((a, i) => {
+                  const chosen = selected.findIndex((item) => item.id === a.id);
+                  const attached = existing.includes(a.id);
+                  const name = a.title || a.original_filename;
+                  return (
+                    <button
+                      type="button"
+                      key={a.id}
+                      className="library-picker-card"
+                      aria-label={`Choose ${name} ${a.id.slice(0, 8)}`}
+                      aria-pressed={chosen >= 0 || attached}
+                      {...itemProps(i, a.id)}
+                      disabled={
+                        busy ||
+                        attached ||
+                        (kind === "image" &&
+                          selected.length >= limit &&
+                          chosen < 0)
+                      }
+                      onClick={() =>
+                        setSelected(
+                          chosen >= 0
+                            ? selected.filter((item) => item.id !== a.id)
+                            : kind === "audio"
+                              ? [a]
+                              : [...selected, a],
+                        )
+                      }
+                    >
+                      {kind === "image" ? (
+                        <img src={`/api/artifacts/${a.id}/thumbnail`} alt="" />
+                      ) : (
+                        <div className="library-picker-audio">
+                          <AudioLines size={28} />
+                        </div>
+                      )}
+                      <strong>{a.title || a.original_filename}</strong>
+                      <small>
+                        {attached
+                          ? "Already attached"
+                          : chosen >= 0
+                            ? `Selected ${chosen + 1}`
+                            : kind === "image"
+                              ? `${a.metadata.width ?? "?"} × ${a.metadata.height ?? "?"}`
+                              : "PCM WAV"}
+                      </small>
+                      {(chosen >= 0 || attached) && (
+                        <span className="library-picker-check">
+                          {attached ? <Check size={14} /> : chosen + 1}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
           )}
           {!query.isPending && !available.length && (
             <p className="model-empty">

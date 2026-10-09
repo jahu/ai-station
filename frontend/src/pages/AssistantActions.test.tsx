@@ -135,8 +135,8 @@ it("reuses Library images in selection order, reorders them, and attaches a voic
     </QueryClientProvider>,
   );
   fireEvent.click(screen.getByRole("button", { name: "Images from Library" }));
-  fireEvent.click(await screen.findByRole("button", { name: "Outfit.jpg" }));
-  fireEvent.click(screen.getByRole("button", { name: "Person.png" }));
+  fireEvent.click(await screen.findByRole("button", { name: /Outfit\.jpg/ }));
+  fireEvent.click(screen.getByRole("button", { name: /Person\.png/ }));
   fireEvent.click(screen.getByRole("button", { name: "Attach 2 files" }));
   expect(screen.getByAltText("Reference 1").getAttribute("src")).toBe(
     "/api/artifacts/outfit/file",
@@ -148,7 +148,7 @@ it("reuses Library images in selection order, reorders them, and attaches a voic
     "/api/artifacts/person/file",
   );
   fireEvent.click(screen.getByRole("button", { name: "Voice from Library" }));
-  fireEvent.click(await screen.findByRole("button", { name: "Voice.wav" }));
+  fireEvent.click(await screen.findByRole("button", { name: /Voice\.wav/ }));
   fireEvent.click(screen.getByRole("button", { name: "Attach file" }));
   expect(
     screen.getByLabelText("Voice reference preview").getAttribute("src"),
