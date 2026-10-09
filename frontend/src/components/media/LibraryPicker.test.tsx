@@ -35,6 +35,10 @@ it("excludes existing inputs and caps the remaining image selection", async () =
   );
   fireEvent.click(screen.getByRole("button", { name: "Images from Library" }));
   expect(
+    await screen.findByRole("dialog", { name: "Choose image references" }),
+  ).toBeTruthy();
+  expect(screen.getByLabelText("Search input Library")).toBeTruthy();
+  expect(
     (await screen.findByRole("button", { name: "existing" })).hasAttribute(
       "disabled",
     ),

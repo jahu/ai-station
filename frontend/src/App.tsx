@@ -302,7 +302,10 @@ export default function App() {
             <Command>
               <div className="command-input">
                 <Search size={18} />
-                <Command.Input placeholder="Where would you like to go?" />
+                <Command.Input
+                  placeholder="Where would you like to go?"
+                  aria-label="Search workspaces and actions"
+                />
                 <Dialog.Close
                   className="icon-button"
                   aria-label="Close command palette"

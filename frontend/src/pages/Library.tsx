@@ -205,8 +205,8 @@ export function Library() {
       <div className="library-search-row">
         <label>
           <Search size={16} />
+          <span className="sr-only">Search Library</span>
           <input
-            aria-label="Search Library"
             placeholder="Search names and notes…"
             value={search}
             onChange={(event) => setSearch(event.target.value)}

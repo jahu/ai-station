@@ -100,8 +100,9 @@ it("skips to the workspace without opening LAN publish", async () => {
 it("opens the command palette from Control K and focuses the workspace after going home", async () => {
   mount("/not-a-workspace");
   fireEvent.keyDown(document, { key: "k", ctrlKey: true });
-  const dialog = await screen.findByRole("dialog");
+  const dialog = await screen.findByRole("dialog", { name: "Command palette" });
   expect(dialog).toBeTruthy();
+  expect(screen.getByLabelText("Search workspaces and actions")).toBeTruthy();
   fireEvent.click(screen.getByRole("option", { name: /Home activity/ }));
   await waitFor(() =>
     expect(

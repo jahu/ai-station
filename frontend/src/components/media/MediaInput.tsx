@@ -164,12 +164,14 @@ export default function MediaInput({
           role="region"
           aria-label={`${label} library`}
         >
-          <input
-            aria-label={`Search ${label.toLowerCase()}`}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search filenames…"
-          />
+          <label>
+            <span className="sr-only">Search {label.toLowerCase()}</span>
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search filenames…"
+            />
+          </label>
           {library.isPending ? (
             <p className="muted">Loading your Library…</p>
           ) : !available?.length ? (

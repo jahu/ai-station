@@ -258,8 +258,8 @@ export default function LlamaModels({
             </div>
             <label className="model-search">
               <Search size={17} />
+              <span className="sr-only">Search models</span>
               <input
-                aria-label="Search models"
                 placeholder="Find a model, size or quantization…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
