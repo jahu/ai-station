@@ -179,3 +179,140 @@ it("links to an existing repair and prevents committing a superseded proposal", 
     screen.queryByRole("button", { name: "Repair with Local AI" }),
   ).toBeNull();
 });
+
+it("moves between files with arrow keys and shows only the selected patch", () => {
+  const run = {
+    id: "coding",
+    status: "succeeded",
+    metadata: {
+      coding_review: {
+        branch: "ai/task",
+        files: [
+          { path: "one.py", diff: "+one", insertions: 1, deletions: 0 },
+          { path: "two.py", diff: "+two", insertions: 2, deletions: 1 },
+        ],
+      },
+    },
+  } as unknown as Run;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <CodingReview run={run} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const list = screen.getByRole("listbox", {
+    name: /Arrow keys choose a file/,
+  });
+  expect(
+    screen
+      .getByRole("option", { name: /one.py/ })
+      .getAttribute("aria-selected"),
+  ).toBe("true");
+  expect(screen.getByLabelText("Diff for one.py")).toBeTruthy();
+  expect(screen.queryByLabelText("Diff for two.py")).toBeNull();
+  fireEvent.keyDown(list, { key: "ArrowDown" });
+  expect(
+    screen
+      .getByRole("option", { name: /two.py/ })
+      .getAttribute("aria-selected"),
+  ).toBe("true");
+  expect(screen.getByLabelText("Diff for two.py")).toBeTruthy();
+  expect(screen.queryByLabelText("Diff for one.py")).toBeNull();
+});
+
+it("states cumulative totals against the task base", () => {
+  const run = {
+    id: "repair",
+    status: "succeeded",
+    parameters: { cumulative: true },
+    metadata: {
+      repair_source_run_id: "previous",
+      coding_review: {
+        branch: "ai/task",
+        base_commit: "abcdef1234567890",
+        files: [
+          { path: "app.py", diff: "+x", insertions: 3, deletions: 1 },
+          { path: "lib.py", diff: "+y", insertions: 2, deletions: 2 },
+        ],
+      },
+    },
+  } as unknown as Run;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <CodingReview run={run} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    screen.getByText(
+      /2 files · \+5 \/ −3 · cumulative against the task base · base abcdef123456/,
+    ),
+  ).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "Previous attempt →" })
+      .getAttribute("href"),
+  ).toBe("/runs/previous");
+});
+
+it("offers download and Library actions for the stored patch artifact", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        String(path).includes("/artifacts?")
+          ? [
+              {
+                id: "patch",
+                type: "git_diff",
+                original_filename: "changes.diff",
+              },
+              {
+                id: "report",
+                type: "json",
+                original_filename: "coding-review.json",
+              },
+            ]
+          : [],
+    })),
+  );
+  const run = {
+    id: "coding",
+    status: "succeeded",
+    metadata: {
+      coding_review: {
+        branch: "ai/task",
+        files: [
+          { path: "file.py", diff: "+print(42)", insertions: 1, deletions: 0 },
+        ],
+      },
+    },
+  } as unknown as Run;
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <CodingReview run={run} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const download = await screen.findByRole("link", { name: "Download patch" });
+  expect(download.getAttribute("href")).toBe("/api/artifacts/patch/file");
+  expect(download.getAttribute("download")).toBe("changes.diff");
+  expect(
+    screen
+      .getByRole("link", { name: "Open patch in Library →" })
+      .getAttribute("href"),
+  ).toBe("/library/patch");
+  expect(
+    screen
+      .getByRole("link", { name: "Download review JSON" })
+      .getAttribute("href"),
+  ).toBe("/api/artifacts/report/file");
+});

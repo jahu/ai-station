@@ -3375,6 +3375,60 @@ main:focus-visible {
   color: var(--muted);
 }
 
+.coding-review-summary {
+  color: #c0cbb9;
+  font-size: 13px;
+}
+.coding-review-artifacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 8px 0 16px;
+}
+.coding-review-artifacts .text-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.coding-review-files {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+.coding-review-file-list {
+  display: grid;
+  gap: 6px;
+  max-height: 240px;
+  overflow: auto;
+  padding: 2px;
+}
+.coding-review-file-list:focus {
+  outline: none;
+}
+.coding-review-file-list:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.coding-review-file {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: #c0cbb9;
+  font-size: 13px;
+}
+.coding-review-file[aria-selected="true"] {
+  border-color: var(--accent);
+  background: rgba(185, 245, 139, 0.08);
+  color: var(--text);
+}
+.coding-review-diff {
+  max-height: 440px;
+  overflow: auto;
+}
 .coding-exploration {
   max-height: 440px;
   overflow: auto;
