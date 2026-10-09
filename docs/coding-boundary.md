@@ -10,7 +10,17 @@ The native runner revalidates the preparation manifest, project, task branch, ba
 
 Each command executes as an argv array through the installed Cursor `cursorsandbox` helper with a fixed policy: workspace writes, read-only Git metadata and agent configuration, minimal system runtime reads, no network and no global temporary writes. No arbitrary shell endpoint or caller-selected sandbox policy is exposed. Direct shell/privilege-tool executables are rejected. Project scripts are trusted saved configuration and remain confined by the same sandbox.
 
-The command environment contains only fixed runtime settings. Home and temporary storage point to a fresh directory inside the worktree; provider credentials and inherited runner variables are absent. Dependencies outside the workspace/system runtime paths, including symlinked external virtual environments, are inaccessible. AI Station does not install dependencies or weaken isolation to make tests pass. Scratch data stays in the worktree for inspection.
+The command environment contains only fixed runtime settings. Home and temporary storage point to a fresh directory inside the worktree; provider credentials and inherited runner variables are absent. Dependencies outside the workspace/system runtime paths, including symlinked external virtual environments, are inaccessible. Scratch data stays in the worktree for inspection. Install declared Python dependencies with a separate Run before validation if the worktree environment does not already contain the packages.
+
+## Dependency installation
+
+From Projects, choose **Install project dependencies** on a prepared owned worktree. The API accepts the worktree ID and expected project version. It does not accept pip arguments, index URLs or host paths. A normal Task and host Run require `filesystem_read`, `workspace_write`, `git_read`, `shell_project_commands` and `network_read`. One project Run can be active at a time. The same worktree lock used by validation and removal prevents concurrent mutation.
+
+The native runner revalidates the preparation manifest, creates a worktree `.venv` when missing, and refuses symlink environments. It reads `requirements.txt`, or `pyproject.toml` `[project.dependencies]` when that file is absent. Specifiers must be ordinary package pins or relative `.whl` paths inside the worktree. URLs, VCS references, editable installs, extra indexes and pip flags are rejected. A regular `vendor/` directory of wheels selects an offline install (`--no-index --find-links=vendor`). Otherwise pip uses `--index-url https://pypi.org/simple` after `pypi.org` and `files.pythonhosted.org` resolve to public addresses. Both modes run `python -m pip install --isolated --require-virtualenv --only-binary :all:` through the Cursor sandbox helper. Vendor installs keep sandbox network disabled. PyPI installs grant sandbox network only for that command and add TLS/resolver system paths; they still cannot write Git metadata or global temporary directories.
+
+Limits: ten minutes and 2 MiB combined output. Timeout/output violations terminate the owned group. Cancellation uses the normal runner ownership checks. Recovery never automatically repeats an install after uncertain dispatch because pip can modify the environment. Known completion produces a JSON artifact and a `dependencies.completed` event. A nonzero pip exit fails the Run while preserving the report. Unknown exit status, cancellation or wrapper failure cannot become success.
+
+Normal CI installs a disposable local wheel through a fake sandbox helper. It does not contact PyPI. Parser, plan and public-DNS unit tests cover PyPI mode without a live download. Real PyPI downloads are not claimed.
 
 Limits: five minutes and 2 MiB combined output per command, fifteen minutes total, at most sixty commands and 32,000 argument characters. Timeout/output violations terminate the owned group. Cancellation uses the normal runner ownership checks and TERM/KILL grace period. Recovery never automatically repeats validation after uncertain dispatch because test/build scripts can modify workspace files.
 
@@ -20,7 +30,7 @@ Known completion produces a JSON artifact, per-command events and a visible resu
 
 On 2026-09-26, disposable real Cursor sandbox probes allowed workspace writes while denying outside reads/writes, writes to the worktree `.git` and common Git config, global `/tmp` writes, and a connection to the existing loopback model server. Real managed validation passed success, nonzero-exit and cancellation cases. No model, cloud token or coding-provider credential was used.
 
-Normal CI uses a fake helper and disposable repositories to verify queueing, saved-command snapshots, stale edits, ownership, permission checks, idempotence, logs/artifacts, failure, cancellation, limits and environment isolation. To repeat the managed-process tests against an installed native helper:
+Normal CI uses a fake helper and disposable repositories to verify queueing, saved-command snapshots, stale edits, ownership, permission checks, idempotence, logs/artifacts, failure, cancellation, limits and environment isolation. Dependency install coverage uses a disposable local wheel rather than PyPI. To repeat the managed-process tests against an installed native helper:
 
 ```bash
 AI_STATION_REAL_SANDBOX_TESTS=1 .venv/bin/python scripts/coding_sandbox_smoke.py

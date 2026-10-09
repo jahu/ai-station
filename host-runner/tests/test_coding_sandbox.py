@@ -4,6 +4,7 @@ import os
 import pytest
 from ai_station_runner.coding_sandbox import (
     SandboxUnavailable,
+    dependency_policy,
     validation_argv,
     validation_policy,
     write_policy,
@@ -30,6 +31,27 @@ def test_validation_policy_keeps_git_readonly_and_denies_network_and_global_tmp(
         write_policy(target, workspace, common)
     with pytest.raises(SandboxUnavailable):
         write_policy(workspace / "policy.json", workspace, common)
+
+
+def test_dependency_policy_enables_network_only_when_requested(tmp_path):
+    workspace = tmp_path / "workspace"
+    common = tmp_path / "repository.git"
+    workspace.mkdir()
+    common.mkdir()
+    offline = dependency_policy(workspace, common, network=False)
+    online = dependency_policy(workspace, common, network=True)
+    assert offline["sandbox"]["networkAccess"] is False
+    assert online["sandbox"]["networkAccess"] is True
+    assert online["sandbox"]["disableTmpWrite"]
+    assert not online["sandbox"]["additionalReadwritePaths"]
+    assert ".git/**" in online["sandbox"]["additionalReadonlyPaths"][str(workspace)]
+    target = write_policy(
+        tmp_path / "policies/deps.json",
+        workspace,
+        common,
+        online,
+    )
+    assert json.loads(target.read_text())["sandbox"]["networkAccess"] is True
 
 
 def test_missing_helper_fails_closed_and_arguments_remain_separate(monkeypatch, tmp_path):

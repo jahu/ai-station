@@ -291,6 +291,59 @@ def validate_project_worktree(project_id: UUID, worktree_id: UUID, body: Worktre
     return run_dict(run)
 
 
+@router.post("/{project_id}/worktrees/{worktree_id}/dependencies", status_code=202)
+def install_project_dependencies(project_id: UUID, worktree_id: UUID, body: WorktreeRequest, session: DB):
+    project = get_project(session, project_id)
+    if project.updated_at != body.expected_updated_at:
+        raise HTTPException(409, "Project settings changed. Reload before installing dependencies.")
+    worktree = session.get(Worktree, str(worktree_id))
+    if worktree is None or worktree.project_id != project.id:
+        raise HTTPException(404, "Worktree not found in this project")
+    preparation = session.get(Run, worktree.run_id)
+    if (
+        worktree.removed_at is not None
+        or not worktree.owned
+        or preparation is None
+        or preparation.status != "succeeded"
+    ):
+        raise HTTPException(409, "Worktree preparation must have succeeded")
+    if session.scalar(
+        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
+    ):
+        raise HTTPException(409, "This project already has an active Run")
+    task = create_task(
+        session,
+        title=f"Install dependencies for {project.name}",
+        prompt="Install declared Python dependencies in an owned worktree",
+        capability="coding.dependencies",
+        project_id=project.id,
+    )
+    run = create_run(
+        session,
+        task,
+        run_type="dependencies",
+        capability="coding.dependencies",
+        executor_type="project_dependencies",
+        execution_target="host",
+        permissions=[
+            "filesystem_read",
+            "workspace_write",
+            "git_read",
+            "shell_project_commands",
+            "network_read",
+        ],
+        retry_class="inspect",
+        parameters={
+            "worktree_id": worktree.id,
+            "worktree_run_id": worktree.run_id,
+            "project_updated_at": project.updated_at.isoformat(),
+        },
+    )
+    run.parent_run_id = worktree.run_id
+    session.commit()
+    return run_dict(run)
+
+
 @router.post("/{project_id}/worktrees/{worktree_id}/remove", status_code=202)
 def remove_project_worktree(project_id: UUID, worktree_id: UUID, body: WorktreeRequest, session: DB):
     project = get_project(session, project_id)

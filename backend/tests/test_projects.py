@@ -606,6 +606,42 @@ def enqueue_validation(client, project, worktree, **extra):
     )
 
 
+def enqueue_dependencies(client, project, worktree, **extra):
+    return client.post(
+        f"/api/projects/{project['id']}/worktrees/{worktree['id']}/dependencies",
+        json={"expected_updated_at": project["updated_at"], **extra},
+    )
+
+
+def write_wheel(directory, name="hello-dep", version="0.0.1"):
+    import zipfile
+
+    dist = name.replace("-", "_")
+    path = directory / f"{dist}-{version}-py3-none-any.whl"
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr(f"{dist}/__init__.py", "VALUE = 1\n")
+        archive.writestr(
+            f"{dist}-{version}.dist-info/METADATA",
+            f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n",
+        )
+        archive.writestr(
+            f"{dist}-{version}.dist-info/WHEEL",
+            "Wheel-Version: 1.0\nGenerator: test\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
+        )
+        archive.writestr(f"{dist}-{version}.dist-info/RECORD", "")
+    return path
+
+
+def seed_worktree_requirements(owned_runner, worktree, text="hello-dep==0.0.1\n", *, vendor=True):
+    workspace = owned_runner.data_dir / worktree["relative_path"]
+    (workspace / "requirements.txt").write_text(text)
+    if vendor:
+        directory = workspace / "vendor"
+        directory.mkdir()
+        write_wheel(directory)
+    return workspace
+
+
 @pytest.mark.parametrize("exit_code", [0, 3])
 def test_validation_reports_exit_codes_and_preserves_original_checkout(
     repository, owned_runner, validation_sandbox, exit_code
@@ -766,6 +802,183 @@ def test_validation_does_not_inherit_runner_credentials(
         with session_factory()() as session:
             tick(session, "environment-validation")
         assert client.get(f"/api/runs/{run['id']}").json()["status"] == "succeeded"
+
+
+def test_dependency_install_from_vendor_wheels_preserves_original_checkout(
+    repository, owned_runner, validation_sandbox
+):
+    original_index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, [])
+        workspace = seed_worktree_requirements(owned_runner, worktree)
+        response = enqueue_dependencies(client, project, worktree)
+        assert response.status_code == 202, response.text
+        run = response.json()
+        assert run["effective_permissions"] == [
+            "filesystem_read",
+            "workspace_write",
+            "git_read",
+            "shell_project_commands",
+            "network_read",
+        ]
+        assert enqueue_dependencies(client, project, worktree).status_code == 409
+        with session_factory()() as session:
+            tick(session, "dependency-vendor")
+        result = client.get(f"/api/runs/{run['id']}").json()
+        assert result["status"] == "succeeded", result
+        report = result["metadata"]["dependencies"]
+        assert report["source"] == "vendor" and report["network"] is False
+        assert report["specifiers"] == ["hello-dep==0.0.1"]
+        assert report["exit_code"] == 0
+        stream = client.get(f"/api/runs/{run['id']}/stream").text
+        assert "dependencies.completed" in stream and "artifact.created" in stream
+        python = workspace / ".venv/bin/python"
+        imported = subprocess.check_output(
+            [str(python), "-c", "import hello_dep; print(hello_dep.VALUE)"], text=True
+        )
+        assert imported.strip() == "1"
+        assert (repository / ".git/index").read_bytes() == original_index
+        assert (repository / "README.md").read_text() == "Original repository\n"
+
+
+def test_dependency_api_rejects_stale_unowned_injected_commands_and_missing_worktree(
+    repository, owned_runner
+):
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, [])
+        assert (
+            enqueue_dependencies(client, project, worktree, commands=[["pip", "install"]]).status_code == 422
+        )
+        stale = {**project, "updated_at": "2000-01-01T00:00:00+00:00"}
+        assert enqueue_dependencies(client, stale, worktree).status_code == 409
+        with session_factory()() as session:
+            from app.models import Worktree
+
+            session.get(Worktree, worktree["id"]).owned = False
+            session.commit()
+        assert enqueue_dependencies(client, project, worktree).status_code == 409
+
+
+def test_dependency_missing_manifest_and_url_requirements_fail_closed(
+    repository, owned_runner, validation_sandbox
+):
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, [])
+        missing = enqueue_dependencies(client, project, worktree)
+        with session_factory()() as session:
+            tick(session, "dependency-missing")
+        failed = client.get(f"/api/runs/{missing.json()['id']}").json()
+        assert failed["status"] == "failed"
+        assert "requirements.txt" in failed["error_message"] or "pyproject.toml" in failed["error_message"]
+        seed_worktree_requirements(
+            owned_runner, worktree, "evil @ https://127.0.0.1/evil.whl\n", vendor=False
+        )
+        blocked = enqueue_dependencies(client, project, worktree)
+        with session_factory()() as session:
+            tick(session, "dependency-url")
+        result = client.get(f"/api/runs/{blocked.json()['id']}").json()
+        assert result["status"] == "failed"
+        assert "URL" in result["error_message"] or "VCS" in result["error_message"]
+
+
+def test_dependency_runner_idempotence_permissions_and_cancellation(
+    repository, owned_runner, validation_sandbox, monkeypatch
+):
+    import sys
+    from uuid import uuid4
+
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, [])
+        seed_worktree_requirements(owned_runner, worktree)
+        original_start = owned_runner.start
+
+        def delayed(**kwargs):
+            run_id = kwargs["run_id"]
+            kwargs["argv"] = [
+                sys.executable,
+                "-c",
+                "import time; time.sleep(30); "
+                f"from ai_station_runner.dependency_job import install; install({run_id!r})",
+            ]
+            return original_start(**kwargs)
+
+        monkeypatch.setattr(owned_runner, "start", delayed)
+        payload = {
+            "run_id": str(uuid4()),
+            "project_id": project["id"],
+            "worktree_run_id": worktree["run_id"],
+            "permissions": [
+                "filesystem_read",
+                "workspace_write",
+                "git_read",
+                "shell_project_commands",
+                "network_read",
+            ],
+        }
+        with TestClient(runner_app) as native:
+            assert (
+                native.post("/v1/runs/dependencies", json={**payload, "permissions": []}).status_code == 403
+            )
+            started = native.post("/v1/runs/dependencies", json=payload)
+            assert started.status_code == 200, started.text
+            replay = native.post("/v1/runs/dependencies", json=payload)
+            assert replay.json()["pid"] == started.json()["pid"]
+            assert (
+                native.post(
+                    "/v1/runs/dependencies", json={**payload, "worktree_run_id": str(uuid4())}
+                ).status_code
+                == 409
+            )
+            time.sleep(0.5)
+            native.post("/v1/process/cancel", json={"run_id": payload["run_id"]})
+            assert not owned_runner.inspect(payload["run_id"])["alive"]
+            assert native.get(f"/v1/runs/dependencies/{payload['run_id']}/report").status_code == 409
+        original = RunnerClient.request
+        response = enqueue_dependencies(client, project, worktree)
+        run = response.json()
+
+        def cancel_on_dispatch(self, method, path, json=None):
+            result = original(self, method, path, json)
+            if method == "POST" and path == "/v1/runs/dependencies":
+                client.post(f"/api/runs/{run['id']}/cancel")
+            return result
+
+        monkeypatch.setattr(RunnerClient, "request", cancel_on_dispatch)
+        with session_factory()() as session:
+            tick(session, "cancel-dependencies")
+        assert client.get(f"/api/runs/{run['id']}").json()["status"] == "canceled"
+        assert not owned_runner.inspect(run["id"])["alive"]
+
+
+def test_dependency_limits_kill_owned_group_without_publishing_success(
+    repository, owned_runner, validation_sandbox, monkeypatch
+):
+    import sys
+
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, [])
+        seed_worktree_requirements(owned_runner, worktree)
+        original = owned_runner.start
+
+        def limited(**kwargs):
+            run_id = kwargs["run_id"]
+            kwargs["argv"] = [
+                sys.executable,
+                "-c",
+                f"from ai_station_runner import dependency_job as job; job.TIMEOUT=0; job.install({run_id!r})",
+            ]
+            return original(**kwargs)
+
+        monkeypatch.setattr(owned_runner, "start", limited)
+        response = enqueue_dependencies(client, project, worktree)
+        run = response.json()
+        with session_factory()() as session:
+            tick(session, "limited-dependencies")
+        result = client.get(f"/api/runs/{run['id']}").json()
+        assert result["status"] == "failed", result
+        assert "time/output limit" in result["error_message"]
+        assert "dependencies" not in result["metadata"]
+        assert not owned_runner.inspect(run["id"])["alive"]
 
 
 @pytest.fixture

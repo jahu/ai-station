@@ -21,6 +21,7 @@ from ai_station_runner.coding_models import coding_models
 from ai_station_runner.coding_sandbox import SandboxUnavailable
 from ai_station_runner.config import get_settings
 from ai_station_runner.cursor_runs import CursorRequest, cursor_report, start_cursor
+from ai_station_runner.dependencies import DependencyRequest, dependency_report, start_dependencies
 from ai_station_runner.diagnostics import collect_diagnostics
 from ai_station_runner.discovery import scan
 from ai_station_runner.fsops import list_dir, read_file, search_files, write_file
@@ -721,6 +722,25 @@ def coding_model_catalog(provider: str):
     if provider not in {"cursor", "codex"}:
         raise HTTPException(404, "Coding provider not found")
     return coding_models(provider)
+
+
+@app.post("/v1/runs/dependencies")
+def project_dependencies(body: DependencyRequest):
+    try:
+        record = start_dependencies(manager(), body)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (GitError, SandboxUnavailable, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+    return {**record, "runner_id": get_settings().runner_id}
+
+
+@app.get("/v1/runs/dependencies/{run_id}/report")
+def project_dependencies_report(run_id: UUID):
+    try:
+        return dependency_report(manager(), str(run_id))
+    except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @app.post("/v1/runs/worktree-remove")

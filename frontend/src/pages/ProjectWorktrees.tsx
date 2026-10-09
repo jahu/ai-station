@@ -48,6 +48,15 @@ export default function ProjectWorktrees({
       }),
     onSuccess: (run) => navigate(`/runs/${run.id}`),
   });
+  const dependencies = useMutation({
+    mutationFn: (worktreeId: string) =>
+      api<Run>(`/projects/${project.id}/worktrees/${worktreeId}/dependencies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expected_updated_at: project.updated_at }),
+      }),
+    onSuccess: (run) => navigate(`/runs/${run.id}`),
+  });
   const remove = useMutation({
     mutationFn: (worktreeId: string) =>
       api<Run>(`/projects/${project.id}/worktrees/${worktreeId}/remove`, {
@@ -63,6 +72,7 @@ export default function ProjectWorktrees({
   const busy =
     prepare.isPending ||
     validate.isPending ||
+    dependencies.isPending ||
     remove.isPending ||
     active ||
     worktrees.isPending ||
@@ -86,10 +96,19 @@ export default function ProjectWorktrees({
         validation command is launched.
       </p>
       <p className="muted">
+        Install project dependencies creates or reuses the worktree Python
+        environment and installs from <code>requirements.txt</code> or{" "}
+        <code>pyproject.toml</code> project.dependencies. A local{" "}
+        <code>vendor/</code> directory of wheels is used offline; otherwise the
+        Run may download wheels from PyPI. Only binary wheels are installed.
+        URLs, VCS refs and extra indexes are rejected. Git metadata stays
+        read-only.
+      </p>
+      <p className="muted">
         Run saved validation executes the project's saved test, lint and build
-        commands in a prepared worktree. Network access is blocked; dependencies
-        must already be available there. Logs and the result report appear in
-        the validation Run.
+        commands in a prepared worktree. Network access is blocked; packages
+        must already be in the worktree environment or system runtime paths.
+        Logs and the result report appear in the validation Run.
       </p>
       <p className="muted">
         Remove deletes only this owned checkout and its local task branch. It
@@ -98,7 +117,11 @@ export default function ProjectWorktrees({
       </p>
       <ErrorNotice
         error={
-          worktrees.error ?? prepare.error ?? validate.error ?? remove.error
+          worktrees.error ??
+          prepare.error ??
+          dependencies.error ??
+          validate.error ??
+          remove.error
         }
       />
       {worktrees.isPending ? (
@@ -118,13 +141,24 @@ export default function ProjectWorktrees({
               {worktree.owned &&
                 worktree.run_status === "succeeded" &&
                 !worktree.removed_at && (
-                  <Button
-                    variant="secondary"
-                    disabled={busy}
-                    onClick={() => validate.mutate(worktree.id)}
-                  >
-                    {validate.isPending ? "Queueing…" : "Run saved validation"}
-                  </Button>
+                  <>
+                    <Button
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => dependencies.mutate(worktree.id)}
+                    >
+                      {dependencies.isPending
+                        ? "Queueing…"
+                        : "Install project dependencies"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => validate.mutate(worktree.id)}
+                    >
+                      {validate.isPending ? "Queueing…" : "Run saved validation"}
+                    </Button>
+                  </>
                 )}
               {!worktree.removed_at &&
                 (confirmId === worktree.id ? (
