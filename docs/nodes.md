@@ -20,7 +20,7 @@ Uvicorn inside the container still listens on all container interfaces so Docker
 
 ## Node inventory and invitations
 
-`GET /api/nodes` always includes this workstation's Host Runner (`transport: unix-socket`). After an operator password is stored, `POST /api/nodes/invitations` creates a pending remote node and returns a one-time `aisn_` token. Only the HMAC-SHA256 of that token is persisted. Later GETs omit the token.
+`GET /api/nodes` always includes this workstation's Host Runner (`transport: unix-socket`). System shows that inventory as one keyboard sequence (arrows, Home, End) with unique Revoke names; Revoke stays on the selected row. There is no inspectable node Run. After an operator password is stored, `POST /api/nodes/invitations` creates a pending remote node and returns a one-time `aisn_` token. Only the HMAC-SHA256 of that token is persisted. Later GETs omit the token.
 
 `POST /api/nodes/register` accepts the token on the existing loopback API, marks the node `registered`, and consumes the token. `POST /api/nodes/{id}/revoke` clears pending or registered remotes. The local node cannot be revoked.
 

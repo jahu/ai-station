@@ -320,3 +320,7 @@ Frontend lint, TypeScript, 126 component tests and production build passed. Runn
 ## Model picker keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 127 component tests and production build passed. The Chat/Coding model picker is one keyboard sequence (arrows, Home, End, Enter marks). llama.cpp and local-server models share that list. Use model still applies the choice. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Nodes list keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 128 component tests and production build passed. The node inventory is one keyboard sequence (arrows, Home, End). Revoke names include the node name and short id and stay on the selected row. There is no inspectable node Run. LAN transport stays unpublished. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import type { OperatorStatus } from "./OperatorLogin";
+import { useListKeyboard } from "./useListKeyboard";
 
 type NodeRow = {
   id: string;
@@ -29,6 +30,73 @@ const json = (method: string, body: unknown) => ({
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
 });
+
+function NodeCards({
+  items,
+  revokePending,
+  onRevoke,
+}: {
+  items: NodeRow[];
+  revokePending: boolean;
+  onRevoke: (id: string) => void;
+}) {
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    items,
+    (node) => node.id,
+  );
+  return (
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId} className="sr-only">
+        Nodes
+      </h3>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a node while the list is focused. Revoke stays on the
+        selected row. Authenticated LAN transport stays unpublished. There is no
+        inspectable node Run.
+      </p>
+      <div
+        ref={listRef}
+        className="diagnostic-list"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {items.map((node, i) => {
+          const current = i === index;
+          const shortId = node.id.slice(0, 8);
+          return (
+            <div key={node.id} {...itemProps(i, node.id)}>
+              <div>
+                <strong>{node.name}</strong>
+                <p>
+                  {node.kind} · {node.transport} · {node.ownership}
+                  {node.status ? ` · ${node.status}` : ""}
+                </p>
+              </div>
+              <div className="row">
+                <Badge
+                  status={node.authenticated ? "available" : "unavailable"}
+                />
+                {node.id !== "local" && node.status !== "revoked" ? (
+                  <Button
+                    variant="secondary"
+                    tabIndex={current ? 0 : -1}
+                    disabled={revokePending}
+                    aria-label={`Revoke ${node.name} ${shortId}`}
+                    onClick={() => onRevoke(node.id)}
+                  >
+                    Revoke
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
 export default function OperatorAccess() {
   const cache = useQueryClient();
@@ -220,33 +288,13 @@ export default function OperatorAccess() {
         </div>
         <p className="muted">{nodes.data?.summary}</p>
         <ErrorNotice error={nodes.error ?? invite.error ?? revoke.error} />
-        <div className="diagnostic-list">
-          {nodes.data?.items.map((node) => (
-            <div key={node.id}>
-              <div>
-                <strong>{node.name}</strong>
-                <p>
-                  {node.kind} · {node.transport} · {node.ownership}
-                  {node.status ? ` · ${node.status}` : ""}
-                </p>
-              </div>
-              <div className="row">
-                <Badge
-                  status={node.authenticated ? "available" : "unavailable"}
-                />
-                {node.id !== "local" && node.status !== "revoked" ? (
-                  <Button
-                    variant="secondary"
-                    disabled={revoke.isPending}
-                    onClick={() => revoke.mutate(node.id)}
-                  >
-                    Revoke
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          ))}
-        </div>
+        {nodes.data?.items.length ? (
+          <NodeCards
+            items={nodes.data.items}
+            revokePending={revoke.isPending}
+            onRevoke={(id) => revoke.mutate(id)}
+          />
+        ) : null}
         {issuedToken ? (
           <p>
             One-time invitation token (not stored in the list):{" "}
