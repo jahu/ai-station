@@ -66,6 +66,14 @@ def test_backup_run_integrity_checks_and_never_restores():
     assert listed["restore"] == "unpublished"
     assert listed["items"][0]["id"] == run["id"]
     assert listed["items"][0]["restore"] == "unpublished"
+    sqlite_listing = next(
+        item for item in listed["items"][0]["artifacts"] if item["filename"] == "ai-station.sqlite"
+    )
+    assert sqlite_listing["id"]
+    assert sqlite_listing["relative_path"].startswith("backups/")
+    copied = client.get(f"/api/artifacts/{sqlite_listing['id']}/file")
+    assert copied.status_code == 200
+    assert copied.content[:15] == b"SQLite format 3"
     inspected = client.get(f"/api/maintenance/backups/{run['id']}").json()
     assert inspected["integrity_check"] == "ok"
     assert inspected["hash_matches"] is True

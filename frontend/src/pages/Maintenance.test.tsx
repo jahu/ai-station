@@ -134,6 +134,15 @@ it("re-checks a backup copy without offering restore or rollout", async () => {
               status: "succeeded",
               summary: "SQLite backup integrity_check=ok",
               restore: "unpublished",
+              artifacts: [
+                {
+                  id: "sqlite-copy",
+                  type: "archive",
+                  filename: "ai-station.sqlite",
+                  size_bytes: 12,
+                  relative_path: "backups/run-backup.sqlite",
+                },
+              ],
               metadata: {
                 backup: { integrity_check: "ok", schema_revision: "0019" },
               },
@@ -146,6 +155,9 @@ it("re-checks a backup copy without offering restore or rollout", async () => {
   });
   mount(fetch);
   await screen.findByText(/recorded integrity_check=ok/);
+  const download = screen.getByRole("link", { name: "Download copy" });
+  expect(download.getAttribute("href")).toBe("/api/artifacts/sqlite-copy/file");
+  expect(download.getAttribute("download")).toBe("ai-station.sqlite");
   expect(
     screen.queryByRole("button", { name: /restore|rollout|deploy/i }),
   ).toBeNull();

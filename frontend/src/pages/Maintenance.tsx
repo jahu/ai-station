@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Download } from "lucide-react";
 import { api, type Run } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
@@ -35,8 +36,16 @@ type BackupReport = {
   schema_revision?: string | null;
 };
 
+type BackupArtifact = {
+  id: string;
+  type: string;
+  filename: string;
+  size_bytes: number;
+  relative_path: string;
+};
+
 type BackupList = {
-  items: Array<Run & { restore: string }>;
+  items: Array<Run & { restore: string; artifacts?: BackupArtifact[] }>;
   restore: string;
 };
 
@@ -311,57 +320,76 @@ export default function Maintenance() {
         </div>
       ) : null}
       {backups.data?.items.length ? (
-        <div className="diagnostic-list mt">
-          {backups.data.items.map((row) => {
-            const recorded = row.metadata?.backup as BackupReport | undefined;
-            const checked =
-              inspect.data?.run_id === row.id ? inspect.data : null;
-            return (
-              <div key={row.id}>
-                <div>
-                  <strong>{row.summary || "SQLite backup"}</strong>
-                  <p>
-                    {row.status}
-                    {recorded?.integrity_check
-                      ? ` · recorded integrity_check=${recorded.integrity_check}`
-                      : ""}
-                    {checked
-                      ? ` · re-check ${checked.integrity_check}`
-                      : ""}
-                    {" · restore "}
-                    {row.restore}
-                  </p>
-                  {checked ? (
-                    <p className="muted">
-                      {checked.summary}
-                      {checked.schema_revision
-                        ? ` · copy schema ${checked.schema_revision}`
+        <div className="mt">
+          <h3>Recent copies</h3>
+          <p className="muted">
+            Download is the stored file. It does not replace the live database.
+          </p>
+          <div className="diagnostic-list">
+            {backups.data.items.map((row) => {
+              const recorded = row.metadata?.backup as BackupReport | undefined;
+              const checked =
+                inspect.data?.run_id === row.id ? inspect.data : null;
+              const sqlite = row.artifacts?.find(
+                (item) => item.filename === "ai-station.sqlite",
+              );
+              return (
+                <div key={row.id}>
+                  <div>
+                    <strong>{row.summary || "SQLite backup"}</strong>
+                    <p>
+                      {row.status}
+                      {recorded?.integrity_check
+                        ? ` · recorded integrity_check=${recorded.integrity_check}`
                         : ""}
-                      {checked.schema_matches_live
-                        ? " · matches live schema"
-                        : " · schema differs from live"}
-                      {` · ${checked.relative_path}`}
+                      {checked
+                        ? ` · re-check ${checked.integrity_check}`
+                        : ""}
+                      {" · restore "}
+                      {row.restore}
                     </p>
-                  ) : null}
+                    {checked ? (
+                      <p className="muted">
+                        {checked.summary}
+                        {checked.schema_revision
+                          ? ` · copy schema ${checked.schema_revision}`
+                          : ""}
+                        {checked.schema_matches_live
+                          ? " · matches live schema"
+                          : " · schema differs from live"}
+                        {` · ${checked.relative_path}`}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="row">
+                    {row.status === "succeeded" ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={inspect.isPending}
+                        onClick={() => inspect.mutate(row.id)}
+                      >
+                        {inspect.isPending && inspect.variables === row.id
+                          ? "Checking…"
+                          : "Inspect copy"}
+                      </Button>
+                    ) : null}
+                    {row.status === "succeeded" && sqlite ? (
+                      <a
+                        className="text-link"
+                        href={`/api/artifacts/${sqlite.id}/file`}
+                        download={sqlite.filename}
+                      >
+                        <Download size={14} />
+                        Download copy
+                      </a>
+                    ) : null}
+                    <Link to={`/runs/${row.id}`}>Open backup Run</Link>
+                  </div>
                 </div>
-                <div className="row">
-                  {row.status === "succeeded" ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={inspect.isPending}
-                      onClick={() => inspect.mutate(row.id)}
-                    >
-                      {inspect.isPending && inspect.variables === row.id
-                        ? "Checking…"
-                        : "Inspect copy"}
-                    </Button>
-                  ) : null}
-                  <Link to={`/runs/${row.id}`}>Open backup Run</Link>
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       ) : null}
     </section>
