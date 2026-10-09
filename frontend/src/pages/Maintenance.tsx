@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useId, type KeyboardEvent } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Download } from "lucide-react";
 import { api, type Run } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
+import { useListKeyboard } from "./useListKeyboard";
 
 type InterruptedRun = Run & {
   title?: string;
@@ -97,6 +98,130 @@ const json = (method: string, body: unknown) => ({
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
 });
+
+type BackupRow = Run & { restore: string; artifacts?: BackupArtifact[] };
+
+function BackupCards({
+  items,
+  inspectPending,
+  inspectVariables,
+  checked,
+  onInspect,
+}: {
+  items: BackupRow[];
+  inspectPending: boolean;
+  inspectVariables?: string;
+  checked: BackupInspect | null;
+  onInspect: (runId: string) => void;
+}) {
+  const headingId = useId();
+  const labelId = useId();
+  const navigate = useNavigate();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    items,
+    (row) => row.id,
+  );
+  const selected = items[index];
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key !== "Enter" || event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input")) return;
+    if (selected?.id) {
+      event.preventDefault();
+      navigate(`/runs/${selected.id}`);
+    }
+  };
+  return (
+    <section className="mt" aria-labelledby={headingId}>
+      <h3 id={headingId}>Recent copies</h3>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a copy while the list is focused. Enter inspects its
+        backup Run. Inspect copy and Download copy stay on the selected row.
+        Download is the stored file. It does not replace the live database.
+      </p>
+      <div
+        ref={listRef}
+        className="diagnostic-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {items.map((row, i) => {
+          const current = i === index;
+          const shortId = row.id.slice(0, 8);
+          const recorded = row.metadata?.backup as BackupReport | undefined;
+          const recheck = checked?.run_id === row.id ? checked : null;
+          const sqlite = row.artifacts?.find(
+            (item) => item.filename === "ai-station.sqlite",
+          );
+          return (
+            <div key={row.id} {...itemProps(i, row.id)}>
+              <div>
+                <strong>{row.summary || "SQLite backup"}</strong>
+                <p>
+                  {row.status}
+                  {recorded?.integrity_check
+                    ? ` · recorded integrity_check=${recorded.integrity_check}`
+                    : ""}
+                  {recheck ? ` · re-check ${recheck.integrity_check}` : ""}
+                  {" · restore "}
+                  {row.restore}
+                </p>
+                {recheck ? (
+                  <p className="muted">
+                    {recheck.summary}
+                    {recheck.schema_revision
+                      ? ` · copy schema ${recheck.schema_revision}`
+                      : ""}
+                    {recheck.schema_matches_live
+                      ? " · matches live schema"
+                      : " · schema differs from live"}
+                    {` · ${recheck.relative_path}`}
+                  </p>
+                ) : null}
+              </div>
+              <div className="row">
+                {row.status === "succeeded" ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    tabIndex={current ? 0 : -1}
+                    disabled={inspectPending}
+                    aria-label={`Inspect copy ${shortId}`}
+                    onClick={() => onInspect(row.id)}
+                  >
+                    {inspectPending && inspectVariables === row.id
+                      ? "Checking…"
+                      : "Inspect copy"}
+                  </Button>
+                ) : null}
+                {row.status === "succeeded" && sqlite ? (
+                  <a
+                    className="text-link"
+                    href={`/api/artifacts/${sqlite.id}/file`}
+                    download={sqlite.filename}
+                    tabIndex={current ? 0 : -1}
+                    aria-label={`Download copy ${shortId}`}
+                  >
+                    <Download size={14} />
+                    Download copy
+                  </a>
+                ) : null}
+                <Link
+                  to={`/runs/${row.id}`}
+                  tabIndex={current ? 0 : -1}
+                  aria-label={`Inspect backup Run ${shortId}`}
+                >
+                  Open backup Run
+                </Link>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
 export default function Maintenance() {
   const cache = useQueryClient();
@@ -320,77 +445,13 @@ export default function Maintenance() {
         </div>
       ) : null}
       {backups.data?.items.length ? (
-        <div className="mt">
-          <h3>Recent copies</h3>
-          <p className="muted">
-            Download is the stored file. It does not replace the live database.
-          </p>
-          <div className="diagnostic-list">
-            {backups.data.items.map((row) => {
-              const recorded = row.metadata?.backup as BackupReport | undefined;
-              const checked =
-                inspect.data?.run_id === row.id ? inspect.data : null;
-              const sqlite = row.artifacts?.find(
-                (item) => item.filename === "ai-station.sqlite",
-              );
-              return (
-                <div key={row.id}>
-                  <div>
-                    <strong>{row.summary || "SQLite backup"}</strong>
-                    <p>
-                      {row.status}
-                      {recorded?.integrity_check
-                        ? ` · recorded integrity_check=${recorded.integrity_check}`
-                        : ""}
-                      {checked
-                        ? ` · re-check ${checked.integrity_check}`
-                        : ""}
-                      {" · restore "}
-                      {row.restore}
-                    </p>
-                    {checked ? (
-                      <p className="muted">
-                        {checked.summary}
-                        {checked.schema_revision
-                          ? ` · copy schema ${checked.schema_revision}`
-                          : ""}
-                        {checked.schema_matches_live
-                          ? " · matches live schema"
-                          : " · schema differs from live"}
-                        {` · ${checked.relative_path}`}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="row">
-                    {row.status === "succeeded" ? (
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        disabled={inspect.isPending}
-                        onClick={() => inspect.mutate(row.id)}
-                      >
-                        {inspect.isPending && inspect.variables === row.id
-                          ? "Checking…"
-                          : "Inspect copy"}
-                      </Button>
-                    ) : null}
-                    {row.status === "succeeded" && sqlite ? (
-                      <a
-                        className="text-link"
-                        href={`/api/artifacts/${sqlite.id}/file`}
-                        download={sqlite.filename}
-                      >
-                        <Download size={14} />
-                        Download copy
-                      </a>
-                    ) : null}
-                    <Link to={`/runs/${row.id}`}>Open backup Run</Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        <BackupCards
+          items={backups.data.items}
+          inspectPending={inspect.isPending}
+          inspectVariables={inspect.variables}
+          checked={inspect.data ?? null}
+          onInspect={(runId) => inspect.mutate(runId)}
+        />
       ) : null}
     </section>
   );
