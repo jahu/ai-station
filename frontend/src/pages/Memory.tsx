@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link,
@@ -10,6 +10,7 @@ import { Pin, Plus, Search } from "lucide-react";
 import { api } from "../api";
 import { Empty, ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
+import { useListKeyboard } from "./useListKeyboard";
 
 type Scope = "global" | "project" | "conversation" | "agent";
 interface Entry {
@@ -192,36 +193,10 @@ function EmbeddingsPanel() {
 function MemoryCards({ entries }: { entries: Entry[] }) {
   const headingId = useId();
   const labelId = useId();
-  const listRef = useRef<HTMLDivElement>(null);
-  const [selectedKey, setSelectedKey] = useState(entries[0]?.id ?? "");
-  const found = entries.findIndex((entry) => entry.id === selectedKey);
-  const index = found >= 0 ? found : 0;
-  const focusItem = (next: number) => {
-    const clamped = Math.max(0, Math.min(entries.length - 1, next));
-    const entry = entries[clamped];
-    if (!entry) return;
-    setSelectedKey(entry.id);
-    const link = listRef.current?.querySelector<HTMLElement>(
-      `[data-memory-index="${clamped}"]`,
-    );
-    link?.focus();
-    link?.scrollIntoView?.({ block: "nearest" });
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
-      event.preventDefault();
-      focusItem(index + 1);
-    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-      event.preventDefault();
-      focusItem(index - 1);
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      focusItem(0);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      focusItem(entries.length - 1);
-    }
-  };
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    entries,
+    (entry) => entry.id,
+  );
   return (
     <section aria-labelledby={headingId}>
       <h2 id={headingId} className="sr-only">
@@ -237,17 +212,13 @@ function MemoryCards({ entries }: { entries: Entry[] }) {
         onKeyDown={onKeyDown}
       >
         {entries.map((entry, i) => {
-          const current = i === index;
           return (
             <Link
               className="panel memory-card"
               to={`/memory/${entry.id}`}
               key={entry.id}
               aria-label={`Inspect ${entry.memory_type.replaceAll("_", " ")} ${entry.id.slice(0, 8)}`}
-              aria-current={current ? "true" : undefined}
-              tabIndex={current ? 0 : -1}
-              data-memory-index={i}
-              onFocus={() => setSelectedKey(entry.id)}
+              {...itemProps(i, entry.id)}
             >
               <div className="row">
                 <span className="tiny-tag">{entry.scope}</span>
