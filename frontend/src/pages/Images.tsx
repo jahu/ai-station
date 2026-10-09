@@ -12,6 +12,10 @@ import {
   ImageBackendChoiceList,
   type ImageBackend,
 } from "./ImageBackendChoiceList";
+import {
+  ImageOperationChoiceList,
+  type ImageOperation,
+} from "./ImageOperationChoiceList";
 
 const modes = {
   t2i: "Generate",
@@ -19,7 +23,7 @@ const modes = {
   recompose: "Recompose",
   upscale: "Upscale",
 };
-type Mode = keyof typeof modes;
+type Mode = ImageOperation;
 
 function SourceStrip({
   ids,
@@ -215,27 +219,20 @@ function ImageForm({
       >
         Create and transform images with your local photo pipeline.
       </PageTitle>
-      <div className="mode-tabs" aria-label="Image operation">
-        {Object.entries(modes).map(([key, label]) => (
-          <button
-            key={key}
-            aria-pressed={mode === key}
-            disabled={upload.isPending || create.isPending}
-            onClick={() => {
-              setMode(key as Mode);
-              setSteps(key === "t2i" ? 35 : 30);
-              setCfg(key === "recompose" ? 6 : 5);
-              setIds((current) =>
-                key === "recompose" ? current : current.slice(0, 1),
-              );
-              setLocalError(null);
-              create.reset();
-            }}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <ImageOperationChoiceList
+        value={mode}
+        disabled={upload.isPending || create.isPending}
+        onChange={(key) => {
+          setMode(key);
+          setSteps(key === "t2i" ? 35 : 30);
+          setCfg(key === "recompose" ? 6 : 5);
+          setIds((current) =>
+            key === "recompose" ? current : current.slice(0, 1),
+          );
+          setLocalError(null);
+          create.reset();
+        }}
+      />
       <form
         className="image-workspace"
         onSubmit={(e) => {

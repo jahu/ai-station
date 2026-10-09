@@ -85,7 +85,7 @@ it("attaches a Library image for Edit without another upload", async () => {
   }));
   vi.stubGlobal("fetch", fetch);
   mount();
-  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.click(screen.getByLabelText("Operation img2img"));
   fireEvent.click(screen.getByRole("button", { name: "Images from Library" }));
   fireEvent.click(
     await screen.findByRole("button", { name: "Choose room.png lib-one" }),
@@ -144,7 +144,7 @@ it("moves through Images sources with arrow keys without queueing a Run", async 
   }));
   vi.stubGlobal("fetch", fetch);
   mount();
-  fireEvent.click(screen.getByRole("button", { name: "Recompose" }));
+  fireEvent.click(screen.getByLabelText("Operation recompose"));
   fireEvent.click(screen.getByRole("button", { name: "Images from Library" }));
   fireEvent.click(
     await screen.findByRole("button", { name: "Choose person.png lib-one" }),
