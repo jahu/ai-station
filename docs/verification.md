@@ -452,3 +452,7 @@ Frontend lint, TypeScript, 194 component tests and production build passed. Codi
 ## Coding project keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 197 component tests and production build passed. Coding project radios reuse `useListKeyboard` with unique Project names. Space or Enter selects the focused registered project and does not start a coding Run. Preferred executor remains a displayed hint; Auto still follows the saved project preference. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Images operation keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 200 component tests and production build passed. Images Generate/Edit/Recompose/Upscale tabs reuse `useListKeyboard` with unique Operation names. Space or Enter selects the focused operation and does not queue a photo Run. Edit, Recompose and Upscale still force Qwen. Generate backend radios remain the existing Qwen/Juggernaut sequence. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
