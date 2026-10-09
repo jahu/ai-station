@@ -380,3 +380,7 @@ Frontend lint, TypeScript, 150 component tests and production build passed. Atta
 ## Home CPU/RAM metric cards keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 151 component tests and production build passed. Home CPU, memory, storage and in-progress Run cards reuse `useListKeyboard` with unique Metric names. Enter inspects Runs from that card; CPU/memory/storage stay live telemetry on Home and do not invent a telemetry Run. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Agent workflow mode keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 152 component tests and production build passed. Bounded tool calling and sequential or gated workflow mode reuse `useListKeyboard` with unique Tool calling and Workflow names. Space or Enter selects the focused row and does not invent a Run. Saved sequential/gated steps and bounded registry calls still use the existing endpoints. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

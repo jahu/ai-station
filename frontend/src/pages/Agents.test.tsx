@@ -911,9 +911,7 @@ it("moves through skills and tools with arrow keys without inventing a Run", asy
   const secondSkill = screen.getByLabelText("Skill Night notes night-notes");
   expect(firstSkill.tabIndex).toBe(0);
   expect(secondSkill.tabIndex).toBe(-1);
-  expect(
-    screen.getByText(/There is no inspectable Skill Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/There is no inspectable Skill Run/)).toBeTruthy();
   fireEvent.keyDown(firstSkill.closest(".agent-choice-list") as HTMLElement, {
     key: "ArrowDown",
   });
@@ -1061,5 +1059,96 @@ it("moves through approval, retry and notice policies without inventing a Run", 
       }) as HTMLInputElement
     ).checked,
   ).toBe(true);
+  expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
+});
+it("moves through workflow mode and tool calling without inventing a Run", async () => {
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
+    ok: options === undefined,
+    json: async () =>
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.endsWith("/chat/provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.includes("/skills") || url.endsWith("tools")
+            ? []
+            : url.endsWith("/hardware")
+              ? { gpus: [] }
+              : {
+                  id: "draft",
+                  name: "Morning review",
+                  description: "",
+                  goal: "Summarize",
+                  system_prompt: "",
+                  model: "local",
+                  tools: [],
+                  search_query: "",
+                  fetch_urls: [],
+                  skills: [],
+                  trigger: "manual",
+                  cron_expr: "",
+                  interval_seconds: null,
+                  run_at: null,
+                  maximum_runtime: 600,
+                  output_expectation: "Report",
+                  require_approval: false,
+                  workflow_mode: "sequential",
+                  tool_calling: "none",
+                  retry_policy: { mode: "none" },
+                  notification_policy: {
+                    on_success: false,
+                    on_failure: false,
+                    on_approval: false,
+                  },
+                  project_id: null,
+                  enabled: false,
+                  updated_at: "2026-10-09T12:00:00Z",
+                  next_run_at: null,
+                  last_run_at: null,
+                  last_status: "",
+                  failure_count: 0,
+                  effective_permissions: [],
+                  runs: [],
+                },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  const toolCalling = await screen.findByLabelText("Tool calling bounded");
+  expect(toolCalling.tabIndex).toBe(0);
+  expect(
+    screen.getByText(/There is no inspectable tool-calling-policy Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(toolCalling.closest(".agent-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: /Bounded tool calling during the report/i,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  const sequential = screen.getByLabelText("Workflow sequential");
+  const gated = screen.getByLabelText("Workflow gated");
+  expect(sequential.tabIndex).toBe(0);
+  expect(gated.tabIndex).toBe(-1);
+  expect(
+    screen.getByText(/There is no inspectable workflow-mode Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(sequential.closest(".agent-choice-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(gated.tabIndex).toBe(0);
+  expect(sequential.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(gated);
+  fireEvent.keyDown(gated.closest(".agent-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(
+    (screen.getByRole("radio", { name: /Gated/i }) as HTMLInputElement).checked,
+  ).toBe(true);
+  fireEvent.keyDown(gated.closest(".agent-choice-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(sequential.tabIndex).toBe(0);
   expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
 });

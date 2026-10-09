@@ -460,6 +460,148 @@ function RetryChoiceList({
   );
 }
 
+function ToolCallingChoiceList({
+  mode,
+  onChange,
+}: {
+  mode: "none" | "bounded";
+  onChange: (mode: "none" | "bounded") => void;
+}) {
+  const labelId = useId();
+  const items = ["bounded"] as const;
+  const checked = mode === "bounded";
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    [...items],
+    (item) => item,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    event.preventDefault();
+    onChange(checked ? "none" : "bounded");
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a tool-calling policy while the list is focused. Space
+        or Enter selects it. Invented tools, URLs and commands fail closed.
+        There is no inspectable tool-calling-policy Run.
+      </p>
+      <div
+        ref={listRef}
+        className="agent-choice-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        <div aria-label="Tool calling bounded" {...itemProps(0, "bounded")}>
+          <label className="agent-tool">
+            <input
+              type="checkbox"
+              checked={checked}
+              tabIndex={index === 0 ? 0 : -1}
+              onChange={(event) =>
+                onChange(event.target.checked ? "bounded" : "none")
+              }
+            />
+            <span>
+              <strong>Bounded tool calling during the report</strong>
+              <small>
+                The model may request selected operational tools from the typed
+                registry. It cannot invent tools, URLs, search queries, shell
+                commands or browser actions. Each call is an event plus a JSON
+                artifact on the report Run. Existing agents stay off until you
+                check this.
+              </small>
+            </span>
+          </label>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function WorkflowModeChoiceList({
+  mode,
+  onChange,
+}: {
+  mode: "sequential" | "gated";
+  onChange: (mode: "sequential" | "gated") => void;
+}) {
+  const labelId = useId();
+  const items = [
+    {
+      key: "sequential" as const,
+      title: "Sequential",
+      detail:
+        "Context tools then the report. Each step waits for the previous one to succeed.",
+    },
+    {
+      key: "gated" as const,
+      title: "Gated",
+      detail:
+        "Same sequence, but the report waits in waiting_for_approval after context tools finish so you can inspect their artifacts first.",
+    },
+  ];
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    items,
+    (item) => item.key,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    const item = items[index];
+    if (!item) return;
+    event.preventDefault();
+    onChange(item.key);
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a workflow mode while the list is focused. Space or
+        Enter selects it. The model cannot add tools, URLs or shell commands.
+        There is no inspectable workflow-mode Run.
+      </p>
+      <div
+        ref={listRef}
+        className="agent-choice-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {items.map((item, i) => {
+          const current = i === index;
+          return (
+            <div
+              key={item.key}
+              aria-label={`Workflow ${item.key}`}
+              {...itemProps(i, item.key)}
+            >
+              <label className="agent-tool">
+                <input
+                  type="radio"
+                  name="workflow_mode"
+                  checked={mode === item.key}
+                  tabIndex={current ? 0 : -1}
+                  onChange={() => onChange(item.key)}
+                />
+                <span>
+                  <strong>{item.title}</strong>
+                  <small>{item.detail}</small>
+                </span>
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 function NoticeChoiceList({
   policy,
   onChange,
@@ -1071,56 +1213,14 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             only after a successful report. Bounded tool calling is extra
             registry calls during the report, not a shell or browser.
           </p>
-          <label className="agent-tool">
-            <input
-              type="checkbox"
-              checked={(values.tool_calling ?? "none") === "bounded"}
-              onChange={(e) =>
-                update("tool_calling", e.target.checked ? "bounded" : "none")
-              }
-            />
-            <span>
-              <strong>Bounded tool calling during the report</strong>
-              <small>
-                The model may request selected operational tools from the typed
-                registry. It cannot invent tools, URLs, search queries, shell
-                commands or browser actions. Each call is an event plus a JSON
-                artifact on the report Run. Existing agents stay off until you
-                check this.
-              </small>
-            </span>
-          </label>
-          <label className="agent-tool">
-            <input
-              type="radio"
-              name="workflow_mode"
-              checked={(values.workflow_mode ?? "sequential") === "sequential"}
-              onChange={() => update("workflow_mode", "sequential")}
-            />
-            <span>
-              <strong>Sequential</strong>
-              <small>
-                Context tools then the report. Each step waits for the previous
-                one to succeed.
-              </small>
-            </span>
-          </label>
-          <label className="agent-tool">
-            <input
-              type="radio"
-              name="workflow_mode"
-              checked={values.workflow_mode === "gated"}
-              onChange={() => update("workflow_mode", "gated")}
-            />
-            <span>
-              <strong>Gated</strong>
-              <small>
-                Same sequence, but the report waits in waiting_for_approval
-                after context tools finish so you can inspect their artifacts
-                first.
-              </small>
-            </span>
-          </label>
+          <ToolCallingChoiceList
+            mode={values.tool_calling ?? "none"}
+            onChange={(mode) => update("tool_calling", mode)}
+          />
+          <WorkflowModeChoiceList
+            mode={values.workflow_mode ?? "sequential"}
+            onChange={(mode) => update("workflow_mode", mode)}
+          />
         </fieldset>
         <fieldset className="agent-wide">
           <legend>Retry</legend>
