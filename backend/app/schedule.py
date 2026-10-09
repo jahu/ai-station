@@ -113,4 +113,7 @@ def scheduler_tick(session: Session) -> list[str]:
             created.append(run_id)
         except (ValueError, ProviderError):
             agent.enabled, agent.next_run_at, agent.last_status = False, None, "misconfigured"
+    from app.worktree_expiry import expire_due_worktrees
+
+    created.extend(expire_due_worktrees(session))
     return created

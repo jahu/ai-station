@@ -68,6 +68,7 @@ it("requires confirmation before queueing owned worktree removal", async () => {
               run_status: "succeeded",
               owned: true,
               removed_at: null,
+              expires_at: null,
               branch: "ai/task",
               relative_path: "worktrees/project/task",
             },
@@ -111,6 +112,65 @@ it("requires confirmation before queueing owned worktree removal", async () => {
   await screen.findByRole("heading", { name: "Removal Run" });
   expect(fetch).toHaveBeenCalledWith(
     "/api/projects/one/worktrees/worktree/remove",
+    expect.objectContaining({
+      method: "POST",
+      body: '{"expected_updated_at":"version"}',
+    }),
+  );
+});
+
+it("pins a scheduled worktree so automatic expiry stops", async () => {
+  let pinned = false;
+  const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST"
+        ? ((pinned = true),
+          { id: "worktree", expires_at: null, owned: true, removed_at: null })
+        : [
+            {
+              id: "worktree",
+              run_id: "preparation",
+              run_status: "succeeded",
+              owned: true,
+              removed_at: null,
+              expires_at: pinned ? null : "2026-10-16T00:00:00Z",
+              branch: "ai/task",
+              relative_path: "worktrees/project/task",
+            },
+          ],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/projects/one"]}>
+        <Routes>
+          <Route
+            path="/projects/one"
+            element={
+              <ProjectWorktrees
+                project={{
+                  id: "one",
+                  updated_at: "version",
+                  integration_branch: "develop",
+                }}
+              />
+            }
+          />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Don't auto-remove" }),
+  );
+  await screen.findByText("Prepared and recorded. Kept until you remove it.");
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/projects/one/worktrees/worktree/keep",
     expect.objectContaining({
       method: "POST",
       body: '{"expected_updated_at":"version"}',

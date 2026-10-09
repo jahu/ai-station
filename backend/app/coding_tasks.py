@@ -12,6 +12,7 @@ from app.models import Run, Worktree
 from app.projects import get_project
 from app.runs import create_run, create_task
 from app.state import TERMINAL
+from app.worktree_expiry import refresh_expiry
 
 
 class CodingTask(BaseModel):
@@ -141,6 +142,7 @@ def queue_proposal(session, preparation, worktree):
         retry_class="inspect",
         parameters={**request, "worktree_id": worktree.id, "worktree_run_id": preparation.id},
     )
+    refresh_expiry(session, worktree_id=worktree.id)
     if local:
         from app.llama import prepare_consumer
 
@@ -176,6 +178,7 @@ def queue_validation(session, coding_run):
         },
     )
     run.parent_run_id = coding_run.id
+    refresh_expiry(session, worktree_id=coding_run.parameters["worktree_id"])
     coding_run.metadata_json = {
         **coding_run.metadata_json,
         "validation_run_id": run.id,

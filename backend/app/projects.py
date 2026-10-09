@@ -16,6 +16,7 @@ from app.runner_client import RunnerClient, RunnerError
 from app.runs import create_run, create_task, run_dict
 from app.serialize import project_dict, worktree_dict
 from app.state import TERMINAL
+from app.worktree_expiry import pin_expiry, queue_worktree_removal, refresh_expiry
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 DB = Annotated[Session, Depends(session_scope)]
@@ -287,6 +288,7 @@ def validate_project_worktree(project_id: UUID, worktree_id: UUID, body: Worktre
         },
     )
     run.parent_run_id = worktree.run_id
+    refresh_expiry(session, worktree_id=worktree.id)
     session.commit()
     return run_dict(run)
 
@@ -340,8 +342,24 @@ def install_project_dependencies(project_id: UUID, worktree_id: UUID, body: Work
         },
     )
     run.parent_run_id = worktree.run_id
+    refresh_expiry(session, worktree_id=worktree.id)
     session.commit()
     return run_dict(run)
+
+
+@router.post("/{project_id}/worktrees/{worktree_id}/keep", status_code=200)
+def keep_project_worktree(project_id: UUID, worktree_id: UUID, body: WorktreeRequest, session: DB):
+    project = get_project(session, project_id)
+    if project.updated_at != body.expected_updated_at:
+        raise HTTPException(409, "Project settings changed. Reload before keeping a worktree.")
+    worktree = session.get(Worktree, str(worktree_id))
+    if worktree is None or worktree.project_id != project.id:
+        raise HTTPException(404, "Worktree not found in this project")
+    if worktree.removed_at is not None or not worktree.owned:
+        raise HTTPException(409, "Only a prepared owned worktree can be kept")
+    pin_expiry(worktree)
+    session.commit()
+    return worktree_dict(worktree)
 
 
 @router.post("/{project_id}/worktrees/{worktree_id}/remove", status_code=202)
@@ -352,39 +370,9 @@ def remove_project_worktree(project_id: UUID, worktree_id: UUID, body: WorktreeR
     worktree = session.get(Worktree, str(worktree_id))
     if worktree is None or worktree.project_id != project.id:
         raise HTTPException(404, "Worktree not found in this project")
-    if worktree.removed_at is not None:
-        raise HTTPException(409, "This worktree was already removed")
-    expected = f"worktrees/{project.id}/{worktree.run_id}"
-    if worktree.relative_path != expected or worktree.branch != f"ai/{worktree.run_id}-workspace":
-        raise HTTPException(409, "Worktree ownership record is inconsistent")
-    if session.scalar(
-        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
-    ):
-        raise HTTPException(409, "This project already has an active Run")
-    task = create_task(
-        session,
-        title=f"Remove worktree for {project.name}",
-        prompt="Remove an owned local Git worktree",
-        capability="coding.worktree.remove",
-        project_id=project.id,
-    )
-    run = create_run(
-        session,
-        task,
-        run_type="worktree",
-        capability="coding.worktree.remove",
-        executor_type="worktree_remove",
-        execution_target="host",
-        permissions=["filesystem_read", "workspace_write", "git_read", "git_write"],
-        retry_class="inspect",
-        parameters={
-            "worktree_id": worktree.id,
-            "worktree_run_id": worktree.run_id,
-            "repo_path": project.repo_path,
-            "relative_path": worktree.relative_path,
-            "branch": worktree.branch,
-        },
-    )
-    run.parent_run_id = worktree.run_id
+    try:
+        run = queue_worktree_removal(session, project, worktree, triggered_by="user")
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
     session.commit()
     return run_dict(run)

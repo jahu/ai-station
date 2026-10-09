@@ -50,6 +50,7 @@ class WorktreeRemoveExecutor(NativeJobExecutor):
         ):
             raise ValueError("Worktree removal result does not match the queued request")
         worktree.removed_at = utcnow()
+        worktree.expires_at = None
         with tempfile.NamedTemporaryFile(mode="w+", suffix=".json") as handle:
             json.dump(report, handle, indent=2)
             handle.flush()
