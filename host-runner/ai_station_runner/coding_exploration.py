@@ -48,7 +48,25 @@ def explore(workspace, prompt, guidance, complete, *, web=False):
         )
         if search:
             web_rules += "web_search sends only the query to the configured search service. "
-        web_rules += "Prefer URLs from the task or from fetch_url links. "
+        for url in public_http.prompt_public_urls(prompt):
+            request = {"tool": "fetch_url", "url": url, "source": "task"}
+            print(
+                json.dumps({"event": "tool.requested", "tool": "fetch_url", "arguments": request}), flush=True
+            )
+            result = public_http.fetch_public(url)
+            observations.append({"request": request, "result": result})
+            print(
+                json.dumps({"event": "tool.completed", "tool": "fetch_url", "step": 0, "result": result}),
+                flush=True,
+            )
+        if any(item["request"].get("source") == "task" for item in observations):
+            web_rules += (
+                "Public URLs from the task were fetched automatically. Use that page text; "
+                "do not invent the company from the hostname. You may fetch_url extra public "
+                "same-origin links from those results. "
+            )
+        else:
+            web_rules += "Prefer URLs from the task or from fetch_url links. "
     instructions = (
         "Select source files for this coding task by exploring an isolated repository. "
         "Reply with exactly one JSON object, no Markdown. Available operations: "

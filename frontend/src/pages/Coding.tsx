@@ -266,10 +266,11 @@ export default function Coding() {
                   </label>
                   {local && explore && (
                     <small>
-                      Local AI may GET public pages from URLs in the task and,
-                      when the Host Runner has search configured, query the
-                      public web. Private and loopback addresses are blocked.
-                      JavaScript is not executed; this is not a browser.
+                      Public URLs in the task are fetched automatically. Local
+                      AI may GET further public pages and, when the Host Runner
+                      has search configured, query the public web. Private and
+                      loopback addresses are blocked. JavaScript is not
+                      executed; this is not a browser.
                     </small>
                   )}
                   {!explore && (

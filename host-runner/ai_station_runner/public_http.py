@@ -63,6 +63,24 @@ def public_url(value):
     return value
 
 
+PROMPT_URL = re.compile(r"https?://[^\s)\]>'\"<>]+", re.IGNORECASE)
+
+
+def prompt_public_urls(text, *, limit=3):
+    found, seen = [], set()
+    if not isinstance(text, str):
+        return found
+    for match in PROMPT_URL.findall(text):
+        url = public_url(match.rstrip(".,;:)]}"))
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        found.append(url)
+        if len(found) == limit:
+            break
+    return found
+
+
 def public_addresses(host):
     try:
         rows = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)

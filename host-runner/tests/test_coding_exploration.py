@@ -156,6 +156,50 @@ def test_local_web_exploration_fails_closed_on_private_fetch(workspace, monkeypa
         )
 
 
+def test_web_exploration_prefetches_public_task_urls(workspace, monkeypatch):
+    calls = []
+
+    def fake_fetch(url):
+        calls.append(url)
+        return {"url": url, "status": 200, "text": "live Kora Timber mill", "untrusted": True}
+
+    monkeypatch.setattr(public_http, "fetch_public", fake_fetch)
+    monkeypatch.setattr(public_http, "configured_search_url", lambda: "")
+    actions = iter([{"tool": "finish", "files": ["index.html"]}])
+    messages = []
+
+    def complete(message):
+        messages.append(message)
+        return json.dumps(next(actions))
+
+    _, trace = explore(
+        workspace,
+        "Zbuduj stronę https://www.koratimber.com/",
+        "",
+        complete,
+        web=True,
+    )
+    assert calls == ["https://www.koratimber.com/"]
+    assert trace[0]["request"]["source"] == "task"
+    assert "live Kora Timber mill" in messages[0]
+    assert "fetched automatically" in messages[0]
+
+
+def test_exploration_without_web_does_not_prefetch_task_urls(workspace, monkeypatch):
+    monkeypatch.setattr(
+        public_http,
+        "fetch_public",
+        lambda url: (_ for _ in ()).throw(AssertionError(url)),
+    )
+    _, trace = explore(
+        workspace,
+        "Clone https://www.koratimber.com/",
+        "",
+        lambda _: json.dumps({"tool": "finish", "files": ["index.html"]}),
+    )
+    assert all(item["request"].get("tool") != "fetch_url" for item in trace)
+
+
 def test_web_exploration_has_a_twelve_request_budget(workspace, monkeypatch):
     monkeypatch.setattr(public_http, "configured_search_url", lambda: "")
     calls = []
