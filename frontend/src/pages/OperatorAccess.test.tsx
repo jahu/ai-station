@@ -248,3 +248,56 @@ it("shows an invitation token once and omits it from later node lists", async ()
   const listCalls = fetch.mock.calls.filter(([path]) => path === "/api/nodes");
   expect(listCalls.length).toBeGreaterThan(0);
 });
+
+it("moves through nodes with arrow keys", async () => {
+  const remote = {
+    id: "node-two",
+    name: "Studio GPU",
+    kind: "host-runner",
+    transport: "unpublished",
+    ownership: "remote",
+    status: "pending",
+    authenticated: false,
+  };
+  mount(
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path === "/api/nodes"
+          ? { ...nodes, items: [...nodes.items, remote] }
+          : {
+              ...status,
+              configured: true,
+              session_required: true,
+              authenticated: true,
+              session_scope: "loopback",
+            },
+    })),
+  );
+  await screen.findByText("This workstation");
+  const first = screen
+    .getByText("This workstation")
+    .closest("[data-list-index]") as HTMLElement;
+  const second = screen.getByRole("button", {
+    name: "Revoke Studio GPU node-two",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Nodes" })).toBeTruthy();
+  expect(
+    screen.getByText(/Authenticated LAN transport stays unpublished/),
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /bind|publish|lan/i })).toBeNull();
+  fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(
+    screen.getByText("Studio GPU").closest("[data-list-index]"),
+  );
+  fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
