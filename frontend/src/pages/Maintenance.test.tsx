@@ -101,6 +101,71 @@ it("queues an explicit backup and does not offer restore or rollout", async () =
   ).toBe(false);
 });
 
+it("re-checks a backup copy without offering restore or rollout", async () => {
+  const fetch = vi.fn(async (path: string) => {
+    if (path === "/api/maintenance/backups/run-backup") {
+      return {
+        ok: true,
+        json: async () => ({
+          run_id: "run-backup",
+          status: "succeeded",
+          integrity_check: "ok",
+          hash_matches: true,
+          size_bytes: 12,
+          schema_revision: "0019",
+          live_schema_revision: "0019",
+          schema_matches_live: true,
+          restore: "unpublished",
+          image_rollout: "unpublished",
+          replay: false,
+          summary: "Copy integrity_check=ok; restore remains unpublished",
+          relative_path: "backups/run-backup.sqlite",
+        }),
+      };
+    }
+    if (path === "/api/maintenance/backups") {
+      return {
+        ok: true,
+        json: async () => ({
+          restore: "unpublished",
+          items: [
+            {
+              id: "run-backup",
+              status: "succeeded",
+              summary: "SQLite backup integrity_check=ok",
+              restore: "unpublished",
+              metadata: {
+                backup: { integrity_check: "ok", schema_revision: "0019" },
+              },
+            },
+          ],
+        }),
+      };
+    }
+    return { ok: true, json: async () => readiness };
+  });
+  mount(fetch);
+  await screen.findByText(/recorded integrity_check=ok/);
+  expect(
+    screen.queryByRole("button", { name: /restore|rollout|deploy/i }),
+  ).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Inspect copy" }));
+  await screen.findByText(/matches live schema/);
+  await screen.findByText(/backups\/run-backup.sqlite/);
+  expect(
+    fetch.mock.calls.some(
+      (call) =>
+        String(call[0]).includes("/restore") ||
+        String(call[0]).includes("/rollout"),
+    ),
+  ).toBe(false);
+  expect(
+    fetch.mock.calls.filter(
+      (call) => call[0] === "/api/maintenance/backups/run-backup",
+    ),
+  ).toHaveLength(1);
+});
+
 it("marks an interrupted run inspected without posting restore", async () => {
   let acknowledged = false;
   const fetch = vi.fn(async (path: string, options?: RequestInit) => {

@@ -64,11 +64,19 @@ def test_backup_run_integrity_checks_and_never_restores():
     assert listed["restore"] == "unpublished"
     assert listed["items"][0]["id"] == run["id"]
     assert listed["items"][0]["restore"] == "unpublished"
+    inspected = client.get(f"/api/maintenance/backups/{run['id']}").json()
+    assert inspected["integrity_check"] == "ok"
+    assert inspected["hash_matches"] is True
+    assert inspected["schema_matches_live"] is True
+    assert inspected["restore"] == "unpublished"
+    assert inspected["image_rollout"] == "unpublished"
+    assert inspected["replay"] is False
     ready = client.get("/api/maintenance").json()
     assert ready["last_backup"]["id"] == run["id"]
     assert ready["restore"] == "unpublished"
     assert client.post("/api/maintenance/backups", json={}).status_code == 202
     assert client.post("/api/maintenance/restore", json={"run_id": run["id"]}).status_code == 404
+    assert client.post(f"/api/maintenance/backups/{run['id']}/restore", json={}).status_code == 404
 
 
 def test_backup_cancel_and_missing_permission_fail_closed():
@@ -169,6 +177,36 @@ def test_acknowledge_interrupted_does_not_replay_or_restore():
         assert copied.status == "succeeded", f"{copied.error_type}: {copied.error_message}"
     assert client.post("/api/maintenance/restore", json={"run_id": backup["id"]}).status_code == 404
     assert client.post(f"/api/runs/{run_id}/retry-workflow", json={}).status_code in {404, 409}
+
+
+def test_inspect_backup_fails_closed_and_never_restores():
+    client = TestClient(app)
+    queued = client.post("/api/maintenance/backups", json={}).json()
+    live = Path(get_settings().sqlite_url().removeprefix("sqlite:///"))
+    with session_factory()() as session:
+        drain(session)
+        row = session.get(Run, queued["id"])
+        assert row.status == "succeeded"
+        copied = get_settings().data_dir / f"backups/{row.id}.sqlite"
+        live_before = live.read_bytes()
+        copied.write_bytes(b"not-a-sqlite-database")
+        run_id = row.id
+        copy_path = copied
+    damaged = client.get(f"/api/maintenance/backups/{run_id}").json()
+    assert damaged["restore"] == "unpublished"
+    assert damaged["replay"] is False
+    assert damaged["hash_matches"] is False
+    assert damaged["integrity_check"] != "ok"
+    assert client.get("/api/maintenance").json()["schema_current_matches_head"] is True
+    assert live.read_bytes() == live_before
+    copy_path.unlink()
+    missing = client.get(f"/api/maintenance/backups/{run_id}")
+    assert missing.status_code == 409
+    assert client.post("/api/maintenance/restore", json={"run_id": run_id}).status_code == 404
+    canceled = client.post("/api/maintenance/backups", json={}).json()
+    client.post(f"/api/runs/{canceled['id']}/cancel")
+    assert client.get(f"/api/maintenance/backups/{canceled['id']}").status_code == 409
+    assert client.get("/api/maintenance/backups/00000000-0000-0000-0000-000000000000").status_code == 404
 
 
 def test_acknowledge_rejects_active_runs():

@@ -1,7 +1,8 @@
-"""Explicit SQLite backups and upgrade-readiness inspection. Restore and image rollout stay unpublished."""
+"""Explicit SQLite backups and inspect-only copy checks. Restore and image rollout stay unpublished."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 import sqlite3
 import tempfile
@@ -21,7 +22,7 @@ from app.db import alembic_config, session_scope, utcnow
 from app.events import append_event
 from app.models import Artifact, Run, Setting, Task
 from app.operator_auth import public_status
-from app.paths import safe_join, validate_relative
+from app.paths import PathBoundaryError, safe_join, validate_relative
 from app.permissions import require
 from app.runs import create_run, create_task, mark_failed, run_dict, transition
 from app.state import ACTIVE, TERMINAL, RunStatus
@@ -129,7 +130,8 @@ def readiness(session: Session) -> dict:
         "summary": (
             "Upgrade readiness is inspect-only. Compose down without --volumes keeps the bind-mounted "
             "data directory. An explicit backup Run copies SQLite with VACUUM INTO and "
-            "integrity-checks the copy. Restore, image rollout and LAN publish are unpublished. "
+            "integrity-checks the copy. A successful copy can be re-checked in place without "
+            "writing the live database. Restore, image rollout and LAN publish are unpublished. "
             "Do not treat preview :8765 as this checkout."
         ),
     }
@@ -155,6 +157,99 @@ def integrity_ok(path: Path) -> str:
         return result[0] if result else "unknown"
     finally:
         connection.close()
+
+
+def readonly_sqlite(path: Path) -> sqlite3.Connection:
+    quoted = str(path.resolve()).replace("?", "%3F")
+    connection = sqlite3.connect(f"file:{quoted}?mode=ro", uri=True, timeout=30)
+    try:
+        connection.execute("PRAGMA query_only=ON")
+    except sqlite3.Error:
+        pass
+    return connection
+
+
+def integrity_readonly(path: Path) -> str:
+    connection = None
+    try:
+        connection = readonly_sqlite(path)
+        result = connection.execute("PRAGMA integrity_check").fetchone()
+        return result[0] if result else "unknown"
+    except sqlite3.Error as exc:
+        return str(exc) or "unreadable"
+    finally:
+        if connection is not None:
+            connection.close()
+
+
+def backup_schema_revision(path: Path) -> str | None:
+    connection = None
+    try:
+        connection = readonly_sqlite(path)
+        row = connection.execute("SELECT version_num FROM alembic_version").fetchone()
+        return str(row[0]) if row and row[0] is not None else None
+    except sqlite3.Error:
+        return None
+    finally:
+        if connection is not None:
+            connection.close()
+
+
+def digest_file(path: Path) -> tuple[int, str]:
+    digest = hashlib.sha256()
+    size = 0
+    with path.open("rb") as handle:
+        while chunk := handle.read(1024 * 1024):
+            size += len(chunk)
+            digest.update(chunk)
+    return size, digest.hexdigest()
+
+
+def sqlite_artifact(session: Session, run: Run) -> Artifact | None:
+    return session.scalars(
+        select(Artifact).where(
+            Artifact.run_id == run.id,
+            Artifact.original_filename == "ai-station.sqlite",
+        )
+    ).first()
+
+
+def inspect_copy(session: Session, run: Run) -> dict:
+    artifact = sqlite_artifact(session, run)
+    if artifact is None or not artifact.relative_path:
+        raise HTTPException(409, "Backup copy is not present")
+    try:
+        stored = safe_join(get_settings().data_dir, artifact.relative_path)
+    except PathBoundaryError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    if not stored.is_file():
+        raise HTTPException(409, "Backup copy is not present on disk")
+    size, digest = digest_file(stored)
+    check = integrity_readonly(stored)
+    copy_schema = backup_schema_revision(stored)
+    live_schema, _head = schema_revisions(session)
+    hash_matches = digest == artifact.sha256 and size == artifact.size_bytes
+    return {
+        "run_id": run.id,
+        "status": run.status,
+        "integrity_check": check,
+        "hash_matches": hash_matches,
+        "size_bytes": size,
+        "recorded_size_bytes": artifact.size_bytes,
+        "sha256": digest,
+        "recorded_sha256": artifact.sha256,
+        "relative_path": artifact.relative_path,
+        "schema_revision": copy_schema,
+        "live_schema_revision": live_schema,
+        "schema_matches_live": copy_schema == live_schema and copy_schema is not None,
+        "restore": "unpublished",
+        "image_rollout": "unpublished",
+        "replay": False,
+        "summary": (
+            f"Copy integrity_check={check}; hash "
+            f"{'matches' if hash_matches else 'differs'}; restore remains unpublished"
+        ),
+    }
 
 
 class SqliteBackupExecutor:
@@ -304,7 +399,18 @@ def list_backups(session: DB):
             {**run_dict(row), "artifacts": by_run.get(row.id, []), "restore": "unpublished"} for row in runs
         ],
         "restore": "unpublished",
+        "image_rollout": "unpublished",
     }
+
+
+@router.get("/backups/{run_id}")
+def inspect_backup(run_id: UUID, session: DB):
+    run = session.get(Run, str(run_id))
+    if run is None or run.executor_type != "sqlite_backup":
+        raise HTTPException(404, "Backup Run not found")
+    if run.status != RunStatus.SUCCEEDED.value:
+        raise HTTPException(409, "Only a successful backup Run can be inspected")
+    return inspect_copy(session, run)
 
 
 @router.post("/interrupted/{run_id}/acknowledge")

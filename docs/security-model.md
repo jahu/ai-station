@@ -34,7 +34,7 @@ Coding work happens in a fresh worktree and a new `ai/...` branch. The user's cu
 
 ## Permissions
 
-Runs store an effective permission list. There is no universal full-access flag. Profiles grant named capabilities (`filesystem_read`, `workspace_write`, `git_read`, `git_write`, `network_read`, `network_external`, `shell_project_commands`, `external_ai`, `manage_station`, and others). Missing permission fails the tool call. SQLite backup Runs require `manage_station`; agents do not receive it. Restore and image rollout are unpublished.
+Runs store an effective permission list. There is no universal full-access flag. Profiles grant named capabilities (`filesystem_read`, `workspace_write`, `git_read`, `git_write`, `network_read`, `network_external`, `shell_project_commands`, `external_ai`, `manage_station`, and others). Missing permission fails the tool call. SQLite backup Runs require `manage_station`; agents do not receive it. Inspecting a copy is read-only. Restore and image rollout are unpublished.
 
 ## Network tools
 
@@ -44,7 +44,7 @@ HTTP fetch is a real tool and is off unless the run has `network_read` (GET) or 
 
 The `operator_auth` setting stores PBKDF2-SHA256 material only. Responses omit password, salt and hash. Rotation and removal require the current password. After the hash exists, the loopback UI/API are gated by `ais_operator` (HMAC in `operator_session`, 12 hours, httpOnly, SameSite=strict, not Secure). Health and login remain public so the workstation can unlock itself. Node invitations require that hash to exist; join tokens are HMAC-SHA256 and returned once. Registration is accepted only on the loopback API and still needs the session. LAN transport stays unpublished.
 
-SQLite backups require `manage_station` and write under the data root. They never restore over the live database. Compose shutdown does not pass `--volumes`. Interrupted-run acknowledgement records inspection only and does not replay side effects. Held-lease status is inspect-only and does not recover or restore. See [operations](operations.md).
+SQLite backups require `manage_station` and write under the data root. Inspecting a copy re-opens that file read-only and never restores over the live database. Compose shutdown does not pass `--volumes`. Interrupted-run acknowledgement records inspection only and does not replay side effects. Held-lease status is inspect-only and does not recover or restore. See [operations](operations.md).
 
 ## Secrets
 
