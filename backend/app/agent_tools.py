@@ -41,7 +41,6 @@ AGENT_TOOLS = {
     ),
 }
 for key, label in [
-    ("http_fetch", "HTTP fetching"),
     ("browser", "Browser automation"),
     ("read_file", "Host file reading"),
 ]:
@@ -63,7 +62,8 @@ def effective_permissions(tools):
 
 
 AGENT_TOOLS["web_search"] = TOOLS["web_search"]
+AGENT_TOOLS["http_fetch"] = TOOLS["http_fetch"]
 
 
 def agent_tool(name):
-    return get_tool(name) if name == "web_search" else AGENT_TOOLS[name]
+    return get_tool(name) if name in {"web_search", "http_fetch"} else AGENT_TOOLS[name]

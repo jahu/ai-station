@@ -2,6 +2,7 @@ import RunTimeline from "./RunTimeline";
 import { useRunEvents } from "./useRunEvents";
 import AgentReport from "./AgentReport";
 import { SearchSources, type WebSources } from "./ChatWebSearch";
+import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import GithubPublication from "./GithubPublication";
 import CodingReview from "./CodingReview";
 import { type FormEvent } from "react";
@@ -429,6 +430,11 @@ export function RunDetail() {
             {run.data.metadata?.web_search && (
               <SearchSources
                 result={run.data.metadata.web_search as WebSources}
+              />
+            )}
+            {run.data.metadata?.http_fetch && (
+              <FetchedPages
+                result={run.data.metadata.http_fetch as FetchResult}
               />
             )}
             {run.data.summary && run.data.executor_type !== "agent" && (

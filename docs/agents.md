@@ -2,7 +2,7 @@
 
 Persistent agents use the existing Task/Run lifecycle and configured local OpenAI-compatible provider. Draft generation is deterministic and always disabled; the definition, model, selected tools, permissions and UTC schedule must be inspectable before activation. Unsupported tool requests stay visible and block activation rather than silently pretending to execute them.
 
-Operational tools are bounded host telemetry, the agent's own scoped memory and explicitly configured public web search. These are explicit context-gathering steps before local inference, not an unrestricted model tool loop. No filesystem editing, arbitrary shell, autonomous web access or external AI is granted. Every tool call emits events, and successful output becomes a Markdown artifact. Cancellation closes the model stream; unavailable providers and empty results fail the Run. Definitions are snapshotted when queued; tool observations and model messages are persisted during execution.
+Operational tools are bounded host telemetry, the agent's own scoped memory, explicitly configured public web search, and GET of reviewed public pages. These are explicit context-gathering steps before local inference, not an unrestricted model tool loop. No filesystem editing, arbitrary shell, model-selected URLs, browser automation or external AI is granted. Every tool call emits events, and successful output becomes a Markdown artifact. Cancellation closes the model stream; unavailable providers and empty results fail the Run. Definitions are snapshotted when queued; tool observations and model messages are persisted during execution.
 
 Manual, interval, five-field UTC cron and one-shot UTC datetime triggers share the same queue. Schedules persist; only one active Run per agent is allowed. Missed recurring slots are coalesced rather than replayed in a burst. Pausing prevents future launches but does not cancel an already queued/running Run. Explicit Run cancellation remains available.
 
@@ -11,7 +11,15 @@ The Agents workspace supports draft review/editing, explicit enablement, Run now
 
 The local endpoint comes from administrator configuration, never agent output. The local model uses the shared compatible-provider stream with a bounded output and runtime; host telemetry has an eight-second request timeout. Partial reports are preserved on failure/cancellation. Scheduled Runs have no automatic retry, and missed worker leases become interrupted rather than repeating inference invisibly. A one-shot launch disables its schedule immediately. Interval/cron agents keep their saved cadence when Run now is used.
 
-No external AI, browser, email, file editing, or arbitrary shell is enabled in this slice. Agents do not control runtime processes. Existing generic draft adapters remain unregistered.
+No external AI, browser, email, file editing, or arbitrary shell is enabled in this slice. Agents do not control runtime processes and cannot choose extra URLs at runtime. Existing generic draft adapters remain unregistered.
+
+## Reviewed public HTTP fetch
+
+Select **HTTP fetch**, enter one to three public `http`/`https` URLs, save the definition and then enable the agent. The URL list is required before activation; it is never inferred from the private goal, memory or model output. Draft creation may copy public URLs that were already written in the instruction, still as a disabled definition for review. Each manual or scheduled Run snapshots those URLs and `network_read` permission, GETs the pages from the control plane, and persists status, bounded text excerpts, same-origin links, timestamps and a JSON artifact before local inference.
+
+The worker enforces cancellation and the overall agent deadline while fetching. A missing permission, non-public address after DNS, redirect to a private target or a network failure stops the Run rather than generating a report without the requested pages. Binary responses are recorded as skipped. Script and style are stripped. JavaScript is not executed, so a client-rendered site may yield little useful HTML. Page excerpts are untrusted context, not instructions or proof of a live browser session. Run details display clickable fetched-page cards independently of the model's prose. External Markdown images are not loaded.
+
+This is GET-only on ports 80/443. Credentialed URLs, loopback, private, link-local, reserved, multicast and non-public DNS answers are rejected. POST, cookies, browser automation and fetching search-result pages that were not reviewed on the definition remain unavailable.
 
 ## Scheduled internet research
 

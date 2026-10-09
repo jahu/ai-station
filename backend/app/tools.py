@@ -115,7 +115,7 @@ TOOLS: dict[str, ToolSpec] = {
     ),
     "http_fetch": ToolSpec(
         name="http_fetch",
-        description="Fetch a public HTTP URL. Private and loopback addresses are blocked.",
+        description="GET a public HTTP URL. Private and loopback addresses are blocked after DNS.",
         risk_level="medium",
         required_permissions=("network_read",),
         timeout=30,

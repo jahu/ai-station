@@ -403,6 +403,158 @@ def test_agent_query_requires_explicit_review_before_activation(research):
         assert registry["web_search"]["operational"] and registry["web_search"]["required_permissions"] == [
             "network_read"
         ]
+        assert registry["http_fetch"]["operational"] and registry["http_fetch"]["required_permissions"] == [
+            "network_read"
+        ]
+
+
+@pytest.fixture
+def pages(monkeypatch):
+    from app import http_fetch
+
+    calls, messages = [], []
+
+    async def fetch_public(url):
+        calls.append(url)
+        return {
+            "url": url,
+            "status": 200,
+            "content_type": "text/html",
+            "text": "Public page excerpt",
+            "links": [url.rstrip("/") + "/about"],
+            "truncated": False,
+            "untrusted": True,
+            "bounded": True,
+        }
+
+    async def stream(self, **params):
+        messages.append(params["messages"])
+        yield "# Page report\n\n[Source](https://www.example.com/)"
+
+    monkeypatch.setattr(http_fetch, "fetch_public", fetch_public)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    return calls, messages
+
+
+@pytest.mark.parametrize("scheduled", [False, True])
+def test_agent_http_fetch_snapshots_reviewed_urls_and_retains_pages(pages, scheduled):
+    calls, messages = pages
+    with TestClient(app) as api:
+        agent = create(
+            api,
+            enabled=True,
+            tools=["http_fetch"],
+            fetch_urls=["https://www.example.com/"],
+            goal="PRIVATE GOAL: summarize the public page",
+            trigger="interval" if scheduled else "manual",
+            interval_seconds=60 if scheduled else None,
+        )
+        if scheduled:
+            with session_factory()() as session:
+                session.get(Agent, agent["id"]).next_run_at = utcnow() - timedelta(seconds=1)
+                session.commit()
+                run_id = scheduler_tick(session)[0]
+                session.commit()
+        else:
+            run_id = run_now(api, agent)["id"]
+        with session_factory()() as session:
+            session.get(Agent, agent["id"]).fetch_urls = ["https://www.example.com/later"]
+            session.commit()
+            tick(session, "fetch-test")
+        run = api.get("/api/runs/" + run_id).json()
+        assert run["status"] == "succeeded", run
+        assert run["effective_permissions"] == ["network_read"]
+        assert calls == ["https://www.example.com/"]
+        assert "PRIVATE GOAL" in str(messages) and "Public page excerpt" in str(messages)
+        assert run["metadata"]["http_fetch"]["pages"][0]["url"] == "https://www.example.com/"
+        artifacts = api.get("/api/artifacts?run_id=" + run_id).json()
+        assert {item["type"] for item in artifacts} == {"markdown", "json"}
+        reset_engine()
+        assert api.get("/api/runs/" + run_id).json()["metadata"]["http_fetch"]["urls"] == calls
+        assert "tool.completed" in api.get("/api/runs/" + run_id + "/stream").text
+
+
+@pytest.mark.parametrize("mode", ["cancel", "timeout", "permission", "failure", "ssrf"])
+def test_agent_fetch_cancels_bounds_runtime_and_enforces_permission(pages, monkeypatch, mode):
+    from app import http_fetch
+
+    closed = []
+
+    async def fetch_public(url):
+        if mode == "permission":
+            raise AssertionError("Unpermitted fetch")
+        if mode == "failure":
+            raise ProviderError("HTTP fetch could not complete. Check the URL and try again.")
+        if mode == "ssrf":
+            raise ValueError("Refusing a non-public network address")
+        try:
+            if mode == "cancel":
+                with session_factory()() as session:
+                    request_cancel(session, session.get(Run, run_id))
+                    session.commit()
+            await asyncio.Future()
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr(http_fetch, "fetch_public", fetch_public)
+    if mode == "timeout":
+        import time
+
+        original = http_fetch.execute_fetch
+
+        async def short_deadline(session, run, urls, **kwargs):
+            return await original(session, run, urls, deadline=time.monotonic() + 0.05)
+
+        monkeypatch.setattr(http_fetch, "execute_fetch", short_deadline)
+    with TestClient(app) as api:
+        agent = create(api, enabled=True, tools=["http_fetch"], fetch_urls=["https://www.example.com/"])
+        run_id = run_now(api, agent)["id"]
+        with session_factory()() as session:
+            if mode == "permission":
+                session.get(Run, run_id).effective_permissions = []
+                session.commit()
+            tick(session, "fetch-negative")
+        result = api.get("/api/runs/" + run_id).json()
+        assert result["status"] == ("canceled" if mode == "cancel" else "failed"), result
+        assert not pages[1]
+        if mode in {"cancel", "timeout"}:
+            assert closed
+        assert api.get("/api/artifacts?run_id=" + run_id).json() == []
+
+
+def test_agent_fetch_requires_explicit_review_before_activation():
+    with TestClient(app) as api:
+        draft = api.post(
+            "/api/agents/draft",
+            json={"instruction": "Every day fetch https://www.example.com/ docs", "model": "local"},
+        ).json()
+        assert draft["tools"] == ["http_fetch"]
+        assert draft["fetch_urls"] == ["https://www.example.com/"]
+        assert not draft["enabled"]
+        empty = api.post(
+            "/api/agents/draft", json={"instruction": "Fetch the public homepage daily", "model": "local"}
+        ).json()
+        assert empty["tools"] == ["http_fetch"] and empty["fetch_urls"] == []
+        assert (
+            api.post(
+                f"/api/agents/{empty['id']}/enabled",
+                json={"enabled": True, "expected_updated_at": empty["updated_at"]},
+            ).status_code
+            == 422
+        )
+        assert (
+            api.post(
+                "/api/agents",
+                json={
+                    "name": "Test",
+                    "goal": "Goal",
+                    "model": "local",
+                    "tools": ["http_fetch"],
+                    "fetch_urls": ["http://127.0.0.1/admin"],
+                },
+            ).status_code
+            == 422
+        )
 
 
 def test_agent_search_migration_preserves_existing_definitions():
@@ -415,7 +567,7 @@ def test_agent_search_migration_preserves_existing_definitions():
         command.upgrade(alembic_config(), "head")
         saved = api.get("/api/agents/" + agent["id"]).json()
         assert saved["goal"] == agent["goal"] and saved["tools"] == ["memory_search"]
-        assert saved["search_query"] == ""
+        assert saved["search_query"] == "" and saved["fetch_urls"] == []
 
 
 @pytest.mark.parametrize("remember", [False, True])

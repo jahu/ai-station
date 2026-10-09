@@ -9,7 +9,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 - Platform assistant: the default conversation routes instructions to images, agent drafts and explicitly scoped Cursor tasks, showing ordinary Runs and media results inline. Images and WAV recordings can be selected from Library or reused directly from conversation results, with ordered image references. Existing workspaces remain available. See [orchestrator contracts and roadmap](docs/orchestrator.md).
 
 - Local chat: persisted conversations, selectable managed llama.cpp GGUFs across multiple GPUs alongside Ollama/compatible providers, model discovery, streaming Markdown, bounded text attachments, stop, regeneration, and inspectable Runs.
-- Agents: disabled natural-language drafts, explicit activation, local reports, opt-in report memory with source Runs, scoped context tools, persistent UTC schedules, pause/resume, duplication and execution history.
+- Agents: disabled natural-language drafts, explicit activation, local reports, opt-in report memory with source Runs, scoped context tools including reviewed public HTTP GET, persistent UTC schedules, pause/resume, duplication and execution history.
 - Memory: scoped FTS search, validated provenance, editing, pin/disable controls, and immutable pinned Chat context.
 - External runtimes: read-only process observations and configured local endpoint health, with durable history and explicit external ownership in System.
 - Models: managed metadata-only discovery Runs, persistent file observations, category/search/detail views and report artifacts.
@@ -146,7 +146,7 @@ Models now discovers existing host files through a cancellable worker Run, persi
 
 ### Agents workspace
 
-Describe a task in Agents, inspect and edit the disabled definition, select a local model and tools, then enable it explicitly. Schedules use UTC. Run now, pause, duplicate and execution history share the global Runs inspector. See [agent contracts and limits](docs/agents.md).
+Describe a task in Agents, inspect and edit the disabled definition, select a local model and tools, then enable it explicitly. Schedules use UTC. HTTP fetch GETs only the public URLs saved on the definition. Run now, pause, duplicate and execution history share the global Runs inspector. See [agent contracts and limits](docs/agents.md).
 
 Runtime observations are refreshed through a normal Run from **System → Observe runtimes**. Process presence, endpoint availability and model files remain separate. See [runtime observation semantics](docs/runtimes.md).
 

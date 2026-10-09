@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.http_fetch import prompt_public_urls
 from app.models import Agent
 
 
@@ -27,6 +28,9 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         tools.append("memory_search")
     if any(word in lowered for word in ("search", "web", "internet", "news", "szukaj", "wiadomości")):
         tools.append("web_search")
+    fetch_urls = prompt_public_urls(text)
+    if fetch_urls or any(word in lowered for word in ("fetch", "pobierz stron")):
+        tools.append("http_fetch")
     agent = Agent(
         name=name,
         description=text.strip()[:500],
@@ -43,6 +47,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         memory_scope="agent",
         maximum_runtime=600,
         tools=tools,
+        fetch_urls=fetch_urls,
         skills=[],
         trigger=trigger,
         cron_expr=cron_expr,

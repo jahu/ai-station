@@ -23,6 +23,7 @@ interface Agent {
   model: string;
   tools: string[];
   search_query: string;
+  fetch_urls: string[];
   trigger: Trigger;
   cron_expr: string;
   interval_seconds: number | null;
@@ -310,9 +311,17 @@ export function AgentDetail() {
   );
 }
 
+const fetchLines = (urls: string[] | undefined) => (urls ?? []).join("\n");
+const parseFetchUrls = (text: string) =>
+  text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+
 function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
   const cache = useQueryClient();
   const [values, setValues] = useState(agent);
+  const [fetchText, setFetchText] = useState(fetchLines(agent.fetch_urls));
   const [modelBusy, setModelBusy] = useState(false);
   const provider = useQuery({
     queryKey: ["chat-provider"],
@@ -338,6 +347,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           model: values.model,
           tools: values.tools,
           search_query: values.search_query ?? "",
+          fetch_urls: parseFetchUrls(fetchText),
           trigger: values.trigger,
           cron_expr: values.trigger === "cron" ? values.cron_expr : "",
           interval_seconds:
@@ -353,6 +363,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
       ),
     onSuccess: (result) => {
       setValues(result);
+      setFetchText(fetchLines(result.fetch_urls));
       void cache.invalidateQueries({ queryKey: ["agent", agent.id] });
       void cache.invalidateQueries({ queryKey: ["agents"] });
     },
@@ -373,7 +384,10 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => setValues(agent)}
+            onClick={() => {
+              setValues(agent);
+              setFetchText(fetchLines(agent.fetch_urls));
+            }}
           >
             Reload saved definition
           </Button>
@@ -521,6 +535,28 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             <span className="chip">Network permission · search only</span>
           </section>
         )}
+        {values.tools.includes("http_fetch") && (
+          <section className="agent-wide agent-search-settings">
+            <h3>Public pages</h3>
+            <label>
+              Public URLs to fetch
+              <textarea
+                required
+                rows={3}
+                value={fetchText}
+                onChange={(e) => setFetchText(e.target.value)}
+                placeholder="https://www.example.com/"
+              />
+            </label>
+            <p className="muted">
+              Each execution GETs these exact public http(s) pages (at most
+              three). Private, loopback and link-local addresses are blocked
+              after DNS. JavaScript is not executed. Your goal, memory and
+              other context stay with the local model.
+            </p>
+            <span className="chip">Network permission · GET public pages</span>
+          </section>
+        )}
         {values.tools.includes("remember_report") && (
           <p className="notice agent-wide">
             Successful reports will be stored in this agent’s memory with their
@@ -556,7 +592,9 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                 <strong>
                   {tool.name === "remember_report"
                     ? "Remember reports"
-                    : tool.name}
+                    : tool.name === "http_fetch"
+                      ? "HTTP fetch"
+                      : tool.name}
                 </strong>{" "}
                 {!tool.operational && "— Unavailable"}
                 <small>

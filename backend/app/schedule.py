@@ -47,6 +47,8 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
         raise ValueError("Agent model or tools are not operational")
     if "web_search" in definition.tools and not definition.search_query:
         raise ValueError("web_search requires an explicit public search query")
+    if "http_fetch" in definition.tools and not definition.fetch_urls:
+        raise ValueError("http_fetch requires 1 to 3 explicit public URLs")
     endpoint = model_endpoint(agent.model, session)
     task = create_task(
         session,

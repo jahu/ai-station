@@ -80,6 +80,8 @@ it("keeps a draft inactive and makes unsupported tools inspectable and removable
                 system_prompt: "",
                 model: "local",
                 tools: ["web_search"],
+                search_query: "",
+                fetch_urls: [],
                 trigger: "manual",
                 cron_expr: "",
                 interval_seconds: null,
@@ -173,5 +175,71 @@ it("saves a reviewed public query separately from the private goal without activ
     goal: "Private project context",
     enabled: false,
     tools: ["web_search"],
+  });
+});
+it("saves reviewed public fetch URLs separately from the private goal", async () => {
+  let agent = {
+    id: "draft",
+    name: "Pages",
+    description: "",
+    goal: "Private project context",
+    system_prompt: "",
+    model: "local",
+    search_query: "",
+    fetch_urls: [] as string[],
+    tools: ["http_fetch"],
+    trigger: "manual",
+    interval_seconds: null,
+    cron_expr: "",
+    run_at: null,
+    maximum_runtime: 600,
+    output_expectation: "Report",
+    project_id: null,
+    enabled: false,
+    updated_at: "2026-10-09T12:00:00Z",
+    next_run_at: null,
+    last_run_at: null,
+    last_status: "",
+    failure_count: 0,
+    effective_permissions: ["network_read"],
+    runs: [],
+  };
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => {
+    if (options) agent = { ...agent, ...JSON.parse(options.body as string) };
+    return {
+      ok: true,
+      json: async () =>
+        url.endsWith("/llama")
+          ? { models: [], instances: [] }
+          : url.endsWith("/chat/provider")
+            ? { models: ["local"], default_model: "local" }
+            : url.endsWith("/tools")
+              ? [
+                  {
+                    name: "http_fetch",
+                    description: "Fetch a public HTTP URL",
+                    operational: true,
+                    required_permissions: ["network_read"],
+                  },
+                ]
+              : agent,
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  const urls = await screen.findByLabelText("Public URLs to fetch");
+  expect((urls as HTMLTextAreaElement).required).toBe(true);
+  fireEvent.change(urls, {
+    target: { value: "https://www.example.com/\nhttps://docs.example.org/a" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save definition" }));
+  await vi.waitFor(() =>
+    expect(fetch.mock.calls.filter((c) => c[1])).toHaveLength(1),
+  );
+  expect(JSON.parse(fetch.mock.calls.find((c) => c[1])![1]!.body as string)).toMatchObject({
+    fetch_urls: ["https://www.example.com/", "https://docs.example.org/a"],
+    goal: "Private project context",
+    enabled: false,
+    tools: ["http_fetch"],
   });
 });
