@@ -3606,6 +3606,7 @@ section:has(> .memory-grid) > .dashboard-note {
 }
 .executor-choice-list:focus-within,
 .project-choice-list:focus-within,
+.coding-model-choice-list:focus-within,
 .gguf-choice-list:focus-within,
 .runtime-choice-list:focus-within,
 .proposal-choice-list:focus-within,
@@ -3615,6 +3616,7 @@ section:has(> .memory-grid) > .dashboard-note {
 }
 .executor-choice-list > div[aria-current="true"],
 .project-choice-list > div[aria-current="true"],
+.coding-model-choice-list > div[aria-current="true"],
 .gguf-choice-list > div[aria-current="true"],
 .runtime-choice-list > div[aria-current="true"],
 .proposal-choice-list > div[aria-current="true"],
@@ -3624,6 +3626,7 @@ section:has(> .memory-grid) > .dashboard-note {
 }
 .executor-choice-list .agent-tool,
 .project-choice-list .agent-tool,
+.coding-model-choice-list .agent-tool,
 .gguf-choice-list .agent-tool,
 .runtime-choice-list .agent-tool,
 .proposal-choice-list .agent-tool,
@@ -3639,6 +3642,7 @@ section:has(> .memory-grid) > .dashboard-note {
 }
 .executor-choice-list .agent-tool input,
 .project-choice-list .agent-tool input,
+.coding-model-choice-list .agent-tool input,
 .gguf-choice-list .agent-tool input,
 .runtime-choice-list .agent-tool input,
 .proposal-choice-list .agent-tool input,
@@ -3891,6 +3895,7 @@ section:has(> .memory-grid) > .dashboard-note {
   gap: 18px;
 }
 .coding-model-row label,
+.coding-model-row > div,
 .coding-local-model {
   flex: 1;
   min-width: 0;
