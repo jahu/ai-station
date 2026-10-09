@@ -42,7 +42,7 @@ HTTP fetch is a real tool and is off unless the run has `network_read` (GET) or 
 
 ## Secrets
 
-Secrets are environment variables or files outside Git. Database rows store references. Logs, events, errors, and prompts pass through a redactor for common token patterns. Connector responses omit secret values.
+Secrets are environment variables or files outside Git. Database rows store references (`env:NAME` or a data-root file path). Logs, events, errors, and prompts pass through a redactor for common token patterns. Connector and chat-provider responses omit secret values; the UI may show that a secret is present and the environment reference name. Chat provider URLs cannot embed credentials. External chat providers require a secret reference and fail closed when it is missing. The built-in local provider may run without a key.
 
 ## External runtimes
 

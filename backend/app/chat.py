@@ -10,12 +10,10 @@ from sqlalchemy.orm import Session
 
 from app.assistant import AssistantInputs, enqueue_assistant, task_results
 from app.chat_attachments import TextAttachment, link_attachments, message_content, save_attachments
-from app.config import get_settings
+from app.chat_providers import BUILTIN_KEY, chat_permissions, snapshot_provider
 from app.conversation_summary import enqueue_summary, latest_summary, summary_memory, summary_view
 from app.db import session_scope, utcnow
-from app.local_provider import LocalChatProvider, local_endpoint, model_endpoint
 from app.models import Conversation, MemoryEntry, Message, ModelFile, Run, Task
-from app.providers import ProviderError
 from app.runs import create_run, create_task, run_dict
 from app.serialize import conversation_dict, iso, message_dict
 from app.state import TERMINAL
@@ -28,6 +26,7 @@ class ConversationBody(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     execution_mode: Literal["local", "orchestrator"] = "local"
     title: str = Field(default="New conversation", min_length=1, max_length=300)
+    provider: str = Field(default=BUILTIN_KEY, min_length=1, max_length=80)
     model: str = Field(min_length=1, max_length=200)
     system_prompt: str = Field(default="", max_length=8000)
     temperature: float = Field(default=0.7, ge=0, le=2, allow_inf_nan=False)
@@ -45,13 +44,6 @@ class MessageBody(AssistantInputs):
         return self
 
 
-def endpoint_or_error(model=None, session=None):
-    try:
-        return model_endpoint(model, session) if model else local_endpoint()
-    except ProviderError as exc:
-        raise HTTPException(409, str(exc)) from exc
-
-
 def conversation(session, conversation_id):
     row = session.get(Conversation, str(conversation_id))
     if row is None:
@@ -60,6 +52,8 @@ def conversation(session, conversation_id):
 
 
 def conversation_view(session, row):
+    from app.models import ChatProvider
+
     label = row.model
     if row.model.startswith("llamacpp:"):
         from pathlib import PurePosixPath
@@ -67,7 +61,17 @@ def conversation_view(session, row):
         model = session.get(ModelFile, row.model.removeprefix("llamacpp:"))
         if model:
             label = f"{PurePosixPath(model.host_path).parent.name} · {model.filename}"
-    return {**conversation_dict(row), "model_label": label}
+    from app.chat_providers import normalize_provider_key
+
+    provider = session.scalar(
+        select(ChatProvider).where(ChatProvider.key == normalize_provider_key(row.provider))
+    )
+    return {
+        **conversation_dict(row),
+        "model_label": label,
+        "provider_name": provider.name if provider else row.provider,
+        "provider_location": provider.location if provider else "local",
+    }
 
 
 def ensure_idle(session, conversation_id):
@@ -78,39 +82,12 @@ def ensure_idle(session, conversation_id):
         raise HTTPException(409, "This conversation already has an active run")
 
 
-@router.get("/provider")
-def provider(session: DB):
-    endpoint = endpoint_or_error()
-    try:
-        models = LocalChatProvider().models()
-        status, error = "available", None
-    except ProviderError as exc:
-        models = []
-        status, error = "unavailable", str(exc)
-    from app.llama import instances
-
-    models += [
-        "llamacpp:" + row.metadata_json["model_file_id"]
-        for row in instances(session)
-        if row.status == "ready"
-    ]
-    if models:
-        status = "available"
-    configured = get_settings().llm_model
-    return {
-        "id": LocalChatProvider.key,
-        "name": "Local OpenAI-compatible",
-        "location": "local",
-        "endpoint": endpoint,
-        "models": models,
-        "default_model": configured,
-        "status": status,
-        "error": error,
-    }
-
-
 @router.get("/conversations")
 def conversations(session: DB):
+    from app.chat_providers import ensure_builtin
+
+    ensure_builtin(session)
+    session.commit()
     return [
         conversation_view(session, row)
         for row in session.scalars(select(Conversation).order_by(Conversation.updated_at.desc()).limit(100))
@@ -119,8 +96,8 @@ def conversations(session: DB):
 
 @router.post("/conversations", status_code=201)
 def create_conversation(body: ConversationBody, session: DB):
-    endpoint_or_error(body.model, session)
-    row = Conversation(**body.model_dump(), provider=LocalChatProvider.key)
+    snapshot_provider(session, Conversation(provider=body.provider, model=body.model))
+    row = Conversation(**body.model_dump())
     session.add(row)
     session.commit()
     return conversation_view(session, row)
@@ -130,6 +107,7 @@ def create_conversation(body: ConversationBody, session: DB):
 def edit_conversation(conversation_id: UUID, body: ConversationBody, session: DB):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
+    snapshot_provider(session, Conversation(provider=body.provider, model=body.model))
     for key, value in body.model_dump().items():
         setattr(row, key, value)
     row.updated_at = utcnow()
@@ -199,7 +177,7 @@ def detail(conversation_id: UUID, session: DB):
 
 
 def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
-    endpoint = endpoint_or_error(row.model, session)
+    snapshot = snapshot_provider(session, row)
     web_search = user.metadata_json.get("web_search")
     summary = latest_summary(session, row.id)
     summary_entry = summary_memory(session, summary)
@@ -303,8 +281,7 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
         execution_target="container",
         parameters={
             "web_search": web_search,
-            "provider": row.provider,
-            "endpoint": endpoint,
+            **snapshot,
             "model": row.model,
             "temperature": row.temperature,
             "max_tokens": row.max_tokens,
@@ -318,7 +295,7 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
             if summary_entry
             else None,
         },
-        permissions=["network_read"] if web_search else [],
+        permissions=chat_permissions(snapshot, ["network_read"] if web_search else []),
         retry_class="inspect",
         parent_run_id=parent_run_id,
     )
@@ -344,7 +321,7 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
 def send(conversation_id: UUID, body: MessageBody, session: DB):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
-    endpoint_or_error(row.model, session)  # Validate the selected runtime before attachments.
+    snapshot_provider(session, row)  # Validate the selected provider before attachments.
     user = Message(
         conversation_id=row.id,
         role="user",
@@ -407,4 +384,4 @@ def regenerate(conversation_id: UUID, session: DB):
 def summarize(conversation_id: UUID, session: DB):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
-    return enqueue_summary(session, row, endpoint_or_error(row.model, session))
+    return enqueue_summary(session, row, snapshot_provider(session, row))

@@ -21,6 +21,7 @@ from app.agents_api import router as agent_router
 from app.audio import router as audio_router
 from app.avatars import router as avatar_router
 from app.chat import router as chat_router
+from app.chat_providers import router as chat_provider_router
 from app.codex_coding import router as codex_router
 from app.coding_sessions import router as coding_sessions_router
 from app.config import get_settings
@@ -279,6 +280,7 @@ app.include_router(local_coding_router)
 app.include_router(dashboard_router)
 app.include_router(image_router)
 app.include_router(chat_router)
+app.include_router(chat_provider_router)
 app.include_router(audio_router)
 app.include_router(avatar_router)
 app.include_router(commit_router)

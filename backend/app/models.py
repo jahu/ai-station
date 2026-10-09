@@ -138,7 +138,7 @@ class Conversation(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     title: Mapped[str] = mapped_column(String(300), default="New conversation")
-    provider: Mapped[str] = mapped_column(String(80), default="openai-compatible")
+    provider: Mapped[str] = mapped_column(String(80), default="local-openai-compatible")
     model: Mapped[str] = mapped_column(String(200), default="")
     system_prompt: Mapped[str] = mapped_column(Text, default="")
     temperature: Mapped[float] = mapped_column(Float, default=0.7)
@@ -372,6 +372,23 @@ class Connector(Base):
     config_json: Mapped[dict] = mapped_column("config", JSON, default=dict)
     secret_ref: Mapped[str] = mapped_column(String(200), default="")
     health: Mapped[str] = mapped_column(String(40), default="unknown")
+
+
+class ChatProvider(Base):
+    __tablename__ = "chat_providers"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    key: Mapped[str] = mapped_column(String(80), unique=True)
+    name: Mapped[str] = mapped_column(String(200))
+    kind: Mapped[str] = mapped_column(String(80), default="openai-compatible")
+    location: Mapped[str] = mapped_column(String(20), default="local")
+    endpoint: Mapped[str] = mapped_column(String(500), default="")
+    secret_ref: Mapped[str] = mapped_column(String(200), default="")
+    default_model: Mapped[str] = mapped_column(String(200), default="")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    builtin: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
 
 class Setting(Base):

@@ -1,3 +1,4 @@
+import ChatProviders from "./ChatProviders";
 import RuntimeObservations from "./RuntimeObservations";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw, ShieldCheck } from "lucide-react";
@@ -91,6 +92,7 @@ export default function System() {
           </div>
         )}
       </section>
+      <ChatProviders />
       <RuntimeObservations />
       <section className="panel mt">
         <div className="panel-heading">

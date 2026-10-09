@@ -12,10 +12,10 @@ from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, ValidationError, model_validator
 from sqlalchemy import select
 
+from app.chat_providers import BUILTIN_KEY, chat_permissions, completion_stream, snapshot_provider
 from app.db import utcnow
 from app.events import append_event
 from app.llama import LoadModel
-from app.local_provider import LocalChatProvider, model_endpoint
 from app.models import Artifact, Conversation, Message, Run, RuntimeInstance
 from app.providers import ProviderError
 from app.publication import PublishBody
@@ -189,6 +189,9 @@ def enqueue_assistant(session, conversation, user, body):
         images.append({"id": row.id, "name": row.original_filename})
     if images and body.attachments:
         raise HTTPException(422, "Send image references and text documents in separate turns")
+    snapshot = (
+        {} if body.action in {"runtime.load", "runtime.stop"} else snapshot_provider(session, conversation)
+    )
     task = create_task(
         session,
         title=body.content[:80],
@@ -209,13 +212,12 @@ def enqueue_assistant(session, conversation, user, body):
             **body.model_dump(mode="json", exclude={"attachments"}),
             "user_message_id": user.id,
             "model": conversation.model,
-            **(
-                {}
-                if body.action in {"runtime.load", "runtime.stop"}
-                else {"endpoint": model_endpoint(conversation.model, session)}
-            ),
+            **({} if body.action in {"runtime.load", "runtime.stop"} else snapshot),
         },
-        permissions=["manage_agents"] + (["external_ai"] if body.coding and body.coding.external_ai else []),
+        permissions=chat_permissions(
+            snapshot,
+            ["manage_agents"] + (["external_ai"] if body.coding and body.coding.external_ai else []),
+        ),
     )
     from app.llama import prepare_consumer
 
@@ -555,6 +557,7 @@ class AssistantExecutor:
         conversation = session.get(Conversation, run.conversation_id)
         if conversation is not None:
             conversation.model = "llamacpp:" + str(params["load"]["model_file_id"])
+            conversation.provider = BUILTIN_KEY
         run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
         message.content = (
             "Queued loading of the selected local GGUF into an owned llama.cpp runtime. "
@@ -581,37 +584,39 @@ class AssistantExecutor:
 
     async def plan(self, session, run):
         params = run.parameters
-        stream = LocalChatProvider().stream(
-            endpoint=params["endpoint"],
-            model=params["model"],
-            temperature=0,
-            max_tokens=512,
-            messages=[
-                {"role": "system", "content": PLANNER_SYSTEM},
-                {
-                    "role": "user",
-                    "content": json.dumps(
-                        {
-                            "instruction": params["content"],
-                            "reference_image_count": len(params["image_artifact_ids"]),
-                            "voice_reference_attached": bool(params.get("audio_artifact_id")),
-                            "coding_scope_selected": bool(params.get("coding")),
-                            "reviewed_commit_selected": bool(params.get("commit")),
-                            "github_publication_approved": bool(params.get("publish")),
-                            "runtime_load_selected": bool(params.get("load")),
-                            "runtime_stop_selected": bool(params.get("stop")),
-                            "external_coding_executor": params.get("coding", {}).get("executor", "cursor")
-                            if params.get("coding") and params["coding"].get("external_ai")
-                            else None,
-                            "external_cursor_allowed": bool(params.get("coding", {}).get("external_ai"))
-                            and params["coding"].get("executor", "cursor") == "cursor"
-                            if params.get("coding")
-                            else False,
-                        },
-                        ensure_ascii=False,
-                    ),
-                },
-            ],
+        stream = completion_stream(
+            session,
+            {
+                **params,
+                "temperature": 0,
+                "max_tokens": 512,
+                "messages": [
+                    {"role": "system", "content": PLANNER_SYSTEM},
+                    {
+                        "role": "user",
+                        "content": json.dumps(
+                            {
+                                "instruction": params["content"],
+                                "reference_image_count": len(params["image_artifact_ids"]),
+                                "voice_reference_attached": bool(params.get("audio_artifact_id")),
+                                "coding_scope_selected": bool(params.get("coding")),
+                                "reviewed_commit_selected": bool(params.get("commit")),
+                                "github_publication_approved": bool(params.get("publish")),
+                                "runtime_load_selected": bool(params.get("load")),
+                                "runtime_stop_selected": bool(params.get("stop")),
+                                "external_coding_executor": params.get("coding", {}).get("executor", "cursor")
+                                if params.get("coding") and params["coding"].get("external_ai")
+                                else None,
+                                "external_cursor_allowed": bool(params.get("coding", {}).get("external_ai"))
+                                and params["coding"].get("executor", "cursor") == "cursor"
+                                if params.get("coding")
+                                else False,
+                            },
+                            ensure_ascii=False,
+                        ),
+                    },
+                ],
+            },
         )
         pending = None
         result = ""

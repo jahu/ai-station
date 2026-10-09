@@ -22,7 +22,7 @@ No generated completion may claim a tool succeeded without the corresponding Run
 
 Chat model selection combines healthy provider models with discovered local files, distinguishing ready, loading and stored models. A stored GGUF is not falsely advertised as a running endpoint. Choosing it creates a typed owned runtime operation. The Host Runner validates the configured model root and executable, records process identity, binds privately and exposes inference through its existing private bridge. It never stops or reconfigures discovered external Ollama/ComfyUI instances.
 
-Runtime instances reserve discovered GPU resources, support explicit unload and recover their owned process identity. Capability planning can request a compatible model/preset; the resource scheduler serializes competing heavy jobs. External models require an explicit provider/data-sharing selection and secret references. Multi-GPU settings follow actual device discovery and model requirements.
+Runtime instances reserve discovered GPU resources, support explicit unload and recover their owned process identity. Capability planning can request a compatible model/preset; the resource scheduler serializes competing heavy jobs. External chat models require an explicit provider selection and secret references; the conversation UI never displays secret values. Multi-GPU settings follow actual device discovery and model requirements.
 
 ## Media and tool growth
 
@@ -46,7 +46,7 @@ The default screen and new Chat conversations offer Platform assistant mode; Con
 
 A model plan cannot commit or publish. Those actions require the user to select them and confirm the existing review/approval forms. They call the same `coding.commit` and `coding.publish` domain services as the Coding workspace, reuse the source Task, and inherit its conversation. Cancellation targets the queued Git Run.
 
-Typed `runtime.load` and `runtime.stop` actions reuse the owned llama.cpp load/stop services. The user selects a discovered GGUF and GPUs, or an owned instance; a model plan cannot grant `manage_models` or stop an external Ollama/ComfyUI process. A successful load points this conversation at that GGUF. Cancellation targets the queued runtime Run. Image understanding, whole-repository coding and remaining media adapters follow as separate increments. Ollama remains supported alongside llama.cpp.
+Typed `runtime.load` and `runtime.stop` actions reuse the owned llama.cpp load/stop services. The user selects a discovered GGUF and GPUs, or an owned instance; a model plan cannot grant `manage_models` or stop an external Ollama/ComfyUI process. A successful load points this conversation at that GGUF and the built-in local provider. Cancellation targets the queued runtime Run. Conversations select a persisted chat provider; external OpenAI-compatible endpoints use secret references and `external_ai`. Image understanding, whole-repository coding and remaining media adapters follow as separate increments. Ollama remains supported alongside llama.cpp.
 
 ## Speech action
 

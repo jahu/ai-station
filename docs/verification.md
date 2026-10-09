@@ -152,3 +152,7 @@ Normal tests never contacted PyPI. Vendor mode installed a disposable local whee
 ## Automatic unused worktree expiry — 2026-10-09
 
 `./scripts/check.sh`: 539 Python tests passed (5 skipped), including scheduled expiry through the existing removal Run, skip of pinned/future/busy cases, and keep pinning. Frontend lint, TypeScript, 60 component tests and production build passed. Existing bundle-size and TestClient deprecation advisories remain. Existing worktrees stay unscheduled. Claude Code remains untested and unavailable.
+
+## Chat provider registry and secret references — 2026-10-09
+
+`./scripts/check.sh`: 593 Python tests passed (5 skipped), including builtin local seeding, explicit provider selection, rejection of credentials in URLs and plaintext secret refs, fail-closed missing secrets, write-only stored secrets omitted from API responses, `external_ai` on external Runs, and queued-run failure when the secret reference changes. HTTP is mocked; no cloud API was called. Frontend lint, TypeScript, 68 component tests and production build passed. Pixel vision remains unavailable. Real OpenAI/Anthropic completions are not claimed. Claude Code remains untested and unavailable.
