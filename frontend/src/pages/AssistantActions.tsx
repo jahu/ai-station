@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { ImagePlus, Mic, X, ArrowLeft, ArrowRight } from "lucide-react";
 import LibraryPicker from "../components/media/LibraryPicker";
 import { Button } from "../components/ui/button";
-import { api, type Artifact, type Run } from "../api";
+import { api, type Artifact, type Hardware, type Run } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 import CodingReview from "./CodingReview";
 import GithubPublication from "./GithubPublication";
@@ -33,6 +33,13 @@ export type PublishScope = {
   title: string;
   body: string;
 };
+export type LoadScope = {
+  model_file_id: string;
+  gpus: number[];
+  context_size: number;
+  cache_type?: "f16" | "q8_0";
+};
+export type StopScope = { instance_id: string };
 export type AssistantOptions = {
   action: string;
   image_artifact_ids: string[];
@@ -40,6 +47,8 @@ export type AssistantOptions = {
   coding: CodingScope | null;
   commit: CommitScope | null;
   publish: PublishScope | null;
+  load: LoadScope | null;
+  stop: StopScope | null;
 };
 type Project = { id: string; name: string; updated_at: string };
 export type ActionResult = {
@@ -235,13 +244,72 @@ export default function AssistantActions({
     enabled: value.action === "coding.publish" && !!publishSource,
     retry: false,
   });
+  const hardware = useQuery({
+    queryKey: ["hardware"],
+    queryFn: () => api<Hardware>("/system/hardware"),
+    enabled: value.action === "runtime.load",
+  });
+  const [loadGpus, setLoadGpus] = useState<number[] | null>(null);
+  const [loadContext, setLoadContext] = useState(4096);
+  const catalog = useQuery({
+    queryKey: ["llama-models"],
+    queryFn: () =>
+      api<{
+        models: { id: string; name: string }[];
+        instances: {
+          id: string;
+          name: string;
+          status: string;
+          ownership: string;
+        }[];
+      }>("/llama"),
+    enabled: value.action.startsWith("runtime."),
+  });
+  const selectedLoadGpus =
+    loadGpus ?? (hardware.data?.gpus ?? []).map((gpu) => Number(gpu.index));
+  const ownedInstances =
+    catalog.data?.instances.filter(
+      (instance) =>
+        instance.ownership === "managed" &&
+        !["stopped", "failed"].includes(instance.status),
+    ) ?? [];
+  function setLoad(modelId: string, gpus: number[], context: number) {
+    onChange({
+      action: "runtime.load",
+      image_artifact_ids: [],
+      audio_artifact_id: null,
+      coding: null,
+      commit: null,
+      publish: null,
+      stop: null,
+      load: modelId
+        ? { model_file_id: modelId, gpus, context_size: context }
+        : null,
+    });
+  }
+  function setStop(instanceId: string) {
+    onChange({
+      action: "runtime.stop",
+      image_artifact_ids: [],
+      audio_artifact_id: null,
+      coding: null,
+      commit: null,
+      publish: null,
+      load: null,
+      stop: instanceId ? { instance_id: instanceId } : null,
+    });
+  }
   function resetAction(action: string) {
     setExternal(false);
     setReviewed(false);
     setPublishApproved(false);
     setCommitSourceId("");
     setPublishSourceId("");
-    if (["coding.commit", "coding.publish"].includes(action)) {
+    if (
+      ["coding.commit", "coding.publish", "runtime.load", "runtime.stop"].includes(
+        action,
+      )
+    ) {
       onChange({
         action,
         image_artifact_ids: [],
@@ -249,6 +317,8 @@ export default function AssistantActions({
         coding: null,
         commit: null,
         publish: null,
+        load: null,
+        stop: null,
       });
       return;
     }
@@ -261,6 +331,8 @@ export default function AssistantActions({
       audio_artifact_id: null,
       coding: null,
       publish: null,
+      load: null,
+      stop: null,
       commit:
         sourceId && message.trim() && confirmed
           ? { source_run_id: sourceId, message: message.trim(), reviewed: true }
@@ -280,6 +352,8 @@ export default function AssistantActions({
       audio_artifact_id: null,
       coding: null,
       commit: null,
+      load: null,
+      stop: null,
       publish:
         sourceId &&
         title.trim() &&
@@ -319,6 +393,8 @@ export default function AssistantActions({
       action,
       commit: null,
       publish: null,
+      load: null,
+      stop: null,
       coding:
         (action === "coding.local" ||
           (["coding.cursor", "coding.codex"].includes(action) && allow)) &&
@@ -392,10 +468,15 @@ export default function AssistantActions({
           <option value="coding.cursor">Coding with Cursor</option>
           <option value="coding.codex">Coding with Codex</option>
           <option value="coding.commit">Commit reviewed changes</option>
-          <option value="coding.publish">Publish reviewed commit to GitHub</option>
+          <option value="coding.publish">
+            Publish reviewed commit to GitHub
+          </option>
+          <option value="runtime.load">Load local GGUF</option>
+          <option value="runtime.stop">Unload owned llama.cpp</option>
         </select>
       </label>
-      {!value.action.startsWith("coding.") && (
+      {!value.action.startsWith("coding.") &&
+        !value.action.startsWith("runtime.") && (
         <div className="assistant-attachment-toolbar">
           <Button
             type="button"
@@ -487,7 +568,8 @@ export default function AssistantActions({
           </button>
         </div>
       )}
-      {(!value.action.startsWith("coding.") ||
+      {((!value.action.startsWith("coding.") &&
+        !value.action.startsWith("runtime.")) ||
         value.image_artifact_ids.length > 0) && (
         <div
           className="assistant-reference-area"
@@ -738,6 +820,114 @@ export default function AssistantActions({
             I approve publishing this commit and PR text to the GitHub repository
             shown above.
           </label>
+        </details>
+      )}
+      {value.action === "runtime.load" && (
+        <details open className="assistant-coding-scope">
+          <summary>Owned llama.cpp load</summary>
+          <p className="muted">
+            Loads a discovered GGUF into an AI Station-owned runtime. External
+            Ollama or ComfyUI processes are not stopped. The model cannot choose
+            a file or GPUs.
+          </p>
+          <ErrorNotice error={catalog.error ?? hardware.error} />
+          <label>
+            GGUF model
+            <select
+              aria-label="GGUF model"
+              value={value.load?.model_file_id ?? ""}
+              onChange={(event) =>
+                setLoad(event.target.value, selectedLoadGpus, loadContext)
+              }
+            >
+              <option value="">Select a discovered language-model GGUF</option>
+              {catalog.data?.models.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!catalog.isPending && !catalog.data?.models.length && (
+            <p className="notice">
+              No language-model GGUFs are discovered yet. Scan model folders in
+              Models first.
+            </p>
+          )}
+          <fieldset>
+            <legend>GPUs</legend>
+            {(hardware.data?.gpus ?? []).map((gpu) => (
+              <label key={gpu.index} className="project-checkbox">
+                <input
+                  type="checkbox"
+                  checked={selectedLoadGpus.includes(Number(gpu.index))}
+                  onChange={(event) => {
+                    const next = event.target.checked
+                      ? [...selectedLoadGpus, Number(gpu.index)]
+                      : selectedLoadGpus.filter(
+                          (index) => index !== Number(gpu.index),
+                        );
+                    setLoadGpus(next);
+                    setLoad(value.load?.model_file_id ?? "", next, loadContext);
+                  }}
+                />
+                GPU {gpu.index}
+                {gpu.name ? ` · ${gpu.name}` : ""}
+              </label>
+            ))}
+            <small>No cards selected uses CPU. Several cards split layers.</small>
+          </fieldset>
+          <label>
+            Context size
+            <input
+              type="number"
+              min={512}
+              max={262144}
+              step={256}
+              aria-label="Context size"
+              value={value.load?.context_size ?? loadContext}
+              onChange={(event) => {
+                const context = Number(event.target.value);
+                setLoadContext(context);
+                setLoad(
+                  value.load?.model_file_id ?? "",
+                  selectedLoadGpus,
+                  context,
+                );
+              }}
+            />
+          </label>
+        </details>
+      )}
+      {value.action === "runtime.stop" && (
+        <details open className="assistant-coding-scope">
+          <summary>Owned llama.cpp unload</summary>
+          <p className="muted">
+            Stops only the selected AI Station-owned instance after its consumers
+            finish. External runtimes are not touched.
+          </p>
+          <ErrorNotice error={catalog.error} />
+          <label>
+            Runtime
+            <select
+              aria-label="Owned runtime"
+              value={value.stop?.instance_id ?? ""}
+              onChange={(event) => setStop(event.target.value)}
+            >
+              <option value="">Select an owned llama.cpp instance</option>
+              {ownedInstances.map((instance) => (
+                <option key={instance.id} value={instance.id}>
+                  {instance.name} · {instance.status}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!ownedInstances.length && (
+            <p className="notice">
+              No owned llama.cpp instance is loaded. External servers cannot be
+              unloaded here.
+            </p>
+          )}
         </details>
       )}
       {codingTask && (

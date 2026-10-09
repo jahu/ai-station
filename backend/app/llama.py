@@ -284,9 +284,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False):
     return run
 
 
-@router.post("/{instance_id}/stop", status_code=202)
-def stop(instance_id: UUID, session: DB):
-    instance = session.get(RuntimeInstance, str(instance_id))
+def request_stop(session, instance, *, task=None, ignore_run_id=None):
     if instance is None or instance.ownership != "managed" or instance.runtime_key != "llama.cpp":
         raise HTTPException(404, "Managed llama.cpp runtime not found")
     active = session.scalars(
@@ -295,9 +293,14 @@ def stop(instance_id: UUID, session: DB):
     if any(r.parameters.get("instance_id") == instance.id for r in active):
         raise HTTPException(409, "Cancel or wait for the current runtime operation first")
     consumers = session.scalars(select(Run).where(Run.status.not_in(TERMINAL)))
-    if any(r.parameters.get("endpoint") == instance.endpoint for r in consumers):
+    if any(r.id != ignore_run_id and r.parameters.get("endpoint") == instance.endpoint for r in consumers):
         raise HTTPException(409, "Stop the model's active conversation or agent Run first")
-    run = enqueue_stop(session, instance)
+    return enqueue_stop(session, instance, task=task)
+
+
+@router.post("/{instance_id}/stop", status_code=202)
+def stop(instance_id: UUID, session: DB):
+    run = request_stop(session, session.get(RuntimeInstance, str(instance_id)))
     session.commit()
     return run_dict(run)
 

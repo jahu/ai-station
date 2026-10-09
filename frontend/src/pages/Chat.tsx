@@ -365,11 +365,15 @@ function ConversationView({
   };
   const gitContent =
     options.commit?.message || options.publish?.title || "";
+  const runtimeReady =
+    (options.action === "runtime.load" && !!options.load) ||
+    (options.action === "runtime.stop" && !!options.stop);
   const gitReady =
     (options.action === "coding.commit" && !!options.commit) ||
     (options.action === "coding.publish" && !!options.publish);
-  const canSend =
-    options.action === "coding.commit" || options.action === "coding.publish"
+  const canSend = options.action.startsWith("runtime.")
+    ? runtimeReady
+    : options.action === "coding.commit" || options.action === "coding.publish"
       ? gitReady
       : !!draft.trim();
   const send = useMutation({
@@ -377,7 +381,14 @@ function ConversationView({
       api<Run>(`/chat/conversations/${conversation.id}/messages`, {
         method: "POST",
         ...json({
-          content: draft.trim() || gitContent,
+          content:
+            draft.trim() ||
+            gitContent ||
+            (options.action === "runtime.load"
+              ? "Load the selected local GGUF"
+              : options.action === "runtime.stop"
+                ? "Unload the selected owned llama.cpp instance"
+                : ""),
           attachments,
           ...(orchestrator ? options : {}),
           web_search: { enabled: webEnabled, query: webQuery },
@@ -680,7 +691,9 @@ function ConversationView({
                   next.audio_artifact_id ||
                   next.coding ||
                   next.commit ||
-                  next.publish
+                  next.publish ||
+                  next.load ||
+                  next.stop
                 )
                   setWebEnabled(false);
               }}
@@ -689,7 +702,10 @@ function ConversationView({
             />
           )}
           {(!orchestrator ||
-            !options.action.startsWith("coding.") ||
+            !(
+              options.action.startsWith("coding.") ||
+              options.action.startsWith("runtime.")
+            ) ||
             attachments.length > 0) && (
             <TextAttachments
               attachments={attachments}
