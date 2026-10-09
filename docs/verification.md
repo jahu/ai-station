@@ -356,3 +356,7 @@ Frontend lint, TypeScript, 139 component tests and production build passed. Home
 ## Coding review file listbox shared keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 139 component tests and production build passed. Coding review changed files reuse `useListKeyboard` as a listbox: arrows/Home/End choose a file, unique File names, and only the selected patch is shown. Enter does not open a Run. Commit, repair and publication still use the existing endpoints. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Home activity list keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 140 component tests and production build passed. Upcoming schedules, enabled agents, recent conversations, recent artifacts and runtime observations each reuse `useListKeyboard` with unique Inspect names. Scheduled vs enabled agents stay distinct. Enter inspects the agent, conversation or artifact; runtime rows open System and do not invent an observation Run. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

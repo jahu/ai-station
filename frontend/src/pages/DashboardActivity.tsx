@@ -162,6 +162,57 @@ function ActivityRow({
   );
 }
 
+function KeyboardActivityList({
+  items,
+  hint,
+}: {
+  items: {
+    key: string;
+    to: string;
+    title: string;
+    detail: string;
+    status?: string;
+    thumbnail?: boolean;
+    fallback?: ReactNode;
+    inspectLabel: string;
+  }[];
+  hint: string;
+}) {
+  const labelId = useId();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard<
+    (typeof items)[number],
+    HTMLUListElement
+  >(items, (item) => item.key);
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        {hint}
+      </p>
+      <ul
+        ref={listRef}
+        className="activity-list"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {items.map((item, i) => (
+          <ActivityRow
+            key={item.key}
+            to={item.to}
+            title={item.title}
+            detail={item.detail}
+            status={item.status}
+            thumbnail={item.thumbnail}
+            fallback={item.fallback}
+            inspectLabel={item.inspectLabel}
+            inspectProps={itemProps(i, item.key)}
+            current={i === index}
+          />
+        ))}
+      </ul>
+    </>
+  );
+}
+
 function attentionShortId(item: AttentionItem, kind: "inspect" | "action") {
   const id =
     kind === "action" && item.action === "read" ? item.noticeId : item.runId;
@@ -487,19 +538,18 @@ export default function DashboardActivity() {
             viewAll="View all scheduled agents"
           >
             {data.upcoming.length ? (
-              <ul className="activity-list">
-                {data.upcoming.map((agent) => (
-                  <ActivityRow
-                    key={agent.id}
-                    to={`/agents/${agent.id}`}
-                    title={agent.name}
-                    detail={`${time(agent.next_run_at)} · ${agent.trigger}${
-                      agent.overdue ? " · Due / waiting for scheduler" : ""
-                    }`}
-                    inspectLabel={`Inspect ${agent.name}`}
-                  />
-                ))}
-              </ul>
+              <KeyboardActivityList
+                hint="Arrow keys choose a schedule while the list is focused. Enter inspects the agent."
+                items={data.upcoming.map((agent) => ({
+                  key: agent.id,
+                  to: `/agents/${agent.id}`,
+                  title: agent.name,
+                  detail: `${time(agent.next_run_at)} · ${agent.trigger}${
+                    agent.overdue ? " · Due / waiting for scheduler" : ""
+                  }`,
+                  inspectLabel: `Inspect scheduled ${agent.name} ${agent.id.slice(0, 8)}`,
+                }))}
+              />
             ) : (
               <Empty title="Nothing scheduled">
                 Enable an agent with a schedule to see its next due time.
@@ -512,23 +562,20 @@ export default function DashboardActivity() {
             viewAll="View all agents"
           >
             {data.agents.length ? (
-              <ul className="activity-list">
-                {data.agents.map((agent) => (
-                  <ActivityRow
-                    key={agent.id}
-                    to={`/agents/${agent.id}`}
-                    title={agent.name}
-                    detail={`${agent.model} · ${agent.trigger}`}
-                    status={agent.last_status || undefined}
-                    inspectLabel={`Inspect ${agent.name}`}
-                    fallback={
-                      agent.last_status ? undefined : (
-                        <span className="muted">Not run yet</span>
-                      )
-                    }
-                  />
-                ))}
-              </ul>
+              <KeyboardActivityList
+                hint="Arrow keys choose an agent while the list is focused. Enter inspects it."
+                items={data.agents.map((agent) => ({
+                  key: agent.id,
+                  to: `/agents/${agent.id}`,
+                  title: agent.name,
+                  detail: `${agent.model} · ${agent.trigger}`,
+                  status: agent.last_status || undefined,
+                  inspectLabel: `Inspect ${agent.name} ${agent.id.slice(0, 8)}`,
+                  fallback: agent.last_status ? undefined : (
+                    <span className="muted">Not run yet</span>
+                  ),
+                }))}
+              />
             ) : (
               <Empty title="No enabled agents">
                 Create and inspect a draft before activating it.
@@ -541,17 +588,16 @@ export default function DashboardActivity() {
             viewAll="View all conversations"
           >
             {data.conversations.length ? (
-              <ul className="activity-list">
-                {data.conversations.map((conversation) => (
-                  <ActivityRow
-                    key={conversation.id}
-                    to={`/chat/${conversation.id}`}
-                    title={conversation.title}
-                    detail={`${conversation.model} · ${time(conversation.updated_at)}`}
-                    inspectLabel={`Inspect ${conversation.title}`}
-                  />
-                ))}
-              </ul>
+              <KeyboardActivityList
+                hint="Arrow keys choose a conversation while the list is focused. Enter opens it."
+                items={data.conversations.map((conversation) => ({
+                  key: conversation.id,
+                  to: `/chat/${conversation.id}`,
+                  title: conversation.title,
+                  detail: `${conversation.model} · ${time(conversation.updated_at)}`,
+                  inspectLabel: `Inspect ${conversation.title} ${conversation.id.slice(0, 8)}`,
+                }))}
+              />
             ) : (
               <Empty title="Start a conversation">
                 Local model conversations are saved between restarts.
@@ -564,18 +610,17 @@ export default function DashboardActivity() {
             viewAll="View all library artifacts"
           >
             {data.artifacts.length ? (
-              <ul className="activity-list">
-                {data.artifacts.map((artifact) => (
-                  <ActivityRow
-                    key={artifact.id}
-                    to={`/library/${artifact.id}`}
-                    title={artifact.name}
-                    detail={`${artifact.type} · ${time(artifact.created_at)}`}
-                    thumbnail={artifact.has_thumbnail}
-                    inspectLabel={`Inspect ${artifact.name}`}
-                  />
-                ))}
-              </ul>
+              <KeyboardActivityList
+                hint="Arrow keys choose an artifact while the list is focused. Enter inspects it."
+                items={data.artifacts.map((artifact) => ({
+                  key: artifact.id,
+                  to: `/library/${artifact.id}`,
+                  title: artifact.name,
+                  detail: `${artifact.type} · ${time(artifact.created_at)}`,
+                  thumbnail: artifact.has_thumbnail,
+                  inspectLabel: `Inspect ${artifact.name} ${artifact.id.slice(0, 8)}`,
+                }))}
+              />
             ) : (
               <Empty title="Your outputs live here">
                 Images, reports and other Run artifacts share the Library.
@@ -592,22 +637,21 @@ export default function DashboardActivity() {
               readiness.
             </p>
             {data.runtimes.length ? (
-              <ul className="activity-list">
-                {data.runtimes.map((runtime) => (
-                  <ActivityRow
-                    key={runtime.id}
-                    to="/system"
-                    title={runtime.name}
-                    detail={`${runtime.ownership} · ${
-                      runtime.source === "host_process" ? "Process" : "Endpoint"
-                    } · ${time(runtime.updated_at)}${
-                      runtime.stale ? " · Stale" : ""
-                    }`}
-                    status={runtime.status}
-                    inspectLabel={`Inspect ${runtime.name}`}
-                  />
-                ))}
-              </ul>
+              <KeyboardActivityList
+                hint="Arrow keys choose an observation while the list is focused. Enter opens System. There is no inspectable observation Run from Home."
+                items={data.runtimes.map((runtime) => ({
+                  key: runtime.id,
+                  to: "/system",
+                  title: runtime.name,
+                  detail: `${runtime.ownership} · ${
+                    runtime.source === "host_process" ? "Process" : "Endpoint"
+                  } · ${time(runtime.updated_at)}${
+                    runtime.stale ? " · Stale" : ""
+                  }`,
+                  status: runtime.status,
+                  inspectLabel: `Inspect observation ${runtime.name} ${runtime.id.slice(0, 8)}`,
+                }))}
+              />
             ) : (
               <Empty title="No observations yet">
                 Open System to inspect the existing runtimes.
