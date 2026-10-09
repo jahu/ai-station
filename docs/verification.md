@@ -436,3 +436,7 @@ Frontend lint, TypeScript, 180 component tests and production build passed. Imag
 ## Assistant action keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 183 component tests and production build passed. Assistant Action radios reuse `useListKeyboard` with unique Action names. Space or Enter selects Auto, conversation, image, speech, avatar, agent, coding, commit, publish or owned llama.cpp load/unload and does not send. Unpublished adapters stay absent from that list. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Avatars Quality and Clip length keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 187 component tests and production build passed. Avatars Quality and Clip length radios reuse `useListKeyboard` with unique Quality and Clip names. Space or Enter selects 256/384/512 px or 17–81 frames and does not queue an EchoMimic Run. Advanced steps, seed and GPU stay unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

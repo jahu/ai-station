@@ -67,9 +67,11 @@ it("selects existing inputs, queues video and keeps the live result beside the f
       screen.getByRole("region", { name: "Speech recording library" }),
     ).findByRole("button", { name: "Choose Speech.wav speech" }),
   );
-  fireEvent.change(screen.getByLabelText("Resolution"), {
-    target: { value: "256" },
-  });
+  const qualityList = screen
+    .getByLabelText("Quality 384")
+    .closest(".avatar-quality-choice-list") as HTMLElement;
+  fireEvent.keyDown(qualityList, { key: "Home" });
+  fireEvent.keyDown(qualityList, { key: "Enter" });
   fireEvent.click(
     screen.getByRole("button", { name: "Generate avatar video" }),
   );
