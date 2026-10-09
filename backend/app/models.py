@@ -430,6 +430,7 @@ class ConversationSummary(Base):
     )
     covered_message_id: Mapped[str] = mapped_column(ForeignKey("messages.id"))
     covered_created_at: Mapped[Any] = mapped_column(UTCDateTime)
+    covered_offset: Mapped[int] = mapped_column(Integer, default=0)
     source_message_ids: Mapped[list] = mapped_column(JSON)
     previous_summary_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)

@@ -14,6 +14,8 @@ export interface Summary {
   source_message_ids: string[];
   previous_summary_id: string | null;
   created_at: string;
+  covered_offset?: number;
+  covered_message_length?: number;
 }
 export default function ConversationSummary({
   conversationId,
@@ -66,7 +68,9 @@ export default function ConversationSummary({
       <div className="content-panel">
         <p className="muted">
           Update the summary of older messages using your local model. The
-          newest eight stay verbatim; full history is preserved.
+          newest eight stay verbatim; full history is preserved. A message
+          longer than the 48,000-character segment is summarized in labeled
+          chunks across later updates.
         </p>
         <label className="project-checkbox">
           <input
@@ -105,6 +109,9 @@ export default function ConversationSummary({
               {time(summary.created_at)} · {summary.source_message_ids.length}{" "}
               source messages in this update
               {summary.previous_summary_id && " · Builds on an earlier summary"}
+              {summary.covered_offset
+                ? ` · Partial coverage through character ${summary.covered_offset} of ${summary.covered_message_length ?? "an oversized message"}; the remainder waits for a later update`
+                : ""}
             </p>
             {summary.enabled ? (
               <pre className="summary-content">{summary.content}</pre>

@@ -5,13 +5,20 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
-from sqlalchemy import select, tuple_
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.assistant import AssistantInputs, enqueue_assistant, task_results
 from app.chat_attachments import TextAttachment, link_attachments, message_content, save_attachments
 from app.chat_providers import BUILTIN_KEY, chat_permissions, snapshot_provider
-from app.conversation_summary import enqueue_summary, latest_summary, summary_memory, summary_view
+from app.conversation_summary import (
+    enqueue_summary,
+    latest_summary,
+    summary_memory,
+    summary_view,
+    uncovered_since,
+    uncovered_text,
+)
 from app.db import session_scope, utcnow
 from app.models import Conversation, MemoryEntry, Message, ModelFile, Run, Task
 from app.runs import create_run, create_task, run_dict
@@ -190,12 +197,7 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
         session.scalars(
             select(Message)
             .where(Message.conversation_id == row.id, Message.created_at <= user.created_at)
-            .where(
-                tuple_(Message.created_at, Message.id)
-                > (summary.covered_created_at, summary.covered_message_id)
-                if summary_entry
-                else True
-            )
+            .where(uncovered_since(summary, summary_entry))
             .order_by(Message.created_at.desc(), Message.id.desc())
             .limit(200)
         )
@@ -211,9 +213,11 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
             continue
         if message.role not in {"user", "assistant"}:
             continue
-        if len(message.content) + 2 > budget or len(context) >= 16:
+        content = uncovered_text(message, summary, summary_entry)
+        if not content:
+            continue
+        if len(content) + 2 > budget or len(context) >= 16:
             break
-        content = message.content
         if message.metadata_json.get("orchestration") and message.run_id:
             result = task_results(session, message, session.get(Run, message.run_id))
             content += "\nRecorded task results: " + str(result.get("steps", []))[:8000]

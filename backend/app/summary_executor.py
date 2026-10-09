@@ -95,6 +95,11 @@ class SummaryExecutor:
             source = session.get(Message, params["covered_message_id"])
             if not source or source.conversation_id != run.conversation_id:
                 raise ProviderError("Summary source is unavailable")
+            covered_offset = params.get("covered_offset") or 0
+            if not isinstance(covered_offset, int) or covered_offset < 0:
+                raise ProviderError("Summary coverage offset is invalid")
+            if covered_offset > len(source.content or ""):
+                raise ProviderError("Summary coverage offset exceeds the source message")
             memory = upsert_memory(
                 session,
                 scope="conversation",
@@ -111,6 +116,7 @@ class SummaryExecutor:
                 memory_id=memory.id,
                 covered_message_id=source.id,
                 covered_created_at=source.created_at,
+                covered_offset=covered_offset,
                 source_message_ids=params["source_message_ids"],
                 previous_summary_id=params["previous_summary_id"],
             )
@@ -136,6 +142,8 @@ class SummaryExecutor:
                     "summary_id": summary.id,
                     "memory_id": memory.id,
                     "source_message_ids": params["source_message_ids"],
+                    "source_chunks": params.get("source_chunks") or [],
+                    "covered_offset": covered_offset,
                 },
             )
             transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})
