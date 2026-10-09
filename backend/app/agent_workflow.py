@@ -11,7 +11,7 @@ from pathlib import Path
 from sqlalchemy import select
 
 from app.agent_schema import AgentSettings
-from app.agent_tools import agent_tool
+from app.agent_tools import RETENTION_TOOLS, WORKFLOW_MEMORY_TOOLS, agent_tool
 from app.artifacts import register_file
 from app.db import utcnow
 from app.dependencies import depend_on
@@ -27,7 +27,7 @@ STEP_KEYS = CONTEXT_STEPS | {"report"}
 def planned_steps(definition: AgentSettings) -> list[dict]:
     steps = []
     for name in definition.tools:
-        if name == "remember_report":
+        if name in RETENTION_TOOLS:
             continue
         if name not in CONTEXT_STEPS or not agent_tool(name).operational:
             raise ValueError(f"Refusing an invented or unavailable agent step: {name}")
@@ -66,6 +66,8 @@ def workflow_view(session, run: Run) -> dict | None:
                 "status": child.status,
                 "capability": child.capability,
                 "tool_calls": child.metadata_json.get("tool_calls") or [],
+                "memory_id": child.metadata_json.get("memory_entry_id"),
+                "memory_excerpted": child.metadata_json.get("memory_excerpted") is True,
             }
             for child in children
         ],
@@ -164,7 +166,7 @@ def publish_steps(session, parent: Run) -> list[Run]:
     steps = parent.parameters.get("steps")
     if not isinstance(steps, list) or not steps:
         steps = planned_steps(definition)
-    allowed = {name for name in definition.tools if name != "remember_report"} | {"report"}
+    allowed = {name for name in definition.tools if name not in RETENTION_TOOLS} | {"report"}
     deadline_at = utcnow() + timedelta(seconds=definition.maximum_runtime)
     validated = []
     for index, raw in enumerate(steps):
@@ -257,7 +259,7 @@ class AgentToolExecutor:
     name = "agent_tool"
 
     def execute(self, session, run):
-        from app.agent_executor import LocalAgentExecutor, execute_context_tool
+        from app.agent_executor import LocalAgentExecutor, execute_context_tool, persist_agent_memory
 
         session.refresh(run)
         if LocalAgentExecutor._canceled(session, run):
@@ -272,8 +274,13 @@ class AgentToolExecutor:
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={"tool": tool})
         transition(session, run, RunStatus.RUNNING, event_type="executor.started", payload={"tool": tool})
         session.commit()
-        deadline = _remaining_deadline(run, definition)
+        remember = "remember_workflow" in definition.tools and tool in WORKFLOW_MEMORY_TOOLS
         try:
+            if remember:
+                from app.permissions import require
+
+                require(run.effective_permissions, "memory_write")
+            deadline = _remaining_deadline(run, definition)
             result = execute_context_tool(session, run, definition, tool, deadline)
             if result is None:
                 LocalAgentExecutor._canceled(session, run)
@@ -283,9 +290,33 @@ class AgentToolExecutor:
                 if run.status == "cancel_requested":
                     transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
                 return "done"
-            run.metadata_json = {**run.metadata_json, "observation": result, tool: result}
-            run.summary = f"{tool} completed."
-            transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={"tool": tool})
+            if remember:
+                append_event(session, run.id, "tool.requested", {"tool": "remember_workflow"})
+            try:
+                with session.begin_nested():
+                    run.metadata_json = {**run.metadata_json, "observation": result, tool: result}
+                    if remember:
+                        persist_agent_memory(
+                            session,
+                            run,
+                            result if isinstance(result, str) else json.dumps(result, ensure_ascii=False),
+                            tags=["agent-workflow", tool],
+                            tool="remember_workflow",
+                            excerpt_notice="\n\n[Excerpt: open the source Run for the full observation.]",
+                        )
+                    run.summary = f"{tool} completed."
+                    transition(
+                        session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={"tool": tool}
+                    )
+            except Exception:
+                if remember:
+                    append_event(
+                        session,
+                        run.id,
+                        "tool.failed",
+                        {"tool": "remember_workflow", "error": "Workflow observation could not be retained"},
+                    )
+                raise
             session.commit()
         except Exception as exc:
             session.refresh(run)

@@ -237,6 +237,14 @@ it("lists persisted workflow steps and keeps cancel available for the active chi
                   capability: "agent.step",
                 },
                 {
+                  run_id: "step-snapshot",
+                  key: "system_snapshot",
+                  gate: "none",
+                  status: "succeeded",
+                  capability: "agent.step",
+                  memory_id: "memory-1",
+                },
+                {
                   run_id: "step-report",
                   key: "report",
                   gate: "none",
@@ -276,6 +284,7 @@ it("lists persisted workflow steps and keeps cancel available for the active chi
     (await screen.findByRole("link", { name: /report/i })).getAttribute("href"),
   ).toBe("/runs/step-report");
   expect(screen.getByRole("button", { name: "Cancel run" })).toBeTruthy();
+  expect(screen.getByText("saved observation")).toBeTruthy();
   expect(screen.getByText("1 registry call")).toBeTruthy();
   expect(
     screen.getByText(/The report may request selected registry tools/i),

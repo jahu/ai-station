@@ -723,3 +723,115 @@ def test_report_memory_excerpt_and_read_permission_are_independent(monkeypatch):
     assert run["status"] == "succeeded" and run["metadata"]["memory_excerpted"] is True
     artifact = api.get("/api/artifacts?run_id=" + run["id"]).json()[0]
     assert api.get(f"/api/artifacts/{artifact['id']}/file").text == report
+
+
+def test_workflow_memory_stores_observations_not_search_or_reports(monkeypatch):
+    from app.runner_client import RunnerClient
+
+    monkeypatch.setattr(RunnerClient, "hardware", lambda self: {"ok": True, "gpus": []})
+
+    async def complete(self, **kwargs):
+        yield "Report without retention"
+
+    monkeypatch.setattr(LocalChatProvider, "stream", complete)
+    api = TestClient(app)
+    agent = create(api, enabled=True, tools=["system_snapshot", "memory_search", "remember_workflow"])
+    queued = run_now(api, agent)
+    with session_factory()() as session:
+        drain(session, "memory-test")
+    snapshot = workflow_step(api, queued["id"], "system_snapshot")
+    search = workflow_step(api, queued["id"], "memory_search")
+    report = workflow_step(api, queued["id"], "report")
+    assert snapshot["status"] == "succeeded"
+    assert snapshot["metadata"]["memory_entry_id"]
+    assert "memory_entry_id" not in search["metadata"]
+    assert "memory_entry_id" not in report["metadata"]
+    parent = api.get("/api/runs/" + queued["id"]).json()
+    saved = next(item for item in parent["workflow"]["steps"] if item["key"] == "system_snapshot")
+    assert saved["memory_id"] == snapshot["metadata"]["memory_entry_id"]
+    with session_factory()() as session:
+        entries = list(session.scalars(select(MemoryEntry)))
+        assert len(entries) == 1
+        entry = entries[0]
+        assert entry.scope == "agent" and entry.scope_id == agent["id"]
+        assert entry.source_run_id == snapshot["id"]
+        assert entry.tags == ["agent-workflow", "system_snapshot"]
+        assert '"ok": true' in entry.content
+        from app.agent_executor import persist_agent_memory
+
+        persist_agent_memory(
+            session,
+            session.get(Run, snapshot["id"]),
+            "Duplicate",
+            tags=["agent-workflow", "system_snapshot"],
+            tool="remember_workflow",
+            excerpt_notice="",
+        )
+        assert len(list(session.scalars(select(MemoryEntry)))) == 1
+
+
+@pytest.mark.parametrize("outcome", ["failed", "missing_permission", "write_failed"])
+def test_unsuccessful_workflow_step_never_retains_memory(monkeypatch, outcome):
+    from app.runner_client import RunnerClient
+
+    called = []
+
+    def hardware(self):
+        called.append(True)
+        if outcome == "failed":
+            raise RuntimeError("host down")
+        return {"ok": True}
+
+    monkeypatch.setattr(RunnerClient, "hardware", hardware)
+
+    async def complete(self, **kwargs):
+        yield "unused"
+
+    monkeypatch.setattr(LocalChatProvider, "stream", complete)
+    api = TestClient(app)
+    agent = create(api, enabled=True, tools=["system_snapshot", "remember_workflow"])
+    queued = run_now(api, agent)
+    if outcome == "missing_permission":
+        with session_factory()() as session:
+            session.get(Run, queued["id"]).effective_permissions = []
+            session.commit()
+    if outcome == "write_failed":
+
+        def fail_write(*args, **kwargs):
+            upsert_memory(*args, **kwargs)
+            raise RuntimeError("Storage failed after flush")
+
+        monkeypatch.setattr("app.agent_executor.upsert_memory", fail_write)
+    with session_factory()() as session:
+        drain(session, "memory-test")
+    snapshot = workflow_step(api, queued["id"], "system_snapshot")
+    assert snapshot["status"] == "failed"
+    assert "memory_entry_id" not in snapshot["metadata"]
+    assert (not called) is (outcome == "missing_permission")
+    with session_factory()() as session:
+        assert list(session.scalars(select(MemoryEntry))) == []
+        assert session.scalar(text("SELECT count(*) FROM memory_fts")) == 0
+
+
+def test_workflow_memory_excerpts_oversized_observations(monkeypatch):
+    from app.runner_client import RunnerClient
+
+    payload = {"blob": "N" * 15000}
+    monkeypatch.setattr(RunnerClient, "hardware", lambda self: payload)
+
+    async def complete(self, **kwargs):
+        yield "ok"
+
+    monkeypatch.setattr(LocalChatProvider, "stream", complete)
+    api = TestClient(app)
+    agent = create(api, enabled=True, tools=["system_snapshot", "remember_workflow"])
+    queued = run_now(api, agent)
+    with session_factory()() as session:
+        drain(session, "memory-test")
+    snapshot = workflow_step(api, queued["id"], "system_snapshot")
+    with session_factory()() as session:
+        entry = session.scalar(select(MemoryEntry).where(MemoryEntry.source_run_id == snapshot["id"]))
+        assert len(entry.content) == 12000 and "[Excerpt:" in entry.content
+    assert snapshot["status"] == "succeeded" and snapshot["metadata"]["memory_excerpted"] is True
+    artifact = api.get("/api/artifacts?run_id=" + snapshot["id"]).json()[0]
+    assert '"blob"' in api.get(f"/api/artifacts/{artifact['id']}/file").text

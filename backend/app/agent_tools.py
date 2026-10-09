@@ -5,6 +5,8 @@ import json
 from app.tools import TOOLS, ToolSpec, get_tool
 
 CALLABLE_TOOLS = frozenset({"system_snapshot", "memory_search", "web_search", "http_fetch"})
+RETENTION_TOOLS = frozenset({"remember_report", "remember_workflow"})
+WORKFLOW_MEMORY_TOOLS = frozenset({"system_snapshot", "web_search", "http_fetch"})
 MAX_TOOL_ROUNDS = 4
 MAX_CALLS_PER_ROUND = 3
 
@@ -23,6 +25,20 @@ AGENT_TOOLS = {
     "remember_report": ToolSpec(
         name="remember_report",
         description="Save successful reports as observations in this agent's own memory, with source Run provenance. Nothing is saved on failure or cancellation.",
+        risk_level="low",
+        required_permissions=("memory_write",),
+        timeout=5,
+        execution_target="container",
+        operational=True,
+        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        output_schema={
+            "type": "object",
+            "properties": {"memory_id": {"type": "string"}, "excerpted": {"type": "boolean"}},
+        },
+    ),
+    "remember_workflow": ToolSpec(
+        name="remember_workflow",
+        description="Save successful workflow step observations (telemetry, public search, HTTP fetch) in this agent's own memory, with source Run provenance. memory_search is not copied. Nothing is saved on failure or cancellation.",
         risk_level="low",
         required_permissions=("memory_write",),
         timeout=5,

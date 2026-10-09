@@ -55,7 +55,7 @@ class AgentSettings(BaseModel):
     model: str = Field(default="", max_length=200)
     search_query: str = Field(default="", max_length=500)
     fetch_urls: list[str] = Field(default_factory=list, max_length=3)
-    tools: list[str] = Field(default_factory=list, max_length=6)
+    tools: list[str] = Field(default_factory=list, max_length=8)
     skills: list[str] = Field(default_factory=list, max_length=4)
     memory_scope: Literal["agent"] = "agent"
     trigger: Literal["manual", "cron", "interval", "datetime"] = "manual"

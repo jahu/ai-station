@@ -85,6 +85,40 @@ def execute_context_tool(session, run, definition, name, deadline, arguments=Non
         raise
 
 
+def persist_agent_memory(session, run, text, *, tags, tool, excerpt_notice):
+    require(run.effective_permissions, "memory_write")
+    if not run.agent_id:
+        raise ValueError("Retention requires an agent scope")
+    if run.metadata_json.get("memory_entry_id"):
+        return
+    append_event(session, run.id, "tool.started", {"tool": tool})
+    excerpted = len(text) > 12000
+    content = text if not excerpted else text[: 12000 - len(excerpt_notice)] + excerpt_notice
+    entry = upsert_memory(
+        session,
+        scope="agent",
+        scope_id=run.agent_id,
+        content=content,
+        memory_type="observation",
+        tags=list(tags),
+        source_run_id=run.id,
+    )
+    run.metadata_json = {**run.metadata_json, "memory_entry_id": entry.id, "memory_excerpted": excerpted}
+    append_event(
+        session,
+        run.id,
+        "memory.created",
+        {
+            "memory_id": entry.id,
+            "scope": "agent",
+            "scope_id": run.agent_id,
+            "excerpted": excerpted,
+            "tool": tool,
+        },
+    )
+    append_event(session, run.id, "tool.completed", {"tool": tool, "memory_id": entry.id})
+
+
 class LocalAgentExecutor:
     name = "agent"
 
@@ -263,7 +297,14 @@ class LocalAgentExecutor:
             try:
                 with session.begin_nested():
                     if remember:
-                        self._remember(session, run, text)
+                        persist_agent_memory(
+                            session,
+                            run,
+                            text,
+                            tags=["agent-report"],
+                            tool="remember_report",
+                            excerpt_notice="\n\n[Excerpt: open the source Run for the full report.]",
+                        )
                     run.summary = text[:500]
                     transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})
             except Exception:
@@ -305,32 +346,14 @@ class LocalAgentExecutor:
 
     @staticmethod
     def _remember(session, run, text):
-        require(run.effective_permissions, "memory_write")
-        if not run.agent_id:
-            raise ValueError("Report retention requires an agent scope")
-        if run.metadata_json.get("memory_entry_id"):
-            return
-        append_event(session, run.id, "tool.started", {"tool": "remember_report"})
-        excerpted = len(text) > 12000
-        notice = "\n\n[Excerpt: open the source Run for the full report.]"
-        content = text if not excerpted else text[: 12000 - len(notice)] + notice
-        entry = upsert_memory(
+        persist_agent_memory(
             session,
-            scope="agent",
-            scope_id=run.agent_id,
-            content=content,
-            memory_type="observation",
+            run,
+            text,
             tags=["agent-report"],
-            source_run_id=run.id,
+            tool="remember_report",
+            excerpt_notice="\n\n[Excerpt: open the source Run for the full report.]",
         )
-        run.metadata_json = {**run.metadata_json, "memory_entry_id": entry.id, "memory_excerpted": excerpted}
-        append_event(
-            session,
-            run.id,
-            "memory.created",
-            {"memory_id": entry.id, "scope": "agent", "scope_id": run.agent_id, "excerpted": excerpted},
-        )
-        append_event(session, run.id, "tool.completed", {"tool": "remember_report", "memory_id": entry.id})
 
     @staticmethod
     def _canceled(session, run):
