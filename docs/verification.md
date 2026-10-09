@@ -232,3 +232,7 @@ Frontend lint, TypeScript, 102 component tests and production build passed. Home
 ## Home parked-run Approve and Deny — 2026-10-09
 
 Frontend lint, TypeScript, 104 component tests and production build passed. Home **Approve and queue** / **Deny** post the existing `/api/runs/{id}/approval` resolutions `granted` and `denied`. Granting queues the parked Run; it does not start tools or inference from Home. Deny cancels it. Stop is not offered for `waiting_for_approval`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Runs table keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 105 component tests and production build passed. The Runs table is one keyboard sequence (arrows, Home, End, Enter inspects). Duplicate inspect icons stay out of the tab order. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
