@@ -70,7 +70,7 @@ Memory scope/source IDs must resolve to existing records; mismatched source conv
 
 ## Model discovery
 
-[Model discovery](models.md) runs as a managed native process through Task → Run → Events → Artifacts. Only host-configured roots are scanned, and only metadata is persisted. Known successful completion is required to update observations; unavailable roots and missing files remain distinguishable. No runtime ownership is inferred.
+[Model discovery](models.md) runs as a managed native process through Task → Run → Events → Artifacts. Only host-configured roots are scanned, and only metadata is persisted. Known successful completion is required to update observations; unavailable roots and missing files remain distinguishable. No runtime ownership is inferred. Explicit installation re-stats a snapshotted path inside those roots and may inspect a locally installed llama.cpp image ID. It never opens model contents, never pulls images, never copies weights and never starts a runtime.
 
 ## Local agents
 

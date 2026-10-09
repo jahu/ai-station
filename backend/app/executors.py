@@ -25,6 +25,7 @@ from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
 from app.llama import LlamaExecutor
 from app.local_coding import LocalProposalExecutor
+from app.model_definitions import ModelInstallExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
 from app.paths import safe_join, validate_relative
@@ -302,6 +303,7 @@ EXECUTORS = {
     "codex_proposal": CodexProposalExecutor(),
     "local_proposal": LocalProposalExecutor(),
     "model_discovery": ModelDiscoveryExecutor(),
+    "model_install": ModelInstallExecutor(),
     "agent": LocalAgentExecutor(),
     "agent_workflow": AgentWorkflowExecutor(),
     "agent_tool": AgentToolExecutor(),

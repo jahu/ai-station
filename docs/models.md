@@ -1,4 +1,4 @@
-# Model file discovery
+# Model files, definitions and installation
 
 The Models workspace lists external files from the Host Runner's configured `AI_STATION_MODEL_ROOTS`. `POST /api/models/discover` only enqueues a Task/Run. The worker dispatches the typed `/v1/runs/model-scan` endpoint with `filesystem_read` and `manage_models` permissions; callers cannot supply paths, commands or output locations. The runner owns a separate process group and applies the same durable identity, byte-offset logs, cancellation and conservative recovery rules as other native work.
 
@@ -12,6 +12,20 @@ A known successful process exit and validated report are required before the wor
 
 Removed external files remain visible for inspection; no destructive endpoint is exposed. Search is literal filename matching, and category filters/pagination run in SQL. Categories, family, quantization and capability hints are inferred from configured root/filename conventions and are labelled as hints, not verified runtime compatibility.
 
-Model File, Model Definition, Runtime and Runtime Instance remain separate records. Discovery creates Model File observations only. It does not invent curated model definitions or claim existing runtimes are managed. Runtime controls/registry UI are still pending; actual diagnostic checks remain available in System.
+## Definitions, presets and compatibility
 
-Migration `0002` adds nullable observation timestamps/Run links and an `unknown` default for pre-existing rows. Upgrade/downgrade coverage verifies existing file metadata survives. Tests use disposable small fixtures, real managed subprocesses and an in-process typed runner transport. The browser smoke uses a native runner over UDS and a worker. Neither test loads model weights.
+Model File, Model Definition, Runtime and Runtime Instance remain separate records. Discovery creates Model File observations only. It does not invent curated model definitions or claim existing runtimes are managed.
+
+A definition is created by an explicit UI/API action from a file observed as `present`. It stores a display name, inherited family/category/capability hints, and a load preset (`gpus`, `context_size`, `cache_type`). One definition is linked to one file. Removing the definition does not delete the file.
+
+`GET /api/models/compatibility` returns declared format/category pairings with a runtime family. Those rows are labels, not a successful load, health probe or proof that weights run on this workstation. GGUF language models (except `mmproj` companions) declare the managed llama.cpp adapter. Other formats stay catalogued until a real adapter exists.
+
+## Explicit installation
+
+`POST /api/models/definitions/{id}/install` enqueues a Task/Run (`models.install`) with `filesystem_read` and `manage_models`. The worker calls the typed Host Runner `/v1/models/verify` endpoint. Callers cannot supply roots, commands, pull flags or output paths. The runner stats the snapshotted path inside configured model roots, rejects symlinks and non-regular files, and does not open model contents.
+
+For GGUF language models it also inspects the administrator-configured llama.cpp image ID. Missing images fail closed. The runner never runs `docker pull`, never copies GGUFs and never starts a runtime. A JSON report becomes a normal artifact. Cancellation, errors and a changed size/mtime leave the definition unregistered (`unverified` or `failed`) and do not rewrite discovery observations. Retry is a new Run.
+
+`POST /api/models/definitions/{id}/load` reuses the existing owned llama.cpp load Run with the saved preset. It requires a successful install and a present loadable GGUF. Extended process health and restart controls remain a later increment; live diagnostics stay in System.
+
+Migration `0002` adds nullable observation timestamps/Run links and an `unknown` default for pre-existing rows. Migration `0018` adds definition status, verification Run links and timestamps. Upgrade/downgrade coverage verifies existing file metadata survives. Tests use disposable small fixtures, real managed subprocesses and an in-process typed runner transport. The browser smoke uses a native runner over UDS and a worker. Neither test loads model weights or pulls images.

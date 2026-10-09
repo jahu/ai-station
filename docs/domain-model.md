@@ -80,7 +80,7 @@ Scoped (`conversation`, `agent`, `project`, `global`) and typed (`fact`, `decisi
 These are different records.
 
 - A **model file** is a discovered file in a configured root.
-- A **model definition** is a logical model (family, capabilities) that may point at files.
+- A **model definition** is a user-curated logical model (family, capabilities, load preset) that points at one observed file. Discovery never creates it. Explicit installation verifies the local file and, for llama.cpp, an already-installed image; it does not download weights.
 - A **runtime** is an engine (llama.cpp, photo_pipe, stable-diffusion.cpp).
 - A **runtime instance** is a process or endpoint, marked `external` or `managed`.
 
@@ -104,7 +104,7 @@ The [Memory workspace](memory.md) exposes durable scoped entries with validated 
 
 ## Model discovery
 
-[Model discovery](models.md) runs as a managed native process through Task → Run → Events → Artifacts. Only host-configured roots are scanned, and only metadata is persisted. Known successful completion is required to update observations; unavailable roots and missing files remain distinguishable. No runtime ownership is inferred.
+[Model discovery](models.md) runs as a managed native process through Task → Run → Events → Artifacts. Only host-configured roots are scanned, and only metadata is persisted. Known successful completion is required to update observations; unavailable roots and missing files remain distinguishable. No runtime ownership is inferred. Curated definitions, load presets and explicit local installation are separate records and Runs.
 
 
 `ConversationSummary` records an incremental coverage boundary, exact message sources, preceding summary, source Run and editable scoped Memory entry. Removing memory clears its reference; historical provenance remains.

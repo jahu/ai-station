@@ -65,6 +65,9 @@ class RunnerClient:
     def observe_runtimes(self) -> dict:
         return self.request("GET", "/v1/runtimes/observe")
 
+    def verify_model(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/models/verify", payload)
+
     def diagnostics(self) -> dict:
         return self.request("GET", "/v1/diagnostics")
 
