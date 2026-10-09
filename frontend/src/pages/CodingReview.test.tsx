@@ -37,6 +37,7 @@ it("requires review acknowledgement and opens the queued commit", async () => {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  expect(screen.getByText(/Unique snippet replacements/)).toBeTruthy();
   const button = screen.getByRole("button", {
     name: "Commit reviewed changes",
   });

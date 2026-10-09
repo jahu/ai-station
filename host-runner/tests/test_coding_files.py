@@ -106,6 +106,91 @@ def test_review_patch_can_be_applied_by_git_including_new_empty_files(tmp_path):
         assert (target / item["path"]).read_text() == item["content"]
 
 
+def test_unique_snippet_replacements_apply_and_reject_ambiguous_matches(tmp_path):
+    source = tmp_path / "app.py"
+    source.write_text("print(1)\nprint(1)\nhelper()\n")
+    selected = read_selected(tmp_path, ["app.py", "new.py"])
+    with pytest.raises(ValueError, match="exactly one unique snippet"):
+        parse_proposal(
+            json.dumps(
+                {
+                    "summary": "Ambiguous",
+                    "files": [
+                        {"path": "app.py", "replacements": [{"old": "print(1)\n", "new": "print(2)\n"}]}
+                    ],
+                }
+            ),
+            selected,
+        )
+    with pytest.raises(ValueError, match="existing selected file"):
+        parse_proposal(
+            json.dumps(
+                {
+                    "summary": "Create",
+                    "files": [{"path": "new.py", "replacements": [{"old": "missing", "new": "no"}]}],
+                }
+            ),
+            selected,
+        )
+    proposal = parse_proposal(
+        json.dumps(
+            {
+                "summary": "Unique edits",
+                "files": [
+                    {
+                        "path": "app.py",
+                        "replacements": [
+                            {"old": "print(1)\nprint(1)\n", "new": "print(2)\nprint(2)\n"},
+                            {"old": "helper()", "new": "helper(1)"},
+                        ],
+                    },
+                    {"path": "new.py", "content": "created\n"},
+                ],
+            }
+        ),
+        selected,
+    )
+    assert proposal["files"][0]["content"] == "print(2)\nprint(2)\nhelper(1)\n"
+    report = apply_proposal(tmp_path, selected, proposal)
+    assert source.read_text() == "print(2)\nprint(2)\nhelper(1)\n"
+    assert (tmp_path / "new.py").read_text() == "created\n"
+    assert {item["path"] for item in report["files"]} == {"app.py", "new.py"}
+    assert "replacements" not in proposal["files"][0]
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"path": "app.py", "content": "x\n", "replacements": [{"old": "print(1)\n", "new": "x\n"}]},
+        {"path": "app.py", "replacements": [{"old": "", "new": "x"}]},
+        {"path": "app.py", "replacements": [{"old": "missing", "new": "x"}]},
+        {"path": "app.py", "replacements": [{"old": "print(1)\n", "new": "x"}] * 21},
+        {"path": "app.py", "delete": True},
+    ],
+)
+def test_invalid_snippet_replacements_fail_closed(tmp_path, payload):
+    (tmp_path / "app.py").write_text("print(1)\n")
+    selected = read_selected(tmp_path, ["app.py"])
+    with pytest.raises(ValueError):
+        parse_proposal(json.dumps({"summary": "No", "files": [payload]}), selected)
+    assert (tmp_path / "app.py").read_text() == "print(1)\n"
+
+
+def test_snippet_expansion_respects_file_size_limit(tmp_path):
+    (tmp_path / "app.py").write_text("token\n")
+    selected = read_selected(tmp_path, ["app.py"])
+    with pytest.raises(ValueError, match="bounded UTF-8"):
+        parse_proposal(
+            json.dumps(
+                {
+                    "summary": "Huge",
+                    "files": [{"path": "app.py", "replacements": [{"old": "token", "new": "x" * 32001}]}],
+                }
+            ),
+            selected,
+        )
+
+
 def test_proposal_prompt_includes_fetched_page_facts():
     selected = [{"path": "index.html", "content": "<h1>Invented</h1>"}]
     message = proposal_prompt(
@@ -123,5 +208,8 @@ def test_proposal_prompt_includes_fetched_page_facts():
     assert "web_observations" in message
     assert "Przybyszewskiego" in message
     assert "untrusted public GET" in message
+    assert "replacements" in message
+    assert "exactly once" in message
     without = proposal_prompt(prompt="Build", selected=selected, guidance="")
     assert "web_observations" not in without
+    assert "file deletion" in without

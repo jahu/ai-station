@@ -345,8 +345,10 @@ export default function Coding() {
                 <ArrowUpRight size={16} />
               </Button>
               <small className="muted">
-                Changes stay in a separate workspace. Return here for follow-up
-                instructions and review before committing.
+                Changes stay in a separate workspace. The agent may rewrite a
+                selected file or replace a unique snippet; it cannot delete
+                files. Return here for follow-up instructions and review before
+                committing.
               </small>
             </fieldset>
           </form>
