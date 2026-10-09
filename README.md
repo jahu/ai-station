@@ -25,7 +25,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 - Live GPU/CPU/RAM/storage dashboard, telemetry history, worker health, read-only diagnostics, optional operator password in Settings, and hashed loopback node invitations. LAN publish stays unpublished.
 - Durable run state, atomic claims, leases, cancellation, conservative recovery, event replay over SSE, and a run inspector.
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory, with explicit integrity-checked backup Runs. `compose down` keeps bind-mounted data. Restore and image rollout stay unpublished. See [operations](docs/operations.md).
-- Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
+- Home attention list: inspect, Stop, or Mark inspected from one place. Skip link to the workspace. Command palette (`Ctrl+K` / `Cmd+K`) also opens backup and upgrade readiness. Broader workspace accessibility remains in progress.
 
 The bounded Codex, Cursor and Local AI adapters are operational. Claude Code remains an inactive draft; reviewed changes can be committed to the owned task branch from Coding or the Platform assistant; approved task-branch pushes and draft GitHub PRs are available from successful commit Runs. Saved project validation and declared Python dependency installs run in prepared worktrees through the native sandbox.
 
@@ -154,7 +154,7 @@ Runtime observations are refreshed through a normal Run from **System → Observ
 **System → Backup and upgrade readiness** queues an integrity-checked SQLite backup Run, lists interrupted work for inspection, and states that compose down keeps bind-mounted data. Restore and image rollout stay unpublished. See [operations](docs/operations.md).
 
 
-The Home workspace combines live hardware with saved activity: active/queued Runs, enabled agents, scheduled work, recent conversations and generated artifacts. Runtime cards distinguish process observations from endpoint checks and flag stale data. Quick actions open the relevant workspaces without starting a workload.
+The Home workspace leads with a unified attention list: interrupted Runs (Mark inspected, no replay), notices, and in-progress work with Stop. Granting parked approvals still happens on the Run inspector. Hardware, schedules, conversations, artifacts and runtime observations follow. Quick actions and Ctrl+K open workspaces without starting a workload.
 
 Runs supports combined status, capability, executor, execution target, project, agent, GPU and creation-time filters. Filters are kept in the page URL and paging makes older history accessible. Dates are entered in local time and submitted with an explicit timezone.
 

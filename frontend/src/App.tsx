@@ -87,6 +87,15 @@ const destinations = [
   ["/system", "System", Terminal],
   ["/settings", "Settings", Settings2],
 ] as [string, string, LucideIcon][];
+const actions: [string, string, string][] = [
+  ["/home", "Home activity", "Inspect, stop or acknowledge"],
+  ["/runs", "Active runs", "Open the queue"],
+  [
+    "/system?focus=maintenance",
+    "Backup and upgrade readiness",
+    "SQLite backup",
+  ],
+];
 
 function Unavailable() {
   const { pathname } = useLocation();
@@ -148,7 +157,13 @@ export default function App() {
             AI Station<small>YOUR PERSONAL AI WORKSTATION</small>
           </span>
         </div>
-        <button className="search-button" onClick={() => setOpen(true)}>
+        <button
+          type="button"
+          className="search-button"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onClick={() => setOpen(true)}
+        >
           <Search size={15} />
           <span>Go to workspace…</span>
           <kbd>Ctrl K</kbd>
@@ -258,9 +273,10 @@ export default function App() {
         <Dialog.Portal>
           <Dialog.Overlay className="dialog-overlay" />
           <Dialog.Content className="command-dialog">
-            <Dialog.Title className="sr-only">Go to workspace</Dialog.Title>
+            <Dialog.Title className="sr-only">Command palette</Dialog.Title>
             <Dialog.Description className="sr-only">
-              Search AI Station workspaces, then press Enter to open one.
+              Search workspaces and station actions. Press Enter to open.
+              Control K toggles this palette; Escape closes it.
             </Dialog.Description>
             <Command>
               <div className="command-input">
@@ -274,23 +290,43 @@ export default function App() {
                 </Dialog.Close>
               </div>
               <Command.List>
-                <Command.Empty>No matching workspace.</Command.Empty>
-                {destinations.map(([path, label, Icon]) => (
-                  <Command.Item
-                    key={path}
-                    onSelect={() => {
-                      navigate(path);
-                      setOpen(false);
-                    }}
-                  >
-                    <Icon size={18} />
-                    {label}
-                    <span>Open workspace ↵</span>
-                  </Command.Item>
-                ))}
+                <Command.Empty>No matching workspace or action.</Command.Empty>
+                <Command.Group heading="Actions">
+                  {actions.map(([path, label, hint]) => (
+                    <Command.Item
+                      key={path}
+                      value={`${label} ${hint}`}
+                      onSelect={() => {
+                        navigate(path);
+                        setOpen(false);
+                      }}
+                    >
+                      <Activity size={18} />
+                      {label}
+                      <span>{hint} ↵</span>
+                    </Command.Item>
+                  ))}
+                </Command.Group>
+                <Command.Group heading="Workspaces">
+                  {destinations.map(([path, label, Icon]) => (
+                    <Command.Item
+                      key={path}
+                      value={label}
+                      onSelect={() => {
+                        navigate(path);
+                        setOpen(false);
+                      }}
+                    >
+                      <Icon size={18} />
+                      {label}
+                      <span>Open workspace ↵</span>
+                    </Command.Item>
+                  ))}
+                </Command.Group>
               </Command.List>
               <div className="command-footer">
-                ↑ ↓ to navigate <span>↵ to open · esc to close</span>
+                ↑ ↓ to navigate{" "}
+                <span>Ctrl K to open · ↵ to go · esc to close</span>
               </div>
             </Command>
           </Dialog.Content>

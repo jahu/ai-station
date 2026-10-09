@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, type Run } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
@@ -43,6 +44,12 @@ const json = (method: string, body: unknown) => ({
 export default function Maintenance() {
   const cache = useQueryClient();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  useEffect(() => {
+    if (params.get("focus") === "maintenance") {
+      document.getElementById("maintenance")?.focus();
+    }
+  }, [params]);
   const status = useQuery({
     queryKey: ["maintenance"],
     queryFn: () => api<Readiness>("/maintenance"),
@@ -76,7 +83,7 @@ export default function Maintenance() {
       !["succeeded", "failed", "interrupted", "canceled"].includes(row.status),
   );
   return (
-    <section className="panel mt">
+    <section className="panel mt" id="maintenance" tabIndex={-1}>
       <div className="panel-heading">
         <div>
           <h2>Backup and upgrade readiness</h2>

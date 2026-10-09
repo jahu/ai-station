@@ -491,7 +491,7 @@ main {
 }
 .dashboard-bottom {
   display: grid;
-  grid-template-columns: 1.1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 20px;
 }
 .panel-heading {
@@ -550,18 +550,42 @@ main {
   line-height: 1.8;
   max-width: 370px;
 }
-.activity-list a {
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.activity-list a,
+.activity-list .activity-row {
   display: flex;
   gap: 12px;
   align-items: center;
   padding: 18px 22px;
   border-bottom: 1px solid #24282b;
 }
-.activity-list a:last-child {
+.activity-list a:last-child,
+.activity-list .activity-row:last-child {
   border: 0;
 }
-.activity-list a:hover {
+.activity-list a:hover,
+.activity-list .activity-row:hover {
   background: #1f2224;
+}
+.activity-list .activity-row > a {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.activity-list .activity-row > a:hover {
+  background: transparent;
+}
+.activity-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
 }
 .activity-icon {
   padding: 9px;
@@ -1037,8 +1061,12 @@ pre {
   .run-meta {
     gap: 12px;
   }
-  .activity-list a {
+  .activity-list a,
+  .activity-list .activity-row {
     padding: 17px 12px;
+  }
+  .activity-list .activity-row > a {
+    padding: 0;
   }
   .activity-list .badge {
     font-size: 8px;
@@ -1786,6 +1814,9 @@ pre {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20px;
+}
+.dashboard-attention {
+  grid-column: 1 / -1;
 }
 .dashboard-activity .activity-list a > div {
   min-width: 0;
