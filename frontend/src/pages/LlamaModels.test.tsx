@@ -339,3 +339,68 @@ it("checks owned runtime health without signalling an external process", async (
     ).toBe(true),
   );
 });
+
+it("moves through picker models with arrow keys", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path.endsWith("/hardware")
+          ? { gpus: [] }
+          : {
+              models: [
+                {
+                  id: "alpha",
+                  model_key: "llamacpp:alpha",
+                  name: "Alpha.gguf",
+                  size_bytes: 1000000000,
+                },
+                {
+                  id: "bravo",
+                  model_key: "llamacpp:bravo",
+                  name: "Bravo.gguf",
+                  size_bytes: 2000000000,
+                },
+              ],
+              instances: [],
+            },
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <LlamaModels
+          value=""
+          models={[]}
+          onSelect={() => undefined}
+          busy={false}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Model" }));
+  const first = await screen.findByRole("button", {
+    name: "Alpha, llama.cpp, Loads when needed",
+  });
+  const second = screen.getByRole("button", {
+    name: "Bravo, llama.cpp, Loads when needed",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Available models" })).toBeTruthy();
+  fireEvent.keyDown(first.closest(".model-options") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".model-options") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
