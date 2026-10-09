@@ -369,11 +369,16 @@ class Connector(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     key: Mapped[str] = mapped_column(String(80), unique=True)
     name: Mapped[str] = mapped_column(String(200))
+    kind: Mapped[str] = mapped_column(String(80), default="http")
     status: Mapped[str] = mapped_column(String(40), default="unconfigured")
     capabilities: Mapped[list] = mapped_column(JSON, default=list)
     config_json: Mapped[dict] = mapped_column("config", JSON, default=dict)
     secret_ref: Mapped[str] = mapped_column(String(200), default="")
     health: Mapped[str] = mapped_column(String(40), default="unknown")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
 
 class ChatProvider(Base):

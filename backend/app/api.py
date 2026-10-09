@@ -26,6 +26,7 @@ from app.chat_providers import router as chat_provider_router
 from app.codex_coding import router as codex_router
 from app.coding_sessions import router as coding_sessions_router
 from app.config import get_settings
+from app.connectors import router as connector_router
 from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
 from app.db import migrate, session_factory, session_scope, utcnow
@@ -311,6 +312,7 @@ app.include_router(dashboard_router)
 app.include_router(image_router)
 app.include_router(chat_router)
 app.include_router(chat_provider_router)
+app.include_router(connector_router)
 app.include_router(audio_router)
 app.include_router(avatar_router)
 app.include_router(commit_router)

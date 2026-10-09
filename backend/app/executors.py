@@ -19,6 +19,7 @@ from app.chat_executor import ChatExecutor
 from app.codex_coding import CodexProposalExecutor
 from app.commit_executor import ReviewedCommitExecutor
 from app.config import get_settings
+from app.connectors import HttpConnectorExecutor
 from app.cursor_executor import CursorProposalExecutor
 from app.events import append_event
 from app.llama import LlamaExecutor
@@ -303,6 +304,7 @@ EXECUTORS = {
     "agent": LocalAgentExecutor(),
     "agent_workflow": AgentWorkflowExecutor(),
     "agent_tool": AgentToolExecutor(),
+    "http_connector": HttpConnectorExecutor(),
     "runtime_observation": RuntimeObservationExecutor(),
 }
 
