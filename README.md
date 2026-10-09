@@ -25,7 +25,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 - Live GPU/CPU/RAM/storage dashboard, telemetry history, worker health, read-only diagnostics, optional operator password and loopback session in Settings, and hashed loopback node invitations. LAN publish stays unpublished.
 - Durable run state, atomic claims, leases, cancellation, conservative recovery, event replay over SSE, and a run inspector.
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory, with explicit integrity-checked backup Runs. `compose down` keeps bind-mounted data. Restore and image rollout stay unpublished. See [operations](docs/operations.md).
-- Home attention list: inspect, Stop, or Mark inspected from one place. Skip link to the workspace. Command palette (`Ctrl+K` / `Cmd+K`) also opens backup and upgrade readiness. Broader workspace accessibility remains in progress.
+- Home attention list: inspect, Stop, or Mark inspected from one place. Skip link to the workspace. Command palette (`Ctrl+K` / `Cmd+K`) also opens backup and upgrade readiness. After a palette or in-app navigation the workspace receives keyboard focus. Broader workspace accessibility remains in progress.
 
 The bounded Codex, Cursor and Local AI adapters are operational. Claude Code remains an inactive draft; reviewed changes can be committed to the owned task branch from Coding or the Platform assistant; approved task-branch pushes and draft GitHub PRs are available from successful commit Runs. Saved project validation and declared Python dependency installs run in prepared worktrees through the native sandbox.
 

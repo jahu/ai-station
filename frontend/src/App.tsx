@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   NavLink,
   Route,
@@ -121,6 +121,7 @@ export default function App() {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const firstPath = useRef(true);
   const hardware = useHardware();
   const page =
     destinations.find(
@@ -136,6 +137,13 @@ export default function App() {
     document.addEventListener("keydown", listener);
     return () => document.removeEventListener("keydown", listener);
   }, []);
+  useEffect(() => {
+    if (firstPath.current) {
+      firstPath.current = false;
+      return;
+    }
+    document.getElementById("main")?.focus();
+  }, [location.pathname]);
   return (
     <div className="app-shell">
       <a
