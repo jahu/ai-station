@@ -357,3 +357,84 @@ it("moves through conversation history with arrow keys", async () => {
   });
   expect(first.tabIndex).toBe(0);
 });
+
+it("overrides this turn without sending or rewriting conversation settings", async () => {
+  const conversation = {
+    id: "conv",
+    title: "Planning",
+    provider: "local-openai-compatible",
+    provider_name: "Local OpenAI-compatible",
+    provider_location: "local",
+    model: "test-model",
+    system_prompt: "",
+    temperature: 0.7,
+    max_tokens: 2048,
+    updated_at: "2026-10-09T12:00:00Z",
+    execution_mode: "local",
+    auto_summary: false,
+    summary_update: null,
+    summary: null,
+    active_run: null,
+    messages: [
+      {
+        id: "user-one",
+        role: "user",
+        content: "Hello",
+        created_at: "2026-10-09T12:00:00Z",
+        run_id: null,
+        run_status: null,
+        error_message: "",
+        metadata: {},
+      },
+    ],
+  };
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    if (options?.method === "POST" || options?.method === "PATCH") {
+      throw new Error(`unexpected ${options.method} ${path}`);
+    }
+    return {
+      ok: true,
+      json: async () =>
+        path.endsWith("/chat/providers")
+          ? [builtin]
+          : path.includes("/chat/providers/")
+            ? builtin
+            : path.endsWith("/llama")
+              ? { models: [], instances: [] }
+              : path.endsWith("/hardware")
+                ? { gpus: [] }
+                : path.endsWith("/chat/conversations")
+                  ? [conversation]
+                  : path.includes("/chat/conversations/")
+                    ? conversation
+                    : [],
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/chat/conv"]}>
+        <Routes>
+          <Route path="/chat/:id" element={<Chat />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const auto = await screen.findByLabelText("Turn auto");
+  expect(screen.queryByLabelText("Action")).toBeNull();
+  const list = auto.closest(".turn-choice-list") as HTMLElement;
+  fireEvent.keyDown(list, { key: "End" });
+  fireEvent.keyDown(list, { key: "Enter" });
+  expect(
+    (
+      screen.getByRole("radio", {
+        name: /Platform assistant/,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  expect(await screen.findByLabelText("Action")).toBeTruthy();
+});
