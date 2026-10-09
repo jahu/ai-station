@@ -274,15 +274,16 @@ it("stages local coding scope without granting Cursor consent", async () => {
   ).toBe(false);
   expect(
     (
-      screen.getByLabelText("Automatic repair", {
-        exact: false,
-      }) as HTMLSelectElement
-    ).value,
-  ).toBe("0");
-  fireEvent.change(
-    screen.getByLabelText("Automatic repair", { exact: false }),
-    { target: { value: "2" } },
-  );
+      screen.getByRole("radio", {
+        name: /Off — ask me first/,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  const repairList = screen.getByLabelText("Repair 0").closest(
+    ".repair-choice-list",
+  ) as HTMLElement;
+  fireEvent.keyDown(repairList, { key: "End" });
+  fireEvent.keyDown(repairList, { key: "Enter" });
   expect(
     JSON.parse(screen.getByTestId("scope").textContent!).max_repair_attempts,
   ).toBe(2);

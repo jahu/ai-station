@@ -111,7 +111,7 @@ Agent report retention requires explicit `memory_write` on the snapshotted Run. 
 
 Local repair accepts only a source Run ID after confirmed validation failure. The control plane serializes project work and preserves model, file scope, guidance and validation commands. The Runner independently verifies the previous successful local report, unchanged task base and original scope. Failure context comes from redacted persisted events with a bounded excerpt. Old reviews cannot be committed after a repair is requested; the cumulative new review uses the existing hash-checked commit path.
 
-Automatic local repair requires an explicit task budget of one or two attempts (default zero); strict validation rejects booleans, strings and larger budgets. Only confirmed failed validation uses that budget. Model output cannot change it, choose new commands/files, trigger external inference or authorize commits. Cancellation, uncertain completion and execution failures do not queue repair.
+Automatic local repair requires an explicit task budget of one or two attempts (default zero); the budget radios reuse the shared list keyboard with unique Repair names and do not start a coding Run. Strict validation rejects booleans, strings and larger budgets. Only confirmed failed validation uses that budget. Model output cannot change it, choose new commands/files, trigger external inference or authorize commits. Cancellation, uncertain completion and execution failures do not queue repair.
 
 ## Reviewed GitHub publication
 

@@ -163,6 +163,71 @@ it.each(["Cursor", "Codex", "Local AI"])(
       files: [],
       explore: true,
       model: executor === "Local AI" ? "llamacpp:gguf" : "available-model",
+      ...(executor === "Local AI" ? { max_repair_attempts: 0 } : {}),
     });
+    if (executor !== "Local AI") {
+      expect(JSON.parse(call[1]!.body as string).max_repair_attempts).toBeUndefined();
+    }
   },
 );
+
+it("posts a selected local repair budget from the coding start form", async () => {
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST"
+        ? { id: "prepare", task_id: "conversation" }
+        : path.endsWith("/sessions")
+          ? []
+          : path.endsWith("/provider")
+            ? { models: ["local-model"], default_model: "local-model" }
+            : path.endsWith("/llama")
+              ? { models: [], instances: [] }
+              : path.endsWith("/hardware")
+                ? { gpus: [] }
+                : [
+                    {
+                      id: "project",
+                      name: "Example",
+                      updated_at: "version",
+                      preferred_executor: "local",
+                    },
+                  ],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  const cache = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={cache}>
+      <MemoryRouter initialEntries={["/coding"]}>
+        <Routes>
+          <Route path="/coding" element={<Coding />} />
+          <Route
+            path="/coding/conversation"
+            element={<h1>Coding conversation</h1>}
+          />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.change(await screen.findByLabelText("Project"), {
+    target: { value: "project" },
+  });
+  fireEvent.change(screen.getByLabelText("Task"), {
+    target: { value: "Build my idea" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
+  const repairList = (await screen.findByLabelText("Repair 0")).closest(
+    ".repair-choice-list",
+  ) as HTMLElement;
+  fireEvent.keyDown(repairList, { key: "End" });
+  fireEvent.keyDown(repairList, { key: "Enter" });
+  fireEvent.click(screen.getByRole("button", { name: "Start coding" }));
+  await screen.findByRole("heading", { name: "Coding conversation" });
+  const call = fetch.mock.calls.find(
+    ([path, options]) =>
+      path === "/api/coding/local" && options?.method === "POST",
+  )!;
+  expect(JSON.parse(call[1]!.body as string).max_repair_attempts).toBe(2);
+});

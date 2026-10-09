@@ -416,3 +416,7 @@ Frontend lint, TypeScript, 165 component tests and production build passed. Codi
 ## Coding file-discovery keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 167 component tests and production build passed. Automatic Coding and assistant file discovery reuses `useListKeyboard` with a unique Explore name. Space or Enter selects it and does not start a coding Run. Explicit Edit file checkboxes remain the existing sequence. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Local AI repair budget keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 171 component tests and production build passed. Coding and assistant Local AI repair budgets reuse `useListKeyboard` with unique Repair names. Space or Enter selects the focused budget and does not start a coding Run. Automatic repair still uses the existing `max_repair_attempts` field; Cursor and Codex still have no repair budget. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
