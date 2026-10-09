@@ -7,6 +7,8 @@ import { api, type Run } from "../api";
 import { ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import { CodingHistory } from "./CodingSessions";
+import { FileChoiceList } from "./FileChoiceList";
+import { parseFilePaths } from "./filePaths";
 
 type Project = {
   id: string;
@@ -78,12 +80,7 @@ export default function Coding() {
           project_id: projectId,
           expected_updated_at: project?.updated_at,
           prompt,
-          files: explore
-            ? []
-            : files
-                .split("\n")
-                .map((p) => p.trim())
-                .filter(Boolean),
+          files: explore ? [] : parseFilePaths(files),
           explore,
           model: local ? selectedModel : model,
           ...(!local
@@ -274,22 +271,15 @@ export default function Coding() {
                     </small>
                   )}
                   {!explore && (
-                    <label>
-                      Files the agent may edit
-                      <textarea
-                        required
-                        rows={3}
-                        value={files}
-                        onChange={(e) => {
-                          setFiles(e.target.value);
-                          setExternal(false);
-                        }}
-                        placeholder="src/app.py&#10;README.md"
-                      />
-                      <small>
-                        Relative paths, one per line. You can include new files.
-                      </small>
-                    </label>
+                    <FileChoiceList
+                      files={files}
+                      required
+                      label="Files the agent may edit"
+                      onChange={(value) => {
+                        setFiles(value);
+                        setExternal(false);
+                      }}
+                    />
                   )}
                   {local && (
                     <label>
