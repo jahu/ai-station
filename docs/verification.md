@@ -260,3 +260,7 @@ Frontend lint, TypeScript, 110 component tests and production build passed. Chat
 ## Projects list keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 111 component tests and production build passed. The Projects list is one keyboard sequence (arrows, Home, End, Enter inspects). Inspect names include the project name and short id. Decorative repository icons stay out of the tab order. Shared `useListKeyboard` covers this list without changing already-shipped Home/Runs/Library/Chat/Agents/Memory sequences. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Models list keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 112 component tests and production build passed. Observed model files and curated definitions are each one keyboard sequence (arrows, Home, End, Enter inspects). Inspect names include the filename or definition name and short id. Decorative type icons stay out of the tab order. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

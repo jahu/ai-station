@@ -181,3 +181,72 @@ it("registers a definition from a present file without installing until asked", 
     name: "Qwen",
   });
 });
+
+it("moves through observed model files with arrow keys", async () => {
+  const file = {
+    filename: "Qwen.gguf",
+    host_path: "/models/Qwen.gguf",
+    root_label: "models",
+    category: "llm",
+    format: "gguf",
+    size_bytes: 1000,
+    family: "qwen",
+    quantization: "Q4_K_M",
+    capabilities: [],
+    availability: "present",
+    discovered_at: "2026-10-09T12:00:00Z",
+    last_seen_at: "2026-10-09T12:00:00Z",
+    last_scan_run_id: "scan",
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        String(url).includes("/models/compatibility")
+          ? { items: [], note: "" }
+          : String(url).includes("/models/definitions")
+            ? { items: [], total: 0 }
+            : {
+                items: [
+                  { ...file, id: "file-one", filename: "Alpha.gguf" },
+                  { ...file, id: "file-two", filename: "Beta.gguf" },
+                ],
+                total: 2,
+                latest_scan: null,
+              },
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <Routes>
+          <Route path="/" element={<Models />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const first = await screen.findByRole("link", {
+    name: "Inspect Alpha.gguf file-one",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect Beta.gguf file-two",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Models" })).toBeTruthy();
+  fireEvent.keyDown(first.closest(".model-grid") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".model-grid") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
