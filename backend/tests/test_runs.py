@@ -157,3 +157,33 @@ def test_reaping_pending_preserves_lease_and_gpu_reservation(session):
     assert run.status == "running"
     assert run.lease_expires_at > utcnow()
     assert session.scalar(select(ResourceLock)).released_at is None
+
+
+def test_status_lists_held_leases_without_recovering(session):
+    from app.api import app
+    from fastapi.testclient import TestClient
+
+    live = queued(session)
+    live.status = "running"
+    live.worker_id = "w1"
+    live.executor_type = "fake"
+    live.lease_expires_at = utcnow() + timedelta(seconds=30)
+    stale = queued(session, retry_class="inspect")
+    stale.status = "preparing"
+    stale.worker_id = "w1"
+    stale.executor_type = "fake"
+    stale.lease_expires_at = utcnow() - timedelta(seconds=10)
+    session.commit()
+    with TestClient(app) as client:
+        body = client.get("/api/system/status").json()
+        assert body["stale_lease_count"] == 1
+        assert body["held_lease_count"] == 2
+        assert body["lease_seconds"] >= 1
+        assert {row["id"] for row in body["leases"]} == {live.id, stale.id}
+        expired = next(row for row in body["leases"] if row["stale"])
+        assert expired["id"] == stale.id
+        assert expired["replay"] is False
+        assert expired["retry_class"] == "inspect"
+        assert client.post("/api/system/status").status_code == 405
+    session.refresh(stale)
+    assert stale.status == "preparing"

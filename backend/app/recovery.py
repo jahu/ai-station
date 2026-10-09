@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.db import utcnow
 from app.events import append_event
 from app.models import Run
 from app.resources import release_run_locks
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import transition
+from app.serialize import iso
 from app.state import RunStatus
 
 INSPECT_STATUSES = {
@@ -19,6 +21,40 @@ INSPECT_STATUSES = {
     RunStatus.RUNNING.value,
     RunStatus.CANCEL_REQUESTED.value,
 }
+
+
+def lease_health(session: Session, *, limit: int = 20) -> dict:
+    """Inspect held leases. Never recovers, requeues, or restores."""
+    now = utcnow()
+    held = select(func.count()).where(
+        Run.status.in_(INSPECT_STATUSES),
+        Run.lease_expires_at.is_not(None),
+    )
+    stale = held.where(Run.lease_expires_at < now)
+    rows = session.scalars(
+        select(Run)
+        .where(Run.status.in_(INSPECT_STATUSES), Run.lease_expires_at.is_not(None))
+        .order_by(Run.lease_expires_at.asc())
+        .limit(limit)
+    )
+    return {
+        "lease_seconds": get_settings().lease_seconds,
+        "held_lease_count": int(session.scalar(held) or 0),
+        "stale_lease_count": int(session.scalar(stale) or 0),
+        "leases": [
+            {
+                "id": run.id,
+                "status": run.status,
+                "worker_id": run.worker_id,
+                "executor_type": run.executor_type,
+                "retry_class": run.retry_class,
+                "lease_expires_at": iso(run.lease_expires_at),
+                "stale": bool(run.lease_expires_at and run.lease_expires_at < now),
+                "replay": False,
+            }
+            for run in rows
+        ],
+    }
 
 
 def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[str]:
