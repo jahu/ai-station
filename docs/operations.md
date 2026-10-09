@@ -28,7 +28,7 @@ This path does not retag unrelated images, migrate other Docker projects, pull G
 
 `POST /api/maintenance/backups` enqueues a Task/Run (`station.backup`, executor `sqlite_backup`) with `manage_station` only. Agents do not receive that permission. After releasing the worker transaction, the executor copies the live SQLite file with `VACUUM INTO` into `backups/<run-id>.sqlite`, runs `PRAGMA integrity_check` on the copy, and stores that file plus a JSON report as artifacts. Cancellation is honored before the copy and before artifact registration; a canceled Run deletes a partial copy. Recovery never restores the copy and never retries the Run automatically (`retry_class=inspect`).
 
-`GET /api/maintenance/backups` lists recent backup Runs. `GET /api/maintenance/backups/{run_id}` opens the stored copy read-only, repeats `PRAGMA integrity_check`, hashes the file, and reads its Alembic revision. A hash mismatch or failed integrity check is reported; the live database is not replaced. Restore remains unpublished because swapping SQLite while the control plane holds WAL connections is unsafe.
+`GET /api/maintenance/backups` lists recent backup Runs and their stored artifacts. System can download the SQLite copy through the ordinary artifact file endpoint. `GET /api/maintenance/backups/{run_id}` opens the stored copy read-only, repeats `PRAGMA integrity_check`, hashes the file, and reads its Alembic revision. A hash mismatch or failed integrity check is reported; the live database is not replaced. Restore remains unpublished because swapping SQLite while the control plane holds WAL connections is unsafe.
 
 ## Interrupted work
 

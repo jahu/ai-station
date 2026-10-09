@@ -216,3 +216,7 @@ Frontend lint, TypeScript, 99 component tests and production build passed. After
 ## Inspect-only compose image comparison — 2026-10-09
 
 `./scripts/check.sh`: 683 Python tests passed (5 skipped), including Host Runner refusal of build/tag/stop argv, missing Docker, missing tag, stale running image ID vs rebuilt `ai-station:local`, ignoring unrelated compose projects, GET `/v1/station-image` without POST rollout, GET `/api/maintenance/image` comparing tag vs running API/worker/scheduler, and unpublished rollout when the runner is down. Frontend lint, TypeScript, 101 component tests and production build passed. System **Inspect running image** does not offer Restore or Rollout. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Download stored SQLite backup copies — 2026-10-09
+
+`./scripts/check.sh`: 683 Python tests passed (5 skipped), including listing the SQLite artifact on GET `/api/maintenance/backups` and downloading it as `SQLite format 3` without restore. Frontend lint, TypeScript, 101 component tests and production build passed. System **Download copy** uses the existing artifact file endpoint and does not offer Restore. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

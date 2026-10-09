@@ -96,7 +96,7 @@ A named external system: kind, status, health, capabilities, non-secret configur
 
 ## Maintenance
 
-`GET /api/maintenance` is an inspect-only upgrade-readiness snapshot. SQLite backups are ordinary Runs with verified artifacts. `GET /api/maintenance/backups/{run_id}` re-checks a successful copy read-only. `GET /api/maintenance/image` compares `ai-station:local` with running compose containers and does not apply an image. Restore and image rollout are unpublished; see [operations](operations.md).
+`GET /api/maintenance` is an inspect-only upgrade-readiness snapshot. SQLite backups are ordinary Runs with verified artifacts. `GET /api/maintenance/backups/{run_id}` re-checks a successful copy read-only. The listing exposes the SQLite artifact for download without restore. `GET /api/maintenance/image` compares `ai-station:local` with running compose containers and does not apply an image. Restore and image rollout are unpublished; see [operations](operations.md).
 
 ## Operator access and nodes
 
