@@ -177,6 +177,115 @@ it("moves through conversation messages with arrow keys", async () => {
   expect(inspect.tabIndex).toBe(0);
 });
 
+it("moves through saved transcript attachments without inspecting a Run", async () => {
+  const conversation = {
+    id: "conv",
+    title: "Planning",
+    provider: "local-openai-compatible",
+    provider_name: "Local OpenAI-compatible",
+    provider_location: "local",
+    model: "test-model",
+    system_prompt: "",
+    temperature: 0.7,
+    max_tokens: 2048,
+    updated_at: "2026-10-09T12:00:00Z",
+    execution_mode: "local",
+    auto_summary: false,
+    summary_update: null,
+    summary: null,
+    active_run: null,
+    messages: [
+      {
+        id: "user-one",
+        role: "user",
+        content: "See these notes",
+        created_at: "2026-10-09T12:00:00Z",
+        run_id: "run-ai",
+        run_status: "succeeded",
+        error_message: "",
+        metadata: {
+          attachments: [
+            {
+              id: "att-notes-aaaa",
+              name: "notes.txt",
+              size_bytes: 12,
+              kind: "text",
+            },
+            {
+              id: "att-photo-bbbb",
+              name: "photo.png",
+              size_bytes: 2048,
+              kind: "image",
+            },
+          ],
+        },
+      },
+    ],
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path.endsWith("/chat/providers")
+          ? [builtin]
+          : path.includes("/chat/providers/")
+            ? builtin
+            : path.endsWith("/llama")
+              ? { models: [], instances: [] }
+              : path.endsWith("/hardware")
+                ? { gpus: [] }
+                : path.endsWith("/chat/conversations")
+                  ? [conversation]
+                  : path.includes("/chat/conversations/")
+                    ? conversation
+                    : [],
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/chat/conv"]}>
+        <Routes>
+          <Route path="/chat/:id" element={<Chat />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const first = await screen.findByRole("link", {
+    name: "Saved attachment notes.txt att-note",
+  });
+  const second = screen.getByRole("link", {
+    name: "Saved attachment photo.png att-phot",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(first.getAttribute("href")).toBe("/api/artifacts/att-notes-aaaa/file");
+  expect(
+    screen.getByText(/There is no inspectable attachment Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(
+    first.closest(".chat-saved-attachment-list") as HTMLElement,
+    { key: "ArrowDown" },
+  );
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(
+    second.closest(".chat-saved-attachment-list") as HTMLElement,
+    { key: "Enter" },
+  );
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(
+    second.closest(".chat-saved-attachment-list") as HTMLElement,
+    { key: "Home" },
+  );
+  expect(first.tabIndex).toBe(0);
+});
+
 it("moves through conversation history with arrow keys", async () => {
   vi.stubGlobal(
     "fetch",
