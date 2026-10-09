@@ -292,3 +292,7 @@ Frontend lint, TypeScript, 118 component tests and production build passed. Rece
 ## Worker leases keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 119 component tests and production build passed. Held worker leases form one keyboard sequence (arrows, Home, End, Enter inspects the Run). Inspect names include the short Run id. The list still does not recover, requeue or restore. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Library picker keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 120 component tests and production build passed. The Library input picker is one keyboard sequence (arrows, Home, End, Enter selects or deselects). Choose names include the filename and short id. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
