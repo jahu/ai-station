@@ -657,3 +657,77 @@ it("saves workflow memory without enabling the draft", async () => {
     screen.getByText(/Successful telemetry, public search and HTTP fetch/i),
   ).toBeTruthy();
 });
+it("moves through the agent list with arrow keys", async () => {
+  const row = {
+    description: "",
+    goal: "Summarize",
+    system_prompt: "",
+    model: "local",
+    tools: [],
+    search_query: "",
+    fetch_urls: [],
+    skills: [],
+    trigger: "manual",
+    cron_expr: "",
+    interval_seconds: null,
+    run_at: null,
+    maximum_runtime: 600,
+    output_expectation: "Report",
+    require_approval: false,
+    workflow_mode: "sequential",
+    tool_calling: "none",
+    retry_policy: { mode: "none" },
+    notification_policy: {
+      on_success: false,
+      on_failure: false,
+      on_approval: false,
+    },
+    project_id: null,
+    enabled: false,
+    updated_at: "2026-10-09T12:00:00Z",
+    next_run_at: null,
+    last_run_at: null,
+    last_status: "",
+    failure_count: 0,
+    effective_permissions: [],
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url.endsWith("/llama")
+          ? { models: [], instances: [] }
+          : url.includes("provider")
+            ? { models: ["local"], default_model: "local" }
+            : url.includes("/agents")
+              ? [
+                  { ...row, id: "agentone", name: "Morning review" },
+                  { ...row, id: "agenttwo", name: "Evening check" },
+                ]
+              : url.endsWith("/hardware")
+                ? { gpus: [] }
+                : [],
+    })),
+  );
+  mount();
+  const first = await screen.findByRole("link", {
+    name: "Inspect Morning review agentone",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect Evening check agenttwo",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Agents" })).toBeTruthy();
+  fireEvent.keyDown(first.closest(".memory-grid") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".memory-grid") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
