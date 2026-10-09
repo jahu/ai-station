@@ -39,6 +39,46 @@ function secretLabel(row: ConnectorInfo) {
   return row.secret_source === "env" ? row.secret_ref : "Secret stored";
 }
 
+function UnavailableCards({ items }: { items: KindInfo[] }) {
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    items,
+    (item) => item.kind,
+  );
+  return (
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId} className="sr-only">
+        Unavailable adapters
+      </h3>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose an unpublished adapter while the list is focused.
+        These kinds stay unavailable. There is no inspectable adapter Run.
+      </p>
+      <div
+        ref={listRef}
+        className="diagnostic-list"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {items.map((item, i) => (
+          <div
+            key={item.kind}
+            aria-label={`Adapter ${item.kind}`}
+            {...itemProps(i, item.kind)}
+          >
+            <div>
+              <strong>{item.kind}</strong>
+              <p>{item.summary}</p>
+            </div>
+            <Badge status="unavailable" />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ConnectorCards({
   connectors,
   checkPending,
@@ -140,7 +180,6 @@ function ConnectorCards({
 }
 
 export default function Connectors() {
-  const unavailableId = useId();
   const navigate = useNavigate();
   const cache = useQueryClient();
   const connectors = useQuery({
@@ -200,24 +239,7 @@ export default function Connectors() {
           remove.error
         }
       />
-      {unavailable.length > 0 && (
-        <section aria-labelledby={unavailableId}>
-          <h3 id={unavailableId} className="sr-only">
-            Unavailable adapters
-          </h3>
-          <div className="diagnostic-list">
-            {unavailable.map((item) => (
-              <div key={item.kind}>
-                <div>
-                  <strong>{item.kind}</strong>
-                  <p>{item.summary}</p>
-                </div>
-                <Badge status="unavailable" />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {unavailable.length > 0 && <UnavailableCards items={unavailable} />}
       {!!connectors.data?.length && (
         <ConnectorCards
           connectors={connectors.data}
