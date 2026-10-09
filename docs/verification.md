@@ -360,3 +360,7 @@ Frontend lint, TypeScript, 139 component tests and production build passed. Codi
 ## Home activity list keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 140 component tests and production build passed. Upcoming schedules, enabled agents, recent conversations, recent artifacts and runtime observations each reuse `useListKeyboard` with unique Inspect names. Scheduled vs enabled agents stay distinct. Enter inspects the agent, conversation or artifact; runtime rows open System and do not invent an observation Run. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Coding exploration step keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 141 component tests and production build passed. Repository exploration steps reuse `useListKeyboard` with unique Step names. Enter does not invent an exploration Run; observations stay on the coding review. File listbox, commit, repair and publication are unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

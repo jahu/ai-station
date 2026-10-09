@@ -321,3 +321,53 @@ it("offers download and Library actions for the stored patch artifact", async ()
       .getAttribute("href"),
   ).toBe("/api/artifacts/report/file");
 });
+
+it("moves through exploration steps with arrow keys without inventing a Run", () => {
+  const run = {
+    id: "coding",
+    status: "succeeded",
+    metadata: {
+      coding_review: {
+        branch: "ai/task",
+        exploration: [
+          {
+            request: { tool: "list_files", path: "." },
+            result: { paths: ["one.py"] },
+          },
+          {
+            request: { tool: "read_file", path: "one.py" },
+            result: { content: "print(1)" },
+          },
+        ],
+        files: [
+          { path: "one.py", diff: "+one", insertions: 1, deletions: 0 },
+        ],
+      },
+    },
+  } as unknown as Run;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <CodingReview run={run} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByText(/Repository exploration · 2 steps/));
+  const first = screen.getByLabelText("Step 1 list_files");
+  const second = screen.getByLabelText("Step 2 read_file");
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(
+    screen.getByText(/There is no inspectable exploration Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(first.closest(".coding-exploration") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".coding-exploration") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(screen.queryByRole("heading", { name: "Commit Run" })).toBeNull();
+  expect(screen.getByLabelText("Diff for one.py")).toBeTruthy();
+});

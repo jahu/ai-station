@@ -115,25 +115,7 @@ export default function CodingReview({
           <ReviewSummary run={run} review={review} />
           <ReviewArtifacts runId={run.id} />
           {!!review.exploration?.length && (
-            <details>
-              <summary>
-                Repository exploration · {review.exploration.length} steps
-              </summary>
-              <div className="coding-exploration">
-                {review.exploration.map((step, i) => (
-                  <article key={i}>
-                    <strong>
-                      {i + 1}. {String(step.request.tool)}
-                    </strong>
-                    <pre>{JSON.stringify(step.request, null, 2)}</pre>
-                    <details>
-                      <summary>Observed result</summary>
-                      <pre>{JSON.stringify(step.result, null, 2)}</pre>
-                    </details>
-                  </article>
-                ))}
-              </div>
-            </details>
+            <ExplorationSteps steps={review.exploration} />
           )}
           <ReviewFiles files={review.files} />
           {review.files.length > 0 &&
@@ -215,6 +197,59 @@ function ReviewArtifacts({ runId }: { runId: string }) {
         </a>
       )}
     </div>
+  );
+}
+
+function ExplorationSteps({
+  steps,
+}: {
+  steps: NonNullable<Review["exploration"]>;
+}) {
+  const headingId = useId();
+  const labelId = useId();
+  const items = steps.map((step, i) => ({
+    key: `${i}-${String(step.request.tool)}`,
+    index: i,
+    tool: String(step.request.tool),
+    step,
+  }));
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    items,
+    (item) => item.key,
+  );
+  return (
+    <details>
+      <summary id={headingId}>
+        Repository exploration · {steps.length} steps
+      </summary>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a step while the list is focused. There is no
+        inspectable exploration Run; observations stay on this review.
+      </p>
+      <div
+        ref={listRef}
+        className="coding-exploration"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {items.map((item, i) => (
+          <article
+            key={item.key}
+            aria-label={`Step ${item.index + 1} ${item.tool}`}
+            {...itemProps(i, item.key)}
+          >
+            <strong>
+              {item.index + 1}. {item.tool}
+            </strong>
+            <pre>{JSON.stringify(item.step.request, null, 2)}</pre>
+            <details>
+              <summary>Observed result</summary>
+              <pre>{JSON.stringify(item.step.result, null, 2)}</pre>
+            </details>
+          </article>
+        ))}
+      </div>
+    </details>
   );
 }
 
