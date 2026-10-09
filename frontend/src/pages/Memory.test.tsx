@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { MemoryDetail } from "./Memory";
+import { Memory, MemoryDetail } from "./Memory";
 
 afterEach(() => {
   cleanup();
@@ -92,4 +92,70 @@ it("requires confirmation before deletion and handles the empty 204 response", a
   await waitFor(() =>
     expect(fetch.mock.calls.filter((call) => call[1])).toHaveLength(1),
   );
+});
+
+it("moves through Memory entries with arrow keys", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        String(url).includes("/embeddings/setup")
+          ? {
+              configured: false,
+              endpoint: "",
+              model: "",
+              dimension: null,
+              indexed_count: 0,
+              memory_count: 0,
+              last_health_run_id: null,
+              last_index_run_id: null,
+            }
+          : [
+              {
+                ...entry,
+                id: "mem-one1",
+                content: "Prefer concise answers",
+                memory_type: "preference",
+              },
+              {
+                ...entry,
+                id: "mem-two2",
+                content: "Use the owned worktree",
+                memory_type: "procedure",
+                pinned: false,
+              },
+            ],
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <Memory />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const first = await screen.findByRole("link", {
+    name: "Inspect preference mem-one1",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect procedure mem-two2",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Memory" })).toBeTruthy();
+  fireEvent.keyDown(first.closest(".memory-grid") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".memory-grid") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
 });
