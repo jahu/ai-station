@@ -276,3 +276,7 @@ Frontend lint, TypeScript, 114 component tests and production build passed. Name
 ## Runtime observations keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 115 component tests and production build passed. Runtime observation rows form one keyboard sequence (arrows, Home, End, Enter inspects the source Run when one exists). Inspect names include the runtime name and short id. Observation still does not control external processes. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Chat providers keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 116 component tests and production build passed. Registered chat providers form one keyboard sequence (arrows, Home, End). Remove names include the provider name and short id and stay on the selected row. There is no inspectable provider Run. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

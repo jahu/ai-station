@@ -97,3 +97,75 @@ it("never displays a secret value and submits a reference instead", async () => 
   expect(screen.queryByDisplayValue("sk-must-not-remain-visible")).toBeNull();
   expect(screen.queryByText("sk-must-not-remain-visible")).toBeNull();
 });
+
+it("moves through chat providers with arrow keys", async () => {
+  const row = {
+    location: "external",
+    endpoint: "https://api.example.test/v1",
+    secret_ref: "env:OPENAI_API_KEY",
+    secret_source: "env",
+    secret_present: true,
+    builtin: false,
+    enabled: true,
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => [
+        {
+          ...row,
+          id: "prov-one",
+          key: "local-openai-compatible",
+          name: "Local OpenAI-compatible",
+          location: "local",
+          endpoint: "http://127.0.0.1:11434/v1",
+          secret_ref: "",
+          secret_source: "none",
+          secret_present: false,
+          builtin: true,
+        },
+        {
+          ...row,
+          id: "prov-two",
+          key: "openai",
+          name: "OpenAI",
+        },
+      ],
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <ChatProviders />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByText("Local OpenAI-compatible");
+  const first = screen
+    .getByText("Local OpenAI-compatible")
+    .closest("[data-list-index]") as HTMLElement;
+  const second = screen.getByRole("button", {
+    name: "Remove OpenAI prov-two",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Chat providers" })).toBeTruthy();
+  expect(screen.getByText(/There is no inspectable provider Run/)).toBeTruthy();
+  fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(
+    screen.getByText("OpenAI").closest("[data-list-index]"),
+  );
+  fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});

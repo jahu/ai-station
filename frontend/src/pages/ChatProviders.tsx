@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
+import { useListKeyboard } from "./useListKeyboard";
 
 export type ChatProviderInfo = {
   id: string;
@@ -33,6 +34,79 @@ function secretLabel(row: ChatProviderInfo) {
   if (row.secret_source === "none") return "No secret";
   if (!row.secret_present) return "Secret missing";
   return row.secret_source === "env" ? row.secret_ref : "Secret stored";
+}
+
+function ProviderCards({
+  providers,
+  removePending,
+  onRemove,
+}: {
+  providers: ChatProviderInfo[];
+  removePending: boolean;
+  onRemove: (id: string, name: string) => void;
+}) {
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    providers,
+    (row) => row.id,
+  );
+  return (
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId} className="sr-only">
+        Chat providers
+      </h3>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a provider while the list is focused. Remove stays on
+        the selected row. There is no inspectable provider Run.
+      </p>
+      <div
+        ref={listRef}
+        className="diagnostic-list"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {providers.map((row, i) => {
+          const current = i === index;
+          const shortId = row.id.slice(0, 8);
+          return (
+            <div key={row.id} {...itemProps(i, row.id)}>
+              <div>
+                <strong>{row.name}</strong>
+                <p>
+                  {row.location} · <span className="mono">{row.endpoint}</span>
+                  {row.secret_ref ? ` · ${row.secret_ref}` : ""}
+                </p>
+              </div>
+              <div className="row">
+                <Badge
+                  status={
+                    row.secret_present || row.secret_source === "none"
+                      ? row.enabled
+                        ? "available"
+                        : "unavailable"
+                      : "unavailable"
+                  }
+                />
+                <span className="muted">{secretLabel(row)}</span>
+                {!row.builtin && (
+                  <Button
+                    variant="secondary"
+                    tabIndex={current ? 0 : -1}
+                    disabled={removePending}
+                    aria-label={`Remove ${row.name} ${shortId}`}
+                    onClick={() => onRemove(row.id, row.name)}
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
 }
 
 export default function ChatProviders() {
@@ -75,47 +149,20 @@ export default function ChatProviders() {
         closed. Pixel vision is not enabled.
       </p>
       <ErrorNotice error={providers.error ?? create.error ?? remove.error} />
-      <div className="diagnostic-list">
-        {providers.data?.map((row) => (
-          <div key={row.id}>
-            <div>
-              <strong>{row.name}</strong>
-              <p>
-                {row.location} · <span className="mono">{row.endpoint}</span>
-                {row.secret_ref ? ` · ${row.secret_ref}` : ""}
-              </p>
-            </div>
-            <div className="row">
-              <Badge
-                status={
-                  row.secret_present || row.secret_source === "none"
-                    ? row.enabled
-                      ? "available"
-                      : "unavailable"
-                    : "unavailable"
-                }
-              />
-              <span className="muted">{secretLabel(row)}</span>
-              {!row.builtin && (
-                <Button
-                  variant="secondary"
-                  disabled={remove.isPending}
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        `Remove ${row.name}? Conversations must use another provider first.`,
-                      )
-                    )
-                      remove.mutate(row.id);
-                  }}
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+      {!!providers.data?.length && (
+        <ProviderCards
+          providers={providers.data}
+          removePending={remove.isPending}
+          onRemove={(id, name) => {
+            if (
+              window.confirm(
+                `Remove ${name}? Conversations must use another provider first.`,
+              )
+            )
+              remove.mutate(id);
+          }}
+        />
+      )}
       <form
         className="image-form mt"
         onSubmit={(event) => {
@@ -156,7 +203,11 @@ export default function ChatProviders() {
         <div className="field-pair">
           <label>
             Location
-            <select name="location" defaultValue="external" aria-label="Location">
+            <select
+              name="location"
+              defaultValue="external"
+              aria-label="Location"
+            >
               <option value="external">External</option>
               <option value="local">Local private network</option>
             </select>
