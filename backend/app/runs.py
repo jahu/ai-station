@@ -125,9 +125,11 @@ def transition(
                     agent.failure_count = 0
     append_event(session, run.id, event_type, payload or {"status": target})
     session.flush()
+    from app.connectors import sync_connector_from_run
     from app.notices import emit_agent_notice
 
     emit_agent_notice(session, run, target)
+    sync_connector_from_run(session, run, target)
     return run
 
 

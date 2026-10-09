@@ -92,7 +92,7 @@ A coarse lease such as `gpu:<index>`. The first scheduler policy is one heavy im
 
 ## Connector
 
-Metadata for an external system: status, capabilities, non-secret configuration, and a secret reference. Secrets are not returned by the API.
+A named external system: kind, status, health, capabilities, non-secret configuration, secret reference and enablement. Operational kind is HTTP GET of one reviewed public URL. Health checks are ordinary Runs. Secrets are not returned by the API. Browser, GitHub, email, calendar and social kinds stay unpublished.
 
 ## Chat provider
 

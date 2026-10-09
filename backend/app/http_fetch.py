@@ -122,7 +122,7 @@ async def public_addresses(host):
     return addresses
 
 
-async def fetch_public(url):
+async def fetch_public(url, *, extra_headers=None):
     current = public_url(url)
     if not current:
         raise ValueError("http_fetch requires a public http(s) URL")
@@ -130,6 +130,10 @@ async def fetch_public(url):
         "User-Agent": "AI-Station-agent/1",
         "Accept": "text/html,application/xhtml+xml,text/plain,application/json,text/markdown;q=0.9,*/*;q=0.1",
     }
+    for key, value in (extra_headers or {}).items():
+        if key.lower() in {"host", "user-agent"}:
+            continue
+        headers[key] = value
     try:
         async with httpx.AsyncClient(
             timeout=TIMEOUT, trust_env=False, follow_redirects=False, headers=headers
