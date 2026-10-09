@@ -30,7 +30,7 @@ Project commands are the argv lists stored on the project. The runner refuses `s
 
 ## Git
 
-Coding work happens in a fresh worktree and a new `ai/...` branch. The user's current checkout is not the cwd of an agent. Protected branches reject automatic commits, pushes, history rewrites, and merges. Force-push is not implemented. Push and opening a pull request require an approval record. Applying or restarting a changed AI Station checkout is not automatic.
+Coding work happens in a fresh worktree and a new `ai/...` branch. The user's current checkout is not the cwd of an agent. Explicit worktree removal deletes only the recorded owned checkout and that local task branch. Unregistered paths, the current checkout and GitHub remotes are never deleted. Protected branches reject automatic commits, pushes, history rewrites, and merges. Force-push is not implemented. Push and opening a pull request require an approval record. Applying or restarting a changed AI Station checkout is not automatic.
 
 ## Permissions
 

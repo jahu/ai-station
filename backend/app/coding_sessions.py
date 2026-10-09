@@ -106,7 +106,12 @@ def followup(task_id: UUID, body: Followup, session: DB):
     ):
         raise HTTPException(409, "Wait for this project's active work to finish")
     worktree = session.get(Worktree, source.parameters["worktree_id"])
-    if not worktree or not worktree.owned or worktree.project_id != task.project_id:
+    if (
+        not worktree
+        or not worktree.owned
+        or worktree.removed_at is not None
+        or worktree.project_id != task.project_id
+    ):
         raise HTTPException(409, "Conversation workspace is unavailable")
     local = source.executor_type == "local_proposal"
     if not local and not body.external_ai:

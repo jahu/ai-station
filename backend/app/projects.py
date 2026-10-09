@@ -241,7 +241,12 @@ def validate_project_worktree(project_id: UUID, worktree_id: UUID, body: Worktre
     if worktree is None or worktree.project_id != project.id:
         raise HTTPException(404, "Worktree not found in this project")
     preparation = session.get(Run, worktree.run_id)
-    if not worktree.owned or preparation is None or preparation.status != "succeeded":
+    if (
+        worktree.removed_at is not None
+        or not worktree.owned
+        or preparation is None
+        or preparation.status != "succeeded"
+    ):
         raise HTTPException(409, "Worktree preparation must have succeeded")
     if session.scalar(
         select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
@@ -279,6 +284,52 @@ def validate_project_worktree(project_id: UUID, worktree_id: UUID, body: Worktre
             "worktree_run_id": worktree.run_id,
             "commands": commands,
             "project_updated_at": project.updated_at.isoformat(),
+        },
+    )
+    run.parent_run_id = worktree.run_id
+    session.commit()
+    return run_dict(run)
+
+
+@router.post("/{project_id}/worktrees/{worktree_id}/remove", status_code=202)
+def remove_project_worktree(project_id: UUID, worktree_id: UUID, body: WorktreeRequest, session: DB):
+    project = get_project(session, project_id)
+    if project.updated_at != body.expected_updated_at:
+        raise HTTPException(409, "Project settings changed. Reload before removing a worktree.")
+    worktree = session.get(Worktree, str(worktree_id))
+    if worktree is None or worktree.project_id != project.id:
+        raise HTTPException(404, "Worktree not found in this project")
+    if worktree.removed_at is not None:
+        raise HTTPException(409, "This worktree was already removed")
+    expected = f"worktrees/{project.id}/{worktree.run_id}"
+    if worktree.relative_path != expected or worktree.branch != f"ai/{worktree.run_id}-workspace":
+        raise HTTPException(409, "Worktree ownership record is inconsistent")
+    if session.scalar(
+        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
+    ):
+        raise HTTPException(409, "This project already has an active Run")
+    task = create_task(
+        session,
+        title=f"Remove worktree for {project.name}",
+        prompt="Remove an owned local Git worktree",
+        capability="coding.worktree.remove",
+        project_id=project.id,
+    )
+    run = create_run(
+        session,
+        task,
+        run_type="worktree",
+        capability="coding.worktree.remove",
+        executor_type="worktree_remove",
+        execution_target="host",
+        permissions=["filesystem_read", "workspace_write", "git_read", "git_write"],
+        retry_class="inspect",
+        parameters={
+            "worktree_id": worktree.id,
+            "worktree_run_id": worktree.run_id,
+            "repo_path": project.repo_path,
+            "relative_path": worktree.relative_path,
+            "branch": worktree.branch,
         },
     )
     run.parent_run_id = worktree.run_id

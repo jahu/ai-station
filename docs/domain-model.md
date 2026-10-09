@@ -47,7 +47,7 @@ A registered Git repository: path, default branch, integration branch, protected
 
 ## Worktree
 
-An AI Station-owned checkout under `worktrees/`. Branch names look like `ai/<run-id>-<slug>`. The registry is the ownership record. Unregistered worktrees are never deleted.
+An AI Station-owned checkout under `worktrees/`. Branch names look like `ai/<run-id>-<slug>`. The registry is the ownership record. Unregistered worktrees are never deleted. Explicit removal records `removed_at` and does not delete the user's checkout or GitHub remotes.
 
 ## Conversation and message
 
