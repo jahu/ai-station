@@ -430,6 +430,11 @@ function ConversationView({
   const [webEnabled, setWebEnabled] = useState(false);
   const [webQuery, setWebQuery] = useState("");
   const orchestrator = conversation.execution_mode === "orchestrator";
+  const [turnMode, setTurnMode] = useState<"auto" | "local" | "orchestrator">(
+    "auto",
+  );
+  const assistantTurn =
+    turnMode === "orchestrator" || (turnMode === "auto" && orchestrator);
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [readingAttachment, setReadingAttachment] = useState(false);
   const [modelPending, setModelPending] = useState(false);
@@ -449,11 +454,14 @@ function ConversationView({
   const gitReady =
     (options.action === "coding.commit" && !!options.commit) ||
     (options.action === "coding.publish" && !!options.publish);
-  const canSend = options.action.startsWith("runtime.")
-    ? runtimeReady
-    : options.action === "coding.commit" || options.action === "coding.publish"
-      ? gitReady
-      : !!draft.trim();
+  const canSend =
+    assistantTurn && options.action.startsWith("runtime.")
+      ? runtimeReady
+      : assistantTurn &&
+          (options.action === "coding.commit" ||
+            options.action === "coding.publish")
+        ? gitReady
+        : !!draft.trim();
   const send = useMutation({
     mutationFn: () =>
       api<Run>(`/chat/conversations/${conversation.id}/messages`, {
@@ -468,7 +476,8 @@ function ConversationView({
                 ? "Unload the selected owned llama.cpp instance"
                 : ""),
           attachments,
-          ...(orchestrator ? options : {}),
+          execution_mode: turnMode,
+          ...(assistantTurn ? options : {}),
           web_search: { enabled: webEnabled, query: webQuery },
         }),
       }),
@@ -765,7 +774,7 @@ function ConversationView({
           <textarea
             id="chat-draft"
             placeholder={
-              orchestrator
+              assistantTurn
                 ? "Describe your task — or drop reference images below…"
                 : "Ask your local model…"
             }
@@ -780,7 +789,32 @@ function ConversationView({
               }
             }}
           />
-          {orchestrator && (
+          <label>
+            This turn
+            <select
+              aria-label="This turn"
+              value={turnMode}
+              disabled={busy}
+              onChange={(event) => {
+                const next = event.target.value as typeof turnMode;
+                setTurnMode(next);
+                if (
+                  next === "local" ||
+                  (next === "auto" && !orchestrator)
+                ) {
+                  setOptions(emptyOptions);
+                }
+              }}
+            >
+              <option value="auto">
+                Conversation default (
+                {orchestrator ? "Platform assistant" : "Conversation only"})
+              </option>
+              <option value="local">Conversation only</option>
+              <option value="orchestrator">Platform assistant</option>
+            </select>
+          </label>
+          {assistantTurn && (
             <AssistantActions
               value={options}
               sources={messages.flatMap((message) => message.coding_runs ?? [])}
@@ -802,7 +836,7 @@ function ConversationView({
               onUploading={setReadingAttachment}
             />
           )}
-          {(!orchestrator ||
+          {(!assistantTurn ||
             !(
               options.action.startsWith("coding.") ||
               options.action.startsWith("runtime.")
@@ -815,7 +849,7 @@ function ConversationView({
               onReading={setReadingAttachment}
             />
           )}
-          {(!orchestrator ||
+          {(!assistantTurn ||
             (["auto", "chat"].includes(options.action) &&
               !options.image_artifact_ids.length &&
               !options.audio_artifact_id &&
@@ -853,7 +887,7 @@ function ConversationView({
             )}
           </div>
         </form>
-        {!!messages.length && !busy && !orchestrator && (
+        {!!messages.length && !busy && !assistantTurn && (
           <Button
             variant="ghost"
             disabled={regenerate.isPending}

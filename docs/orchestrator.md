@@ -4,7 +4,7 @@ The default AI Station screen is a conversation that operates the workstation. T
 
 ## Execution contract
 
-A submitted turn creates a Task and an orchestration Run. The worker selects a typed action from the operational capability registry. Explicit intent takes a deterministic route; ambiguous requests can use a local model to produce a strictly validated plan. A model proposes actions, never grants permissions, selects arbitrary host paths or supplies shell commands. The user can override routing.
+A submitted turn creates a Task and an orchestration Run. The worker selects a typed action from the operational capability registry. Explicit intent takes a deterministic route; ambiguous requests can use a local model to produce a strictly validated plan. A model proposes actions, never grants permissions, selects arbitrary host paths or supplies shell commands. The user can override routing, including a per-turn execution-mode override that does not rewrite the saved conversation mode.
 
 An action uses the same domain service as its dedicated workspace. Child Runs inherit Task/conversation provenance and reference their orchestration parent. Image generation, worktree preparation, coding, validation and model loading remain separate inspectable Runs. A planning Run completes when it atomically publishes its child Run; it does not wait while occupying the sole worker. The conversation projects the complete Task tree, errors, validation and artifacts, rather than equating successful planning with successful execution.
 
@@ -42,7 +42,7 @@ The design above describes the target. Each implementation increment records sep
 
 ## Implemented conversation increment
 
-The default screen and new Chat conversations offer Platform assistant mode; Conversation only remains selectable and existing conversations keep their mode. Typed actions cover images, disabled agent drafts, explicitly scoped Cursor/Codex/local coding, reviewed task-branch commits and approved draft GitHub publication. Local model routing handles requests without an explicit action or deterministic match. Invalid plans produce clarification without executing a capability. Ordered image uploads, task-step status, generated images, coding diffs and links to coding/validation/commit/publication Runs appear in the transcript. Repeating an action requires a new user turn rather than completion regeneration.
+The default screen and new Chat conversations offer Platform assistant mode; Conversation only remains selectable and existing conversations keep their mode. A composer control can override that saved mode for one turn without rewriting conversation settings. Typed actions cover images, disabled agent drafts, explicitly scoped Cursor/Codex/local coding, reviewed task-branch commits and approved draft GitHub publication. Local model routing handles requests without an explicit action or deterministic match. Invalid plans produce clarification without executing a capability. Ordered image uploads, task-step status, generated images, coding diffs and links to coding/validation/commit/publication Runs appear in the transcript. Repeating an action requires a new user turn rather than completion regeneration.
 
 A model plan cannot commit or publish. Those actions require the user to select them and confirm the existing review/approval forms. They call the same `coding.commit` and `coding.publish` domain services as the Coding workspace, reuse the source Task, and inherit its conversation. Cancellation targets the queued Git Run.
 
