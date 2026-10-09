@@ -17,6 +17,7 @@ import { ExploreChoiceList } from "./ExploreChoiceList";
 import { RepairChoiceList } from "./RepairChoiceList";
 import { parseFilePaths } from "./filePaths";
 import { GpuChoiceList } from "./GpuChoiceList";
+import { ActionChoiceList } from "./ActionChoiceList";
 
 export type CodingScope = {
   project_id: string;
@@ -542,35 +543,14 @@ export default function AssistantActions({
   }
   return (
     <fieldset disabled={busy} className="assistant-actions image-form">
-      <label>
-        Action
-        <select
-          aria-label="Action"
+      <div>
+        <span>Action</span>
+        <ActionChoiceList
           value={value.action}
-          onChange={(e) => resetAction(e.target.value)}
-        >
-          <option value="auto">Auto — let AI Station route this task</option>
-          <option value="chat">Conversation</option>
-          <option value="image.generate">Generate image</option>
-          <option value="image.edit">Edit image</option>
-          <option value="image.recompose">Recompose references</option>
-          <option value="image.upscale">Upscale image</option>
-          <option value="audio.speech">
-            Speech · read this message in Polish
-          </option>
-          <option value="avatar.animate">Animate portrait with speech</option>
-          <option value="agent.create">Create agent</option>
-          <option value="coding.local">Coding with Local AI</option>
-          <option value="coding.cursor">Coding with Cursor</option>
-          <option value="coding.codex">Coding with Codex</option>
-          <option value="coding.commit">Commit reviewed changes</option>
-          <option value="coding.publish">
-            Publish reviewed commit to GitHub
-          </option>
-          <option value="runtime.load">Load local GGUF</option>
-          <option value="runtime.stop">Unload owned llama.cpp</option>
-        </select>
-      </label>
+          disabled={busy}
+          onChange={resetAction}
+        />
+      </div>
       {!value.action.startsWith("coding.") &&
         !value.action.startsWith("runtime.") && (
         <div className="assistant-attachment-toolbar">
