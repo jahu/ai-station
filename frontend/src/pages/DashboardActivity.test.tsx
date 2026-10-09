@@ -114,6 +114,13 @@ it("unifies attention with inspect and stop actions", async () => {
         json: async () => ({ id: "run", status: "canceled" }),
       };
     }
+    if (path === "/api/notices/notice/read" && options?.method === "POST") {
+      expect(JSON.parse(String(options.body))).toEqual({ read: true });
+      return {
+        ok: true,
+        json: async () => ({ id: "notice", read_at: "2026-09-25T10:01:00Z" }),
+      };
+    }
     return { ok: true, json: async () => overview() };
   });
   vi.stubGlobal("fetch", fetch);
@@ -177,6 +184,18 @@ it("unifies attention with inspect and stop actions", async () => {
       ),
     ).toBe(true),
   );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Mark read Agent workflow failed" }),
+  );
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(
+        (call) =>
+          call[0] === "/api/notices/notice/read" &&
+          (call[1] as RequestInit | undefined)?.method === "POST",
+      ),
+    ).toBe(true),
+  );
 });
 it("moves through the attention list with arrow keys", async () => {
   vi.stubGlobal(
@@ -202,10 +221,18 @@ it("moves through the attention list with arrow keys", async () => {
   expect(screen.getByRole("button", { name: "Stop Image task" }).tabIndex).toBe(
     -1,
   );
+  expect(
+    screen.getByRole("button", { name: "Mark read Agent workflow failed" })
+      .tabIndex,
+  ).toBe(-1);
   fireEvent.keyDown(first.closest("ul") as HTMLElement, { key: "ArrowDown" });
   expect(notice.tabIndex).toBe(0);
   expect(first.tabIndex).toBe(-1);
   expect(document.activeElement).toBe(notice);
+  expect(
+    screen.getByRole("button", { name: "Mark read Agent workflow failed" })
+      .tabIndex,
+  ).toBe(0);
   fireEvent.keyDown(notice.closest("ul") as HTMLElement, { key: "End" });
   expect(active.tabIndex).toBe(0);
   expect(screen.getByRole("button", { name: "Stop Image task" }).tabIndex).toBe(
