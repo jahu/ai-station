@@ -3,10 +3,61 @@
 from __future__ import annotations
 
 import re
+from datetime import datetime, timezone
 
 from app.http_fetch import prompt_public_urls
 from app.models import Agent
 from app.skills import SkillError, list_skills
+
+_TOOL_CALLING = (
+    "tool calling",
+    "call tools",
+    "function calling",
+    "wywołuj narzędzia",
+    "wywoluj narzedzia",
+)
+_APPROVAL = (
+    "require approval",
+    "ask before each run",
+    "wymagaj zatwierdzenia",
+    "zatwierdź przed każdym",
+    "zatwierdz przed kazdym",
+)
+_GATED = (
+    "gated",
+    "inspect tools first",
+    "wait after tools",
+    "bramkowany",
+    "zatwierdź raport po",
+    "zatwierdz raport po",
+)
+_RETRY = ("manual retry", "retry manually", "allow retry", "ręcznie ponów", "recznie ponow", "ponów ręcznie")
+_REMEMBER_REPORTS = (
+    "remember reports",
+    "retain reports",
+    "save reports",
+    "zapamiętuj raporty",
+    "zapamietuj raporty",
+)
+_DOW = (
+    ("sunday", "0"),
+    ("monday", "1"),
+    ("tuesday", "2"),
+    ("wednesday", "3"),
+    ("thursday", "4"),
+    ("friday", "5"),
+    ("saturday", "6"),
+    ("niedziel", "0"),
+    ("poniedział", "1"),
+    ("poniedzial", "1"),
+    ("wtorek", "2"),
+    ("środ", "3"),
+    ("srod", "3"),
+    ("czwartek", "4"),
+    ("piątek", "5"),
+    ("piatek", "5"),
+    ("sobot", "6"),
+)
 
 
 def _mentioned_skills(text: str) -> list[str]:
@@ -24,31 +75,104 @@ def _mentioned_skills(text: str) -> list[str]:
     return found[:4]
 
 
+def _has(lowered: str, phrases: tuple[str, ...]) -> bool:
+    return any(phrase in lowered for phrase in phrases)
+
+
+def _clock(lowered: str) -> tuple[int, int] | None:
+    match = re.search(r"(?:at|o)\s+(\d{1,2}):(\d{2})\s*utc", lowered)
+    if not match:
+        return None
+    hour, minute = int(match.group(1)), int(match.group(2))
+    if 0 <= hour <= 23 and 0 <= minute <= 59:
+        return hour, minute
+    return None
+
+
+def _schedule(lowered: str, original: str) -> tuple[str, str, int | None, datetime | None]:
+    once = re.search(
+        r"once at (\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:\d{2}))",
+        original,
+        re.IGNORECASE,
+    )
+    if once:
+        stamp = datetime.fromisoformat(once.group(1).replace("Z", "+00:00"))
+        if stamp.tzinfo is None:
+            return "manual", "", None, None
+        return "datetime", "", None, stamp.astimezone(timezone.utc)
+    hours = re.search(r"every (\d+) hours|co (\d+) godzin", lowered)
+    if hours:
+        count = int(hours.group(1) or hours.group(2))
+        if 1 <= count <= 168:
+            return "interval", "", count * 3600, None
+    minutes = re.search(r"every (\d+) minutes|co (\d+) minut", lowered)
+    if minutes:
+        count = int(minutes.group(1) or minutes.group(2))
+        if 60 <= count <= 10080:
+            return "interval", "", count * 60, None
+    clock = _clock(lowered)
+    hour, minute = clock if clock else (9, 0)
+    if "every morning" in lowered or "co rano" in lowered:
+        if clock is None:
+            hour, minute = 8, 0
+        return "cron", f"{minute} {hour} * * *", None, None
+    if "every evening" in lowered or "co wieczór" in lowered or "co wieczor" in lowered:
+        if clock is None:
+            hour, minute = 20, 0
+        return "cron", f"{minute} {hour} * * *", None, None
+    if "every hour" in lowered or "co godzinę" in lowered or "co godzine" in lowered:
+        return "interval", "", 3600, None
+    if any(word in lowered for word in ("weekdays", "weekday", "dni robocze", "w dni robocze")):
+        return "cron", f"{minute} {hour} * * 1-5", None, None
+    for name, value in _DOW:
+        if f"every {name}" in lowered or f"w {name}" in lowered:
+            return "cron", f"{minute} {hour} * * {value}", None, None
+    if any(word in lowered for word in ("every week", "weekly", "co tydzień", "co tydzien")):
+        return "cron", f"{minute} {hour} * * 1", None, None
+    if any(word in lowered for word in ("every day", "daily", "codziennie")) or clock is not None:
+        return "cron", f"{minute} {hour} * * *", None, None
+    return "manual", "", None, None
+
+
+def _search_query(text: str) -> str:
+    match = re.search(
+        r'(?:public (?:search )?query|search for|szukaj)\s+"([^"]{1,500})"',
+        text,
+        re.IGNORECASE,
+    )
+    return match.group(1).strip() if match else ""
+
+
 def draft_agent(text: str, *, model: str = "") -> Agent:
     lowered = text.lower()
-    trigger = "manual"
-    cron_expr = ""
-    interval = None
-    if "every morning" in lowered or "co rano" in lowered:
-        trigger = "cron"
-        cron_expr = "0 8 * * *"
-    elif "every hour" in lowered or "co godzinę" in lowered:
-        trigger = "interval"
-        interval = 3600
-    elif "every day" in lowered or "daily" in lowered or "codziennie" in lowered:
-        trigger = "cron"
-        cron_expr = "0 9 * * *"
+    trigger, cron_expr, interval, run_at = _schedule(lowered, text)
     name = text.strip().split(".")[0][:80] or "New agent"
     tools = []
     if any(word in lowered for word in ("gpu", "hardware", "workstation", "system", "stacji")):
         tools.append("system_snapshot")
-    if any(word in lowered for word in ("memory", "remember", "pamię")):
+    if _has(lowered, _REMEMBER_REPORTS):
+        tools.append("remember_report")
+    if any(word in lowered for word in ("memory", "remember", "pamię", "pamie")):
         tools.append("memory_search")
-    if any(word in lowered for word in ("search", "web", "internet", "news", "szukaj", "wiadomości")):
+    search_query = _search_query(text)
+    if search_query or any(
+        word in lowered
+        for word in ("search", "web", "internet", "news", "szukaj", "wiadomości", "wiadomosci")
+    ):
         tools.append("web_search")
     fetch_urls = prompt_public_urls(text)
     if fetch_urls or any(word in lowered for word in ("fetch", "pobierz stron")):
         tools.append("http_fetch")
+    notices = {
+        "on_success": _has(lowered, ("notify on success", "powiadom o sukcesie")),
+        "on_failure": _has(
+            lowered,
+            ("notify on failure", "alert on failure", "powiadom o błędzie", "powiadom o bledzie"),
+        ),
+        "on_approval": _has(
+            lowered, ("notify when waiting", "notify on approval", "powiadom o zatwierdzeniu")
+        ),
+    }
     agent = Agent(
         name=name,
         description=text.strip()[:500],
@@ -65,32 +189,21 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         memory_scope="agent",
         maximum_runtime=600,
         tools=tools,
+        search_query=search_query,
         fetch_urls=fetch_urls,
         skills=_mentioned_skills(text),
         trigger=trigger,
         cron_expr=cron_expr,
         interval_seconds=interval,
+        run_at=run_at,
         permission_profile="agent_local",
         enabled=False,
-        require_approval=False,
-        workflow_mode="sequential",
-        tool_calling=(
-            "bounded"
-            if any(
-                phrase in lowered
-                for phrase in (
-                    "tool calling",
-                    "call tools",
-                    "function calling",
-                    "wywołuj narzędzia",
-                    "wywoluj narzedzia",
-                )
-            )
-            else "none"
-        ),
+        require_approval=_has(lowered, _APPROVAL),
+        workflow_mode="gated" if _has(lowered, _GATED) else "sequential",
+        tool_calling="bounded" if _has(lowered, _TOOL_CALLING) else "none",
         output_expectation="A short report the user can inspect in Runs.",
-        notification_policy={"on_success": False, "on_failure": False, "on_approval": False},
-        retry_policy={"mode": "none"},
+        notification_policy=notices,
+        retry_policy={"mode": "manual" if _has(lowered, _RETRY) else "none"},
     )
     agent.next_run_at = None
     return agent

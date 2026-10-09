@@ -121,9 +121,11 @@ export function Agents() {
       >
         <h2>Create an agent draft</h2>
         <p className="muted">
-          Describe the task and cadence. A deterministic parser proposes a
-          disabled definition for your review. Creating a draft does not call a
-          model.
+          Describe the task and cadence. A deterministic parser copies
+          recognized tools, UTC schedules, approval, gated steps, retry,
+          notices, quoted public search queries and tool calling into a
+          disabled definition. Creating a draft does not call a model or enable
+          the agent.
         </p>
         <label>
           Instruction

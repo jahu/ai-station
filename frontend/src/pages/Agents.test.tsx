@@ -44,6 +44,9 @@ it("creates a reviewable draft without enabling or running it", async () => {
   vi.stubGlobal("fetch", fetch);
   mount();
   await screen.findByRole("heading", { name: "No agents in this view" });
+  expect(
+    screen.getByText(/disabled definition/i),
+  ).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Instruction"), {
     target: { value: "Every morning summarize memory" },
   });
