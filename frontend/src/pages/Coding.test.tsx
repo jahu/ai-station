@@ -146,6 +146,9 @@ it.each(["Cursor", "Codex", "Local AI"])(
         screen.getByRole("button", { name: "Model" }).textContent,
       ).toContain("27B Uncensored");
     }
+    expect(
+      screen.getByText(/replace a unique snippet; it cannot delete files/),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Start coding" }));
     await screen.findByRole("heading", { name: "Coding conversation" });
     const call = fetch.mock.calls.find(

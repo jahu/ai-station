@@ -145,6 +145,10 @@ The user-approved real Cursor self-development repeat passed: preparation `c2e12
 Normal tests never contacted PyPI. Vendor mode installed a disposable local wheel into a worktree `.venv` and imported it. PyPI mode is covered by parser/plan/policy unit tests and public-DNS fail-closed checks, not a live download. Claude Code remains untested and unavailable.
 
 
+## Unique snippet replacements in coding proposals — 2026-10-09
+
+`./scripts/check.sh`: 547 Python tests passed (5 skipped), including unique exact substring application, sequential replacements, rejection of missing/ambiguous/mixed/oversized/delete-shaped payloads, prompt contract text, and a fake local-inference integration that applied a README snippet plus a new file while the original checkout stayed unchanged. Frontend lint, TypeScript, 60 component tests and production build passed. Complete file rewrites remain accepted. File deletion stays unsupported. Claude Code remains untested and unavailable.
+
 ## Automatic unused worktree expiry — 2026-10-09
 
 `./scripts/check.sh`: 539 Python tests passed (5 skipped), including scheduled expiry through the existing removal Run, skip of pinned/future/busy cases, and keep pinning. Frontend lint, TypeScript, 60 component tests and production build passed. Existing bundle-size and TestClient deprecation advisories remain. Existing worktrees stay unscheduled. Claude Code remains untested and unavailable.

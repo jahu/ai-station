@@ -1450,6 +1450,33 @@ def test_local_coding_applies_validates_and_commits_only_owned_worktree(
     assert (repository / ".git/index").read_bytes() == index
 
 
+def test_local_coding_applies_unique_snippet_replacements(repository, owned_runner, local_coding_bridge):
+    local_coding_bridge["proposal"] = {
+        "summary": "Unique README edit",
+        "files": [
+            {
+                "path": "README.md",
+                "replacements": [{"old": "Original repository\n", "new": "Snippet edit\n"}],
+            },
+            {"path": "new.py", "content": "print(1)\n"},
+        ],
+    }
+    with TestClient(app) as client:
+        project = register(client, repository)
+        run_id = prepare_local_coding(client, project)
+        with session_factory()() as session:
+            tick(session, "local-snippet")
+        run = client.get(f"/api/runs/{run_id}").json()
+        assert run["status"] == "succeeded", run
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        root = owned_runner.data_dir / worktree["relative_path"]
+        assert (root / "README.md").read_text() == "Snippet edit\n"
+        assert (root / "new.py").read_text() == "print(1)\n"
+        assert "Original repository" in run["metadata"]["coding_review"]["files"][0]["diff"]
+    assert (repository / "README.md").read_text() == "Original repository\n"
+    assert not (repository / "new.py").exists()
+
+
 def test_local_coding_can_complete_multi_file_output_beyond_old_budget(
     repository, owned_runner, local_coding_bridge
 ):
