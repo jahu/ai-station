@@ -159,3 +159,51 @@ it("moves through Memory entries with arrow keys", async () => {
   });
   expect(first.tabIndex).toBe(0);
 });
+
+it("moves through pin and enabled flags without inventing a Run", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => entry,
+    })),
+  );
+  mount();
+  const pinned = await screen.findByLabelText("Memory pinned");
+  const enabled = screen.getByLabelText("Memory enabled");
+  expect(pinned.tabIndex).toBe(0);
+  expect(enabled.tabIndex).toBe(-1);
+  expect(
+    screen.getByText(/There is no inspectable memory-flag Run/),
+  ).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: /Pinned context/i,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  fireEvent.keyDown(pinned.closest(".memory-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: /Pinned context/i,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(false);
+  fireEvent.keyDown(pinned.closest(".memory-choice-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(enabled.tabIndex).toBe(0);
+  expect(pinned.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(enabled);
+  fireEvent.keyDown(enabled.closest(".memory-choice-list") as HTMLElement, {
+    key: " ",
+  });
+  expect(
+    (screen.getByRole("checkbox", { name: /Enabled/i }) as HTMLInputElement)
+      .checked,
+  ).toBe(false);
+});

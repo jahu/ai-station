@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link,
@@ -384,6 +384,84 @@ export function MemoryDetail() {
   return <MemoryEditor key={id ?? "new"} entry={entry.data} />;
 }
 
+function MemoryFlagChoiceList({
+  pinned,
+  enabled,
+  showEnabled,
+  onPinned,
+  onEnabled,
+}: {
+  pinned: boolean;
+  enabled: boolean;
+  showEnabled: boolean;
+  onPinned: (value: boolean) => void;
+  onEnabled: (value: boolean) => void;
+}) {
+  const labelId = useId();
+  const items = [
+    { key: "pinned" as const, title: "Pinned context", checked: pinned },
+    ...(showEnabled
+      ? [{ key: "enabled" as const, title: "Enabled", checked: enabled }]
+      : []),
+  ];
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    items,
+    (item) => item.key,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    const item = items[index];
+    if (!item) return;
+    event.preventDefault();
+    if (item.key === "pinned") onPinned(!pinned);
+    else onEnabled(!enabled);
+  };
+  return (
+    <div className="agent-wide">
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose pin or enabled while the list is focused. Space or
+        Enter selects it. Disabled or unpinned entries leave historical Chat
+        snapshots unchanged. There is no inspectable memory-flag Run.
+      </p>
+      <div
+        ref={listRef}
+        className="memory-choice-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {items.map((item, i) => {
+          const current = i === index;
+          return (
+            <div
+              key={item.key}
+              aria-label={`Memory ${item.key}`}
+              {...itemProps(i, item.key)}
+            >
+              <label className="memory-check">
+                <input
+                  type="checkbox"
+                  checked={item.checked}
+                  tabIndex={current ? 0 : -1}
+                  onChange={(event) =>
+                    item.key === "pinned"
+                      ? onPinned(event.target.checked)
+                      : onEnabled(event.target.checked)
+                  }
+                />
+                {item.title}
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function MemoryEditor({ entry }: { entry?: Entry }) {
   const cache = useQueryClient();
   const navigate = useNavigate();
@@ -539,26 +617,13 @@ function MemoryEditor({ entry }: { entry?: Entry }) {
             placeholder="Comma-separated tags"
           />
         </label>
-        <div className="row">
-          <label className="memory-check">
-            <input
-              type="checkbox"
-              checked={pinned}
-              onChange={(e) => setPinned(e.target.checked)}
-            />{" "}
-            Pinned context
-          </label>
-          {entry && (
-            <label className="memory-check">
-              <input
-                type="checkbox"
-                checked={enabled}
-                onChange={(e) => setEnabled(e.target.checked)}
-              />{" "}
-              Enabled
-            </label>
-          )}
-        </div>
+        <MemoryFlagChoiceList
+          pinned={pinned}
+          enabled={enabled}
+          showEnabled={Boolean(entry)}
+          onPinned={setPinned}
+          onEnabled={setEnabled}
+        />
         <Button type="submit" disabled={save.isPending || remove.isPending}>
           {save.isPending ? "Saving…" : "Save memory"}
         </Button>
