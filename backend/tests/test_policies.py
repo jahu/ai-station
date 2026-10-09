@@ -53,6 +53,7 @@ def test_legacy_agents_keep_silent_policies_and_reject_auto_retry():
 def test_manual_retry_creates_a_new_workflow_without_replaying_the_failed_run(monkeypatch):
     async def fail(self, **kwargs):
         raise RuntimeError("provider down")
+        yield
 
     monkeypatch.setattr(LocalChatProvider, "stream", fail)
     api = TestClient(app)
@@ -89,6 +90,7 @@ def test_manual_retry_creates_a_new_workflow_without_replaying_the_failed_run(mo
 def test_failure_notice_is_opt_in_and_can_be_marked_read(monkeypatch):
     async def fail(self, **kwargs):
         raise RuntimeError("provider down")
+        yield
 
     monkeypatch.setattr(LocalChatProvider, "stream", fail)
     api = TestClient(app)
