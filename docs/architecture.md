@@ -70,7 +70,7 @@ New behavior plugs in at:
 
 ## Scoped memory integration
 
-The [Memory workspace](memory.md) exposes durable scoped entries with validated provenance and FTS retrieval. Chat snapshots only enabled pinned global and matching conversation entries into new Run parameters; changes never rewrite historical contexts.
+The [Memory workspace](memory.md) exposes durable scoped entries with validated provenance and FTS retrieval. Optional embeddings use an explicit local OpenAI-compatible endpoint; they are not downloaded and fail closed without that setup. Chat snapshots only enabled pinned global and matching conversation entries into new Run parameters; changes never rewrite historical contexts.
 
 ## Model discovery
 

@@ -164,3 +164,7 @@ Normal tests never contacted PyPI. Vendor mode installed a disposable local whee
 ## Opt-in workflow observation memory — 2026-10-09
 
 `./scripts/check.sh`: 637 Python tests passed (5 skipped), including successful telemetry observations with source Run provenance, skip of memory_search and reports, fail-closed missing permission and write errors, and 12,000-character excerpts with the full JSON artifact retained. Frontend lint, TypeScript, 79 component tests and production build passed. Embeddings remain unconfigured. Existing agents keep workflow memory off. Claude Code remains untested and unavailable.
+
+## Optional memory embeddings with explicit local setup — 2026-10-09
+
+`./scripts/check.sh`: 641 Python tests passed (5 skipped), including fail-closed missing setup, rejection of public endpoints and `/embeddings` paths, health/index/search Runs, refusal of all-zero vectors, and migration that preserves existing memories. Frontend lint, TypeScript, 80 component tests and production build passed. No embedding weights were downloaded. Cloud embedding providers remain unavailable. Claude Code remains untested and unavailable.

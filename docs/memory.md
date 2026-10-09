@@ -1,6 +1,8 @@
 # Persistent memory
 
-Memory is control-plane metadata under the application data root. The existing Alembic-managed `memories` and FTS5 tables store content, tags, scope, pin/enabled state, confidence, timestamps and source Run/conversation/message references. No embedding model or separate service is required.
+Memory is control-plane metadata under the application data root. The existing Alembic-managed `memories` and FTS5 tables store content, tags, scope, pin/enabled state, confidence, timestamps and source Run/conversation/message references. Full-text search does not need an embedding model.
+
+Optional embeddings require an explicit local OpenAI-compatible `/v1` endpoint and model name that already serve vectors. AI Station does not download embedding weights, does not start llama.cpp with extra flags, and does not store empty or all-zero vectors. Setup, health, indexing and semantic search are ordinary Task/Run operations with cancellation. Without that setup, semantic endpoints fail closed and FTS remains the search surface.
 
 The Memory workspace supports search, scope/target filtering, editing, pinning, disabling, and confirmed deletion. `GET /api/memory` supports literal-token text search, exact tag filtering, pagination and optional disabled entries. SQL filters scope and enabled state before applying the result limit. `POST /api/memory` validates scope targets and compatible provenance references. Sources are immutable after creation; edits and deletion require `expected_updated_at` and reject stale versions with 409. Source-free entries are explicitly user-entered, not attributed to an AI. Linked sources establish provenance, not truth or endorsement.
 

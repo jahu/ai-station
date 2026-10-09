@@ -118,6 +118,7 @@ def delete_memory(session: Session, entry_id: str) -> None:
     if entry is None:
         raise KeyError(entry_id)
     session.execute(text("DELETE FROM memory_fts WHERE memory_id = :id"), {"id": entry.id})
+    session.execute(text("DELETE FROM memory_embeddings WHERE memory_id = :id"), {"id": entry.id})
     session.delete(entry)
 
 

@@ -271,6 +271,19 @@ class MemoryEntry(Base):
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
 
+class MemoryEmbedding(Base):
+    __tablename__ = "memory_embeddings"
+
+    memory_id: Mapped[str] = mapped_column(ForeignKey("memories.id", ondelete="CASCADE"), primary_key=True)
+    vector: Mapped[list] = mapped_column(JSON)
+    dimension: Mapped[int] = mapped_column(Integer)
+    model: Mapped[str] = mapped_column(String(200), index=True)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    source_run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"))
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+
+
 class WorkerRow(Base):
     __tablename__ = "workers"
 

@@ -21,6 +21,7 @@ from app.commit_executor import ReviewedCommitExecutor
 from app.config import get_settings
 from app.connectors import HttpConnectorExecutor
 from app.cursor_executor import CursorProposalExecutor
+from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
 from app.llama import LlamaExecutor
 from app.local_coding import LocalProposalExecutor
@@ -305,6 +306,7 @@ EXECUTORS = {
     "agent_workflow": AgentWorkflowExecutor(),
     "agent_tool": AgentToolExecutor(),
     "http_connector": HttpConnectorExecutor(),
+    "memory_embed": MemoryEmbedExecutor(),
     "runtime_observation": RuntimeObservationExecutor(),
 }
 
