@@ -448,3 +448,7 @@ Frontend lint, TypeScript, 191 component tests and production build passed. Save
 ## Coding executor keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 194 component tests and production build passed. Coding Auto/Local AI/Cursor/Codex radios reuse `useListKeyboard` with unique Executor names. Space or Enter selects the focused executor and does not start a coding Run. Claude Code stays absent. Preferred-executor Auto and consent still use the existing fields. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Coding project keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 197 component tests and production build passed. Coding project radios reuse `useListKeyboard` with unique Project names. Space or Enter selects the focused registered project and does not start a coding Run. Preferred executor remains a displayed hint; Auto still follows the saved project preference. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

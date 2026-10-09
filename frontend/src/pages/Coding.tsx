@@ -15,6 +15,7 @@ import {
   ExecutorChoiceList,
   type CodingExecutorChoice,
 } from "./ExecutorChoiceList";
+import { ProjectChoiceList } from "./ProjectChoiceList";
 import { parseFilePaths } from "./filePaths";
 
 type Project = {
@@ -130,25 +131,19 @@ export default function Coding() {
             }}
           >
             <fieldset disabled={create.isPending || modelPending}>
-              <label>
-                Project
-                <select
-                  required
+              <div>
+                <span>Project</span>
+                <ProjectChoiceList
+                  projects={projects.data ?? []}
                   value={projectId}
-                  onChange={(e) => {
-                    setProjectId(e.target.value);
+                  disabled={create.isPending || modelPending}
+                  onChange={(id) => {
+                    setProjectId(id);
                     setExternal(false);
                     setModel("");
                   }}
-                >
-                  <option value="">Choose a project</option>
-                  {projects.data?.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                />
+              </div>
               {!projects.data?.length && (
                 <p className="notice">
                   Start with a name — we’ll prepare the folder, Git repository
