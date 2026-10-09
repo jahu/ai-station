@@ -336,3 +336,7 @@ Frontend lint, TypeScript, 130 component tests and production build passed. The 
 ## Workflow steps keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 131 component tests and production build passed. Workflow child steps on a parent Run are one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names including the step key and short Run id. Cancel stays outside the list. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Agent execution history keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 132 component tests and production build passed. Agent execution history is one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names including capability or step tool and short Run id. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
