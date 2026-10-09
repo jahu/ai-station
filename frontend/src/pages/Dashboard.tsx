@@ -93,22 +93,29 @@ export default function Dashboard() {
       <ErrorNotice error={hardware.error ?? status.error} />
       {hardware.isPending && <Loading />}
       <DashboardActivity />
-      <div className="section-label">
-        <span>COMPUTE</span>
-        <span className="muted">
-          Host telemetry · refreshes every 5 seconds
-        </span>
-      </div>
+      <section className="dashboard-compute" aria-labelledby="compute-heading">
+        <div className="section-label">
+          <h2 id="compute-heading">Compute</h2>
+          <span className="muted">
+            Host telemetry · refreshes every 5 seconds
+          </span>
+        </div>
       <div className="gpu-grid">
         {data?.gpus.map((gpu) => (
-          <section className="panel gpu-card" key={gpu.uuid}>
+          <section
+            className="panel gpu-card"
+            key={gpu.uuid}
+            aria-labelledby={`gpu-${gpu.index}-heading`}
+          >
             <div className="row spread">
               <span className="chip">
                 <Microchip size={14} /> GPU {gpu.index}
               </span>
               <span className="eyebrow">NVIDIA</span>
             </div>
-            <h2>{gpu.name.replace("NVIDIA ", "")}</h2>
+            <h2 id={`gpu-${gpu.index}-heading`}>
+              {gpu.name.replace("NVIDIA ", "")}
+            </h2>
             <p className="muted">
               {gpu.memory_total_mib == null
                 ? "VRAM unavailable"
@@ -122,7 +129,10 @@ export default function Dashboard() {
                 {number(gpu.temperature_c, "°C")}
               </span>
             </div>
-            <Meter value={gpu.utilization} />
+            <Meter
+              value={gpu.utilization}
+              label={`${gpu.name.replace("NVIDIA ", "")} utilization`}
+            />
             <div className="gpu-bottom">
               <span>
                 VRAM <b>{number(gpu.memory_used_mib, " MiB")}</b>
@@ -137,7 +147,7 @@ export default function Dashboard() {
           </section>
         ))}
         {data && !data.gpus.length && (
-          <section className="panel">
+          <section className="panel" aria-label="GPU detection">
             <Empty title="No GPUs detected">
               CPU monitoring is available. Check Diagnostics for NVIDIA
               detection details.
@@ -146,13 +156,16 @@ export default function Dashboard() {
         )}
       </div>
       <div className="metrics-grid">
-        <section className="panel metric">
+        <section className="panel metric" aria-label="CPU utilization">
           <Cpu size={18} />
           <span>CPU utilization</span>
           <strong>{number(data?.cpu.utilization, "%")}</strong>
-          <Meter value={data?.cpu.utilization ?? null} />
+          <Meter
+            value={data?.cpu.utilization ?? null}
+            label="CPU utilization"
+          />
         </section>
-        <section className="panel metric">
+        <section className="panel metric" aria-label="System memory">
           <MemoryStick size={18} />
           <span>System memory</span>
           <strong>
@@ -164,9 +177,10 @@ export default function Dashboard() {
           <Meter
             value={data?.memory.used_mib ?? null}
             total={data?.memory.total_mib}
+            label="System memory"
           />
         </section>
-        <section className="panel metric">
+        <section className="panel metric" aria-label="Storage available">
           <HardDrive size={18} />
           <span>Storage available</span>
           <strong>
@@ -176,9 +190,10 @@ export default function Dashboard() {
           <Meter
             value={data?.disk.used_bytes ?? null}
             total={data?.disk.total_bytes}
+            label="Storage used"
           />
         </section>
-        <section className="panel metric">
+        <section className="panel metric" aria-label="Runs in progress">
           <Layers size={18} />
           <span>Runs in progress</span>
           <strong>
@@ -189,16 +204,29 @@ export default function Dashboard() {
             Inspect runs <ArrowUpRight size={14} />
           </Link>
         </section>
-      </div>
+        </div>
+      </section>
       <div className="dashboard-bottom">
-        <section className="panel">
+        <section className="panel" aria-labelledby="resource-activity-heading">
           <div className="panel-heading">
-            <h2>Resource activity</h2>
+            <h2 id="resource-activity-heading">Resource activity</h2>
             <span className="muted">Recent samples</span>
           </div>
           <ErrorNotice error={history.error} />
           {chart.length > 1 ? (
-            <div className="chart">
+            <div
+              className="chart"
+              role="img"
+              aria-label={`Resource activity. Latest CPU ${
+                chart.at(-1)?.cpu == null
+                  ? "unavailable"
+                  : `${Math.round(Number(chart.at(-1)?.cpu))} percent`
+              }. First GPU ${
+                chart.at(-1)?.gpu == null
+                  ? "unavailable"
+                  : `${Math.round(Number(chart.at(-1)?.gpu))} percent`
+              }.`}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chart}>
                   <defs>

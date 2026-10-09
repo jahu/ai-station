@@ -64,19 +64,27 @@ export function Loading() {
 export function Meter({
   value,
   total = 100,
+  label,
 }: {
   value: number | null;
   total?: number | null;
+  label?: string;
 }) {
   const percent =
     value == null || !total
       ? 0
       : Math.max(0, Math.min(100, (value / total) * 100));
+  const measured = value != null && total != null;
   return (
     <div
       className="meter"
-      aria-label={
-        value == null ? "No measurement" : `${Math.round(percent)} percent`
+      role="meter"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={measured ? Math.round(percent) : undefined}
+      aria-valuetext={
+        measured ? `${Math.round(percent)} percent` : "No measurement"
       }
     >
       <span style={{ width: `${percent}%` }} />
