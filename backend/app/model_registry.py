@@ -14,6 +14,7 @@ from app.artifacts import adopt_existing
 from app.config import get_settings
 from app.db import session_scope, utcnow
 from app.events import append_event
+from app.model_definitions import definition_dict
 from app.models import ModelDefinition, ModelFile, Run
 from app.paths import safe_join
 from app.permissions import require
@@ -113,10 +114,7 @@ def model_detail(file_id: UUID, session: DB):
     definitions = session.scalars(select(ModelDefinition).where(ModelDefinition.file_id == row.id))
     return {
         **file_dict(row),
-        "definitions": [
-            {"id": d.id, "name": d.name, "category": d.category, "capabilities": d.capabilities}
-            for d in definitions
-        ],
+        "definitions": [definition_dict(item, row) for item in definitions],
     }
 
 

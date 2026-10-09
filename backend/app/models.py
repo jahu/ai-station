@@ -344,6 +344,7 @@ class ModelFile(Base):
 
 class ModelDefinition(Base):
     __tablename__ = "model_definitions"
+    __table_args__ = (Index("uq_model_definitions_file_id", "file_id", unique=True),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     name: Mapped[str] = mapped_column(String(200))
@@ -352,6 +353,10 @@ class ModelDefinition(Base):
     file_id: Mapped[str | None] = mapped_column(ForeignKey("model_files.id"), nullable=True)
     capabilities: Mapped[list] = mapped_column(JSON, default=list)
     metadata_json: Mapped[dict] = mapped_column("metadata", JSON, default=dict)
+    status: Mapped[str] = mapped_column(String(20), default="unverified", index=True)
+    last_verify_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
 
 class Runtime(Base):

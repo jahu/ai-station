@@ -1647,6 +1647,39 @@ pre {
     gap: 8px;
   }
 }
+.model-compatibility {
+  display: grid;
+  gap: 16px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.model-compatibility li {
+  display: grid;
+  gap: 4px;
+}
+.model-compatibility span,
+.model-compatibility p {
+  color: #adb6c0;
+}
+.model-definition-form {
+  display: grid;
+  gap: 16px;
+}
+.model-definition-form label,
+.model-definition-form fieldset {
+  display: grid;
+  gap: 8px;
+  color: #adb6c0;
+}
+.model-definition-form input:not([type="checkbox"]),
+.model-definition-form select {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #111315;
+  color: inherit;
+}
 
 .agent-form {
   display: flex;

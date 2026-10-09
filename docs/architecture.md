@@ -65,7 +65,7 @@ New behavior plugs in at:
 - LLM provider (OpenAI-compatible client)
 - tool (registry entry with permissions and a real implementation)
 - connector (status and credential reference; no fake integrations)
-- runtime / model discovery (host scan, no mutation)
+- runtime / model discovery (host scan, no mutation) and explicit local installation (verify existing files/images, never pull)
 - skill (versioned directory under `skills/`)
 
 ## Scoped memory integration
@@ -74,7 +74,7 @@ The [Memory workspace](memory.md) exposes durable scoped entries with validated 
 
 ## Model discovery
 
-[Model discovery](models.md) runs as a managed native process through Task → Run → Events → Artifacts. Only host-configured roots are scanned, and only metadata is persisted. Known successful completion is required to update observations; unavailable roots and missing files remain distinguishable. No runtime ownership is inferred.
+[Model discovery](models.md) runs as a managed native process through Task → Run → Events → Artifacts. Only host-configured roots are scanned, and only metadata is persisted. Known successful completion is required to update observations; unavailable roots and missing files remain distinguishable. No runtime ownership is inferred. Users may then save a curated definition with a load preset and explicitly install it; installation verifies the existing file and an already-present llama.cpp image, and never downloads GGUFs or pulls container images.
 
 ## Local agents
 

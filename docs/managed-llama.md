@@ -1,6 +1,6 @@
 # Managed llama.cpp runtimes
 
-llama.cpp and the configured OpenAI-compatible provider (including Ollama) coexist. Discovered GGUFs are loaded only by an explicit model selection. The native Host Runner owns a narrow container adapter; the control plane receives neither a Docker socket nor model-root mounts.
+llama.cpp and the configured OpenAI-compatible provider (including Ollama) coexist. Discovered GGUFs are loaded only by an explicit model selection, typically from a curated definition whose install Run has confirmed the file and the already-installed server image. The native Host Runner owns a narrow container adapter; the control plane receives neither a Docker socket nor model-root mounts.
 
 A load Task creates a Run and a managed RuntimeInstance. Its immutable request binds the model path, observed size/mtime, selected discovered GPUs, context size and KV cache type. Coding Q8 loads treat the requested context as a GPU-fitting ceiling: the control plane persists the size it actually queued, and the Runner records observed `n_ctx` from read-only `/v1/models` and `/props` after `/health` succeeds. Missing runtime metadata does not block readiness and is not invented. The Runner uses an administrator-configured, already installed image, resolves its immutable image ID, mounts one model read-only and one private runtime directory, drops capabilities, runs as the workstation user and disables networking. llama-server listens on a Unix socket in that directory. No image/model download, driver change or external-runtime shutdown occurs.
 

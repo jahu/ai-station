@@ -38,6 +38,7 @@ from ai_station_runner.gitops import (
 from ai_station_runner.llama_runtime import router as llama_router
 from ai_station_runner.local_coding_runs import LocalCodingRequest, local_coding_report, start_local_coding
 from ai_station_runner.local_model import router as local_model_router
+from ai_station_runner.model_verify import VerifyModel, verify_model
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
 from ai_station_runner.project_setup import ProjectSetup, setup_report, start_setup
@@ -200,6 +201,11 @@ def local_coding_proposal_report(run_id: UUID):
 class ModelScanBody(RequestBody):
     run_id: RunId
     permissions: list[Literal["filesystem_read", "manage_models"]] = Field(max_length=2)
+
+
+@app.post("/v1/models/verify")
+def verify_installed_model(body: VerifyModel):
+    return verify_model(body)
 
 
 @app.post("/v1/runs/model-scan")
@@ -563,6 +569,7 @@ def runtime_observations():
 _operational = {
     "/v1/runtimes/observe",
     "/v1/runs/model-scan",
+    "/v1/models/verify",
     "/v1/runs/worktree",
     "/v1/runs/validation",
     "/v1/runs/local-coding-proposal",
