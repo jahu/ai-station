@@ -432,3 +432,7 @@ Frontend lint, TypeScript, 177 component tests and production build passed. Imag
 ## Images Generate backend keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 180 component tests and production build passed. Images Generate Qwen/Juggernaut backends reuse `useListKeyboard` with unique Backend names. Space or Enter selects the focused backend and does not queue a photo Run. Edit, Recompose and Upscale still force Qwen. Seed and negative prompt still appear only for Juggernaut. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant action keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 183 component tests and production build passed. Assistant Action radios reuse `useListKeyboard` with unique Action names. Space or Enter selects Auto, conversation, image, speech, avatar, agent, coding, commit, publish or owned llama.cpp load/unload and does not send. Unpublished adapters stay absent from that list. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

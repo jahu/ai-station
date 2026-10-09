@@ -6,6 +6,12 @@ import { MemoryRouter } from "react-router-dom";
 import { useState } from "react";
 import AssistantActions, { AssistantResults } from "./AssistantActions";
 
+function chooseAction(key: string) {
+  fireEvent.click(
+    screen.getByLabelText(`Action ${key}`).querySelector("input") as HTMLElement,
+  );
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -236,9 +242,7 @@ it("stages local coding scope without granting Cursor consent", async () => {
       <Composer />
     </QueryClientProvider>,
   );
-  fireEvent.change(screen.getByLabelText("Action"), {
-    target: { value: "coding.local" },
-  });
+  chooseAction("coding.local");
   await screen.findByRole("option", { name: "AI Station" });
   fireEvent.change(screen.getByLabelText("Project"), {
     target: { value: "project-1" },
@@ -287,9 +291,7 @@ it("stages local coding scope without granting Cursor consent", async () => {
   expect(
     JSON.parse(screen.getByTestId("scope").textContent!).max_repair_attempts,
   ).toBe(2);
-  fireEvent.change(screen.getByLabelText("Action"), {
-    target: { value: "coding.cursor" },
-  });
+  chooseAction("coding.cursor");
   expect(screen.getByTestId("scope").textContent).toBe("null");
   fireEvent.click(screen.getByRole("checkbox", { name: /Allow sending/ }));
   expect(JSON.parse(screen.getByTestId("scope").textContent!).external_ai).toBe(
@@ -298,17 +300,13 @@ it("stages local coding scope without granting Cursor consent", async () => {
   expect(
     JSON.parse(screen.getByTestId("scope").textContent!).max_repair_attempts,
   ).toBeUndefined();
-  fireEvent.change(screen.getByLabelText("Action"), {
-    target: { value: "coding.codex" },
-  });
+  chooseAction("coding.codex");
   expect(screen.getByTestId("scope").textContent).toBe("null");
   fireEvent.click(screen.getByRole("checkbox", { name: /Allow sending/ }));
   expect(JSON.parse(screen.getByTestId("scope").textContent!).executor).toBe(
     "codex",
   );
-  fireEvent.change(screen.getByLabelText("Action"), {
-    target: { value: "coding.local" },
-  });
+  chooseAction("coding.local");
   expect(JSON.parse(screen.getByTestId("scope").textContent!).external_ai).toBe(
     false,
   );
@@ -348,9 +346,7 @@ it("requires an in-conversation proposal and review before commit action is read
       <Composer />
     </QueryClientProvider>,
   );
-  fireEvent.change(screen.getByLabelText("Action"), {
-    target: { value: "coding.commit" },
-  });
+  chooseAction("coding.commit");
   expect(screen.getByTestId("commit").textContent).toBe("null");
   fireEvent.change(screen.getByLabelText("Commit proposal"), {
     target: { value: "proposal" },
@@ -454,9 +450,7 @@ it("requires an explicit GGUF before a load action is ready", async () => {
       <Composer />
     </QueryClientProvider>,
   );
-  fireEvent.change(screen.getByLabelText("Action"), {
-    target: { value: "runtime.load" },
-  });
+  chooseAction("runtime.load");
   expect(screen.getByTestId("load").textContent).toBe("null");
   await screen.findByRole("option", { name: /assistant.gguf/ });
   fireEvent.change(screen.getByLabelText("GGUF model"), {

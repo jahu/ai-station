@@ -425,7 +425,7 @@ it("overrides this turn without sending or rewriting conversation settings", asy
     </QueryClientProvider>,
   );
   const auto = await screen.findByLabelText("Turn auto");
-  expect(screen.queryByLabelText("Action")).toBeNull();
+  expect(screen.queryByLabelText("Action auto")).toBeNull();
   const list = auto.closest(".turn-choice-list") as HTMLElement;
   fireEvent.keyDown(list, { key: "End" });
   fireEvent.keyDown(list, { key: "Enter" });
@@ -436,5 +436,5 @@ it("overrides this turn without sending or rewriting conversation settings", asy
       }) as HTMLInputElement
     ).checked,
   ).toBe(true);
-  expect(await screen.findByLabelText("Action")).toBeTruthy();
+  expect(await screen.findByLabelText("Action auto")).toBeTruthy();
 });
