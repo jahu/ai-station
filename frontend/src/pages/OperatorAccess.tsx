@@ -3,14 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
-
-type OperatorStatus = {
-  configured: boolean;
-  bind_host: string;
-  lan_exposure: string;
-  lan_bind_allowed: boolean;
-  reason: string;
-};
+import type { OperatorStatus } from "./OperatorLogin";
 
 type NodeRow = {
   id: string;
@@ -79,6 +72,13 @@ export default function OperatorAccess() {
       void cache.invalidateQueries({ queryKey: ["nodes"] });
     },
   });
+  const logout = useMutation({
+    mutationFn: () =>
+      api<OperatorStatus>("/operator-auth/logout", json("POST", {})),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["operator-auth"] });
+    },
+  });
   const invite = useMutation({
     mutationFn: (name: string) =>
       api<NodeRow>("/nodes/invitations", json("POST", { name })),
@@ -101,13 +101,27 @@ export default function OperatorAccess() {
           <div>
             <h2>Operator access</h2>
             <p className="muted">
-              Local credential required before any future LAN listener · not a
-              session login yet
+              Loopback session after a password is stored · LAN stays
+              unpublished
             </p>
           </div>
-          <Badge
-            status={status.data?.lan_bind_allowed ? "available" : "unavailable"}
-          />
+          <div className="row">
+            {status.data?.configured ? (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={logout.isPending}
+                onClick={() => logout.mutate()}
+              >
+                {logout.isPending ? "Signing out…" : "Sign out"}
+              </Button>
+            ) : null}
+            <Badge
+              status={
+                status.data?.lan_bind_allowed ? "available" : "unavailable"
+              }
+            />
+          </div>
         </div>
         <p>
           {status.data?.reason ??
@@ -120,11 +134,19 @@ export default function OperatorAccess() {
           {status.data?.configured
             ? " · operator password stored (hash only)"
             : " · no operator password"}
-          . This password is never returned by the API and is not used to gate
-          localhost requests. Non-loopback bind is refused even after it is set,
-          because authenticated LAN transport is unpublished.
+          {status.data?.session_required
+            ? status.data.authenticated
+              ? " · loopback session active"
+              : " · loopback session required"
+            : " · no session until a password is stored"}
+          . This password is never returned by the API. After it is stored, the
+          loopback UI and API require the session cookie; health and login stay
+          public. Non-loopback bind is refused even after it is set, because
+          authenticated LAN transport is unpublished.
         </p>
-        <ErrorNotice error={status.error ?? save.error ?? clear.error} />
+        <ErrorNotice
+          error={status.error ?? save.error ?? clear.error ?? logout.error}
+        />
         <form
           className="image-form mt"
           onSubmit={(event) => {

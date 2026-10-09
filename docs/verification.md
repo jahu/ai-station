@@ -176,3 +176,7 @@ Normal tests never contacted PyPI. Vendor mode installed a disposable local whee
 ## Unified Home activity — 2026-10-09
 
 Frontend lint, TypeScript, 90 component tests and production build passed. Home attention Stop/Mark inspected use the existing cancel and interrupted-acknowledgement APIs without restore, replay or granting approvals. Command palette Actions include backup readiness (`?focus=maintenance`). Skip link and list semantics are present. Broader workspace keyboard/accessibility coverage remains open. Claude Code remains untested and unavailable.
+
+## Loopback operator session — 2026-10-09
+
+`./scripts/check.sh`: 670 Python tests passed (5 skipped), including session issue on password store, 401 without the `ais_operator` cookie, public health/login, login/logout, and unpublished LAN bind. Frontend lint, TypeScript, 91 component tests and production build passed. Node registration still requires the loopback session and does not open a LAN listener. Remote nodes still do not execute work. Claude Code remains untested and unavailable.

@@ -44,7 +44,7 @@ from app.model_registry import router as model_router
 from app.models import Run, Setting, WorkerRow
 from app.nodes import router as nodes_router
 from app.notices import router as notice_router
-from app.operator_auth import refuse_non_loopback_bind
+from app.operator_auth import refuse_non_loopback_bind, require_operator_session
 from app.operator_auth import router as operator_auth_router
 from app.project_setup import router as project_setup_router
 from app.projects import router as project_router
@@ -88,6 +88,9 @@ async def local_requests(request: Request, call_next):
             return JSONResponse({"detail": "Cross-origin writes are not allowed"}, status_code=403)
         if request.headers.get("sec-fetch-site") == "cross-site":
             return JSONResponse({"detail": "Cross-site writes are not allowed"}, status_code=403)
+    gated = require_operator_session(request)
+    if gated is not None:
+        return gated
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response

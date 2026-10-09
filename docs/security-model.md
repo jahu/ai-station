@@ -3,7 +3,7 @@
 > Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Local agents now have explicit activation, durable schedules, bounded context tools, GET of reviewed public pages, versioned Skills as instruction packs, sequential or gated workflow steps, optional bounded registry tool calling during the report, saved retry policies and in-app notices. Named HTTP GET connectors are operational; browser and other connector kinds are not. Bounded Cursor file-edit proposals, review artifacts and separate validation Runs are operational. Other coding adapters remain inactive. See README for runnable commands and limitations.
 
 
-AI Station is a single-user workstation application. The default network exposure is loopback only. Localhost requests are not gated by a session. Settings may store an operator password hash as a prerequisite for a future authenticated listener; a non-loopback bind is refused even after that hash exists because LAN/node transport is unpublished. Do not publish port 8765 on a LAN or the public internet.
+AI Station is a single-user workstation application. The default network exposure is loopback only. When an operator password hash is stored, loopback API requests require a session cookie except health, login status, login and logout. A non-loopback bind is refused even after that hash exists because LAN/node transport is unpublished. Do not publish port 8765 on a LAN or the public internet.
 
 ## Control plane
 
@@ -42,7 +42,7 @@ HTTP fetch is a real tool and is off unless the run has `network_read` (GET) or 
 
 ## Operator credential
 
-The `operator_auth` setting stores PBKDF2-SHA256 material only. Responses omit password, salt and hash. Rotation and removal require the current password. The credential does not yet issue sessions. Node invitations require that hash to exist; join tokens are HMAC-SHA256 and returned once. Registration is accepted only on the loopback API. LAN transport stays unpublished.
+The `operator_auth` setting stores PBKDF2-SHA256 material only. Responses omit password, salt and hash. Rotation and removal require the current password. After the hash exists, the loopback UI/API are gated by `ais_operator` (HMAC in `operator_session`, 12 hours, httpOnly, SameSite=strict, not Secure). Health and login remain public so the workstation can unlock itself. Node invitations require that hash to exist; join tokens are HMAC-SHA256 and returned once. Registration is accepted only on the loopback API and still needs the session. LAN transport stays unpublished.
 
 SQLite backups require `manage_station` and write under the data root. They never restore over the live database. Compose shutdown does not pass `--volumes`. Interrupted-run acknowledgement records inspection only and does not replay side effects. See [operations](operations.md).
 

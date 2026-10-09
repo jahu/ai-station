@@ -57,7 +57,16 @@ it("stores an operator password without displaying it later", async () => {
     if (path === "/api/operator-auth" && options?.method === "PUT") {
       configured = true;
       expect(JSON.parse(String(options.body)).password).toBe("operator-pass");
-      return { ok: true, json: async () => ({ ...status, configured: true }) };
+      return {
+        ok: true,
+        json: async () => ({
+          ...status,
+          configured: true,
+          session_required: true,
+          authenticated: true,
+          session_scope: "loopback",
+        }),
+      };
     }
     if (path === "/api/operator-auth") {
       return {
@@ -69,8 +78,10 @@ it("stores an operator password without displaying it later", async () => {
   });
   mount(fetch);
   await screen.findByText("This workstation");
-  expect(screen.getByText(/LAN publish is not enabled/)).toBeTruthy();
-  expect(screen.queryByText("operator-pass")).toBeNull();
+  expect(
+    screen.getByText(/LAN publish is not enabled/, { selector: "p" }),
+  ).toBeTruthy();
+  expect(screen.queryByDisplayValue("operator-pass")).toBeNull();
   fireEvent.change(screen.getByLabelText("Operator password"), {
     target: { value: "operator-pass" },
   });
@@ -85,16 +96,70 @@ it("does not offer a LAN bind control", async () => {
     vi.fn(async (path: string) => ({
       ok: true,
       json: async () =>
-        path === "/api/nodes" ? nodes : { ...status, configured: true },
+        path === "/api/nodes"
+          ? nodes
+          : {
+              ...status,
+              configured: true,
+              session_required: true,
+              authenticated: true,
+              session_scope: "loopback",
+            },
     })),
   );
   await screen.findByText("This workstation");
   expect(
     screen.queryByRole("button", { name: /bind|publish|lan/i }),
   ).toBeNull();
+  expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
   expect(
     screen.getByText(/authenticated LAN transport is unpublished/),
   ).toBeTruthy();
+});
+
+it("signs out the loopback session without offering LAN publish", async () => {
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    if (path === "/api/operator-auth/logout" && options?.method === "POST") {
+      return {
+        ok: true,
+        json: async () => ({
+          ...status,
+          configured: true,
+          session_required: true,
+          authenticated: false,
+          session_scope: "loopback",
+        }),
+      };
+    }
+    if (path === "/api/operator-auth") {
+      return {
+        ok: true,
+        json: async () => ({
+          ...status,
+          configured: true,
+          session_required: true,
+          authenticated: true,
+          session_scope: "loopback",
+        }),
+      };
+    }
+    return { ok: true, json: async () => nodes };
+  });
+  mount(fetch);
+  await screen.findByRole("button", { name: "Sign out" });
+  expect(
+    screen.queryByRole("button", { name: /bind|publish|lan/i }),
+  ).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(
+        (call) =>
+          call[0] === "/api/operator-auth/logout" &&
+          (call[1] as RequestInit | undefined)?.method === "POST",
+      ),
+    ).toBe(true),
+  );
 });
 
 it("shows an invitation token once and omits it from later node lists", async () => {
@@ -122,7 +187,16 @@ it("shows an invitation token once and omits it from later node lists", async ()
         json: async () => ({ ...nodes, items: [...nodes.items, remote] }),
       };
     }
-    return { ok: true, json: async () => ({ ...status, configured: true }) };
+    return {
+      ok: true,
+      json: async () => ({
+        ...status,
+        configured: true,
+        session_required: true,
+        authenticated: true,
+        session_scope: "loopback",
+      }),
+    };
   });
   mount(fetch);
   await screen.findByText("This workstation");
