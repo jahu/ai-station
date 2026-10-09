@@ -129,9 +129,7 @@ it("moves through commit review without queueing a commit", () => {
       }) as HTMLInputElement
     ).checked,
   ).toBe(true);
-  expect(
-    fetch.mock.calls.every((call) => !String(call[0]).includes("/commit")),
-  ).toBe(true);
+  expect(JSON.stringify(fetch.mock.calls)).not.toContain("/commit");
 });
 
 it("offers a local repair only after confirmed failing validation", async () => {

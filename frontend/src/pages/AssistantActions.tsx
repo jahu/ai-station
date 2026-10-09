@@ -13,6 +13,7 @@ import { FileChoiceList } from "./FileChoiceList";
 import { ConsentChoiceList } from "./ConsentChoiceList";
 import { PublicationChoiceList } from "./PublicationChoiceList";
 import { ReviewChoiceList } from "./ReviewChoiceList";
+import { ExploreChoiceList } from "./ExploreChoiceList";
 import { parseFilePaths } from "./filePaths";
 import { GpuChoiceList } from "./GpuChoiceList";
 
@@ -974,23 +975,16 @@ export default function AssistantActions({
             </select>
           </label>
           {value.action === "coding.local" && (
-            <label className="project-checkbox">
-              <input
-                type="checkbox"
-                checked={explore}
-                onChange={(e) => {
-                  setExplore(e.target.checked);
-                  scope(
-                    projectId,
-                    files,
-                    false,
-                    value.action,
-                    e.target.checked,
-                  );
-                }}
-              />
+            <ExploreChoiceList
+              checked={explore}
+              disabled={busy}
+              onChange={(next) => {
+                setExplore(next);
+                scope(projectId, files, false, value.action, next);
+              }}
+            >
               Let Local AI find the relevant files
-            </label>
+            </ExploreChoiceList>
           )}
           {value.action === "coding.local" && explore && (
             <small>
