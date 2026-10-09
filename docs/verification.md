@@ -240,3 +240,7 @@ Frontend lint, TypeScript, 105 component tests and production build passed. The 
 ## Library grid keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 106 component tests and production build passed. The Library collection is one keyboard sequence (arrows, Home, End, Enter inspects). Inspect names include the artifact title and short id. Decorative type icons stay out of the tab order. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Chat transcript keyboard and landmarks — 2026-10-09
+
+Frontend lint, TypeScript, 107 component tests and production build passed. Conversation messages form one keyboard sequence (arrows, Home, End, Enter inspects a Run when present). Inspect run and Copy name the speaker and short message id and stay on the selected message. The transcript is a labelled Messages landmark. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
