@@ -37,6 +37,24 @@ it("queues summary only on request and exposes failure", async () => {
     { method: "POST" },
   );
 });
+it("shows partial coverage of an oversized source message", () => {
+  mount({
+    id: "summary",
+    run_id: "run",
+    memory_id: "memory",
+    enabled: true,
+    content: "Decided to chunk long messages.",
+    source_message_ids: ["message"],
+    previous_summary_id: null,
+    created_at: "2026-09-26T00:00:00Z",
+    covered_offset: 48000,
+    covered_message_length: 90000,
+  });
+  expect(
+    screen.getByText(/Partial coverage through character 48000 of 90000/),
+  ).toBeTruthy();
+});
+
 it("makes disabled memory and its provenance explicit while blocking concurrent work", () => {
   mount(
     {

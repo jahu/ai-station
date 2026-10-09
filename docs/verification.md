@@ -156,3 +156,7 @@ Normal tests never contacted PyPI. Vendor mode installed a disposable local whee
 ## Chat provider registry and secret references — 2026-10-09
 
 `./scripts/check.sh`: 593 Python tests passed (5 skipped), including builtin local seeding, explicit provider selection, rejection of credentials in URLs and plaintext secret refs, fail-closed missing secrets, write-only stored secrets omitted from API responses, `external_ai` on external Runs, and queued-run failure when the secret reference changes. HTTP is mocked; no cloud API was called. Frontend lint, TypeScript, 68 component tests and production build passed. Pixel vision remains unavailable. Real OpenAI/Anthropic completions are not claimed. Claude Code remains untested and unavailable.
+
+## Oversized conversation-summary message chunking — 2026-10-09
+
+`./scripts/check.sh`: 632 Python tests passed (5 skipped), including labeled character-range chunks, persisted coverage offsets, remainder inclusion in Chat context, automatic summary of an oversized uncovered message, and migration defaulting existing summaries to offset 0. Frontend lint, TypeScript, 78 component tests and production build passed. Embeddings remain unconfigured. Workflow memory production is not in this increment. Claude Code remains untested and unavailable.

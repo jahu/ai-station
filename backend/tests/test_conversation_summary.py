@@ -336,3 +336,106 @@ def test_automatic_context_migration_defaults_off_and_preserves_history():
     detail = TestClient(app).get(f"/api/chat/conversations/{cid}").json()
     assert detail["auto_summary"] is False
     assert len(detail["messages"]) == 20
+
+
+def test_split_chunk_prefers_paragraph_breaks():
+    from app.conversation_summary import collect_segment, split_chunk
+
+    text = "alpha\n\n" + ("b" * 2000) + "\n\n" + ("c" * 2000)
+    assert split_chunk(text, 2500) == len("alpha\n\n") + 2000 + 2
+
+    class Piece:
+        def __init__(self, content, identity):
+            self.content = content
+            self.id = identity
+            self.role = "user"
+
+    first = Piece("x" * 60000, "oversize")
+    pieces, covered, offset = collect_segment([first, Piece("later", "later")])
+    assert covered is first and offset == 48000
+    assert pieces[0]["start"] == 0 and pieces[0]["end"] == 48000 and pieces[0]["total"] == 60000
+    remainder, covered, offset = collect_segment([first, Piece("later", "later")], start_offset=48000)
+    assert [item["message"].id for item in remainder] == ["oversize", "later"]
+    assert remainder[0]["start"] == 48000 and remainder[0]["end"] == 60000
+    assert covered.id == "later" and offset == 0
+
+
+def _set_oldest_content(conversation_id, content):
+    with session_factory()() as session:
+        message = session.scalar(
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at, Message.id)
+        )
+        message.content = content
+        session.commit()
+        return message.id
+
+
+def test_oversized_message_is_chunked_and_remainder_stays_in_chat(fake):
+    cid = seed(10)
+    oversized = ("KEEP-HEAD " * 4800) + ("TAIL-PAD " * 400) + "UNIQUE-TAIL"
+    source_id = _set_oldest_content(cid, oversized)
+    api = TestClient(app)
+    path = f"/api/chat/conversations/{cid}"
+    queued = api.post(path + "/summarize")
+    assert queued.status_code == 202, queued.text
+    run = queued.json()
+    assert run["parameters"]["covered_message_id"] == source_id
+    assert run["parameters"]["covered_offset"] == 48000
+    assert run["parameters"]["source_chunks"][0]["end"] == 48000
+    payload = run["parameters"]["messages"][1]["content"]
+    assert "Partial message characters 1–48000 of" in payload
+    assert "KEEP-HEAD" in payload and "UNIQUE-TAIL" not in payload
+    execute()
+    summary = api.get(path).json()["summary"]
+    assert summary["covered_offset"] == 48000
+    assert summary["covered_message_length"] == len(oversized)
+    next_run = api.post(path + "/messages", json={"content": "Continue"}).json()
+    context = str(next_run["parameters"]["messages"])
+    assert "UNIQUE-TAIL" in context and "KEEP-HEAD" not in context
+    execute()
+    follow = api.post(path + "/summarize")
+    assert follow.status_code == 202, follow.text
+    second = follow.json()
+    assert second["parameters"]["covered_offset"] == 0
+    assert "UNIQUE-TAIL" in second["parameters"]["messages"][1]["content"]
+    execute()
+    done = api.get(path).json()["summary"]
+    assert done["covered_offset"] == 0
+    later = api.post(path + "/messages", json={"content": "After coverage"}).json()
+    assert "UNIQUE-TAIL" not in str(later["parameters"]["messages"])
+
+
+def test_automatic_summary_chunks_an_oversized_uncovered_message(fake):
+    cid = seed(8)
+    _set_oldest_content(cid, "BLOCK " * 9000)
+    api = TestClient(app)
+    path = f"/api/chat/conversations/{cid}"
+    assert api.patch(path + "/context", json={"auto_summary": True}).status_code == 200
+    reply = api.post(path + "/messages", json={"content": "Continue"}).json()
+    execute()
+    finished = api.get(f"/api/runs/{reply['id']}").json()
+    assert finished["status"] == "succeeded"
+    active = api.get(path).json()["active_run"]
+    assert active and active["executor_type"] == "chat_summary"
+    assert active["parameters"]["covered_offset"] > 0
+    execute()
+    summary = api.get(path).json()["summary"]
+    assert summary["enabled"] and summary["covered_offset"] > 0
+
+
+def test_coverage_offset_migration_defaults_zero_and_preserves_summary(fake):
+    from alembic import command
+    from app.db import alembic_config
+
+    cid = seed()
+    api = TestClient(app)
+    api.post(f"/api/chat/conversations/{cid}/summarize")
+    execute()
+    command.downgrade(alembic_config(), "0015")
+    command.upgrade(alembic_config(), "head")
+    reset_engine()
+    summary = api.get(f"/api/chat/conversations/{cid}").json()["summary"]
+    assert summary["enabled"] and summary["covered_offset"] == 0
+    assert summary["content"] == "Preserved decisions and preferences."
