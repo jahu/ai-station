@@ -94,6 +94,8 @@ export interface Run {
         arguments: Record<string, unknown>;
         round: number;
       }[];
+      memory_id?: string | null;
+      memory_excerpted?: boolean;
     }[];
   };
 }

@@ -780,6 +780,14 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             delete them in Memory.
           </p>
         )}
+        {values.tools.includes("remember_workflow") && (
+          <p className="notice agent-wide">
+            Successful telemetry, public search and HTTP fetch steps will be
+            stored in this agent’s memory with their source Run. memory_search
+            results are not copied. Failures and cancellation write nothing.
+            Select memory_search to use them on future runs.
+          </p>
+        )}
         <div className="agent-wide">
           <h3>Skills</h3>
           <p className="muted">
@@ -829,8 +837,8 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           <h3>Tools</h3>
           <p className="muted">
             Context tools become inspectable workflow steps before the report.
-            Remember reports runs after a successful report. Unavailable tools
-            prevent activation.
+            Remember reports and remember workflow observations run after those
+            successful steps. Unavailable tools prevent activation.
           </p>
           {tools.data?.map((tool) => (
             <label className="agent-tool" key={tool.name}>
@@ -853,9 +861,11 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                 <strong>
                   {tool.name === "remember_report"
                     ? "Remember reports"
-                    : tool.name === "http_fetch"
-                      ? "HTTP fetch"
-                      : tool.name}
+                    : tool.name === "remember_workflow"
+                      ? "Remember workflow observations"
+                      : tool.name === "http_fetch"
+                        ? "HTTP fetch"
+                        : tool.name}
                 </strong>{" "}
                 {!tool.operational && "— Unavailable"}
                 <small>

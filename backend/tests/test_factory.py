@@ -10,7 +10,8 @@ def test_factory_copies_policies_schedules_and_quoted_query_without_enabling():
         json={
             "instruction": (
                 "Weekdays at 07:15 UTC require approval, gated inspect tools first, "
-                'allow retry, notify on failure, remember reports, and search for "public gpu news". '
+                "allow retry, notify on failure, remember reports, remember workflow observations, "
+                'and search for "public gpu news". '
                 "Call tools to summarize workstation memory."
             ),
             "model": "fake-local",
@@ -29,6 +30,7 @@ def test_factory_copies_policies_schedules_and_quoted_query_without_enabling():
     assert draft["tool_calling"] == "bounded"
     assert draft["search_query"] == "public gpu news"
     assert "remember_report" in draft["tools"]
+    assert "remember_workflow" in draft["tools"]
     assert "memory_search" in draft["tools"]
     assert "web_search" in draft["tools"]
     assert "system_snapshot" in draft["tools"]

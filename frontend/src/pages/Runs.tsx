@@ -473,6 +473,9 @@ export function RunDetail() {
                           {step.tool_calls.length === 1 ? "" : "s"}
                         </span>
                       )}
+                      {step.memory_id && (
+                        <span className="muted">saved observation</span>
+                      )}
                       <span className="mono">{step.run_id.slice(0, 8)}</span>
                     </Link>
                   ))
@@ -535,6 +538,20 @@ export function RunDetail() {
             {artifacts.data && artifacts.data.length > 0 && (
               <ArtifactCards artifacts={artifacts.data} />
             )}
+            {run.data.executor_type === "agent_tool" &&
+              typeof run.data.metadata?.memory_entry_id === "string" && (
+                <p>
+                  <Link
+                    className="text-link"
+                    to={`/memory/${run.data.metadata.memory_entry_id}`}
+                  >
+                    View saved workflow observation →
+                  </Link>
+                  {run.data.metadata?.memory_excerpted === true
+                    ? " · Memory contains an excerpt; the full JSON artifact remains on this Run."
+                    : ""}
+                </p>
+              )}
             {run.data.executor_type === "agent" && artifacts.data && (
               <AgentReport
                 artifacts={artifacts.data}

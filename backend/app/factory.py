@@ -39,6 +39,15 @@ _REMEMBER_REPORTS = (
     "zapamiętuj raporty",
     "zapamietuj raporty",
 )
+_REMEMBER_WORKFLOW = (
+    "remember workflow",
+    "remember observations",
+    "remember steps",
+    "pamiętaj obserwacje",
+    "pamietaj obserwacje",
+    "pamiętaj kroki",
+    "pamietaj kroki",
+)
 _DOW = (
     ("sunday", "0"),
     ("monday", "1"),
@@ -152,6 +161,8 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         tools.append("system_snapshot")
     if _has(lowered, _REMEMBER_REPORTS):
         tools.append("remember_report")
+    if _has(lowered, _REMEMBER_WORKFLOW):
+        tools.append("remember_workflow")
     if any(word in lowered for word in ("memory", "remember", "pamię", "pamie")):
         tools.append("memory_search")
     search_query = _search_query(text)
