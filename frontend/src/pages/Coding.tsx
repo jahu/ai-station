@@ -1,5 +1,5 @@
 import LlamaModels from "./LlamaModels";
-import { Cpu, Cloud, Sparkles, Plus, ArrowUpRight } from "lucide-react";
+import { Plus, ArrowUpRight } from "lucide-react";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -11,6 +11,10 @@ import { FileChoiceList } from "./FileChoiceList";
 import { ConsentChoiceList } from "./ConsentChoiceList";
 import { ExploreChoiceList } from "./ExploreChoiceList";
 import { RepairChoiceList } from "./RepairChoiceList";
+import {
+  ExecutorChoiceList,
+  type CodingExecutorChoice,
+} from "./ExecutorChoiceList";
 import { parseFilePaths } from "./filePaths";
 
 type Project = {
@@ -28,7 +32,7 @@ export default function Coding() {
   const [files, setFiles] = useState("");
   const [model, setModel] = useState("");
   const [approvedScope, setApprovedScope] = useState("");
-  const [choice, setChoice] = useState("auto");
+  const [choice, setChoice] = useState<CodingExecutorChoice>("auto");
   const [explore, setExplore] = useState(true);
   const [repairAttempts, setRepairAttempts] = useState(0);
   const [localModel, setLocalModel] = useState("");
@@ -154,44 +158,17 @@ export default function Coding() {
                   </Link>
                 </p>
               )}
-              <div
-                className="coding-executor-options coding-agent-options"
-                role="group"
-                aria-label="Coding executor"
-              >
-                {[
-                  ["auto", "Auto", Sparkles],
-                  ["local", "Local AI", Cpu],
-                  ["cursor", "Cursor", Cloud],
-                  ["codex", "Codex", Cloud],
-                ].map(([id, title, Icon]) => {
-                  const Symbol = Icon as typeof Cpu;
-                  return (
-                    <button
-                      type="button"
-                      key={String(id)}
-                      aria-label={String(title)}
-                      aria-pressed={choice === id}
-                      onClick={() => {
-                        setChoice(String(id));
-                        setExternal(false);
-                        setModel("");
-                      }}
-                    >
-                      <Symbol size={18} />
-                      <span>
-                        <strong>{String(title)}</strong>
-                        <small>
-                          {id === "auto"
-                            ? "Project preference"
-                            : id === "local"
-                              ? "On this machine"
-                              : "External AI"}
-                        </small>
-                      </span>
-                    </button>
-                  );
-                })}
+              <div>
+                <span>Executor</span>
+                <ExecutorChoiceList
+                  value={choice}
+                  disabled={create.isPending || modelPending}
+                  onChange={(next) => {
+                    setChoice(next);
+                    setExternal(false);
+                    setModel("");
+                  }}
+                />
               </div>
               <div className="coding-model-row">
                 <span className="chip">

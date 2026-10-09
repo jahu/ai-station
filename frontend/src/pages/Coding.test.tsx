@@ -10,6 +10,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Coding from "./Coding";
 
+function chooseExecutor(name: string) {
+  const key = name === "Local AI" ? "local" : name.toLowerCase();
+  fireEvent.click(
+    screen.getByLabelText(`Executor ${key}`).querySelector(
+      "input",
+    ) as HTMLElement,
+  );
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -83,7 +92,7 @@ it.each(["Cursor", "Codex", "Local AI"])(
     fireEvent.change(screen.getByLabelText("Task"), {
       target: { value: "Build my idea" },
     });
-    fireEvent.click(screen.getByRole("button", { name: executor }));
+    chooseExecutor(executor);
     expect(screen.queryByLabelText("Files the agent may edit")).toBeNull();
     if (executor !== "Local AI") {
       await screen.findByRole("option", { name: "Available model" });
@@ -115,7 +124,7 @@ it.each(["Cursor", "Codex", "Local AI"])(
         ).toBe(false),
       );
       const other = executor === "Cursor" ? "Codex" : "Cursor";
-      fireEvent.click(screen.getByRole("button", { name: other }));
+      chooseExecutor(other);
       expect(
         (
           screen.getByRole("checkbox", {
@@ -123,7 +132,7 @@ it.each(["Cursor", "Codex", "Local AI"])(
           }) as HTMLInputElement
         ).checked,
       ).toBe(false);
-      fireEvent.click(screen.getByRole("button", { name: executor }));
+      chooseExecutor(executor);
       fireEvent.change(screen.getByLabelText("Model"), {
         target: { value: "available-model" },
       });
@@ -217,7 +226,7 @@ it("posts a selected local repair budget from the coding start form", async () =
   fireEvent.change(screen.getByLabelText("Task"), {
     target: { value: "Build my idea" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Local AI" }));
+  chooseExecutor("Local AI");
   const repairList = (await screen.findByLabelText("Repair 0")).closest(
     ".repair-choice-list",
   ) as HTMLElement;

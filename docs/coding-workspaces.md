@@ -1,6 +1,6 @@
 # Coding workspaces
 
-The default flow is create a project by name, select an executor/model, describe the outcome and continue in a persistent coding conversation. Existing repositories and branch/validation policies remain advanced settings.
+The default flow is create a project by name, select an executor/model, describe the outcome and continue in a persistent coding conversation. Existing repositories and branch/validation policies remain advanced settings. Coding executor radios reuse the shared list keyboard with unique Executor names; Space or Enter selects Auto, Local AI, Cursor or Codex and does not start a coding Run. Claude Code stays unavailable. There is no inspectable executor Run.
 
 Project creation is a normal host Run. The Runner reserves a UUID-owned directory under application storage, initializes local Git with main/develop branches and a first commit, and creates a project Python environment without installing packages or fetching dependencies. Failed/canceled setup preserves its directory for inspection. The project registry is populated only after confirmed completion. No caller-selected destination or external repository is overwritten. Declared dependencies are installed later by an explicit worktree Run; see [dependency installation](coding-boundary.md).
 
