@@ -53,6 +53,55 @@ it("queues Juggernaut parameters and opens the durable run", async () => {
     expect.objectContaining({ body: expect.stringContaining('"seed":123') }),
   );
 });
+it("attaches a Library image for Edit without another upload", async () => {
+  const artifact = {
+    id: "lib-one",
+    original_filename: "room.png",
+    type: "image",
+    mime_type: "image/png",
+    metadata: { width: 200, height: 100 },
+  };
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () => {
+      const url = String(path);
+      if (url.includes("/hardware")) return { gpus: [] };
+      if (url.includes("/artifacts?")) return [artifact];
+      if (url.includes("/artifacts/")) return artifact;
+      return { id: "run-edit" };
+    },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.click(screen.getByRole("button", { name: "Images from Library" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Choose room.png lib-one" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Attach file" }));
+  fireEvent.change(screen.getByLabelText("Edit instruction"), {
+    target: { value: "Make it dusk" },
+  });
+  await waitFor(() =>
+    expect(
+      screen
+        .getByRole("button", { name: "Queue edit" })
+        .hasAttribute("disabled"),
+    ).toBe(false),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Queue edit" }));
+  await screen.findByRole("heading", { name: "Run inspector" });
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/images/runs",
+    expect.objectContaining({
+      body: expect.stringContaining('"input_artifact_ids":["lib-one"]'),
+    }),
+  );
+  expect(
+    fetch.mock.calls.some((call) => String(call[0]).includes("/images/uploads")),
+  ).toBe(false);
+});
+
 it("reuses a Library source, shows upscale dimensions, and submits its identity", async () => {
   const fetch = vi.fn(async (path: string) => ({
     ok: true,
