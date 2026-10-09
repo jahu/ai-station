@@ -33,6 +33,12 @@ interface Agent {
   output_expectation: string;
   require_approval: boolean;
   workflow_mode: "sequential" | "gated";
+  retry_policy: { mode: "none" | "manual" };
+  notification_policy: {
+    on_success: boolean;
+    on_failure: boolean;
+    on_approval: boolean;
+  };
   project_id: string | null;
   enabled: boolean;
   updated_at: string;
@@ -397,6 +403,12 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           output_expectation: values.output_expectation,
           require_approval: values.require_approval ?? false,
           workflow_mode: values.workflow_mode ?? "sequential",
+          retry_policy: values.retry_policy ?? { mode: "none" },
+          notification_policy: values.notification_policy ?? {
+            on_success: false,
+            on_failure: false,
+            on_approval: false,
+          },
           project_id: values.project_id,
           enabled: agent.enabled,
         }),
@@ -574,8 +586,8 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           <p className="muted">
             Selected context tools become persisted child Runs with
             dependencies. The model cannot add tools, URLs or shell commands.
-            Cancel stops the currently active child. Remember reports still
-            runs only after a successful report.
+            Cancel stops the currently active child. Remember reports still runs
+            only after a successful report.
           </p>
           <label className="agent-tool">
             <input
@@ -608,6 +620,87 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               </small>
             </span>
           </label>
+        </fieldset>
+        <fieldset className="agent-wide">
+          <legend>Retry</legend>
+          <p className="muted">
+            Failed workflows are never retried automatically. Manual retry
+            starts a new inspectable Run from the same snapshot. It does not
+            resume or replay a search, fetch or inference that already had an
+            uncertain outcome.
+          </p>
+          <label className="agent-tool">
+            <input
+              type="radio"
+              name="retry_policy"
+              checked={(values.retry_policy?.mode ?? "none") === "none"}
+              onChange={() => update("retry_policy", { mode: "none" })}
+            />
+            <span>
+              <strong>No retry</strong>
+              <small>
+                Inspect the failed Runs. Start a new execution yourself.
+              </small>
+            </span>
+          </label>
+          <label className="agent-tool">
+            <input
+              type="radio"
+              name="retry_policy"
+              checked={values.retry_policy?.mode === "manual"}
+              onChange={() => update("retry_policy", { mode: "manual" })}
+            />
+            <span>
+              <strong>Manual retry</strong>
+              <small>
+                After failure or interruption, the workflow inspector can queue
+                a new Run with the same saved snapshot.
+              </small>
+            </span>
+          </label>
+        </fieldset>
+        <fieldset className="agent-wide">
+          <legend>Notifications</legend>
+          <p className="muted">
+            Notices stay in AI Station. Email, chat and other connectors are not
+            enabled. Existing agents stay silent until you opt in.
+          </p>
+          {(
+            [
+              [
+                "on_failure",
+                "When a workflow or report fails or is interrupted",
+              ],
+              ["on_success", "When a report succeeds"],
+              ["on_approval", "When a Run is waiting for approval"],
+            ] as const
+          ).map(([key, label]) => (
+            <label className="agent-tool" key={key}>
+              <input
+                type="checkbox"
+                checked={Boolean(values.notification_policy?.[key])}
+                onChange={(e) =>
+                  update("notification_policy", {
+                    on_success:
+                      key === "on_success"
+                        ? e.target.checked
+                        : Boolean(values.notification_policy?.on_success),
+                    on_failure:
+                      key === "on_failure"
+                        ? e.target.checked
+                        : Boolean(values.notification_policy?.on_failure),
+                    on_approval:
+                      key === "on_approval"
+                        ? e.target.checked
+                        : Boolean(values.notification_policy?.on_approval),
+                  })
+                }
+              />
+              <span>
+                <strong>{label}</strong>
+              </span>
+            </label>
+          ))}
         </fieldset>
         {values.tools.includes("web_search") && (
           <section className="agent-wide agent-search-settings">

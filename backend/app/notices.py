@@ -1,0 +1,113 @@
+"""Saved agent notification policies emit inspectable in-app notices, never email."""
+
+from __future__ import annotations
+
+from typing import Annotated
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, ConfigDict, StrictBool
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.agent_schema import NotificationPolicy, RetryPolicy
+from app.db import session_scope, utcnow
+from app.events import append_event
+from app.models import Notice, Run
+from app.serialize import iso
+
+router = APIRouter(prefix="/api/notices", tags=["notices"])
+DB = Annotated[Session, Depends(session_scope)]
+
+KIND_POLICY = {
+    "succeeded": "on_success",
+    "failed": "on_failure",
+    "interrupted": "on_failure",
+    "waiting_for_approval": "on_approval",
+}
+
+
+def retry_policy(raw) -> RetryPolicy:
+    return RetryPolicy.model_validate(raw or {})
+
+
+def notification_policy(raw) -> NotificationPolicy:
+    return NotificationPolicy.model_validate(raw or {})
+
+
+def notice_dict(row: Notice) -> dict:
+    return {
+        "id": row.id,
+        "agent_id": row.agent_id,
+        "run_id": row.run_id,
+        "kind": row.kind,
+        "title": row.title,
+        "body": row.body,
+        "created_at": iso(row.created_at),
+        "read_at": iso(row.read_at),
+    }
+
+
+def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
+    if run.executor_type == "agent_tool":
+        return None
+    if run.executor_type == "agent_workflow" and status == "succeeded":
+        return None
+    if run.executor_type not in {"agent", "agent_workflow"} or not run.agent_id:
+        return None
+    field = KIND_POLICY.get(status)
+    if field is None:
+        return None
+    policy = notification_policy((run.parameters.get("definition") or {}).get("notification_policy"))
+    if not getattr(policy, field):
+        return None
+    existing = session.scalar(
+        select(Notice.id).where(Notice.run_id == run.id, Notice.kind == status).limit(1)
+    )
+    if existing:
+        return None
+    titles = {
+        "succeeded": "Agent report succeeded",
+        "failed": "Agent workflow failed",
+        "interrupted": "Agent workflow interrupted",
+        "waiting_for_approval": "Agent workflow needs approval",
+    }
+    notice = Notice(
+        agent_id=run.agent_id,
+        run_id=run.id,
+        kind=status,
+        title=titles[status],
+        body=run.summary or run.error_message or titles[status],
+    )
+    session.add(notice)
+    session.flush()
+    append_event(session, run.id, "notice.created", {"notice_id": notice.id, "kind": status})
+    return notice
+
+
+@router.get("")
+def list_notices(
+    session: DB,
+    unread: bool = False,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
+    statement = select(Notice).order_by(Notice.created_at.desc(), Notice.id)
+    if unread:
+        statement = statement.where(Notice.read_at.is_(None))
+    return [notice_dict(row) for row in session.scalars(statement.limit(limit).offset(offset))]
+
+
+class ReadBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    read: StrictBool = True
+
+
+@router.post("/{notice_id}/read")
+def mark_read(notice_id: UUID, body: ReadBody, session: DB):
+    row = session.get(Notice, str(notice_id))
+    if row is None:
+        raise HTTPException(404, "Notice not found")
+    row.read_at = utcnow() if body.read else None
+    session.commit()
+    return notice_dict(row)

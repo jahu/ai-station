@@ -75,8 +75,8 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         require_approval=False,
         workflow_mode="sequential",
         output_expectation="A short report the user can inspect in Runs.",
-        notification_policy={"surface": "runs"},
-        retry_policy={"auto": False},
+        notification_policy={"on_success": False, "on_failure": False, "on_approval": False},
+        retry_policy={"mode": "none"},
     )
     agent.next_run_at = None
     return agent

@@ -8,7 +8,8 @@ from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.db import session_scope, utcnow
-from app.models import Agent, Artifact, Conversation, Run, RuntimeInstance, Task
+from app.models import Agent, Artifact, Conversation, Notice, Run, RuntimeInstance, Task
+from app.notices import notice_dict
 from app.serialize import iso
 from app.state import ACTIVE
 
@@ -103,5 +104,14 @@ def overview(session: DB):
                 "stale": row.updated_at < now - timedelta(minutes=5),
             }
             for row in runtimes
+        ],
+        "unread_notice_count": session.scalar(
+            select(func.count()).select_from(Notice).where(Notice.read_at.is_(None))
+        ),
+        "notices": [
+            notice_dict(row)
+            for row in session.scalars(
+                select(Notice).where(Notice.read_at.is_(None)).order_by(Notice.created_at.desc()).limit(8)
+            )
         ],
     }

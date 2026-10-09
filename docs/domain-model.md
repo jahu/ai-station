@@ -55,7 +55,7 @@ Chat is durable. A completion is also a run. The prompt window is the recent mes
 
 ## Agent definition
 
-A persistent agent: goal, system prompt, provider, model, tools, skills, memory scope, trigger, permission profile, execution target, limits, workflow mode (`sequential` or `gated`), and enablement. Enabling is explicit. Drafts are stored disabled. A launch snapshots the step list and publishes child Runs with `RunDependency` edges; the model cannot invent extra steps.
+A persistent agent: goal, system prompt, provider, model, tools, skills, memory scope, trigger, permission profile, execution target, limits, workflow mode (`sequential` or `gated`), retry policy, notification policy, and enablement. Enabling is explicit. Drafts are stored disabled. A launch snapshots the step list and publishes child Runs with `RunDependency` edges; the model cannot invent extra steps. Retry never requeues the same Run. Notices are in-app records, not email.
 
 Triggers that exist: `manual`, `cron`, `interval`, `one-shot datetime`. Unimplemented triggers are not presented as working.
 
@@ -66,6 +66,10 @@ A versioned `SKILL.md` instruction pack under the skills root. Agents store sele
 ## Approval
 
 A pause record for a sensitive action: action, reason, risk, requesting run, timestamps, and resolution. Agent Runs that require approval wait in `waiting_for_approval` until granted (re-queued) or denied (canceled). GitHub publication still records a granted approval at enqueue time.
+
+## Notice
+
+An in-app record from a saved agent notification policy: agent, run, kind (`succeeded`, `failed`, `interrupted`, `waiting_for_approval`), title, body and optional `read_at`. Email and other connectors are not used.
 
 ## Memory
 

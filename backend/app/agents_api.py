@@ -57,8 +57,8 @@ def apply_settings(agent, body):
         if key == "project_id" and value is not None:
             value = str(value)
         setattr(agent, key, value)
-    agent.retry_policy = {"auto": False}
-    agent.notification_policy = {"surface": "runs"}
+    agent.retry_policy = body.retry_policy.model_dump()
+    agent.notification_policy = body.notification_policy.model_dump()
     agent.next_run_at = compute_next(agent) if agent.enabled else None
     agent.updated_at = utcnow()
 

@@ -400,6 +400,19 @@ class Setting(Base):
     value: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
+class Notice(Base):
+    __tablename__ = "notices"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    agent_id: Mapped[str] = mapped_column(ForeignKey("agents.id"), index=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"), index=True)
+    kind: Mapped[str] = mapped_column(String(40), index=True)
+    title: Mapped[str] = mapped_column(String(300), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow, index=True)
+    read_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True, index=True)
+
+
 class ConversationSummary(Base):
     __tablename__ = "conversation_summaries"
 

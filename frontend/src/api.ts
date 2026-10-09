@@ -73,6 +73,11 @@ export interface Run {
     resolved_at: string | null;
     resolution: string;
   };
+  retry?: {
+    allowed: boolean;
+    retry_run_id?: string | null;
+    retry_of?: string | null;
+  };
   workflow?: {
     parent_run_id: string;
     mode: string;

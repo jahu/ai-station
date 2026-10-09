@@ -260,9 +260,85 @@ it("lists persisted workflow steps and keeps cancel available for the active chi
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  expect(await screen.findByRole("heading", { name: "Workflow steps" })).toBeTruthy();
+  expect(
+    await screen.findByRole("heading", { name: "Workflow steps" }),
+  ).toBeTruthy();
   expect(
     (await screen.findByRole("link", { name: /report/i })).getAttribute("href"),
   ).toBe("/runs/step-report");
   expect(screen.getByRole("button", { name: "Cancel run" })).toBeTruthy();
+});
+it("retries a failed workflow as a new run instead of replaying the original", async () => {
+  vi.stubGlobal(
+    "EventSource",
+    class {
+      close() {}
+      addEventListener() {}
+    },
+  );
+  const created = {
+    id: "retry",
+    capability: "agent.workflow",
+    executor_type: "agent_workflow",
+    parent_run_id: null,
+    retry: { allowed: false, retry_of: "parent" },
+  };
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      String(url).includes("/events") || String(url).includes("/artifacts")
+        ? []
+        : options
+          ? created
+          : {
+              id: "parent",
+              capability: "agent.workflow",
+              executor_type: "agent_workflow",
+              execution_target: "container",
+              status: "succeeded",
+              created_at: "2026-10-09T12:00:00Z",
+              started_at: "2026-10-09T12:00:01Z",
+              finished_at: "2026-10-09T12:00:02Z",
+              actual_gpu: null,
+              requested_gpu: "none",
+              parameters: {},
+              effective_permissions: [],
+              summary: "Published 1 workflow step.",
+              error_type: "",
+              error_message: "",
+              worker_id: null,
+              workflow: {
+                parent_run_id: "parent",
+                mode: "sequential",
+                steps: [],
+              },
+              retry: { allowed: true, retry_run_id: null, retry_of: null },
+            },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/runs/parent"]}>
+        <Routes>
+          <Route path="/runs/:id" element={<RunDetail />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Retry as a new workflow" }),
+  );
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(
+        (call) =>
+          String(call[0]) === "/api/runs/parent/retry-workflow" &&
+          call[1]?.method === "POST",
+      ),
+    ).toBe(true),
+  );
 });

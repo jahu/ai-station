@@ -46,9 +46,13 @@ def workflow_view(session, run: Run) -> dict | None:
     parent = session.get(Run, parent_id) if parent_id else None
     if parent is None or parent.executor_type != "agent_workflow":
         return None
-    children = list(
-        session.scalars(select(Run).where(Run.parent_run_id == parent.id).order_by(Run.created_at, Run.id))
-    )
+    children = [
+        child
+        for child in session.scalars(
+            select(Run).where(Run.parent_run_id == parent.id).order_by(Run.created_at, Run.id)
+        )
+        if child.executor_type in {"agent_tool", "agent"}
+    ]
     return {
         "parent_run_id": parent.id,
         "mode": (parent.parameters.get("definition") or {}).get("workflow_mode", "sequential"),

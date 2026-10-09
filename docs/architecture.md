@@ -78,7 +78,7 @@ The [Memory workspace](memory.md) exposes durable scoped entries with validated 
 
 ## Local agents
 
-[Agent lifecycle](agents.md) uses the shared queue, local provider, Run events and Markdown artifacts. Explicit telemetry, own-scope memory, configured public search and GET of reviewed public pages gather bounded context as persisted child Runs before the report. Versioned [Skills](skills.md) inject reviewed instruction text; they do not grant tools or permissions. Definitions start disabled; unsupported tools block activation. An optional durable Approval can park the parent workflow before children are published. Gated mode parks the report after those children succeed. Scheduling is serialized, persistent and non-overlapping.
+[Agent lifecycle](agents.md) uses the shared queue, local provider, Run events and Markdown artifacts. Explicit telemetry, own-scope memory, configured public search and GET of reviewed public pages gather bounded context as persisted child Runs before the report. Versioned [Skills](skills.md) inject reviewed instruction text; they do not grant tools or permissions. Definitions start disabled; unsupported tools block activation. An optional durable Approval can park the parent workflow before children are published. Gated mode parks the report after those children succeed. Saved retry policies never auto-loop; manual retry starts a new Run from the snapshot. Saved notification policies write in-app notices. Scheduling is serialized, persistent and non-overlapping.
 
 ## Runtime observations
 
