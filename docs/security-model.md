@@ -3,13 +3,13 @@
 > Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Local agents now have explicit activation, durable schedules, bounded context tools, GET of reviewed public pages, versioned Skills as instruction packs, sequential or gated workflow steps, optional bounded registry tool calling during the report, saved retry policies and in-app notices. Named HTTP GET connectors are operational; browser and other connector kinds are not. Bounded Cursor file-edit proposals, review artifacts and separate validation Runs are operational. Other coding adapters remain inactive. See README for runnable commands and limitations.
 
 
-AI Station is a single-user workstation application. The default network exposure is loopback only. There is no authentication on that localhost MVP. Do not publish port 8765 on a LAN or the public internet until authentication exists.
+AI Station is a single-user workstation application. The default network exposure is loopback only. Localhost requests are not gated by a session. Settings may store an operator password hash as a prerequisite for a future authenticated listener; a non-loopback bind is refused even after that hash exists because LAN/node transport is unpublished. Do not publish port 8765 on a LAN or the public internet.
 
 ## Control plane
 
 Containers run without `--privileged`, without extra capabilities, and without `/var/run/docker.sock`. The only host mounts are the application data directory and the Host Runner socket directory. Compose sets `user` to the host uid/gid so a mode `0600` socket works without making it world-writable. The socket directory itself is the per-user runtime dir (`0700`).
 
-The process inside the container listens on all container interfaces so Docker can proxy `127.0.0.1:8765`. The host publish address is `127.0.0.1`.
+The process inside the container listens on all container interfaces so Docker can proxy `127.0.0.1:8765`. The host publish address is `127.0.0.1`. Startup refuses `AI_STATION_BIND_HOST` values that are not loopback.
 
 ## Host Runner
 
@@ -39,6 +39,10 @@ Runs store an effective permission list. There is no universal full-access flag.
 ## Network tools
 
 HTTP fetch is a real tool and is off unless the run has `network_read` (GET) or `network_external` (POST). URLs are resolved and rejected when any address is loopback, private, link-local, reserved, or multicast. That blocks trivial SSRF to the host's model servers and cloud metadata endpoints. Local coding exploration may GET public pages under that rule. Agents may GET up to three explicitly reviewed public URLs stored on the definition; the model cannot add URLs. Named HTTP connectors reuse the same public-URL rule for a single GET, with optional Bearer secret references that never appear in API responses. Chat web search is an explicit per-message opt-in through a configured private SearXNG service. Only the query leaves the control plane; history, memory and attachments are not sent to search engines. Results are bounded untrusted snippets, with persisted provenance; Chat and agents do not fetch arbitrary search-result pages. Browser automation remains unavailable.
+
+## Operator credential
+
+The `operator_auth` setting stores PBKDF2-SHA256 material only. Responses omit password, salt and hash. Rotation and removal require the current password. The credential does not yet issue sessions or authorize remote nodes.
 
 ## Secrets
 

@@ -42,6 +42,8 @@ from app.model_definitions import router as model_definition_router
 from app.model_registry import router as model_router
 from app.models import Run, Setting, WorkerRow
 from app.notices import router as notice_router
+from app.operator_auth import nodes_router, refuse_non_loopback_bind
+from app.operator_auth import router as operator_auth_router
 from app.project_setup import router as project_setup_router
 from app.projects import router as project_router
 from app.providers import ProviderError
@@ -61,6 +63,8 @@ DB = Annotated[Session, Depends(session_scope)]
 @asynccontextmanager
 async def lifespan(_app):
     migrate()
+    with session_factory()() as session:
+        refuse_non_loopback_bind(session)
     yield
 
 
@@ -326,6 +330,8 @@ app.include_router(project_setup_router)
 app.include_router(project_router)
 app.include_router(memory_router)
 app.include_router(embedding_router)
+app.include_router(operator_auth_router)
+app.include_router(nodes_router)
 app.include_router(model_definition_router)
 app.include_router(model_router)
 app.include_router(agent_router)
