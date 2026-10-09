@@ -20,9 +20,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { api, type Sample, useHardware, useRuns, useStatus } from "../api";
+import { api, type Sample, useHardware, useStatus } from "../api";
 import {
-  Badge,
   Empty,
   ErrorNotice,
   Loading,
@@ -30,11 +29,10 @@ import {
   PageTitle,
 } from "../components/common";
 import { Button } from "../components/ui/button";
-import { number, time } from "../lib/utils";
+import { number } from "../lib/utils";
 
 export default function Dashboard() {
   const hardware = useHardware();
-  const runs = useRuns();
   const status = useStatus();
   const history = useQuery({
     queryKey: ["history"],
@@ -75,7 +73,8 @@ export default function Dashboard() {
           </Button>
         }
       >
-        A live view of your local resources and everything in motion.
+        Attention first: inspect, stop or acknowledge work, then local
+        resources.
       </PageTitle>
       <nav className="dashboard-actions" aria-label="Quick actions">
         <Button asChild>
@@ -91,8 +90,9 @@ export default function Dashboard() {
           <Link to="/projects">Open project</Link>
         </Button>
       </nav>
-      <ErrorNotice error={hardware.error ?? runs.error ?? status.error} />
+      <ErrorNotice error={hardware.error ?? status.error} />
       {hardware.isPending && <Loading />}
+      <DashboardActivity />
       <div className="section-label">
         <span>COMPUTE</span>
         <span className="muted">
@@ -266,36 +266,7 @@ export default function Dashboard() {
             </span>
           </div>
         </section>
-        <section className="panel">
-          <div className="panel-heading">
-            <h2>Recent activity</h2>
-            <Link to="/runs" className="text-link">
-              View all <ArrowUpRight size={14} />
-            </Link>
-          </div>
-          {!runs.data?.length ? (
-            <Empty title="A clear runway">
-              Your tasks and their execution history will appear here.
-            </Empty>
-          ) : (
-            <div className="activity-list">
-              {runs.data.slice(0, 5).map((run) => (
-                <Link to={`/runs/${run.id}`} key={run.id}>
-                  <div className="activity-icon">
-                    <Activity size={16} />
-                  </div>
-                  <div>
-                    <strong>{run.capability}</strong>
-                    <small>{time(run.created_at)}</small>
-                  </div>
-                  <Badge status={run.status} />
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
       </div>
-      <DashboardActivity />
       <div className="footnote">
         <span className="status-dot" /> Local-first by design. External services
         remain under your control.

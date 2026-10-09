@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { Badge, Empty, ErrorNotice, Loading } from "../components/common";
+import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
 
 interface AgentSummary {
@@ -65,17 +66,28 @@ interface Overview {
     replay?: boolean;
   }[];
 }
+
+const CANCELABLE = new Set([
+  "queued",
+  "claimed",
+  "preparing",
+  "running",
+  "waiting_for_approval",
+]);
+
 function Section({
   title,
   to,
   children,
+  wide,
 }: {
   title: string;
   to: string;
   children: ReactNode;
+  wide?: boolean;
 }) {
   return (
-    <section className="panel">
+    <section className={wide ? "panel dashboard-attention" : "panel"}>
       <div className="panel-heading">
         <h2>{title}</h2>
         <Link className="text-link" to={to}>
@@ -86,95 +98,171 @@ function Section({
     </section>
   );
 }
+
+function ActivityRow({
+  to,
+  title,
+  detail,
+  status,
+  thumbnail,
+  fallback,
+  action,
+}: {
+  to: string;
+  title: string;
+  detail: string;
+  status?: string;
+  thumbnail?: boolean;
+  fallback?: ReactNode;
+  action?: ReactNode;
+}) {
+  const id = to.split("/").pop() ?? title;
+  return (
+    <li className="activity-row">
+      <Link to={to}>
+        {thumbnail ? (
+          <img
+            className="dashboard-thumbnail"
+            src={`/api/artifacts/${id}/thumbnail`}
+            alt=""
+            loading="lazy"
+          />
+        ) : null}
+        <div>
+          <strong>{title} </strong>
+          <small>{detail}</small>
+        </div>
+        {status ? <Badge status={status} /> : fallback}
+      </Link>
+      {action ? <div className="activity-actions">{action}</div> : null}
+    </li>
+  );
+}
+
 export default function DashboardActivity() {
+  const cache = useQueryClient();
   const query = useQuery({
     queryKey: ["dashboard"],
     queryFn: () => api<Overview>("/dashboard"),
     refetchInterval: 10000,
   });
+  const acknowledge = useMutation({
+    mutationFn: (runId: string) =>
+      api(`/maintenance/interrupted/${runId}/acknowledge`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["dashboard"] });
+      void cache.invalidateQueries({ queryKey: ["maintenance"] });
+    },
+  });
+  const cancel = useMutation({
+    mutationFn: (runId: string) =>
+      api(`/runs/${runId}/cancel`, { method: "POST" }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["dashboard"] });
+      void cache.invalidateQueries({ queryKey: ["runs"] });
+      void cache.invalidateQueries({ queryKey: ["status"] });
+    },
+  });
   const data = query.data;
+  const interrupted = data?.interrupted_runs ?? [];
+  const notices = data?.notices ?? [];
+  const active = data?.active_runs ?? [];
+  const interruptedIds = new Set(interrupted.map((row) => row.id));
+  const attention =
+    interrupted.length +
+    notices.filter((row) => !interruptedIds.has(row.run_id)).length +
+    active.length;
   return (
     <div className="dashboard-activity">
-      <ErrorNotice error={query.error} />
+      <ErrorNotice error={query.error ?? acknowledge.error ?? cancel.error} />
       {query.isPending && <Loading />}
       {data && (
         <div className="dashboard-activity-grid">
-          {(data.notices?.length ?? 0) > 0 && (
-            <Section
-              title={`Agent notices · ${data.unread_notice_count ?? data.notices?.length}`}
-              to="/agents"
-            >
-              <div className="activity-list">
-                {data.notices!.map((notice) => (
-                  <Link key={notice.id} to={`/runs/${notice.run_id}`}>
-                    <div>
-                      <strong>{notice.title}</strong>
-                      <small>
-                        {notice.kind.replaceAll("_", " ")} ·{" "}
-                        {time(notice.created_at)}
-                      </small>
-                    </div>
-                  </Link>
+          <Section title={`Needs attention · ${attention}`} to="/runs" wide>
+            {attention ? (
+              <ul className="activity-list">
+                {interrupted.map((run) => (
+                  <ActivityRow
+                    key={`interrupted-${run.id}`}
+                    to={`/runs/${run.id}`}
+                    title={run.title}
+                    detail={`${run.executor_type} · interrupted · not replayed`}
+                    status={run.status}
+                    action={
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={acknowledge.isPending}
+                        onClick={() => acknowledge.mutate(run.id)}
+                      >
+                        Mark inspected
+                      </Button>
+                    }
+                  />
                 ))}
-              </div>
-            </Section>
-          )}
-          {(data.interrupted_runs?.length ?? 0) > 0 && (
-            <Section
-              title={`Needs inspection · ${data.interrupted_runs!.length}`}
-              to="/system"
-            >
-              <div className="activity-list">
-                {data.interrupted_runs!.map((run) => (
-                  <Link key={run.id} to={`/runs/${run.id}`}>
-                    <div>
-                      <strong>{run.title}</strong>
-                      <small>
-                        {run.executor_type} · interrupted · not replayed
-                      </small>
-                    </div>
-                    <Badge status={run.status} />
-                  </Link>
+                {notices
+                  .filter((notice) => !interruptedIds.has(notice.run_id))
+                  .map((notice) => (
+                    <ActivityRow
+                      key={notice.id}
+                      to={`/runs/${notice.run_id}`}
+                      title={notice.title}
+                      detail={`${notice.kind.replaceAll("_", " ")} · ${time(notice.created_at)}`}
+                    />
+                  ))}
+                {active.map((run) => (
+                  <ActivityRow
+                    key={run.id}
+                    to={`/runs/${run.id}`}
+                    title={run.title}
+                    detail={
+                      run.status === "waiting_for_approval"
+                        ? `${run.executor_type} · grant or deny on the Run`
+                        : `${run.executor_type} · ${run.execution_target}`
+                    }
+                    status={run.status}
+                    action={
+                      CANCELABLE.has(run.status) ? (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          disabled={cancel.isPending}
+                          onClick={() => cancel.mutate(run.id)}
+                        >
+                          Stop
+                        </Button>
+                      ) : run.status === "cancel_requested" ? (
+                        <span className="muted">Stopping…</span>
+                      ) : undefined
+                    }
+                  />
                 ))}
-              </div>
-            </Section>
-          )}
-          <Section title={`In progress · ${data.active_run_count}`} to="/runs">
-            {data.active_runs.length ? (
-              <div className="activity-list">
-                {data.active_runs.map((run) => (
-                  <Link key={run.id} to={`/runs/${run.id}`}>
-                    <div>
-                      <strong>{run.title}</strong>
-                      <small>
-                        {run.executor_type} · {run.execution_target}
-                      </small>
-                    </div>
-                    <Badge status={run.status} />
-                  </Link>
-                ))}
-              </div>
+              </ul>
             ) : (
-              <Empty title="No active runs">
-                Queued and running work will appear here.
+              <Empty title="Nothing needs you right now">
+                Interrupted work, notices and in-progress Runs will appear here
+                with Stop or Mark inspected.
               </Empty>
             )}
           </Section>
           <Section title="Upcoming schedules" to="/agents">
             {data.upcoming.length ? (
-              <div className="activity-list">
+              <ul className="activity-list">
                 {data.upcoming.map((agent) => (
-                  <Link key={agent.id} to={`/agents/${agent.id}`}>
-                    <div>
-                      <strong>{agent.name}</strong>
-                      <small>
-                        {time(agent.next_run_at)} · {agent.trigger}
-                        {agent.overdue && " · Due / waiting for scheduler"}
-                      </small>
-                    </div>
-                  </Link>
+                  <ActivityRow
+                    key={agent.id}
+                    to={`/agents/${agent.id}`}
+                    title={agent.name}
+                    detail={`${time(agent.next_run_at)} · ${agent.trigger}${
+                      agent.overdue ? " · Due / waiting for scheduler" : ""
+                    }`}
+                  />
                 ))}
-              </div>
+              </ul>
             ) : (
               <Empty title="Nothing scheduled">
                 Enable an agent with a schedule to see its next due time.
@@ -186,23 +274,22 @@ export default function DashboardActivity() {
             to="/agents"
           >
             {data.agents.length ? (
-              <div className="activity-list">
+              <ul className="activity-list">
                 {data.agents.map((agent) => (
-                  <Link key={agent.id} to={`/agents/${agent.id}`}>
-                    <div>
-                      <strong>{agent.name}</strong>
-                      <small>
-                        {agent.model} · {agent.trigger}
-                      </small>
-                    </div>
-                    {agent.last_status ? (
-                      <Badge status={agent.last_status} />
-                    ) : (
-                      <span className="muted">Not run yet</span>
-                    )}
-                  </Link>
+                  <ActivityRow
+                    key={agent.id}
+                    to={`/agents/${agent.id}`}
+                    title={agent.name}
+                    detail={`${agent.model} · ${agent.trigger}`}
+                    status={agent.last_status || undefined}
+                    fallback={
+                      agent.last_status ? undefined : (
+                        <span className="muted">Not run yet</span>
+                      )
+                    }
+                  />
                 ))}
-              </div>
+              </ul>
             ) : (
               <Empty title="No enabled agents">
                 Create and inspect a draft before activating it.
@@ -211,18 +298,16 @@ export default function DashboardActivity() {
           </Section>
           <Section title="Recent conversations" to="/chat">
             {data.conversations.length ? (
-              <div className="activity-list">
+              <ul className="activity-list">
                 {data.conversations.map((conversation) => (
-                  <Link key={conversation.id} to={`/chat/${conversation.id}`}>
-                    <div>
-                      <strong>{conversation.title}</strong>
-                      <small>
-                        {conversation.model} · {time(conversation.updated_at)}
-                      </small>
-                    </div>
-                  </Link>
+                  <ActivityRow
+                    key={conversation.id}
+                    to={`/chat/${conversation.id}`}
+                    title={conversation.title}
+                    detail={`${conversation.model} · ${time(conversation.updated_at)}`}
+                  />
                 ))}
-              </div>
+              </ul>
             ) : (
               <Empty title="Start a conversation">
                 Local model conversations are saved between restarts.
@@ -231,26 +316,17 @@ export default function DashboardActivity() {
           </Section>
           <Section title="Recent artifacts" to="/library">
             {data.artifacts.length ? (
-              <div className="activity-list">
+              <ul className="activity-list">
                 {data.artifacts.map((artifact) => (
-                  <Link key={artifact.id} to={`/library/${artifact.id}`}>
-                    {artifact.has_thumbnail && (
-                      <img
-                        className="dashboard-thumbnail"
-                        src={`/api/artifacts/${artifact.id}/thumbnail`}
-                        alt=""
-                        loading="lazy"
-                      />
-                    )}
-                    <div>
-                      <strong>{artifact.name}</strong>
-                      <small>
-                        {artifact.type} · {time(artifact.created_at)}
-                      </small>
-                    </div>
-                  </Link>
+                  <ActivityRow
+                    key={artifact.id}
+                    to={`/library/${artifact.id}`}
+                    title={artifact.name}
+                    detail={`${artifact.type} · ${time(artifact.created_at)}`}
+                    thumbnail={artifact.has_thumbnail}
+                  />
                 ))}
-              </div>
+              </ul>
             ) : (
               <Empty title="Your outputs live here">
                 Images, reports and other Run artifacts share the Library.
@@ -263,24 +339,21 @@ export default function DashboardActivity() {
               readiness.
             </p>
             {data.runtimes.length ? (
-              <div className="activity-list">
+              <ul className="activity-list">
                 {data.runtimes.map((runtime) => (
-                  <Link key={runtime.id} to="/system">
-                    <div>
-                      <strong>{runtime.name}</strong>
-                      <small>
-                        {runtime.ownership} ·{" "}
-                        {runtime.source === "host_process"
-                          ? "Process"
-                          : "Endpoint"}{" "}
-                        · {time(runtime.updated_at)}
-                        {runtime.stale && " · Stale"}
-                      </small>
-                    </div>
-                    <Badge status={runtime.status} />
-                  </Link>
+                  <ActivityRow
+                    key={runtime.id}
+                    to="/system"
+                    title={runtime.name}
+                    detail={`${runtime.ownership} · ${
+                      runtime.source === "host_process" ? "Process" : "Endpoint"
+                    } · ${time(runtime.updated_at)}${
+                      runtime.stale ? " · Stale" : ""
+                    }`}
+                    status={runtime.status}
+                  />
                 ))}
-              </div>
+              </ul>
             ) : (
               <Empty title="No observations yet">
                 Open System to inspect the existing runtimes.

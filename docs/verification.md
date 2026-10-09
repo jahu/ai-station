@@ -168,3 +168,11 @@ Normal tests never contacted PyPI. Vendor mode installed a disposable local whee
 ## Optional memory embeddings with explicit local setup — 2026-10-09
 
 `./scripts/check.sh`: 641 Python tests passed (5 skipped), including fail-closed missing setup, rejection of public endpoints and `/embeddings` paths, health/index/search Runs, refusal of all-zero vectors, and migration that preserves existing memories. Frontend lint, TypeScript, 80 component tests and production build passed. No embedding weights were downloaded. Cloud embedding providers remain unavailable. Claude Code remains untested and unavailable.
+
+## Data-preserving upgrade backups — 2026-10-09
+
+`./scripts/check.sh`: 669 Python tests passed (5 skipped), including `VACUUM INTO` SQLite backup artifacts with integrity_check, cancel deleting a partial copy, unpublished restore/rollout, interrupted-run acknowledgement without replay, and launcher/compose bind-mount invariants. Frontend lint, TypeScript, 88 component tests and production build passed. Restore, image rollout and LAN publish remain unpublished. Claude Code remains untested and unavailable.
+
+## Unified Home activity — 2026-10-09
+
+Frontend lint, TypeScript, 90 component tests and production build passed. Home attention Stop/Mark inspected use the existing cancel and interrupted-acknowledgement APIs without restore, replay or granting approvals. Command palette Actions include backup readiness (`?focus=maintenance`). Skip link and list semantics are present. Broader workspace keyboard/accessibility coverage remains open. Claude Code remains untested and unavailable.
