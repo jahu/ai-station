@@ -507,7 +507,9 @@ export default function AssistantActions({
     repairs = repairAttempts,
     nativeModel = codingModel,
   ) {
-    const localExplore = action === "coding.local" && auto;
+    const autoExplore =
+      ["coding.local", "coding.cursor", "coding.codex"].includes(action) &&
+      auto;
     const project = projects.data?.find((p) => p.id === id);
     const selected = parseFilePaths(paths);
     onChange({
@@ -521,12 +523,12 @@ export default function AssistantActions({
         (action === "coding.local" ||
           (["coding.cursor", "coding.codex"].includes(action) && allow)) &&
         project &&
-        (selected.length || localExplore)
+        (selected.length || autoExplore)
           ? {
               project_id: project.id,
               expected_updated_at: project.updated_at,
-              files: localExplore ? [] : selected,
-              ...(localExplore ? { explore: true } : {}),
+              files: autoExplore ? [] : selected,
+              ...(autoExplore ? { explore: true } : {}),
               ...(action === "coding.local" && repairs > 0
                 ? { max_repair_attempts: repairs }
                 : {}),
@@ -986,18 +988,19 @@ export default function AssistantActions({
               )}
             </div>
           )}
-          {value.action === "coding.local" && (
-            <ExploreChoiceList
-              checked={explore}
-              disabled={busy}
-              onChange={(next) => {
-                setExplore(next);
-                scope(projectId, files, false, value.action, next);
-              }}
-            >
-              Let Local AI find the relevant files
-            </ExploreChoiceList>
-          )}
+          <ExploreChoiceList
+            checked={explore}
+            disabled={busy}
+            onChange={(next) => {
+              setExplore(next);
+              setExternal(false);
+              scope(projectId, files, false, value.action, next);
+            }}
+          >
+            {value.action === "coding.local"
+              ? "Let Local AI find the relevant files"
+              : "Let the agent find the relevant files"}
+          </ExploreChoiceList>
           {value.action === "coding.local" && explore && (
             <small>
               Public URLs in the task are fetched automatically. Local AI may
@@ -1026,10 +1029,11 @@ export default function AssistantActions({
               />
             </div>
           )}
-          {value.action === "coding.local" && explore ? (
+          {explore ? (
             <p className="muted">
-              Local source exploration in a new worktree. Review selected files
-              and changes in the resulting Run.
+              {value.action === "coding.local"
+                ? "Local source exploration in a new worktree. Review selected files and changes in the resulting Run."
+                : "Repository exploration in a new worktree. Cursor and Codex stay repository-only; they do not GET public pages."}
             </p>
           ) : (
             <FileChoiceList
@@ -1057,8 +1061,11 @@ export default function AssistantActions({
                 scope(projectId, files, next);
               }}
             >
-              Allow sending this instruction, project guidance and selected file
-              contents to external{" "}
+              Allow sending this instruction, project guidance and{" "}
+              {explore
+                ? "relevant source files found by the agent"
+                : "the selected files"}{" "}
+              to external{" "}
               {value.action === "coding.codex" ? "Codex" : "Cursor"}.
             </ConsentChoiceList>
           )}

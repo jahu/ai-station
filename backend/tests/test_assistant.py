@@ -382,6 +382,45 @@ def test_assistant_external_coding_uses_native_cli_model(provider):
         assert rejected.status_code == 422
 
 
+@pytest.mark.parametrize("provider", ["cursor", "codex"])
+def test_assistant_external_coding_uses_automatic_file_discovery(provider):
+    from app.models import Project
+
+    with session_factory()() as session:
+        project = Project(name="explore", repo_path="/allowed/explore")
+        session.add(project)
+        session.commit()
+        scope = {
+            "project_id": project.id,
+            "expected_updated_at": project.updated_at.isoformat(),
+            "files": [],
+            "explore": True,
+            "external_ai": True,
+            "executor": provider,
+        }
+    with TestClient(app) as client:
+        cid = create(client)
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={"content": "Add feature", "action": f"coding.{provider}", "coding": scope},
+        )
+        assert response.status_code == 202, response.text
+        step()
+        child = client.get(f"/api/chat/conversations/{cid}").json()["active_run"]
+        assert child["parameters"][provider]["explore"] is True
+        assert child["parameters"][provider]["files"] == []
+        assert child["metadata"]["next_executor"] == f"{provider}_proposal"
+        rejected = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "content": "Add feature",
+                "action": f"coding.{provider}",
+                "coding": {**scope, "files": ["README.md"]},
+            },
+        )
+        assert rejected.status_code == 422
+
+
 def succeed(session, run):
     transition(session, run, RunStatus.CLAIMED, event_type="run.claimed")
     transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
