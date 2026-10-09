@@ -290,7 +290,7 @@ it("stages local coding scope without granting Cursor consent", async () => {
     target: { value: "coding.cursor" },
   });
   expect(screen.getByTestId("scope").textContent).toBe("null");
-  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(screen.getByRole("checkbox", { name: /Allow sending/ }));
   expect(JSON.parse(screen.getByTestId("scope").textContent!).external_ai).toBe(
     true,
   );
@@ -301,7 +301,7 @@ it("stages local coding scope without granting Cursor consent", async () => {
     target: { value: "coding.codex" },
   });
   expect(screen.getByTestId("scope").textContent).toBe("null");
-  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(screen.getByRole("checkbox", { name: /Allow sending/ }));
   expect(JSON.parse(screen.getByTestId("scope").textContent!).executor).toBe(
     "codex",
   );

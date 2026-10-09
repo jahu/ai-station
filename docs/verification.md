@@ -364,3 +364,7 @@ Frontend lint, TypeScript, 140 component tests and production build passed. Upco
 ## Coding exploration step keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 141 component tests and production build passed. Repository exploration steps reuse `useListKeyboard` with unique Step names. Enter does not invent an exploration Run; observations stay on the coding review. File listbox, commit, repair and publication are unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Coding file checkboxes keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 148 component tests and production build passed. Explicit Coding and assistant file paths reuse `useListKeyboard` as checkboxes with unique Edit file names. Space or Enter removes the focused path and does not start a coding Run. Automatic discovery, consent, commit, repair and publication are unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

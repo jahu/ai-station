@@ -9,6 +9,8 @@ import { Badge, ErrorNotice } from "../components/common";
 import CodingReview from "./CodingReview";
 import GithubPublication from "./GithubPublication";
 import { useListKeyboard } from "./useListKeyboard";
+import { FileChoiceList } from "./FileChoiceList";
+import { parseFilePaths } from "./filePaths";
 import { GpuChoiceList } from "./GpuChoiceList";
 
 export type CodingScope = {
@@ -476,10 +478,7 @@ export default function AssistantActions({
   ) {
     const localExplore = action === "coding.local" && auto;
     const project = projects.data?.find((p) => p.id === id);
-    const selected = paths
-      .split("\n")
-      .map((p) => p.trim())
-      .filter(Boolean);
+    const selected = parseFilePaths(paths);
     onChange({
       ...value,
       action,
@@ -1040,21 +1039,15 @@ export default function AssistantActions({
               and changes in the resulting Run.
             </p>
           ) : (
-            <>
-              <label>
-                Selected files
-                <textarea
-                  rows={3}
-                  value={files}
-                  placeholder="One repository-relative path per line"
-                  onChange={(e) => {
-                    setFiles(e.target.value);
-                    setExternal(false);
-                    scope(projectId, e.target.value, false);
-                  }}
-                />
-              </label>
-            </>
+            <FileChoiceList
+              files={files}
+              label="Selected files"
+              onChange={(value) => {
+                setFiles(value);
+                setExternal(false);
+                scope(projectId, value, false);
+              }}
+            />
           )}
           {value.action === "coding.local" ? (
             <p className="muted">
