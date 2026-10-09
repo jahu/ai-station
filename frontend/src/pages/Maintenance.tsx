@@ -30,9 +30,30 @@ type Readiness = {
   summary: string;
 };
 
+type BackupReport = {
+  integrity_check?: string;
+  schema_revision?: string | null;
+};
+
 type BackupList = {
   items: Array<Run & { restore: string }>;
   restore: string;
+};
+
+type BackupInspect = {
+  run_id: string;
+  status: string;
+  integrity_check: string;
+  hash_matches: boolean;
+  size_bytes: number;
+  schema_revision: string | null;
+  live_schema_revision: string | null;
+  schema_matches_live: boolean;
+  restore: string;
+  image_rollout: string;
+  replay: boolean;
+  summary: string;
+  relative_path: string;
 };
 
 const json = (method: string, body: unknown) => ({
@@ -66,6 +87,10 @@ export default function Maintenance() {
       navigate(`/runs/${run.id}`);
     },
   });
+  const inspect = useMutation({
+    mutationFn: (runId: string) =>
+      api<BackupInspect>(`/maintenance/backups/${runId}`),
+  });
   const acknowledge = useMutation({
     mutationFn: (runId: string) =>
       api<Run>(
@@ -88,7 +113,7 @@ export default function Maintenance() {
         <div>
           <h2>Backup and upgrade readiness</h2>
           <p className="muted">
-            Inspect-only · restore and image rollout stay unpublished
+            Inspect a verified copy · restore and image rollout stay unpublished
           </p>
         </div>
         <Badge
@@ -100,7 +125,11 @@ export default function Maintenance() {
       <p className="muted">{ready?.summary}</p>
       <ErrorNotice
         error={
-          status.error ?? backups.error ?? backup.error ?? acknowledge.error
+          status.error ??
+          backups.error ??
+          backup.error ??
+          inspect.error ??
+          acknowledge.error
         }
       />
       {ready ? (
@@ -200,17 +229,56 @@ export default function Maintenance() {
       ) : null}
       {backups.data?.items.length ? (
         <div className="diagnostic-list mt">
-          {backups.data.items.map((row) => (
-            <div key={row.id}>
-              <div>
-                <strong>{row.summary || "SQLite backup"}</strong>
-                <p>
-                  {row.status} · restore {row.restore}
-                </p>
+          {backups.data.items.map((row) => {
+            const recorded = row.metadata?.backup as BackupReport | undefined;
+            const checked =
+              inspect.data?.run_id === row.id ? inspect.data : null;
+            return (
+              <div key={row.id}>
+                <div>
+                  <strong>{row.summary || "SQLite backup"}</strong>
+                  <p>
+                    {row.status}
+                    {recorded?.integrity_check
+                      ? ` · recorded integrity_check=${recorded.integrity_check}`
+                      : ""}
+                    {checked
+                      ? ` · re-check ${checked.integrity_check}`
+                      : ""}
+                    {" · restore "}
+                    {row.restore}
+                  </p>
+                  {checked ? (
+                    <p className="muted">
+                      {checked.summary}
+                      {checked.schema_revision
+                        ? ` · copy schema ${checked.schema_revision}`
+                        : ""}
+                      {checked.schema_matches_live
+                        ? " · matches live schema"
+                        : " · schema differs from live"}
+                      {` · ${checked.relative_path}`}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="row">
+                  {row.status === "succeeded" ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={inspect.isPending}
+                      onClick={() => inspect.mutate(row.id)}
+                    >
+                      {inspect.isPending && inspect.variables === row.id
+                        ? "Checking…"
+                        : "Inspect copy"}
+                    </Button>
+                  ) : null}
+                  <Link to={`/runs/${row.id}`}>Open backup Run</Link>
+                </div>
               </div>
-              <Link to={`/runs/${row.id}`}>Open backup Run</Link>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : null}
     </section>
