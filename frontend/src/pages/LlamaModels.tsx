@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -6,6 +6,7 @@ import { Check, ChevronDown, Cpu, Search, Server, X } from "lucide-react";
 import { api, useHardware, type Run } from "../api";
 import { ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
+import { useListKeyboard } from "./useListKeyboard";
 
 type Model = {
   id: string;
@@ -188,6 +189,13 @@ export default function LlamaModels({
     name.toLowerCase().includes(search.toLowerCase());
   const available = catalog.data?.models.filter((m) => matches(m.name)) ?? [];
   const providers = localModels.filter(matches);
+  const pickerKeys = [...available.map((model) => model.model_key), ...providers];
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    pickerKeys,
+    (key) => key,
+  );
   function choose() {
     if (pending || invalid) return;
     if (needsSetup) load.mutate(choice);
@@ -275,16 +283,26 @@ export default function LlamaModels({
                 (needsSetup ? hardware.error : null)
               }
             />
-            <div
-              className="model-options"
-              role="group"
-              aria-label="Available models"
-            >
+            <section aria-labelledby={headingId}>
+              <h3 id={headingId} className="sr-only">
+                Available models
+              </h3>
+              <p id={labelId} className="dashboard-note">
+                Arrow keys choose a model while the list is focused. Enter marks
+                it. Use model applies the choice.
+              </p>
+              <div
+                ref={listRef}
+                className="model-options"
+                role="group"
+                aria-labelledby={labelId}
+                onKeyDown={onKeyDown}
+              >
               <div className="model-group-label">
                 <Cpu size={13} /> llama.cpp <span>FROM YOUR DISK</span>
               </div>
               {catalog.isPending && <Loading />}
-              {available.map((model) => {
+              {available.map((model, i) => {
                 const runtime = instanceFor(model);
                 return (
                   <button
@@ -294,6 +312,7 @@ export default function LlamaModels({
                     aria-label={`${modelName(model.name)}, llama.cpp, ${stateLabel(runtime)}`}
                     aria-pressed={draft === model.model_key}
                     disabled={pending}
+                    {...itemProps(i, model.model_key)}
                     onClick={() => setDraft(model.model_key)}
                   >
                     <span className="model-option-icon">
@@ -330,7 +349,7 @@ export default function LlamaModels({
                 <Server size={13} /> Local server{" "}
                 <span>OLLAMA / COMPATIBLE</span>
               </div>
-              {providers.map((model) => (
+              {providers.map((model, i) => (
                 <button
                   type="button"
                   key={model}
@@ -338,6 +357,7 @@ export default function LlamaModels({
                   aria-label={`${model}, local server`}
                   aria-pressed={draft === model}
                   disabled={pending}
+                  {...itemProps(available.length + i, model)}
                   onClick={() => setDraft(model)}
                 >
                   <span className="model-option-icon">
@@ -355,7 +375,8 @@ export default function LlamaModels({
               {!providers.length && (
                 <p className="model-empty">No matching server models.</p>
               )}
-            </div>
+              </div>
+            </section>
             <details className="model-advanced">
               <summary>GPU, context and advanced options</summary>
               {choice ? (

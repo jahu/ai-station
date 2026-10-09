@@ -316,3 +316,7 @@ Frontend lint, TypeScript, 125 component tests and production build passed. Regi
 ## Compose containers keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 126 component tests and production build passed. Running compose containers form one keyboard sequence (arrows, Home, End) after Inspect running image. Container names include the service and short id. Rollout remains unpublished. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Model picker keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 127 component tests and production build passed. The Chat/Coding model picker is one keyboard sequence (arrows, Home, End, Enter marks). llama.cpp and local-server models share that list. Use model still applies the choice. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
