@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { RunEvent } from "../api";
 import { Button } from "../components/ui/button";
+import { useListKeyboard } from "./useListKeyboard";
 
 const outputTypes = new Set(["stdout", "stderr", "chat.delta", "agent.delta"]);
 const pageSize = 50;
@@ -13,6 +14,8 @@ export default function RunTimeline({
   events: RunEvent[];
   live: boolean;
 }) {
+  const headingId = useId();
+  const labelId = useId();
   const [view, setView] = useState<View>("activity");
   // Sequence boundaries keep an older page stable while new events arrive.
   const [boundaries, setBoundaries] = useState<number[]>([]);
@@ -27,6 +30,10 @@ export default function RunTimeline({
       : filtered.findIndex((e) => e.sequence >= before);
   const start = Math.max(0, end - pageSize);
   const page = filtered.slice(start, end);
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    page,
+    (event) => event.id,
+  );
   const output =
     view === "output"
       ? events.filter((e) => outputTypes.has(e.event_type))
@@ -46,9 +53,9 @@ export default function RunTimeline({
     })
     .join("");
   return (
-    <section className="panel run-timeline">
+    <section className="panel run-timeline" aria-labelledby={headingId}>
       <div className="panel-heading">
-        <h2>Execution timeline</h2>
+        <h2 id={headingId}>Execution timeline</h2>
         <span className="muted">
           {live ? "Live events" : "Recorded events"} · {events.length}
         </span>
@@ -86,20 +93,27 @@ export default function RunTimeline({
         </div>
       ) : (
         <>
-          <p className="muted run-event-count">
+          <p id={labelId} className="muted run-event-count">
             {filtered.length
               ? `${start + 1}–${end} of ${filtered.length} ${view === "activity" ? "activity" : "total"} events`
               : "No events in this view yet."}
             {view === "activity" &&
-              " · Token and process output is grouped in Output."}
+              " · Token and process output is grouped in Output."}{" "}
+            Arrow keys choose an event while the list is focused. Older and
+            newer pages stay outside this list.
           </p>
           <div
+            ref={listRef}
             className="timeline run-event-list"
-            tabIndex={0}
-            aria-label="Execution events"
+            aria-labelledby={labelId}
+            onKeyDown={onKeyDown}
           >
-            {page.map((event) => (
-              <article key={event.id}>
+            {page.map((event, i) => (
+              <article
+                key={event.id}
+                aria-label={`Event ${event.event_type} ${event.sequence}`}
+                {...itemProps(i, event.id)}
+              >
                 <span className="timeline-node" />
                 <div className="row spread">
                   <strong>{event.event_type}</strong>

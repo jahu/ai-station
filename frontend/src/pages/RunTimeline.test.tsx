@@ -32,6 +32,35 @@ it("keeps streaming tokens out of Activity and presents readable full output", (
   fireEvent.click(screen.getByRole("button", { name: "All events" }));
   expect(container.querySelectorAll(".timeline article")).toHaveLength(50);
 });
+it("moves through execution events with arrow keys", () => {
+  render(
+    <RunTimeline
+      events={[
+        event(1, "run.started", "start"),
+        event(2, "tool.completed", "done"),
+      ]}
+      live={false}
+    />,
+  );
+  const first = screen.getByLabelText("Event run.started 1");
+  const second = screen.getByLabelText("Event tool.completed 2");
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(
+    screen.getByRole("region", { name: "Execution timeline" }),
+  ).toBeTruthy();
+  expect(screen.getByText(/Arrow keys choose an event/)).toBeTruthy();
+  fireEvent.keyDown(first.closest(".run-event-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".run-event-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
 it("preserves earlier pages while live events arrive and returns to the latest", () => {
   const events = Array.from({ length: 120 }, (_, i) =>
     event(i + 1, "tool.completed", String(i + 1)),
