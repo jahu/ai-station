@@ -65,6 +65,17 @@ def test_public_url_accepts_https_example():
     assert public_http.public_url("https://www.koratimber.com/") == "https://www.koratimber.com/"
 
 
+def test_prompt_public_urls_extracts_http_and_skips_private():
+    text = (
+        "Zbuduj stronę firmy Kora Timber ( https://www.koratimber.com/ ) "
+        "oraz http://127.0.0.1/admin i https://example.com/docs."
+    )
+    assert public_http.prompt_public_urls(text) == [
+        "https://www.koratimber.com/",
+        "https://example.com/docs",
+    ]
+
+
 def test_public_addresses_reject_loopback(monkeypatch):
     monkeypatch.setattr(
         public_http.socket,
