@@ -1,16 +1,11 @@
-import {
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from "react";
+import { useId, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { api } from "../api";
 import { Badge, Empty, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
+import { useListKeyboard } from "./useListKeyboard";
 
 interface AgentSummary {
   id: string;
@@ -125,10 +120,8 @@ function ActivityRow({
   fallback,
   action,
   inspectLabel,
-  inspectTabIndex,
-  attentionIndex,
+  inspectProps,
   current,
-  onInspectFocus,
 }: {
   to: string;
   title: string;
@@ -138,21 +131,18 @@ function ActivityRow({
   fallback?: ReactNode;
   action?: ReactNode;
   inspectLabel: string;
-  inspectTabIndex?: number;
-  attentionIndex?: number;
+  inspectProps?: {
+    "aria-current"?: "true";
+    tabIndex: number;
+    "data-list-index": number;
+    onFocus: () => void;
+  };
   current?: boolean;
-  onInspectFocus?: () => void;
 }) {
   const id = to.split("/").pop() ?? title;
   return (
     <li className="activity-row" aria-current={current ? "true" : undefined}>
-      <Link
-        to={to}
-        aria-label={inspectLabel}
-        tabIndex={inspectTabIndex}
-        data-attention-index={attentionIndex}
-        onFocus={onInspectFocus}
-      >
+      <Link to={to} aria-label={inspectLabel} {...inspectProps}>
         {thumbnail ? (
           <img
             className="dashboard-thumbnail"
@@ -172,6 +162,12 @@ function ActivityRow({
   );
 }
 
+function attentionShortId(item: AttentionItem, kind: "inspect" | "action") {
+  const id =
+    kind === "action" && item.action === "read" ? item.noticeId : item.runId;
+  return (id ?? item.key).slice(0, 8);
+}
+
 function attentionAction(
   item: AttentionItem,
   current: boolean,
@@ -189,6 +185,7 @@ function attentionAction(
 ) {
   const runId = item.runId;
   const noticeId = item.noticeId;
+  const actionId = attentionShortId(item, "action");
   if (item.action === "acknowledge" && runId) {
     return (
       <Button
@@ -196,7 +193,7 @@ function attentionAction(
         variant="secondary"
         tabIndex={current ? 0 : -1}
         disabled={handlers.acknowledgePending}
-        aria-label={`Mark inspected ${item.title}`}
+        aria-label={`Mark inspected ${item.title} ${actionId}`}
         onFocus={handlers.onSelect}
         onClick={() => handlers.onAcknowledge(runId)}
       >
@@ -211,7 +208,7 @@ function attentionAction(
         variant="secondary"
         tabIndex={current ? 0 : -1}
         disabled={handlers.cancelPending}
-        aria-label={`Stop ${item.title}`}
+        aria-label={`Stop ${item.title} ${actionId}`}
         onFocus={handlers.onSelect}
         onClick={() => handlers.onStop(runId)}
       >
@@ -229,7 +226,7 @@ function attentionAction(
         variant="secondary"
         tabIndex={current ? 0 : -1}
         disabled={handlers.readPending}
-        aria-label={`Mark read ${item.title}`}
+        aria-label={`Mark read ${item.title} ${actionId}`}
         onFocus={handlers.onSelect}
         onClick={() => handlers.onRead(noticeId)}
       >
@@ -244,7 +241,7 @@ function attentionAction(
           type="button"
           tabIndex={current ? 0 : -1}
           disabled={handlers.decidePending}
-          aria-label={`Approve and queue ${item.title}`}
+          aria-label={`Approve and queue ${item.title} ${actionId}`}
           onFocus={handlers.onSelect}
           onClick={() => handlers.onDecide(runId, "granted")}
         >
@@ -255,7 +252,7 @@ function attentionAction(
           variant="secondary"
           tabIndex={current ? 0 : -1}
           disabled={handlers.decidePending}
-          aria-label={`Deny ${item.title}`}
+          aria-label={`Deny ${item.title} ${actionId}`}
           onFocus={handlers.onSelect}
           onClick={() => handlers.onDecide(runId, "denied")}
         >
@@ -289,41 +286,11 @@ function AttentionList({
   onDecide: (runId: string, resolution: "granted" | "denied") => void;
 }) {
   const labelId = useId();
-  const listRef = useRef<HTMLUListElement>(null);
-  const navigate = useNavigate();
-  const [selectedKey, setSelectedKey] = useState(items[0]?.key ?? "");
-  const found = items.findIndex((item) => item.key === selectedKey);
-  const index = found >= 0 ? found : 0;
-  const selected = items[index];
-  const focusItem = (next: number) => {
-    const clamped = Math.max(0, Math.min(items.length - 1, next));
-    const item = items[clamped];
-    if (!item) return;
-    setSelectedKey(item.key);
-    const link = listRef.current?.querySelector<HTMLElement>(
-      `[data-attention-index="${clamped}"]`,
+  const { listRef, index, setSelectedKey, onKeyDown, itemProps } =
+    useListKeyboard<AttentionItem, HTMLUListElement>(
+      items,
+      (item) => item.key,
     );
-    link?.focus();
-    link?.scrollIntoView?.({ block: "nearest" });
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLUListElement>) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
-      event.preventDefault();
-      focusItem(index + 1);
-    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-      event.preventDefault();
-      focusItem(index - 1);
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      focusItem(0);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      focusItem(items.length - 1);
-    } else if (event.key === "Enter" && event.target === event.currentTarget) {
-      event.preventDefault();
-      if (selected) navigate(selected.to);
-    }
-  };
   return (
     <>
       <p id={labelId} className="dashboard-note">
@@ -339,6 +306,7 @@ function AttentionList({
       >
         {items.map((item, i) => {
           const current = i === index;
+          const inspectId = attentionShortId(item, "inspect");
           return (
             <ActivityRow
               key={item.key}
@@ -346,11 +314,9 @@ function AttentionList({
               title={item.title}
               detail={item.detail}
               status={item.status}
-              inspectLabel={`Inspect ${item.title}`}
-              inspectTabIndex={current ? 0 : -1}
-              attentionIndex={i}
+              inspectLabel={`Inspect ${item.title} ${inspectId}`}
+              inspectProps={itemProps(i, item.key)}
               current={current}
-              onInspectFocus={() => setSelectedKey(item.key)}
               action={attentionAction(item, current, {
                 acknowledgePending,
                 cancelPending,
@@ -451,6 +417,7 @@ export default function DashboardActivity() {
         detail: `${notice.kind.replaceAll("_", " ")} · ${time(notice.created_at)}`,
         action: "read" as const,
         noticeId: notice.id,
+        runId: notice.run_id,
       })),
     ...active.map((run) => ({
       key: run.id,

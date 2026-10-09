@@ -143,17 +143,19 @@ it("unifies attention with inspect and stop actions", async () => {
   ).toBe("/library/artifact");
   expect(
     screen
-      .getByRole("link", { name: "Inspect Image task" })
+      .getByRole("link", { name: "Inspect Image task run" })
       .getAttribute("href"),
   ).toBe("/runs/run");
   expect(
     screen
-      .getByRole("link", { name: "Inspect Agent workflow failed" })
+      .getByRole("link", { name: "Inspect Agent workflow failed failed-r" })
       .getAttribute("href"),
   ).toBe("/runs/failed-run");
   expect(
     screen
-      .getByRole("link", { name: "Inspect Image task needs inspection" })
+      .getByRole("link", {
+        name: "Inspect Image task needs inspection interrup",
+      })
       .getAttribute("href"),
   ).toBe("/runs/interrupted-run");
   expect(screen.getByText(/Due \/ waiting for scheduler/)).toBeTruthy();
@@ -161,7 +163,7 @@ it("unifies attention with inspect and stop actions", async () => {
   expect(screen.getByText(/Stale/)).toBeTruthy();
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Mark inspected Image task needs inspection",
+      name: "Mark inspected Image task needs inspection interrup",
     }),
   );
   await waitFor(() =>
@@ -174,7 +176,7 @@ it("unifies attention with inspect and stop actions", async () => {
       ),
     ).toBe(true),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Stop Image task" }));
+  fireEvent.click(screen.getByRole("button", { name: "Stop Image task run" }));
   await waitFor(() =>
     expect(
       fetch.mock.calls.some(
@@ -185,7 +187,9 @@ it("unifies attention with inspect and stop actions", async () => {
     ).toBe(true),
   );
   fireEvent.click(
-    screen.getByRole("button", { name: "Mark read Agent workflow failed" }),
+    screen.getByRole("button", {
+      name: "Mark read Agent workflow failed notice",
+    }),
   );
   await waitFor(() =>
     expect(
@@ -204,40 +208,42 @@ it("moves through the attention list with arrow keys", async () => {
   );
   mount();
   const first = await screen.findByRole("link", {
-    name: "Inspect Image task needs inspection",
+    name: "Inspect Image task needs inspection interrup",
   });
   const notice = screen.getByRole("link", {
-    name: "Inspect Agent workflow failed",
+    name: "Inspect Agent workflow failed failed-r",
   });
-  const active = screen.getByRole("link", { name: "Inspect Image task" });
+  const active = screen.getByRole("link", { name: "Inspect Image task run" });
   expect(first.tabIndex).toBe(0);
   expect(notice.tabIndex).toBe(-1);
   expect(active.tabIndex).toBe(-1);
   expect(
     screen.getByRole("button", {
-      name: "Mark inspected Image task needs inspection",
+      name: "Mark inspected Image task needs inspection interrup",
     }).tabIndex,
   ).toBe(0);
-  expect(screen.getByRole("button", { name: "Stop Image task" }).tabIndex).toBe(
-    -1,
-  );
   expect(
-    screen.getByRole("button", { name: "Mark read Agent workflow failed" })
-      .tabIndex,
+    screen.getByRole("button", { name: "Stop Image task run" }).tabIndex,
+  ).toBe(-1);
+  expect(
+    screen.getByRole("button", {
+      name: "Mark read Agent workflow failed notice",
+    }).tabIndex,
   ).toBe(-1);
   fireEvent.keyDown(first.closest("ul") as HTMLElement, { key: "ArrowDown" });
   expect(notice.tabIndex).toBe(0);
   expect(first.tabIndex).toBe(-1);
   expect(document.activeElement).toBe(notice);
   expect(
-    screen.getByRole("button", { name: "Mark read Agent workflow failed" })
-      .tabIndex,
+    screen.getByRole("button", {
+      name: "Mark read Agent workflow failed notice",
+    }).tabIndex,
   ).toBe(0);
   fireEvent.keyDown(notice.closest("ul") as HTMLElement, { key: "End" });
   expect(active.tabIndex).toBe(0);
-  expect(screen.getByRole("button", { name: "Stop Image task" }).tabIndex).toBe(
-    0,
-  );
+  expect(
+    screen.getByRole("button", { name: "Stop Image task run" }).tabIndex,
+  ).toBe(0);
   fireEvent.keyDown(active.closest("ul") as HTMLElement, { key: "Home" });
   expect(first.tabIndex).toBe(0);
 });
@@ -276,7 +282,9 @@ it("grants a parked Run from Home without starting inference", async () => {
   await screen.findByRole("heading", { name: "Needs attention · 1" });
   expect(screen.queryByRole("button", { name: /Stop/ })).toBeNull();
   fireEvent.click(
-    screen.getByRole("button", { name: "Approve and queue Morning review" }),
+    screen.getByRole("button", {
+      name: "Approve and queue Morning review parked",
+    }),
   );
   await waitFor(() =>
     expect(
@@ -320,8 +328,10 @@ it("denies a parked Run from Home without restore or replay", async () => {
   });
   vi.stubGlobal("fetch", fetch);
   mount();
-  await screen.findByRole("button", { name: "Deny Morning review" });
-  fireEvent.click(screen.getByRole("button", { name: "Deny Morning review" }));
+  await screen.findByRole("button", { name: "Deny Morning review parked" });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Deny Morning review parked" }),
+  );
   await waitFor(() =>
     expect(
       fetch.mock.calls.some(
