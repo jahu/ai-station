@@ -11,6 +11,7 @@ import GithubPublication from "./GithubPublication";
 import { useListKeyboard } from "./useListKeyboard";
 import { FileChoiceList } from "./FileChoiceList";
 import { ConsentChoiceList } from "./ConsentChoiceList";
+import { PublicationChoiceList } from "./PublicationChoiceList";
 import { parseFilePaths } from "./filePaths";
 import { GpuChoiceList } from "./GpuChoiceList";
 
@@ -840,24 +841,17 @@ export default function AssistantActions({
               }}
             />
           </label>
-          <label className="project-checkbox">
-            <input
-              type="checkbox"
-              checked={publishApproved}
-              disabled={!preview.data || !!preview.data.blocked_reason}
-              onChange={(event) => {
-                setPublishApproved(event.target.checked);
-                setPublish(
-                  publishSourceId,
-                  publishTitle,
-                  publishBody,
-                  event.target.checked,
-                );
-              }}
-            />
+          <PublicationChoiceList
+            checked={publishApproved}
+            disabled={!preview.data || !!preview.data.blocked_reason || busy}
+            onChange={(next) => {
+              setPublishApproved(next);
+              setPublish(publishSourceId, publishTitle, publishBody, next);
+            }}
+          >
             I approve publishing this commit and PR text to the GitHub repository
             shown above.
-          </label>
+          </PublicationChoiceList>
         </details>
       )}
       {value.action === "runtime.load" && (

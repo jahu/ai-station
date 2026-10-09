@@ -88,6 +88,50 @@ it("requires approval for the exact repository and commit before publication", a
     }),
   );
 });
+it("moves through publication approval without publishing", async () => {
+  const fetch = vi.fn(async (_url: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options
+        ? { id: "publish" }
+        : {
+            repository: "owner/repo",
+            branch: "ai/task",
+            commit: "abc",
+            base: "develop",
+            expected_updated_at: "version",
+            project_id: "project",
+            github_cli_available: true,
+            blocked_reason: null,
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount({
+    id: "commit",
+    executor_type: "reviewed_commit",
+    status: "succeeded",
+    metadata: {},
+  } as Run);
+  const option = await screen.findByLabelText("Publication approve");
+  expect(option.tabIndex).toBe(0);
+  expect(
+    screen.getByText(/There is no inspectable publication-approval Run/),
+  ).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("PR title"), {
+    target: { value: "Improve feature" },
+  });
+  fireEvent.keyDown(option.closest(".publication-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(
+    (screen.getByRole("checkbox", { name: /I approve publishing/ }) as HTMLInputElement)
+      .checked,
+  ).toBe(true);
+  expect(fetch.mock.calls.filter((call) => call[1]?.method === "POST")).toHaveLength(
+    0,
+  );
+});
+
 it("keeps partial failures inspectable without claiming a PR exists", () => {
   mount({
     id: "publish",
