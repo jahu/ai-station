@@ -20,7 +20,7 @@ The native runner revalidates the preparation manifest, creates a worktree `.ven
 
 Limits: ten minutes and 2 MiB combined output. Timeout/output violations terminate the owned group. Cancellation uses the normal runner ownership checks. Recovery never automatically repeats an install after uncertain dispatch because pip can modify the environment. Known completion produces a JSON artifact and a `dependencies.completed` event. A nonzero pip exit fails the Run while preserving the report. Unknown exit status, cancellation or wrapper failure cannot become success.
 
-Normal CI installs a disposable local wheel through a fake sandbox helper. It does not contact PyPI. A PyPI-mode integration test mocks index confirmation and pip execution to assert the public index argv. Real PyPI downloads are not claimed.
+Normal CI installs a disposable local wheel through a fake sandbox helper. It does not contact PyPI. Parser, plan and public-DNS unit tests cover PyPI mode without a live download. Real PyPI downloads are not claimed.
 
 Limits: five minutes and 2 MiB combined output per command, fifteen minutes total, at most sixty commands and 32,000 argument characters. Timeout/output violations terminate the owned group. Cancellation uses the normal runner ownership checks and TERM/KILL grace period. Recovery never automatically repeats validation after uncertain dispatch because test/build scripts can modify workspace files.
 
