@@ -39,9 +39,11 @@ it("queues Juggernaut parameters and opens the durable run", async () => {
   }));
   vi.stubGlobal("fetch", fetch);
   mount();
-  fireEvent.change(screen.getByLabelText("Backend"), {
-    target: { value: "juggernaut" },
-  });
+  const backendList = screen
+    .getByLabelText("Backend qwen")
+    .closest(".image-backend-choice-list") as HTMLElement;
+  fireEvent.keyDown(backendList, { key: "End" });
+  fireEvent.keyDown(backendList, { key: "Enter" });
   fireEvent.change(screen.getByLabelText("Prompt"), {
     target: { value: "A forest" },
   });
