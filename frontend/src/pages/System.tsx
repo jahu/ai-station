@@ -21,6 +21,46 @@ import { useListKeyboard } from "./useListKeyboard";
 
 type Lease = NonNullable<Status["leases"]>[number];
 
+function CheckCards({ checks }: { checks: Diagnostic[] }) {
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    checks,
+    (check) => check.name,
+  );
+  return (
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId} className="sr-only">
+        Integration checks
+      </h3>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a check while the list is focused. There is no
+        inspectable diagnostic Run. Refresh stays outside this list.
+      </p>
+      <div
+        ref={listRef}
+        className="diagnostic-list"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {checks.map((check, i) => (
+          <div
+            key={check.name}
+            aria-label={`Check ${check.name}`}
+            {...itemProps(i, check.name)}
+          >
+            <div>
+              <strong>{check.name}</strong>
+              <p>{check.detail}</p>
+            </div>
+            <Badge status={check.status} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function System() {
   const hardware = useHardware();
   const status = useStatus();
@@ -92,19 +132,9 @@ export default function System() {
         </div>
         {diagnostics.isPending ? (
           <Loading />
-        ) : (
-          <div className="diagnostic-list">
-            {diagnostics.data?.checks.map((check) => (
-              <div key={check.name}>
-                <div>
-                  <strong>{check.name}</strong>
-                  <p>{check.detail}</p>
-                </div>
-                <Badge status={check.status} />
-              </div>
-            ))}
-          </div>
-        )}
+        ) : diagnostics.data?.checks.length ? (
+          <CheckCards checks={diagnostics.data.checks} />
+        ) : null}
       </section>
       <OperatorAccess />
       <Maintenance />
