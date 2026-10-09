@@ -166,6 +166,69 @@ it("re-checks a backup copy without offering restore or rollout", async () => {
   ).toHaveLength(1);
 });
 
+it("inspects the running compose image without offering rollout", async () => {
+  const fetch = vi.fn(async (path: string) => {
+    if (path === "/api/maintenance/image") {
+      return {
+        ok: true,
+        json: async () => ({
+          docker: "available",
+          runner: "available",
+          tag: {
+            name: "ai-station:local",
+            present: true,
+            id: "sha256:abc",
+            created: null,
+          },
+          containers: [
+            {
+              id: "c".repeat(64),
+              name: "ai-station-ai-station-1",
+              service: "ai-station",
+              project: "ai-station",
+              status: "running",
+              image: "ai-station:local",
+              image_id: "sha256:abc",
+              matches_tag: true,
+              self: true,
+            },
+          ],
+          matches_running: true,
+          restore: "unpublished",
+          image_rollout: "unpublished",
+          summary:
+            "Running control-plane containers use the current ai-station:local image ID.",
+        }),
+      };
+    }
+    if (path === "/api/maintenance/backups") {
+      return {
+        ok: true,
+        json: async () => ({ restore: "unpublished", items: [] }),
+      };
+    }
+    return { ok: true, json: async () => readiness };
+  });
+  mount(fetch);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Inspect running image" }),
+  );
+  await screen.findByText(/this API/);
+  await screen.findByText(/matches ai-station:local/);
+  await screen.findByText(/present · sha256:abc/);
+  expect(
+    screen.queryByRole("button", { name: /restore|rollout|deploy/i }),
+  ).toBeNull();
+  expect(
+    fetch.mock.calls
+      .map((call) => call[0])
+      .filter(
+        (path) =>
+          String(path).includes("/rollout") || String(path).includes("/restore"),
+      ),
+  ).toEqual([]);
+});
+
 it("marks an interrupted run inspected without posting restore", async () => {
   let acknowledged = false;
   const fetch = vi.fn(async (path: string, options?: RequestInit) => {

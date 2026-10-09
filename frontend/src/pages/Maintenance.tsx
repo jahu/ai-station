@@ -56,6 +56,33 @@ type BackupInspect = {
   relative_path: string;
 };
 
+type ImageInspect = {
+  docker: string;
+  runner?: string;
+  tag: {
+    name: string;
+    present: boolean;
+    id: string | null;
+    created: string | null;
+  };
+  containers: {
+    id: string;
+    name: string;
+    service: string;
+    project: string;
+    status: string;
+    image: string;
+    image_id: string | null;
+    matches_tag: boolean;
+    self?: boolean;
+  }[];
+  matches_running: boolean;
+  self_container_id?: string | null;
+  restore: string;
+  image_rollout: string;
+  summary: string;
+};
+
 const json = (method: string, body: unknown) => ({
   method,
   headers: { "Content-Type": "application/json" },
@@ -90,6 +117,9 @@ export default function Maintenance() {
   const inspect = useMutation({
     mutationFn: (runId: string) =>
       api<BackupInspect>(`/maintenance/backups/${runId}`),
+  });
+  const image = useMutation({
+    mutationFn: () => api<ImageInspect>("/maintenance/image"),
   });
   const acknowledge = useMutation({
     mutationFn: (runId: string) =>
@@ -129,6 +159,7 @@ export default function Maintenance() {
           backups.error ??
           backup.error ??
           inspect.error ??
+          image.error ??
           acknowledge.error
         }
       />
@@ -194,7 +225,59 @@ export default function Maintenance() {
         >
           {backup.isPending ? "Queueing…" : "Back up SQLite"}
         </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={image.isPending}
+          onClick={() => image.mutate()}
+        >
+          {image.isPending ? "Inspecting…" : "Inspect running image"}
+        </Button>
       </div>
+      {image.data ? (
+        <div className="mt">
+          <h3>Compose image</h3>
+          <p className="muted">{image.data.summary}</p>
+          <div className="diagnostic-list">
+            <div>
+              <div>
+                <strong>{image.data.tag.name}</strong>
+                <p>
+                  {image.data.tag.present
+                    ? `present · ${image.data.tag.id ?? "id unknown"}`
+                    : "tag not present on this host"}
+                  {` · rollout ${image.data.image_rollout}`}
+                </p>
+              </div>
+            </div>
+            {image.data.containers.length ? (
+              image.data.containers.map((row) => (
+                <div key={row.id}>
+                  <div>
+                    <strong>
+                      {row.service}
+                      {row.self ? " · this API" : ""}
+                    </strong>
+                    <p>
+                      {row.project} · {row.status}
+                      {row.matches_tag
+                        ? " · matches ai-station:local"
+                        : " · differs from current tag"}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div>
+                <div>
+                  <strong>No running control-plane containers reported</strong>
+                  <p>Rollout remains unpublished.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : null}
       {(ready?.interrupted_runs.length ?? 0) > 0 ? (
         <div className="mt">
           <h3>Interrupted Runs</h3>

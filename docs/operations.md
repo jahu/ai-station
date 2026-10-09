@@ -22,7 +22,7 @@ This path does not retag unrelated images, migrate other Docker projects, pull G
 
 ## Upgrade readiness
 
-`GET /api/maintenance` reports the live Alembic revision versus code head, the application-owned SQLite path, WAL journal mode, active Run count, bind-mount persistence, and interrupted Runs that still need inspection. It is inspect-only. `restore` and `image_rollout` are `unpublished`. A non-loopback bind remains refused. `GET /api/maintenance/backups/{run_id}` re-checks a successful copy without writing.
+`GET /api/maintenance` reports the live Alembic revision versus code head, the application-owned SQLite path, WAL journal mode, active Run count, bind-mount persistence, and interrupted Runs that still need inspection. It is inspect-only. `restore` and `image_rollout` are `unpublished`. A non-loopback bind remains refused. `GET /api/maintenance/backups/{run_id}` re-checks a successful copy without writing. `GET /api/maintenance/image` asks the Host Runner to compare the `ai-station:local` tag with running `ai-station`/`worker`/`scheduler` containers. It never builds, tags, starts, stops or retags.
 
 ## SQLite backup
 
@@ -33,6 +33,10 @@ This path does not retag unrelated images, migrate other Docker projects, pull G
 ## Interrupted work
 
 Conservative recovery still parks uncertain dispatched work as `interrupted` after the owned process is gone. **Mark inspected** records that a person looked at the Run. It does not requeue, restore a backup, or replay side effects. Explicit retry, when a domain already supports it, remains a new Run. System lists currently held leases and expired-lease counts without offering replay; if no worker is available, those expired leases stay listed until a worker ticks.
+
+## Compose image inspect
+
+**System → Backup and upgrade readiness → Inspect running image** compares the current `ai-station:local` image ID with running control-plane containers that use that tag. A mismatch means the tag was rebuilt while those containers still run an older ID. Applying that tag, building from the UI, or taking over preview `:8765` stays unpublished. Rebuild from a reviewed checkout in an isolated worktree using `./scripts/start.sh`.
 
 ## What remains unpublished
 

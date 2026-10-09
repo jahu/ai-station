@@ -7,6 +7,7 @@ from app.engine import tick
 from app.models import Artifact, Run, Task
 from app.permissions import ALL_PERMISSIONS
 from app.recovery import recover_stale
+from app.runner_client import RunnerClient, RunnerUnavailable
 from app.runs import create_run, create_task, request_cancel
 from fastapi.testclient import TestClient
 from sqlalchemy import select
@@ -34,6 +35,7 @@ def test_upgrade_readiness_is_inspect_only_and_restore_stays_unpublished():
     assert body["interrupted_runs"] == []
     assert client.post("/api/maintenance/restore", json={}).status_code == 404
     assert client.post("/api/maintenance/rollout", json={}).status_code == 404
+    assert client.post("/api/maintenance/image", json={}).status_code == 405
     assert "manage_station" in ALL_PERMISSIONS
 
 
@@ -207,6 +209,59 @@ def test_inspect_backup_fails_closed_and_never_restores():
     client.post(f"/api/runs/{canceled['id']}/cancel")
     assert client.get(f"/api/maintenance/backups/{canceled['id']}").status_code == 409
     assert client.get("/api/maintenance/backups/00000000-0000-0000-0000-000000000000").status_code == 404
+
+
+def test_inspect_compose_image_compares_tag_without_rollout(monkeypatch):
+    tag_id = "sha256:" + "a" * 64
+    running = "sha256:" + "c" * 64
+
+    def inspect(_self):
+        return {
+            "docker": "available",
+            "tag": {"name": "ai-station:local", "present": True, "id": tag_id, "created": None},
+            "containers": [
+                {
+                    "id": running,
+                    "name": "ai-station-ai-station-1",
+                    "service": "ai-station",
+                    "project": "ai-station",
+                    "status": "running",
+                    "image": "ai-station:local",
+                    "image_id": tag_id,
+                    "matches_tag": True,
+                }
+            ],
+            "matches_running": True,
+            "image_rollout": "unpublished",
+            "restore": "unpublished",
+            "summary": "Running control-plane containers use the current ai-station:local image ID.",
+        }
+
+    monkeypatch.setattr(RunnerClient, "inspect_station_image", inspect)
+    monkeypatch.setenv("HOSTNAME", running[:12])
+    client = TestClient(app)
+    body = client.get("/api/maintenance/image").json()
+    assert body["image_rollout"] == "unpublished"
+    assert body["restore"] == "unpublished"
+    assert body["matches_running"] is True
+    assert body["tag"]["id"] == tag_id
+    assert body["containers"][0]["self"] is True
+    assert body["self_container_id"] == running
+    assert client.post("/api/maintenance/image", json={}).status_code == 405
+    assert client.post("/api/maintenance/rollout", json={}).status_code == 404
+
+
+def test_inspect_compose_image_stays_unpublished_when_runner_is_down(monkeypatch):
+    def down(_self):
+        raise RunnerUnavailable("no socket")
+
+    monkeypatch.setattr(RunnerClient, "inspect_station_image", down)
+    client = TestClient(app)
+    body = client.get("/api/maintenance/image").json()
+    assert body["runner"] == "unavailable"
+    assert body["matches_running"] is False
+    assert body["image_rollout"] == "unpublished"
+    assert "unpublished" in body["summary"].lower()
 
 
 def test_acknowledge_rejects_active_runs():
