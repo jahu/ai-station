@@ -6,4 +6,4 @@ Refresh is an explicit Task → Run performed by the worker. Host Runner reads b
 
 Process identity includes boot identity, PID and start ticks. Recognized names are deliberately limited to llama-server, Ollama, stable-diffusion server and a Python ComfyUI main script. Recognition is a heuristic, not proof of ownership or permission to signal a process. Gone observations remain inspectable as not observed; no destructive deletion is offered. The registry has no management endpoints.
 
-Managed llama.cpp instances now have a separate [owned lifecycle](managed-llama.md), with private inference sockets, multi-GPU reservations and typed load/stop Runs. The external observations described above remain read-only.
+Managed llama.cpp instances now have a separate [owned lifecycle](managed-llama.md), with private inference sockets, multi-GPU reservations and typed load, stop, health and restart Runs. Health inspects only an owned instance. The external observations described above remain read-only and still grant no management capability.

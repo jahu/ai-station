@@ -23,7 +23,7 @@ from app.connectors import HttpConnectorExecutor
 from app.cursor_executor import CursorProposalExecutor
 from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
-from app.llama import LlamaExecutor
+from app.llama import LlamaExecutor, LlamaHealthExecutor
 from app.local_coding import LocalProposalExecutor
 from app.model_definitions import ModelInstallExecutor
 from app.model_registry import ModelDiscoveryExecutor
@@ -287,6 +287,7 @@ EXECUTORS = {
     "orchestrator": AssistantExecutor(),
     "llama_load": LlamaExecutor("load"),
     "llama_stop": LlamaExecutor("stop"),
+    "llama_health": LlamaHealthExecutor(),
     "photo_pipe": PhotoPipeExecutor(),
     "chatterbox": AudioExecutor(),
     "echomimic": AvatarExecutor(),

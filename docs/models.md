@@ -26,6 +26,8 @@ A definition is created by an explicit UI/API action from a file observed as `pr
 
 For GGUF language models it also inspects the administrator-configured llama.cpp image ID. Missing images fail closed. The runner never runs `docker pull`, never copies GGUFs and never starts a runtime. A JSON report becomes a normal artifact. Cancellation, errors and a changed size/mtime leave the definition unregistered (`unverified` or `failed`) and do not rewrite discovery observations. Retry is a new Run.
 
-`POST /api/models/definitions/{id}/load` reuses the existing owned llama.cpp load Run with the saved preset. It requires a successful install and a present loadable GGUF. Extended process health and restart controls remain a later increment; live diagnostics stay in System.
+`POST /api/models/definitions/{id}/load` reuses the existing owned llama.cpp load Run with the saved preset. It requires a successful install and a present loadable GGUF.
+
+Owned llama.cpp health and restart are separate inspectable Runs. Health records process liveness and observed context without signalling external runtimes. Restart unloads an idle owned instance, then loads the saved GPU/context preset. Unknown ownership still requires inspection. System diagnostics remain available for the host.
 
 Migration `0002` adds nullable observation timestamps/Run links and an `unknown` default for pre-existing rows. Migration `0018` adds definition status, verification Run links and timestamps. Upgrade/downgrade coverage verifies existing file metadata survives. Tests use disposable small fixtures, real managed subprocesses and an in-process typed runner transport. The browser smoke uses a native runner over UDS and a worker. Neither test loads model weights or pulls images.

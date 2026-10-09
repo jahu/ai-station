@@ -107,6 +107,9 @@ it("registers a definition from a present file without installing until asked", 
       if (String(url).includes("/system/hardware")) {
         return { gpus: [{ index: 0, name: "GPU 0" }] };
       }
+      if (String(url).includes("/llama")) {
+        return { models: [], instances: [] };
+      }
       if (String(url).includes("/models/definitions") && options?.method === "POST") {
         definition = {
           id: "def-1",
