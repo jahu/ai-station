@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link,
@@ -18,6 +18,7 @@ import { Empty, ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import ProjectWorktrees from "./ProjectWorktrees";
 import { terminal } from "../lib/utils";
+import { useListKeyboard } from "./useListKeyboard";
 
 interface Project {
   id: string;
@@ -308,6 +309,56 @@ function ProjectForm({
   );
 }
 
+function ProjectCards({ projects }: { projects: Project[] }) {
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    projects,
+    (project) => project.id,
+  );
+  return (
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId} className="sr-only">
+        Projects
+      </h2>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a project while the list is focused. Enter inspects
+        it.
+      </p>
+      <div
+        ref={listRef}
+        className="project-grid"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {projects.map((project, i) => (
+          <Link
+            className="panel project-card"
+            key={project.id}
+            to={`/projects/${project.id}`}
+            aria-label={`Inspect ${project.name} ${project.id.slice(0, 8)}`}
+            {...itemProps(i, project.id)}
+          >
+            <div className="row spread">
+              <FolderGit2 size={23} aria-hidden="true" />
+              <span className="chip">HOST REPOSITORY</span>
+            </div>
+            <h2>{project.name}</h2>
+            <p className="mono muted">{project.repo_path}</p>
+            <div className="project-card-footer">
+              <span>
+                <GitBranch size={13} aria-hidden="true" />
+                {project.integration_branch}
+              </span>
+              <span>{project.preferred_executor} preferred</span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function Projects() {
   const [offset, setOffset] = useState(0);
   const projects = useQuery({
@@ -336,29 +387,7 @@ export function Projects() {
       ) : (
         projects.data &&
         (projects.data.length ? (
-          <div className="project-grid">
-            {projects.data.map((project) => (
-              <Link
-                className="panel project-card"
-                key={project.id}
-                to={`/projects/${project.id}`}
-              >
-                <div className="row spread">
-                  <FolderGit2 size={23} />
-                  <span className="chip">HOST REPOSITORY</span>
-                </div>
-                <h2>{project.name}</h2>
-                <p className="mono muted">{project.repo_path}</p>
-                <div className="project-card-footer">
-                  <span>
-                    <GitBranch size={13} />
-                    {project.integration_branch}
-                  </span>
-                  <span>{project.preferred_executor} preferred</span>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <ProjectCards projects={projects.data} />
         ) : (
           <section className="panel">
             <Empty title="No projects on this page">

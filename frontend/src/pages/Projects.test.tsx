@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { NewProject, ProjectDetail } from "./Projects";
+import { NewProject, ProjectDetail, Projects } from "./Projects";
 
 afterEach(() => {
   cleanup();
@@ -105,6 +105,63 @@ it("keeps saved settings visible when live Git inspection is unavailable", async
     (screen.getByLabelText("Agent rules") as HTMLTextAreaElement).value,
   ).toBe("Preserve the API");
   expect(screen.queryByText("Clean")).toBeNull();
+});
+
+it("moves through the project list with arrow keys", async () => {
+  const row = {
+    repo_path: "/repos/example",
+    default_branch: "main",
+    integration_branch: "develop",
+    protected_branches: ["main", "master"],
+    preferred_executor: "codex",
+    test_commands: [],
+    lint_commands: [],
+    build_commands: [],
+    agent_rules: "",
+    pr_policy: {},
+    updated_at: "2026-10-09T12:00:00Z",
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => [
+        { ...row, id: "proj-one", name: "Studio site" },
+        { ...row, id: "proj-two", name: "Local tools" },
+      ],
+    })),
+  );
+  const cache = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={cache}>
+      <MemoryRouter initialEntries={["/projects"]}>
+        <Routes>
+          <Route path="/projects" element={<Projects />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const first = await screen.findByRole("link", {
+    name: "Inspect Studio site proj-one",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect Local tools proj-two",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Projects" })).toBeTruthy();
+  fireEvent.keyDown(first.closest(".project-grid") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".project-grid") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
 });
 
 it("creates a project using only a name and waits for setup", async () => {
