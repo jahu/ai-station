@@ -227,6 +227,7 @@ it("lists persisted workflow steps and keeps cancel available for the active chi
             workflow: {
               parent_run_id: "parent",
               mode: "sequential",
+              tool_calling: "bounded",
               steps: [
                 {
                   run_id: "step-search",
@@ -241,6 +242,14 @@ it("lists persisted workflow steps and keeps cancel available for the active chi
                   gate: "none",
                   status: "running",
                   capability: "agent.execute",
+                  tool_calls: [
+                    {
+                      id: "call-0-0",
+                      tool: "system_snapshot",
+                      arguments: {},
+                      round: 0,
+                    },
+                  ],
                 },
               ],
             },
@@ -267,6 +276,10 @@ it("lists persisted workflow steps and keeps cancel available for the active chi
     (await screen.findByRole("link", { name: /report/i })).getAttribute("href"),
   ).toBe("/runs/step-report");
   expect(screen.getByRole("button", { name: "Cancel run" })).toBeTruthy();
+  expect(screen.getByText("1 registry call")).toBeTruthy();
+  expect(
+    screen.getByText(/The report may request selected registry tools/i),
+  ).toBeTruthy();
 });
 it("retries a failed workflow as a new run instead of replaying the original", async () => {
   vi.stubGlobal(

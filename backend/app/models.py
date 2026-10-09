@@ -228,6 +228,7 @@ class Agent(Base):
     output_expectation: Mapped[str] = mapped_column(Text, default="")
     require_approval: Mapped[bool] = mapped_column(Boolean, default=False)
     workflow_mode: Mapped[str] = mapped_column(String(20), default="sequential")
+    tool_calling: Mapped[str] = mapped_column(String(20), default="none")
     enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     last_run_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
     next_run_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True, index=True)

@@ -589,6 +589,7 @@ def test_agent_search_migration_preserves_existing_definitions():
         assert saved["goal"] == agent["goal"] and saved["tools"] == ["memory_search"]
         assert saved["search_query"] == "" and saved["fetch_urls"] == []
         assert saved["workflow_mode"] == "sequential"
+        assert saved["tool_calling"] == "none"
 
 
 @pytest.mark.parametrize("remember", [False, True])
@@ -666,8 +667,8 @@ def test_unsuccessful_agent_never_retains_memory(monkeypatch, outcome):
     if outcome == "late_cancel":
         consume = LocalAgentExecutor._consume
 
-        async def late(self, *args):
-            result = await consume(self, *args)
+        async def late(self, *args, **kwargs):
+            result = await consume(self, *args, **kwargs)
             cancel()
             return result
 

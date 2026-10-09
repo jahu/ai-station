@@ -383,6 +383,71 @@ it("saves gated workflow steps without enabling the draft", async () => {
     enabled: false,
   });
 });
+it("saves bounded tool calling without enabling the draft", async () => {
+  let agent = {
+    id: "draft",
+    name: "Guarded",
+    description: "",
+    goal: "Summarize the workstation",
+    system_prompt: "",
+    model: "local",
+    search_query: "",
+    fetch_urls: [] as string[],
+    skills: [] as string[],
+    tools: [] as string[],
+    require_approval: false,
+    workflow_mode: "sequential",
+    tool_calling: "none",
+    trigger: "manual",
+    interval_seconds: null,
+    cron_expr: "",
+    run_at: null,
+    maximum_runtime: 600,
+    output_expectation: "Report",
+    project_id: null,
+    enabled: false,
+    updated_at: "2026-10-09T12:00:00Z",
+    next_run_at: null,
+    last_run_at: null,
+    last_status: "",
+    failure_count: 0,
+    effective_permissions: [] as string[],
+    runs: [],
+  };
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => {
+    if (options) agent = { ...agent, ...JSON.parse(options.body as string) };
+    return {
+      ok: true,
+      json: async () =>
+        url.endsWith("/llama")
+          ? { models: [], instances: [] }
+          : url.endsWith("/chat/provider")
+            ? { models: ["local"], default_model: "local" }
+            : url.includes("/skills")
+              ? []
+              : url.endsWith("/tools")
+                ? []
+                : agent,
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  fireEvent.click(
+    await screen.findByRole("checkbox", {
+      name: /Bounded tool calling during the report/i,
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save definition" }));
+  await vi.waitFor(() =>
+    expect(fetch.mock.calls.filter((c) => c[1])).toHaveLength(1),
+  );
+  expect(
+    JSON.parse(fetch.mock.calls.find((c) => c[1])![1]!.body as string),
+  ).toMatchObject({
+    tool_calling: "bounded",
+    enabled: false,
+  });
+});
 it("saves retry and notification policies without enabling the draft", async () => {
   let agent = {
     id: "draft",

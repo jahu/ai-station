@@ -53,9 +53,11 @@ def workflow_view(session, run: Run) -> dict | None:
         )
         if child.executor_type in {"agent_tool", "agent"}
     ]
+    definition = parent.parameters.get("definition") or {}
     return {
         "parent_run_id": parent.id,
-        "mode": (parent.parameters.get("definition") or {}).get("workflow_mode", "sequential"),
+        "mode": definition.get("workflow_mode", "sequential"),
+        "tool_calling": definition.get("tool_calling", "none"),
         "steps": [
             {
                 "run_id": child.id,
@@ -63,6 +65,7 @@ def workflow_view(session, run: Run) -> dict | None:
                 "gate": child.parameters.get("gate", "none"),
                 "status": child.status,
                 "capability": child.capability,
+                "tool_calls": child.metadata_json.get("tool_calls") or [],
             }
             for child in children
         ],

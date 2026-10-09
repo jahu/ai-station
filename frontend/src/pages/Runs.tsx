@@ -450,6 +450,9 @@ export function RunDetail() {
                   {run.data.workflow.mode === "gated"
                     ? "Gated: the report waits for approval after context tools."
                     : "Sequential: each step waits for the previous one to succeed."}{" "}
+                  {run.data.workflow.tool_calling === "bounded"
+                    ? "The report may request selected registry tools; invented tools fail closed. "
+                    : ""}
                   Cancel targets the currently active child.
                 </p>
                 {run.data.workflow.steps.length ? (
@@ -463,6 +466,12 @@ export function RunDetail() {
                       <span>{step.key}</span>
                       {step.gate === "approval" && (
                         <span className="muted">approval gate</span>
+                      )}
+                      {!!step.tool_calls?.length && (
+                        <span className="muted">
+                          {step.tool_calls.length} registry call
+                          {step.tool_calls.length === 1 ? "" : "s"}
+                        </span>
                       )}
                       <span className="mono">{step.run_id.slice(0, 8)}</span>
                     </Link>
@@ -537,6 +546,29 @@ export function RunDetail() {
                 excerpted={run.data.metadata?.memory_excerpted === true}
               />
             )}
+            {Array.isArray(run.data.metadata?.tool_calls) &&
+              run.data.metadata.tool_calls.length > 0 && (
+                <section className="panel">
+                  <h2>Registry tool calls</h2>
+                  <p className="muted">
+                    Bounded calls from the typed agent registry. The model
+                    cannot invent tools, URLs, queries or shell commands.
+                  </p>
+                  {(
+                    run.data.metadata.tool_calls as {
+                      id: string;
+                      tool: string;
+                      round: number;
+                    }[]
+                  ).map((call) => (
+                    <div className="row" key={call.id}>
+                      <span>{call.tool}</span>
+                      <span className="muted">round {call.round + 1}</span>
+                      <span className="mono">{call.id.slice(0, 8)}</span>
+                    </div>
+                  ))}
+                </section>
+              )}
             {run.data.metadata?.web_search && (
               <SearchSources
                 result={run.data.metadata.web_search as WebSources}

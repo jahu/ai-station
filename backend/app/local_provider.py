@@ -119,6 +119,8 @@ class LocalChatProvider:
         max_tokens: int,
         headers=None,
         location: str = "local",
+        tools: list[dict] | None = None,
+        on_tool_calls=None,
     ):
         managed = model.startswith("llamacpp:")
         if managed and location != "local":
@@ -138,6 +140,17 @@ class LocalChatProvider:
         elif use_runner:
             endpoint, headers = self.request_target(original)
         done = False
+        body = {
+            "messages": messages,
+            "model": model,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "stream": True,
+        }
+        if tools is not None:
+            body["tools"] = _validated_tools(tools)
+            body["tool_choice"] = "auto"
+        tool_acc: dict[int, dict[str, str]] = {}
         try:
             async with httpx.AsyncClient(
                 timeout=httpx.Timeout(300, connect=10),
@@ -149,17 +162,12 @@ class LocalChatProvider:
                     "POST",
                     endpoint + "/chat/completions",
                     headers=headers,
-                    json={
-                        "messages": messages,
-                        "model": model,
-                        "temperature": temperature,
-                        "max_tokens": max_tokens,
-                        "stream": True,
-                    },
+                    json=body,
                 ) as response:
                     response.raise_for_status()
                     # Bound protocol records even if a broken server omits newlines.
                     pending = ""
+                    finished = False
                     async for text in response.aiter_text():
                         pending += text
                         if len(pending) > 1024 * 1024:
@@ -170,7 +178,9 @@ class LocalChatProvider:
                                 continue
                             data = line[5:].strip()
                             if data == "[DONE]":
-                                return
+                                done = True
+                                finished = True
+                                break
                             chunk = json.loads(data)
                             if chunk.get("error"):
                                 raise ProviderError("The local provider reported an error")
@@ -179,16 +189,76 @@ class LocalChatProvider:
                                 continue
                             choice = choices[0]
                             done = done or choice.get("finish_reason") is not None
-                            content = (choice.get("delta") or {}).get("content")
+                            delta = choice.get("delta") or {}
+                            for item in delta.get("tool_calls") or []:
+                                _accumulate_tool_delta(tool_acc, item)
+                            content = delta.get("content")
                             if content is not None:
                                 if not isinstance(content, str):
                                     raise ProviderError("Unsupported provider content format")
                                 if content:
                                     yield content
+                        if finished:
+                            break
+            if tool_acc:
+                assembled = [_completed_tool_call(tool_acc[index]) for index in sorted(tool_acc)]
+                if on_tool_calls is None:
+                    raise ProviderError("Provider returned tool calls that this consumer cannot use")
+                on_tool_calls(assembled)
+                return
             if not done:
                 raise ProviderError("Provider stream ended before completion")
         except (httpx.HTTPError, ValueError, TypeError, KeyError, AttributeError) as exc:
             raise ProviderError("Completion failed or returned an invalid stream") from exc
+
+
+def _validated_tools(tools):
+    if not isinstance(tools, list) or not tools or len(tools) > 8:
+        raise ProviderError("Invalid tool list")
+    for spec in tools:
+        if not isinstance(spec, dict) or spec.get("type") != "function":
+            raise ProviderError("Invalid tool list")
+        function = spec.get("function")
+        if not isinstance(function, dict) or not isinstance(function.get("name"), str):
+            raise ProviderError("Invalid tool list")
+    return tools
+
+
+def _accumulate_tool_delta(acc: dict[int, dict[str, str]], item) -> None:
+    if not isinstance(item, dict) or set(item) - {"index", "id", "type", "function"}:
+        raise ProviderError("Unsupported provider tool-call format")
+    if item.get("type") not in {None, "function"}:
+        raise ProviderError("Unsupported provider tool-call format")
+    index = item.get("index", 0)
+    if not isinstance(index, int) or index < 0 or index > 7:
+        raise ProviderError("Unsupported provider tool-call format")
+    slot = acc.setdefault(index, {"id": "", "name": "", "arguments": ""})
+    if "id" in item:
+        if not isinstance(item["id"], str) or len(item["id"]) > 80:
+            raise ProviderError("Unsupported provider tool-call format")
+        slot["id"] = item["id"]
+    function = item.get("function")
+    if function is None:
+        return
+    if not isinstance(function, dict) or set(function) - {"name", "arguments"}:
+        raise ProviderError("Unsupported provider tool-call format")
+    if "name" in function:
+        if not isinstance(function["name"], str) or len(slot["name"]) + len(function["name"]) > 80:
+            raise ProviderError("Unsupported provider tool-call format")
+        slot["name"] += function["name"]
+    if "arguments" in function:
+        if (
+            not isinstance(function["arguments"], str)
+            or len(slot["arguments"]) + len(function["arguments"]) > 4000
+        ):
+            raise ProviderError("Unsupported provider tool-call format")
+        slot["arguments"] += function["arguments"]
+
+
+def _completed_tool_call(slot: dict[str, str]) -> dict:
+    if not slot["name"]:
+        raise ProviderError("Provider returned an incomplete tool call")
+    return {"id": slot["id"], "name": slot["name"], "arguments": slot["arguments"] or "{}"}
 
 
 def discover_models(
