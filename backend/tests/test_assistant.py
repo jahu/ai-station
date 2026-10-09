@@ -342,3 +342,267 @@ def test_external_coding_scope_binds_the_selected_provider(selected, action):
         else:
             assert detail["active_run"] is None
             assert "explicitly allow sharing" in detail["messages"][-1]["content"]
+
+
+def succeed(session, run):
+    transition(session, run, RunStatus.CLAIMED, event_type="run.claimed")
+    transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
+    transition(session, run, RunStatus.RUNNING, event_type="run.started")
+    transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
+
+
+def reviewed_proposal(conversation_id, *, publish=False):
+    from app.models import Project
+    from app.runs import create_run, create_task
+
+    with session_factory()() as session:
+        project = Project(
+            name="reviewed",
+            repo_path="/allowed/reviewed",
+            pr_policy={
+                "commit_task_branch": True,
+                "push_task_branch": publish,
+                "pr_to_integration": publish,
+            },
+        )
+        session.add(project)
+        session.flush()
+        task = create_task(
+            session,
+            title="code",
+            prompt="code",
+            capability="assistant.orchestrate",
+            conversation_id=conversation_id,
+            project_id=project.id,
+        )
+        proposal = create_run(
+            session,
+            task,
+            run_type="coding",
+            capability="coding.local",
+            executor_type="local_proposal",
+            project_id=project.id,
+            parameters={"worktree_run_id": "worktree-run", "commands": []},
+            metadata={
+                "coding_review": {
+                    "branch": "ai/task-workspace",
+                    "files": [{"path": "app.py", "diff": "+print(1)", "insertions": 1, "deletions": 0}],
+                }
+            },
+        )
+        succeed(session, proposal)
+        session.commit()
+        return project.id, proposal.id, project.updated_at.isoformat()
+
+
+def test_conversation_projects_coding_review_for_inline_commit():
+    from app.models import Message
+    from app.runs import create_run
+
+    with TestClient(app) as client:
+        cid = create(client)
+        _, proposal_id, _ = reviewed_proposal(cid)
+        with session_factory()() as session:
+            proposal = session.get(Run, proposal_id)
+            plan = create_run(
+                session,
+                proposal.task,
+                run_type="orchestration",
+                capability="assistant.orchestrate",
+                executor_type="orchestrator",
+                execution_target="container",
+            )
+            succeed(session, plan)
+            session.add(
+                Message(
+                    conversation_id=cid,
+                    role="assistant",
+                    content="Queued coding",
+                    run_id=plan.id,
+                    metadata_json={"orchestration": True},
+                )
+            )
+            session.commit()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        review = next(row for row in detail["messages"][-1]["coding_runs"] if row["id"] == proposal_id)
+        assert review["metadata"]["coding_review"]["files"][0]["path"] == "app.py"
+
+
+def test_explicit_commit_reuses_domain_service_and_stays_on_source_task():
+    with TestClient(app) as client:
+        cid = create(client)
+        _, proposal_id, _ = reviewed_proposal(cid)
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "content": "Commit reviewed changes",
+                "action": "coding.commit",
+                "commit": {
+                    "source_run_id": proposal_id,
+                    "message": "Accept reviewed edits",
+                    "reviewed": True,
+                },
+            },
+        )
+        assert response.status_code == 202, response.text
+        assert "git_write" not in response.json()["effective_permissions"]
+        step()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        child = next(
+            row for row in detail["messages"][-1]["coding_runs"] if row["executor_type"] == "reviewed_commit"
+        )
+        assert child["capability"] == "coding.commit"
+        assert child["parent_run_id"] == proposal_id
+        assert child["parameters"]["message"] == "Accept reviewed edits"
+        assert child["effective_permissions"] == ["filesystem_read", "git_read", "git_write"]
+        assert client.post(f"/api/runs/{child['id']}/cancel").status_code == 200
+        assert (
+            client.get(f"/api/chat/conversations/{cid}").json()["messages"][-1]["task_status"] == "canceled"
+        )
+
+
+def test_model_cannot_grant_commit_or_publish(monkeypatch):
+    async def plan(*args):
+        from app.assistant import Plan
+
+        return Plan(action="coding.commit", reason="Commit the work")
+
+    monkeypatch.setattr(AssistantExecutor, "plan", plan)
+    with TestClient(app) as client:
+        cid = create(client)
+        _, proposal_id, _ = reviewed_proposal(cid)
+        client.post(f"/api/chat/conversations/{cid}/messages", json={"content": "commit this"})
+        step()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        assert "cannot grant Git write permission" in detail["messages"][-1]["content"]
+        assert not any(
+            row["executor_type"] == "reviewed_commit" for row in detail["messages"][-1].get("coding_runs", [])
+        )
+        assert (
+            client.post(
+                f"/api/chat/conversations/{cid}/messages",
+                json={
+                    "content": "Commit",
+                    "action": "coding.commit",
+                    "commit": {"source_run_id": proposal_id},
+                },
+            ).status_code
+            == 422
+        )
+
+
+def test_commit_rejects_another_conversation_and_unreviewed_body():
+    with TestClient(app) as client:
+        cid = create(client)
+        other = create(client)
+        _, proposal_id, _ = reviewed_proposal(other)
+        assert (
+            client.post(
+                f"/api/chat/conversations/{cid}/messages",
+                json={"content": "Commit", "action": "coding.commit"},
+            ).status_code
+            == 422
+        )
+        client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "content": "Commit",
+                "action": "coding.commit",
+                "commit": {
+                    "source_run_id": proposal_id,
+                    "message": "Steal this review",
+                    "reviewed": True,
+                },
+            },
+        )
+        step()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        assert "this conversation" in detail["messages"][-1]["content"]
+        assert detail["active_run"] is None
+
+
+def test_explicit_publish_reuses_approval_record_without_model_permission():
+    from app.models import Approval
+    from app.runs import create_run
+
+    with TestClient(app) as client:
+        cid = create(client)
+        project_id, proposal_id, _ = reviewed_proposal(cid, publish=True)
+        with session_factory()() as session:
+            proposal = session.get(Run, proposal_id)
+            commit = create_run(
+                session,
+                proposal.task,
+                run_type="git",
+                capability="coding.commit",
+                executor_type="reviewed_commit",
+                project_id=project_id,
+                parent_run_id=proposal.id,
+                parameters={"source_run_id": proposal.id, "worktree_run_id": "worktree-run"},
+                metadata={
+                    "git_commit": {
+                        "commit": "a" * 40,
+                        "branch": "ai/task-workspace",
+                        "worktree_run_id": "worktree-run",
+                    }
+                },
+            )
+            succeed(session, commit)
+            commit_id = commit.id
+            session.commit()
+        with session_factory()() as session:
+            from app.models import Project
+
+            version = session.get(Project, project_id).updated_at.isoformat()
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "content": "Publish reviewed changes",
+                "action": "coding.publish",
+                "publish": {
+                    "source_run_id": commit_id,
+                    "approved": True,
+                    "repository": "owner/repo",
+                    "commit": "a" * 40,
+                    "base": "develop",
+                    "expected_updated_at": version,
+                    "title": "Reviewed task branch",
+                    "body": "Validated locally.",
+                },
+            },
+        )
+        assert response.status_code == 202, response.text
+        assert "network_external" not in response.json()["effective_permissions"]
+        step()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        child = next(
+            row
+            for row in detail["messages"][-1]["coding_runs"]
+            if row["executor_type"] == "github_publication"
+        )
+        assert child["capability"] == "coding.publish"
+        assert "network_external" in child["effective_permissions"]
+        with session_factory()() as session:
+            approval = session.scalar(select(Approval).where(Approval.run_id == child["id"]))
+            assert approval.resolution == "granted"
+            assert approval.action == "github.publish"
+        assert client.post(f"/api/runs/{child['id']}/cancel").status_code == 200
+
+
+def test_model_cannot_grant_github_publication(monkeypatch):
+    async def plan(*args):
+        from app.assistant import Plan
+
+        return Plan(action="coding.publish", reason="Publish it")
+
+    monkeypatch.setattr(AssistantExecutor, "plan", plan)
+    with TestClient(app) as client:
+        cid = create(client)
+        client.post(f"/api/chat/conversations/{cid}/messages", json={"content": "open a PR"})
+        step()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        assert "cannot grant publication permission" in detail["messages"][-1]["content"]
+        assert not any(
+            row["executor_type"] == "github_publication"
+            for row in detail["messages"][-1].get("coding_runs", [])
+        )

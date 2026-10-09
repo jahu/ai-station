@@ -1,6 +1,6 @@
 # Reviewed coding commits
 
-A successful coding proposal is review evidence, not permission to integrate it. The next Coding action explicitly queues a local `coding.commit` Run for the reviewed proposal. It snapshots the proposal identity and commit message, requires successful configured validation, and never pushes or merges.
+A successful coding proposal is review evidence, not permission to integrate it. The next Coding action explicitly queues a local `coding.commit` Run for the reviewed proposal. The Platform assistant shows the same review in the conversation and can queue that Run after an explicit acknowledgement, using the same domain service. It snapshots the proposal identity and commit message, requires successful configured validation, and never pushes or merges. A model-generated plan cannot grant Git write permission.
 
 The Runner revalidates the owned worktree, task branch and proposal report. Only reviewed file contents with matching hashes and original executable bits may enter the commit. A private temporary index constructs a tree from the recorded parent and selected snapshots; unrelated worktree files are excluded. Git hooks, signing, filters and automatic maintenance are disabled. The task ref advances using Git's compare-and-swap parent check. The active checkout and protected branches are untouched.
 

@@ -310,3 +310,110 @@ it("stages local coding scope without granting Cursor consent", async () => {
     false,
   );
 });
+
+it("requires an in-conversation proposal and review before commit action is ready", async () => {
+  function Composer() {
+    const [value, setValue] = useState(emptyOptions);
+    return (
+      <>
+        <AssistantActions
+          value={value}
+          onChange={setValue}
+          busy={false}
+          onUploading={() => {}}
+          sources={[
+            {
+              id: "proposal",
+              executor_type: "local_proposal",
+              status: "succeeded",
+              summary: "Update app.py",
+              capability: "coding.local",
+              metadata: {
+                coding_review: {
+                  files: [{ path: "app.py", diff: "+x", insertions: 1 }],
+                },
+              },
+            } as never,
+          ]}
+        />
+        <output data-testid="commit">{JSON.stringify(value.commit)}</output>
+      </>
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  fireEvent.change(screen.getByLabelText("Action"), {
+    target: { value: "coding.commit" },
+  });
+  expect(screen.getByTestId("commit").textContent).toBe("null");
+  fireEvent.change(screen.getByLabelText("Commit proposal"), {
+    target: { value: "proposal" },
+  });
+  fireEvent.change(screen.getByLabelText("Commit message"), {
+    target: { value: "Accept reviewed edits" },
+  });
+  expect(screen.getByTestId("commit").textContent).toBe("null");
+  fireEvent.click(
+    screen.getByRole("checkbox", {
+      name: "I reviewed the diff and validation results.",
+    }),
+  );
+  expect(JSON.parse(screen.getByTestId("commit").textContent!)).toEqual({
+    source_run_id: "proposal",
+    message: "Accept reviewed edits",
+    reviewed: true,
+  });
+});
+
+it("renders review and commit controls from conversation coding runs", () => {
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <AssistantResults
+          result={{
+            task_status: "succeeded",
+            steps: [
+              {
+                id: "proposal",
+                capability: "coding.local",
+                status: "succeeded",
+                summary: "Update app.py",
+                error_message: "",
+                location: "local",
+              },
+            ],
+            artifacts: [],
+            coding_runs: [
+              {
+                id: "proposal",
+                status: "succeeded",
+                summary: "Update app.py",
+                executor_type: "local_proposal",
+                metadata: {
+                  coding_review: {
+                    branch: "ai/task",
+                    files: [
+                      {
+                        path: "app.py",
+                        diff: "+print(1)",
+                        insertions: 1,
+                        deletions: 0,
+                      },
+                    ],
+                  },
+                },
+              } as never,
+            ],
+          }}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText("Changes awaiting review")).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Commit reviewed changes" }),
+  ).toBeTruthy();
+});

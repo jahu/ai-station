@@ -5,4 +5,6 @@ export const emptyOptions: AssistantOptions = {
   image_artifact_ids: [],
   audio_artifact_id: null,
   coding: null,
+  commit: null,
+  publish: null,
 };

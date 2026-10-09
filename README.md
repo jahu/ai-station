@@ -6,7 +6,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 
 ## What works now
 
-- Platform assistant: the default conversation routes instructions to images, agent drafts and explicitly scoped Cursor tasks, showing ordinary Runs and media results inline. Images and WAV recordings can be selected from Library or reused directly from conversation results, with ordered image references. Existing workspaces remain available. See [orchestrator contracts and roadmap](docs/orchestrator.md).
+- Platform assistant: the default conversation routes instructions to images, agent drafts and explicitly scoped Cursor/Codex/local coding, showing ordinary Runs and media results inline. After a coding Task, the same conversation shows the diff, can queue a reviewed task-branch commit, and can approve a draft GitHub PR using the existing Git services. Images and WAV recordings can be selected from Library or reused directly from conversation results, with ordered image references. Existing workspaces remain available. See [orchestrator contracts and roadmap](docs/orchestrator.md).
 
 - Local chat: persisted conversations, selectable managed llama.cpp GGUFs across multiple GPUs alongside Ollama/compatible providers, model discovery, streaming Markdown, bounded text/PDF/image attachments, stop, regeneration, and inspectable Runs.
 - Agents: disabled natural-language drafts, explicit activation, local reports, opt-in report memory with source Runs, scoped context tools including reviewed public HTTP GET, persistent UTC schedules, pause/resume, duplication and execution history.
@@ -26,7 +26,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory.
 - Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
 
-The bounded Codex, Cursor and Local AI adapters are operational. Claude Code remains an inactive draft; reviewed changes can be committed to the owned task branch; approved task-branch pushes and draft GitHub PRs are available from successful commit Runs. Saved project validation and declared Python dependency installs run in prepared worktrees through the native sandbox.
+The bounded Codex, Cursor and Local AI adapters are operational. Claude Code remains an inactive draft; reviewed changes can be committed to the owned task branch from Coding or the Platform assistant; approved task-branch pushes and draft GitHub PRs are available from successful commit Runs. Saved project validation and declared Python dependency installs run in prepared worktrees through the native sandbox.
 
 ## Prerequisites and installation
 

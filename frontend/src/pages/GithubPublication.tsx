@@ -19,9 +19,15 @@ type Preview = {
 };
 type Result = { pr_url?: string; stage?: string; outcome?: string };
 
-export default function GithubPublication({ run }: { run: Run }) {
+export default function GithubPublication({
+  run,
+  onQueued,
+}: {
+  run: Run;
+  onQueued?: (result: Run) => void;
+}) {
   if (run.executor_type === "reviewed_commit" && run.status === "succeeded")
-    return <PublishCommit run={run} />;
+    return <PublishCommit run={run} onQueued={onQueued} />;
   if (
     run.executor_type !== "github_publication" &&
     run.executor_type !== "publication_reconcile"
@@ -54,7 +60,11 @@ export default function GithubPublication({ run }: { run: Run }) {
         </a>
       ) : run.executor_type === "github_publication" &&
         ["failed", "interrupted", "canceled"].includes(run.status) ? (
-        <UncertainPublication run={run} repository={repository} />
+        <UncertainPublication
+          run={run}
+          repository={repository}
+          onQueued={onQueued}
+        />
       ) : result?.outcome === "not_on_github" ? (
         <p className="notice">
           GitHub does not have this task branch. Publication was not retried and
@@ -73,15 +83,18 @@ export default function GithubPublication({ run }: { run: Run }) {
 function UncertainPublication({
   run,
   repository,
+  onQueued,
 }: {
   run: Run;
   repository: string;
+  onQueued?: (result: Run) => void;
 }) {
   const navigate = useNavigate();
   const reconcile = useMutation({
     mutationFn: () =>
       api<Run>(`/coding/runs/${run.id}/reconcile`, { method: "POST" }),
-    onSuccess: (result) => navigate(`/runs/${result.id}`),
+    onSuccess: (result) =>
+      onQueued ? onQueued(result) : navigate(`/runs/${result.id}`),
   });
   const next = run.metadata?.reconcile_run_id;
   return (
@@ -118,7 +131,13 @@ function UncertainPublication({
   );
 }
 
-function PublishCommit({ run }: { run: Run }) {
+function PublishCommit({
+  run,
+  onQueued,
+}: {
+  run: Run;
+  onQueued?: (result: Run) => void;
+}) {
   const navigate = useNavigate();
   const [title, setTitle] = useState("Review AI Station changes");
   const [body, setBody] = useState("");
@@ -145,7 +164,8 @@ function PublishCommit({ run }: { run: Run }) {
           body,
         }),
       }),
-    onSuccess: (result) => navigate(`/runs/${result.id}`),
+    onSuccess: (result) =>
+      onQueued ? onQueued(result) : navigate(`/runs/${result.id}`),
   });
   const next =
     run.metadata?.publication_run_id ?? preview.data?.publication_run_id;
