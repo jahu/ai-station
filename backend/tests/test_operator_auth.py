@@ -107,6 +107,39 @@ def test_nodes_list_is_local_host_runner_only():
     assert "unpublished" in payload["summary"].lower()
 
 
+def test_loopback_session_gates_api_after_password_without_opening_lan():
+    client = api()
+    guest = api()
+    assert client.get("/api/nodes").status_code == 200
+    saved = client.put("/api/operator-auth", json={"password": PASSWORD})
+    assert saved.status_code == 200
+    body = saved.json()
+    assert body["session_required"] is True
+    assert body["authenticated"] is True
+    assert body["session_scope"] == "loopback"
+    assert body["lan_bind_allowed"] is False
+    assert body["lan_exposure"] == "disabled"
+    assert "ais_operator" in saved.cookies
+    assert client.get("/api/nodes").status_code == 200
+    denied = guest.get("/api/nodes")
+    assert denied.status_code == 401
+    assert denied.json()["detail"] == "Operator login required"
+    assert guest.post("/api/nodes/register", json={"token": "aisn_x"}).status_code == 401
+    public = guest.get("/api/operator-auth").json()
+    assert public["session_required"] is True
+    assert public["authenticated"] is False
+    assert guest.get("/api/health").status_code == 200
+    assert guest.post("/api/operator-auth/login", json={"password": "wrong-password"}).status_code == 403
+    login = guest.post("/api/operator-auth/login", json={"password": PASSWORD})
+    assert login.status_code == 200
+    assert login.json()["authenticated"] is True
+    assert login.json()["lan_bind_allowed"] is False
+    assert guest.get("/api/nodes").status_code == 200
+    assert guest.post("/api/operator-auth/logout").status_code == 200
+    assert guest.get("/api/nodes").status_code == 401
+    assert guest.get("/api/health").status_code == 200
+
+
 def test_compose_publish_addresses_stay_on_loopback():
     root = Path(__file__).resolve().parents[2]
     compose = (root / "compose.yaml").read_text()

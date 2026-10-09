@@ -100,7 +100,7 @@ A named external system: kind, status, health, capabilities, non-secret configur
 
 ## Operator access and nodes
 
-The `operator_auth` setting stores PBKDF2 material for a local operator password. It is a control-plane secret, not a Run. `StationNode` records pending, registered or revoked remotes with hashed one-time invitation tokens. The local Host Runner is synthesized, not stored. LAN listeners stay unpublished; see [nodes](nodes.md).
+The `operator_auth` setting stores PBKDF2 material for a local operator password. `operator_session` stores the HMAC and expiry of the loopback session cookie. Both are control-plane secrets, not Runs. `StationNode` records pending, registered or revoked remotes with hashed one-time invitation tokens. The local Host Runner is synthesized, not stored. LAN listeners stay unpublished; see [nodes](nodes.md).
 
 ## Chat provider
 

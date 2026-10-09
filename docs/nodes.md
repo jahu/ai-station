@@ -1,10 +1,14 @@
 # Nodes and operator access
 
-The only registered execution node is this workstation's private Host Runner over a Unix socket. Remote node registration, LAN transport and a session login for the UI are unpublished.
+The only registered execution node is this workstation's private Host Runner over a Unix socket. After an operator password is stored, the loopback UI and API require a session cookie. Remote node transport and a LAN listener stay unpublished.
 
 ## Operator credential
 
-Settings can store a local operator password (`PUT /api/operator-auth`). It is hashed with PBKDF2-SHA256 (600,000 iterations) in the `operator_auth` setting. The API never returns the password, salt or hash. Replacing the credential (`PUT /api/operator-auth`) or clearing it (`POST /api/operator-auth/clear`) requires the current password. The hash is a prerequisite for a future authenticated non-loopback listener; it is not yet used to gate localhost requests.
+Settings can store a local operator password (`PUT /api/operator-auth`). It is hashed with PBKDF2-SHA256 (600,000 iterations) in the `operator_auth` setting. The API never returns the password, salt or hash. Replacing the credential (`PUT /api/operator-auth`) or clearing it (`POST /api/operator-auth/clear`) requires the current password.
+
+When that hash exists, loopback requests other than `GET /api/health`, `GET /api/operator-auth`, `POST /api/operator-auth/login` and `POST /api/operator-auth/logout` require the `ais_operator` cookie. Storing the password or a successful login issues an httpOnly `SameSite=strict` cookie (not `Secure`, because the UI is HTTP on 127.0.0.1). Only the HMAC of the token is stored in `operator_session`, with a 12-hour expiry. A single workstation session is replaced on each login. Logout and password removal delete it. The session does not enable LAN publish.
+
+`POST /api/nodes/register` stays on the existing loopback API and still requires that session after a password is stored. It does not open a remote listener.
 
 ## LAN bind
 
@@ -12,7 +16,7 @@ Settings can store a local operator password (`PUT /api/operator-auth`). It is h
 
 Uvicorn inside the container still listens on all container interfaces so Docker can map that localhost publish. That internal bind is not host exposure. Do not set `AI_STATION_BIND_HOST=0.0.0.0` to “make Docker work”.
 
-`GET /api/operator-auth` reports `lan_bind_allowed: false` and `lan_exposure` of `disabled` (loopback), `forbidden` (non-loopback without a password) or `unpublished` (password present, transport still off).
+`GET /api/operator-auth` reports `lan_bind_allowed: false`, `session_scope: loopback`, `session_required` when a password exists, `authenticated` for a valid cookie, and `lan_exposure` of `disabled` (loopback), `forbidden` (non-loopback without a password) or `unpublished` (password present, transport still off).
 
 ## Node inventory and invitations
 
