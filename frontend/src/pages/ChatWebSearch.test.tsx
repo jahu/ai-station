@@ -39,6 +39,38 @@ it("starts offline and exposes a bounded explicit query only when enabled", () =
   expect(screen.queryByLabelText("Search query")).toBeNull();
 });
 
+it("moves through the search toggle without sending a message", () => {
+  function Control() {
+    const [enabled, setEnabled] = useState(false);
+    return (
+      <WebSearchControl
+        enabled={enabled}
+        query=""
+        busy={false}
+        onToggle={setEnabled}
+        onQuery={() => undefined}
+      />
+    );
+  }
+  render(<Control />);
+  const toggle = screen.getByLabelText("Search web_search");
+  expect(toggle.tabIndex).toBe(0);
+  expect(
+    screen.getByText(/There is no inspectable search-toggle Run/),
+  ).toBeTruthy();
+  expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("false");
+  fireEvent.keyDown(toggle.closest(".web-search-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true");
+  expect(screen.getByLabelText("Search query")).toBeTruthy();
+  fireEvent.keyDown(toggle.closest(".web-search-choice-list") as HTMLElement, {
+    key: " ",
+  });
+  expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("false");
+  expect(screen.queryByLabelText("Search query")).toBeNull();
+});
+
 it("shows actual source links and partial results independently of the model answer", () => {
   render(
     <SearchSources
