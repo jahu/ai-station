@@ -9,14 +9,17 @@ from uuid import UUID
 
 import httpx
 
+from ai_station_runner import public_http
 from ai_station_runner.coding_files import proposal_prompt
 from ai_station_runner.coding_job import execute_proposal
 from ai_station_runner.config import get_settings
 from ai_station_runner.local_coding_runs import directory, load_request
 
 
-def collect_proposal(body, selected):
-    message = proposal_prompt(prompt=body.prompt, selected=selected, guidance=body.guidance)
+def collect_proposal(body, selected, references=None):
+    message = proposal_prompt(
+        prompt=body.prompt, selected=selected, guidance=body.guidance, references=references
+    )
     return collect_completion(body, message, max_tokens=8192)
 
 
@@ -115,23 +118,26 @@ def execute(run_id):
     signal.alarm(1200)
     body = load_request(run_id)
     discover = None
+    references = []
     if body.explore:
         from ai_station_runner.coding_exploration import explore
 
         def discover(workspace):
-            return explore(
+            selected, observations = explore(
                 workspace,
                 body.prompt,
                 body.guidance,
                 lambda message: collect_completion(body, message)[0],
                 web=True,
             )
+            references[:] = public_http.proposal_references(observations)
+            return selected, observations
 
     execute_proposal(
         run_id,
         body,
         directory(run_id),
-        lambda selected: collect_proposal(body, selected),
+        lambda selected: collect_proposal(body, selected, references),
         location="local",
         discover=discover,
     )

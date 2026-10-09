@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from ai_station_runner.coding_files import apply_proposal, parse_proposal, read_selected
+from ai_station_runner.coding_files import apply_proposal, parse_proposal, proposal_prompt, read_selected
 
 
 def test_checked_replacements_preserve_unchanged_files_and_executable_mode(tmp_path):
@@ -104,3 +104,24 @@ def test_review_patch_can_be_applied_by_git_including_new_empty_files(tmp_path):
     assert result.returncode == 0, result.stderr
     for item in proposal["files"]:
         assert (target / item["path"]).read_text() == item["content"]
+
+
+def test_proposal_prompt_includes_fetched_page_facts():
+    selected = [{"path": "index.html", "content": "<h1>Invented</h1>"}]
+    message = proposal_prompt(
+        prompt="Build https://www.koratimber.com/",
+        selected=selected,
+        guidance="",
+        references=[
+            {
+                "url": "https://www.koratimber.com/",
+                "text": "ul. Przybyszewskiego 193, 93-120 Łódź | info@koratimber.com",
+                "untrusted": True,
+            }
+        ],
+    )
+    assert "web_observations" in message
+    assert "Przybyszewskiego" in message
+    assert "untrusted public GET" in message
+    without = proposal_prompt(prompt="Build", selected=selected, guidance="")
+    assert "web_observations" not in without
