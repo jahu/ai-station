@@ -51,7 +51,7 @@ Almost every action is a **Task** that produces one or more **Runs**. A Run is p
 
 The Host Runner does not expose an arbitrary shell. Photo, Git, coding CLIs, cancellation, telemetry, and discovery are separate validated operations.
 
-SQLite backups are explicit Task/Run copies (`VACUUM INTO` plus integrity check). A successful copy can be re-checked in place; restore and image rollout stay unpublished. See [operations](operations.md).
+SQLite backups are explicit Task/Run copies (`VACUUM INTO` plus integrity check). A successful copy can be re-checked in place. The Host Runner can inspect `ai-station:local` versus running compose containers without building or retagging; restore and image rollout stay unpublished. See [operations](operations.md).
 
 ## Networking
 

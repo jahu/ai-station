@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import sqlite3
 import tempfile
 from pathlib import Path
@@ -24,6 +25,7 @@ from app.models import Artifact, Run, Setting, Task
 from app.operator_auth import public_status
 from app.paths import PathBoundaryError, safe_join, validate_relative
 from app.permissions import require
+from app.runner_client import RunnerClient, RunnerUnavailable
 from app.runs import create_run, create_task, mark_failed, run_dict, transition
 from app.state import ACTIVE, TERMINAL, RunStatus
 
@@ -344,9 +346,69 @@ class SqliteBackupExecutor:
             return "done"
 
 
+def unpublished_image_inspect(*, docker: str, runner: str, summary: str) -> dict:
+    return {
+        "docker": docker,
+        "runner": runner,
+        "tag": {"name": "ai-station:local", "present": False, "id": None, "created": None},
+        "containers": [],
+        "matches_running": False,
+        "self_container_id": None,
+        "image_rollout": "unpublished",
+        "restore": "unpublished",
+        "summary": summary,
+    }
+
+
+def mark_self_container(payload: dict) -> dict:
+    hostname = (os.environ.get("HOSTNAME") or "").strip().lower()
+    self_id = None
+    containers = []
+    for row in payload.get("containers") or []:
+        item = dict(row)
+        cid = str(item.get("id") or "").lower()
+        name = str(item.get("name") or "").lower()
+        short = cid[:12]
+        is_self = len(hostname) >= 8 and (
+            cid.startswith(hostname) or hostname.startswith(short) or hostname == name
+        )
+        item["self"] = is_self
+        if is_self:
+            self_id = item.get("id")
+        containers.append(item)
+    payload["containers"] = containers
+    payload["self_container_id"] = self_id
+    payload["image_rollout"] = "unpublished"
+    payload["restore"] = "unpublished"
+    payload["runner"] = "available"
+    return payload
+
+
 @router.get("")
 def status(session: DB):
     return readiness(session)
+
+
+@router.get("/image")
+def inspect_image():
+    try:
+        payload = RunnerClient(timeout=15).inspect_station_image()
+    except RunnerUnavailable:
+        return unpublished_image_inspect(
+            docker="unavailable",
+            runner="unavailable",
+            summary=(
+                "Host Runner is unavailable, so the compose image was not inspected. "
+                "Image rollout stays unpublished."
+            ),
+        )
+    if not isinstance(payload, dict):
+        return unpublished_image_inspect(
+            docker="unavailable",
+            runner="available",
+            summary="Host Runner returned an unreadable image inspect. Image rollout stays unpublished.",
+        )
+    return mark_self_container(payload)
 
 
 @router.post("/backups", status_code=202)

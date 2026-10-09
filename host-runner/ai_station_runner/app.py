@@ -52,6 +52,7 @@ from ai_station_runner.publication_reconcile import ReconcileRequest, reconcile_
 from ai_station_runner.reviewed_commits import CommitRequest, commit_report, start_commit
 from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
+from ai_station_runner.station_image import inspect_station_image
 from ai_station_runner.telemetry import collect
 from ai_station_runner.validation import ValidationRequest, start_validation, validation_report
 from ai_station_runner.worktree_remove import RemoveWorktreeRequest, remove_report, start_remove
@@ -597,6 +598,11 @@ app.include_router(local_model_router)
 
 
 app.include_router(llama_router)
+
+
+@app.get("/v1/station-image")
+def inspect_compose_image():
+    return inspect_station_image()
 
 
 @app.post("/v1/runs/audio")

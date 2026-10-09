@@ -71,6 +71,9 @@ class RunnerClient:
     def diagnostics(self) -> dict:
         return self.request("GET", "/v1/diagnostics")
 
+    def inspect_station_image(self) -> dict:
+        return self.request("GET", "/v1/station-image")
+
     def scan_models(self) -> dict:
         return self.request("POST", "/v1/models/scan", {})
 
