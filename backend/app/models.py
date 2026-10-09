@@ -211,6 +211,7 @@ class Agent(Base):
     provider: Mapped[str] = mapped_column(String(80), default="openai-compatible")
     model: Mapped[str] = mapped_column(String(200), default="")
     search_query: Mapped[str] = mapped_column(String(500), default="")
+    fetch_urls: Mapped[list] = mapped_column(JSON, default=list)
     tools: Mapped[list] = mapped_column(JSON, default=list)
     skills: Mapped[list] = mapped_column(JSON, default=list)
     memory_scope: Mapped[str] = mapped_column(String(40), default="agent")

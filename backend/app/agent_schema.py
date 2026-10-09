@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 from app.agent_tools import AGENT_TOOLS, agent_tool
 from app.db import utcnow
+from app.http_fetch import reviewed_urls
 
 
 class AgentSettings(BaseModel):
@@ -21,6 +22,7 @@ class AgentSettings(BaseModel):
     provider: Literal["local-openai-compatible"] = "local-openai-compatible"
     model: str = Field(default="", max_length=200)
     search_query: str = Field(default="", max_length=500)
+    fetch_urls: list[str] = Field(default_factory=list, max_length=3)
     tools: list[str] = Field(default_factory=list, max_length=6)
     skills: list[str] = Field(default_factory=list, max_length=0)
     memory_scope: Literal["agent"] = "agent"
@@ -57,9 +59,15 @@ class AgentSettings(BaseModel):
             if self.run_at.tzinfo is None:
                 raise ValueError("One-shot time requires an explicit timezone")
             self.run_at = self.run_at.astimezone(timezone.utc)
+        try:
+            self.fetch_urls = reviewed_urls(self.fetch_urls)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
         if self.enabled:
             if "web_search" in self.tools and not self.search_query:
                 raise ValueError("web_search requires an explicit public search query before activation")
+            if "http_fetch" in self.tools and not self.fetch_urls:
+                raise ValueError("http_fetch requires 1 to 3 explicit public URLs before activation")
             if not self.model:
                 raise ValueError("Select a local model before enabling the agent")
             unavailable = [name for name in self.tools if not agent_tool(name).operational]
