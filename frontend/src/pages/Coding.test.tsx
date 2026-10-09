@@ -97,7 +97,14 @@ it.each(["Cursor", "Codex", "Local AI"])(
     chooseExecutor(executor);
     expect(screen.queryByLabelText("Files the agent may edit")).toBeNull();
     if (executor !== "Local AI") {
-      await screen.findByRole("option", { name: "Available model" });
+      await screen.findByLabelText("Model available-model");
+      expect(
+        (
+          screen.getByLabelText("Model auto").querySelector(
+            "input",
+          ) as HTMLInputElement
+        ).checked,
+      ).toBe(true);
       const button = screen.getByRole("button", { name: "Start coding" });
       expect((button as HTMLButtonElement).disabled).toBe(true);
       fireEvent.click(
@@ -135,9 +142,11 @@ it.each(["Cursor", "Codex", "Local AI"])(
         ).checked,
       ).toBe(false);
       chooseExecutor(executor);
-      fireEvent.change(screen.getByLabelText("Model"), {
-        target: { value: "available-model" },
-      });
+      fireEvent.click(
+        screen.getByLabelText("Model available-model").querySelector(
+          "input",
+        ) as HTMLElement,
+      );
       fireEvent.click(
         screen.getByRole("checkbox", { name: /Allow .* to receive/ }),
       );

@@ -15,6 +15,7 @@ import {
   ExecutorChoiceList,
   type CodingExecutorChoice,
 } from "./ExecutorChoiceList";
+import { CodingModelChoiceList } from "./CodingModelChoiceList";
 import { ProjectChoiceList } from "./ProjectChoiceList";
 import { parseFilePaths } from "./filePaths";
 
@@ -189,22 +190,15 @@ export default function Coding() {
                     </small>
                   </div>
                 ) : (
-                  <label>
-                    Model
-                    <select
+                  <div>
+                    <span>Model</span>
+                    <CodingModelChoiceList
+                      models={catalog.data?.models ?? []}
                       value={model}
-                      onChange={(e) => setModel(e.target.value)}
-                    >
-                      <option value="">Auto — provider default</option>
-                      {catalog.data?.models
-                        .filter((m) => m.id !== "auto")
-                        .map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.name}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
+                      disabled={create.isPending || modelPending}
+                      onChange={setModel}
+                    />
+                  </div>
                 )}
               </div>
               <ErrorNotice error={local ? provider.error : catalog.error} />

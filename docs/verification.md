@@ -468,3 +468,7 @@ Frontend lint, TypeScript, 207 component tests and production build passed. Assi
 ## Assistant proposal and commit keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 211 component tests and production build passed. Assistant commit/publish radios reuse `useListKeyboard` with unique Proposal and Commit names. Space or Enter selects a reviewed coding proposal or successful reviewed commit from this conversation and does not send, commit or publish. Review acknowledgement and GitHub approval remain the existing sequences. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Coding Cursor/Codex model keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 215 component tests and production build passed. Coding start Cursor/Codex models reuse `useListKeyboard` with unique Model names. Space or Enter selects Auto or an installed CLI catalog model and does not start a coding Run. Auto remains the selected provider's CLI default and never a silent provider switch. Local AI still uses the existing llama.cpp picker. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
