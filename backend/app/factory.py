@@ -74,6 +74,20 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         enabled=False,
         require_approval=False,
         workflow_mode="sequential",
+        tool_calling=(
+            "bounded"
+            if any(
+                phrase in lowered
+                for phrase in (
+                    "tool calling",
+                    "call tools",
+                    "function calling",
+                    "wywołuj narzędzia",
+                    "wywoluj narzedzia",
+                )
+            )
+            else "none"
+        ),
         output_expectation="A short report the user can inspect in Runs.",
         notification_policy={"on_success": False, "on_failure": False, "on_approval": False},
         retry_policy={"mode": "none"},

@@ -69,6 +69,7 @@ class AgentSettings(BaseModel):
     output_expectation: str = Field(default="A concise, factual report.", max_length=4000)
     require_approval: StrictBool = False
     workflow_mode: Literal["sequential", "gated"] = "sequential"
+    tool_calling: Literal["none", "bounded"] = "none"
     retry_policy: RetryPolicy = Field(default_factory=RetryPolicy)
     notification_policy: NotificationPolicy = Field(default_factory=NotificationPolicy)
     enabled: StrictBool = False

@@ -150,6 +150,7 @@ def agent_dict(agent: Agent) -> dict:
         "output_expectation": agent.output_expectation,
         "require_approval": agent.require_approval,
         "workflow_mode": agent.workflow_mode,
+        "tool_calling": agent.tool_calling,
         "enabled": agent.enabled,
         "last_run_at": iso(agent.last_run_at),
         "next_run_at": iso(agent.next_run_at),

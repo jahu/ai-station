@@ -81,12 +81,19 @@ export interface Run {
   workflow?: {
     parent_run_id: string;
     mode: string;
+    tool_calling?: string;
     steps: {
       run_id: string;
       key: string;
       gate: string;
       status: string;
       capability: string;
+      tool_calls?: {
+        id: string;
+        tool: string;
+        arguments: Record<string, unknown>;
+        round: number;
+      }[];
     }[];
   };
 }

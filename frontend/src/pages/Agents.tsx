@@ -33,6 +33,7 @@ interface Agent {
   output_expectation: string;
   require_approval: boolean;
   workflow_mode: "sequential" | "gated";
+  tool_calling: "none" | "bounded";
   retry_policy: { mode: "none" | "manual" };
   notification_policy: {
     on_success: boolean;
@@ -295,6 +296,9 @@ export function AgentDetail() {
           {agent.workflow_mode === "gated"
             ? " Gated mode parks the report after context tools so you can inspect those artifacts first."
             : " Sequential mode runs saved context tools then the report, each as its own Run."}
+          {agent.tool_calling === "bounded"
+            ? " Bounded tool calling lets the report request selected registry tools; invented tools, URLs and commands fail closed."
+            : ""}
         </p>
         {agent.runs?.find((run) => run.status === "waiting_for_approval") && (
           <p className="notice">
@@ -403,6 +407,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           output_expectation: values.output_expectation,
           require_approval: values.require_approval ?? false,
           workflow_mode: values.workflow_mode ?? "sequential",
+          tool_calling: values.tool_calling ?? "none",
           retry_policy: values.retry_policy ?? { mode: "none" },
           notification_policy: values.notification_policy ?? {
             on_success: false,
@@ -587,8 +592,28 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             Selected context tools become persisted child Runs with
             dependencies. The model cannot add tools, URLs or shell commands.
             Cancel stops the currently active child. Remember reports still runs
-            only after a successful report.
+            only after a successful report. Bounded tool calling is extra
+            registry calls during the report, not a shell or browser.
           </p>
+          <label className="agent-tool">
+            <input
+              type="checkbox"
+              checked={(values.tool_calling ?? "none") === "bounded"}
+              onChange={(e) =>
+                update("tool_calling", e.target.checked ? "bounded" : "none")
+              }
+            />
+            <span>
+              <strong>Bounded tool calling during the report</strong>
+              <small>
+                The model may request selected operational tools from the typed
+                registry. It cannot invent tools, URLs, search queries, shell
+                commands or browser actions. Each call is an event plus a JSON
+                artifact on the report Run. Existing agents stay off until you
+                check this.
+              </small>
+            </span>
+          </label>
           <label className="agent-tool">
             <input
               type="radio"
