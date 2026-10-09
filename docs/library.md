@@ -1,6 +1,6 @@
 # Library management
 
-Library manages general Artifacts, not an image-only store. Import uses the existing bounded image/WAV upload adapters; generated outputs retain their Run and parent relationships. Search, type filters and pagination operate on persisted artifact records.
+Library manages general Artifacts, not an image-only store. Import uses the existing bounded image/WAV upload adapters; generated outputs retain their Run and parent relationships. Search, type filters and pagination operate on persisted artifact records. The collection grid is one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names; decorative type icons stay out of the tab order.
 
 User-editable display titles and notes are separate from immutable generation parameters, original filenames, hashes and paths. Versioned updates reject stale edits. Moving an artifact to Trash hides it from the normal Library and new input pickers; it does not delete bytes or break historical Runs, existing inputs or source lineage. Trash supports inspection and restoration. Permanent file deletion is intentionally separate from this reversible action.
 

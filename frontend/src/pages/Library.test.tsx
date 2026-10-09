@@ -155,3 +155,41 @@ it("filters and searches the collection and imports WAV through the audio adapte
     expect.objectContaining({ method: "POST", body: expect.any(FormData) }),
   );
 });
+it("moves through Library artifacts with arrow keys", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        { ...original, id: "portrait", title: "Portrait" },
+        {
+          ...original,
+          id: "voiceclip",
+          type: "audio",
+          title: "Voice take",
+          original_filename: "voice.wav",
+        },
+      ],
+    }),
+  );
+  mount("/library");
+  const first = await screen.findByRole("link", {
+    name: "Inspect Portrait portrait",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect Voice take voicecli",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Library" })).toBeTruthy();
+  fireEvent.keyDown(first.closest(".artifact-grid") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".artifact-grid") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
