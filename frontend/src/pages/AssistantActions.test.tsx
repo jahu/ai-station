@@ -375,18 +375,17 @@ it("selects a native Cursor model without sending", async () => {
       ) as HTMLInputElement
     ).checked,
   ).toBe(true);
-  fireEvent.change(screen.getByLabelText("Selected files"), {
-    target: { value: "README.md" },
-  });
   fireEvent.click(
     screen.getByLabelText("Model available-model").querySelector(
       "input",
     ) as HTMLElement,
   );
   fireEvent.click(screen.getByRole("checkbox", { name: /Allow sending/ }));
-  expect(JSON.parse(screen.getByTestId("scope").textContent!).model).toBe(
-    "available-model",
-  );
+  expect(JSON.parse(screen.getByTestId("scope").textContent!)).toMatchObject({
+    model: "available-model",
+    explore: true,
+    files: [],
+  });
   const list = screen
     .getByLabelText("Model auto")
     .closest(".coding-model-choice-list") as HTMLElement;
@@ -396,6 +395,67 @@ it("selects a native Cursor model without sending", async () => {
   expect(
     screen.getByText(/There is no inspectable model-selection Run/),
   ).toBeTruthy();
+});
+
+it("enables Cursor automatic file discovery without sending", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => [
+        {
+          id: "project-1",
+          name: "AI Station",
+          updated_at: "2026-09-29T00:00:00Z",
+        },
+      ],
+    })),
+  );
+  function Composer() {
+    const [value, setValue] = useState(emptyOptions);
+    return (
+      <>
+        <AssistantActions
+          value={value}
+          onChange={setValue}
+          busy={false}
+          onUploading={() => {}}
+        />
+        <output data-testid="scope">{JSON.stringify(value.coding)}</output>
+      </>
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  chooseAction("coding.cursor");
+  fireEvent.keyDown(
+    (await screen.findByLabelText("Project project-1")).closest(
+      ".project-choice-list",
+    ) as HTMLElement,
+    { key: "Enter" },
+  );
+  expect(
+    screen.getByRole("checkbox", {
+      name: "Let the agent find the relevant files",
+    }),
+  ).toBeTruthy();
+  expect(screen.queryByLabelText("Selected files")).toBeNull();
+  fireEvent.click(screen.getByRole("checkbox", { name: /Allow sending/ }));
+  expect(JSON.parse(screen.getByTestId("scope").textContent!)).toMatchObject({
+    files: [],
+    explore: true,
+    external_ai: true,
+  });
+  fireEvent.click(
+    screen.getByRole("checkbox", {
+      name: "Let the agent find the relevant files",
+    }),
+  );
+  expect(screen.getByTestId("scope").textContent).toBe("null");
+  expect(screen.getByLabelText("Selected files")).toBeTruthy();
 });
 
 it("requires an in-conversation proposal and review before commit action is ready", async () => {

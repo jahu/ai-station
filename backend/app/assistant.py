@@ -70,8 +70,8 @@ class CodingScope(BaseModel):
 
     @model_validator(mode="after")
     def selection(self):
-        if self.explore and (self.external_ai or self.files) or not self.explore and not self.files:
-            raise ValueError("Choose local repository exploration or explicit source files")
+        if self.explore and self.files or not self.explore and not self.files:
+            raise ValueError("Choose automatic file discovery or explicit source files")
         if self.external_ai and self.max_repair_attempts:
             raise ValueError("Automatic repair is available only for local coding")
         return self
@@ -446,7 +446,7 @@ class AssistantExecutor:
             or "external_ai" not in run.effective_permissions
             or params["coding"].get("executor", "cursor") != provider
         ):
-            message.content = f"Select the project and files in Coding scope and explicitly allow sharing with {provider.title()}, then send your instruction."
+            message.content = f"Select the project and sharing scope and explicitly allow sharing with {provider.title()}, then send your instruction."
             return
         try:
             if local:
@@ -466,7 +466,7 @@ class AssistantExecutor:
                     **{
                         key: value
                         for key, value in params["coding"].items()
-                        if key not in {"explore", "max_repair_attempts", "executor"}
+                        if key not in {"max_repair_attempts", "executor"}
                     },
                     prompt=params["content"],
                 )

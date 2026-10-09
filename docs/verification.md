@@ -476,3 +476,7 @@ Frontend lint, TypeScript, 215 component tests and production build passed. Codi
 ## Assistant Cursor/Codex model select — 2026-10-09
 
 Frontend lint, TypeScript, 216 component tests, production build and `./scripts/check.sh` (685 passed, 5 skipped) passed. Assistant Cursor/Codex coding reuses the Coding native model radios. Space or Enter selects Auto or an installed CLI catalog model and does not send. Auto remains the selected provider's CLI default. The selected model is stored on `CodingScope` and applied to the existing Cursor/Codex coding Task; local coding still uses the conversation model. No Host Runner or schema migration. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant Cursor/Codex automatic file discovery — 2026-10-09
+
+Frontend lint, TypeScript, 217 component tests, production build and `./scripts/check.sh` (687 passed, 5 skipped) passed. Assistant Cursor and Codex coding reuse the existing Explore checkbox and worktree discovery path. Space or Enter selects it and does not send. Cursor and Codex stay repository-only; public GET remains Local AI only. Explore plus explicit files is still rejected. No Host Runner or schema migration. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
