@@ -205,20 +205,25 @@ it("moves between files with arrow keys and shows only the selected patch", () =
     name: /Arrow keys choose a file/,
   });
   expect(
-    screen
-      .getByRole("option", { name: /one.py/ })
-      .getAttribute("aria-selected"),
+    screen.getByRole("option", { name: "File one.py" }).getAttribute(
+      "aria-selected",
+    ),
   ).toBe("true");
   expect(screen.getByLabelText("Diff for one.py")).toBeTruthy();
   expect(screen.queryByLabelText("Diff for two.py")).toBeNull();
   fireEvent.keyDown(list, { key: "ArrowDown" });
   expect(
-    screen
-      .getByRole("option", { name: /two.py/ })
-      .getAttribute("aria-selected"),
+    screen.getByRole("option", { name: "File two.py" }).getAttribute(
+      "aria-selected",
+    ),
   ).toBe("true");
   expect(screen.getByLabelText("Diff for two.py")).toBeTruthy();
   expect(screen.queryByLabelText("Diff for one.py")).toBeNull();
+  fireEvent.keyDown(list, { key: "Enter" });
+  expect(screen.getByLabelText("Diff for two.py")).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "Commit Run" })).toBeNull();
+  fireEvent.keyDown(list, { key: "Home" });
+  expect(screen.getByLabelText("Diff for one.py")).toBeTruthy();
 });
 
 it("states cumulative totals against the task base", () => {

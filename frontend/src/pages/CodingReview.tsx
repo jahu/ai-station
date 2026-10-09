@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useId, useState, type KeyboardEvent } from "react";
+import { useId, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, GitCommitHorizontal, Check } from "lucide-react";
 import { api, type Artifact, type Run } from "../api";
@@ -7,6 +7,7 @@ import { Button } from "../components/ui/button";
 import { ErrorNotice } from "../components/common";
 import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
+import { useListKeyboard } from "./useListKeyboard";
 
 type Review = {
   exploration?: {
@@ -219,38 +220,21 @@ function ReviewArtifacts({ runId }: { runId: string }) {
 
 function ReviewFiles({ files }: { files: Review["files"] }) {
   const labelId = useId();
-  const [selected, setSelected] = useState(0);
+  const { listRef, index, setSelectedKey, onKeyDown, itemProps } =
+    useListKeyboard(files, (item) => item.path);
   if (!files.length) return <p>No file contents changed.</p>;
-  const index = Math.min(selected, files.length - 1);
-  const file = files[index];
-  const move = (next: number) =>
-    setSelected(Math.max(0, Math.min(files.length - 1, next)));
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
-      event.preventDefault();
-      move(index + 1);
-    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-      event.preventDefault();
-      move(index - 1);
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      move(0);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      move(files.length - 1);
-    }
-  };
+  const file = files[index] ?? files[0];
   return (
     <div className="coding-review-files">
       <p id={labelId} className="muted">
         Arrow keys choose a file while the list is focused. Only the selected
-        patch is shown.
+        patch is shown. Enter does not open a Run.
       </p>
       <div
+        ref={listRef}
         role="listbox"
-        tabIndex={0}
         aria-labelledby={labelId}
-        aria-activedescendant={`${labelId}-${index}`}
+        aria-activedescendant={file ? `${labelId}-${index}` : undefined}
         className="coding-review-file-list"
         onKeyDown={onKeyDown}
       >
@@ -260,8 +244,10 @@ function ReviewFiles({ files }: { files: Review["files"] }) {
             key={item.path}
             role="option"
             aria-selected={i === index}
+            aria-label={`File ${item.path}`}
             className="coding-review-file"
-            onClick={() => setSelected(i)}
+            onClick={() => setSelectedKey(item.path)}
+            {...itemProps(i, item.path)}
           >
             <span className="mono">{item.path}</span>
             <span>
