@@ -36,6 +36,7 @@ import {
 } from "../components/common";
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
+import { useListKeyboard } from "./useListKeyboard";
 
 type Conversation = {
   id: string;
@@ -105,40 +106,11 @@ function ConversationHistory({
 }) {
   const headingId = useId();
   const labelId = useId();
-  const listRef = useRef<HTMLDivElement>(null);
-  const [selectedKey, setSelectedKey] = useState(
-    currentId || conversations[0]?.id || "",
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    conversations,
+    (row) => row.id,
+    { initialKey: currentId },
   );
-  const found = conversations.findIndex((row) => row.id === selectedKey);
-  const currentFound = conversations.findIndex((row) => row.id === currentId);
-  const index =
-    found >= 0 ? found : currentFound >= 0 ? currentFound : 0;
-  const focusItem = (next: number) => {
-    const clamped = Math.max(0, Math.min(conversations.length - 1, next));
-    const row = conversations[clamped];
-    if (!row) return;
-    setSelectedKey(row.id);
-    const link = listRef.current?.querySelector<HTMLElement>(
-      `[data-conversation-index="${clamped}"]`,
-    );
-    link?.focus();
-    link?.scrollIntoView?.({ block: "nearest" });
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
-      event.preventDefault();
-      focusItem(index + 1);
-    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-      event.preventDefault();
-      focusItem(index - 1);
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      focusItem(0);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      focusItem(conversations.length - 1);
-    }
-  };
   return (
     <aside className="panel chat-history">
       <Button asChild>
@@ -163,17 +135,13 @@ function ConversationHistory({
             onKeyDown={onKeyDown}
           >
             {conversations.map((row, i) => {
-              const current = i === index;
               return (
                 <Link
                   className={row.id === currentId ? "selected" : ""}
                   key={row.id}
                   to={`/chat/${row.id}`}
                   aria-label={`Inspect ${row.title} ${row.id.slice(0, 8)}`}
-                  aria-current={current ? "true" : undefined}
-                  tabIndex={current ? 0 : -1}
-                  data-conversation-index={i}
-                  onFocus={() => setSelectedKey(row.id)}
+                  {...itemProps(i, row.id)}
                 >
                   <MessageSquare size={15} aria-hidden="true" />
                   <span>
@@ -529,49 +497,27 @@ function Transcript({
 }) {
   const headingId = useId();
   const labelId = useId();
-  const listRef = useRef<HTMLDivElement>(null);
   const end = useRef<HTMLDivElement>(null);
   const visible = messages.filter((message) => !message.metadata.routing_only);
-  const [selectedKey, setSelectedKey] = useState(visible.at(-1)?.id ?? "");
-  const found = visible.findIndex((message) => message.id === selectedKey);
-  const index = found >= 0 ? found : Math.max(0, visible.length - 1);
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    visible,
+    (message) => message.id,
+    { initialKey: visible.at(-1)?.id, fallback: "last" },
+  );
   const selected = visible[index];
   const last = messages.at(-1);
   const navigate = useNavigate();
   useEffect(() => {
     end.current?.scrollIntoView?.({ block: "nearest" });
   }, [last?.content, messages.length]);
-  const focusItem = (next: number) => {
-    const clamped = Math.max(0, Math.min(visible.length - 1, next));
-    const message = visible[clamped];
-    if (!message) return;
-    setSelectedKey(message.id);
-    const item = listRef.current?.querySelector<HTMLElement>(
-      `[data-message-index="${clamped}"]`,
-    );
-    item?.focus();
-    item?.scrollIntoView?.({ block: "nearest" });
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key !== "Enter" || event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input")) return;
+    if (selected?.run_id) {
       event.preventDefault();
-      focusItem(index + 1);
-    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-      event.preventDefault();
-      focusItem(index - 1);
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      focusItem(0);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      focusItem(visible.length - 1);
-    } else if (event.key === "Enter") {
-      const target = event.target as HTMLElement;
-      if (target.closest("a, button, textarea, input")) return;
-      if (selected?.run_id) {
-        event.preventDefault();
-        navigate(`/runs/${selected.run_id}`);
-      }
+      navigate(`/runs/${selected.run_id}`);
     }
   };
   return (
@@ -595,7 +541,7 @@ function Transcript({
         ref={listRef}
         className="chat-messages"
         aria-labelledby={visible.length ? labelId : undefined}
-        onKeyDown={onKeyDown}
+        onKeyDown={handleKey}
       >
         {visible.map((message, i) => {
           const current = i === index;
@@ -605,10 +551,8 @@ function Transcript({
             <article
               className={`chat-message ${message.role} ${message.metadata.superseded ? "superseded" : ""}`}
               key={message.id}
-              aria-current={current ? "true" : undefined}
-              tabIndex={current ? 0 : -1}
-              data-message-index={i}
-              onFocus={() => setSelectedKey(message.id)}
+              aria-label={`Message ${speaker} ${shortId}`}
+              {...itemProps(i, message.id)}
             >
               <div className="row spread">
                 <strong>
