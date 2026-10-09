@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.agents_api import router as agent_router
+from app.approvals import resolve_run_approval, run_public
 from app.audio import router as audio_router
 from app.avatars import router as avatar_router
 from app.chat import router as chat_router
@@ -158,14 +159,29 @@ def runs(
 
 @app.get("/api/runs/{run_id}")
 def run_detail(run_id: UUID, session: DB):
-    return redact_obj(run_dict(get_run(session, run_id)))
+    return redact_obj(run_public(session, get_run(session, run_id)))
+
+
+class ApprovalDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    resolution: Literal["granted", "denied"]
+
+
+@app.post("/api/runs/{run_id}/approval")
+def decide_approval(run_id: UUID, body: ApprovalDecision, session: DB):
+    try:
+        run = resolve_run_approval(session, get_run(session, run_id), body.resolution)
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    session.commit()
+    return redact_obj(run_public(session, run))
 
 
 @app.post("/api/runs/{run_id}/cancel")
 def cancel_run(run_id: UUID, session: DB):
     run = request_cancel(session, get_run(session, run_id))
     session.commit()
-    return redact_obj(run_dict(run))
+    return redact_obj(run_public(session, run))
 
 
 @app.get("/api/runs/{run_id}/events")

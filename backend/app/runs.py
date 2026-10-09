@@ -203,6 +203,9 @@ def request_cancel(session: Session, run: Run) -> Run:
             session, run, RunStatus.CANCEL_REQUESTED, event_type="run.cancel_requested", payload={}
         )
     if run.status == RunStatus.WAITING_FOR_APPROVAL:
+        from app.approvals import dismiss_pending
+
+        dismiss_pending(session, run)
         return transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
     raise InvalidTransition(run.status, RunStatus.CANCEL_REQUESTED.value)
 

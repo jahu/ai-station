@@ -36,7 +36,7 @@ ACTIVE = {
 
 # interrupted -> queued is only used by recovery for safe retries.
 TRANSITIONS: dict[RunStatus, set[RunStatus]] = {
-    RunStatus.QUEUED: {RunStatus.CLAIMED, RunStatus.CANCELED},
+    RunStatus.QUEUED: {RunStatus.CLAIMED, RunStatus.CANCELED, RunStatus.WAITING_FOR_APPROVAL},
     RunStatus.CLAIMED: {
         RunStatus.PREPARING,
         RunStatus.FAILED,
@@ -58,6 +58,7 @@ TRANSITIONS: dict[RunStatus, set[RunStatus]] = {
         RunStatus.INTERRUPTED,
     },
     RunStatus.WAITING_FOR_APPROVAL: {
+        RunStatus.QUEUED,
         RunStatus.RUNNING,
         RunStatus.PREPARING,
         RunStatus.CANCELED,

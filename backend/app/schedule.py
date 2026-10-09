@@ -81,11 +81,30 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
         retry_class="inspect",
         triggered_by=triggered_by,
     )
-    from app.llama import prepare_consumer
-
-    prepare_consumer(session, run)
     now = utcnow()
-    agent.last_run_at, agent.last_status = now, "queued"
+    agent.last_run_at = now
+    if definition.require_approval:
+        from app.approvals import request_run_approval
+
+        request_run_approval(
+            session,
+            run,
+            action="agent.execute",
+            reason="This agent requires approval before each Run",
+            payload={
+                "agent_id": agent.id,
+                "name": agent.name,
+                "model": agent.model,
+                "tools": list(agent.tools),
+                "skills": list(agent.skills),
+                "triggered_by": triggered_by,
+            },
+        )
+    else:
+        from app.llama import prepare_consumer
+
+        prepare_consumer(session, run)
+        agent.last_status = "queued"
     if agent.trigger == "datetime":
         agent.enabled, agent.next_run_at = False, None
     elif triggered_by == "scheduler":

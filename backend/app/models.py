@@ -226,6 +226,7 @@ class Agent(Base):
     retry_policy: Mapped[dict] = mapped_column(JSON, default=dict)
     notification_policy: Mapped[dict] = mapped_column(JSON, default=dict)
     output_expectation: Mapped[str] = mapped_column(Text, default="")
+    require_approval: Mapped[bool] = mapped_column(Boolean, default=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     last_run_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
     next_run_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True, index=True)

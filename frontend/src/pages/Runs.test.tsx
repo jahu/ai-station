@@ -7,8 +7,8 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
-import { Runs } from "./Runs";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { RunDetail, Runs } from "./Runs";
 
 afterEach(() => {
   cleanup();
@@ -110,4 +110,87 @@ it("restores combined filters from the URL and resets paging when applying a cha
     ),
   );
   expect(screen.getByText("Page 1 · up to 100 runs")).toBeTruthy();
+});
+it("lets the user grant a parked agent Run without starting it from the inspector", async () => {
+  vi.stubGlobal(
+    "EventSource",
+    class {
+      close() {}
+      addEventListener() {}
+    },
+  );
+  let run = {
+    id: "parked",
+    capability: "agent.execute",
+    executor_type: "agent",
+    execution_target: "container",
+    status: "waiting_for_approval",
+    created_at: "2026-10-09T12:00:00Z",
+    started_at: null,
+    finished_at: null,
+    actual_gpu: null,
+    requested_gpu: "none",
+    parameters: {},
+    effective_permissions: [],
+    summary: "",
+    error_type: "",
+    error_message: "",
+    worker_id: null,
+    approval: {
+      id: "a1",
+      action: "agent.execute",
+      reason: "This agent requires approval before each Run",
+      risk: "medium",
+      payload: {},
+      requested_at: "2026-10-09T12:00:00Z",
+      resolved_at: null as string | null,
+      resolution: "pending",
+    },
+  };
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => {
+    if (options && String(url).includes("/approval")) {
+      const body = JSON.parse(options.body as string);
+      run = {
+        ...run,
+        status: body.resolution === "granted" ? "queued" : "canceled",
+        approval: {
+          ...run.approval,
+          resolution: body.resolution,
+          resolved_at: "2026-10-09T12:01:00Z",
+        },
+      };
+    }
+    return {
+      ok: true,
+      json: async () =>
+        String(url).includes("/events") || String(url).includes("/artifacts")
+          ? []
+          : run,
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/runs/parked"]}>
+        <Routes>
+          <Route path="/runs/:id" element={<RunDetail />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("heading", { name: "Approval required" });
+  fireEvent.click(screen.getByRole("button", { name: "Approve and queue" }));
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(
+        (call) =>
+          String(call[0]).includes("/approval") &&
+          JSON.parse(String(call[1]?.body)).resolution === "granted",
+      ),
+    ).toBe(true),
+  );
 });

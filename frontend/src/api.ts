@@ -63,6 +63,16 @@ export interface Run {
   error_message: string;
   worker_id: string | null;
   metadata?: Record<string, unknown>;
+  approval?: {
+    id: string;
+    action: string;
+    reason: string;
+    risk: string;
+    payload: Record<string, unknown>;
+    requested_at: string;
+    resolved_at: string | null;
+    resolution: string;
+  };
 }
 export interface RunEvent {
   id: string;

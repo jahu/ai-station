@@ -65,7 +65,7 @@ A versioned `SKILL.md` instruction pack under the skills root. Agents store sele
 
 ## Approval
 
-A pause record for a sensitive action: action, reason, risk, requesting run, timestamps, and resolution. The run waits in `waiting_for_approval`.
+A pause record for a sensitive action: action, reason, risk, requesting run, timestamps, and resolution. Agent Runs that require approval wait in `waiting_for_approval` until granted (re-queued) or denied (canceled). GitHub publication still records a granted approval at enqueue time.
 
 ## Memory
 

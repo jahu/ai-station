@@ -313,6 +313,18 @@ export function RunDetail() {
     mutationFn: () => api<Run>(`/images/runs/${id}/retry`, { method: "POST" }),
     onSuccess: (next) => navigate(`/runs/${next.id}`),
   });
+  const decide = useMutation({
+    mutationFn: (resolution: "granted" | "denied") =>
+      api<Run>(`/runs/${id}/approval`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolution }),
+      }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["run", id] });
+      void cache.invalidateQueries({ queryKey: ["runs"] });
+    },
+  });
   const isTerminal = run.data ? terminal.has(run.data.status) : false;
   return (
     <>
@@ -349,6 +361,7 @@ export function RunDetail() {
           events.error ??
           cancel.error ??
           retry.error ??
+          decide.error ??
           artifacts.error
         }
       />
@@ -372,6 +385,33 @@ export function RunDetail() {
                 Started <b>{time(run.data.started_at)}</b>
               </span>
             </div>
+            {run.data.status === "waiting_for_approval" &&
+              run.data.approval?.resolution === "pending" && (
+                <section className="panel">
+                  <h2>Approval required</h2>
+                  <p>{run.data.approval.reason}</p>
+                  <p className="muted">
+                    Action {run.data.approval.action}. Granting queues this Run
+                    for the worker; denying cancels it. Tools and inference have
+                    not started.
+                  </p>
+                  <div className="row">
+                    <Button
+                      disabled={decide.isPending}
+                      onClick={() => decide.mutate("granted")}
+                    >
+                      Approve and queue
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={decide.isPending}
+                      onClick={() => decide.mutate("denied")}
+                    >
+                      Deny
+                    </Button>
+                  </div>
+                </section>
+              )}
             {run.data.error_message && (
               <div className="notice" role="alert">
                 {run.data.error_message}
