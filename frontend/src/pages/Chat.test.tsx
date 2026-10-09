@@ -57,9 +57,9 @@ it("creates a conversation with explicit local model settings", async () => {
     </QueryClientProvider>,
   );
   await screen.findByLabelText("Model");
-  expect(screen.getByLabelText("Mode")).toBeTruthy();
+  expect(screen.getByLabelText("Mode local")).toBeTruthy();
   expect(screen.getByLabelText("Conversation title")).toBeTruthy();
-  expect(screen.getByLabelText("Provider")).toBeTruthy();
+  expect(screen.getByLabelText("Provider local-openai-compatible")).toBeTruthy();
   expect(screen.getByLabelText("Temperature")).toBeTruthy();
   expect(screen.getByLabelText("Maximum tokens")).toBeTruthy();
   fireEvent.change(screen.getByLabelText("System prompt"), {
@@ -431,9 +431,9 @@ it("overrides this turn without sending or rewriting conversation settings", asy
   fireEvent.keyDown(list, { key: "Enter" });
   expect(
     (
-      screen.getByRole("radio", {
-        name: /Platform assistant/,
-      }) as HTMLInputElement
+      screen.getByLabelText("Turn orchestrator").querySelector(
+        "input",
+      ) as HTMLInputElement
     ).checked,
   ).toBe(true);
   expect(await screen.findByLabelText("Action auto")).toBeTruthy();

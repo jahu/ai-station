@@ -440,3 +440,7 @@ Frontend lint, TypeScript, 183 component tests and production build passed. Assi
 ## Avatars Quality and Clip length keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 187 component tests and production build passed. Avatars Quality and Clip length radios reuse `useListKeyboard` with unique Quality and Clip names. Space or Enter selects 256/384/512 px or 17–81 frames and does not queue an EchoMimic Run. Advanced steps, seed and GPU stay unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Chat saved Mode and Provider keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 191 component tests and production build passed. Saved conversation Mode and Provider radios reuse `useListKeyboard` with unique Mode and Provider names. Space or Enter selects Platform assistant, Conversation only or a registered provider and does not create, save or send. This-turn Turn radios remain the existing override and still do not rewrite saved Mode. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
