@@ -58,13 +58,36 @@ def validation_policy(workspace: Path, git_common_dir: Path) -> dict:
     }
 
 
-def write_policy(path: Path, workspace: Path, git_common_dir: Path) -> Path:
+NETWORK_READ_PATHS = (
+    "/etc/ssl",
+    "/etc/pki",
+    "/etc/ssl/certs",
+    "/etc/ca-certificates",
+    "/etc/resolv.conf",
+    "/etc/hosts",
+    "/etc/nsswitch.conf",
+    "/usr/share/ca-certificates",
+    "/usr/lib/ssl",
+)
+
+
+def dependency_policy(workspace: Path, git_common_dir: Path, *, network: bool) -> dict:
+    policy = validation_policy(workspace, git_common_dir)
+    sandbox = policy["sandbox"]
+    sandbox["networkAccess"] = bool(network)
+    if network:
+        extra = [path for path in NETWORK_READ_PATHS if Path(path).exists()]
+        sandbox["hardcodedReadPaths"] = list(dict.fromkeys([*sandbox["hardcodedReadPaths"], *extra]))
+    return policy
+
+
+def write_policy(path: Path, workspace: Path, git_common_dir: Path, policy: dict | None = None) -> Path:
     workspace = workspace.resolve(strict=True)
     if not path.is_absolute() or path.resolve(strict=False) != path:
         raise SandboxUnavailable("Policy path must be canonical without symlink redirection")
     if path.is_relative_to(workspace):
         raise SandboxUnavailable("Sandbox policy must stay outside the writable worktree")
-    policy = validation_policy(workspace, git_common_dir)
+    policy = policy or validation_policy(workspace, git_common_dir)
     path.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
     descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     with os.fdopen(descriptor, "w") as handle:

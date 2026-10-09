@@ -103,7 +103,7 @@ A native process group can disappear from the live-process scan before `waitpid`
 `chat_summary` is a container executor for explicit incremental conversation summaries. It snapshots local model context and source IDs, emits summary deltas, and atomically publishes coverage, scoped Memory and a Markdown artifact only on success. Cancellation or failed publication keeps the previous summary. Interrupted inference requires inspection, not automatic retry.
 
 
-Saved project test/lint/build commands now run through the worker and a managed native sandbox in an owned worktree. Commands are snapshotted from versioned project settings, Git metadata stays read-only, networking is blocked, and results become events plus a JSON artifact. See [project validation](coding-boundary.md) for limits, recovery and current dependency restrictions. The [bounded Cursor adapter](coding-cursor.md) adds explicit external-AI consent, checked selected-file writes, review artifacts and a separate validation Run; other provider adapters remain disabled.
+Saved project test/lint/build commands now run through the worker and a managed native sandbox in an owned worktree. Commands are snapshotted from versioned project settings, Git metadata stays read-only, networking is blocked, and results become events plus a JSON artifact. Declared Python dependencies use a separate native Run and the same worktree lock. See [project validation and dependency installation](coding-boundary.md). The [bounded Cursor adapter](coding-cursor.md) adds explicit external-AI consent, checked selected-file writes, review artifacts and a separate validation Run; other provider adapters remain disabled.
 
 ## Waiting for managed models
 

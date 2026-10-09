@@ -136,3 +136,10 @@ The first AI Station self-development attempt applied its documentation proposal
 Reviewed implementation `3926405` was deployed with a verified SQLite backup and retained release checkouts. The final Docker image and fresh isolated fake-executor/browser/restart/shutdown smoke passed. API, native Runner, worker/scheduler and local provider discovery are healthy. Real model/runtime scans observed 18 files and three runtime instances without modifying external resources.
 
 The user-approved real Cursor self-development repeat passed: preparation `c2e12ab4-aef7-44b4-9350-e0463dafb65d`, coding `a5ed6ac9-956c-41c5-9630-9a69d91e9210`, validation `f550e8b0-b41e-4142-bee7-ae04dc5a032d`. The documentation proposal's hash matched exactly, both Python syntax commands passed, and active HEAD/status/index were unchanged. The preserved worktree still awaits human review; no proposal commit/merge/deployment occurred. See [scope and limitations](mvp-acceptance.md).
+
+
+## Sandboxed project dependency installation — 2026-10-09
+
+`./scripts/check.sh`: 538 Python tests passed (5 skipped), including vendor-wheel install through the fake sandbox helper, manifest URL/VCS rejection, stale/unowned API guards, runner replay/permissions/cancellation, and time-limit failure without a success report. Frontend lint, TypeScript, 59 component tests and production build passed. Existing bundle-size and TestClient deprecation advisories remain.
+
+Normal tests never contacted PyPI. Vendor mode installed a disposable local wheel into a worktree `.venv` and imported it. PyPI mode is covered by parser/plan/policy unit tests and public-DNS fail-closed checks, not a live download. Claude Code remains untested and unavailable.

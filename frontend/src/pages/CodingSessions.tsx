@@ -260,6 +260,7 @@ export default function CodingSession() {
                 .filter(
                   (r) =>
                     r.executor_type === "project_validation" ||
+                    r.executor_type === "project_dependencies" ||
                     r.executor_type === "reviewed_commit" ||
                     r.executor_type === "github_publication",
                 )
@@ -269,9 +270,11 @@ export default function CodingSession() {
                       <Badge status={r.status} />
                       {r.executor_type === "project_validation"
                         ? "Project checks"
-                        : r.executor_type === "reviewed_commit"
-                          ? "Reviewed commit"
-                          : "GitHub publication"}
+                        : r.executor_type === "project_dependencies"
+                          ? "Project dependencies"
+                          : r.executor_type === "reviewed_commit"
+                            ? "Reviewed commit"
+                            : "GitHub publication"}
                     </summary>
                     <p>{r.summary || r.error_message}</p>
                     <Link className="text-link" to={`/runs/${r.id}`}>

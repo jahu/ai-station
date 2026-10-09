@@ -440,6 +440,7 @@ export function RunDetail() {
             <CodingReview run={run.data} />
             <GithubPublication run={run.data} />
             <ValidationResults events={events.data ?? []} />
+            <DependencyResults events={events.data ?? []} />
             <div className="inspector-grid">
               <RunTimeline
                 key={id}
@@ -503,6 +504,36 @@ function ValidationResults({ events }: { events: RunEvent[] }) {
           <p className="muted">
             Exit {String(event.payload.exit_code)} ·{" "}
             {String(event.payload.duration_seconds)} seconds
+          </p>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function DependencyResults({ events }: { events: RunEvent[] }) {
+  const results = events.filter(
+    (event) => event.event_type === "dependencies.completed",
+  );
+  if (!results.length) return null;
+  return (
+    <section className="panel content-panel">
+      <h2>Project dependencies</h2>
+      {results.map((event) => (
+        <article key={event.id} className="mt">
+          <div className="row spread">
+            <strong>
+              {String(event.payload.manifest)} · {String(event.payload.source)}
+            </strong>
+            <Badge
+              status={event.payload.exit_code === 0 ? "succeeded" : "failed"}
+            />
+          </div>
+          <pre>{JSON.stringify(event.payload.specifiers)}</pre>
+          <p className="muted">
+            Exit {String(event.payload.exit_code)} ·{" "}
+            {String(event.payload.duration_seconds)} seconds
+            {event.payload.network === true ? " · PyPI" : " · offline vendor"}
           </p>
         </article>
       ))}

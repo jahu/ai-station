@@ -641,10 +641,10 @@ export function ProjectDetail() {
               <h2>Execution boundary</h2>
               <p>
                 Commands, agent rules, and Git policy are saved configuration.
-                Worktree preparation creates an isolated branch. Saved
-                validation commands run inside a native sandbox with read-only
-                Git metadata. Coding agents, commits, and PR actions are not
-                enabled yet.
+                Worktree preparation creates an isolated branch. Declared Python
+                dependencies can be installed into that worktree environment.
+                Saved validation commands run inside a native sandbox with
+                read-only Git metadata and no network.
               </p>
               <p className="muted">
                 If another editor changes this project, reload the saved
