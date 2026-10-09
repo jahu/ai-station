@@ -455,13 +455,78 @@ it("requires an explicit GGUF before a load action is ready", async () => {
   );
   chooseAction("runtime.load");
   expect(screen.getByTestId("load").textContent).toBe("null");
-  await screen.findByRole("option", { name: /assistant.gguf/ });
-  fireEvent.change(screen.getByLabelText("GGUF model"), {
-    target: { value: "gguf-1" },
-  });
+  const ggufList = (await screen.findByLabelText("GGUF gguf-1")).closest(
+    ".gguf-choice-list",
+  ) as HTMLElement;
+  fireEvent.keyDown(ggufList, { key: "Enter" });
+  expect(screen.getByText(/There is no inspectable GGUF-selection Run/)).toBeTruthy();
   expect(JSON.parse(screen.getByTestId("load").textContent!)).toMatchObject({
     model_file_id: "gguf-1",
     context_size: 4096,
+  });
+});
+
+it("selects an owned runtime without listing external servers", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        models: [],
+        instances: [
+          {
+            id: "owned",
+            name: "27B",
+            status: "ready",
+            ownership: "managed",
+          },
+          {
+            id: "ext",
+            name: "Ollama",
+            status: "ready",
+            ownership: "external",
+          },
+          {
+            id: "dead",
+            name: "Stopped",
+            status: "stopped",
+            ownership: "managed",
+          },
+        ],
+      }),
+    })),
+  );
+  function Composer() {
+    const [value, setValue] = useState(emptyOptions);
+    return (
+      <>
+        <AssistantActions
+          value={value}
+          onChange={setValue}
+          busy={false}
+          onUploading={() => {}}
+        />
+        <output data-testid="stop">{JSON.stringify(value.stop)}</output>
+      </>
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  chooseAction("runtime.stop");
+  const runtimeList = (await screen.findByLabelText("Runtime owned")).closest(
+    ".runtime-choice-list",
+  ) as HTMLElement;
+  expect(screen.queryByLabelText("Runtime ext")).toBeNull();
+  expect(screen.queryByLabelText("Runtime dead")).toBeNull();
+  fireEvent.keyDown(runtimeList, { key: "Enter" });
+  expect(
+    screen.getByText(/There is no inspectable runtime-selection Run/),
+  ).toBeTruthy();
+  expect(JSON.parse(screen.getByTestId("stop").textContent!)).toEqual({
+    instance_id: "owned",
   });
 });
 
