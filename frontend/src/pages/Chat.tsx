@@ -38,6 +38,11 @@ import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
 import { useListKeyboard } from "./useListKeyboard";
 import { TurnModeChoiceList } from "./TurnModeChoiceList";
+import {
+  ConversationModeChoiceList,
+  ConversationProviderChoiceList,
+  type SavedChatMode,
+} from "./ChatSettingsChoiceLists";
 
 type Conversation = {
   id: string;
@@ -346,6 +351,9 @@ function SettingsForm({
 }) {
   const [model, setModel] = useState(defaults.model);
   const [modelPending, setModelPending] = useState(false);
+  const [mode, setMode] = useState<SavedChatMode>(
+    defaults.execution_mode ?? "local",
+  );
   const localBuiltin = provider?.builtin && provider.location === "local";
   return (
     <form
@@ -355,9 +363,9 @@ function SettingsForm({
         if (pending || modelPending || !model) return;
         const fields = new FormData(e.currentTarget);
         submit({
-          execution_mode: fields.get("execution_mode"),
+          execution_mode: mode,
           title: fields.get("title"),
-          provider: fields.get("provider") || defaults.provider,
+          provider: defaults.provider,
           model,
           system_prompt: fields.get("system_prompt"),
           temperature: Number(fields.get("temperature")),
@@ -366,17 +374,14 @@ function SettingsForm({
       }}
     >
       <fieldset disabled={pending}>
-        <label>
-          Mode
-          <select
-            aria-label="Mode"
-            name="execution_mode"
-            defaultValue={defaults.execution_mode ?? "local"}
-          >
-            <option value="orchestrator">Platform assistant</option>
-            <option value="local">Conversation only</option>
-          </select>
-        </label>
+        <div>
+          <span>Mode</span>
+          <ConversationModeChoiceList
+            value={mode}
+            disabled={pending}
+            onChange={setMode}
+          />
+        </div>
         <label>
           Conversation title
           <input
@@ -386,24 +391,18 @@ function SettingsForm({
             defaultValue={defaults.title}
           />
         </label>
-        <label>
-          Provider
-          <select
-            aria-label="Provider"
-            name="provider"
+        <div>
+          <span>Provider</span>
+          <ConversationProviderChoiceList
             value={defaults.provider}
-            onChange={(event) => {
-              onProviderChange(event.target.value);
+            providers={providers}
+            disabled={pending}
+            onChange={(key) => {
+              onProviderChange(key);
               setModel("");
             }}
-          >
-            {providers.map((row) => (
-              <option key={row.key} value={row.key} disabled={!row.enabled}>
-                {row.name}
-              </option>
-            ))}
-          </select>
-        </label>
+          />
+        </div>
         {localBuiltin ? (
           <LlamaModels
             value={model}
