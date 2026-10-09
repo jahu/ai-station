@@ -711,6 +711,13 @@ select {
 .table-scroll {
   overflow-x: auto;
 }
+.table-scroll:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+table tbody tr[aria-current="true"] {
+  background: rgba(185, 245, 139, 0.08);
+}
 table {
   width: 100%;
   border-collapse: collapse;

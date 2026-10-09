@@ -5,7 +5,13 @@ import { SearchSources, type WebSources } from "./ChatWebSearch";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import GithubPublication from "./GithubPublication";
 import CodingReview from "./CodingReview";
-import { type FormEvent } from "react";
+import {
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 import {
   Link,
   useParams,
@@ -25,6 +31,113 @@ import {
 import { Button } from "../components/ui/button";
 import { terminal, time } from "../lib/utils";
 import { ArtifactCards } from "./Library";
+
+type RunRow = {
+  id: string;
+  capability: string;
+  executor_type: string;
+  execution_target: string;
+  status: string;
+  created_at: string;
+};
+
+function RunTable({ runs }: { runs: RunRow[] }) {
+  const labelId = useId();
+  const listRef = useRef<HTMLTableSectionElement>(null);
+  const [selectedKey, setSelectedKey] = useState(runs[0]?.id ?? "");
+  const found = runs.findIndex((run) => run.id === selectedKey);
+  const index = found >= 0 ? found : 0;
+  const focusItem = (next: number) => {
+    const clamped = Math.max(0, Math.min(runs.length - 1, next));
+    const run = runs[clamped];
+    if (!run) return;
+    setSelectedKey(run.id);
+    const link = listRef.current?.querySelector<HTMLElement>(
+      `[data-run-index="${clamped}"]`,
+    );
+    link?.focus();
+    link?.scrollIntoView?.({ block: "nearest" });
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLTableSectionElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      event.preventDefault();
+      focusItem(index + 1);
+    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      event.preventDefault();
+      focusItem(index - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      focusItem(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      focusItem(runs.length - 1);
+    }
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a Run while the table is focused. Enter inspects it.
+      </p>
+      <div className="table-scroll">
+        <table aria-labelledby={labelId}>
+          <thead>
+            <tr>
+              <th>Capability / Run</th>
+              <th>Status</th>
+              <th>Executor</th>
+              <th>Target</th>
+              <th>Created</th>
+              <th>
+                <span className="sr-only">Inspect</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody ref={listRef} onKeyDown={onKeyDown}>
+            {runs.map((run, i) => {
+              const current = i === index;
+              return (
+                <tr
+                  key={run.id}
+                  aria-current={current ? "true" : undefined}
+                >
+                  <td>
+                    <Link
+                      to={`/runs/${run.id}`}
+                      aria-label={`Inspect ${run.capability} ${run.id.slice(0, 8)}`}
+                      tabIndex={current ? 0 : -1}
+                      data-run-index={i}
+                      onFocus={() => setSelectedKey(run.id)}
+                    >
+                      <strong>{run.capability}</strong>
+                      <small className="mono">{run.id.slice(0, 8)}</small>
+                    </Link>
+                  </td>
+                  <td>
+                    <Badge status={run.status} />
+                  </td>
+                  <td>{run.executor_type}</td>
+                  <td>
+                    <span className="chip">{run.execution_target}</span>
+                  </td>
+                  <td className="muted">{time(run.created_at)}</td>
+                  <td>
+                    <Link
+                      to={`/runs/${run.id}`}
+                      tabIndex={-1}
+                      aria-hidden="true"
+                    >
+                      <ArrowUpRight size={16} />
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
 
 export function Runs() {
   const [params, setParams] = useSearchParams();
@@ -211,52 +324,12 @@ export function Runs() {
       {query.isPending ? (
         <Loading />
       ) : (
-        <section className="panel">
+        <section className="panel" aria-labelledby="runs-list-heading">
+          <h2 id="runs-list-heading" className="sr-only">
+            Runs
+          </h2>
           {query.data?.length ? (
-            <div className="table-scroll">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Capability / Run</th>
-                    <th>Status</th>
-                    <th>Executor</th>
-                    <th>Target</th>
-                    <th>Created</th>
-                    <th>
-                      <span className="sr-only">Inspect</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {query.data.map((run) => (
-                    <tr key={run.id}>
-                      <td>
-                        <Link to={`/runs/${run.id}`}>
-                          <strong>{run.capability}</strong>
-                          <small className="mono">{run.id.slice(0, 8)}</small>
-                        </Link>
-                      </td>
-                      <td>
-                        <Badge status={run.status} />
-                      </td>
-                      <td>{run.executor_type}</td>
-                      <td>
-                        <span className="chip">{run.execution_target}</span>
-                      </td>
-                      <td className="muted">{time(run.created_at)}</td>
-                      <td>
-                        <Link
-                          to={`/runs/${run.id}`}
-                          aria-label={`Inspect run ${run.id}`}
-                        >
-                          <ArrowUpRight size={16} />
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <RunTable runs={query.data} />
           ) : (
             <Empty title="No runs in this view">
               Tasks appear here when you submit them. Change the filter to see

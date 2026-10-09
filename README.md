@@ -156,7 +156,7 @@ Runtime observations are refreshed through a normal Run from **System → Observ
 
 The Home workspace leads with a unified attention list: interrupted Runs (Mark inspected, no replay), unread notices (Mark read, no replay), parked approvals (Approve queues the Run; Deny cancels it; tools have not started), and in-progress work with Stop. The list is one keyboard sequence (arrows, Home, End, Enter). The Run inspector can still grant or deny the same parked Run. Hardware, schedules, conversations, artifacts and runtime observations follow as labelled regions. Quick actions and Ctrl+K open workspaces without starting a workload.
 
-Runs supports combined status, capability, executor, execution target, project, agent, GPU and creation-time filters. Filters are kept in the page URL and paging makes older history accessible. Dates are entered in local time and submitted with an explicit timezone.
+Runs supports combined status, capability, executor, execution target, project, agent, GPU and creation-time filters. Filters are kept in the page URL and paging makes older history accessible. Dates are entered in local time and submitted with an explicit timezone. Arrow keys move through the Run table; Enter inspects the selected row.
 
 ## Local validation and hosted CI
 

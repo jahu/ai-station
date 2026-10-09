@@ -65,9 +65,9 @@ it("requests the selected status and links persisted runs to their inspector", a
     </QueryClientProvider>,
   );
   expect(
-    (await screen.findByRole("link", { name: /image.generate/ })).getAttribute(
-      "href",
-    ),
+    (
+      await screen.findByRole("link", { name: "Inspect image.generate one" })
+    ).getAttribute("href"),
   ).toBe("/runs/one");
   fireEvent.change(screen.getByRole("combobox", { name: "Filter by status" }), {
     target: { value: "running" },
@@ -75,6 +75,61 @@ it("requests the selected status and links persisted runs to their inspector", a
   await waitFor(() =>
     expect(fetch).toHaveBeenCalledWith("/api/runs?status=running", undefined),
   );
+});
+
+it("moves through the Run list with arrow keys", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => [
+        {
+          id: "one",
+          capability: "image.generate",
+          executor_type: "photo_pipe",
+          execution_target: "host",
+          status: "running",
+          created_at: "2026-01-01T00:00:00Z",
+        },
+        {
+          id: "two",
+          capability: "chat.completion",
+          executor_type: "local_chat",
+          execution_target: "container",
+          status: "succeeded",
+          created_at: "2026-01-01T00:01:00Z",
+        },
+      ],
+    }),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <Runs />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const first = await screen.findByRole("link", {
+    name: "Inspect image.generate one",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect chat.completion two",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Runs" })).toBeTruthy();
+  fireEvent.keyDown(first.closest("tbody") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest("tbody") as HTMLElement, { key: "Home" });
+  expect(first.tabIndex).toBe(0);
 });
 
 it("restores combined filters from the URL and resets paging when applying a change", async () => {
