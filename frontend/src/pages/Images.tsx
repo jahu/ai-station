@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { ImagePlus, Sparkles, X } from "lucide-react";
@@ -6,6 +6,7 @@ import { api, useHardware, type Artifact, type Run } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import LibraryPicker from "../components/media/LibraryPicker";
+import { useListKeyboard } from "./useListKeyboard";
 
 const modes = {
   t2i: "Generate",
@@ -14,6 +15,70 @@ const modes = {
   upscale: "Upscale",
 };
 type Mode = keyof typeof modes;
+
+function SourceStrip({
+  ids,
+  busy,
+  onChange,
+}: {
+  ids: string[];
+  busy: boolean;
+  onChange: (ids: string[]) => void;
+}) {
+  const labelId = useId();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    ids,
+    (id) => id,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key === "Enter") event.preventDefault();
+  };
+  if (!ids.length) return null;
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a source while the list is focused. Remove stays on
+        the selected image. Enter does not queue a Run. There is no inspectable
+        source Run.
+      </p>
+      <div
+        ref={listRef}
+        className="source-strip"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {ids.map((id, i) => {
+          const current = i === index;
+          const shortId = id.slice(0, 8);
+          return (
+            <div
+              key={id}
+              aria-label={`Source ${i + 1} ${shortId}`}
+              {...itemProps(i, id)}
+            >
+              <img
+                src={`/api/artifacts/${id}/thumbnail`}
+                alt={`Reference ${i + 1}`}
+              />
+              <button
+                type="button"
+                className="icon-button"
+                aria-label={`Remove source ${i + 1} ${shortId}`}
+                tabIndex={current ? 0 : -1}
+                disabled={busy}
+                onClick={() => onChange(ids.filter((value) => value !== id))}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 export default function Images() {
   const [search] = useSearchParams();
   // Remount when navigating here from a Library action.
@@ -244,29 +309,11 @@ function ImageForm({
                   ]);
                 }}
               />
-              <div className="source-strip">
-                {ids.map((id, index) => (
-                  <div key={id}>
-                    <img
-                      src={`/api/artifacts/${id}/thumbnail`}
-                      alt={`Reference ${index + 1}`}
-                    />
-                    <button
-                      type="button"
-                      className="icon-button"
-                      aria-label={`Remove reference ${index + 1}`}
-                      disabled={upload.isPending}
-                      onClick={() =>
-                        setIds((current) =>
-                          current.filter((value) => value !== id),
-                        )
-                      }
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+              <SourceStrip
+                ids={ids}
+                busy={upload.isPending}
+                onChange={setIds}
+              />
             </>
           )}
           {mode !== "upscale" && (
