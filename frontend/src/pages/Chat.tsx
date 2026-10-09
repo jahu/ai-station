@@ -9,10 +9,17 @@ import { emptyOptions } from "./assistant-options";
 import AssistantActions, {
   AssistantResults,
   type ActionResult,
+  type AssistantOptions,
 } from "./AssistantActions";
 import TextAttachments, { type TextAttachment } from "./TextAttachments";
 import ConversationSummary, { type Summary } from "./ConversationSummary";
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Markdown from "react-markdown";
@@ -410,6 +417,270 @@ function SettingsForm({
     </form>
   );
 }
+function speakerName(message: Message, orchestrator: boolean) {
+  return message.role === "user"
+    ? "You"
+    : orchestrator
+      ? "AI Station"
+      : "Local AI";
+}
+function Transcript({
+  messages,
+  orchestrator,
+  options,
+  busy,
+  refresh,
+  setOptions,
+  setClipboardError,
+  emptyHint,
+}: {
+  messages: Message[];
+  orchestrator: boolean;
+  options: AssistantOptions;
+  busy: boolean;
+  refresh: () => void;
+  setOptions: (update: (previous: AssistantOptions) => AssistantOptions) => void;
+  setClipboardError: (error: Error | null) => void;
+  emptyHint: string;
+}) {
+  const headingId = useId();
+  const labelId = useId();
+  const listRef = useRef<HTMLDivElement>(null);
+  const end = useRef<HTMLDivElement>(null);
+  const visible = messages.filter((message) => !message.metadata.routing_only);
+  const [selectedKey, setSelectedKey] = useState(visible.at(-1)?.id ?? "");
+  const found = visible.findIndex((message) => message.id === selectedKey);
+  const index = found >= 0 ? found : Math.max(0, visible.length - 1);
+  const selected = visible[index];
+  const last = messages.at(-1);
+  const navigate = useNavigate();
+  useEffect(() => {
+    end.current?.scrollIntoView?.({ block: "nearest" });
+  }, [last?.content, messages.length]);
+  const focusItem = (next: number) => {
+    const clamped = Math.max(0, Math.min(visible.length - 1, next));
+    const message = visible[clamped];
+    if (!message) return;
+    setSelectedKey(message.id);
+    const item = listRef.current?.querySelector<HTMLElement>(
+      `[data-message-index="${clamped}"]`,
+    );
+    item?.focus();
+    item?.scrollIntoView?.({ block: "nearest" });
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      event.preventDefault();
+      focusItem(index + 1);
+    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      event.preventDefault();
+      focusItem(index - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      focusItem(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      focusItem(visible.length - 1);
+    } else if (event.key === "Enter") {
+      const target = event.target as HTMLElement;
+      if (target.closest("a, button, textarea, input")) return;
+      if (selected?.run_id) {
+        event.preventDefault();
+        navigate(`/runs/${selected.run_id}`);
+      }
+    }
+  };
+  return (
+    <section
+      className="chat-transcript"
+      aria-labelledby={headingId}
+      aria-live="polite"
+    >
+      <h2 id={headingId} className="sr-only">
+        Messages
+      </h2>
+      {visible.length ? (
+        <p id={labelId} className="dashboard-note">
+          Arrow keys choose a message while the transcript is focused. Enter
+          inspects its Run when one exists.
+        </p>
+      ) : (
+        <Empty title="A fresh perspective starts here">{emptyHint}</Empty>
+      )}
+      <div
+        ref={listRef}
+        className="chat-messages"
+        aria-labelledby={visible.length ? labelId : undefined}
+        onKeyDown={onKeyDown}
+      >
+        {visible.map((message, i) => {
+          const current = i === index;
+          const speaker = speakerName(message, orchestrator);
+          const shortId = message.id.slice(0, 8);
+          return (
+            <article
+              className={`chat-message ${message.role} ${message.metadata.superseded ? "superseded" : ""}`}
+              key={message.id}
+              aria-current={current ? "true" : undefined}
+              tabIndex={current ? 0 : -1}
+              data-message-index={i}
+              onFocus={() => setSelectedKey(message.id)}
+            >
+              <div className="row spread">
+                <strong>
+                  {speaker}
+                  {message.metadata.superseded ? " · Previous response" : ""}
+                </strong>
+                <small className="muted">{time(message.created_at)}</small>
+              </div>
+              <div className="markdown">
+                <Markdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeHighlight]}
+                  components={{
+                    img: ({ alt }) => (
+                      <span className="muted">
+                        [Image: {alt ?? "remote media"}]
+                      </span>
+                    ),
+                    a: ({ href, children }) => (
+                      <a href={href} target="_blank" rel="noreferrer">
+                        {children}
+                      </a>
+                    ),
+                  }}
+                >
+                  {(message.metadata.user_text ?? message.content) ||
+                    (message.role === "assistant"
+                      ? message.run_status &&
+                        ["failed", "canceled", "interrupted"].includes(
+                          message.run_status,
+                        )
+                        ? "No response text was returned."
+                        : "Waiting for response…"
+                      : "")}
+                </Markdown>
+              </div>
+              <div className="assistant-images">
+                {message.metadata.images?.map((image, imageIndex) => (
+                  <img
+                    key={`${image.id}-${imageIndex}`}
+                    src={`/api/artifacts/${image.id}/file`}
+                    alt={`Reference ${imageIndex + 1}: ${image.name}`}
+                  />
+                ))}
+              </div>
+              {message.role === "assistant" && message.metadata.web_search && (
+                <SearchSources result={message.metadata.web_search} />
+              )}
+              {message.metadata.agent_id && (
+                <p>
+                  <Link
+                    to={`/agents/${message.metadata.agent_id}`}
+                    tabIndex={current ? 0 : -1}
+                    aria-label={`Review and enable agent ${message.metadata.agent_id.slice(0, 8)}`}
+                  >
+                    Review and enable agent
+                  </Link>
+                </p>
+              )}
+              <AssistantResults
+                result={message}
+                inputs={options}
+                busy={busy}
+                onQueued={orchestrator ? refresh : undefined}
+                onUse={
+                  orchestrator
+                    ? (artifact) =>
+                        setOptions((previous) => ({
+                          ...previous,
+                          ...(artifact.type === "image"
+                            ? {
+                                image_artifact_ids: [
+                                  ...previous.image_artifact_ids,
+                                  artifact.id,
+                                ],
+                              }
+                            : { audio_artifact_id: artifact.id }),
+                        }))
+                    : undefined
+                }
+              />
+              {message.metadata.attachments?.map((attachment) => (
+                <div key={attachment.id} className="chat-saved-attachment">
+                  <p>
+                    <a
+                      className="text-link"
+                      href={`/api/artifacts/${attachment.id}/file`}
+                      tabIndex={current ? 0 : -1}
+                    >
+                      {attachment.name}
+                    </a>
+                    {" · "}
+                    {attachment.size_bytes} bytes
+                    {attachment.kind === "pdf" &&
+                      " · extracted text, not vision"}
+                    {attachment.kind === "image" &&
+                      " · stored image, pixels not sent"}
+                    {(!attachment.kind || attachment.kind === "text") &&
+                      " · saved attachment"}
+                  </p>
+                  {attachment.kind === "image" && (
+                    <img
+                      className="chat-attachment-preview"
+                      alt={attachment.name}
+                      src={`/api/artifacts/${attachment.id}/thumbnail`}
+                    />
+                  )}
+                </div>
+              ))}
+              {message.role === "assistant" && (
+                <div className="message-actions">
+                  {message.run_status && <Badge status={message.run_status} />}{" "}
+                  {message.metadata.partial && message.content && (
+                    <span className="muted">Partial response</span>
+                  )}
+                  {message.run_id && (
+                    <Link
+                      to={`/runs/${message.run_id}`}
+                      tabIndex={current ? 0 : -1}
+                      aria-label={`Inspect run ${speaker} ${shortId}`}
+                    >
+                      Inspect run
+                    </Link>
+                  )}
+                  <button
+                    className="icon-button"
+                    aria-label={`Copy ${speaker} ${shortId}`}
+                    tabIndex={current ? 0 : -1}
+                    disabled={!message.content}
+                    onClick={() => {
+                      void navigator.clipboard
+                        .writeText(message.content)
+                        .catch(() =>
+                          setClipboardError(
+                            new Error(
+                              "Clipboard unavailable. Select and copy the response text.",
+                            ),
+                          ),
+                        );
+                    }}
+                  >
+                    <Copy size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+              {message.error_message && (
+                <p className="notice">{message.error_message}</p>
+              )}
+            </article>
+          );
+        })}
+        <div ref={end} />
+      </div>
+    </section>
+  );
+}
 function ConversationView({
   conversation,
   providers,
@@ -438,7 +709,6 @@ function ConversationView({
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [readingAttachment, setReadingAttachment] = useState(false);
   const [modelPending, setModelPending] = useState(false);
-  const end = useRef<HTMLDivElement>(null);
   const [clipboardError, setClipboardError] = useState<Error | null>(null);
   const refresh = () => {
     void cache.invalidateQueries({
@@ -517,10 +787,6 @@ function ConversationView({
     modelPending ||
     settings.isPending;
   const messages = conversation.messages;
-  const last = messages.at(-1);
-  useEffect(() => {
-    end.current?.scrollIntoView({ block: "nearest" });
-  }, [last?.content, messages.length]);
   return (
     <>
       <div className="chat-heading">
@@ -592,166 +858,22 @@ function ConversationView({
         lastUpdate={conversation.summary_update}
         busy={busy}
       />
-      <div className="chat-transcript" aria-live="polite">
-        {!messages.length && (
-          <Empty title="A fresh perspective starts here">
-            {orchestrator
-              ? "Describe what you want done. Attach image references, create an agent or select a project for coding."
-              : conversation.provider_location === "external"
-                ? "Send a message through the selected external provider. The secret value is never displayed."
-                : "Send a message to the selected local provider."}
-          </Empty>
-        )}
-        {messages
-          .filter((message) => !message.metadata.routing_only)
-          .map((message) => (
-            <article
-              className={`chat-message ${message.role} ${message.metadata.superseded ? "superseded" : ""}`}
-              key={message.id}
-            >
-              <div className="row spread">
-                <strong>
-                  {message.role === "user"
-                    ? "You"
-                    : orchestrator
-                      ? "AI Station"
-                      : "Local AI"}
-                  {message.metadata.superseded ? " · Previous response" : ""}
-                </strong>
-                <small className="muted">{time(message.created_at)}</small>
-              </div>
-              <div className="markdown">
-                <Markdown
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeHighlight]}
-                  components={{
-                    img: ({ alt }) => (
-                      <span className="muted">
-                        [Image: {alt ?? "remote media"}]
-                      </span>
-                    ),
-                    a: ({ href, children }) => (
-                      <a href={href} target="_blank" rel="noreferrer">
-                        {children}
-                      </a>
-                    ),
-                  }}
-                >
-                  {(message.metadata.user_text ?? message.content) ||
-                    (message.role === "assistant"
-                      ? message.run_status &&
-                        ["failed", "canceled", "interrupted"].includes(
-                          message.run_status,
-                        )
-                        ? "No response text was returned."
-                        : "Waiting for response…"
-                      : "")}
-                </Markdown>
-              </div>
-              <div className="assistant-images">
-                {message.metadata.images?.map((image, index) => (
-                  <img
-                    key={`${image.id}-${index}`}
-                    src={`/api/artifacts/${image.id}/file`}
-                    alt={`Reference ${index + 1}: ${image.name}`}
-                  />
-                ))}
-              </div>
-              {message.role === "assistant" && message.metadata.web_search && (
-                <SearchSources result={message.metadata.web_search} />
-              )}
-              {message.metadata.agent_id && (
-                <p>
-                  <Link to={`/agents/${message.metadata.agent_id}`}>
-                    Review and enable agent
-                  </Link>
-                </p>
-              )}
-              <AssistantResults
-                result={message}
-                inputs={options}
-                busy={busy}
-                onQueued={orchestrator ? refresh : undefined}
-                onUse={
-                  orchestrator
-                    ? (artifact) =>
-                        setOptions((previous) => ({
-                          ...previous,
-                          ...(artifact.type === "image"
-                            ? {
-                                image_artifact_ids: [
-                                  ...previous.image_artifact_ids,
-                                  artifact.id,
-                                ],
-                              }
-                            : { audio_artifact_id: artifact.id }),
-                        }))
-                    : undefined
-                }
-              />
-              {message.metadata.attachments?.map((attachment) => (
-                <div key={attachment.id} className="chat-saved-attachment">
-                  <p>
-                    <a
-                      className="text-link"
-                      href={`/api/artifacts/${attachment.id}/file`}
-                    >
-                      {attachment.name}
-                    </a>
-                    {" · "}
-                    {attachment.size_bytes} bytes
-                    {attachment.kind === "pdf" &&
-                      " · extracted text, not vision"}
-                    {attachment.kind === "image" &&
-                      " · stored image, pixels not sent"}
-                    {(!attachment.kind || attachment.kind === "text") &&
-                      " · saved attachment"}
-                  </p>
-                  {attachment.kind === "image" && (
-                    <img
-                      className="chat-attachment-preview"
-                      alt={attachment.name}
-                      src={`/api/artifacts/${attachment.id}/thumbnail`}
-                    />
-                  )}
-                </div>
-              ))}
-              {message.role === "assistant" && (
-                <div className="message-actions">
-                  {message.run_status && <Badge status={message.run_status} />}{" "}
-                  {message.metadata.partial && message.content && (
-                    <span className="muted">Partial response</span>
-                  )}
-                  {message.run_id && (
-                    <Link to={`/runs/${message.run_id}`}>Inspect run</Link>
-                  )}
-                  <button
-                    className="icon-button"
-                    aria-label="Copy response"
-                    disabled={!message.content}
-                    onClick={() => {
-                      void navigator.clipboard
-                        .writeText(message.content)
-                        .catch(() =>
-                          setClipboardError(
-                            new Error(
-                              "Clipboard unavailable. Select and copy the response text.",
-                            ),
-                          ),
-                        );
-                    }}
-                  >
-                    <Copy size={14} />
-                  </button>
-                </div>
-              )}
-              {message.error_message && (
-                <p className="notice">{message.error_message}</p>
-              )}
-            </article>
-          ))}
-        <div ref={end} />
-      </div>
+      <Transcript
+        messages={messages}
+        orchestrator={orchestrator}
+        options={options}
+        busy={busy}
+        refresh={refresh}
+        setOptions={setOptions}
+        setClipboardError={setClipboardError}
+        emptyHint={
+          orchestrator
+            ? "Describe what you want done. Attach image references, create an agent or select a project for coding."
+            : conversation.provider_location === "external"
+              ? "Send a message through the selected external provider. The secret value is never displayed."
+              : "Send a message to the selected local provider."
+        }
+      />
       <div className="chat-composer">
         <ErrorNotice
           error={
