@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   NavLink,
   Route,
@@ -21,6 +22,7 @@ import {
   Image,
   Images,
   Layers,
+  LogOut,
   MessageSquare,
   Search,
   Settings2,
@@ -30,8 +32,9 @@ import {
   X,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { useHardware } from "./api";
+import { api, useHardware } from "./api";
 import { Empty, PageTitle } from "./components/common";
+import { Button } from "./components/ui/button";
 import { Memory, MemoryDetail } from "./pages/Memory";
 import { Models, ModelDetail } from "./pages/Models";
 import { Agents, AgentDetail } from "./pages/Agents";
@@ -46,6 +49,7 @@ import ImagesWorkspace from "./pages/Images";
 import { Library, ArtifactDetail } from "./pages/Library";
 import System from "./pages/System";
 import { Projects, NewProject, ProjectDetail } from "./pages/Projects";
+import type { OperatorStatus } from "./pages/OperatorLogin";
 
 const groups: { label: string; items: [string, string, LucideIcon][] }[] = [
   {
@@ -123,7 +127,26 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const firstPath = useRef(true);
+  const cache = useQueryClient();
   const hardware = useHardware();
+  const operator = useQuery({
+    queryKey: ["operator-auth"],
+    queryFn: () => api<OperatorStatus>("/operator-auth"),
+  });
+  const logout = useMutation({
+    mutationFn: () =>
+      api<OperatorStatus>("/operator-auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["operator-auth"] });
+    },
+  });
+  const sessionActive = Boolean(
+    operator.data?.session_required && operator.data.authenticated,
+  );
   const page =
     destinations.find(
       ([path]) => path !== "/" && location.pathname.startsWith(path),
@@ -236,8 +259,21 @@ export default function App() {
           <div className="row">
             <span className="private-label">
               <span className="status-dot" />
-              Local control plane
+              {sessionActive
+                ? "Loopback session"
+                : "Local control plane"}
             </span>
+            {sessionActive ? (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={logout.isPending}
+                onClick={() => logout.mutate()}
+              >
+                <LogOut size={15} />
+                {logout.isPending ? "Signing out…" : "Sign out"}
+              </Button>
+            ) : null}
             <button
               className="icon-button"
               aria-label="Open command palette"

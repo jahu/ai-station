@@ -204,3 +204,7 @@ Frontend lint, TypeScript, 97 component tests and production build passed. Comma
 ## Inspect-only SQLite backup re-check — 2026-10-09
 
 `./scripts/check.sh`: 672 Python tests passed (5 skipped), including GET `/api/maintenance/backups/{run_id}` repeating integrity_check and hashing the stored copy, reporting a damaged file without writing the live database, 409 on missing/canceled copies, and unpublished restore/rollout. Frontend lint, TypeScript, 98 component tests and production build passed. System **Inspect copy** re-checks a successful backup in place and does not offer Restore. Image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Loopback session Sign out in workspace chrome — 2026-10-09
+
+Frontend lint, TypeScript, 99 component tests and production build passed. After an operator password is stored, the top bar shows **Sign out** for the loopback session and posts the existing logout endpoint. No LAN bind control is offered. Settings still has the same Sign out. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
