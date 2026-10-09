@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import CodingSession, { CodingNav } from "./CodingSessions";
+import CodingSession, { CodingHistory, CodingNav } from "./CodingSessions";
 
 afterEach(() => {
   cleanup();
@@ -74,4 +74,55 @@ it("reopens task history and sends a guarded follow-up to the same conversation"
   expect(
     screen.getByRole("link", { name: /Build a site/ }).getAttribute("href"),
   ).toBe("/coding/task");
+});
+
+it("moves through coding conversations with arrow keys", async () => {
+  const row = {
+    project_name: "Studio",
+    status: "succeeded",
+    active_run_id: null,
+    latest_proposal_id: "proposal",
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => [
+        { ...row, id: "sess-one", title: "Build a site" },
+        { ...row, id: "sess-two", title: "Fix the form" },
+      ],
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <CodingHistory />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const first = await screen.findByRole("link", {
+    name: "Inspect Build a site sess-one",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect Fix the form sess-two",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(
+    screen.getByRole("region", { name: "Coding conversations" }),
+  ).toBeTruthy();
+  fireEvent.keyDown(first.closest(".coding-history") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".coding-history") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
 });
