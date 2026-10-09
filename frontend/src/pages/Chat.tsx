@@ -469,6 +469,66 @@ function SettingsForm({
     </form>
   );
 }
+function SavedAttachments({
+  attachments,
+}: {
+  attachments: NonNullable<Message["metadata"]["attachments"]>;
+}) {
+  const labelId = useId();
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    attachments,
+    (item) => item.id,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    event.stopPropagation();
+    onKeyDown(event);
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a saved attachment while the list is focused. Enter
+        opens the selected file. There is no inspectable attachment Run.
+      </p>
+      <div
+        ref={listRef}
+        className="chat-saved-attachment-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {attachments.map((attachment, i) => {
+          const shortId = attachment.id.slice(0, 8);
+          const kind =
+            attachment.kind === "pdf"
+              ? "extracted text, not vision"
+              : attachment.kind === "image"
+                ? "stored image, pixels not sent"
+                : "saved attachment";
+          return (
+            <a
+              key={attachment.id}
+              className="chat-saved-attachment"
+              href={`/api/artifacts/${attachment.id}/file`}
+              aria-label={`Saved attachment ${attachment.name} ${shortId}`}
+              {...itemProps(i, attachment.id)}
+            >
+              <strong>{attachment.name}</strong>
+              <span className="muted">
+                {attachment.size_bytes} bytes · {kind}
+              </span>
+              {attachment.kind === "image" && (
+                <img
+                  className="chat-attachment-preview"
+                  alt=""
+                  src={`/api/artifacts/${attachment.id}/thumbnail`}
+                />
+              )}
+            </a>
+          );
+        })}
+      </div>
+    </>
+  );
+}
 function speakerName(message: Message, orchestrator: boolean) {
   return message.role === "user"
     ? "You"
@@ -634,34 +694,9 @@ function Transcript({
                     : undefined
                 }
               />
-              {message.metadata.attachments?.map((attachment) => (
-                <div key={attachment.id} className="chat-saved-attachment">
-                  <p>
-                    <a
-                      className="text-link"
-                      href={`/api/artifacts/${attachment.id}/file`}
-                      tabIndex={current ? 0 : -1}
-                    >
-                      {attachment.name}
-                    </a>
-                    {" · "}
-                    {attachment.size_bytes} bytes
-                    {attachment.kind === "pdf" &&
-                      " · extracted text, not vision"}
-                    {attachment.kind === "image" &&
-                      " · stored image, pixels not sent"}
-                    {(!attachment.kind || attachment.kind === "text") &&
-                      " · saved attachment"}
-                  </p>
-                  {attachment.kind === "image" && (
-                    <img
-                      className="chat-attachment-preview"
-                      alt={attachment.name}
-                      src={`/api/artifacts/${attachment.id}/thumbnail`}
-                    />
-                  )}
-                </div>
-              ))}
+              {message.metadata.attachments?.length ? (
+                <SavedAttachments attachments={message.metadata.attachments} />
+              ) : null}
               {message.role === "assistant" && (
                 <div className="message-actions">
                   {message.run_status && <Badge status={message.run_status} />}{" "}

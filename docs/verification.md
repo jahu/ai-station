@@ -372,3 +372,7 @@ Frontend lint, TypeScript, 148 component tests and production build passed. Expl
 ## Agent policy checkboxes keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 149 component tests and production build passed. Agent approval, retry and notice policies reuse `useListKeyboard` with unique Approval, Retry and Notice names. Space or Enter selects the focused row and does not invent a Run. Saved policies still park, retry from a snapshot or write in-app notices through the existing endpoints. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Saved Chat transcript attachments keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 150 component tests and production build passed. Attachments already saved on a Chat message reuse `useListKeyboard` as a nested sequence with unique Saved attachment names. Enter opens the selected file and does not inspect a Run. Composer staging, pixel vision and download boundaries are unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
