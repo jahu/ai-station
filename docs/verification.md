@@ -412,3 +412,7 @@ Frontend lint, TypeScript, 162 component tests and production build passed. GitH
 ## Commit review acknowledgement keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 165 component tests and production build passed. Coding and assistant review acknowledgement reuses `useListKeyboard` with a unique Review name. Space or Enter selects it and does not queue a `coding.commit` Run. File listbox, repair and publication remain unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Coding file-discovery keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 167 component tests and production build passed. Automatic Coding and assistant file discovery reuses `useListKeyboard` with a unique Explore name. Space or Enter selects it and does not start a coding Run. Explicit Edit file checkboxes remain the existing sequence. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

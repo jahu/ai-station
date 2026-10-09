@@ -9,6 +9,7 @@ import { Button } from "../components/ui/button";
 import { CodingHistory } from "./CodingSessions";
 import { FileChoiceList } from "./FileChoiceList";
 import { ConsentChoiceList } from "./ConsentChoiceList";
+import { ExploreChoiceList } from "./ExploreChoiceList";
 import { parseFilePaths } from "./filePaths";
 
 type Project = {
@@ -251,17 +252,16 @@ export default function Coding() {
               <details className="coding-advanced">
                 <summary>Advanced settings</summary>
                 <div className="coding-advanced-fields">
-                  <label className="project-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={explore}
-                      onChange={(e) => {
-                        setExplore(e.target.checked);
-                        setExternal(false);
-                      }}
-                    />
+                  <ExploreChoiceList
+                    checked={explore}
+                    disabled={create.isPending || modelPending}
+                    onChange={(next) => {
+                      setExplore(next);
+                      setExternal(false);
+                    }}
+                  >
                     Let the agent find the relevant files
-                  </label>
+                  </ExploreChoiceList>
                   {local && explore && (
                     <small>
                       Public URLs in the task are fetched automatically. Local
