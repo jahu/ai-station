@@ -87,8 +87,9 @@ type AttentionItem = {
   title: string;
   detail: string;
   status?: string;
-  action?: "acknowledge" | "stop" | "stopping";
+  action?: "acknowledge" | "stop" | "stopping" | "read";
   runId?: string;
+  noticeId?: string;
 };
 
 function Section({
@@ -183,12 +184,15 @@ function attentionAction(
   handlers: {
     acknowledgePending: boolean;
     cancelPending: boolean;
+    readPending: boolean;
     onAcknowledge: (runId: string) => void;
     onStop: (runId: string) => void;
+    onRead: (noticeId: string) => void;
     onSelect: () => void;
   },
 ) {
   const runId = item.runId;
+  const noticeId = item.noticeId;
   if (item.action === "acknowledge" && runId) {
     return (
       <Button
@@ -222,6 +226,21 @@ function attentionAction(
   if (item.action === "stopping") {
     return <span className="muted">Stopping…</span>;
   }
+  if (item.action === "read" && noticeId) {
+    return (
+      <Button
+        type="button"
+        variant="secondary"
+        tabIndex={current ? 0 : -1}
+        disabled={handlers.readPending}
+        aria-label={`Mark read ${item.title}`}
+        onFocus={handlers.onSelect}
+        onClick={() => handlers.onRead(noticeId)}
+      >
+        Mark read
+      </Button>
+    );
+  }
   return undefined;
 }
 
@@ -229,14 +248,18 @@ function AttentionList({
   items,
   acknowledgePending,
   cancelPending,
+  readPending,
   onAcknowledge,
   onStop,
+  onRead,
 }: {
   items: AttentionItem[];
   acknowledgePending: boolean;
   cancelPending: boolean;
+  readPending: boolean;
   onAcknowledge: (runId: string) => void;
   onStop: (runId: string) => void;
+  onRead: (noticeId: string) => void;
 }) {
   const labelId = useId();
   const listRef = useRef<HTMLUListElement>(null);
@@ -278,7 +301,7 @@ function AttentionList({
     <>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose an item while the list is focused. Enter inspects it.
-        Stop and Mark inspected stay on the selected row.
+        Stop, Mark inspected and Mark read stay on the selected row.
       </p>
       <ul
         ref={listRef}
@@ -303,8 +326,10 @@ function AttentionList({
               action={attentionAction(item, current, {
                 acknowledgePending,
                 cancelPending,
+                readPending,
                 onAcknowledge,
                 onStop,
+                onRead,
                 onSelect: () => setSelectedKey(item.key),
               })}
             />
@@ -343,6 +368,17 @@ export default function DashboardActivity() {
       void cache.invalidateQueries({ queryKey: ["status"] });
     },
   });
+  const markRead = useMutation({
+    mutationFn: (noticeId: string) =>
+      api(`/notices/${noticeId}/read`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ read: true }),
+      }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
   const data = query.data;
   const interrupted = data?.interrupted_runs ?? [];
   const notices = data?.notices ?? [];
@@ -365,6 +401,8 @@ export default function DashboardActivity() {
         to: `/runs/${notice.run_id}`,
         title: notice.title,
         detail: `${notice.kind.replaceAll("_", " ")} · ${time(notice.created_at)}`,
+        action: "read" as const,
+        noticeId: notice.id,
       })),
     ...active.map((run) => ({
       key: run.id,
@@ -386,7 +424,11 @@ export default function DashboardActivity() {
   const attention = attentionItems.length;
   return (
     <div className="dashboard-activity">
-      <ErrorNotice error={query.error ?? acknowledge.error ?? cancel.error} />
+      <ErrorNotice
+        error={
+          query.error ?? acknowledge.error ?? cancel.error ?? markRead.error
+        }
+      />
       {query.isPending && <Loading />}
       {data && (
         <div className="dashboard-activity-grid">
@@ -401,13 +443,15 @@ export default function DashboardActivity() {
                 items={attentionItems}
                 acknowledgePending={acknowledge.isPending}
                 cancelPending={cancel.isPending}
+                readPending={markRead.isPending}
                 onAcknowledge={(runId) => acknowledge.mutate(runId)}
                 onStop={(runId) => cancel.mutate(runId)}
+                onRead={(noticeId) => markRead.mutate(noticeId)}
               />
             ) : (
               <Empty title="Nothing needs you right now">
                 Interrupted work, notices and in-progress Runs will appear here
-                with Stop or Mark inspected.
+                with Stop, Mark inspected or Mark read.
               </Empty>
             )}
           </Section>
