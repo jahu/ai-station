@@ -322,6 +322,228 @@ function ToolChoiceList({
   );
 }
 
+function ApprovalChoiceList({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) {
+  const labelId = useId();
+  const items = ["require_approval"] as const;
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    [...items],
+    (item) => item,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    event.preventDefault();
+    onChange(!checked);
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose an approval policy while the list is focused. Space or
+        Enter selects it. There is no inspectable approval-policy Run.
+      </p>
+      <div
+        ref={listRef}
+        className="agent-choice-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        <div
+          aria-label="Approval require_approval"
+          {...itemProps(0, "require_approval")}
+        >
+          <label className="agent-tool agent-wide">
+            <input
+              type="checkbox"
+              checked={checked}
+              tabIndex={index === 0 ? 0 : -1}
+              onChange={(event) => onChange(event.target.checked)}
+            />
+            <span>
+              <strong>Require approval before each Run</strong>
+              <small>
+                Manual and scheduled executions park in waiting_for_approval.
+                The worker does not start tools or inference until you grant the
+                Run. Deny or cancel leaves no report.
+              </small>
+            </span>
+          </label>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function RetryChoiceList({
+  mode,
+  onChange,
+}: {
+  mode: "none" | "manual";
+  onChange: (mode: "none" | "manual") => void;
+}) {
+  const labelId = useId();
+  const items = [
+    {
+      key: "none" as const,
+      title: "No retry",
+      detail: "Inspect the failed Runs. Start a new execution yourself.",
+    },
+    {
+      key: "manual" as const,
+      title: "Manual retry",
+      detail:
+        "After failure or interruption, the workflow inspector can queue a new Run with the same saved snapshot.",
+    },
+  ];
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    items,
+    (item) => item.key,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    const item = items[index];
+    if (!item) return;
+    event.preventDefault();
+    onChange(item.key);
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a retry policy while the list is focused. Space or
+        Enter selects it. Manual retry never auto-loops. There is no inspectable
+        retry-policy Run.
+      </p>
+      <div
+        ref={listRef}
+        className="agent-choice-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {items.map((item, i) => {
+          const current = i === index;
+          return (
+            <div
+              key={item.key}
+              aria-label={`Retry ${item.key}`}
+              {...itemProps(i, item.key)}
+            >
+              <label className="agent-tool">
+                <input
+                  type="radio"
+                  name="retry_policy"
+                  checked={mode === item.key}
+                  tabIndex={current ? 0 : -1}
+                  onChange={() => onChange(item.key)}
+                />
+                <span>
+                  <strong>{item.title}</strong>
+                  <small>{item.detail}</small>
+                </span>
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+function NoticeChoiceList({
+  policy,
+  onChange,
+}: {
+  policy: {
+    on_success: boolean;
+    on_failure: boolean;
+    on_approval: boolean;
+  };
+  onChange: (policy: {
+    on_success: boolean;
+    on_failure: boolean;
+    on_approval: boolean;
+  }) => void;
+}) {
+  const labelId = useId();
+  const items = [
+    {
+      key: "on_failure" as const,
+      title: "When a workflow or report fails or is interrupted",
+    },
+    { key: "on_success" as const, title: "When a report succeeds" },
+    {
+      key: "on_approval" as const,
+      title: "When a Run is waiting for approval",
+    },
+  ];
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    items,
+    (item) => item.key,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    const item = items[index];
+    if (!item) return;
+    event.preventDefault();
+    onChange({ ...policy, [item.key]: !policy[item.key] });
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a notice policy while the list is focused. Space or
+        Enter selects it. Notices stay in AI Station. There is no inspectable
+        notice-policy Run.
+      </p>
+      <div
+        ref={listRef}
+        className="agent-choice-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {items.map((item, i) => {
+          const current = i === index;
+          return (
+            <div
+              key={item.key}
+              aria-label={`Notice ${item.key}`}
+              {...itemProps(i, item.key)}
+            >
+              <label className="agent-tool">
+                <input
+                  type="checkbox"
+                  checked={policy[item.key]}
+                  tabIndex={current ? 0 : -1}
+                  onChange={(event) =>
+                    onChange({ ...policy, [item.key]: event.target.checked })
+                  }
+                />
+                <span>
+                  <strong>{item.title}</strong>
+                </span>
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 function AgentCards({ agents }: { agents: Agent[] }) {
   const headingId = useId();
   const labelId = useId();
@@ -834,21 +1056,12 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             onChange={(e) => update("output_expectation", e.target.value)}
           />
         </label>
-        <label className="agent-tool agent-wide">
-          <input
-            type="checkbox"
+        <div className="agent-wide">
+          <ApprovalChoiceList
             checked={values.require_approval ?? false}
-            onChange={(e) => update("require_approval", e.target.checked)}
+            onChange={(value) => update("require_approval", value)}
           />
-          <span>
-            <strong>Require approval before each Run</strong>
-            <small>
-              Manual and scheduled executions park in waiting_for_approval. The
-              worker does not start tools or inference until you grant the Run.
-              Deny or cancel leaves no report.
-            </small>
-          </span>
-        </label>
+        </div>
         <fieldset className="agent-wide">
           <legend>Workflow steps</legend>
           <p className="muted">
@@ -917,35 +1130,10 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             resume or replay a search, fetch or inference that already had an
             uncertain outcome.
           </p>
-          <label className="agent-tool">
-            <input
-              type="radio"
-              name="retry_policy"
-              checked={(values.retry_policy?.mode ?? "none") === "none"}
-              onChange={() => update("retry_policy", { mode: "none" })}
-            />
-            <span>
-              <strong>No retry</strong>
-              <small>
-                Inspect the failed Runs. Start a new execution yourself.
-              </small>
-            </span>
-          </label>
-          <label className="agent-tool">
-            <input
-              type="radio"
-              name="retry_policy"
-              checked={values.retry_policy?.mode === "manual"}
-              onChange={() => update("retry_policy", { mode: "manual" })}
-            />
-            <span>
-              <strong>Manual retry</strong>
-              <small>
-                After failure or interruption, the workflow inspector can queue
-                a new Run with the same saved snapshot.
-              </small>
-            </span>
-          </label>
+          <RetryChoiceList
+            mode={values.retry_policy?.mode ?? "none"}
+            onChange={(mode) => update("retry_policy", { mode })}
+          />
         </fieldset>
         <fieldset className="agent-wide">
           <legend>Notifications</legend>
@@ -953,42 +1141,14 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             Notices stay in AI Station. Email, chat and other connectors are not
             enabled. Existing agents stay silent until you opt in.
           </p>
-          {(
-            [
-              [
-                "on_failure",
-                "When a workflow or report fails or is interrupted",
-              ],
-              ["on_success", "When a report succeeds"],
-              ["on_approval", "When a Run is waiting for approval"],
-            ] as const
-          ).map(([key, label]) => (
-            <label className="agent-tool" key={key}>
-              <input
-                type="checkbox"
-                checked={Boolean(values.notification_policy?.[key])}
-                onChange={(e) =>
-                  update("notification_policy", {
-                    on_success:
-                      key === "on_success"
-                        ? e.target.checked
-                        : Boolean(values.notification_policy?.on_success),
-                    on_failure:
-                      key === "on_failure"
-                        ? e.target.checked
-                        : Boolean(values.notification_policy?.on_failure),
-                    on_approval:
-                      key === "on_approval"
-                        ? e.target.checked
-                        : Boolean(values.notification_policy?.on_approval),
-                  })
-                }
-              />
-              <span>
-                <strong>{label}</strong>
-              </span>
-            </label>
-          ))}
+          <NoticeChoiceList
+            policy={{
+              on_success: Boolean(values.notification_policy?.on_success),
+              on_failure: Boolean(values.notification_policy?.on_failure),
+              on_approval: Boolean(values.notification_policy?.on_approval),
+            }}
+            onChange={(policy) => update("notification_policy", policy)}
+          />
         </fieldset>
         {values.tools.includes("web_search") && (
           <section className="agent-wide agent-search-settings">

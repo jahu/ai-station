@@ -955,3 +955,111 @@ it("moves through skills and tools with arrow keys without inventing a Run", asy
   ).toBe(true);
   expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
 });
+it("moves through approval, retry and notice policies without inventing a Run", async () => {
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
+    ok: options === undefined,
+    json: async () =>
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.endsWith("/chat/provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.includes("/skills") || url.endsWith("tools")
+            ? []
+            : url.endsWith("/hardware")
+              ? { gpus: [] }
+              : {
+                  id: "draft",
+                  name: "Morning review",
+                  description: "",
+                  goal: "Summarize",
+                  system_prompt: "",
+                  model: "local",
+                  tools: [],
+                  search_query: "",
+                  fetch_urls: [],
+                  skills: [],
+                  trigger: "manual",
+                  cron_expr: "",
+                  interval_seconds: null,
+                  run_at: null,
+                  maximum_runtime: 600,
+                  output_expectation: "Report",
+                  require_approval: false,
+                  workflow_mode: "sequential",
+                  tool_calling: "none",
+                  retry_policy: { mode: "none" },
+                  notification_policy: {
+                    on_success: false,
+                    on_failure: false,
+                    on_approval: false,
+                  },
+                  project_id: null,
+                  enabled: false,
+                  updated_at: "2026-10-09T12:00:00Z",
+                  next_run_at: null,
+                  last_run_at: null,
+                  last_status: "",
+                  failure_count: 0,
+                  effective_permissions: [],
+                  runs: [],
+                },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  const approval = await screen.findByLabelText("Approval require_approval");
+  expect(approval.tabIndex).toBe(0);
+  expect(
+    screen.getByText(/There is no inspectable approval-policy Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(approval.closest(".agent-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: /Require approval before each Run/i,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  const none = screen.getByLabelText("Retry none");
+  const manual = screen.getByLabelText("Retry manual");
+  expect(none.tabIndex).toBe(0);
+  expect(manual.tabIndex).toBe(-1);
+  expect(
+    screen.getByText(/There is no inspectable retry-policy Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(none.closest(".agent-choice-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(manual.tabIndex).toBe(0);
+  expect(document.activeElement).toBe(manual);
+  fireEvent.keyDown(manual.closest(".agent-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(
+    (screen.getByRole("radio", { name: /Manual retry/i }) as HTMLInputElement)
+      .checked,
+  ).toBe(true);
+  const failure = screen.getByLabelText("Notice on_failure");
+  const success = screen.getByLabelText("Notice on_success");
+  expect(failure.tabIndex).toBe(0);
+  expect(success.tabIndex).toBe(-1);
+  expect(
+    screen.getByText(/There is no inspectable notice-policy Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(failure.closest(".agent-choice-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(success.tabIndex).toBe(0);
+  fireEvent.keyDown(success.closest(".agent-choice-list") as HTMLElement, {
+    key: " ",
+  });
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: /When a report succeeds/i,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
+});
