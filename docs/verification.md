@@ -220,3 +220,7 @@ Frontend lint, TypeScript, 99 component tests and production build passed. After
 ## Download stored SQLite backup copies — 2026-10-09
 
 `./scripts/check.sh`: 683 Python tests passed (5 skipped), including listing the SQLite artifact on GET `/api/maintenance/backups` and downloading it as `SQLite format 3` without restore. Frontend lint, TypeScript, 101 component tests and production build passed. System **Download copy** uses the existing artifact file endpoint and does not offer Restore. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Home attention keyboard and labelled landmarks — 2026-10-09
+
+`./scripts/check.sh`: 683 Python tests passed (5 skipped). Frontend lint, TypeScript, 102 component tests and production build passed. Home attention rows form one keyboard sequence (arrows, Home, End, Enter inspects). Stop and Mark inspected name the selected work and stay on that row. Activity sections, compute telemetry meters and the resource chart expose accessible names. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

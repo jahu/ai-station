@@ -106,6 +106,12 @@ it("skips to the workspace without opening LAN publish", async () => {
   ).toBeNull();
   fireEvent.click(skip);
   expect(document.activeElement).toBe(screen.getByRole("main"));
+  expect(screen.getByRole("heading", { name: "Compute" })).toBeTruthy();
+  expect(screen.getByRole("region", { name: "Compute" })).toBeTruthy();
+  expect(screen.getByRole("meter", { name: "CPU utilization" })).toBeTruthy();
+  expect(
+    screen.getByRole("navigation", { name: "Quick actions" }),
+  ).toBeTruthy();
 });
 
 it("signs out the loopback session from chrome without offering LAN publish", async () => {

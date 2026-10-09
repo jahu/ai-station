@@ -120,30 +120,43 @@ it("unifies attention with inspect and stop actions", async () => {
   mount();
   await screen.findByRole("heading", { name: "Needs attention · 3" });
   expect(
-    screen.getByRole("link", { name: /My conversation/ }).getAttribute("href"),
+    screen.getByRole("region", { name: "Needs attention · 3" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "View all runs" }).getAttribute("href"),
+  ).toBe("/runs");
+  expect(
+    screen.getByRole("link", { name: "View all conversations" }).getAttribute("href"),
+  ).toBe("/chat");
+  expect(
+    screen.getByRole("link", { name: "Inspect My conversation" }).getAttribute("href"),
   ).toBe("/chat/chat");
   expect(
-    screen.getByRole("link", { name: /Report.md/ }).getAttribute("href"),
+    screen.getByRole("link", { name: "Inspect Report.md" }).getAttribute("href"),
   ).toBe("/library/artifact");
   expect(
     screen
-      .getByRole("link", { name: /photo_pipe · host running/ })
+      .getByRole("link", { name: "Inspect Image task" })
       .getAttribute("href"),
   ).toBe("/runs/run");
   expect(
     screen
-      .getByRole("link", { name: /Agent workflow failed/ })
+      .getByRole("link", { name: "Inspect Agent workflow failed" })
       .getAttribute("href"),
   ).toBe("/runs/failed-run");
   expect(
     screen
-      .getByRole("link", { name: /Image task needs inspection/ })
+      .getByRole("link", { name: "Inspect Image task needs inspection" })
       .getAttribute("href"),
   ).toBe("/runs/interrupted-run");
   expect(screen.getByText(/Due \/ waiting for scheduler/)).toBeTruthy();
   expect(screen.getByText(/external · Process/)).toBeTruthy();
   expect(screen.getByText(/Stale/)).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Mark inspected" }));
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Mark inspected Image task needs inspection",
+    }),
+  );
   await waitFor(() =>
     expect(
       fetch.mock.calls.some(
@@ -154,7 +167,7 @@ it("unifies attention with inspect and stop actions", async () => {
       ),
     ).toBe(true),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Stop" }));
+  fireEvent.click(screen.getByRole("button", { name: "Stop Image task" }));
   await waitFor(() =>
     expect(
       fetch.mock.calls.some(
@@ -165,6 +178,43 @@ it("unifies attention with inspect and stop actions", async () => {
     ).toBe(true),
   );
 });
+it("moves through the attention list with arrow keys", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, json: async () => overview() })),
+  );
+  mount();
+  const first = await screen.findByRole("link", {
+    name: "Inspect Image task needs inspection",
+  });
+  const notice = screen.getByRole("link", {
+    name: "Inspect Agent workflow failed",
+  });
+  const active = screen.getByRole("link", { name: "Inspect Image task" });
+  expect(first.tabIndex).toBe(0);
+  expect(notice.tabIndex).toBe(-1);
+  expect(active.tabIndex).toBe(-1);
+  expect(
+    screen.getByRole("button", {
+      name: "Mark inspected Image task needs inspection",
+    }).tabIndex,
+  ).toBe(0);
+  expect(screen.getByRole("button", { name: "Stop Image task" }).tabIndex).toBe(
+    -1,
+  );
+  fireEvent.keyDown(first.closest("ul") as HTMLElement, { key: "ArrowDown" });
+  expect(notice.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(notice);
+  fireEvent.keyDown(notice.closest("ul") as HTMLElement, { key: "End" });
+  expect(active.tabIndex).toBe(0);
+  expect(screen.getByRole("button", { name: "Stop Image task" }).tabIndex).toBe(
+    0,
+  );
+  fireEvent.keyDown(active.closest("ul") as HTMLElement, { key: "Home" });
+  expect(first.tabIndex).toBe(0);
+});
+
 it("shows an error instead of claiming there is no activity", async () => {
   vi.stubGlobal(
     "fetch",
