@@ -284,3 +284,7 @@ Frontend lint, TypeScript, 116 component tests and production build passed. Regi
 ## Project worktrees keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 117 component tests and production build passed. Prepared worktrees form one keyboard sequence (arrows, Home, End, Enter inspects the preparation Run). Inspect, install, validate, keep and remove names include the branch and short id. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Backup copies keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 118 component tests and production build passed. Recent SQLite backup copies form one keyboard sequence (arrows, Home, End, Enter inspects the backup Run). Inspect copy and Download copy names include the short Run id and stay on the selected row. Restore and image rollout stay unpublished. Reuses `useListKeyboard`. No Python or Host Runner changes. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

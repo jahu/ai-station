@@ -155,13 +155,13 @@ it("re-checks a backup copy without offering restore or rollout", async () => {
   });
   mount(fetch);
   await screen.findByText(/recorded integrity_check=ok/);
-  const download = screen.getByRole("link", { name: "Download copy" });
+  const download = screen.getByRole("link", { name: /Download copy/ });
   expect(download.getAttribute("href")).toBe("/api/artifacts/sqlite-copy/file");
   expect(download.getAttribute("download")).toBe("ai-station.sqlite");
   expect(
     screen.queryByRole("button", { name: /restore|rollout|deploy/i }),
   ).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Inspect copy" }));
+  fireEvent.click(screen.getByRole("button", { name: /Inspect copy/ }));
   await screen.findByText(/matches live schema/);
   await screen.findByText(/backups\/run-backup.sqlite/);
   expect(
@@ -236,7 +236,8 @@ it("inspects the running compose image without offering rollout", async () => {
       .map((call) => call[0])
       .filter(
         (path) =>
-          String(path).includes("/rollout") || String(path).includes("/restore"),
+          String(path).includes("/rollout") ||
+          String(path).includes("/restore"),
       ),
   ).toEqual([]);
 });
@@ -288,4 +289,68 @@ it("marks an interrupted run inspected without posting restore", async () => {
       .map((call) => call[0])
       .filter((path) => String(path).includes("restore")),
   ).toEqual([]);
+});
+
+it("moves through backup copies with arrow keys", async () => {
+  const copy = {
+    status: "succeeded",
+    summary: "SQLite backup integrity_check=ok",
+    restore: "unpublished",
+    artifacts: [
+      {
+        id: "sqlite-copy",
+        type: "archive",
+        filename: "ai-station.sqlite",
+        size_bytes: 12,
+        relative_path: "backups/run.sqlite",
+      },
+    ],
+  };
+  mount(
+    vi.fn(async (path: string) => {
+      if (path === "/api/maintenance/backups") {
+        return {
+          ok: true,
+          json: async () => ({
+            restore: "unpublished",
+            items: [
+              { ...copy, id: "backup01" },
+              {
+                ...copy,
+                id: "backup02",
+                artifacts: [{ ...copy.artifacts[0], id: "sqlite-two" }],
+              },
+            ],
+          }),
+        };
+      }
+      return { ok: true, json: async () => readiness };
+    }),
+  );
+  const first = await screen.findByRole("link", {
+    name: "Inspect backup Run backup01",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect backup Run backup02",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Recent copies" })).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: /restore|rollout|deploy/i }),
+  ).toBeNull();
+  fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(
+    screen
+      .getByRole("link", { name: "Inspect backup Run backup02" })
+      .closest("[data-list-index]"),
+  );
+  fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
 });
