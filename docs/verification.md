@@ -272,3 +272,7 @@ Frontend lint, TypeScript, 113 component tests and production build passed. Codi
 ## Connectors list keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 114 component tests and production build passed. Named HTTP GET connectors form one keyboard sequence (arrows, Home, End, Enter inspects the last check when one exists). Inspect, Check GET and Remove names include the connector name and short id. Browser/GitHub/email adapters stay listed as unavailable and are not in that inspect sequence. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Runtime observations keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 115 component tests and production build passed. Runtime observation rows form one keyboard sequence (arrows, Home, End, Enter inspects the source Run when one exists). Inspect names include the runtime name and short id. Observation still does not control external processes. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

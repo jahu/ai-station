@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { api, type Run } from "../api";
 import { Badge, Empty, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
+import { useListKeyboard } from "./useListKeyboard";
 
 interface RuntimeInstance {
   id: string;
@@ -23,6 +24,96 @@ interface RuntimeInstance {
     scan_run_id?: string;
   };
 }
+
+function RuntimeCards({ runtimes }: { runtimes: RuntimeInstance[] }) {
+  const headingId = useId();
+  const labelId = useId();
+  const navigate = useNavigate();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    runtimes,
+    (runtime) => runtime.id,
+  );
+  const selected = runtimes[index];
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key !== "Enter" || event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input")) return;
+    const runId = selected?.metadata.scan_run_id;
+    if (runId) {
+      event.preventDefault();
+      navigate(`/runs/${runId}`);
+    }
+  };
+  return (
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId} className="sr-only">
+        Runtime observations
+      </h3>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose an observation while the list is focused. Enter
+        inspects its source Run when one exists.
+      </p>
+      <div
+        ref={listRef}
+        className="diagnostic-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {runtimes.map((runtime, i) => {
+          const current = i === index;
+          const shortId = runtime.id.slice(0, 8);
+          return (
+            <div
+              key={runtime.id}
+              className="runtime-item"
+              {...itemProps(i, runtime.id)}
+            >
+              <div>
+                <strong>{runtime.name}</strong>
+                <p>
+                  <span className="tiny-tag">{runtime.ownership}</span>{" "}
+                  {runtime.metadata.source === "host_process"
+                    ? `Host process · PID ${runtime.metadata.pid}`
+                    : runtime.endpoint}
+                </p>
+                <p>
+                  {runtime.metadata.source === "host_process"
+                    ? "Process observation does not verify inference readiness."
+                    : "Endpoint status checks model discovery, not generation."}
+                </p>
+                {runtime.metadata.models?.length ? (
+                  <p>
+                    Advertised models: {runtime.metadata.models.join(", ")}
+                  </p>
+                ) : null}
+                {runtime.metadata.error && <p>{runtime.metadata.error}</p>}
+                <small className="muted">
+                  Observed {time(runtime.updated_at)}
+                  {runtime.stale && " · Stale"}
+                  {runtime.metadata.scan_run_id && (
+                    <>
+                      {" · "}
+                      <Link
+                        to={`/runs/${runtime.metadata.scan_run_id}`}
+                        tabIndex={current ? 0 : -1}
+                        aria-label={`Inspect ${runtime.name} ${shortId}`}
+                      >
+                        Source Run
+                      </Link>
+                    </>
+                  )}
+                </small>
+              </div>
+              <Badge status={runtime.status} />
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function RuntimeObservations() {
   const navigate = useNavigate();
   const [offset, setOffset] = useState(0);
@@ -86,40 +177,7 @@ export default function RuntimeObservations() {
           configured local model endpoint.
         </Empty>
       ) : (
-        <div className="diagnostic-list">
-          {registry.data.items.map((runtime) => (
-            <div key={runtime.id} className="runtime-item">
-              <div>
-                <strong>{runtime.name}</strong>
-                <p>
-                  <span className="tiny-tag">{runtime.ownership}</span>{" "}
-                  {runtime.metadata.source === "host_process"
-                    ? `Host process · PID ${runtime.metadata.pid}`
-                    : runtime.endpoint}
-                </p>
-                <p>
-                  {runtime.metadata.source === "host_process"
-                    ? "Process observation does not verify inference readiness."
-                    : "Endpoint status checks model discovery, not generation."}
-                </p>
-                {runtime.metadata.models?.length ? (
-                  <p>Advertised models: {runtime.metadata.models.join(", ")}</p>
-                ) : null}
-                {runtime.metadata.error && <p>{runtime.metadata.error}</p>}
-                <small className="muted">
-                  Observed {time(runtime.updated_at)}
-                  {runtime.stale && " · Stale"} ·{" "}
-                  {runtime.metadata.scan_run_id && (
-                    <Link to={`/runs/${runtime.metadata.scan_run_id}`}>
-                      Source Run
-                    </Link>
-                  )}
-                </small>
-              </div>
-              <Badge status={runtime.status} />
-            </div>
-          ))}
-        </div>
+        <RuntimeCards runtimes={registry.data.items} />
       )}
       <div className="row runtime-summary">
         <Button
