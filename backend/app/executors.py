@@ -38,6 +38,7 @@ from app.summary_executor import SummaryExecutor
 from app.tools import get_tool
 from app.validation_executor import ProjectValidationExecutor
 from app.worktree_executor import WorktreeExecutor
+from app.worktree_remove import WorktreeRemoveExecutor
 
 
 class ExecutorResult(str):
@@ -289,6 +290,7 @@ EXECUTORS = {
     "chat": ChatExecutor(),
     "chat_summary": SummaryExecutor(),
     "worktree_prepare": WorktreeExecutor(),
+    "worktree_remove": WorktreeRemoveExecutor(),
     "project_validation": ProjectValidationExecutor(),
     "cursor_proposal": CursorProposalExecutor(),
     "codex_proposal": CodexProposalExecutor(),

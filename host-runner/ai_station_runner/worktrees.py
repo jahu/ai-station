@@ -1,4 +1,4 @@
-"""Runner-owned worktree reservations. No deletion or caller-selected paths."""
+"""Runner-owned worktree reservations. Callers cannot choose destinations."""
 
 import fcntl
 import json
@@ -47,7 +47,7 @@ def load_manifest(run_id: str) -> dict:
         or record["branch"] != f"ai/{run_id}-workspace"
         or not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", record["base_commit"])
         or not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", record.get("head_commit", record["base_commit"]))
-        or record["state"] not in {"reserved", "preparing", "ready"}
+        or record["state"] not in {"reserved", "preparing", "ready", "removing", "removed"}
     ):
         raise GitError("Worktree reservation is inconsistent with its owner")
     return record
@@ -152,6 +152,8 @@ def reserve_and_start(
 
 def inspect_worktree(manager: ProcessManager, run_id: str) -> dict:
     record = load_manifest(run_id)
+    if record["state"] in {"removing", "removed"}:
+        raise GitError("Owned worktree is no longer available")
     try:
         process = manager.inspect(run_id)
     except ProcessNotOwned as exc:

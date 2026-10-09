@@ -51,6 +51,7 @@ from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.telemetry import collect
 from ai_station_runner.validation import ValidationRequest, start_validation, validation_report
+from ai_station_runner.worktree_remove import RemoveWorktreeRequest, remove_report, start_remove
 from ai_station_runner.worktrees import inspect_worktree, reserve_and_start
 
 app = FastAPI(title="AI Station Host Runner", version=__version__)
@@ -701,3 +702,21 @@ def coding_model_catalog(provider: str):
     if provider not in {"cursor", "codex"}:
         raise HTTPException(404, "Coding provider not found")
     return coding_models(provider)
+
+
+@app.post("/v1/runs/worktree-remove")
+def worktree_remove_run(body: RemoveWorktreeRequest):
+    try:
+        return {**start_remove(manager(), body), "runner_id": get_settings().runner_id}
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (GitError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/runs/worktree-remove/{run_id}/report")
+def worktree_remove_report(run_id: UUID):
+    try:
+        return remove_report(manager(), str(run_id))
+    except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc

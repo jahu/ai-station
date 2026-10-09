@@ -431,6 +431,143 @@ def test_preparation_requires_permissions_before_dispatch(repository, owned_runn
         assert not (owned_runner.data_dir / f"runtime/worktree-requests/{run['id']}.json").exists()
 
 
+def enqueue_remove(client, project, worktree):
+    return client.post(
+        f"/api/projects/{project['id']}/worktrees/{worktree['id']}/remove",
+        json={"expected_updated_at": project["updated_at"]},
+    )
+
+
+def test_owned_worktree_removal_deletes_checkout_and_task_branch(repository, owned_runner):
+    from ai_station_runner.worktrees import inspect_worktree, load_manifest
+
+    original_index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project = register(client, repository)
+        first = enqueue_worktree(client, project)
+        with session_factory()() as session:
+            tick(session, "prepare-first")
+        assert client.get(f"/api/runs/{first['id']}").json()["status"] == "succeeded"
+        second = enqueue_worktree(client, project)
+        with session_factory()() as session:
+            tick(session, "prepare-second")
+        assert client.get(f"/api/runs/{second['id']}").json()["status"] == "succeeded"
+        worktrees = client.get(f"/api/projects/{project['id']}/worktrees").json()
+        keep = next(row for row in worktrees if row["run_id"] == second["id"])
+        target = next(row for row in worktrees if row["run_id"] == first["id"])
+        destination = owned_runner.data_dir / target["relative_path"]
+        (destination / "README.md").write_text("Dirty owned checkout\n")
+        stale = client.post(
+            f"/api/projects/{project['id']}/worktrees/{target['id']}/remove",
+            json={"expected_updated_at": "2000-01-01T00:00:00+00:00"},
+        )
+        assert stale.status_code == 409
+        assert (
+            enqueue_remove(client, project, {"id": "00000000-0000-0000-0000-000000000000"}).status_code == 404
+        )
+        run = enqueue_remove(client, project, target)
+        assert run.status_code == 202, run.text
+        with session_factory()() as session:
+            tick(session, "remove-first")
+        result = client.get(f"/api/runs/{run.json()['id']}").json()
+        assert result["status"] == "succeeded", result
+        listed = client.get(f"/api/projects/{project['id']}/worktrees").json()
+        removed = next(row for row in listed if row["id"] == target["id"])
+        assert removed["removed_at"]
+        assert not destination.exists()
+        assert (
+            owned_runner.data_dir / keep["relative_path"] / "README.md"
+        ).read_text() == "Original repository\n"
+        branches = subprocess.check_output(["git", "-C", str(repository), "branch"], text=True)
+        assert f"ai/{first['id']}-workspace" not in branches
+        assert f"ai/{second['id']}-workspace" in branches
+        assert (repository / "README.md").read_text() == "Original repository\n"
+        assert (repository / ".git/index").read_bytes() == original_index
+        assert load_manifest(first["id"])["state"] == "removed"
+        with pytest.raises(Exception, match="no longer available"):
+            inspect_worktree(owned_runner, first["id"])
+        assert enqueue_remove(client, project, target).status_code == 409
+        assert (
+            client.post(
+                f"/api/projects/{project['id']}/worktrees/{target['id']}/validate",
+                json={"expected_updated_at": project["updated_at"]},
+            ).status_code
+            == 409
+        )
+        artifacts = client.get(f"/api/artifacts?run_id={run.json()['id']}").json()
+        assert artifacts[0]["type"] == "json"
+        assert "git.worktree.removed" in client.get(f"/api/runs/{run.json()['id']}/stream").text
+
+
+def test_worktree_remove_dispatch_replay_and_conflicts(repository, owned_runner):
+    from uuid import uuid4
+
+    with TestClient(app) as client:
+        project = register(client, repository)
+        preparation = enqueue_worktree(client, project)
+        with session_factory()() as session:
+            tick(session, "prepare-remove")
+        assert client.get(f"/api/runs/{preparation['id']}").json()["status"] == "succeeded"
+    payload = {
+        "run_id": str(uuid4()),
+        "project_id": project["id"],
+        "worktree_run_id": preparation["id"],
+        "repo_path": str(repository),
+        "permissions": ["filesystem_read", "workspace_write", "git_read", "git_write"],
+    }
+    with TestClient(runner_app) as client:
+        started = client.post("/v1/runs/worktree-remove", json=payload)
+        assert started.status_code == 200, started.text
+        replay = client.post("/v1/runs/worktree-remove", json=payload)
+        assert replay.json()["pid"] == started.json()["pid"]
+        assert (
+            client.post(
+                "/v1/runs/worktree-remove", json={**payload, "repo_path": str(repository) + "/other"}
+            ).status_code
+            == 409
+        )
+        assert client.post("/v1/runs/worktree-remove", json={**payload, "permissions": []}).status_code == 403
+        assert client.post("/v1/git/worktree/remove", json={}).status_code == 404
+
+
+def test_worktree_remove_cancellation_only_terminates_owned_group(repository, owned_runner, monkeypatch):
+    import sys
+
+    original_start = owned_runner.start
+
+    def slow(**kwargs):
+        if kwargs.get("executor") == "worktree_remove":
+            kwargs["argv"] = [sys.executable, "-c", "import time; time.sleep(30)"]
+        return original_start(**kwargs)
+
+    monkeypatch.setattr(owned_runner, "start", slow)
+    original = RunnerClient.request
+
+    def wrap(self, method, path, json=None):
+        result = original(self, method, path, json)
+        if method == "POST" and path == "/v1/runs/worktree-remove":
+            assert client.post(f"/api/runs/{run['id']}/cancel").status_code == 200
+        return result
+
+    with TestClient(app) as client:
+        project = register(client, repository)
+        enqueue_worktree(client, project)
+        with session_factory()() as session:
+            tick(session, "prepare-cancel-remove")
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        queued = enqueue_remove(client, project, worktree)
+        assert queued.status_code == 202, queued.text
+        run = queued.json()
+        monkeypatch.setattr(RunnerClient, "request", wrap)
+        with session_factory()() as session:
+            tick(session, "cancel-remove")
+        assert client.get(f"/api/runs/{run['id']}").json()["status"] == "canceled"
+        assert not owned_runner.inspect(run["id"])["alive"]
+        listed = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        assert listed["removed_at"] is None
+        assert (owned_runner.data_dir / listed["relative_path"]).is_dir()
+
+
 @pytest.fixture
 def validation_sandbox(tmp_path, monkeypatch):
     """A disposable fake helper for CI; real isolation has a separate opt-in probe."""
@@ -2150,6 +2287,37 @@ def test_coding_conversation_continues_same_worktree_and_supersedes_review(
         with session_factory()() as session:
             tick(session, "commit-both-turns")
         assert client.get(f"/api/runs/{accepted.json()['id']}").json()["status"] == "succeeded"
+
+
+def test_coding_followup_rejects_removed_workspace(repository, owned_runner, fake_cursor):
+    with TestClient(app) as client:
+        project = register(client, repository)
+        response = client.post("/api/coding/cursor", json=coding_request(project, files=[], explore=True))
+        assert response.status_code == 202, response.text
+        preparation = response.json()
+        for worker in ("prepare", "first-turn"):
+            with session_factory()() as session:
+                tick(session, worker)
+        path = f"/api/coding/sessions/{preparation['task_id']}"
+        source = next(r for r in client.get(path).json()["runs"] if r["executor_type"] == "cursor_proposal")
+        assert source["status"] == "succeeded", source
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        removed = enqueue_remove(client, project, worktree)
+        assert removed.status_code == 202, removed.text
+        with session_factory()() as session:
+            tick(session, "remove-coding-workspace")
+        assert client.get(f"/api/runs/{removed.json()['id']}").json()["status"] == "succeeded"
+        assert (
+            client.post(
+                path + "/messages",
+                json={
+                    "prompt": "continue in the same workspace",
+                    "expected_run_id": source["id"],
+                    "external_ai": True,
+                },
+            ).status_code
+            == 409
+        )
 
 
 def test_project_setup_cancellation_and_no_destination_overwrite(repository, owned_runner, monkeypatch):

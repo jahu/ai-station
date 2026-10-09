@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "react-router-dom";
 import { GitBranch } from "lucide-react";
@@ -14,6 +15,7 @@ interface Worktree {
   branch: string;
   base_branch: string;
   owned: boolean;
+  removed_at: string | null;
 }
 
 export default function ProjectWorktrees({
@@ -22,6 +24,7 @@ export default function ProjectWorktrees({
   project: { id: string; updated_at: string; integration_branch: string };
 }) {
   const navigate = useNavigate();
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const worktrees = useQuery({
     queryKey: ["project-worktrees", project.id],
     queryFn: () => api<Worktree[]>(`/projects/${project.id}/worktrees`),
@@ -45,9 +48,25 @@ export default function ProjectWorktrees({
       }),
     onSuccess: (run) => navigate(`/runs/${run.id}`),
   });
+  const remove = useMutation({
+    mutationFn: (worktreeId: string) =>
+      api<Run>(`/projects/${project.id}/worktrees/${worktreeId}/remove`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expected_updated_at: project.updated_at }),
+      }),
+    onSuccess: (run) => navigate(`/runs/${run.id}`),
+  });
   const active = worktrees.data?.some(
     (worktree) => !terminal.has(worktree.run_status),
   );
+  const busy =
+    prepare.isPending ||
+    validate.isPending ||
+    remove.isPending ||
+    active ||
+    worktrees.isPending ||
+    worktrees.isError;
   return (
     <section className="panel content-panel mt">
       <div className="row spread project-worktrees-heading">
@@ -55,15 +74,7 @@ export default function ProjectWorktrees({
           <GitBranch size={17} />
           Isolated worktrees
         </h2>
-        <Button
-          disabled={
-            prepare.isPending ||
-            active ||
-            worktrees.isPending ||
-            worktrees.isError
-          }
-          onClick={() => prepare.mutate()}
-        >
+        <Button disabled={busy} onClick={() => prepare.mutate()}>
           {prepare.isPending ? "Queueing…" : "Prepare isolated worktree"}
         </Button>
       </div>
@@ -80,7 +91,16 @@ export default function ProjectWorktrees({
         must already be available there. Logs and the result report appear in
         the validation Run.
       </p>
-      <ErrorNotice error={worktrees.error ?? prepare.error ?? validate.error} />
+      <p className="muted">
+        Remove deletes only this owned checkout and its local task branch. It
+        does not change your current repository, push, or delete GitHub
+        branches. Coding conversations that used the worktree cannot continue.
+      </p>
+      <ErrorNotice
+        error={
+          worktrees.error ?? prepare.error ?? validate.error ?? remove.error
+        }
+      />
       {worktrees.isPending ? (
         <Loading />
       ) : worktrees.data?.length ? (
@@ -91,33 +111,66 @@ export default function ProjectWorktrees({
                 <Link className="text-link" to={`/runs/${worktree.run_id}`}>
                   Inspect preparation Run →
                 </Link>
-                <Badge status={worktree.run_status} />
+                <Badge
+                  status={worktree.removed_at ? "removed" : worktree.run_status}
+                />
               </div>
-              {worktree.owned && worktree.run_status === "succeeded" && (
-                <Button
-                  variant="secondary"
-                  disabled={validate.isPending || active}
-                  onClick={() => validate.mutate(worktree.id)}
-                >
-                  {validate.isPending ? "Queueing…" : "Run saved validation"}
-                </Button>
-              )}
+              {worktree.owned &&
+                worktree.run_status === "succeeded" &&
+                !worktree.removed_at && (
+                  <Button
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => validate.mutate(worktree.id)}
+                  >
+                    {validate.isPending ? "Queueing…" : "Run saved validation"}
+                  </Button>
+                )}
+              {!worktree.removed_at &&
+                (confirmId === worktree.id ? (
+                  <div className="row">
+                    <Button
+                      disabled={busy}
+                      onClick={() => remove.mutate(worktree.id)}
+                    >
+                      {remove.isPending
+                        ? "Queueing…"
+                        : "Permanently remove worktree"}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setConfirmId(null)}
+                    >
+                      Keep worktree
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    disabled={busy}
+                    onClick={() => setConfirmId(worktree.id)}
+                  >
+                    Remove worktree…
+                  </Button>
+                ))}
               <p className="mono">{worktree.branch}</p>
               <p className="mono muted">{worktree.relative_path}</p>
               <p className="muted">
-                {worktree.owned
-                  ? "Prepared and recorded. Preserved for review."
-                  : terminal.has(worktree.run_status)
-                    ? "Preparation was not confirmed. Inspect the Run and any partial data before continuing."
-                    : "Preparation has not completed yet."}
+                {worktree.removed_at
+                  ? "Removed. The local task branch and owned checkout are gone; GitHub remotes were not changed."
+                  : worktree.owned
+                    ? "Prepared and recorded. Preserved until you remove it."
+                    : terminal.has(worktree.run_status)
+                      ? "Preparation was not confirmed. Inspect the Run and any partial data before removing."
+                      : "Preparation has not completed yet."}
               </p>
             </article>
           ))}
         </div>
       ) : (
         <Empty title="No worktrees prepared">
-          Prepare a separate checkout for an upcoming coding task. Worktrees and
-          branches are preserved; automatic cleanup is disabled.
+          Prepare a separate checkout for an upcoming coding task. Owned
+          worktrees stay until you remove them; automatic cleanup is disabled.
         </Empty>
       )}
     </section>

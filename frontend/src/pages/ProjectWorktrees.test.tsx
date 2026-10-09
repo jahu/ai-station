@@ -55,6 +55,69 @@ it("queues an explicit versioned preparation Run and opens its inspector", async
   );
 });
 
+it("requires confirmation before queueing owned worktree removal", async () => {
+  const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST"
+        ? { id: "removed" }
+        : [
+            {
+              id: "worktree",
+              run_id: "preparation",
+              run_status: "succeeded",
+              owned: true,
+              removed_at: null,
+              branch: "ai/task",
+              relative_path: "worktrees/project/task",
+            },
+          ],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/projects/one"]}>
+        <Routes>
+          <Route
+            path="/projects/one"
+            element={
+              <ProjectWorktrees
+                project={{
+                  id: "one",
+                  updated_at: "version",
+                  integration_branch: "develop",
+                }}
+              />
+            }
+          />
+          <Route path="/runs/removed" element={<h1>Removal Run</h1>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Remove worktree…" }),
+  );
+  expect(
+    fetch.mock.calls.filter(([, options]) => options?.method === "POST"),
+  ).toHaveLength(0);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Permanently remove worktree" }),
+  );
+  await screen.findByRole("heading", { name: "Removal Run" });
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/projects/one/worktrees/worktree/remove",
+    expect.objectContaining({
+      method: "POST",
+      body: '{"expected_updated_at":"version"}',
+    }),
+  );
+});
+
 it("queues saved validation for a ready owned worktree without sending commands", async () => {
   const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
     ok: true,

@@ -77,7 +77,12 @@ def enqueue_local_repair(session, source_id):
     ):
         raise HTTPException(409, "Repair requires confirmed failing project validation")
     worktree = session.get(Worktree, source.parameters["worktree_id"])
-    if not worktree or not worktree.owned or worktree.project_id != source.project_id:
+    if (
+        not worktree
+        or not worktree.owned
+        or worktree.removed_at is not None
+        or worktree.project_id != source.project_id
+    ):
         raise HTTPException(409, "The task worktree is unavailable")
     if session.scalar(
         select(Run.id).where(Run.project_id == source.project_id, Run.status.not_in(TERMINAL)).limit(1)
