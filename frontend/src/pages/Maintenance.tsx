@@ -99,7 +99,55 @@ const json = (method: string, body: unknown) => ({
   body: JSON.stringify(body),
 });
 
+type ComposeContainer = ImageInspect["containers"][number];
 type BackupRow = Run & { restore: string; artifacts?: BackupArtifact[] };
+
+function ContainerCards({ containers }: { containers: ComposeContainer[] }) {
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    containers,
+    (row) => row.id,
+  );
+  return (
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId} className="sr-only">
+        Compose containers
+      </h3>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a container while the list is focused. Rollout remains
+        unpublished.
+      </p>
+      <div
+        ref={listRef}
+        className="diagnostic-list"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {containers.map((row, i) => (
+          <div
+            key={row.id}
+            aria-label={`Container ${row.service} ${row.id.slice(0, 8)}`}
+            {...itemProps(i, row.id)}
+          >
+            <div>
+              <strong>
+                {row.service}
+                {row.self ? " · this API" : ""}
+              </strong>
+              <p>
+                {row.project} · {row.status}
+                {row.matches_tag
+                  ? " · matches ai-station:local"
+                  : " · differs from current tag"}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function BackupCards({
   items,
@@ -463,32 +511,19 @@ export default function Maintenance() {
                 </p>
               </div>
             </div>
-            {image.data.containers.length ? (
-              image.data.containers.map((row) => (
-                <div key={row.id}>
-                  <div>
-                    <strong>
-                      {row.service}
-                      {row.self ? " · this API" : ""}
-                    </strong>
-                    <p>
-                      {row.project} · {row.status}
-                      {row.matches_tag
-                        ? " · matches ai-station:local"
-                        : " · differs from current tag"}
-                    </p>
-                  </div>
-                </div>
-              ))
-            ) : (
+          </div>
+          {image.data.containers.length ? (
+            <ContainerCards containers={image.data.containers} />
+          ) : (
+            <div className="diagnostic-list">
               <div>
                 <div>
                   <strong>No running control-plane containers reported</strong>
                   <p>Rollout remains unpublished.</p>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       ) : null}
       {(ready?.interrupted_runs.length ?? 0) > 0 ? (

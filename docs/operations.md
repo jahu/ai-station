@@ -36,7 +36,7 @@ Conservative recovery still parks uncertain dispatched work as `interrupted` aft
 
 ## Compose image inspect
 
-**System → Backup and upgrade readiness → Inspect running image** compares the current `ai-station:local` image ID with running control-plane containers that use that tag. A mismatch means the tag was rebuilt while those containers still run an older ID. Applying that tag, building from the UI, or taking over preview `:8765` stays unpublished. Rebuild from a reviewed checkout in an isolated worktree using `./scripts/start.sh`.
+**System → Backup and upgrade readiness → Inspect running image** compares the current `ai-station:local` image ID with running control-plane containers that use that tag. Running containers are one keyboard sequence (arrows, Home, End) with unique Container names. A mismatch means the tag was rebuilt while those containers still run an older ID. Applying that tag, building from the UI, or taking over preview `:8765` stays unpublished. Rebuild from a reviewed checkout in an isolated worktree using `./scripts/start.sh`.
 
 ## What remains unpublished
 

@@ -242,6 +242,86 @@ it("inspects the running compose image without offering rollout", async () => {
   ).toEqual([]);
 });
 
+it("moves through compose containers with arrow keys", async () => {
+  const container = {
+    name: "ai-station-ai-station-1",
+    project: "ai-station",
+    status: "running",
+    image: "ai-station:local",
+    image_id: "sha256:abc",
+    matches_tag: true,
+  };
+  const fetch = vi.fn(async (path: string) => {
+    if (path === "/api/maintenance/image") {
+      return {
+        ok: true,
+        json: async () => ({
+          docker: "available",
+          runner: "available",
+          tag: {
+            name: "ai-station:local",
+            present: true,
+            id: "sha256:abc",
+            created: null,
+          },
+          containers: [
+            {
+              ...container,
+              id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+              service: "ai-station",
+              self: true,
+            },
+            {
+              ...container,
+              id: "bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
+              service: "worker",
+              name: "ai-station-worker-1",
+              self: false,
+            },
+          ],
+          matches_running: true,
+          restore: "unpublished",
+          image_rollout: "unpublished",
+          summary:
+            "Running control-plane containers use the current ai-station:local image ID.",
+        }),
+      };
+    }
+    if (path === "/api/maintenance/backups") {
+      return {
+        ok: true,
+        json: async () => ({ restore: "unpublished", items: [] }),
+      };
+    }
+    return { ok: true, json: async () => readiness };
+  });
+  mount(fetch);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Inspect running image" }),
+  );
+  const first = await screen.findByLabelText("Container ai-station aaaaaaaa");
+  const second = screen.getByLabelText("Container worker bbbbbbbb");
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(
+    screen.getByRole("region", { name: "Compose containers" }),
+  ).toBeTruthy();
+  expect(screen.getByText(/Rollout remains unpublished/)).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: /restore|rollout|deploy/i }),
+  ).toBeNull();
+  fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
+
 it("marks an interrupted run inspected without posting restore", async () => {
   let acknowledged = false;
   const fetch = vi.fn(async (path: string, options?: RequestInit) => {

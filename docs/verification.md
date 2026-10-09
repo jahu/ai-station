@@ -312,3 +312,7 @@ Frontend lint, TypeScript, 124 component tests and production build passed. Inte
 ## Worker heartbeats keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 125 component tests and production build passed. Registered workers form one keyboard sequence (arrows, Home, End). Worker names include the worker id. There is no inspectable heartbeat Run. Held leases stay a separate inspect-only list. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Compose containers keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 126 component tests and production build passed. Running compose containers form one keyboard sequence (arrows, Home, End) after Inspect running image. Container names include the service and short id. Rollout remains unpublished. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
