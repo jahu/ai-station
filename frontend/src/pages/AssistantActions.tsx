@@ -21,6 +21,10 @@ import { ActionChoiceList } from "./ActionChoiceList";
 import { ProjectChoiceList } from "./ProjectChoiceList";
 import { GgufChoiceList } from "./GgufChoiceList";
 import { RuntimeChoiceList } from "./RuntimeChoiceList";
+import {
+  CommitChoiceList,
+  ProposalChoiceList,
+} from "./AssistantGitChoiceLists";
 
 export type CodingScope = {
   project_id: string;
@@ -691,24 +695,22 @@ export default function AssistantActions({
             Only proposals from this conversation can be committed. The model
             cannot grant Git write permission.
           </p>
-          <label>
-            Proposal
-            <select
-              aria-label="Commit proposal"
+          <div>
+            <span>Proposal</span>
+            <ProposalChoiceList
+              proposals={proposals.map((run) => ({
+                id: run.id,
+                title: `${run.summary || run.capability} · ${run.id.slice(0, 8)}`,
+                detail: run.executor_type,
+              }))}
               value={commitSourceId}
-              onChange={(event) => {
-                setCommitSourceId(event.target.value);
-                setCommit(event.target.value, commitMessage, reviewed);
+              disabled={busy}
+              onChange={(id) => {
+                setCommitSourceId(id);
+                setCommit(id, commitMessage, reviewed);
               }}
-            >
-              <option value="">Select a reviewed coding proposal</option>
-              {proposals.map((run) => (
-                <option key={run.id} value={run.id}>
-                  {run.summary || run.capability} · {run.id.slice(0, 8)}
-                </option>
-              ))}
-            </select>
-          </label>
+            />
+          </div>
           {!proposals.length && (
             <p className="notice">
               Finish a coding task in this conversation and review its diff
@@ -746,28 +748,26 @@ export default function AssistantActions({
             merges. Enable task-branch push and integration PRs in the project
             first.
           </p>
-          <label>
-            Reviewed commit
-            <select
-              aria-label="Publish commit"
+          <div>
+            <span>Reviewed commit</span>
+            <CommitChoiceList
+              commits={commits.map((run) => ({
+                id: run.id,
+                title: String(
+                  (run.metadata?.git_commit as { commit?: string })?.commit ??
+                    run.id,
+                ).slice(0, 12),
+                detail: run.executor_type,
+              }))}
               value={publishSourceId}
-              onChange={(event) => {
-                setPublishSourceId(event.target.value);
+              disabled={busy}
+              onChange={(id) => {
+                setPublishSourceId(id);
                 setPublishApproved(false);
-                setPublish(event.target.value, publishTitle, publishBody, false);
+                setPublish(id, publishTitle, publishBody, false);
               }}
-            >
-              <option value="">Select a successful reviewed commit</option>
-              {commits.map((run) => (
-                <option key={run.id} value={run.id}>
-                  {String(
-                    (run.metadata?.git_commit as { commit?: string })?.commit ??
-                      run.id,
-                  ).slice(0, 12)}
-                </option>
-              ))}
-            </select>
-          </label>
+            />
+          </div>
           {!commits.length && (
             <p className="notice">
               Commit reviewed changes in this conversation before publishing.
