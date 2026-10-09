@@ -13,6 +13,7 @@ import App from "./App";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  document.title = "AI Station · Your AI workstation";
 });
 
 function mount(path = "/home") {
@@ -87,6 +88,8 @@ it("skips to the workspace without opening LAN publish", async () => {
   mount("/home");
   const skip = await screen.findByRole("link", { name: "Skip to workspace" });
   expect(screen.getByRole("main")).toBeTruthy();
+  expect(document.title).toBe("Home · AI Station");
+  expect(document.getElementById("route-announcer")?.textContent).toBe("");
   expect(
     screen.queryByRole("button", { name: /bind|publish|lan/i }),
   ).toBeNull();
@@ -101,7 +104,13 @@ it("opens the command palette from Control K and focuses the workspace after goi
   expect(dialog).toBeTruthy();
   fireEvent.click(screen.getByRole("option", { name: /Home activity/ }));
   await waitFor(() =>
-    expect(screen.getByRole("heading", { name: /Needs attention/ })).toBeTruthy(),
+    expect(
+      screen.getByRole("heading", { name: /Needs attention/ }),
+    ).toBeTruthy(),
   );
   expect(document.activeElement).toBe(screen.getByRole("main"));
+  expect(document.title).toBe("Home · AI Station");
+  expect(document.getElementById("route-announcer")?.textContent).toBe(
+    "Home workspace",
+  );
 });
