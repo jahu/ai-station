@@ -28,7 +28,7 @@ from app.paths import safe_join, validate_relative
 from app.photo_executor import PhotoPipeExecutor
 from app.project_setup import ProjectSetupExecutor
 from app.providers import ProviderError, stream_chat
-from app.publication import GithubPublicationExecutor
+from app.publication import GithubPublicationExecutor, PublicationReconcileExecutor
 from app.resources import release_run_locks
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import mark_failed, touch_lease, transition
@@ -287,6 +287,7 @@ EXECUTORS = {
     "echomimic": AvatarExecutor(),
     "reviewed_commit": ReviewedCommitExecutor(),
     "github_publication": GithubPublicationExecutor(),
+    "publication_reconcile": PublicationReconcileExecutor(),
     "chat": ChatExecutor(),
     "chat_summary": SummaryExecutor(),
     "worktree_prepare": WorktreeExecutor(),

@@ -20,6 +20,7 @@ function mount(run: Run) {
         <Routes>
           <Route path="/" element={<GithubPublication run={run} />} />
           <Route path="/runs/publish" element={<h1>Publication Run</h1>} />
+          <Route path="/runs/reconcile" element={<h1>Reconcile Run</h1>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -109,5 +110,35 @@ it("keeps partial failures inspectable without claiming a PR exists", () => {
   expect(
     screen.queryByRole("link", { name: "Open draft pull request ↗" }),
   ).toBeNull();
-  expect(screen.queryByRole("button")).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Reconcile with GitHub" }),
+  ).toBeTruthy();
+});
+
+it("queues GitHub reconciliation without claiming a PR exists", async () => {
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ id: "reconcile" }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount({
+    id: "publish",
+    executor_type: "github_publication",
+    status: "failed",
+    parameters: {
+      repository: "owner/repo",
+      branch: "ai/task",
+      base: "develop",
+      commit: "abc",
+    },
+    metadata: { publication_progress: { stage: "pr_requested" } },
+  } as unknown as Run);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Reconcile with GitHub" }),
+  );
+  await screen.findByRole("heading", { name: "Reconcile Run" });
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/coding/runs/publish/reconcile",
+    expect.objectContaining({ method: "POST" }),
+  );
 });
