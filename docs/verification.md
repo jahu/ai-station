@@ -308,3 +308,7 @@ Frontend lint, TypeScript, 123 component tests and production build passed. Imag
 ## Integration checks keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 124 component tests and production build passed. Integration checks form one keyboard sequence (arrows, Home, End). Check names are unique. There is no inspectable diagnostic Run. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Worker heartbeats keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 125 component tests and production build passed. Registered workers form one keyboard sequence (arrows, Home, End). Worker names include the worker id. There is no inspectable heartbeat Run. Held leases stay a separate inspect-only list. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

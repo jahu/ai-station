@@ -18,7 +18,7 @@ HTTP handlers do not generate images, run coding agents, or execute agent loops.
 
 A claim is an `UPDATE ... WHERE status = 'queued'` under SQLite `IMMEDIATE` transactions. Exactly one worker can win. The claim sets `worker_id`, `claimed_at`, and `lease_expires_at`.
 
-The worker refreshes the lease on runs it is actively handling. The interval is `AI_STATION_HEARTBEAT_SECONDS`. The lease length is `AI_STATION_LEASE_SECONDS`. `GET /api/system/status` lists held leases and expired-lease counts for inspection. System shows that list as one keyboard sequence (arrows, Home, End, Enter inspects the Run) with unique Inspect names. That endpoint never recovers, requeues or restores; the next worker tick still runs `recover_stale`.
+The worker refreshes the lease on runs it is actively handling. The interval is `AI_STATION_HEARTBEAT_SECONDS`. The lease length is `AI_STATION_LEASE_SECONDS`. `GET /api/system/status` lists held leases and expired-lease counts for inspection. System shows registered workers as one keyboard sequence (arrows, Home, End) with unique Worker names; there is no inspectable heartbeat Run. Held leases are a separate sequence (arrows, Home, End, Enter inspects the Run) with unique Inspect names. That endpoint never recovers, requeues or restores; the next worker tick still runs `recover_stale`.
 
 ## Recovery policy
 
