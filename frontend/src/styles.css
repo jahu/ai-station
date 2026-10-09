@@ -458,6 +458,14 @@ main {
   gap: 16px;
   margin-bottom: 24px;
 }
+.metrics-grid:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.metrics-grid > .metric[aria-current="true"] {
+  border-color: #b9f48a66;
+  background: rgba(185, 245, 139, 0.08);
+}
 .metric {
   padding: 20px;
   position: relative;

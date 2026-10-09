@@ -376,3 +376,7 @@ Frontend lint, TypeScript, 149 component tests and production build passed. Agen
 ## Saved Chat transcript attachments keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 150 component tests and production build passed. Attachments already saved on a Chat message reuse `useListKeyboard` as a nested sequence with unique Saved attachment names. Enter opens the selected file and does not inspect a Run. Composer staging, pixel vision and download boundaries are unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Home CPU/RAM metric cards keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 151 component tests and production build passed. Home CPU, memory, storage and in-progress Run cards reuse `useListKeyboard` with unique Metric names. Enter inspects Runs from that card; CPU/memory/storage stay live telemetry on Home and do not invent a telemetry Run. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
