@@ -5,7 +5,13 @@ import {
   useInfiniteQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useState, useRef, useEffect } from "react";
+import {
+  useState,
+  useRef,
+  useEffect,
+  useId,
+  type KeyboardEvent,
+} from "react";
 import {
   Upload,
   Search,
@@ -21,71 +27,136 @@ import { ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
 
-export function ArtifactCards({ artifacts }: { artifacts: Artifact[] }) {
+function artifactName(artifact: Artifact) {
   return (
-    <div className="artifact-grid">
-      {artifacts.map((a) => (
-        <Link
-          className="artifact-card panel"
-          key={a.id}
-          to={`/library/${a.id}`}
-        >
-          {a.type === "image" ? (
-            <img
-              loading="lazy"
-              src={`/api/artifacts/${a.id}/thumbnail`}
-              alt={a.title || a.original_filename}
-            />
-          ) : (
-            <div className={`artifact-placeholder artifact-kind-${a.type}`}>
-              {a.type === "video" &&
-              a.metadata.capability === "avatar.animate" &&
-              a.parent_artifact_ids[0] ? (
+    artifact.title ||
+    (artifact.metadata.mode
+      ? ({
+          t2i: "Generate",
+          img2img: "Edit",
+          recompose: "Recompose",
+          upscale: "Upscale",
+        }[artifact.metadata.mode] ?? artifact.metadata.mode)
+      : artifact.original_filename)
+  );
+}
+
+export function ArtifactCards({
+  artifacts,
+  heading = "Artifacts",
+}: {
+  artifacts: Artifact[];
+  heading?: string;
+}) {
+  const headingId = useId();
+  const labelId = useId();
+  const listRef = useRef<HTMLDivElement>(null);
+  const [selectedKey, setSelectedKey] = useState(artifacts[0]?.id ?? "");
+  const found = artifacts.findIndex((artifact) => artifact.id === selectedKey);
+  const index = found >= 0 ? found : 0;
+  const focusItem = (next: number) => {
+    const clamped = Math.max(0, Math.min(artifacts.length - 1, next));
+    const artifact = artifacts[clamped];
+    if (!artifact) return;
+    setSelectedKey(artifact.id);
+    const link = listRef.current?.querySelector<HTMLElement>(
+      `[data-artifact-index="${clamped}"]`,
+    );
+    link?.focus();
+    link?.scrollIntoView?.({ block: "nearest" });
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      event.preventDefault();
+      focusItem(index + 1);
+    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      event.preventDefault();
+      focusItem(index - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      focusItem(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      focusItem(artifacts.length - 1);
+    }
+  };
+  return (
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId} className="sr-only">
+        {heading}
+      </h2>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose an artifact while the grid is focused. Enter inspects
+        it.
+      </p>
+      <div
+        ref={listRef}
+        className="artifact-grid"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {artifacts.map((a, i) => {
+          const current = i === index;
+          const name = artifactName(a);
+          return (
+            <Link
+              className="artifact-card panel"
+              key={a.id}
+              to={`/library/${a.id}`}
+              aria-label={`Inspect ${name} ${a.id.slice(0, 8)}`}
+              aria-current={current ? "true" : undefined}
+              tabIndex={current ? 0 : -1}
+              data-artifact-index={i}
+              onFocus={() => setSelectedKey(a.id)}
+            >
+              {a.type === "image" ? (
                 <img
-                  src={`/api/artifacts/${a.parent_artifact_ids[0]}/thumbnail`}
-                  alt=""
                   loading="lazy"
+                  src={`/api/artifacts/${a.id}/thumbnail`}
+                  alt=""
                 />
-              ) : a.type === "audio" ? (
-                <AudioLines size={34} />
-              ) : a.type === "video" ? (
-                <Film size={34} />
               ) : (
-                <FileText size={30} />
+                <div className={`artifact-placeholder artifact-kind-${a.type}`}>
+                  {a.type === "video" &&
+                  a.metadata.capability === "avatar.animate" &&
+                  a.parent_artifact_ids[0] ? (
+                    <img
+                      src={`/api/artifacts/${a.parent_artifact_ids[0]}/thumbnail`}
+                      alt=""
+                      loading="lazy"
+                    />
+                  ) : a.type === "audio" ? (
+                    <AudioLines size={34} aria-hidden="true" />
+                  ) : a.type === "video" ? (
+                    <Film size={34} aria-hidden="true" />
+                  ) : (
+                    <FileText size={30} aria-hidden="true" />
+                  )}
+                  <span className="artifact-kind-label">
+                    {a.type === "video" ? (
+                      <Film size={12} aria-hidden="true" />
+                    ) : a.type === "audio" ? (
+                      <AudioLines size={12} aria-hidden="true" />
+                    ) : null}
+                    {a.type.replaceAll("_", " ")}
+                  </span>
+                </div>
               )}
-              <span className="artifact-kind-label">
-                {a.type === "video" ? (
-                  <Film size={12} />
-                ) : a.type === "audio" ? (
-                  <AudioLines size={12} />
-                ) : null}
-                {a.type.replaceAll("_", " ")}
-              </span>
-            </div>
-          )}
-          <div>
-            <strong>
-              {a.title ||
-                (a.metadata.mode
-                  ? ({
-                      t2i: "Generate",
-                      img2img: "Edit",
-                      recompose: "Recompose",
-                      upscale: "Upscale",
-                    }[a.metadata.mode] ?? a.metadata.mode)
-                  : a.original_filename)}
-            </strong>
-            <span>
-              {a.metadata.backend ?? a.type}
-              {a.metadata.width
-                ? ` · ${a.metadata.width} × ${a.metadata.height}`
-                : ""}
-            </span>
-            <small>{time(a.created_at)}</small>
-          </div>
-        </Link>
-      ))}
-    </div>
+              <div>
+                <strong>{name}</strong>
+                <span>
+                  {a.metadata.backend ?? a.type}
+                  {a.metadata.width
+                    ? ` · ${a.metadata.width} × ${a.metadata.height}`
+                    : ""}
+                </span>
+                <small>{time(a.created_at)}</small>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 export function Library() {
@@ -247,7 +318,7 @@ export function Library() {
         {query.isPending ? (
           <Loading />
         ) : artifacts.length ? (
-          <ArtifactCards artifacts={artifacts} />
+          <ArtifactCards artifacts={artifacts} heading="Library" />
         ) : (
           <section className="panel library-empty">
             <ImageIcon size={36} />

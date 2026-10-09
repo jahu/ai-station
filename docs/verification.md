@@ -236,3 +236,7 @@ Frontend lint, TypeScript, 104 component tests and production build passed. Home
 ## Runs table keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 105 component tests and production build passed. The Runs table is one keyboard sequence (arrows, Home, End, Enter inspects). Duplicate inspect icons stay out of the tab order. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Library grid keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 106 component tests and production build passed. The Library collection is one keyboard sequence (arrows, Home, End, Enter inspects). Inspect names include the artifact title and short id. Decorative type icons stay out of the tab order. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
