@@ -184,3 +184,7 @@ Frontend lint, TypeScript, 90 component tests and production build passed. Home 
 ## Workspace keyboard routing — 2026-10-09
 
 Frontend lint, TypeScript, 93 component tests and production build passed. Skip link focuses `#main`. Control K opens the command palette; choosing Home activity moves focus into the workspace. No Python changes in this slice. Broader workspace accessibility remains open. LAN publish and remote execution stay unpublished. Claude Code remains untested and unavailable.
+
+## Coding review keyboard, cumulative totals and artifacts — 2026-10-09
+
+Frontend lint, TypeScript, 96 component tests and production build passed. Review lists files for arrow-key selection, shows one selected patch, labels cumulative totals against the task base, and links the stored `changes.diff` / review JSON artifacts. Commit, repair and publication still use the existing endpoints. No Python or Host Runner changes. Pre-existing Prettier drift in unrelated files was left untouched. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

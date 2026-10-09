@@ -1,13 +1,12 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { GitCommitHorizontal, Check } from "lucide-react";
-import { api } from "../api";
+import { Download, GitCommitHorizontal, Check } from "lucide-react";
+import { api, type Artifact, type Run } from "../api";
 import { Button } from "../components/ui/button";
 import { ErrorNotice } from "../components/common";
 import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
-import type { Run } from "../api";
 
 type Review = {
   exploration?: {
@@ -15,6 +14,7 @@ type Review = {
     result: Record<string, unknown>;
   }[];
   branch: string;
+  base_commit?: string;
   files: {
     path: string;
     diff: string;
@@ -52,7 +52,7 @@ export default function CodingReview({
   )
     return null;
   return (
-    <section className="panel content-panel">
+    <section className="panel content-panel" aria-label="Coding review">
       <span className="chip">
         {local ? "LOCAL AI" : `EXTERNAL ${externalName.toUpperCase()} AI`}
       </span>
@@ -111,6 +111,8 @@ export default function CodingReview({
               </Link>
             </p>
           )}
+          <ReviewSummary run={run} review={review} />
+          <ReviewArtifacts runId={run.id} />
           {!!review.exploration?.length && (
             <details>
               <summary>
@@ -132,25 +134,7 @@ export default function CodingReview({
               </div>
             </details>
           )}
-          {!review.files.length && <p>No file contents changed.</p>}
-          {review.files.map((file) => (
-            <details key={file.path} open>
-              <summary>
-                {file.path} · +{file.insertions} / −{file.deletions}
-              </summary>
-              <div className="markdown">
-                <Markdown
-                  rehypePlugins={[rehypeHighlight]}
-                  components={{
-                    img: () => null,
-                    a: ({ children }) => <span>{children}</span>,
-                  }}
-                >
-                  {"````````````diff\n" + file.diff + "\n````````````"}
-                </Markdown>
-              </div>
-            </details>
-          ))}
+          <ReviewFiles files={review.files} />
           {review.files.length > 0 &&
             run.status === "succeeded" &&
             typeof validation !== "string" &&
@@ -161,6 +145,146 @@ export default function CodingReview({
         </>
       )}
     </section>
+  );
+}
+
+function ReviewSummary({ run, review }: { run: Run; review: Review }) {
+  const insertions = review.files.reduce((n, file) => n + file.insertions, 0);
+  const deletions = review.files.reduce((n, file) => n + file.deletions, 0);
+  const cumulative =
+    run.parameters?.cumulative === true ||
+    typeof run.metadata?.repair_source_run_id === "string";
+  const base =
+    typeof review.base_commit === "string" && review.base_commit
+      ? review.base_commit.slice(0, 12)
+      : "";
+  return (
+    <p className="coding-review-summary">
+      {review.files.length} {review.files.length === 1 ? "file" : "files"} · +
+      {insertions} / −{deletions}
+      {cumulative
+        ? " · cumulative against the task base"
+        : " · this proposal only"}
+      {base ? ` · base ${base}` : ""}
+    </p>
+  );
+}
+
+function ReviewArtifacts({ runId }: { runId: string }) {
+  const artifacts = useQuery({
+    queryKey: ["run-artifacts", runId],
+    queryFn: () => api<Artifact[]>(`/artifacts?run_id=${runId}`),
+  });
+  const items = Array.isArray(artifacts.data) ? artifacts.data : [];
+  const patch = items.find((item) => item.type === "git_diff");
+  const report = items.find(
+    (item) =>
+      item.type === "json" && item.original_filename === "coding-review.json",
+  );
+  if (!patch && !report) return null;
+  return (
+    <div
+      className="coding-review-artifacts"
+      role="group"
+      aria-label="Review artifacts"
+    >
+      {patch && (
+        <>
+          <a
+            className="text-link"
+            href={`/api/artifacts/${patch.id}/file`}
+            download={patch.original_filename || "changes.diff"}
+          >
+            <Download size={14} />
+            Download patch
+          </a>
+          <Link className="text-link" to={`/library/${patch.id}`}>
+            Open patch in Library →
+          </Link>
+        </>
+      )}
+      {report && (
+        <a
+          className="text-link"
+          href={`/api/artifacts/${report.id}/file`}
+          download={report.original_filename || "coding-review.json"}
+        >
+          <Download size={14} />
+          Download review JSON
+        </a>
+      )}
+    </div>
+  );
+}
+
+function ReviewFiles({ files }: { files: Review["files"] }) {
+  const labelId = useId();
+  const [selected, setSelected] = useState(0);
+  if (!files.length) return <p>No file contents changed.</p>;
+  const index = Math.min(selected, files.length - 1);
+  const file = files[index];
+  const move = (next: number) =>
+    setSelected(Math.max(0, Math.min(files.length - 1, next)));
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      event.preventDefault();
+      move(index + 1);
+    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      event.preventDefault();
+      move(index - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      move(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      move(files.length - 1);
+    }
+  };
+  return (
+    <div className="coding-review-files">
+      <p id={labelId} className="muted">
+        Arrow keys choose a file while the list is focused. Only the selected
+        patch is shown.
+      </p>
+      <div
+        role="listbox"
+        tabIndex={0}
+        aria-labelledby={labelId}
+        aria-activedescendant={`${labelId}-${index}`}
+        className="coding-review-file-list"
+        onKeyDown={onKeyDown}
+      >
+        {files.map((item, i) => (
+          <div
+            id={`${labelId}-${i}`}
+            key={item.path}
+            role="option"
+            aria-selected={i === index}
+            className="coding-review-file"
+            onClick={() => setSelected(i)}
+          >
+            <span className="mono">{item.path}</span>
+            <span>
+              +{item.insertions} / −{item.deletions}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div
+        className="coding-review-diff markdown"
+        aria-label={`Diff for ${file.path}`}
+      >
+        <Markdown
+          rehypePlugins={[rehypeHighlight]}
+          components={{
+            img: () => null,
+            a: ({ children }) => <span>{children}</span>,
+          }}
+        >
+          {"````````````diff\n" + file.diff + "\n````````````"}
+        </Markdown>
+      </div>
+    </div>
   );
 }
 
