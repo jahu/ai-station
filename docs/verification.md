@@ -348,3 +348,7 @@ Frontend lint, TypeScript, 133 component tests and production build passed. Retr
 ## Fetched pages keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 134 component tests and production build passed. Reviewed HTTP GET page cards are one keyboard sequence (arrows, Home, End, Enter opens the public URL) with unique Page names. Rel stays `noopener noreferrer`. JavaScript is not executed and page HTML is not rendered. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Home attention shared list keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 139 component tests and production build passed. Home attention reuses `useListKeyboard`. Inspect, Stop, Mark inspected, Mark read, Approve and Deny names include a short Run or notice id. Enter still inspects; those actions stay on the selected row and still use the existing cancel, interrupted-acknowledgement, notice-read and approval endpoints. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
