@@ -101,8 +101,7 @@ export default function OperatorAccess() {
           <div>
             <h2>Operator access</h2>
             <p className="muted">
-              Loopback session after a password is stored · LAN stays
-              unpublished
+              Idle and absolute loopback session · LAN stays unpublished
             </p>
           </div>
           <div className="row">
@@ -139,10 +138,15 @@ export default function OperatorAccess() {
               ? " · loopback session active"
               : " · loopback session required"
             : " · no session until a password is stored"}
-          . This password is never returned by the API. After it is stored, the
-          loopback UI and API require the session cookie; health and login stay
-          public. Non-loopback bind is refused even after it is set, because
-          authenticated LAN transport is unpublished.
+          . The session cookie is httpOnly, SameSite=strict, not Secure. It
+          expires after{" "}
+          {Math.round((status.data?.session_idle_seconds ?? 1800) / 60)} minutes
+          idle or{" "}
+          {Math.round((status.data?.session_max_age_seconds ?? 43200) / 3600)}{" "}
+          hours from sign-in. This password is never returned by the API. After
+          it is stored, the loopback UI and API require the session cookie;
+          health and login stay public. Non-loopback bind is refused even after
+          it is set, because authenticated LAN transport is unpublished.
         </p>
         <ErrorNotice
           error={status.error ?? save.error ?? clear.error ?? logout.error}

@@ -1,10 +1,21 @@
+from datetime import timedelta
 from pathlib import Path
 
 from app.api import app
 from app.config import clear_settings_cache
-from app.db import session_factory
+from app.db import session_factory, utcnow
 from app.models import Setting
-from app.operator_auth import ALGORITHM, SETUP_KEY, lan_bind_decision, refuse_non_loopback_bind
+from app.operator_auth import (
+    ALGORITHM,
+    COOKIE,
+    COOKIE_POLICY,
+    SESSION_ABSOLUTE_SECONDS,
+    SESSION_IDLE_SECONDS,
+    SESSION_KEY,
+    SETUP_KEY,
+    lan_bind_decision,
+    refuse_non_loopback_bind,
+)
 from fastapi.testclient import TestClient
 
 PASSWORD = "operator-pass-ok"
@@ -117,9 +128,22 @@ def test_loopback_session_gates_api_after_password_without_opening_lan():
     assert body["session_required"] is True
     assert body["authenticated"] is True
     assert body["session_scope"] == "loopback"
+    assert body["session_idle_seconds"] == SESSION_IDLE_SECONDS
+    assert body["session_max_age_seconds"] == SESSION_ABSOLUTE_SECONDS
+    assert body["session_cookie"] == COOKIE_POLICY
+    assert body["issued_at"]
+    assert body["last_seen_at"]
+    assert body["expires_at"]
+    assert body["idle_expires_at"]
     assert body["lan_bind_allowed"] is False
     assert body["lan_exposure"] == "disabled"
-    assert "ais_operator" in saved.cookies
+    assert COOKIE in saved.cookies
+    cookie = saved.headers.get("set-cookie") or ""
+    assert "HttpOnly" in cookie
+    assert "samesite=strict" in cookie.lower()
+    assert "Secure" not in cookie
+    assert "Path=/" in cookie
+    assert f"Max-Age={SESSION_IDLE_SECONDS}" in cookie
     assert client.get("/api/nodes").status_code == 200
     denied = guest.get("/api/nodes")
     assert denied.status_code == 401
@@ -128,6 +152,11 @@ def test_loopback_session_gates_api_after_password_without_opening_lan():
     public = guest.get("/api/operator-auth").json()
     assert public["session_required"] is True
     assert public["authenticated"] is False
+    assert public["issued_at"] is None
+    assert public["last_seen_at"] is None
+    assert public["expires_at"] is None
+    assert public["idle_expires_at"] is None
+    assert public["session_cookie"] == COOKIE_POLICY
     assert guest.get("/api/health").status_code == 200
     assert guest.post("/api/operator-auth/login", json={"password": "wrong-password"}).status_code == 403
     login = guest.post("/api/operator-auth/login", json={"password": PASSWORD})
@@ -138,6 +167,73 @@ def test_loopback_session_gates_api_after_password_without_opening_lan():
     assert guest.post("/api/operator-auth/logout").status_code == 200
     assert guest.get("/api/nodes").status_code == 401
     assert guest.get("/api/health").status_code == 200
+
+
+def test_idle_activity_refreshes_session_and_idle_timeout_signs_out(monkeypatch):
+    client = api()
+    saved = client.put("/api/operator-auth", json={"password": PASSWORD})
+    assert saved.status_code == 200
+    start = utcnow()
+    monkeypatch.setattr("app.operator_auth.utcnow", lambda: start + timedelta(minutes=29))
+    active = client.get("/api/nodes")
+    assert active.status_code == 200
+    refresh = active.headers.get("set-cookie") or ""
+    assert f"Max-Age={SESSION_IDLE_SECONDS}" in refresh
+    assert "HttpOnly" in refresh
+    with session_factory()() as session:
+        record = session.get(Setting, SESSION_KEY)
+        assert record is not None
+        seen = record.value["last_seen_at"]
+    monkeypatch.setattr("app.operator_auth.utcnow", lambda: start + timedelta(minutes=58))
+    assert client.get("/api/nodes").status_code == 200
+    monkeypatch.setattr("app.operator_auth.utcnow", lambda: start + timedelta(minutes=90))
+    denied = client.get("/api/nodes")
+    assert denied.status_code == 401
+    assert denied.json()["detail"] == "Operator login required"
+    with session_factory()() as session:
+        assert session.get(Setting, SESSION_KEY) is None
+    login = client.post("/api/operator-auth/login", json={"password": PASSWORD})
+    assert login.json()["authenticated"] is True
+    assert seen != login.json()["last_seen_at"]
+
+
+def test_absolute_session_limit_wins_over_recent_activity():
+    client = api()
+    assert client.put("/api/operator-auth", json={"password": PASSWORD}).status_code == 200
+    with session_factory()() as session:
+        record = session.get(Setting, SESSION_KEY)
+        assert record is not None
+        value = dict(record.value)
+        now = utcnow()
+        value["last_seen_at"] = now.isoformat()
+        value["expires_at"] = (now - timedelta(seconds=1)).isoformat()
+        record.value = value
+        session.commit()
+    denied = client.get("/api/nodes")
+    assert denied.status_code == 401
+    with session_factory()() as session:
+        assert session.get(Setting, SESSION_KEY) is None
+
+
+def test_legacy_session_without_last_seen_starts_idle_clock_on_use():
+    client = api()
+    assert client.put("/api/operator-auth", json={"password": PASSWORD}).status_code == 200
+    with session_factory()() as session:
+        record = session.get(Setting, SESSION_KEY)
+        assert record is not None
+        value = dict(record.value)
+        value.pop("last_seen_at", None)
+        value.pop("issued_at", None)
+        value.pop("idle_timeout_seconds", None)
+        record.value = value
+        session.commit()
+    assert client.get("/api/nodes").status_code == 200
+    with session_factory()() as session:
+        record = session.get(Setting, SESSION_KEY)
+        assert record is not None
+        assert record.value["last_seen_at"]
+        assert record.value["issued_at"]
+        assert record.value["idle_timeout_seconds"] == SESSION_IDLE_SECONDS
 
 
 def test_compose_publish_addresses_stay_on_loopback():

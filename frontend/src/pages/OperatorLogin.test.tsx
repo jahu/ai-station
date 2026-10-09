@@ -88,6 +88,9 @@ it("requires a loopback session and does not offer LAN publish", async () => {
   await screen.findByRole("heading", { name: "Unlock this workstation." });
   expect(screen.queryByRole("heading", { name: "Workstation" })).toBeNull();
   expect(
+    screen.getByText(/idle session lasts 30 minutes, or 12 hours from sign-in/),
+  ).toBeTruthy();
+  expect(
     screen.queryByRole("button", { name: /bind|publish|lan/i }),
   ).toBeNull();
   fireEvent.change(screen.getByLabelText("Operator password"), {
