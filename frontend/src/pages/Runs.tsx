@@ -3,6 +3,7 @@ import { useRunEvents } from "./useRunEvents";
 import AgentReport from "./AgentReport";
 import { SearchSources, type WebSources } from "./ChatWebSearch";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
+import { RegistryToolCalls, type RegistryToolCall } from "./AgentToolCalls";
 import GithubPublication from "./GithubPublication";
 import CodingReview from "./CodingReview";
 import {
@@ -684,26 +685,9 @@ export function RunDetail() {
             )}
             {Array.isArray(run.data.metadata?.tool_calls) &&
               run.data.metadata.tool_calls.length > 0 && (
-                <section className="panel">
-                  <h2>Registry tool calls</h2>
-                  <p className="muted">
-                    Bounded calls from the typed agent registry. The model
-                    cannot invent tools, URLs, queries or shell commands.
-                  </p>
-                  {(
-                    run.data.metadata.tool_calls as {
-                      id: string;
-                      tool: string;
-                      round: number;
-                    }[]
-                  ).map((call) => (
-                    <div className="row" key={call.id}>
-                      <span>{call.tool}</span>
-                      <span className="muted">round {call.round + 1}</span>
-                      <span className="mono">{call.id.slice(0, 8)}</span>
-                    </div>
-                  ))}
-                </section>
+                <RegistryToolCalls
+                  calls={run.data.metadata.tool_calls as RegistryToolCall[]}
+                />
               )}
             {run.data.metadata?.web_search && (
               <SearchSources
