@@ -324,3 +324,7 @@ Frontend lint, TypeScript, 127 component tests and production build passed. The 
 ## Nodes list keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 128 component tests and production build passed. The node inventory is one keyboard sequence (arrows, Home, End). Revoke names include the node name and short id and stay on the selected row. There is no inspectable node Run. LAN transport stays unpublished. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Unpublished connector adapters keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 129 component tests and production build passed. Unpublished connector kinds form one keyboard sequence (arrows, Home, End) with unique Adapter names. They stay unavailable; there is no inspectable adapter Run. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

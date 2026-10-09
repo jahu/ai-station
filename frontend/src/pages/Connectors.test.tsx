@@ -178,3 +178,60 @@ it("moves through named connectors with arrow keys", async () => {
   });
   expect(first.tabIndex).toBe(0);
 });
+
+it("moves through unpublished adapters with arrow keys", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        String(path).endsWith("/kinds")
+          ? [
+              { kind: "http", operational: true, summary: "GET" },
+              {
+                kind: "browser",
+                operational: false,
+                summary: "Browser automation is not enabled.",
+              },
+              {
+                kind: "github",
+                operational: false,
+                summary: "GitHub connector is not enabled.",
+              },
+            ]
+          : [],
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <Connectors />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const first = await screen.findByLabelText("Adapter browser");
+  const second = screen.getByLabelText("Adapter github");
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(
+    screen.getByRole("region", { name: "Unavailable adapters" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByText(/These kinds stay unavailable/),
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /enable|publish/i })).toBeNull();
+  fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
