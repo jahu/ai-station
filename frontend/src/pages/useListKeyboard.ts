@@ -1,15 +1,26 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 
+export type ListKeyboardOptions = {
+  initialKey?: string;
+  fallback?: "first" | "last";
+};
+
 export function useListKeyboard<T, E extends HTMLElement = HTMLDivElement>(
   items: T[],
   getKey: (item: T) => string,
+  options?: ListKeyboardOptions,
 ) {
   const listRef = useRef<E>(null);
   const [selectedKey, setSelectedKey] = useState(
-    items[0] ? getKey(items[0]) : "",
+    options?.initialKey || (items[0] ? getKey(items[0]) : ""),
   );
   const found = items.findIndex((item) => getKey(item) === selectedKey);
-  const index = found >= 0 ? found : 0;
+  const index =
+    found >= 0
+      ? found
+      : options?.fallback === "last"
+        ? Math.max(0, items.length - 1)
+        : 0;
   const focusItem = (next: number) => {
     const clamped = Math.max(0, Math.min(items.length - 1, next));
     const item = items[clamped];
