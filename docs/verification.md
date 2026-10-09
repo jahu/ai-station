@@ -428,3 +428,7 @@ Frontend lint, TypeScript, 175 component tests and production build passed. Chat
 ## Images/Audio/Avatars GPU target keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 177 component tests and production build passed. Images, Audio and Avatars GPU targets reuse `useListKeyboard` with unique Target GPU names. Space or Enter selects Auto or a discovered GPU and does not queue a photo, speech or avatar Run. llama.cpp allocation checkboxes remain the existing sequence. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Images Generate backend keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 180 component tests and production build passed. Images Generate Qwen/Juggernaut backends reuse `useListKeyboard` with unique Backend names. Space or Enter selects the focused backend and does not queue a photo Run. Edit, Recompose and Upscale still force Qwen. Seed and negative prompt still appear only for Juggernaut. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

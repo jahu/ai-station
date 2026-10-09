@@ -8,6 +8,10 @@ import { Button } from "../components/ui/button";
 import LibraryPicker from "../components/media/LibraryPicker";
 import { useListKeyboard } from "./useListKeyboard";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
+import {
+  ImageBackendChoiceList,
+  type ImageBackend,
+} from "./ImageBackendChoiceList";
 
 const modes = {
   t2i: "Generate",
@@ -101,7 +105,7 @@ function ImageForm({
   const [mode, setMode] = useState<Mode>(
     Object.hasOwn(modes, initialMode) ? (initialMode as Mode) : "t2i",
   );
-  const [backend, setBackend] = useState("qwen");
+  const [backend, setBackend] = useState<ImageBackend>("qwen");
   const [prompt, setPrompt] = useState("");
   const [negative, setNegative] = useState("");
   const [width, setWidth] = useState(832);
@@ -379,16 +383,14 @@ function ImageForm({
         <aside className="panel content-panel image-form">
           <h2>Generation settings</h2>
           {mode === "t2i" && (
-            <label>
-              Backend
-              <select
+            <div>
+              <span>Backend</span>
+              <ImageBackendChoiceList
                 value={backend}
-                onChange={(e) => setBackend(e.target.value)}
-              >
-                <option value="qwen">Qwen</option>
-                <option value="juggernaut">Juggernaut</option>
-              </select>
-            </label>
+                disabled={create.isPending || upload.isPending}
+                onChange={setBackend}
+              />
+            </div>
           )}
           {(mode === "t2i" || mode === "recompose") && (
             <>
