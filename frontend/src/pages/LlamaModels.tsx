@@ -7,6 +7,7 @@ import { api, useHardware, type Run } from "../api";
 import { ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { useListKeyboard } from "./useListKeyboard";
+import { GpuChoiceList } from "./GpuChoiceList";
 
 type Model = {
   id: string;
@@ -397,28 +398,19 @@ export default function LlamaModels({
                     }
                   >
                     <legend>GPU allocation</legend>
-                    <div className="model-gpus">
-                      {hardware.data?.gpus.map((gpu) => (
-                        <label key={gpu.index}>
-                          <input
-                            type="checkbox"
-                            checked={(
-                              instance?.metadata.gpus ?? selectedGpus
-                            ).includes(Number(gpu.index))}
-                            onChange={(e) =>
-                              setGpus(
-                                e.target.checked
-                                  ? [...selectedGpus, Number(gpu.index)]
-                                  : selectedGpus.filter(
-                                      (g) => g !== Number(gpu.index),
-                                    ),
-                              )
-                            }
-                          />
-                          GPU {gpu.index} · {gpu.name}
-                        </label>
-                      ))}
-                    </div>
+                    <GpuChoiceList
+                      gpus={hardware.data?.gpus ?? []}
+                      selected={(
+                        instance?.metadata.gpus ?? selectedGpus
+                      ).map(Number)}
+                      disabled={
+                        pending ||
+                        !!instance ||
+                        hardware.isPending ||
+                        !!hardware.error
+                      }
+                      onChange={setGpus}
+                    />
                     {!selectedGpus.length && !instance && (
                       <p>CPU execution selected.</p>
                     )}

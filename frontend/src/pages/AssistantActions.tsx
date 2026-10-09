@@ -9,6 +9,7 @@ import { Badge, ErrorNotice } from "../components/common";
 import CodingReview from "./CodingReview";
 import GithubPublication from "./GithubPublication";
 import { useListKeyboard } from "./useListKeyboard";
+import { GpuChoiceList } from "./GpuChoiceList";
 
 export type CodingScope = {
   project_id: string;
@@ -893,25 +894,14 @@ export default function AssistantActions({
           )}
           <fieldset>
             <legend>GPUs</legend>
-            {(hardware.data?.gpus ?? []).map((gpu) => (
-              <label key={gpu.index} className="project-checkbox">
-                <input
-                  type="checkbox"
-                  checked={selectedLoadGpus.includes(Number(gpu.index))}
-                  onChange={(event) => {
-                    const next = event.target.checked
-                      ? [...selectedLoadGpus, Number(gpu.index)]
-                      : selectedLoadGpus.filter(
-                          (index) => index !== Number(gpu.index),
-                        );
-                    setLoadGpus(next);
-                    setLoad(value.load?.model_file_id ?? "", next, loadContext);
-                  }}
-                />
-                GPU {gpu.index}
-                {gpu.name ? ` · ${gpu.name}` : ""}
-              </label>
-            ))}
+            <GpuChoiceList
+              gpus={hardware.data?.gpus ?? []}
+              selected={selectedLoadGpus}
+              onChange={(next) => {
+                setLoadGpus(next);
+                setLoad(value.load?.model_file_id ?? "", next, loadContext);
+              }}
+            />
             <small>No cards selected uses CPU. Several cards split layers.</small>
           </fieldset>
           <label>

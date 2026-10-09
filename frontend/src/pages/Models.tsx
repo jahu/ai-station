@@ -12,6 +12,7 @@ import {
 } from "../components/common";
 import { Button } from "../components/ui/button";
 import { useListKeyboard } from "./useListKeyboard";
+import { GpuChoiceList } from "./GpuChoiceList";
 
 interface Compatibility {
   format: string;
@@ -609,25 +610,11 @@ export function ModelDetail() {
           <fieldset>
             <legend>Saved GPU preset</legend>
             {(hardware.data?.gpus ?? []).length ? (
-              hardware.data?.gpus.map((gpu) => (
-                <label key={gpu.index}>
-                  <input
-                    type="checkbox"
-                    checked={selectedGpus.includes(Number(gpu.index))}
-                    onChange={(event) =>
-                      setGpus(
-                        event.target.checked
-                          ? [...selectedGpus, Number(gpu.index)]
-                          : selectedGpus.filter(
-                              (index) => index !== Number(gpu.index),
-                            ),
-                      )
-                    }
-                  />
-                  GPU {gpu.index}
-                  {gpu.name ? ` · ${gpu.name}` : ""}
-                </label>
-              ))
+              <GpuChoiceList
+                gpus={hardware.data?.gpus ?? []}
+                selected={selectedGpus}
+                onChange={setGpus}
+              />
             ) : (
               <p className="muted">
                 No GPUs reported. An empty preset loads on CPU after
