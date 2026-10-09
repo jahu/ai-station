@@ -223,6 +223,85 @@ function BackupCards({
   );
 }
 
+function InterruptedCards({
+  items,
+  acknowledgePending,
+  onAcknowledge,
+}: {
+  items: InterruptedRun[];
+  acknowledgePending: boolean;
+  onAcknowledge: (runId: string) => void;
+}) {
+  const headingId = useId();
+  const labelId = useId();
+  const navigate = useNavigate();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    items,
+    (row) => row.id,
+  );
+  const selected = items[index];
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key !== "Enter" || event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input")) return;
+    if (selected?.id) {
+      event.preventDefault();
+      navigate(`/runs/${selected.id}`);
+    }
+  };
+  return (
+    <section className="mt" aria-labelledby={headingId}>
+      <h3 id={headingId}>Interrupted Runs</h3>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a Run while the list is focused. Enter inspects it.
+        Mark inspected stays on the selected row. It does not retry the Run or
+        restore a backup.
+      </p>
+      <div
+        ref={listRef}
+        className="diagnostic-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {items.map((row, i) => {
+          const current = i === index;
+          const shortId = row.id.slice(0, 8);
+          const name = row.title || row.summary || row.executor_type;
+          return (
+            <div key={row.id} {...itemProps(i, row.id)}>
+              <div>
+                <strong>{name}</strong>
+                <p>
+                  {row.status} · {row.executor_type} · not replayed
+                </p>
+              </div>
+              <div className="row">
+                <Link
+                  to={`/runs/${row.id}`}
+                  tabIndex={current ? 0 : -1}
+                  aria-label={`Inspect ${name} ${shortId}`}
+                >
+                  Open Run
+                </Link>
+                <Button
+                  variant="secondary"
+                  tabIndex={current ? 0 : -1}
+                  disabled={acknowledgePending}
+                  aria-label={`Mark inspected ${name} ${shortId}`}
+                  onClick={() => onAcknowledge(row.id)}
+                >
+                  Mark inspected
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export default function Maintenance() {
   const cache = useQueryClient();
   const navigate = useNavigate();
@@ -413,36 +492,11 @@ export default function Maintenance() {
         </div>
       ) : null}
       {(ready?.interrupted_runs.length ?? 0) > 0 ? (
-        <div className="mt">
-          <h3>Interrupted Runs</h3>
-          <p className="muted">
-            Marking inspected does not retry the Run or restore a backup.
-          </p>
-          <div className="diagnostic-list">
-            {ready!.interrupted_runs.map((row) => (
-              <div key={row.id}>
-                <div>
-                  <strong>
-                    {row.title || row.summary || row.executor_type}
-                  </strong>
-                  <p>
-                    {row.status} · {row.executor_type} · not replayed
-                  </p>
-                </div>
-                <div className="row">
-                  <Link to={`/runs/${row.id}`}>Open Run</Link>
-                  <Button
-                    variant="secondary"
-                    disabled={acknowledge.isPending}
-                    onClick={() => acknowledge.mutate(row.id)}
-                  >
-                    Mark inspected
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <InterruptedCards
+          items={ready!.interrupted_runs}
+          acknowledgePending={acknowledge.isPending}
+          onAcknowledge={(runId) => acknowledge.mutate(runId)}
+        />
       ) : null}
       {backups.data?.items.length ? (
         <BackupCards
