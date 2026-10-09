@@ -57,6 +57,13 @@ interface Overview {
     title: string;
     created_at: string;
   }[];
+  interrupted_runs?: {
+    id: string;
+    title: string;
+    status: string;
+    executor_type: string;
+    replay?: boolean;
+  }[];
 }
 function Section({
   title,
@@ -107,6 +114,26 @@ export default function DashboardActivity() {
                         {time(notice.created_at)}
                       </small>
                     </div>
+                  </Link>
+                ))}
+              </div>
+            </Section>
+          )}
+          {(data.interrupted_runs?.length ?? 0) > 0 && (
+            <Section
+              title={`Needs inspection · ${data.interrupted_runs!.length}`}
+              to="/system"
+            >
+              <div className="activity-list">
+                {data.interrupted_runs!.map((run) => (
+                  <Link key={run.id} to={`/runs/${run.id}`}>
+                    <div>
+                      <strong>{run.title}</strong>
+                      <small>
+                        {run.executor_type} · interrupted · not replayed
+                      </small>
+                    </div>
+                    <Badge status={run.status} />
                   </Link>
                 ))}
               </div>

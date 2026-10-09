@@ -43,13 +43,15 @@ The three containers share one image and different commands. They do not receive
 
 Application data lives in one directory (`AI_STATION_DATA_HOST_PATH` on the host, `/data` in containers). The database stores AI Station-owned files as paths relative to that root (`artifacts/ab/cd/<uuid>.png`). External models and repositories are references, not copies.
 
-Replacing containers does not drop the database, artifacts, memory, or run history because those files are on the mounted data volume.
+Replacing containers does not drop the database, artifacts, memory, or run history because those files are on the host bind mount. The launcher's `compose down` never passes `--volumes`. `/data` is not a named volume.
 
 ## Execution
 
 Almost every action is a **Task** that produces one or more **Runs**. A Run is performed by an **Executor** on an **Execution Target** (`host` or `container`; `remote-node` is reserved). The worker is the only component that executes runs. HTTP handlers enqueue work and stream stored events.
 
 The Host Runner does not expose an arbitrary shell. Photo, Git, coding CLIs, cancellation, telemetry, and discovery are separate validated operations.
+
+SQLite backups are explicit Task/Run copies (`VACUUM INTO` plus integrity check); restore and image rollout stay unpublished. See [operations](operations.md).
 
 ## Networking
 

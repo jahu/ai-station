@@ -71,5 +71,13 @@ def test_empty_overview_does_not_require_runner_or_model():
     assert data["active_run_count"] == data["enabled_agent_count"] == 0
     assert all(
         data[key] == []
-        for key in ("active_runs", "upcoming", "agents", "conversations", "artifacts", "runtimes")
+        for key in (
+            "active_runs",
+            "upcoming",
+            "agents",
+            "conversations",
+            "artifacts",
+            "runtimes",
+            "interrupted_runs",
+        )
     )

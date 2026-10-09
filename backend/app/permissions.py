@@ -42,6 +42,7 @@ ALL_PERMISSIONS = sorted(
         "external_ai",
         "manage_agents",
         "manage_models",
+        "manage_station",
         "memory_write",
     }
 )

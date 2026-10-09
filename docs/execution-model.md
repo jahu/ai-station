@@ -38,7 +38,7 @@ On each loop the worker loads runs whose lease has expired and whose status is s
 - `inspect` — a person should look before repeating (coding agents, git writes).
 - `external` — the run may have called a system outside AI Station. Never auto-retry.
 
-Planned explicit retry creates a new run with `parent_run_id`; it is not exposed in the foundation API. Failed runs are not rewritten in place.
+Planned explicit retry creates a new run with `parent_run_id`; it is not exposed in the foundation API. Failed runs are not rewritten in place. Interrupted Runs can be marked inspected from System; that acknowledgement does not requeue work or restore a SQLite backup. See [operations](operations.md).
 
 ## Cancellation
 

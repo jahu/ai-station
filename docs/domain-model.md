@@ -94,6 +94,10 @@ A coarse lease such as `gpu:<index>`. The first scheduler policy is one heavy im
 
 A named external system: kind, status, health, capabilities, non-secret configuration, secret reference and enablement. Operational kind is HTTP GET of one reviewed public URL. Health checks are ordinary Runs. Secrets are not returned by the API. Browser, GitHub, email, calendar and social kinds stay unpublished.
 
+## Maintenance
+
+`GET /api/maintenance` is an inspect-only upgrade-readiness snapshot. SQLite backups are ordinary Runs with verified artifacts. Restore and image rollout are unpublished; see [operations](operations.md).
+
 ## Operator access and nodes
 
 The `operator_auth` setting stores PBKDF2 material for a local operator password. It is a control-plane secret, not a Run. `StationNode` records pending, registered or revoked remotes with hashed one-time invitation tokens. The local Host Runner is synthesized, not stored. LAN listeners stay unpublished; see [nodes](nodes.md).

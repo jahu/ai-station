@@ -37,6 +37,7 @@ from app.images import router as image_router
 from app.library import router as library_router
 from app.llama import router as llama_router
 from app.local_coding import router as local_coding_router
+from app.maintenance import router as maintenance_router
 from app.memory_api import router as memory_router
 from app.model_definitions import router as model_definition_router
 from app.model_registry import router as model_router
@@ -329,6 +330,7 @@ app.include_router(publication_router)
 app.include_router(library_router)
 app.include_router(project_setup_router)
 app.include_router(project_router)
+app.include_router(maintenance_router)
 app.include_router(memory_router)
 app.include_router(embedding_router)
 app.include_router(operator_auth_router)

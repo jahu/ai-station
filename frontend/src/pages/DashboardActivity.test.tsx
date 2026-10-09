@@ -86,6 +86,15 @@ it("links real activity and marks saved runtime and overdue schedule state", asy
           created_at: "2026-09-25T10:00:00Z",
         },
       ],
+      interrupted_runs: [
+        {
+          id: "interrupted-run",
+          title: "Image task needs inspection",
+          executor_type: "photo_pipe",
+          status: "interrupted",
+          replay: false,
+        },
+      ],
     }),
   }));
   vi.stubGlobal("fetch", fetch);
@@ -98,13 +107,23 @@ it("links real activity and marks saved runtime and overdue schedule state", asy
     screen.getByRole("link", { name: /Report.md/ }).getAttribute("href"),
   ).toBe("/library/artifact");
   expect(
-    screen.getByRole("link", { name: /Image task/ }).getAttribute("href"),
+    screen
+      .getByRole("link", { name: /^Image taskphoto_pipe · host/ })
+      .getAttribute("href"),
   ).toBe("/runs/run");
   expect(
     screen
       .getByRole("link", { name: /Agent workflow failed/ })
       .getAttribute("href"),
   ).toBe("/runs/failed-run");
+  expect(
+    screen
+      .getByRole("link", { name: /Image task needs inspection/ })
+      .getAttribute("href"),
+  ).toBe("/runs/interrupted-run");
+  expect(
+    screen.getByRole("heading", { name: "Needs inspection · 1" }),
+  ).toBeTruthy();
   expect(screen.getByText(/Due \/ waiting for scheduler/)).toBeTruthy();
   expect(screen.getByText(/external · Process.*Stale/)).toBeTruthy();
   expect(fetch.mock.calls).toEqual([["/api/dashboard", undefined]]);

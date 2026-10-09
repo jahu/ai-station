@@ -132,6 +132,7 @@ def migrate() -> None:
         "telemetry",
         "cache",
         "runtime",
+        "backups",
     ):
         (settings.data_dir / name).mkdir(parents=True, exist_ok=True)
     # Multiple containers can start together. Only one may migrate at a time.

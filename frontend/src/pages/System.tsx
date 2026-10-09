@@ -1,5 +1,6 @@
 import ChatProviders from "./ChatProviders";
 import Connectors from "./Connectors";
+import Maintenance from "./Maintenance";
 import OperatorAccess from "./OperatorAccess";
 import RuntimeObservations from "./RuntimeObservations";
 import { useQuery } from "@tanstack/react-query";
@@ -95,6 +96,7 @@ export default function System() {
         )}
       </section>
       <OperatorAccess />
+      <Maintenance />
       <ChatProviders />
       <Connectors />
       <RuntimeObservations />

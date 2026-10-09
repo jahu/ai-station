@@ -8,6 +8,7 @@ from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
 from app.db import session_scope, utcnow
+from app.maintenance import interrupted_runs
 from app.models import Agent, Artifact, Conversation, Notice, Run, RuntimeInstance, Task
 from app.notices import notice_dict
 from app.serialize import iso
@@ -114,4 +115,5 @@ def overview(session: DB):
                 select(Notice).where(Notice.read_at.is_(None)).order_by(Notice.created_at.desc()).limit(8)
             )
         ],
+        "interrupted_runs": interrupted_runs(session),
     }

@@ -34,7 +34,7 @@ No release branch, NVIDIA/CUDA configuration, existing model file, unrelated run
 - The installed Codex sandbox failed its native probe; no OS security policy was weakened. CLI presence is not execution readiness.
 - Saved validation has no network and sees only its owned worktree plus allowed system/runtime paths. Full project test/build dependencies must be prepared there. The registered AI Station example currently has Python syntax checks; these do not certify arbitrary future changes.
 - Chat supports one configured local compatible provider and bounded text attachments. Vision/PDF attachments, cloud Chat and coding modes within Chat are not enabled.
-- Agents can use the implemented local telemetry and own-scope memory tools. Autonomous web/email/browser integrations, general video/music adapters and LAN exposure remain future work. Operator password hashes and loopback node invitations do not open a LAN listener.
+- Agents can use the implemented local telemetry and own-scope memory tools. Autonomous web/email/browser integrations, general video/music adapters and LAN exposure remain future work. Operator password hashes, loopback node invitations and SQLite backups do not open a LAN listener or restore/roll out images.
 - The frontend bundle-size advisory and TestClient dependency deprecation remain non-blocking development warnings.
 
 See [verification history](verification.md) for test details and [acceptance status](mvp-status.md) for the capability ledger.

@@ -34,7 +34,7 @@ Coding work happens in a fresh worktree and a new `ai/...` branch. The user's cu
 
 ## Permissions
 
-Runs store an effective permission list. There is no universal full-access flag. Profiles grant named capabilities (`filesystem_read`, `workspace_write`, `git_read`, `git_write`, `network_read`, `network_external`, `shell_project_commands`, `external_ai`, and others). Missing permission fails the tool call.
+Runs store an effective permission list. There is no universal full-access flag. Profiles grant named capabilities (`filesystem_read`, `workspace_write`, `git_read`, `git_write`, `network_read`, `network_external`, `shell_project_commands`, `external_ai`, `manage_station`, and others). Missing permission fails the tool call. SQLite backup Runs require `manage_station`; agents do not receive it. Restore and image rollout are unpublished.
 
 ## Network tools
 
@@ -43,6 +43,8 @@ HTTP fetch is a real tool and is off unless the run has `network_read` (GET) or 
 ## Operator credential
 
 The `operator_auth` setting stores PBKDF2-SHA256 material only. Responses omit password, salt and hash. Rotation and removal require the current password. The credential does not yet issue sessions. Node invitations require that hash to exist; join tokens are HMAC-SHA256 and returned once. Registration is accepted only on the loopback API. LAN transport stays unpublished.
+
+SQLite backups require `manage_station` and write under the data root. They never restore over the live database. Compose shutdown does not pass `--volumes`. Interrupted-run acknowledgement records inspection only and does not replay side effects. See [operations](operations.md).
 
 ## Secrets
 
