@@ -3,7 +3,8 @@ import Connectors from "./Connectors";
 import Maintenance from "./Maintenance";
 import OperatorAccess from "./OperatorAccess";
 import RuntimeObservations from "./RuntimeObservations";
-import { Link } from "react-router-dom";
+import { useId, type KeyboardEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw, ShieldCheck } from "lucide-react";
 import {
@@ -16,6 +17,9 @@ import {
 import { Badge, ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import { number, time } from "../lib/utils";
+import { useListKeyboard } from "./useListKeyboard";
+
+type Lease = NonNullable<Status["leases"]>[number];
 
 export default function System() {
   const hardware = useHardware();
@@ -133,6 +137,69 @@ export default function System() {
   );
 }
 
+function LeaseCards({ leases }: { leases: Lease[] }) {
+  const headingId = useId();
+  const labelId = useId();
+  const navigate = useNavigate();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    leases,
+    (lease) => lease.id,
+  );
+  const selected = leases[index];
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key !== "Enter" || event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input")) return;
+    if (selected?.id) {
+      event.preventDefault();
+      navigate(`/runs/${selected.id}`);
+    }
+  };
+  return (
+    <section aria-labelledby={headingId}>
+      <h4 id={headingId} className="sr-only">
+        Worker leases
+      </h4>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a lease while the list is focused. Enter inspects its
+        Run. This page does not recover, requeue or restore them.
+      </p>
+      <div
+        ref={listRef}
+        className="diagnostic-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {leases.map((lease, i) => {
+          const current = i === index;
+          const shortId = lease.id.slice(0, 8);
+          return (
+            <div key={lease.id} {...itemProps(i, lease.id)}>
+              <div>
+                <Link
+                  className="text-link mono"
+                  to={`/runs/${lease.id}`}
+                  tabIndex={current ? 0 : -1}
+                  aria-label={`Inspect ${shortId}`}
+                >
+                  {shortId}
+                </Link>
+                <p>
+                  {lease.executor_type} · {lease.retry_class}
+                  {lease.stale ? " · expired" : ""} · replay{" "}
+                  {lease.replay ? "yes" : "no"}
+                </p>
+              </div>
+              <Badge status={lease.stale ? "interrupted" : lease.status} />
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 function LeaseHealth({ status }: { status?: Status }) {
   const leases = status?.leases ?? [];
   const stale = status?.stale_lease_count ?? 0;
@@ -160,23 +227,7 @@ function LeaseHealth({ status }: { status?: Status }) {
         </p>
       )}
       {leases.length ? (
-        <div className="diagnostic-list">
-          {leases.map((lease) => (
-            <div key={lease.id}>
-              <div>
-                <Link className="text-link mono" to={`/runs/${lease.id}`}>
-                  {lease.id.slice(0, 8)}
-                </Link>
-                <p>
-                  {lease.executor_type} · {lease.retry_class}
-                  {lease.stale ? " · expired" : ""} · replay{" "}
-                  {lease.replay ? "yes" : "no"}
-                </p>
-              </div>
-              <Badge status={lease.stale ? "interrupted" : lease.status} />
-            </div>
-          ))}
-        </div>
+        <LeaseCards leases={leases} />
       ) : (
         <p className="muted">No worker currently holds a run lease.</p>
       )}
