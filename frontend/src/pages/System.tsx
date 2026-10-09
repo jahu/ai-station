@@ -20,6 +20,47 @@ import { number, time } from "../lib/utils";
 import { useListKeyboard } from "./useListKeyboard";
 
 type Lease = NonNullable<Status["leases"]>[number];
+type Worker = Status["workers"][number];
+
+function WorkerCards({ workers }: { workers: Worker[] }) {
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    workers,
+    (worker) => worker.id,
+  );
+  return (
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId} className="sr-only">
+        Worker heartbeats
+      </h3>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a worker while the list is focused. There is no
+        inspectable heartbeat Run. Held leases stay a separate list.
+      </p>
+      <div
+        ref={listRef}
+        className="diagnostic-list"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {workers.map((worker, i) => (
+          <div
+            key={worker.id}
+            aria-label={`Worker ${worker.id}`}
+            {...itemProps(i, worker.id)}
+          >
+            <div>
+              <strong className="mono">{worker.id}</strong>
+              <p>Last heartbeat {time(worker.last_heartbeat)}</p>
+            </div>
+            <Badge status={worker.available ? "available" : "unavailable"} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 function CheckCards({ checks }: { checks: Diagnostic[] }) {
   const headingId = useId();
@@ -146,21 +187,11 @@ export default function System() {
           <h2>Workers</h2>
           <span className="muted">Durable execution leases</span>
         </div>
-        <div className="diagnostic-list">
-          {status.data?.workers.length ? (
-            status.data.workers.map((w) => (
-              <div key={w.id}>
-                <div>
-                  <strong className="mono">{w.id}</strong>
-                  <p>Last heartbeat {time(w.last_heartbeat)}</p>
-                </div>
-                <Badge status={w.available ? "available" : "unavailable"} />
-              </div>
-            ))
-          ) : (
-            <p className="muted">No worker has registered yet.</p>
-          )}
-        </div>
+        {status.data?.workers.length ? (
+          <WorkerCards workers={status.data.workers} />
+        ) : (
+          <p className="muted">No worker has registered yet.</p>
+        )}
         <LeaseHealth status={status.data} />
       </section>
     </>

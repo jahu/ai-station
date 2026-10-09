@@ -23,6 +23,7 @@ function mount(
   leases: Array<typeof lease & { id: string }>,
   extras: {
     checks?: { name: string; status: string; detail: string }[];
+    workers?: { id: string; available: boolean; last_heartbeat: string }[];
   } = {},
 ) {
   vi.stubGlobal(
@@ -51,7 +52,7 @@ function mount(
         if (url.includes("/system/status")) {
           return {
             counts: {},
-            workers: [],
+            workers: extras.workers ?? [],
             scheduler: { available: false, last_heartbeat: null },
             lease_seconds: 45,
             held_lease_count: leases.length,
@@ -199,6 +200,43 @@ it("moves through integration checks with arrow keys", async () => {
   ).toBeTruthy();
   expect(
     screen.getByText(/There is no inspectable diagnostic Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
+
+it("moves through worker heartbeats with arrow keys", async () => {
+  mount([], {
+    workers: [
+      {
+        id: "worker-one",
+        available: true,
+        last_heartbeat: "2026-10-09T12:00:00Z",
+      },
+      {
+        id: "worker-two",
+        available: false,
+        last_heartbeat: "2026-10-09T11:00:00Z",
+      },
+    ],
+  });
+  const first = await screen.findByLabelText("Worker worker-one");
+  const second = screen.getByLabelText("Worker worker-two");
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(
+    screen.getByRole("region", { name: "Worker heartbeats" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByText(/There is no inspectable heartbeat Run/),
   ).toBeTruthy();
   fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
     key: "ArrowDown",
