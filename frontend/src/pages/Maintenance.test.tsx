@@ -282,7 +282,7 @@ it("marks an interrupted run inspected without posting restore", async () => {
   });
   mount(fetch);
   await screen.findByRole("heading", { name: "Interrupted Runs" });
-  fireEvent.click(screen.getByRole("button", { name: "Mark inspected" }));
+  fireEvent.click(screen.getByRole("button", { name: /Mark inspected/ }));
   await waitFor(() => expect(acknowledged).toBe(true));
   expect(
     fetch.mock.calls
@@ -347,6 +347,65 @@ it("moves through backup copies with arrow keys", async () => {
   expect(document.activeElement).toBe(
     screen
       .getByRole("link", { name: "Inspect backup Run backup02" })
+      .closest("[data-list-index]"),
+  );
+  fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
+
+it("moves through interrupted Runs with arrow keys", async () => {
+  const row = {
+    status: "interrupted",
+    executor_type: "photo_pipe",
+    replay: false,
+  };
+  mount(
+    vi.fn(async (path: string) => {
+      if (path === "/api/maintenance/backups") {
+        return {
+          ok: true,
+          json: async () => ({ restore: "unpublished", items: [] }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () => ({
+          ...readiness,
+          interrupted_runs: [
+            { ...row, id: "intr-one", title: "Owned photo Run" },
+            {
+              ...row,
+              id: "intr-two",
+              title: "Owned chat Run",
+              executor_type: "local_chat",
+            },
+          ],
+        }),
+      };
+    }),
+  );
+  const first = await screen.findByRole("link", {
+    name: "Inspect Owned photo Run intr-one",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect Owned chat Run intr-two",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Interrupted Runs" })).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: /restore|replay|requeue/i }),
+  ).toBeNull();
+  fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(
+    screen
+      .getByRole("link", { name: "Inspect Owned chat Run intr-two" })
       .closest("[data-list-index]"),
   );
   fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {

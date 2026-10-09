@@ -32,7 +32,7 @@ This path does not retag unrelated images, migrate other Docker projects, pull G
 
 ## Interrupted work
 
-Conservative recovery still parks uncertain dispatched work as `interrupted` after the owned process is gone. **Mark inspected** records that a person looked at the Run. It does not requeue, restore a backup, or replay side effects. Explicit retry, when a domain already supports it, remains a new Run. System lists currently held leases and expired-lease counts without offering replay; arrow keys move through that list and Enter inspects the Run. If no worker is available, those expired leases stay listed until a worker ticks.
+Conservative recovery still parks uncertain dispatched work as `interrupted` after the owned process is gone. **Mark inspected** records that a person looked at the Run. It does not requeue, restore a backup, or replay side effects. Interrupted Runs are one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names; Mark inspected stays on the selected row. Explicit retry, when a domain already supports it, remains a new Run. System lists currently held leases and expired-lease counts without offering replay; arrow keys move through that list and Enter inspects the Run. If no worker is available, those expired leases stay listed until a worker ticks.
 
 ## Compose image inspect
 
