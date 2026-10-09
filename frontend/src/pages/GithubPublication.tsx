@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { PublicationChoiceList } from "./PublicationChoiceList";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { GitPullRequest, Upload } from "lucide-react";
@@ -234,17 +235,14 @@ function PublishCommit({
                         placeholder="What changed and how was it validated?"
                       />
                     </label>
-                    <label className="project-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={approved}
-                        onChange={(event) =>
-                          setApproval(event.target.checked ? scope : null)
-                        }
-                      />
+                    <PublicationChoiceList
+                      checked={approved}
+                      disabled={publish.isPending}
+                      onChange={(next) => setApproval(next ? scope : null)}
+                    >
                       I approve publishing this commit and PR text to the GitHub
                       repository shown above.
-                    </label>
+                    </PublicationChoiceList>
                     <Button
                       disabled={!approved || !title.trim() || publish.isPending}
                     >
