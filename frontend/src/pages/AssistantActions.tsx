@@ -18,6 +18,7 @@ import { RepairChoiceList } from "./RepairChoiceList";
 import { parseFilePaths } from "./filePaths";
 import { GpuChoiceList } from "./GpuChoiceList";
 import { ActionChoiceList } from "./ActionChoiceList";
+import { ProjectChoiceList } from "./ProjectChoiceList";
 
 export type CodingScope = {
   project_id: string;
@@ -936,25 +937,19 @@ export default function AssistantActions({
       {codingTask && (
         <details open className="assistant-coding-scope">
           <summary>Coding scope</summary>
-          <label>
-            Project
-            <select
-              aria-label="Project"
+          <div>
+            <span>Project</span>
+            <ProjectChoiceList
+              projects={projects.data ?? []}
               value={projectId}
-              onChange={(e) => {
-                setProjectId(e.target.value);
+              disabled={busy}
+              onChange={(id) => {
+                setProjectId(id);
                 setExternal(false);
-                scope(e.target.value, files, false);
+                scope(id, files, false);
               }}
-            >
-              <option value="">Select a registered project</option>
-              {projects.data?.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
+            />
+          </div>
           {value.action === "coding.local" && (
             <ExploreChoiceList
               checked={explore}

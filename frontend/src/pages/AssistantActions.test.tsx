@@ -243,10 +243,13 @@ it("stages local coding scope without granting Cursor consent", async () => {
     </QueryClientProvider>,
   );
   chooseAction("coding.local");
-  await screen.findByRole("option", { name: "AI Station" });
-  fireEvent.change(screen.getByLabelText("Project"), {
-    target: { value: "project-1" },
-  });
+  const projectList = (
+    await screen.findByLabelText("Project project-1")
+  ).closest(".project-choice-list") as HTMLElement;
+  fireEvent.keyDown(projectList, { key: "Enter" });
+  expect(
+    screen.getByText(/There is no inspectable project-selection Run/),
+  ).toBeTruthy();
   expect(JSON.parse(screen.getByTestId("scope").textContent!)).toMatchObject({
     files: [],
     explore: true,
