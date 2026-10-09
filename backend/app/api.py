@@ -30,6 +30,7 @@ from app.connectors import router as connector_router
 from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
 from app.db import migrate, session_factory, session_scope, utcnow
+from app.embeddings import router as embedding_router
 from app.events import event_dict, list_events
 from app.images import MAX_UPLOAD
 from app.images import router as image_router
@@ -323,6 +324,7 @@ app.include_router(library_router)
 app.include_router(project_setup_router)
 app.include_router(project_router)
 app.include_router(memory_router)
+app.include_router(embedding_router)
 app.include_router(model_router)
 app.include_router(agent_router)
 app.include_router(notice_router)
