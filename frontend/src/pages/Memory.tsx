@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Link,
@@ -189,6 +189,96 @@ function EmbeddingsPanel() {
   );
 }
 
+function MemoryCards({ entries }: { entries: Entry[] }) {
+  const headingId = useId();
+  const labelId = useId();
+  const listRef = useRef<HTMLDivElement>(null);
+  const [selectedKey, setSelectedKey] = useState(entries[0]?.id ?? "");
+  const found = entries.findIndex((entry) => entry.id === selectedKey);
+  const index = found >= 0 ? found : 0;
+  const focusItem = (next: number) => {
+    const clamped = Math.max(0, Math.min(entries.length - 1, next));
+    const entry = entries[clamped];
+    if (!entry) return;
+    setSelectedKey(entry.id);
+    const link = listRef.current?.querySelector<HTMLElement>(
+      `[data-memory-index="${clamped}"]`,
+    );
+    link?.focus();
+    link?.scrollIntoView?.({ block: "nearest" });
+  };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      event.preventDefault();
+      focusItem(index + 1);
+    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      event.preventDefault();
+      focusItem(index - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      focusItem(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      focusItem(entries.length - 1);
+    }
+  };
+  return (
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId} className="sr-only">
+        Memory
+      </h2>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a memory while the list is focused. Enter inspects it.
+      </p>
+      <div
+        ref={listRef}
+        className="memory-grid"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {entries.map((entry, i) => {
+          const current = i === index;
+          return (
+            <Link
+              className="panel memory-card"
+              to={`/memory/${entry.id}`}
+              key={entry.id}
+              aria-label={`Inspect ${entry.memory_type.replaceAll("_", " ")} ${entry.id.slice(0, 8)}`}
+              aria-current={current ? "true" : undefined}
+              tabIndex={current ? 0 : -1}
+              data-memory-index={i}
+              onFocus={() => setSelectedKey(entry.id)}
+            >
+              <div className="row">
+                <span className="tiny-tag">{entry.scope}</span>
+                <span className="muted">
+                  {entry.memory_type.replaceAll("_", " ")}
+                </span>
+                {entry.pinned && <Pin size={15} aria-hidden="true" />}
+                {!entry.enabled && <span className="tiny-tag">Disabled</span>}
+              </div>
+              <p>{entry.content}</p>
+              <div className="row muted">
+                {entry.tags.map((tag) => (
+                  <span key={tag}>#{tag}</span>
+                ))}
+              </div>
+              <small className="muted">
+                {entry.source_run_id ||
+                entry.source_message_id ||
+                entry.source_conversation_id
+                  ? "Linked source"
+                  : "User entered"}{" "}
+                · {new Date(entry.updated_at).toLocaleString()}
+              </small>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function Memory() {
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState("");
@@ -288,38 +378,7 @@ export function Memory() {
           </Empty>
         </section>
       ) : (
-        <div className="memory-grid">
-          {entries.data?.map((entry) => (
-            <Link
-              className="panel memory-card"
-              to={`/memory/${entry.id}`}
-              key={entry.id}
-            >
-              <div className="row">
-                <span className="tiny-tag">{entry.scope}</span>
-                <span className="muted">
-                  {entry.memory_type.replaceAll("_", " ")}
-                </span>
-                {entry.pinned && <Pin size={15} aria-label="Pinned" />}
-                {!entry.enabled && <span className="tiny-tag">Disabled</span>}
-              </div>
-              <p>{entry.content}</p>
-              <div className="row muted">
-                {entry.tags.map((tag) => (
-                  <span key={tag}>#{tag}</span>
-                ))}
-              </div>
-              <small className="muted">
-                {entry.source_run_id ||
-                entry.source_message_id ||
-                entry.source_conversation_id
-                  ? "Linked source"
-                  : "User entered"}{" "}
-                · {new Date(entry.updated_at).toLocaleString()}
-              </small>
-            </Link>
-          ))}
-        </div>
+        <MemoryCards entries={entries.data ?? []} />
       )}
       <div className="row">
         <Button
