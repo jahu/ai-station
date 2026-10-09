@@ -44,7 +44,7 @@ from app.model_registry import router as model_router
 from app.models import Run, Setting, WorkerRow
 from app.nodes import router as nodes_router
 from app.notices import router as notice_router
-from app.operator_auth import refuse_non_loopback_bind, require_operator_session
+from app.operator_auth import refresh_operator_cookie, refuse_non_loopback_bind, require_operator_session
 from app.operator_auth import router as operator_auth_router
 from app.project_setup import router as project_setup_router
 from app.projects import router as project_router
@@ -93,6 +93,7 @@ async def local_requests(request: Request, call_next):
     if gated is not None:
         return gated
     response = await call_next(request)
+    refresh_operator_cookie(request, response)
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 

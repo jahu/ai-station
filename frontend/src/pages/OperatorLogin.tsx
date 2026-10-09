@@ -9,6 +9,18 @@ export type OperatorStatus = {
   session_required?: boolean;
   authenticated?: boolean;
   session_scope?: string;
+  session_idle_seconds?: number;
+  session_max_age_seconds?: number;
+  session_cookie?: {
+    httponly: boolean;
+    samesite: string;
+    secure: boolean;
+    path: string;
+  };
+  issued_at?: string | null;
+  last_seen_at?: string | null;
+  expires_at?: string | null;
+  idle_expires_at?: string | null;
   bind_host: string;
   lan_exposure: string;
   lan_bind_allowed: boolean;
@@ -39,7 +51,8 @@ function LoginForm() {
         title="Unlock this workstation."
       >
         An operator password is stored. LAN publish stays unpublished; this
-        login only gates the loopback UI.
+        login only gates the loopback UI. An idle session lasts 30 minutes, or
+        12 hours from sign-in, whichever comes first.
       </PageTitle>
       <section className="panel">
         <ErrorNotice error={login.error} />

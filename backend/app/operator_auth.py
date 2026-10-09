@@ -27,6 +27,16 @@ ALGORITHM = "pbkdf2-sha256"
 ITERATIONS = 600_000
 MIN_PASSWORD = 12
 SESSION_HOURS = 12
+SESSION_IDLE_MINUTES = 30
+SESSION_IDLE_SECONDS = SESSION_IDLE_MINUTES * 60
+SESSION_ABSOLUTE_SECONDS = SESSION_HOURS * 3600
+LAST_SEEN_MIN_WRITE_SECONDS = 60
+COOKIE_POLICY = {
+    "httponly": True,
+    "samesite": "strict",
+    "secure": False,
+    "path": "/",
+}
 LOOPBACK = {"127.0.0.1", "localhost", "::1", "[::1]"}
 PUBLIC_GET = {"/api/health", "/api/operator-auth"}
 PUBLIC_POST = {"/api/operator-auth/login", "/api/operator-auth/logout"}
@@ -115,78 +125,198 @@ def refuse_non_loopback_bind(session: Session | None = None) -> dict:
     return decision
 
 
-def session_valid(session: Session, token: str | None) -> bool:
-    if not token:
-        return False
+def stored_session(session: Session) -> dict:
     row = session.get(Setting, SESSION_KEY)
     value = dict(row.value) if row and isinstance(row.value, dict) else {}
+    return value if value.get("token_hash") and value.get("salt") else {}
+
+
+def parse_time(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        moment = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    return moment if moment.tzinfo is not None else None
+
+
+def idle_seconds(value: dict) -> int:
+    try:
+        seconds = int(value.get("idle_timeout_seconds") or SESSION_IDLE_SECONDS)
+    except (TypeError, ValueError):
+        return SESSION_IDLE_SECONDS
+    return SESSION_IDLE_SECONDS if seconds <= 0 else seconds
+
+
+def idle_deadline(value: dict) -> datetime | None:
+    last_seen = parse_time(value.get("last_seen_at")) or parse_time(value.get("issued_at"))
+    return None if last_seen is None else last_seen + timedelta(seconds=idle_seconds(value))
+
+
+def cookie_max_age(value: dict, *, now: datetime | None = None) -> int:
+    now = now or utcnow()
+    remaining = idle_seconds(value)
+    expires = parse_time(value.get("expires_at"))
+    if expires is not None:
+        remaining = min(remaining, int((expires - now).total_seconds()))
+    idle_at = idle_deadline(value)
+    if idle_at is not None:
+        remaining = min(remaining, int((idle_at - now).total_seconds()))
+    return max(0, remaining)
+
+
+def attach_session_cookie(response: Response, token: str, *, max_age: int) -> None:
+    response.set_cookie(
+        COOKIE,
+        token,
+        httponly=COOKIE_POLICY["httponly"],
+        samesite=COOKIE_POLICY["samesite"],
+        secure=COOKIE_POLICY["secure"],
+        path=COOKIE_POLICY["path"],
+        max_age=max_age,
+    )
+
+
+def clear_session_row(session: Session) -> None:
+    row = session.get(Setting, SESSION_KEY)
+    if row is not None:
+        session.delete(row)
+
+
+def session_verdict(value: dict, token: str | None, *, now: datetime | None = None) -> str:
+    now = now or utcnow()
+    if not token or not value:
+        return "missing"
     try:
         salt = bytes.fromhex(value.get("salt") or "")
         expected = value.get("token_hash") or ""
-        expires = value.get("expires_at") or ""
     except (TypeError, ValueError):
-        return False
-    if not salt or not expected or not expires:
-        return False
-    try:
-        deadline = datetime.fromisoformat(expires)
-    except ValueError:
-        return False
-    if deadline.tzinfo is None:
-        return False
-    if utcnow() >= deadline:
-        return False
+        return "mismatch"
+    if not salt or not expected:
+        return "mismatch"
     actual = hmac.new(salt, token.encode("utf-8"), hashlib.sha256).hexdigest()
-    return hmac.compare_digest(expected, actual)
+    if not hmac.compare_digest(expected, actual):
+        return "mismatch"
+    expires = parse_time(value.get("expires_at"))
+    if expires is None or now >= expires:
+        return "expired"
+    last_seen = parse_time(value.get("last_seen_at")) or parse_time(value.get("issued_at"))
+    if last_seen is None:
+        return "valid"
+    if now >= last_seen + timedelta(seconds=idle_seconds(value)):
+        return "idle"
+    return "valid"
 
 
-def issue_session(session: Session, response: Response) -> str:
-    token = secrets.token_hex(32)
-    salt = os.urandom(16)
-    expires = utcnow() + timedelta(hours=SESSION_HOURS)
-    payload = {
-        "token_hash": hmac.new(salt, token.encode("utf-8"), hashlib.sha256).hexdigest(),
-        "salt": salt.hex(),
-        "expires_at": expires.isoformat(),
-    }
+def session_valid(session: Session, token: str | None) -> bool:
+    return session_verdict(stored_session(session), token) == "valid"
+
+
+def persist_session(session: Session, payload: dict) -> None:
     row = session.get(Setting, SESSION_KEY)
     if row is None:
         session.add(Setting(key=SESSION_KEY, value=payload))
     else:
         row.value = payload
-    response.set_cookie(
-        COOKIE,
-        token,
-        httponly=True,
-        samesite="strict",
-        max_age=SESSION_HOURS * 3600,
-        path="/",
-        secure=False,
-    )
+
+
+def touch_session(session: Session, *, now: datetime | None = None) -> dict | None:
+    now = now or utcnow()
+    row = session.get(Setting, SESSION_KEY)
+    if row is None or not isinstance(row.value, dict):
+        return None
+    value = dict(row.value)
+    last_seen = parse_time(value.get("last_seen_at"))
+    if last_seen is not None and (now - last_seen).total_seconds() < LAST_SEEN_MIN_WRITE_SECONDS:
+        return None
+    value["last_seen_at"] = now.isoformat()
+    if not parse_time(value.get("issued_at")):
+        value["issued_at"] = now.isoformat()
+    if not value.get("idle_timeout_seconds"):
+        value["idle_timeout_seconds"] = SESSION_IDLE_SECONDS
+    row.value = value
+    return value
+
+
+def issue_session(session: Session, response: Response) -> str:
+    token = secrets.token_hex(32)
+    salt = os.urandom(16)
+    now = utcnow()
+    payload = {
+        "token_hash": hmac.new(salt, token.encode("utf-8"), hashlib.sha256).hexdigest(),
+        "salt": salt.hex(),
+        "issued_at": now.isoformat(),
+        "last_seen_at": now.isoformat(),
+        "expires_at": (now + timedelta(hours=SESSION_HOURS)).isoformat(),
+        "idle_timeout_seconds": SESSION_IDLE_SECONDS,
+    }
+    persist_session(session, payload)
+    attach_session_cookie(response, token, max_age=cookie_max_age(payload, now=now))
     return token
 
 
 def drop_session(session: Session, response: Response) -> None:
-    row = session.get(Setting, SESSION_KEY)
-    if row is not None:
-        session.delete(row)
-    response.delete_cookie(COOKIE, path="/")
+    clear_session_row(session)
+    response.delete_cookie(COOKIE, path=COOKIE_POLICY["path"])
+
+
+def unauthorized() -> JSONResponse:
+    response = JSONResponse({"detail": "Operator login required"}, status_code=401)
+    response.delete_cookie(COOKIE, path=COOKIE_POLICY["path"])
+    return response
 
 
 def public_status(session: Session, token: str | None = None) -> dict:
     settings = get_settings()
     auth = configured(session)
     decision = lan_bind_decision(settings.bind_host, auth_configured=auth)
+    value = stored_session(session)
+    verdict = session_verdict(value, token) if auth else "missing"
+    if verdict in {"expired", "idle"}:
+        clear_session_row(session)
+        value = {}
+        verdict = "missing"
+    authenticated = verdict == "valid"
+    idle_at = idle_deadline(value) if authenticated else None
     return {
         "configured": auth,
         "session_required": auth,
-        "authenticated": session_valid(session, token) if auth else False,
+        "authenticated": authenticated,
         "session_scope": "loopback",
+        "session_idle_seconds": SESSION_IDLE_SECONDS,
+        "session_max_age_seconds": SESSION_ABSOLUTE_SECONDS,
+        "session_cookie": dict(COOKIE_POLICY),
+        "issued_at": value.get("issued_at") if authenticated else None,
+        "last_seen_at": value.get("last_seen_at") if authenticated else None,
+        "expires_at": value.get("expires_at") if authenticated else None,
+        "idle_expires_at": idle_at.isoformat() if idle_at is not None else None,
         "bind_host": settings.bind_host,
         "lan_exposure": decision["lan_exposure"],
         "lan_bind_allowed": False,
         "reason": decision["reason"],
     }
+
+
+def remember_activity(request: Request, session: Session, token: str) -> None:
+    updated = touch_session(session)
+    payload = updated or stored_session(session)
+    if updated is None:
+        return
+    request.state.operator_cookie_refresh = {
+        "token": token,
+        "max_age": cookie_max_age(payload),
+    }
+
+
+def refresh_operator_cookie(request: Request, response: Response) -> None:
+    refresh = getattr(request.state, "operator_cookie_refresh", None)
+    if not isinstance(refresh, dict):
+        return
+    token = refresh.get("token")
+    max_age = refresh.get("max_age")
+    if isinstance(token, str) and isinstance(max_age, int) and max_age > 0:
+        attach_session_cookie(response, token, max_age=max_age)
 
 
 def require_operator_session(request: Request) -> JSONResponse | None:
@@ -204,11 +334,19 @@ def require_operator_session(request: Request) -> JSONResponse | None:
     try:
         if not configured(db):
             return None
-        if session_valid(db, request.cookies.get(COOKIE)):
+        token = request.cookies.get(COOKIE)
+        verdict = session_verdict(stored_session(db), token)
+        if verdict == "valid" and token:
+            remember_activity(request, db, token)
+            db.commit()
             return None
+        if verdict in {"expired", "idle"}:
+            clear_session_row(db)
+            db.commit()
+            return unauthorized()
     finally:
         db.close()
-    return JSONResponse({"detail": "Operator login required"}, status_code=401)
+    return unauthorized()
 
 
 def save_secret(session: Session, password: str) -> None:
@@ -227,8 +365,12 @@ def save_secret(session: Session, password: str) -> None:
 
 
 @router.get("")
-def status(request: Request, session: DB):
-    return public_status(session, request.cookies.get(COOKIE))
+def status(request: Request, response: Response, session: DB):
+    token = request.cookies.get(COOKIE)
+    body = public_status(session, token)
+    if token and not body["authenticated"]:
+        response.delete_cookie(COOKIE, path=COOKIE_POLICY["path"])
+    return body
 
 
 @router.put("")

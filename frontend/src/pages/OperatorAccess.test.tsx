@@ -91,6 +91,42 @@ it("stores an operator password without displaying it later", async () => {
   expect(screen.queryByDisplayValue("operator-pass")).toBeNull();
 });
 
+it("describes idle timeout and cookie flags without offering LAN publish", async () => {
+  mount(
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path === "/api/nodes"
+          ? nodes
+          : {
+              ...status,
+              configured: true,
+              session_required: true,
+              authenticated: true,
+              session_scope: "loopback",
+              session_idle_seconds: 1800,
+              session_max_age_seconds: 43200,
+              session_cookie: {
+                httponly: true,
+                samesite: "strict",
+                secure: false,
+                path: "/",
+              },
+            },
+    })),
+  );
+  await screen.findByText("This workstation");
+  expect(
+    screen.getByText(/httpOnly, SameSite=strict, not Secure/),
+  ).toBeTruthy();
+  expect(
+    screen.getByText(/30 minutes\s+idle or 12 hours from sign-in/),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: /bind|publish|lan/i }),
+  ).toBeNull();
+});
+
 it("does not offer a LAN bind control", async () => {
   mount(
     vi.fn(async (path: string) => ({
