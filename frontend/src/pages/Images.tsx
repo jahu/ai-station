@@ -7,6 +7,7 @@ import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import LibraryPicker from "../components/media/LibraryPicker";
 import { useListKeyboard } from "./useListKeyboard";
+import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 
 const modes = {
   t2i: "Generate",
@@ -465,17 +466,15 @@ function ImageForm({
               />
             </label>
           )}
-          <label>
-            GPU
-            <select value={gpu} onChange={(e) => setGpu(e.target.value)}>
-              <option value="auto">Auto · next available GPU</option>
-              {hardware.data?.gpus.map((g) => (
-                <option key={g.index} value={String(g.index)}>
-                  GPU {g.index} · {g.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div>
+            <span>GPU</span>
+            <GpuTargetChoiceList
+              value={gpu}
+              gpus={hardware.data?.gpus ?? []}
+              disabled={create.isPending || upload.isPending}
+              onChange={setGpu}
+            />
+          </div>
           {hardware.error && (
             <p className="muted">
               GPU discovery is unavailable. The worker will verify the runner
