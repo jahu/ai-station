@@ -242,6 +242,97 @@ it("moves through the attention list with arrow keys", async () => {
   expect(first.tabIndex).toBe(0);
 });
 
+it("grants a parked Run from Home without starting inference", async () => {
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    if (path === "/api/runs/parked/approval" && options?.method === "POST") {
+      expect(JSON.parse(String(options.body))).toEqual({
+        resolution: "granted",
+      });
+      return {
+        ok: true,
+        json: async () => ({ id: "parked", status: "queued" }),
+      };
+    }
+    return {
+      ok: true,
+      json: async () => ({
+        ...overview(),
+        active_runs: [
+          {
+            id: "parked",
+            title: "Morning review",
+            executor_type: "agent",
+            execution_target: "container",
+            status: "waiting_for_approval",
+          },
+        ],
+        notices: [],
+        interrupted_runs: [],
+      }),
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  await screen.findByRole("heading", { name: "Needs attention · 1" });
+  expect(screen.queryByRole("button", { name: /Stop/ })).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Approve and queue Morning review" }),
+  );
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(
+        (call) =>
+          call[0] === "/api/runs/parked/approval" &&
+          (call[1] as RequestInit | undefined)?.method === "POST",
+      ),
+    ).toBe(true),
+  );
+});
+
+it("denies a parked Run from Home without restore or replay", async () => {
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    if (path === "/api/runs/parked/approval" && options?.method === "POST") {
+      expect(JSON.parse(String(options.body))).toEqual({
+        resolution: "denied",
+      });
+      return {
+        ok: true,
+        json: async () => ({ id: "parked", status: "canceled" }),
+      };
+    }
+    return {
+      ok: true,
+      json: async () => ({
+        ...overview(),
+        active_runs: [
+          {
+            id: "parked",
+            title: "Morning review",
+            executor_type: "agent",
+            execution_target: "container",
+            status: "waiting_for_approval",
+          },
+        ],
+        notices: [],
+        interrupted_runs: [],
+      }),
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  await screen.findByRole("button", { name: "Deny Morning review" });
+  fireEvent.click(screen.getByRole("button", { name: "Deny Morning review" }));
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(
+        (call) =>
+          call[0] === "/api/runs/parked/approval" &&
+          (call[1] as RequestInit | undefined)?.method === "POST",
+      ),
+    ).toBe(true),
+  );
+});
+
 it("shows an error instead of claiming there is no activity", async () => {
   vi.stubGlobal(
     "fetch",
