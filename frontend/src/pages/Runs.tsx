@@ -313,6 +313,11 @@ export function RunDetail() {
     mutationFn: () => api<Run>(`/images/runs/${id}/retry`, { method: "POST" }),
     onSuccess: (next) => navigate(`/runs/${next.id}`),
   });
+  const retryWorkflow = useMutation({
+    mutationFn: () =>
+      api<Run>(`/runs/${id}/retry-workflow`, { method: "POST" }),
+    onSuccess: (next) => navigate(`/runs/${next.id}`),
+  });
   const decide = useMutation({
     mutationFn: (resolution: "granted" | "denied") =>
       api<Run>(`/runs/${id}/approval`, {
@@ -364,6 +369,7 @@ export function RunDetail() {
           events.error ??
           cancel.error ??
           retry.error ??
+          retryWorkflow.error ??
           decide.error ??
           artifacts.error
         }
@@ -448,7 +454,11 @@ export function RunDetail() {
                 </p>
                 {run.data.workflow.steps.length ? (
                   run.data.workflow.steps.map((step) => (
-                    <Link className="row" key={step.run_id} to={`/runs/${step.run_id}`}>
+                    <Link
+                      className="row"
+                      key={step.run_id}
+                      to={`/runs/${step.run_id}`}
+                    >
                       <Badge status={step.status} />
                       <span>{step.key}</span>
                       {step.gate === "approval" && (
@@ -458,9 +468,41 @@ export function RunDetail() {
                     </Link>
                   ))
                 ) : (
-                  <p className="muted">Steps are published after this workflow Run starts.</p>
+                  <p className="muted">
+                    Steps are published after this workflow Run starts.
+                  </p>
                 )}
               </section>
+            )}
+            {run.data.retry?.allowed && (
+              <div className="panel content-panel">
+                <p>
+                  Manual retry queues a new workflow from this snapshot. It does
+                  not resume the failed step or replay an uncertain search,
+                  fetch or inference.
+                </p>
+                <Button
+                  variant="secondary"
+                  disabled={retryWorkflow.isPending}
+                  onClick={() => retryWorkflow.mutate()}
+                >
+                  Retry as a new workflow
+                </Button>
+              </div>
+            )}
+            {run.data.retry?.retry_run_id && (
+              <p>
+                <Link to={`/runs/${run.data.retry.retry_run_id}`}>
+                  Open retry Run →
+                </Link>
+              </p>
+            )}
+            {run.data.retry?.retry_of && (
+              <p>
+                <Link to={`/runs/${run.data.retry.retry_of}`}>
+                  View original workflow →
+                </Link>
+              </p>
             )}
             {run.data.executor_type === "photo_pipe" &&
               ["failed", "canceled", "interrupted"].includes(

@@ -48,6 +48,15 @@ interface Overview {
     updated_at: string;
     stale: boolean;
   }[];
+  unread_notice_count?: number;
+  notices?: {
+    id: string;
+    agent_id: string;
+    run_id: string;
+    kind: string;
+    title: string;
+    created_at: string;
+  }[];
 }
 function Section({
   title,
@@ -83,6 +92,26 @@ export default function DashboardActivity() {
       {query.isPending && <Loading />}
       {data && (
         <div className="dashboard-activity-grid">
+          {(data.notices?.length ?? 0) > 0 && (
+            <Section
+              title={`Agent notices · ${data.unread_notice_count ?? data.notices?.length}`}
+              to="/agents"
+            >
+              <div className="activity-list">
+                {data.notices!.map((notice) => (
+                  <Link key={notice.id} to={`/runs/${notice.run_id}`}>
+                    <div>
+                      <strong>{notice.title}</strong>
+                      <small>
+                        {notice.kind.replaceAll("_", " ")} ·{" "}
+                        {time(notice.created_at)}
+                      </small>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </Section>
+          )}
           <Section title={`In progress · ${data.active_run_count}`} to="/runs">
             {data.active_runs.length ? (
               <div className="activity-list">

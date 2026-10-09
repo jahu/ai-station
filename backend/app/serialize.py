@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.agent_schema import NotificationPolicy, RetryPolicy
 from app.models import (
     Agent,
     Approval,
@@ -142,8 +143,10 @@ def agent_dict(agent: Agent) -> dict:
         "project_id": agent.project_id,
         "execution_target": agent.execution_target,
         "maximum_runtime": agent.maximum_runtime,
-        "retry_policy": agent.retry_policy,
-        "notification_policy": agent.notification_policy,
+        "retry_policy": RetryPolicy.model_validate(agent.retry_policy or {}).model_dump(),
+        "notification_policy": NotificationPolicy.model_validate(
+            agent.notification_policy or {}
+        ).model_dump(),
         "output_expectation": agent.output_expectation,
         "require_approval": agent.require_approval,
         "workflow_mode": agent.workflow_mode,

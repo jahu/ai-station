@@ -12,6 +12,38 @@ from app.db import utcnow
 from app.http_fetch import reviewed_urls
 
 
+class RetryPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    mode: Literal["none", "manual"] = "none"
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_legacy(cls, value):
+        if value is None or value == {}:
+            return {"mode": "none"}
+        if isinstance(value, dict) and "mode" not in value:
+            return {"mode": "none"}
+        return value
+
+
+class NotificationPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    on_success: StrictBool = False
+    on_failure: StrictBool = False
+    on_approval: StrictBool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_legacy(cls, value):
+        if value is None or value == {}:
+            return {}
+        if isinstance(value, dict) and not any(
+            key in value for key in ("on_success", "on_failure", "on_approval")
+        ):
+            return {"on_success": False, "on_failure": False, "on_approval": False}
+        return value
+
+
 class AgentSettings(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     name: str = Field(min_length=1, max_length=200)
@@ -37,6 +69,8 @@ class AgentSettings(BaseModel):
     output_expectation: str = Field(default="A concise, factual report.", max_length=4000)
     require_approval: StrictBool = False
     workflow_mode: Literal["sequential", "gated"] = "sequential"
+    retry_policy: RetryPolicy = Field(default_factory=RetryPolicy)
+    notification_policy: NotificationPolicy = Field(default_factory=NotificationPolicy)
     enabled: StrictBool = False
 
     @model_validator(mode="after")

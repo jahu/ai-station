@@ -33,14 +33,14 @@ def active_run(session, agent_id):
     )
 
 
-def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
+def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definition=None) -> str:
     if not agent.enabled:
         raise ValueError("Enable the reviewed definition before running this agent")
     if active_run(session, agent.id):
         raise ValueError("This agent already has an active Run")
     # Activation validated the future timestamp; an already-due one-shot time is
     # expected here. Revalidate the rest of the persisted execution contract.
-    definition = AgentSettings.model_validate(
+    definition = definition or AgentSettings.model_validate(
         {key: getattr(agent, key) for key in AgentSettings.model_fields} | {"enabled": False}
     )
     if not definition.model or any(not agent_tool(name).operational for name in definition.tools):
@@ -57,11 +57,11 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
         steps = planned_steps(definition)
     except SkillError as exc:
         raise ValueError(str(exc)) from exc
-    endpoint = model_endpoint(agent.model, session)
+    endpoint = model_endpoint(definition.model, session)
     task = create_task(
         session,
         title=agent.name,
-        prompt=agent.goal,
+        prompt=definition.goal,
         capability="agent.workflow",
         intent="agent",
         agent_id=agent.id,
@@ -80,7 +80,7 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
             "skill_snapshots": skill_snapshots,
             "steps": steps,
         },
-        permissions=effective_permissions(agent.tools),
+        permissions=effective_permissions(definition.tools),
         retry_class="inspect",
         triggered_by=triggered_by,
     )
@@ -107,12 +107,52 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
         )
     else:
         agent.last_status = "queued"
-    if agent.trigger == "datetime":
-        agent.enabled, agent.next_run_at = False, None
-    elif triggered_by == "scheduler":
-        agent.next_run_at = compute_next(agent, after=now)
+    if triggered_by != "retry":
+        if agent.trigger == "datetime":
+            agent.enabled, agent.next_run_at = False, None
+        elif triggered_by == "scheduler":
+            agent.next_run_at = compute_next(agent, after=now)
     session.flush()
     return run.id
+
+
+def workflow_retryable(session: Session, source: Run) -> bool:
+    from app.state import RunStatus
+
+    if source.executor_type != "agent_workflow":
+        return False
+    if source.status in {RunStatus.FAILED.value, RunStatus.INTERRUPTED.value}:
+        return True
+    if source.status != RunStatus.SUCCEEDED.value:
+        return False
+    children = session.scalars(select(Run).where(Run.parent_run_id == source.id))
+    return any(child.status in {RunStatus.FAILED.value, RunStatus.INTERRUPTED.value} for child in children)
+
+
+def retry_workflow(session: Session, source: Run) -> str:
+    from app.events import append_event
+    from app.notices import retry_policy
+
+    if source.executor_type != "agent_workflow":
+        raise ValueError("Only a workflow Run can be retried")
+    if not workflow_retryable(session, source):
+        raise ValueError("Retry is available after failure or interruption, not after success or cancel")
+    if retry_policy((source.parameters.get("definition") or {}).get("retry_policy")).mode != "manual":
+        raise ValueError("This workflow's saved policy does not allow retry")
+    if source.metadata_json.get("retry_run_id"):
+        raise ValueError("This workflow already has a retry; inspect that Run")
+    agent = session.get(Agent, source.agent_id)
+    if agent is None:
+        raise ValueError("Agent not found")
+    definition = AgentSettings.model_validate(source.parameters.get("definition") or {})
+    run_id = launch_agent(session, agent, triggered_by="retry", definition=definition)
+    retry = session.get(Run, run_id)
+    retry.metadata_json = {**retry.metadata_json, "retry_of": source.id}
+    retry.parameters = {**retry.parameters, "retry_of": source.id}
+    source.metadata_json = {**source.metadata_json, "retry_run_id": run_id}
+    append_event(session, source.id, "workflow.retry_requested", {"retry_run_id": run_id})
+    session.flush()
+    return run_id
 
 
 def due_agents(session: Session):

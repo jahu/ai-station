@@ -38,6 +38,7 @@ from app.local_coding import router as local_coding_router
 from app.memory_api import router as memory_router
 from app.model_registry import router as model_router
 from app.models import Run, Setting, WorkerRow
+from app.notices import router as notice_router
 from app.project_setup import router as project_setup_router
 from app.projects import router as project_router
 from app.providers import ProviderError
@@ -184,6 +185,18 @@ def cancel_run(run_id: UUID, session: DB):
     return redact_obj(run_public(session, run))
 
 
+@app.post("/api/runs/{run_id}/retry-workflow", status_code=202)
+def retry_workflow_run(run_id: UUID, session: DB):
+    from app.schedule import retry_workflow
+
+    try:
+        created = retry_workflow(session, get_run(session, run_id))
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    session.commit()
+    return redact_obj(run_public(session, session.get(Run, created)))
+
+
 @app.get("/api/runs/{run_id}/events")
 def events(run_id: UUID, session: DB, after: int = Query(0, ge=0)):
     get_run(session, run_id)
@@ -310,6 +323,7 @@ app.include_router(project_router)
 app.include_router(memory_router)
 app.include_router(model_router)
 app.include_router(agent_router)
+app.include_router(notice_router)
 app.include_router(skill_router)
 app.include_router(runtime_router)
 app.include_router(llama_router)
