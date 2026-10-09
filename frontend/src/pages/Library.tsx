@@ -5,13 +5,7 @@ import {
   useInfiniteQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import {
-  useState,
-  useRef,
-  useEffect,
-  useId,
-  type KeyboardEvent,
-} from "react";
+import { useState, useRef, useEffect, useId } from "react";
 import {
   Upload,
   Search,
@@ -26,6 +20,7 @@ import { api, type Artifact } from "../api";
 import { ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
+import { useListKeyboard } from "./useListKeyboard";
 
 function artifactName(artifact: Artifact) {
   return (
@@ -50,36 +45,10 @@ export function ArtifactCards({
 }) {
   const headingId = useId();
   const labelId = useId();
-  const listRef = useRef<HTMLDivElement>(null);
-  const [selectedKey, setSelectedKey] = useState(artifacts[0]?.id ?? "");
-  const found = artifacts.findIndex((artifact) => artifact.id === selectedKey);
-  const index = found >= 0 ? found : 0;
-  const focusItem = (next: number) => {
-    const clamped = Math.max(0, Math.min(artifacts.length - 1, next));
-    const artifact = artifacts[clamped];
-    if (!artifact) return;
-    setSelectedKey(artifact.id);
-    const link = listRef.current?.querySelector<HTMLElement>(
-      `[data-artifact-index="${clamped}"]`,
-    );
-    link?.focus();
-    link?.scrollIntoView?.({ block: "nearest" });
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
-      event.preventDefault();
-      focusItem(index + 1);
-    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-      event.preventDefault();
-      focusItem(index - 1);
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      focusItem(0);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      focusItem(artifacts.length - 1);
-    }
-  };
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    artifacts,
+    (artifact) => artifact.id,
+  );
   return (
     <section aria-labelledby={headingId}>
       <h2 id={headingId} className="sr-only">
@@ -96,7 +65,6 @@ export function ArtifactCards({
         onKeyDown={onKeyDown}
       >
         {artifacts.map((a, i) => {
-          const current = i === index;
           const name = artifactName(a);
           return (
             <Link
@@ -104,10 +72,7 @@ export function ArtifactCards({
               key={a.id}
               to={`/library/${a.id}`}
               aria-label={`Inspect ${name} ${a.id.slice(0, 8)}`}
-              aria-current={current ? "true" : undefined}
-              tabIndex={current ? 0 : -1}
-              data-artifact-index={i}
-              onFocus={() => setSelectedKey(a.id)}
+              {...itemProps(i, a.id)}
             >
               {a.type === "image" ? (
                 <img
