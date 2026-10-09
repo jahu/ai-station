@@ -25,6 +25,7 @@ from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
 from app.llama import LlamaExecutor, LlamaHealthExecutor
 from app.local_coding import LocalProposalExecutor
+from app.maintenance import SqliteBackupExecutor
 from app.model_definitions import ModelInstallExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
@@ -310,6 +311,7 @@ EXECUTORS = {
     "agent_tool": AgentToolExecutor(),
     "http_connector": HttpConnectorExecutor(),
     "memory_embed": MemoryEmbedExecutor(),
+    "sqlite_backup": SqliteBackupExecutor(),
     "runtime_observation": RuntimeObservationExecutor(),
 }
 

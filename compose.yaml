@@ -22,6 +22,8 @@ x-control-plane: &control-plane
     AI_STATION_LLM_API_KEY: ${AI_STATION_LLM_API_KEY:-}
     AI_STATION_ENABLE_TEST_EXECUTOR: ${AI_STATION_ENABLE_TEST_EXECUTOR:-false}
   volumes:
+    # Bind mount, not a named volume: `compose down` (even with --volumes) must
+    # not delete host application data. The launcher never passes --volumes.
     - type: bind
       source: ${AI_STATION_DATA_HOST_PATH:-./data}
       target: /data

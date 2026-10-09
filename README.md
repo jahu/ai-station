@@ -24,7 +24,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 - One-command startup of the native runner, API, worker, scheduler, and web UI.
 - Live GPU/CPU/RAM/storage dashboard, telemetry history, worker health, read-only diagnostics, optional operator password in Settings, and hashed loopback node invitations. LAN publish stays unpublished.
 - Durable run state, atomic claims, leases, cancellation, conservative recovery, event replay over SSE, and a run inspector.
-- Alembic migrations and SQLite WAL persistence under one application-owned data directory.
+- Alembic migrations and SQLite WAL persistence under one application-owned data directory, with explicit integrity-checked backup Runs. `compose down` keeps bind-mounted data. Restore and image rollout stay unpublished. See [operations](docs/operations.md).
 - Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
 
 The bounded Codex, Cursor and Local AI adapters are operational. Claude Code remains an inactive draft; reviewed changes can be committed to the owned task branch from Coding or the Platform assistant; approved task-branch pushes and draft GitHub PRs are available from successful commit Runs. Saved project validation and declared Python dependency installs run in prepared worktrees through the native sandbox.
@@ -48,7 +48,7 @@ Bootstrap installs Python dependencies only in `.venv`. It never installs driver
 
 ## Configuration and persistence
 
-Copy `.env.example`; configure existing integrations using host paths. Relative paths resolve from the repository root. `AI_STATION_DATA_HOST_PATH` defaults to `./data`, mounted as `/data` in containers. Database records store app-owned paths relative to this root. External repositories/models remain references.
+Copy `.env.example`; configure existing integrations using host paths. Relative paths resolve from the repository root. `AI_STATION_DATA_HOST_PATH` defaults to `./data`, mounted as `/data` in containers. That path is a bind mount, not a named volume, so replacing containers or running `compose down` without `--volumes` keeps SQLite, artifacts and backups. Database records store app-owned paths relative to this root. External repositories/models remain references. See [upgrade and recovery](docs/operations.md).
 
 The normal launcher uses `data/runtime/runner/runner.sock` with mode `0600` in a private directory; configure `AI_STATION_RUNNER_SOCKET` to place it elsewhere (filename `runner.sock`). Containers run as your uid/gid and mount only application data and the socket directory. The runner can also be started independently with `./scripts/runner-dev.sh`, using its configured socket or the user's XDG runtime directory by default.
 
@@ -150,6 +150,8 @@ Models now discovers existing host files through a cancellable worker Run, persi
 Describe a task in Agents, inspect and edit the disabled definition, select a local model, tools and any installed Skills, then enable it explicitly. Schedules use UTC. HTTP fetch GETs only the public URLs saved on the definition. Skills inject reviewed instruction text and do not grant extra tools. Optional approval parks each Run until you grant it in the inspector. Optional bounded tool calling during the report may request selected registry tools; invented tools, URLs and commands fail closed. Run now, pause, duplicate and execution history share the global Runs inspector. See [agent contracts and limits](docs/agents.md) and [Skills](docs/skills.md).
 
 Runtime observations are refreshed through a normal Run from **System → Observe runtimes**. Process presence, endpoint availability and model files remain separate. See [runtime observation semantics](docs/runtimes.md).
+
+**System → Backup and upgrade readiness** queues an integrity-checked SQLite backup Run, lists interrupted work for inspection, and states that compose down keeps bind-mounted data. Restore and image rollout stay unpublished. See [operations](docs/operations.md).
 
 
 The Home workspace combines live hardware with saved activity: active/queued Runs, enabled agents, scheduled work, recent conversations and generated artifacts. Runtime cards distinguish process observations from endpoint checks and flag stale data. Quick actions open the relevant workspaces without starting a workload.

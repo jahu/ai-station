@@ -15,6 +15,9 @@ import httpx
 from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
+# Bind-mounted application data must survive shutdown. Never pass --volumes/-v/--rmi.
+COMPOSE_DOWN = ("down", "--timeout", "10")
+VOLUME_WIPE_FLAGS = frozenset({"-v", "--volumes", "--rmi"})
 
 
 def configuration() -> dict[str, str]:
@@ -56,6 +59,13 @@ def runner_health(env: dict) -> bool:
     if body.get("data_dir") != env["AI_STATION_DATA_HOST_PATH"]:
         raise RuntimeError("The existing Host Runner uses a different data directory")
     return body.get("status") == "ok"
+
+
+def data_preserving_compose_down(compose: list[str]) -> list[str]:
+    command = [*compose, *COMPOSE_DOWN]
+    if VOLUME_WIPE_FLAGS.intersection(command):
+        raise RuntimeError("Compose shutdown must not pass --volumes, -v, or --rmi")
+    return command
 
 
 def stop_runner(proc: subprocess.Popen | None) -> None:
@@ -132,7 +142,7 @@ def main() -> None:
             signal.signal(signal.SIGTERM, signal.SIG_IGN)
             try:
                 if started:
-                    run("down", "--timeout", "10")
+                    subprocess.run(data_preserving_compose_down(compose), env=env, check=True)
             finally:
                 stop_runner(proc)
 
