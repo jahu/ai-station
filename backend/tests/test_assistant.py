@@ -344,6 +344,44 @@ def test_external_coding_scope_binds_the_selected_provider(selected, action):
             assert "explicitly allow sharing" in detail["messages"][-1]["content"]
 
 
+@pytest.mark.parametrize("provider", ["cursor", "codex"])
+def test_assistant_external_coding_uses_native_cli_model(provider):
+    from app.models import Project
+
+    with session_factory()() as session:
+        project = Project(name="native-model", repo_path="/allowed/native-model")
+        session.add(project)
+        session.commit()
+        scope = {
+            "project_id": project.id,
+            "expected_updated_at": project.updated_at.isoformat(),
+            "files": ["README.md"],
+            "external_ai": True,
+            "executor": provider,
+            "model": "available-model",
+        }
+    with TestClient(app) as client:
+        cid = create(client)
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={"content": "Update documentation", "action": f"coding.{provider}", "coding": scope},
+        )
+        assert response.status_code == 202, response.text
+        step()
+        child = client.get(f"/api/chat/conversations/{cid}").json()["active_run"]
+        assert child["parameters"][provider]["model"] == "available-model"
+        assert child["metadata"]["next_executor"] == f"{provider}_proposal"
+        rejected = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "content": "Update documentation",
+                "action": f"coding.{provider}",
+                "coding": {**scope, "model": "bad model!"},
+            },
+        )
+        assert rejected.status_code == 422
+
+
 def succeed(session, run):
     transition(session, run, RunStatus.CLAIMED, event_type="run.claimed")
     transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")

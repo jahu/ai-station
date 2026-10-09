@@ -66,6 +66,7 @@ class CodingScope(BaseModel):
     executor: Literal["cursor", "codex"] = "cursor"
     explore: StrictBool = False
     max_repair_attempts: StrictInt = Field(default=0, ge=0, le=2)
+    model: str = Field(default="", max_length=100, pattern=r"^[A-Za-z0-9._:/ -]*$")
 
     @model_validator(mode="after")
     def selection(self):
@@ -454,7 +455,7 @@ class AssistantExecutor:
                 scope = {
                     key: value
                     for key, value in params["coding"].items()
-                    if key not in {"external_ai", "executor"}
+                    if key not in {"external_ai", "executor", "model"}
                 }
                 body = LocalCodingTask(**scope, prompt=params["content"], model=params["model"])
                 child = enqueue_coding_task(
