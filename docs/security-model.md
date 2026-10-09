@@ -42,7 +42,7 @@ HTTP fetch is a real tool and is off unless the run has `network_read` (GET) or 
 
 ## Operator credential
 
-The `operator_auth` setting stores PBKDF2-SHA256 material only. Responses omit password, salt and hash. Rotation and removal require the current password. The credential does not yet issue sessions or authorize remote nodes.
+The `operator_auth` setting stores PBKDF2-SHA256 material only. Responses omit password, salt and hash. Rotation and removal require the current password. The credential does not yet issue sessions. Node invitations require that hash to exist; join tokens are HMAC-SHA256 and returned once. Registration is accepted only on the loopback API. LAN transport stays unpublished.
 
 ## Secrets
 

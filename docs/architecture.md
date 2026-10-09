@@ -55,7 +55,7 @@ The Host Runner does not expose an arbitrary shell. Photo, Git, coding CLIs, can
 
 The published UI/API port is `127.0.0.1:8765`. Inside the container the process listens on `0.0.0.0` so Docker's localhost publish mapping works. That internal bind is not host exposure. `AI_STATION_BIND_HOST` is the host publish policy; a non-loopback value aborts startup. An optional operator password can be stored as a PBKDF2 hash, but it does not enable LAN publish because authenticated node transport is unpublished. See [nodes and operator access](nodes.md).
 
-Loopback-only host model services are reached through the private Host Runner bridge. Optional direct container connections use `host.docker.internal` or another configured reachable endpoint; container `127.0.0.1` remains the container itself. The only registered node is this Host Runner over its Unix socket.
+Loopback-only host model services are reached through the private Host Runner bridge. Optional direct container connections use `host.docker.internal` or another configured reachable endpoint; container `127.0.0.1` remains the container itself. The only networked node is this Host Runner over its Unix socket. Remote invitations and loopback token registration persist as `StationNode` rows; they do not add a LAN listener.
 
 ## Extension points
 

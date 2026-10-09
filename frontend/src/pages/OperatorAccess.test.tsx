@@ -33,9 +33,9 @@ const nodes = {
       authenticated: true,
     },
   ],
-  remote_registration: "unavailable",
+  remote_registration: "loopback-token",
   lan_exposure: "disabled",
-  summary: "Only the private local Host Runner is registered.",
+  summary: "The local Host Runner is registered over its Unix socket.",
 };
 
 function mount(fetchImpl: ReturnType<typeof vi.fn>) {
@@ -95,4 +95,46 @@ it("does not offer a LAN bind control", async () => {
   expect(
     screen.getByText(/authenticated LAN transport is unpublished/),
   ).toBeTruthy();
+});
+
+it("shows an invitation token once and omits it from later node lists", async () => {
+  const remote = {
+    id: "n1",
+    name: "Studio GPU",
+    kind: "host-runner",
+    transport: "unpublished",
+    ownership: "remote",
+    status: "pending",
+    authenticated: false,
+    token_issued: true,
+  };
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    if (path === "/api/nodes/invitations" && options?.method === "POST") {
+      expect(JSON.parse(String(options.body)).name).toBe("Studio GPU");
+      return {
+        ok: true,
+        json: async () => ({ ...remote, token: "aisn_secret-token" }),
+      };
+    }
+    if (path === "/api/nodes") {
+      return {
+        ok: true,
+        json: async () => ({ ...nodes, items: [...nodes.items, remote] }),
+      };
+    }
+    return { ok: true, json: async () => ({ ...status, configured: true }) };
+  });
+  mount(fetch);
+  await screen.findByText("This workstation");
+  fireEvent.change(screen.getByLabelText("Remote node name"), {
+    target: { value: "Studio GPU" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Issue invitation" }));
+  await screen.findByText(/aisn_secret-token/);
+  await screen.findByText("Studio GPU");
+  expect(
+    screen.getByText(/host-runner · unpublished · remote · pending/),
+  ).toBeTruthy();
+  const listCalls = fetch.mock.calls.filter(([path]) => path === "/api/nodes");
+  expect(listCalls.length).toBeGreaterThan(0);
 });

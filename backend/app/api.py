@@ -41,8 +41,9 @@ from app.memory_api import router as memory_router
 from app.model_definitions import router as model_definition_router
 from app.model_registry import router as model_router
 from app.models import Run, Setting, WorkerRow
+from app.nodes import router as nodes_router
 from app.notices import router as notice_router
-from app.operator_auth import nodes_router, refuse_non_loopback_bind
+from app.operator_auth import refuse_non_loopback_bind
 from app.operator_auth import router as operator_auth_router
 from app.project_setup import router as project_setup_router
 from app.projects import router as project_router

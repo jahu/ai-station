@@ -424,6 +424,22 @@ class Setting(Base):
     value: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
+class StationNode(Base):
+    __tablename__ = "station_nodes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    name: Mapped[str] = mapped_column(String(200))
+    kind: Mapped[str] = mapped_column(String(80), default="host-runner")
+    ownership: Mapped[str] = mapped_column(String(20), default="remote")
+    transport: Mapped[str] = mapped_column(String(40), default="unpublished")
+    status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
+    token_hash: Mapped[str] = mapped_column(String(128), default="")
+    token_salt: Mapped[str] = mapped_column(String(64), default="")
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    registered_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+    revoked_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+
+
 class Notice(Base):
     __tablename__ = "notices"
 

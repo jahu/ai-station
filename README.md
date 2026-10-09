@@ -22,7 +22,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 - Library: image/WAV import, search and type filters, editable names and notes, reversible Trash, source reuse and preserved Run history. See [Library management](docs/library.md).
 - Avatars and Video: local EchoMimic portrait animation from an image and speech, with inline playback and reusable Library outputs.
 - One-command startup of the native runner, API, worker, scheduler, and web UI.
-- Live GPU/CPU/RAM/storage dashboard, telemetry history, worker health, read-only diagnostics, optional operator password in Settings, and a local-only node list. Remote nodes and LAN publish stay unpublished.
+- Live GPU/CPU/RAM/storage dashboard, telemetry history, worker health, read-only diagnostics, optional operator password in Settings, and hashed loopback node invitations. LAN publish stays unpublished.
 - Durable run state, atomic claims, leases, cancellation, conservative recovery, event replay over SSE, and a run inspector.
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory.
 - Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
