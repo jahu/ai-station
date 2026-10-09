@@ -21,7 +21,7 @@ import {
 } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ArrowUpRight, Ban } from "lucide-react";
-import { api, type Run, type RunEvent, type Artifact, useRuns } from "../api";
+import { api, type Run, type Artifact, useRuns } from "../api";
 import {
   Badge,
   Empty,
@@ -32,6 +32,7 @@ import {
 import { Button } from "../components/ui/button";
 import { terminal, time } from "../lib/utils";
 import { ArtifactCards } from "./Library";
+import { DependencyResults, ValidationResults } from "./ProjectResults";
 import { useListKeyboard } from "./useListKeyboard";
 
 type RunRow = {
@@ -752,59 +753,3 @@ export function RunDetail() {
   );
 }
 
-function ValidationResults({ events }: { events: RunEvent[] }) {
-  const results = events.filter(
-    (event) => event.event_type === "validation.completed",
-  );
-  if (!results.length) return null;
-  return (
-    <section className="panel content-panel">
-      <h2>Project validation</h2>
-      {results.map((event) => (
-        <article key={event.id} className="mt">
-          <div className="row spread">
-            <strong>{String(event.payload.kind)}</strong>
-            <Badge
-              status={event.payload.exit_code === 0 ? "succeeded" : "failed"}
-            />
-          </div>
-          <pre>{JSON.stringify(event.payload.argv)}</pre>
-          <p className="muted">
-            Exit {String(event.payload.exit_code)} ·{" "}
-            {String(event.payload.duration_seconds)} seconds
-          </p>
-        </article>
-      ))}
-    </section>
-  );
-}
-
-function DependencyResults({ events }: { events: RunEvent[] }) {
-  const results = events.filter(
-    (event) => event.event_type === "dependencies.completed",
-  );
-  if (!results.length) return null;
-  return (
-    <section className="panel content-panel">
-      <h2>Project dependencies</h2>
-      {results.map((event) => (
-        <article key={event.id} className="mt">
-          <div className="row spread">
-            <strong>
-              {String(event.payload.manifest)} · {String(event.payload.source)}
-            </strong>
-            <Badge
-              status={event.payload.exit_code === 0 ? "succeeded" : "failed"}
-            />
-          </div>
-          <pre>{JSON.stringify(event.payload.specifiers)}</pre>
-          <p className="muted">
-            Exit {String(event.payload.exit_code)} ·{" "}
-            {String(event.payload.duration_seconds)} seconds
-            {event.payload.network === true ? " · PyPI" : " · offline vendor"}
-          </p>
-        </article>
-      ))}
-    </section>
-  );
-}
