@@ -111,7 +111,7 @@ Saved project test/lint/build commands now run through the worker and a managed 
 
 ## Conversation orchestration
 
-The default entry point is the [platform assistant](orchestrator.md). Dedicated workspaces remain available. Conversation intent is compiled into typed capability actions, dispatched as ordinary Runs, and projected back into the conversation with live state and artifacts. Coding review in that conversation and on the Run inspector lists files for keyboard selection, labels cumulative diffs against the task base, and links the stored patch artifact without changing commit or publication permissions. The assistant shares domain services with workspaces; it cannot bypass their permissions, resource scheduling or native boundaries.
+The default entry point is the [platform assistant](orchestrator.md). Dedicated workspaces remain available. Conversation intent is compiled into typed capability actions, dispatched as ordinary Runs, and projected back into the conversation with live state and artifacts. Coding review in that conversation and on the Run inspector lists files as a keyboard listbox that shows only the selected patch, labels cumulative diffs against the task base, and links the stored patch artifact without changing commit or publication permissions. That file list reuses the shared list keyboard; Enter does not open a Run. The assistant shares domain services with workspaces; it cannot bypass their permissions, resource scheduling or native boundaries.
 
 ## Owned llama.cpp instances
 
