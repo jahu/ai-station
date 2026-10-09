@@ -424,3 +424,7 @@ Frontend lint, TypeScript, 171 component tests and production build passed. Codi
 ## Chat this-turn execution mode keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 175 component tests and production build passed. Chat this-turn execution mode reuses `useListKeyboard` with unique Turn names. Space or Enter selects Conversation default, Conversation only or Platform assistant and does not send or PATCH conversation settings. Saved conversation Mode remains the existing settings select. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Images/Audio/Avatars GPU target keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 177 component tests and production build passed. Images, Audio and Avatars GPU targets reuse `useListKeyboard` with unique Target GPU names. Space or Enter selects Auto or a discovered GPU and does not queue a photo, speech or avatar Run. llama.cpp allocation checkboxes remain the existing sequence. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

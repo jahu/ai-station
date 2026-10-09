@@ -8,6 +8,7 @@ import { Button } from "../components/ui/button";
 import MediaInput from "../components/media/MediaInput";
 import MediaResult from "../components/media/MediaResult";
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
+import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 
 export default function Avatars({ video = false }: { video?: boolean }) {
   const [search, setSearch] = useSearchParams();
@@ -170,20 +171,15 @@ export default function Avatars({ video = false }: { video?: boolean }) {
                   />
                 </label>
               </div>
-              <label>
-                GPU
-                <select
+              <div>
+                <span>GPU</span>
+                <GpuTargetChoiceList
                   value={gpu}
-                  onChange={(event) => setGpu(event.target.value)}
-                >
-                  <option value="auto">Auto · available GPU</option>
-                  {hardware.data?.gpus.map((device) => (
-                    <option key={device.index} value={device.index}>
-                      GPU {device.index} · {device.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  gpus={hardware.data?.gpus ?? []}
+                  disabled={uploading || busy}
+                  onChange={setGpu}
+                />
+              </div>
               <ErrorNotice error={hardware.error} />
             </details>
             <ErrorNotice error={generate.error} />

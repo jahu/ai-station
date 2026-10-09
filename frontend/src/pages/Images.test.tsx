@@ -46,11 +46,21 @@ it("queues Juggernaut parameters and opens the durable run", async () => {
     target: { value: "A forest" },
   });
   fireEvent.change(screen.getByLabelText("Seed"), { target: { value: "123" } });
+  await screen.findByLabelText("Target GPU 7");
+  const gpuList = screen.getByLabelText("Target GPU auto").closest(
+    ".gpu-target-choice-list",
+  ) as HTMLElement;
+  fireEvent.keyDown(gpuList, { key: "End" });
+  fireEvent.keyDown(gpuList, { key: "Enter" });
   fireEvent.click(screen.getByRole("button", { name: "Queue generate" }));
   await screen.findByRole("heading", { name: "Run inspector" });
   expect(fetch).toHaveBeenCalledWith(
     "/api/images/runs",
     expect.objectContaining({ body: expect.stringContaining('"seed":123') }),
+  );
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/images/runs",
+    expect.objectContaining({ body: expect.stringContaining('"gpu":"7"') }),
   );
 });
 it("attaches a Library image for Edit without another upload", async () => {
