@@ -1,6 +1,6 @@
 import DashboardActivity from "./DashboardActivity";
-import { useId } from "react";
-import { Link } from "react-router-dom";
+import { useId, type KeyboardEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -21,7 +21,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { api, type GPU, type Sample, useHardware, useStatus } from "../api";
+import {
+  api,
+  type GPU,
+  type Hardware,
+  type Sample,
+  useHardware,
+  useStatus,
+} from "../api";
 import { useListKeyboard } from "./useListKeyboard";
 import {
   Empty,
@@ -114,6 +121,122 @@ function GpuCards({ gpus }: { gpus: GPU[] }) {
   );
 }
 
+function MetricCards({
+  data,
+  active,
+  queued,
+}: {
+  data?: Hardware;
+  active: number | null;
+  queued: number;
+}) {
+  const labelId = useId();
+  const navigate = useNavigate();
+  const items = [
+    { key: "cpu" },
+    { key: "memory" },
+    { key: "storage" },
+    { key: "runs" },
+  ];
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    items,
+    (item) => item.key,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key !== "Enter" || event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    event.preventDefault();
+    if (items[index]?.key === "runs") navigate("/runs");
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a host metric while the list is focused. Enter
+        inspects Runs from that card. CPU, memory and storage stay on Home.
+        There is no inspectable telemetry Run.
+      </p>
+      <div
+        ref={listRef}
+        className="metrics-grid"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        <section
+          className="panel metric"
+          aria-label="Metric CPU"
+          {...itemProps(0, "cpu")}
+        >
+          <Cpu size={18} />
+          <span>CPU utilization</span>
+          <strong>{number(data?.cpu.utilization, "%")}</strong>
+          <Meter
+            value={data?.cpu.utilization ?? null}
+            label="CPU utilization"
+          />
+        </section>
+        <section
+          className="panel metric"
+          aria-label="Metric memory"
+          {...itemProps(1, "memory")}
+        >
+          <MemoryStick size={18} />
+          <span>System memory</span>
+          <strong>
+            {data ? `${(data.memory.used_mib / 1024).toFixed(1)} GB` : "—"}
+          </strong>
+          <small>
+            of {data ? (data.memory.total_mib / 1024).toFixed(1) : "—"} GB
+          </small>
+          <Meter
+            value={data?.memory.used_mib ?? null}
+            total={data?.memory.total_mib}
+            label="System memory"
+          />
+        </section>
+        <section
+          className="panel metric"
+          aria-label="Metric storage"
+          {...itemProps(2, "storage")}
+        >
+          <HardDrive size={18} />
+          <span>Storage available</span>
+          <strong>
+            {data ? `${(data.disk.free_bytes / 1024 ** 3).toFixed(0)} GB` : "—"}
+          </strong>
+          <small>application data volume</small>
+          <Meter
+            value={data?.disk.used_bytes ?? null}
+            total={data?.disk.total_bytes}
+            label="Storage used"
+          />
+        </section>
+        <section
+          className="panel metric"
+          aria-label="Metric runs"
+          {...itemProps(3, "runs")}
+        >
+          <Layers size={18} />
+          <span>Runs in progress</span>
+          <strong>
+            {active == null ? "—" : active} <em>active</em>
+          </strong>
+          <small>{queued} waiting in queue</small>
+          <Link
+            to="/runs"
+            className="text-link"
+            tabIndex={index === 3 ? 0 : -1}
+            aria-label="Inspect runs"
+          >
+            Inspect runs <ArrowUpRight size={14} />
+          </Link>
+        </section>
+      </div>
+    </>
+  );
+}
+
 export default function Dashboard() {
   const hardware = useHardware();
   const status = useStatus();
@@ -184,56 +307,11 @@ export default function Dashboard() {
           </span>
         </div>
       {data ? <GpuCards gpus={data.gpus} /> : null}
-      <div className="metrics-grid">
-        <section className="panel metric" aria-label="CPU utilization">
-          <Cpu size={18} />
-          <span>CPU utilization</span>
-          <strong>{number(data?.cpu.utilization, "%")}</strong>
-          <Meter
-            value={data?.cpu.utilization ?? null}
-            label="CPU utilization"
-          />
-        </section>
-        <section className="panel metric" aria-label="System memory">
-          <MemoryStick size={18} />
-          <span>System memory</span>
-          <strong>
-            {data ? `${(data.memory.used_mib / 1024).toFixed(1)} GB` : "—"}
-          </strong>
-          <small>
-            of {data ? (data.memory.total_mib / 1024).toFixed(1) : "—"} GB
-          </small>
-          <Meter
-            value={data?.memory.used_mib ?? null}
-            total={data?.memory.total_mib}
-            label="System memory"
-          />
-        </section>
-        <section className="panel metric" aria-label="Storage available">
-          <HardDrive size={18} />
-          <span>Storage available</span>
-          <strong>
-            {data ? `${(data.disk.free_bytes / 1024 ** 3).toFixed(0)} GB` : "—"}
-          </strong>
-          <small>application data volume</small>
-          <Meter
-            value={data?.disk.used_bytes ?? null}
-            total={data?.disk.total_bytes}
-            label="Storage used"
-          />
-        </section>
-        <section className="panel metric" aria-label="Runs in progress">
-          <Layers size={18} />
-          <span>Runs in progress</span>
-          <strong>
-            {status.data ? active : "—"} <em>active</em>
-          </strong>
-          <small>{counts.queued ?? 0} waiting in queue</small>
-          <Link to="/runs" className="text-link">
-            Inspect runs <ArrowUpRight size={14} />
-          </Link>
-        </section>
-        </div>
+      <MetricCards
+        data={data}
+        active={status.data ? active : null}
+        queued={counts.queued ?? 0}
+      />
       </section>
       <div className="dashboard-bottom">
         <section className="panel" aria-labelledby="resource-activity-heading">
