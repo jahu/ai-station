@@ -24,7 +24,7 @@ class AgentSettings(BaseModel):
     search_query: str = Field(default="", max_length=500)
     fetch_urls: list[str] = Field(default_factory=list, max_length=3)
     tools: list[str] = Field(default_factory=list, max_length=6)
-    skills: list[str] = Field(default_factory=list, max_length=0)
+    skills: list[str] = Field(default_factory=list, max_length=4)
     memory_scope: Literal["agent"] = "agent"
     trigger: Literal["manual", "cron", "interval", "datetime"] = "manual"
     cron_expr: str = Field(default="", max_length=120)
@@ -42,6 +42,16 @@ class AgentSettings(BaseModel):
         self.tools = list(dict.fromkeys(self.tools))
         if any(tool not in AGENT_TOOLS for tool in self.tools):
             raise ValueError("Unknown agent tool")
+        self.skills = list(dict.fromkeys(self.skills))
+        if self.skills:
+            from app.agent_tools import effective_permissions
+            from app.skills import SkillError, assert_skill_permissions, snapshot_skills
+
+            try:
+                snapshots = snapshot_skills(self.skills)
+                assert_skill_permissions(snapshots, effective_permissions(self.tools))
+            except SkillError as exc:
+                raise ValueError(str(exc)) from exc
         if self.trigger == "cron":
             if len(self.cron_expr.split()) != 5 or not croniter.is_valid(self.cron_expr):
                 raise ValueError("Use a valid five-field UTC cron expression")

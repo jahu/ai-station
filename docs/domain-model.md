@@ -59,6 +59,10 @@ A persistent agent: goal, system prompt, provider, model, tools, skills, memory 
 
 Triggers that exist: `manual`, `cron`, `interval`, `one-shot datetime`. Unimplemented triggers are not presented as working.
 
+## Skill
+
+A versioned `SKILL.md` instruction pack under the skills root. Agents store selected ids; Runs snapshot hashes and inject the text. Skills are not executables and do not grant permissions.
+
 ## Approval
 
 A pause record for a sensitive action: action, reason, risk, requesting run, timestamps, and resolution. The run waits in `waiting_for_approval`.
