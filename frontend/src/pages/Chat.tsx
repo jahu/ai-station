@@ -37,6 +37,7 @@ import {
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
 import { useListKeyboard } from "./useListKeyboard";
+import { TurnModeChoiceList } from "./TurnModeChoiceList";
 
 type Conversation = {
   id: string;
@@ -974,31 +975,20 @@ function ConversationView({
               }
             }}
           />
-          <label>
-            This turn
-            <select
-              aria-label="This turn"
+          <div>
+            <span>This turn</span>
+            <TurnModeChoiceList
               value={turnMode}
+              orchestrator={orchestrator}
               disabled={busy}
-              onChange={(event) => {
-                const next = event.target.value as typeof turnMode;
+              onChange={(next) => {
                 setTurnMode(next);
-                if (
-                  next === "local" ||
-                  (next === "auto" && !orchestrator)
-                ) {
+                if (next === "local" || (next === "auto" && !orchestrator)) {
                   setOptions(emptyOptions);
                 }
               }}
-            >
-              <option value="auto">
-                Conversation default (
-                {orchestrator ? "Platform assistant" : "Conversation only"})
-              </option>
-              <option value="local">Conversation only</option>
-              <option value="orchestrator">Platform assistant</option>
-            </select>
-          </label>
+            />
+          </div>
           {assistantTurn && (
             <AssistantActions
               value={options}

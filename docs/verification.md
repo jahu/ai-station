@@ -420,3 +420,7 @@ Frontend lint, TypeScript, 167 component tests and production build passed. Auto
 ## Local AI repair budget keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 171 component tests and production build passed. Coding and assistant Local AI repair budgets reuse `useListKeyboard` with unique Repair names. Space or Enter selects the focused budget and does not start a coding Run. Automatic repair still uses the existing `max_repair_attempts` field; Cursor and Codex still have no repair budget. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Chat this-turn execution mode keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 175 component tests and production build passed. Chat this-turn execution mode reuses `useListKeyboard` with unique Turn names. Space or Enter selects Conversation default, Conversation only or Platform assistant and does not send or PATCH conversation settings. Saved conversation Mode remains the existing settings select. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
