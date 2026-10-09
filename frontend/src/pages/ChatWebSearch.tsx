@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type KeyboardEvent } from "react";
 import { Globe, ExternalLink } from "lucide-react";
 import { useListKeyboard } from "./useListKeyboard";
 
@@ -22,21 +22,51 @@ export function WebSearchControl({
   onToggle: (enabled: boolean) => void;
   onQuery: (query: string) => void;
 }) {
+  const labelId = useId();
+  const items = ["web_search"] as const;
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    [...items],
+    (item) => item,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    event.preventDefault();
+    onToggle(!enabled);
+  };
   return (
     <div className="chat-web-search">
-      <button
-        type="button"
-        role="switch"
-        aria-checked={enabled}
-        aria-label="Search the web"
-        disabled={busy}
-        className="web-search-toggle"
-        onClick={() => onToggle(!enabled)}
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose the search toggle while the list is focused. Space or
+        Enter selects it. Enter does not send. History and attachments stay
+        local. There is no inspectable search-toggle Run.
+      </p>
+      <div
+        ref={listRef}
+        className="web-search-choice-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
       >
-        <Globe size={16} />
-        <span>Search the web</span>
-        <span className="chip">{enabled ? "ON" : "OFF"}</span>
-      </button>
+        <div aria-label="Search web_search" {...itemProps(0, "web_search")}>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={enabled}
+            aria-label="Search the web"
+            disabled={busy}
+            tabIndex={index === 0 ? 0 : -1}
+            className="web-search-toggle"
+            onClick={() => onToggle(!enabled)}
+          >
+            <Globe size={16} />
+            <span>Search the web</span>
+            <span className="chip">{enabled ? "ON" : "OFF"}</span>
+          </button>
+        </div>
+      </div>
       {enabled && (
         <div className="web-search-query">
           <label>
