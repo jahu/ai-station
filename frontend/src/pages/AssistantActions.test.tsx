@@ -351,9 +351,13 @@ it("requires an in-conversation proposal and review before commit action is read
   );
   chooseAction("coding.commit");
   expect(screen.getByTestId("commit").textContent).toBe("null");
-  fireEvent.change(screen.getByLabelText("Commit proposal"), {
-    target: { value: "proposal" },
-  });
+  const proposalList = screen
+    .getByLabelText("Proposal proposal")
+    .closest(".proposal-choice-list") as HTMLElement;
+  fireEvent.keyDown(proposalList, { key: "Enter" });
+  expect(
+    screen.getByText(/There is no inspectable proposal-selection Run/),
+  ).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Commit message"), {
     target: { value: "Accept reviewed edits" },
   });
