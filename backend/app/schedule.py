@@ -49,6 +49,12 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
         raise ValueError("web_search requires an explicit public search query")
     if "http_fetch" in definition.tools and not definition.fetch_urls:
         raise ValueError("http_fetch requires 1 to 3 explicit public URLs")
+    from app.skills import SkillError, snapshot_skills
+
+    try:
+        skill_snapshots = snapshot_skills(definition.skills)
+    except SkillError as exc:
+        raise ValueError(str(exc)) from exc
     endpoint = model_endpoint(agent.model, session)
     task = create_task(
         session,
@@ -66,7 +72,11 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
         capability="agent.execute",
         executor_type="agent",
         execution_target="container",
-        parameters={"definition": definition.model_dump(mode="json"), "endpoint": endpoint},
+        parameters={
+            "definition": definition.model_dump(mode="json"),
+            "endpoint": endpoint,
+            "skill_snapshots": skill_snapshots,
+        },
         permissions=effective_permissions(agent.tools),
         retry_class="inspect",
         triggered_by=triggered_by,

@@ -46,6 +46,7 @@ from app.reviewed_commits import router as commit_router
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, request_cancel, run_dict
 from app.runtime_registry import router as runtime_router
+from app.skills import router as skill_router
 from app.state import TERMINAL, InvalidTransition, RunStatus
 from app.telemetry_store import history
 
@@ -293,6 +294,7 @@ app.include_router(project_router)
 app.include_router(memory_router)
 app.include_router(model_router)
 app.include_router(agent_router)
+app.include_router(skill_router)
 app.include_router(runtime_router)
 app.include_router(llama_router)
 

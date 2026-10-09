@@ -24,6 +24,7 @@ interface Agent {
   tools: string[];
   search_query: string;
   fetch_urls: string[];
+  skills: string[];
   trigger: Trigger;
   cron_expr: string;
   interval_seconds: number | null;
@@ -45,6 +46,14 @@ interface Tool {
   description: string;
   operational: boolean;
   required_permissions: string[];
+}
+interface Skill {
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  required_permissions: string[];
+  instructions: string;
 }
 const json = (method: string, body: unknown) => ({
   method,
@@ -242,6 +251,7 @@ export function AgentDetail() {
       >
         {agent.enabled ? "Enabled" : "Paused / draft"} · {schedule(agent)} ·{" "}
         {agent.model || "No model selected"}
+        {agent.skills?.length ? ` · Skills: ${agent.skills.join(", ")}` : ""}
       </PageTitle>
       <section className="panel agent-form">
         <div className="row">
@@ -332,6 +342,10 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
     queryKey: ["agent-tools"],
     queryFn: () => api<Tool[]>("/agents/tools"),
   });
+  const skills = useQuery({
+    queryKey: ["skills"],
+    queryFn: () => api<Skill[]>("/skills"),
+  });
   const update = <K extends keyof Agent>(key: K, value: Agent[K]) =>
     setValues((current) => ({ ...current, [key]: value }));
   const save = useMutation({
@@ -348,6 +362,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           tools: values.tools,
           search_query: values.search_query ?? "",
           fetch_urls: parseFetchUrls(fetchText),
+          skills: values.skills ?? [],
           trigger: values.trigger,
           cron_expr: values.trigger === "cron" ? values.cron_expr : "",
           interval_seconds:
@@ -551,8 +566,8 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             <p className="muted">
               Each execution GETs these exact public http(s) pages (at most
               three). Private, loopback and link-local addresses are blocked
-              after DNS. JavaScript is not executed. Your goal, memory and
-              other context stay with the local model.
+              after DNS. JavaScript is not executed. Your goal, memory and other
+              context stay with the local model.
             </p>
             <span className="chip">Network permission · GET public pages</span>
           </section>
@@ -565,6 +580,51 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             delete them in Memory.
           </p>
         )}
+        <div className="agent-wide">
+          <h3>Skills</h3>
+          <p className="muted">
+            Versioned instruction packs from the skills directory. They do not
+            grant tools, permissions or shell access. At most four. Review the
+            text before enabling the agent.
+          </p>
+          {!skills.data?.length && (
+            <p className="muted">
+              No skills are installed. Add a SKILL.md under the configured
+              skills directory to make one selectable.
+            </p>
+          )}
+          {skills.data?.map((skill) => (
+            <div key={skill.id}>
+              <label className="agent-tool">
+                <input
+                  type="checkbox"
+                  checked={(values.skills ?? []).includes(skill.id)}
+                  onChange={(e) =>
+                    update(
+                      "skills",
+                      e.target.checked
+                        ? [...(values.skills ?? []), skill.id]
+                        : (values.skills ?? []).filter((id) => id !== skill.id),
+                    )
+                  }
+                />
+                <span>
+                  <strong>{skill.name}</strong>{" "}
+                  <small>
+                    {skill.id} {skill.version}. {skill.description}{" "}
+                    {skill.required_permissions.join(", ")}
+                  </small>
+                </span>
+              </label>
+              {(values.skills ?? []).includes(skill.id) && (
+                <details className="agent-skill-text">
+                  <summary>Review instructions</summary>
+                  <pre>{skill.instructions}</pre>
+                </details>
+              )}
+            </div>
+          ))}
+        </div>
         <div className="agent-wide">
           <h3>Tools</h3>
           <p className="muted">
@@ -605,7 +665,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           ))}
         </div>
       </fieldset>
-      <ErrorNotice error={save.error ?? tools.error} />
+      <ErrorNotice error={save.error ?? tools.error ?? skills.error} />
       <div>
         <Button disabled={active || stale || modelBusy || save.isPending}>
           Save definition

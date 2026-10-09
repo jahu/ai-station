@@ -2,8 +2,26 @@
 
 from __future__ import annotations
 
+import re
+
 from app.http_fetch import prompt_public_urls
 from app.models import Agent
+from app.skills import SkillError, list_skills
+
+
+def _mentioned_skills(text: str) -> list[str]:
+    lowered = text.lower()
+    try:
+        catalog = list_skills()
+    except SkillError:
+        return []
+    found = []
+    for skill in catalog:
+        if re.search(rf"(?<![a-z0-9-]){re.escape(skill.id)}(?![a-z0-9-])", lowered) or (
+            skill.name.lower() in lowered
+        ):
+            found.append(skill.id)
+    return found[:4]
 
 
 def draft_agent(text: str, *, model: str = "") -> Agent:
@@ -48,7 +66,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         maximum_runtime=600,
         tools=tools,
         fetch_urls=fetch_urls,
-        skills=[],
+        skills=_mentioned_skills(text),
         trigger=trigger,
         cron_expr=cron_expr,
         interval_seconds=interval,
