@@ -345,6 +345,96 @@ it("lists persisted workflow steps and keeps cancel available for the active chi
     screen.getByText(/The report may request selected registry tools/i),
   ).toBeTruthy();
 });
+it("moves through workflow steps with arrow keys", async () => {
+  vi.stubGlobal(
+    "EventSource",
+    class {
+      close() {}
+      addEventListener() {}
+    },
+  );
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        String(url).includes("/events") || String(url).includes("/artifacts")
+          ? []
+          : {
+              id: "parent",
+              capability: "agent.workflow",
+              executor_type: "agent_workflow",
+              execution_target: "container",
+              status: "running",
+              created_at: "2026-10-09T12:00:00Z",
+              parameters: {},
+              effective_permissions: [],
+              summary: "",
+              error_type: "",
+              error_message: "",
+              worker_id: null,
+              workflow: {
+                parent_run_id: "parent",
+                mode: "sequential",
+                steps: [
+                  {
+                    run_id: "step-search",
+                    key: "memory_search",
+                    gate: "none",
+                    status: "succeeded",
+                    capability: "agent.step",
+                  },
+                  {
+                    run_id: "step-report",
+                    key: "report",
+                    gate: "none",
+                    status: "running",
+                    capability: "agent.execute",
+                  },
+                ],
+              },
+            },
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/runs/parent"]}>
+        <Routes>
+          <Route path="/runs/:id" element={<RunDetail />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const first = await screen.findByRole("link", {
+    name: "Inspect memory_search step-sea",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect report step-rep",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Workflow steps" })).toBeTruthy();
+  expect(screen.getByText(/Enter inspects its child Run/)).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Cancel run" })).toBeTruthy();
+  fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(
+    screen
+      .getByRole("link", { name: "Inspect report step-rep" })
+      .closest("[data-list-index]"),
+  );
+  fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
 it("retries a failed workflow as a new run instead of replaying the original", async () => {
   vi.stubGlobal(
     "EventSource",

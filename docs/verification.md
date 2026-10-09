@@ -332,3 +332,7 @@ Frontend lint, TypeScript, 129 component tests and production build passed. Unpu
 ## Run event timeline keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 130 component tests and production build passed. The Run inspector Activity/All-events page is one keyboard sequence (arrows, Home, End) with unique Event names including type and sequence. Older and newer paging stays outside the list. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Workflow steps keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 131 component tests and production build passed. Workflow child steps on a parent Run are one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names including the step key and short Run id. Cancel stays outside the list. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
