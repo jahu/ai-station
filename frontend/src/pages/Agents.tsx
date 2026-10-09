@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type KeyboardEvent } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Run } from "../api";
@@ -152,36 +152,10 @@ const schedule = (agent: Agent) =>
 function AgentCards({ agents }: { agents: Agent[] }) {
   const headingId = useId();
   const labelId = useId();
-  const listRef = useRef<HTMLDivElement>(null);
-  const [selectedKey, setSelectedKey] = useState(agents[0]?.id ?? "");
-  const found = agents.findIndex((agent) => agent.id === selectedKey);
-  const index = found >= 0 ? found : 0;
-  const focusItem = (next: number) => {
-    const clamped = Math.max(0, Math.min(agents.length - 1, next));
-    const agent = agents[clamped];
-    if (!agent) return;
-    setSelectedKey(agent.id);
-    const link = listRef.current?.querySelector<HTMLElement>(
-      `[data-agent-index="${clamped}"]`,
-    );
-    link?.focus();
-    link?.scrollIntoView?.({ block: "nearest" });
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
-      event.preventDefault();
-      focusItem(index + 1);
-    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-      event.preventDefault();
-      focusItem(index - 1);
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      focusItem(0);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      focusItem(agents.length - 1);
-    }
-  };
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    agents,
+    (agent) => agent.id,
+  );
   return (
     <section aria-labelledby={headingId}>
       <h2 id={headingId} className="sr-only">
@@ -197,17 +171,13 @@ function AgentCards({ agents }: { agents: Agent[] }) {
         onKeyDown={onKeyDown}
       >
         {agents.map((agent, i) => {
-          const current = i === index;
           return (
             <Link
               className="panel memory-card"
               to={`/agents/${agent.id}`}
               key={agent.id}
               aria-label={`Inspect ${agent.name} ${agent.id.slice(0, 8)}`}
-              aria-current={current ? "true" : undefined}
-              tabIndex={current ? 0 : -1}
-              data-agent-index={i}
-              onFocus={() => setSelectedKey(agent.id)}
+              {...itemProps(i, agent.id)}
             >
               <div className="row">
                 <span className="tiny-tag">LOCAL</span>
