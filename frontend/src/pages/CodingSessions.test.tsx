@@ -76,6 +76,64 @@ it("reopens task history and sends a guarded follow-up to the same conversation"
   ).toBe("/coding/task");
 });
 
+it("moves through follow-up consent without starting a Run", async () => {
+  const task = {
+    id: "task",
+    title: "Build a site",
+    project_name: "Studio",
+    status: "succeeded",
+    active_run_id: null,
+    latest_proposal_id: "proposal",
+    runs: [
+      {
+        id: "proposal",
+        task_id: "task",
+        executor_type: "codex_proposal",
+        status: "succeeded",
+        created_at: "2026-10-08T00:00:00Z",
+        parameters: { prompt: "Build my homepage" },
+        summary: "Homepage created",
+        metadata: { execution_location: "external" },
+      },
+    ],
+  };
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () => (path === "/api/coding/sessions" ? [task] : task),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/coding/task"]}>
+        <Routes>
+          <Route path="/coding/:id" element={<CodingSession />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const option = await screen.findByLabelText("Consent external_ai");
+  expect(option.tabIndex).toBe(0);
+  expect(screen.getByText(/There is no inspectable consent Run/)).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Follow-up instruction"), {
+    target: { value: "Add a contact form" },
+  });
+  fireEvent.keyDown(option.closest(".consent-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(
+    (
+      screen.getByRole("checkbox", { name: /Share this turn/ }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).includes("/messages")),
+  ).toBe(true);
+});
+
 it("moves through coding conversations with arrow keys", async () => {
   const row = {
     project_name: "Studio",

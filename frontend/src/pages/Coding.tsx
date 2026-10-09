@@ -8,6 +8,7 @@ import { ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import { CodingHistory } from "./CodingSessions";
 import { FileChoiceList } from "./FileChoiceList";
+import { ConsentChoiceList } from "./ConsentChoiceList";
 import { parseFilePaths } from "./filePaths";
 
 type Project = {
@@ -306,13 +307,12 @@ export default function Coding() {
                 </div>
               </details>
               {!local && (
-                <label className="project-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={external}
-                    onChange={(e) => setExternal(e.target.checked)}
-                    required
-                  />
+                <ConsentChoiceList
+                  checked={external}
+                  required
+                  disabled={create.isPending || modelPending}
+                  onChange={setExternal}
+                >
                   <span>
                     Allow {externalName} to receive this conversation, project
                     guidance and{" "}
@@ -321,7 +321,7 @@ export default function Coding() {
                       : "the selected files"}
                     .
                   </span>
-                </label>
+                </ConsentChoiceList>
               )}
               <Button
                 type="submit"
