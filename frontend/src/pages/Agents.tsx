@@ -31,6 +31,7 @@ interface Agent {
   run_at: string | null;
   maximum_runtime: number;
   output_expectation: string;
+  require_approval: boolean;
   project_id: string | null;
   enabled: boolean;
   updated_at: string;
@@ -281,7 +282,20 @@ export function AgentDetail() {
         <p className="muted">
           Activation uses the saved definition. Pausing stops future scheduling;
           cancel an active execution from its Run page.
+          {agent.require_approval
+            ? " Each Run waits for an explicit approval before tools or inference."
+            : ""}
         </p>
+        {agent.runs?.find((run) => run.status === "waiting_for_approval") && (
+          <p className="notice">
+            A Run is waiting for approval.{" "}
+            <Link
+              to={`/runs/${agent.runs.find((run) => run.status === "waiting_for_approval")!.id}`}
+            >
+              Review it
+            </Link>
+          </p>
+        )}
         <div className="agent-fields">
           <div>Next run: {time(agent.next_run_at)}</div>
           <div>Last run: {time(agent.last_run_at)}</div>
@@ -372,6 +386,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           run_at: values.trigger === "datetime" ? values.run_at : null,
           maximum_runtime: values.maximum_runtime,
           output_expectation: values.output_expectation,
+          require_approval: values.require_approval ?? false,
           project_id: values.project_id,
           enabled: agent.enabled,
         }),
@@ -528,6 +543,21 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             value={values.output_expectation}
             onChange={(e) => update("output_expectation", e.target.value)}
           />
+        </label>
+        <label className="agent-tool agent-wide">
+          <input
+            type="checkbox"
+            checked={values.require_approval ?? false}
+            onChange={(e) => update("require_approval", e.target.checked)}
+          />
+          <span>
+            <strong>Require approval before each Run</strong>
+            <small>
+              Manual and scheduled executions park in waiting_for_approval. The
+              worker does not start tools or inference until you grant the Run.
+              Deny or cancel leaves no report.
+            </small>
+          </span>
         </label>
         {values.tools.includes("web_search") && (
           <section className="agent-wide agent-search-settings">

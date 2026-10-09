@@ -110,7 +110,7 @@ it("keeps a draft inactive and makes unsupported tools inspectable and removable
     (screen.getByRole("button", { name: "Run now" }) as HTMLButtonElement)
       .disabled,
   ).toBe(true);
-  const checkbox = await screen.findByRole("checkbox");
+  const checkbox = await screen.findByRole("checkbox", { name: /web_search/i });
   expect((checkbox as HTMLInputElement).checked).toBe(true);
   fireEvent.click(checkbox);
   expect((checkbox as HTMLInputElement).checked).toBe(false);
@@ -308,7 +308,7 @@ it("lets a reviewer attach an installed skill without showing extra tools", asyn
   });
   vi.stubGlobal("fetch", fetch);
   mount(true);
-  const box = await screen.findByRole("checkbox");
+  const box = await screen.findByRole("checkbox", { name: /Daily brief/i });
   fireEvent.click(box);
   expect(await screen.findByText("Always mention GPU memory.")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Save definition" }));
@@ -321,5 +321,67 @@ it("lets a reviewer attach an installed skill without showing extra tools", asyn
     skills: ["daily-brief"],
     enabled: false,
     tools: [],
+  });
+});
+it("saves an explicit approval requirement without enabling the draft", async () => {
+  let agent = {
+    id: "draft",
+    name: "Guarded",
+    description: "",
+    goal: "Summarize the workstation",
+    system_prompt: "",
+    model: "local",
+    search_query: "",
+    fetch_urls: [] as string[],
+    skills: [] as string[],
+    tools: [] as string[],
+    require_approval: false,
+    trigger: "manual",
+    interval_seconds: null,
+    cron_expr: "",
+    run_at: null,
+    maximum_runtime: 600,
+    output_expectation: "Report",
+    project_id: null,
+    enabled: false,
+    updated_at: "2026-10-09T12:00:00Z",
+    next_run_at: null,
+    last_run_at: null,
+    last_status: "",
+    failure_count: 0,
+    effective_permissions: [] as string[],
+    runs: [],
+  };
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => {
+    if (options) agent = { ...agent, ...JSON.parse(options.body as string) };
+    return {
+      ok: true,
+      json: async () =>
+        url.endsWith("/llama")
+          ? { models: [], instances: [] }
+          : url.endsWith("/chat/provider")
+            ? { models: ["local"], default_model: "local" }
+            : url.includes("/skills")
+              ? []
+              : url.endsWith("/tools")
+                ? []
+                : agent,
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  const box = await screen.findByRole("checkbox", {
+    name: /Require approval before each Run/i,
+  });
+  fireEvent.click(box);
+  fireEvent.click(screen.getByRole("button", { name: "Save definition" }));
+  await vi.waitFor(() =>
+    expect(fetch.mock.calls.filter((c) => c[1])).toHaveLength(1),
+  );
+  expect(
+    JSON.parse(fetch.mock.calls.find((c) => c[1])![1]!.body as string),
+  ).toMatchObject({
+    require_approval: true,
+    enabled: false,
   });
 });

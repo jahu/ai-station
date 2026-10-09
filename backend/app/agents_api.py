@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.agent_schema import AgentSettings
 from app.agent_tools import AGENT_TOOLS, agent_tool, effective_permissions
+from app.approvals import run_public
 from app.db import session_scope, utcnow
 from app.factory import draft_agent
 from app.local_provider import model_endpoint
@@ -169,7 +170,7 @@ def run_now(agent_id: UUID, body: VersionBody, session: DB):
     except (ValueError, ProviderError) as exc:
         raise HTTPException(409, str(exc)) from exc
     session.commit()
-    return run_dict(session.get(Run, run_id))
+    return run_public(session, session.get(Run, run_id))
 
 
 @router.post("/{agent_id}/duplicate", status_code=201)

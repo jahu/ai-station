@@ -35,6 +35,7 @@ class AgentSettings(BaseModel):
     execution_target: Literal["container"] = "container"
     maximum_runtime: int = Field(default=600, ge=5, le=3600)
     output_expectation: str = Field(default="A concise, factual report.", max_length=4000)
+    require_approval: StrictBool = False
     enabled: StrictBool = False
 
     @model_validator(mode="after")

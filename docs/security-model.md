@@ -50,7 +50,7 @@ Discovered llama.cpp, Ollama, or ComfyUI processes are `external`. Discovery nev
 
 ## Autonomy
 
-Agent drafts are created disabled. The UI shows prompt, tools, permissions, and schedule before enablement. Sensitive side effects pause in `waiting_for_approval`.
+Agent drafts are created disabled. The UI shows prompt, tools, permissions, and schedule before enablement. Optional per-Run approval parks execution in `waiting_for_approval` until the user grants or denies it; the worker does not start parked Runs. GitHub publication still requires an explicit granted Approval at enqueue.
 
 ## Image boundaries
 

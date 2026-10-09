@@ -145,6 +145,7 @@ def agent_dict(agent: Agent) -> dict:
         "retry_policy": agent.retry_policy,
         "notification_policy": agent.notification_policy,
         "output_expectation": agent.output_expectation,
+        "require_approval": agent.require_approval,
         "enabled": agent.enabled,
         "last_run_at": iso(agent.last_run_at),
         "next_run_at": iso(agent.next_run_at),
