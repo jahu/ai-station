@@ -188,3 +188,7 @@ Frontend lint, TypeScript, 93 component tests and production build passed. Skip 
 ## Coding review keyboard, cumulative totals and artifacts — 2026-10-09
 
 Frontend lint, TypeScript, 96 component tests and production build passed. Review lists files for arrow-key selection, shows one selected patch, labels cumulative totals against the task base, and links the stored `changes.diff` / review JSON artifacts. Commit, repair and publication still use the existing endpoints. No Python or Host Runner changes. Pre-existing Prettier drift in unrelated files was left untouched. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Route announcements after navigation — 2026-10-09
+
+Frontend lint, TypeScript, 96 component tests and production build passed. In-app navigation updates `document.title` to `{workspace} · AI Station` and a polite live region announces `{workspace} workspace` after the first load. Skip-link focus is unchanged. Overlay focus traps were already Radix Dialogs and were not reimplemented. Remaining keyboard, label and contrast work stays open. No Python changes. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

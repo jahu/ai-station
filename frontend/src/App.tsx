@@ -119,6 +119,7 @@ function Unavailable() {
 
 export default function App() {
   const [open, setOpen] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const firstPath = useRef(true);
@@ -126,7 +127,7 @@ export default function App() {
   const page =
     destinations.find(
       ([path]) => path !== "/" && location.pathname.startsWith(path),
-    )?.[1] ?? "Chat";
+    )?.[1] ?? (location.pathname === "/" ? "Chat" : "Workspace");
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -138,12 +139,16 @@ export default function App() {
     return () => document.removeEventListener("keydown", listener);
   }, []);
   useEffect(() => {
+    document.title = `${page} · AI Station`;
+  }, [page]);
+  useEffect(() => {
     if (firstPath.current) {
       firstPath.current = false;
       return;
     }
     document.getElementById("main")?.focus();
-  }, [location.pathname]);
+    setAnnouncement(`${page} workspace`);
+  }, [location.pathname, page]);
   return (
     <div className="app-shell">
       <a
@@ -242,6 +247,14 @@ export default function App() {
             </button>
           </div>
         </header>
+        <div
+          id="route-announcer"
+          className="sr-only"
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {announcement}
+        </div>
         <main id="main" tabIndex={-1}>
           <Routes>
             <Route path="/" element={<Chat assistant />} />
