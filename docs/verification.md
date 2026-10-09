@@ -228,3 +228,7 @@ Frontend lint, TypeScript, 99 component tests and production build passed. After
 ## Home notice Mark read — 2026-10-09
 
 Frontend lint, TypeScript, 102 component tests and production build passed. Home **Mark read** posts the existing `/api/notices/{id}/read` body `{ "read": true }` and does not retry, restore or replay the related Run. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Home parked-run Approve and Deny — 2026-10-09
+
+Frontend lint, TypeScript, 104 component tests and production build passed. Home **Approve and queue** / **Deny** post the existing `/api/runs/{id}/approval` resolutions `granted` and `denied`. Granting queues the parked Run; it does not start tools or inference from Home. Deny cancels it. Stop is not offered for `waiting_for_approval`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

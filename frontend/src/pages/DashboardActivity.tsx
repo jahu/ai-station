@@ -73,13 +73,7 @@ interface Overview {
   }[];
 }
 
-const CANCELABLE = new Set([
-  "queued",
-  "claimed",
-  "preparing",
-  "running",
-  "waiting_for_approval",
-]);
+const CANCELABLE = new Set(["queued", "claimed", "preparing", "running"]);
 
 type AttentionItem = {
   key: string;
@@ -87,7 +81,7 @@ type AttentionItem = {
   title: string;
   detail: string;
   status?: string;
-  action?: "acknowledge" | "stop" | "stopping" | "read";
+  action?: "acknowledge" | "stop" | "stopping" | "read" | "approve";
   runId?: string;
   noticeId?: string;
 };
@@ -185,9 +179,11 @@ function attentionAction(
     acknowledgePending: boolean;
     cancelPending: boolean;
     readPending: boolean;
+    decidePending: boolean;
     onAcknowledge: (runId: string) => void;
     onStop: (runId: string) => void;
     onRead: (noticeId: string) => void;
+    onDecide: (runId: string, resolution: "granted" | "denied") => void;
     onSelect: () => void;
   },
 ) {
@@ -241,6 +237,33 @@ function attentionAction(
       </Button>
     );
   }
+  if (item.action === "approve" && runId) {
+    return (
+      <>
+        <Button
+          type="button"
+          tabIndex={current ? 0 : -1}
+          disabled={handlers.decidePending}
+          aria-label={`Approve and queue ${item.title}`}
+          onFocus={handlers.onSelect}
+          onClick={() => handlers.onDecide(runId, "granted")}
+        >
+          Approve and queue
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          tabIndex={current ? 0 : -1}
+          disabled={handlers.decidePending}
+          aria-label={`Deny ${item.title}`}
+          onFocus={handlers.onSelect}
+          onClick={() => handlers.onDecide(runId, "denied")}
+        >
+          Deny
+        </Button>
+      </>
+    );
+  }
   return undefined;
 }
 
@@ -249,17 +272,21 @@ function AttentionList({
   acknowledgePending,
   cancelPending,
   readPending,
+  decidePending,
   onAcknowledge,
   onStop,
   onRead,
+  onDecide,
 }: {
   items: AttentionItem[];
   acknowledgePending: boolean;
   cancelPending: boolean;
   readPending: boolean;
+  decidePending: boolean;
   onAcknowledge: (runId: string) => void;
   onStop: (runId: string) => void;
   onRead: (noticeId: string) => void;
+  onDecide: (runId: string, resolution: "granted" | "denied") => void;
 }) {
   const labelId = useId();
   const listRef = useRef<HTMLUListElement>(null);
@@ -301,7 +328,8 @@ function AttentionList({
     <>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose an item while the list is focused. Enter inspects it.
-        Stop, Mark inspected and Mark read stay on the selected row.
+        Stop, Mark inspected, Mark read, Approve and Deny stay on the selected
+        row.
       </p>
       <ul
         ref={listRef}
@@ -327,9 +355,11 @@ function AttentionList({
                 acknowledgePending,
                 cancelPending,
                 readPending,
+                decidePending,
                 onAcknowledge,
                 onStop,
                 onRead,
+                onDecide,
                 onSelect: () => setSelectedKey(item.key),
               })}
             />
@@ -379,6 +409,24 @@ export default function DashboardActivity() {
       void cache.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
+  const decide = useMutation({
+    mutationFn: ({
+      runId,
+      resolution,
+    }: {
+      runId: string;
+      resolution: "granted" | "denied";
+    }) =>
+      api(`/runs/${runId}/approval`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolution }),
+      }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["dashboard"] });
+      void cache.invalidateQueries({ queryKey: ["runs"] });
+    },
+  });
   const data = query.data;
   const interrupted = data?.interrupted_runs ?? [];
   const notices = data?.notices ?? [];
@@ -410,14 +458,17 @@ export default function DashboardActivity() {
       title: run.title,
       detail:
         run.status === "waiting_for_approval"
-          ? `${run.executor_type} · grant or deny on the Run`
+          ? `${run.executor_type} · grant queues the Run; deny cancels it`
           : `${run.executor_type} · ${run.execution_target}`,
       status: run.status,
-      action: CANCELABLE.has(run.status)
-        ? ("stop" as const)
-        : run.status === "cancel_requested"
-          ? ("stopping" as const)
-          : undefined,
+      action:
+        run.status === "waiting_for_approval"
+          ? ("approve" as const)
+          : CANCELABLE.has(run.status)
+            ? ("stop" as const)
+            : run.status === "cancel_requested"
+              ? ("stopping" as const)
+              : undefined,
       runId: run.id,
     })),
   ];
@@ -426,7 +477,11 @@ export default function DashboardActivity() {
     <div className="dashboard-activity">
       <ErrorNotice
         error={
-          query.error ?? acknowledge.error ?? cancel.error ?? markRead.error
+          query.error ??
+          acknowledge.error ??
+          cancel.error ??
+          markRead.error ??
+          decide.error
         }
       />
       {query.isPending && <Loading />}
@@ -444,14 +499,18 @@ export default function DashboardActivity() {
                 acknowledgePending={acknowledge.isPending}
                 cancelPending={cancel.isPending}
                 readPending={markRead.isPending}
+                decidePending={decide.isPending}
                 onAcknowledge={(runId) => acknowledge.mutate(runId)}
                 onStop={(runId) => cancel.mutate(runId)}
                 onRead={(noticeId) => markRead.mutate(noticeId)}
+                onDecide={(runId, resolution) =>
+                  decide.mutate({ runId, resolution })
+                }
               />
             ) : (
               <Empty title="Nothing needs you right now">
                 Interrupted work, notices and in-progress Runs will appear here
-                with Stop, Mark inspected or Mark read.
+                with Stop, Mark inspected, Mark read, Approve or Deny.
               </Empty>
             )}
           </Section>
