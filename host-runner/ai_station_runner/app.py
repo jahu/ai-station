@@ -46,6 +46,7 @@ from ai_station_runner.publication import (
     publication_report,
     start_publication,
 )
+from ai_station_runner.publication_reconcile import ReconcileRequest, reconcile_report, start_reconcile
 from ai_station_runner.reviewed_commits import CommitRequest, commit_report, start_commit
 from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
@@ -657,6 +658,24 @@ def github_publication_progress(run_id: UUID):
     try:
         return publication_progress(str(run_id))
     except (GitError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.post("/v1/runs/publication-reconcile")
+def publication_reconcile_run(body: ReconcileRequest):
+    try:
+        return {**start_reconcile(manager(), body), "runner_id": get_settings().runner_id}
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (GitError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/runs/publication-reconcile/{run_id}/report")
+def publication_reconcile_report(run_id: UUID):
+    try:
+        return reconcile_report(manager(), str(run_id))
+    except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc
 
 

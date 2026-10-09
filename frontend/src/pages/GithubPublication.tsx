@@ -17,12 +17,16 @@ type Preview = {
   blocked_reason: string | null;
   publication_run_id: string | null;
 };
-type Result = { pr_url?: string; stage?: string };
+type Result = { pr_url?: string; stage?: string; outcome?: string };
 
 export default function GithubPublication({ run }: { run: Run }) {
   if (run.executor_type === "reviewed_commit" && run.status === "succeeded")
     return <PublishCommit run={run} />;
-  if (run.executor_type !== "github_publication") return null;
+  if (
+    run.executor_type !== "github_publication" &&
+    run.executor_type !== "publication_reconcile"
+  )
+    return null;
   const result = (run.metadata?.publication ??
     run.metadata?.publication_progress) as Result | undefined;
   const repository = String(run.parameters.repository);
@@ -48,19 +52,13 @@ export default function GithubPublication({ run }: { run: Run }) {
         >
           Open draft pull request ↗
         </a>
-      ) : ["failed", "interrupted", "canceled"].includes(run.status) ? (
+      ) : run.executor_type === "github_publication" &&
+        ["failed", "interrupted", "canceled"].includes(run.status) ? (
+        <UncertainPublication run={run} repository={repository} />
+      ) : result?.outcome === "not_on_github" ? (
         <p className="notice">
-          Publication stopped. GitHub may already have received the branch or
-          PR.{" "}
-          <a
-            className="text-link"
-            href={`https://github.com/${repository}`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Inspect the repository ↗
-          </a>{" "}
-          before requesting another publication.
+          GitHub does not have this task branch. Publication was not retried and
+          nothing was pushed.
         </p>
       ) : (
         <p className="muted">
@@ -69,6 +67,54 @@ export default function GithubPublication({ run }: { run: Run }) {
         </p>
       )}
     </section>
+  );
+}
+
+function UncertainPublication({
+  run,
+  repository,
+}: {
+  run: Run;
+  repository: string;
+}) {
+  const navigate = useNavigate();
+  const reconcile = useMutation({
+    mutationFn: () =>
+      api<Run>(`/coding/runs/${run.id}/reconcile`, { method: "POST" }),
+    onSuccess: (result) => navigate(`/runs/${result.id}`),
+  });
+  const next = run.metadata?.reconcile_run_id;
+  return (
+    <>
+      <p className="notice">
+        Publication stopped. GitHub may already have the branch or PR. This
+        action inspects GitHub and can open the approved draft PR. It never
+        pushes again.{" "}
+        <a
+          className="text-link"
+          href={`https://github.com/${repository}`}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Inspect the repository ↗
+        </a>
+      </p>
+      {typeof next === "string" ? (
+        <Link className="text-link" to={`/runs/${next}`}>
+          Inspect reconciliation →
+        </Link>
+      ) : (
+        <>
+          <ErrorNotice error={reconcile.error} />
+          <Button
+            disabled={reconcile.isPending}
+            onClick={() => reconcile.mutate()}
+          >
+            {reconcile.isPending ? "Queueing…" : "Reconcile with GitHub"}
+          </Button>
+        </>
+      )}
+    </>
   );
 }
 

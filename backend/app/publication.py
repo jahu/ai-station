@@ -155,6 +155,51 @@ def publish(source_id: UUID, body: PublishBody, session: DB):
     return run_dict(run)
 
 
+@router.post("/runs/{publication_id}/reconcile", status_code=202)
+def reconcile_publication(publication_id: UUID, session: DB):
+    source = session.get(Run, str(publication_id))
+    if source is None or source.executor_type != "github_publication":
+        raise HTTPException(404, "Publication Run not found")
+    if source.status not in {"failed", "interrupted", "canceled"}:
+        raise HTTPException(409, "Reconcile only inspects a stopped publication Run")
+    if source.metadata_json.get("publication", {}).get("pr_url"):
+        raise HTTPException(409, "This publication already recorded a pull request")
+    previous = session.get(Run, source.metadata_json.get("reconcile_run_id", ""))
+    if previous is not None and previous.status not in TERMINAL:
+        raise HTTPException(409, "Reconciliation is already running")
+    if previous is not None and previous.status == "succeeded":
+        raise HTTPException(409, "Reconciliation already recorded GitHub's state; inspect that Run")
+    if not source.metadata_json.get("dispatch_attempted"):
+        raise HTTPException(409, "Publication never reached GitHub")
+    if session.scalar(
+        select(Run.id).where(Run.project_id == source.project_id, Run.status.not_in(TERMINAL)).limit(1)
+    ):
+        raise HTTPException(409, "This project has an active Run")
+    run = create_run(
+        session,
+        source.task,
+        run_type="git",
+        capability="coding.publish.reconcile",
+        executor_type="publication_reconcile",
+        execution_target="host",
+        project_id=source.project_id,
+        parent_run_id=source.id,
+        permissions=list(PublicationReconcileExecutor.permissions),
+        retry_class="inspect",
+        parameters={
+            "publication_run_id": source.id,
+            "source_run_id": source.parameters["source_run_id"],
+            "repository": source.parameters["repository"],
+            "commit": source.parameters["commit"],
+            "base": source.parameters["base"],
+            "branch": source.parameters["branch"],
+        },
+    )
+    source.metadata_json = {**source.metadata_json, "reconcile_run_id": run.id}
+    session.commit()
+    return run_dict(run)
+
+
 class GithubPublicationExecutor(NativeJobExecutor):
     name = "github_publication"
     permissions = ("filesystem_read", "git_read", "git_write", "network_external")
@@ -249,5 +294,73 @@ class GithubPublicationExecutor(NativeJobExecutor):
             "git.pull_request.created",
             {"url": report["pr_url"], "draft": True, "base": report["base"]},
         )
+        transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
+        return "done"
+
+
+class PublicationReconcileExecutor(NativeJobExecutor):
+    name = "publication_reconcile"
+    permissions = ("filesystem_read", "git_read", "network_external")
+    error_type = "PublicationReconcileFailed"
+
+    def payload(self, run):
+        return {
+            "run_id": run.id,
+            "project_id": run.project_id,
+            "permissions": run.effective_permissions,
+            "publication_run_id": run.parameters["publication_run_id"],
+        }
+
+    def start(self, runner, payload):
+        return runner.request("POST", "/v1/runs/publication-reconcile", payload)
+
+    def report(self, runner, run_id):
+        return runner.request("GET", f"/v1/runs/publication-reconcile/{run_id}/report")
+
+    def finish(self, session, run, report):
+        source = session.get(Run, run.parameters["publication_run_id"])
+        if (
+            source is None
+            or source.executor_type != "github_publication"
+            or report["run_id"] != run.id
+            or report["publication_run_id"] != source.id
+            or report["project_id"] != run.project_id
+            or any(report[key] != run.parameters[key] for key in ("repository", "commit", "base", "branch"))
+            or report["outcome"]
+            not in {"not_on_github", "recorded_existing_pr", "created_draft_pr", "recorded_local_report"}
+        ):
+            raise ValueError("Publication reconcile report does not match the queued request")
+        if report["pr_url"] and not re.fullmatch(
+            r"https://github\.com/" + re.escape(run.parameters["repository"]) + r"/pull/[1-9][0-9]*",
+            report["pr_url"],
+        ):
+            raise ValueError("Reconcile reported an unexpected PR URL")
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".json") as handle:
+            json.dump(report, handle)
+            handle.flush()
+            register_file(
+                session,
+                source=Path(handle.name),
+                artifact_type="json",
+                mime_type="application/json",
+                original_filename="github-publication-reconcile.json",
+                run_id=run.id,
+                metadata={"project_id": run.project_id, "outcome": report["outcome"]},
+            )
+        run.metadata_json = {**run.metadata_json, "publication": report}
+        if report["pr_url"]:
+            source.metadata_json = {**source.metadata_json, "publication": report}
+            run.summary = f"Recorded draft PR {report['pr_url']} without pushing again"
+            event = (
+                "git.pull_request.created"
+                if report["outcome"] == "created_draft_pr"
+                else "git.pull_request.recorded"
+            )
+            append_event(
+                session, run.id, event, {"url": report["pr_url"], "draft": True, "base": report["base"]}
+            )
+        else:
+            run.summary = "GitHub does not have this task branch. Publication was not retried."
+        append_event(session, run.id, "git.publication.reconciled", report)
         transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
         return "done"

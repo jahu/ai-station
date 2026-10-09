@@ -1728,6 +1728,7 @@ assert os.environ['GIT_CONFIG_NOSYSTEM']=='1'
 assert os.environ['GH_HOST']=='github.com'
 assert pathlib.Path(os.environ['GIT_DIR']).name=='export.git'
 assert not any(a.startswith('--force') for a in args)
+assert 'push' not in args or name=='git' and 'ls-remote' not in args
 if name=='git':
  op='push' if 'push' in args else 'ls-remote'; index=args.index(op)
  # Real Git must see no source/global URL rewrites or injected helpers.
@@ -1738,6 +1739,8 @@ if name=='git':
   ref=args[-1]
   if ref=='refs/heads/develop':
    print(('0'*40 if state['mode']=='bad_base' else state['parent'])+'\\t'+ref);sys.exit(0)
+  if state.get('pushed') and ref.startswith('refs/heads/ai/'):
+   print(state['pushed']+'\\t'+ref);sys.exit(0)
   sys.exit(2)
  state['push_started']=True;control.write_text(json.dumps(state))
  if state['mode']=='wait':
@@ -1748,6 +1751,13 @@ if name=='git':
  assert ref.startswith('refs/heads/ai/')
  assert subprocess.check_output([real_git,'cat-file','-t',sha],text=True).strip()=='commit'
  state['pushed']=sha;control.write_text(json.dumps(state));sys.exit(0)
+if args[:2]==['pr','list']:
+ head=args[args.index('--head')+1]
+ if state.get('existing_pr'):
+  print(json.dumps([{'url':state['existing_pr'],'number':17,'isDraft':True,'headRefName':head,'baseRefName':'develop','state':'OPEN'}]))
+ else:
+  print('[]')
+ sys.exit(0)
 assert args[:2]==['pr','create']
 assert '--draft' in args and '--no-maintainer-edit' in args
 assert args[args.index('--repo')+1]=='fixture/example'
@@ -1922,6 +1932,79 @@ def test_reviewed_publication_preserves_checkout_approval_and_partial_progress(
             assert '"push"' not in calls.read_text()
     assert (repository / ".git/index").read_bytes() == before
     assert (repository / "README.md").read_text() == "Original repository\n"
+
+
+def test_publication_reconcile_records_or_creates_pr_without_pushing(
+    repository, owned_runner, local_coding_bridge, fake_github
+):
+    import json
+
+    control, calls = fake_github
+    with TestClient(app) as client:
+        project, committed = prepared_publication(client, repository)
+        route = f"/api/coding/runs/{committed['id']}/publication"
+        info = client.get(route).json()
+        body = {key: info[key] for key in ("repository", "commit", "base", "expected_updated_at")}
+        body.update(approved=True, title="Reviewed improvement", body="Verified project checks.")
+        control.write_text(json.dumps({**json.loads(control.read_text()), "mode": "pr_error"}))
+        response = client.post(route, json=body)
+        assert response.status_code == 202, response.text
+        publication_id = response.json()["id"]
+        with session_factory()() as session:
+            tick(session, "publication-pr-error")
+        failed = client.get(f"/api/runs/{publication_id}").json()
+        assert failed["status"] == "failed"
+        assert failed["metadata"]["publication_progress"]["stage"] == "pr_requested"
+        control.write_text(json.dumps({**json.loads(control.read_text()), "mode": "success"}))
+        before = calls.read_text()
+        reconcile = client.post(f"/api/coding/runs/{publication_id}/reconcile")
+        assert reconcile.status_code == 202, reconcile.text
+        with session_factory()() as session:
+            tick(session, "publication-reconcile")
+        result = client.get(f"/api/runs/{reconcile.json()['id']}").json()
+        assert result["status"] == "succeeded", result
+        assert result["metadata"]["publication"]["outcome"] == "created_draft_pr"
+        assert result["metadata"]["publication"]["pr_url"] == "https://github.com/fixture/example/pull/17"
+        recorded = [json.loads(line) for line in calls.read_text()[len(before) :].splitlines() if line]
+        assert all(item["tool"] != "git" or "push" not in item["args"] for item in recorded)
+        assert any(item["tool"] == "gh" and item["args"][:2] == ["pr", "list"] for item in recorded)
+        assert any(item["tool"] == "gh" and item["args"][:2] == ["pr", "create"] for item in recorded)
+        original = client.get(f"/api/runs/{publication_id}").json()
+        assert original["status"] == "failed"
+        assert original["metadata"]["publication"]["pr_url"] == "https://github.com/fixture/example/pull/17"
+        assert client.post(f"/api/coding/runs/{publication_id}/reconcile").status_code == 409
+
+
+def test_publication_reconcile_reports_missing_remote_branch(
+    repository, owned_runner, local_coding_bridge, fake_github
+):
+    import json
+
+    control, calls = fake_github
+    with TestClient(app) as client:
+        project, committed = prepared_publication(client, repository)
+        route = f"/api/coding/runs/{committed['id']}/publication"
+        info = client.get(route).json()
+        body = {key: info[key] for key in ("repository", "commit", "base", "expected_updated_at")}
+        body.update(approved=True, title="Reviewed improvement", body="Verified project checks.")
+        control.write_text(json.dumps({**json.loads(control.read_text()), "mode": "push_error"}))
+        response = client.post(route, json=body)
+        assert response.status_code == 202, response.text
+        publication_id = response.json()["id"]
+        with session_factory()() as session:
+            tick(session, "publication-push-error")
+        before = calls.read_text()
+        reconcile = client.post(f"/api/coding/runs/{publication_id}/reconcile")
+        assert reconcile.status_code == 202, reconcile.text
+        with session_factory()() as session:
+            tick(session, "publication-reconcile-missing")
+        result = client.get(f"/api/runs/{reconcile.json()['id']}").json()
+        assert result["status"] == "succeeded", result
+        assert result["metadata"]["publication"]["outcome"] == "not_on_github"
+        assert result["metadata"]["publication"]["pr_url"] is None
+        recorded = [json.loads(line) for line in calls.read_text()[len(before) :].splitlines() if line]
+        assert all("push" not in item["args"] for item in recorded)
+        assert not any(item["tool"] == "gh" and item["args"][:2] == ["pr", "create"] for item in recorded)
 
 
 @pytest.mark.skipif(
