@@ -396,3 +396,7 @@ Frontend lint, TypeScript, 154 component tests and production build passed. Memo
 ## Conversation auto-summary keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 155 component tests and production build passed. Automatic conversation-memory maintenance reuses `useListKeyboard` with a unique Summary name. Space or Enter selects it, PATCHes the existing opt-in, and does not POST a summary Run. Manual Update summary and disabled-memory suppression are unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Project Git policy keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 156 component tests and production build passed. Project Git workflow policy checkboxes reuse `useListKeyboard` with unique Policy names. Space or Enter selects commit, push or integration-PR intent and does not invent a Git Run. Force push, production PRs and automatic merge stay disabled. Saving still does not commit, push or open a PR. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
