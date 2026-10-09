@@ -5,6 +5,7 @@ import { ImagePlus, Sparkles, X } from "lucide-react";
 import { api, useHardware, type Artifact, type Run } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
+import LibraryPicker from "../components/media/LibraryPicker";
 
 const modes = {
   t2i: "Generate",
@@ -218,6 +219,31 @@ function ImageForm({
                   }}
                 />
               </label>
+              <LibraryPicker
+                kind="image"
+                existing={ids}
+                limit={(mode === "recompose" ? 8 : 1) - ids.length}
+                busy={upload.isPending}
+                onSelect={(items) => {
+                  const maximum = mode === "recompose" ? 8 : 1;
+                  if (items.length + ids.length > maximum) {
+                    setLocalError(
+                      new Error(
+                        `This mode accepts ${maximum} source image${maximum > 1 ? "s" : ""}. Remove a source before adding another.`,
+                      ),
+                    );
+                    return;
+                  }
+                  setLocalError(null);
+                  for (const artifact of items) {
+                    cache.setQueryData(["artifact", artifact.id], artifact);
+                  }
+                  setIds((current) => [
+                    ...current,
+                    ...items.map((artifact) => artifact.id),
+                  ]);
+                }}
+              />
               <div className="source-strip">
                 {ids.map((id, index) => (
                   <div key={id}>

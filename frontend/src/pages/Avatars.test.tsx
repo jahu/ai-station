@@ -57,7 +57,7 @@ it("selects existing inputs, queues video and keeps the live result beside the f
   fireEvent.click(
     await within(
       screen.getByRole("region", { name: "Portrait library" }),
-    ).findByRole("button", { name: "Portrait.png" }, { timeout: 5000 }),
+    ).findByRole("button", { name: "Choose Portrait.png portrait" }, { timeout: 5000 }),
   );
   fireEvent.click(
     screen.getAllByRole("button", { name: "Choose from Library" })[1],
@@ -65,7 +65,7 @@ it("selects existing inputs, queues video and keeps the live result beside the f
   fireEvent.click(
     await within(
       screen.getByRole("region", { name: "Speech recording library" }),
-    ).findByRole("button", { name: "Speech.wav" }),
+    ).findByRole("button", { name: "Choose Speech.wav speech" }),
   );
   fireEvent.change(screen.getByLabelText("Resolution"), {
     target: { value: "256" },

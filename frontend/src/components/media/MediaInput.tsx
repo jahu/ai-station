@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AudioLines, ImagePlus, Library, Upload, X } from "lucide-react";
 import { api, type Artifact } from "../../api";
 import { ErrorNotice } from "../common";
 import { Button } from "../ui/button";
+import { useListKeyboard } from "../../pages/useListKeyboard";
 
 type Props = {
   kind: "image" | "audio";
@@ -55,14 +56,21 @@ export default function MediaInput({
     onSettled: () => onBusy(false),
   });
   const Icon = kind === "image" ? ImagePlus : AudioLines;
-  const available = library.data?.filter(
-    (a) =>
-      a.type === kind &&
-      (kind !== "image" || ["image/png", "image/jpeg"].includes(a.mime_type)) &&
-      (kind !== "audio" || a.mime_type === "audio/wav") &&
-      `${a.title ?? ""} ${a.original_filename}`
-        .toLowerCase()
-        .includes(search.toLowerCase()),
+  const headingId = useId();
+  const labelId = useId();
+  const available =
+    library.data?.filter(
+      (a) =>
+        a.type === kind &&
+        (kind !== "image" || ["image/png", "image/jpeg"].includes(a.mime_type)) &&
+        (kind !== "audio" || a.mime_type === "audio/wav") &&
+        `${a.title ?? ""} ${a.original_filename}`
+          .toLowerCase()
+          .includes(search.toLowerCase()),
+    ) ?? [];
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    available,
+    (artifact) => artifact.id,
   );
   return (
     <div className="media-input">
@@ -174,33 +182,53 @@ export default function MediaInput({
           </label>
           {library.isPending ? (
             <p className="muted">Loading your Library…</p>
-          ) : !available?.length ? (
+          ) : !available.length ? (
             <p className="muted">
               No matching {kind === "image" ? "portraits" : "WAV recordings"}.
               Upload one above.
             </p>
           ) : (
-            <div className="media-picker-list">
-              {available.map((a) => (
-                <button
-                  type="button"
-                  key={a.id}
-                  disabled={disabled}
-                  onClick={() => {
-                    cache.setQueryData(["artifact", a.id], a);
-                    onChange(a.id);
-                    setLibraryOpen(false);
-                  }}
-                >
-                  {kind === "image" ? (
-                    <img src={`/api/artifacts/${a.id}/thumbnail`} alt="" />
-                  ) : (
-                    <AudioLines size={18} />
-                  )}
-                  <span>{a.title || a.original_filename}</span>
-                </button>
-              ))}
-            </div>
+            <section aria-labelledby={headingId}>
+              <h3 id={headingId} className="sr-only">
+                Reusable {kind === "image" ? "portraits" : "recordings"}
+              </h3>
+              <p id={labelId} className="dashboard-note">
+                Arrow keys choose a file while the list is focused. Enter
+                attaches it.
+              </p>
+              <div
+                ref={listRef}
+                className="media-picker-list"
+                role="group"
+                aria-labelledby={labelId}
+                onKeyDown={onKeyDown}
+              >
+                {available.map((a, i) => {
+                  const name = a.title || a.original_filename;
+                  return (
+                    <button
+                      type="button"
+                      key={a.id}
+                      aria-label={`Choose ${name} ${a.id.slice(0, 8)}`}
+                      disabled={disabled}
+                      {...itemProps(i, a.id)}
+                      onClick={() => {
+                        cache.setQueryData(["artifact", a.id], a);
+                        onChange(a.id);
+                        setLibraryOpen(false);
+                      }}
+                    >
+                      {kind === "image" ? (
+                        <img src={`/api/artifacts/${a.id}/thumbnail`} alt="" />
+                      ) : (
+                        <AudioLines size={18} />
+                      )}
+                      <span>{name}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
           )}
         </div>
       )}

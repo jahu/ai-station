@@ -300,3 +300,7 @@ Frontend lint, TypeScript, 120 component tests and production build passed. The 
 ## Interrupted Runs keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 121 component tests and production build passed. Interrupted Runs form one keyboard sequence (arrows, Home, End, Enter inspects). Inspect and Mark inspected names include the title and short id. Mark inspected still does not retry, restore or replay. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Images Library attach and inline MediaInput keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 123 component tests and production build passed. Images Edit/Recompose/Upscale attach existing Library files through the shared picker without another upload. The inline Audio/Avatars MediaInput list is one keyboard sequence (arrows, Home, End, Enter attaches) with unique Choose names. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
