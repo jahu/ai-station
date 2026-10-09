@@ -57,7 +57,15 @@ type Message = ActionResult & {
     partial?: boolean;
     superseded?: boolean;
     user_text?: string;
-    attachments?: { id: string; name: string; size_bytes: number }[];
+    attachments?: {
+      id: string;
+      name: string;
+      size_bytes: number;
+      kind?: string;
+      pixels_sent?: boolean;
+      extracted_text?: boolean;
+      extracted_chars?: number;
+    }[];
   };
 };
 type Detail = Conversation & {
@@ -551,16 +559,31 @@ function ConversationView({
                 }
               />
               {message.metadata.attachments?.map((attachment) => (
-                <p key={attachment.id}>
-                  <a
-                    className="text-link"
-                    href={`/api/artifacts/${attachment.id}/file`}
-                  >
-                    {attachment.name}
-                  </a>
-                  {" · "}
-                  {attachment.size_bytes} bytes · saved attachment
-                </p>
+                <div key={attachment.id} className="chat-saved-attachment">
+                  <p>
+                    <a
+                      className="text-link"
+                      href={`/api/artifacts/${attachment.id}/file`}
+                    >
+                      {attachment.name}
+                    </a>
+                    {" · "}
+                    {attachment.size_bytes} bytes
+                    {attachment.kind === "pdf" &&
+                      " · extracted text, not vision"}
+                    {attachment.kind === "image" &&
+                      " · stored image, pixels not sent"}
+                    {(!attachment.kind || attachment.kind === "text") &&
+                      " · saved attachment"}
+                  </p>
+                  {attachment.kind === "image" && (
+                    <img
+                      className="chat-attachment-preview"
+                      alt={attachment.name}
+                      src={`/api/artifacts/${attachment.id}/thumbnail`}
+                    />
+                  )}
+                </div>
               ))}
               {message.role === "assistant" && (
                 <div className="message-actions">

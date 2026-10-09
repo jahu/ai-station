@@ -1,4 +1,7 @@
 import asyncio
+import base64
+import hashlib
+import io
 import json
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
@@ -14,6 +17,8 @@ from app.models import Run
 from app.providers import ProviderError
 from app.runs import request_cancel
 from fastapi.testclient import TestClient
+from PIL import Image
+from pypdf import PdfWriter
 
 
 class Stream(httpx.AsyncByteStream):
@@ -249,7 +254,6 @@ def test_context_window_preserves_valid_turn_order(provider):
 
 
 def test_text_attachments_persist_as_safe_artifacts_and_immutable_context(provider):
-    import hashlib
 
     with TestClient(app) as client:
         conversation_id = new_conversation(client)
@@ -335,3 +339,107 @@ def test_summary_includes_attached_text_in_its_covered_source_messages(provider)
         context = summary.json()["parameters"]["messages"][-1]["content"]
         assert "Willow" in context and "decision.md" in context
         assert len(summary.json()["parameters"]["source_message_ids"]) == 2
+
+
+def _pdf(text="HelloPDF"):
+    stream = f"BT /F1 12 Tf 72 720 Td ({text}) Tj ET".encode()
+    parts = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Count 1 /Kids [3 0 R] >>",
+        (
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
+            b"/Resources << /Font << /F1 5 0 R >> >> >>"
+        ),
+        b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+    out = bytearray(b"%PDF-1.4\n")
+    offsets = []
+    for index, body in enumerate(parts, start=1):
+        offsets.append(len(out))
+        out.extend(f"{index} 0 obj\n".encode() + body + b"\nendobj\n")
+    xref = len(out)
+    out.extend(f"xref\n0 {len(parts) + 1}\n0000000000 65535 f \n".encode())
+    for offset in offsets:
+        out.extend(f"{offset:010d} 00000 n \n".encode())
+    out.extend(f"trailer << /Size {len(parts) + 1} /Root 1 0 R >>\nstartxref\n{xref}\n%%EOF\n".encode())
+    return bytes(out)
+
+
+def _png():
+    buf = io.BytesIO()
+    Image.new("RGB", (8, 8), "red").save(buf, "PNG")
+    return buf.getvalue()
+
+
+def test_pdf_and_image_attachments_are_untrusted_context_without_vision(provider):
+    pdf = _pdf("WillowClause")
+    image = _png()
+    writer = PdfWriter()
+    writer.add_blank_page(200, 200)
+    empty = io.BytesIO()
+    writer.write(empty)
+    with TestClient(app) as client:
+        conversation_id = new_conversation(client)
+        rejected = client.post(
+            f"/api/chat/conversations/{conversation_id}/messages",
+            json={
+                "content": "Read this",
+                "attachments": [
+                    {
+                        "name": "empty.pdf",
+                        "kind": "pdf",
+                        "content": base64.b64encode(empty.getvalue()).decode(),
+                    }
+                ],
+            },
+        )
+        assert rejected.status_code == 422 and "extractable text" in rejected.text
+        result = client.post(
+            f"/api/chat/conversations/{conversation_id}/messages",
+            json={
+                "content": "Read these",
+                "attachments": [
+                    {"name": "notes.pdf", "kind": "pdf", "content": base64.b64encode(pdf).decode()},
+                    {"name": "photo.png", "kind": "image", "content": base64.b64encode(image).decode()},
+                ],
+            },
+        )
+        assert result.status_code == 202, result.text
+        run = result.json()
+        payload = run["parameters"]["messages"][-1]["content"]
+        assert "WillowClause" in payload
+        assert "Pixels were not sent" in payload
+        assert base64.b64encode(image).decode() not in payload
+        with session_factory()() as session:
+            tick(session, "document-chat")
+        message = client.get(f"/api/chat/conversations/{conversation_id}").json()["messages"][0]
+        kinds = {item["kind"]: item for item in message["metadata"]["attachments"]}
+        assert kinds["pdf"]["extracted_text"] is True
+        assert kinds["image"]["pixels_sent"] is False
+        pdf_file = client.get(f"/api/artifacts/{kinds['pdf']['id']}/file")
+        assert pdf_file.content == pdf
+        assert pdf_file.headers["content-type"].startswith("application/pdf")
+        assert pdf_file.headers["content-disposition"].startswith("attachment;")
+        image_meta = client.get(f"/api/artifacts/{kinds['image']['id']}").json()
+        assert image_meta["type"] == "image" and image_meta["metadata"]["width"] == 8
+        assert kinds["pdf"]["sha256"] == hashlib.sha256(pdf).hexdigest()
+        regenerated = client.post(f"/api/chat/conversations/{conversation_id}/regenerate").json()
+        assert regenerated["parameters"]["messages"] == run["parameters"]["messages"]
+
+
+def test_invalid_pdf_and_image_attachments_are_rejected(provider):
+    with TestClient(app) as client:
+        conversation_id = new_conversation(client)
+        for attachments in (
+            [{"name": "notes.pdf", "kind": "pdf", "content": base64.b64encode(b"not-a-pdf").decode()}],
+            [{"name": "photo.png", "kind": "image", "content": base64.b64encode(b"<svg></svg>").decode()}],
+            [{"name": "notes.pdf", "kind": "pdf", "content": "%%%not-base64%%%"}],
+        ):
+            result = client.post(
+                f"/api/chat/conversations/{conversation_id}/messages",
+                json={"content": "Read", "attachments": attachments},
+            )
+            assert result.status_code == 422, result.text
+        assert not client.get(f"/api/chat/conversations/{conversation_id}").json()["messages"]
+        assert not client.get("/api/artifacts").json()

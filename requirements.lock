@@ -61,6 +61,8 @@ pydantic-settings==2.15.0
     # via
     #   ai-station (backend/pyproject.toml)
     #   ai-station-runner (host-runner/pyproject.toml)
+pypdf==6.19.0
+    # via ai-station (backend/pyproject.toml)
 python-dateutil==2.9.0.post0
     # via croniter
 python-dotenv==1.2.3
