@@ -6,13 +6,7 @@ import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import { RegistryToolCalls, type RegistryToolCall } from "./AgentToolCalls";
 import GithubPublication from "./GithubPublication";
 import CodingReview from "./CodingReview";
-import {
-  useId,
-  useRef,
-  useState,
-  type FormEvent,
-  type KeyboardEvent,
-} from "react";
+import { useId, type FormEvent, type KeyboardEvent } from "react";
 import {
   Link,
   useParams,
@@ -134,36 +128,10 @@ function WorkflowStepCards({ workflow }: { workflow: Workflow }) {
 
 function RunTable({ runs }: { runs: RunRow[] }) {
   const labelId = useId();
-  const listRef = useRef<HTMLTableSectionElement>(null);
-  const [selectedKey, setSelectedKey] = useState(runs[0]?.id ?? "");
-  const found = runs.findIndex((run) => run.id === selectedKey);
-  const index = found >= 0 ? found : 0;
-  const focusItem = (next: number) => {
-    const clamped = Math.max(0, Math.min(runs.length - 1, next));
-    const run = runs[clamped];
-    if (!run) return;
-    setSelectedKey(run.id);
-    const link = listRef.current?.querySelector<HTMLElement>(
-      `[data-run-index="${clamped}"]`,
-    );
-    link?.focus();
-    link?.scrollIntoView?.({ block: "nearest" });
-  };
-  const onKeyDown = (event: KeyboardEvent<HTMLTableSectionElement>) => {
-    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
-      event.preventDefault();
-      focusItem(index + 1);
-    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
-      event.preventDefault();
-      focusItem(index - 1);
-    } else if (event.key === "Home") {
-      event.preventDefault();
-      focusItem(0);
-    } else if (event.key === "End") {
-      event.preventDefault();
-      focusItem(runs.length - 1);
-    }
-  };
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard<
+    RunRow,
+    HTMLTableSectionElement
+  >(runs, (run) => run.id);
   return (
     <>
       <p id={labelId} className="dashboard-note">
@@ -192,9 +160,7 @@ function RunTable({ runs }: { runs: RunRow[] }) {
                     <Link
                       to={`/runs/${run.id}`}
                       aria-label={`Inspect ${run.capability} ${run.id.slice(0, 8)}`}
-                      tabIndex={current ? 0 : -1}
-                      data-run-index={i}
-                      onFocus={() => setSelectedKey(run.id)}
+                      {...itemProps(i, run.id)}
                     >
                       <strong>{run.capability}</strong>
                       <small className="mono">{run.id.slice(0, 8)}</small>
