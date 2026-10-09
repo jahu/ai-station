@@ -86,9 +86,11 @@ it.each(["Cursor", "Codex", "Local AI"])(
         </MemoryRouter>
       </QueryClientProvider>,
     );
-    fireEvent.change(await screen.findByLabelText("Project"), {
-      target: { value: "project" },
-    });
+    fireEvent.click(
+      (await screen.findByLabelText("Project project")).querySelector(
+        "input",
+      ) as HTMLElement,
+    );
     fireEvent.change(screen.getByLabelText("Task"), {
       target: { value: "Build my idea" },
     });
@@ -220,9 +222,11 @@ it("posts a selected local repair budget from the coding start form", async () =
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  fireEvent.change(await screen.findByLabelText("Project"), {
-    target: { value: "project" },
-  });
+  fireEvent.click(
+    (await screen.findByLabelText("Project project")).querySelector(
+      "input",
+    ) as HTMLElement,
+  );
   fireEvent.change(screen.getByLabelText("Task"), {
     target: { value: "Build my idea" },
   });
