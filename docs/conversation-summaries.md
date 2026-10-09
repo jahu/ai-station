@@ -1,6 +1,6 @@
 # Inspectable rolling conversation summaries
 
-Users can explicitly update a conversation summary or enable automatic maintenance in Conversation memory. Both use a normal local-model Task/Run. Each update combines the previous enabled summary with a bounded next segment of older eligible messages, leaving the newest eight messages verbatim. Failed, canceled or interrupted updates never replace the current summary. Full message history remains intact.
+Users can explicitly update a conversation summary or enable automatic maintenance in Conversation memory. The automatic-memory toggle is a keyboard sequence with a unique Summary name; Space or Enter selects it and does not invent a summary Run. Both use a normal local-model Task/Run. Each update combines the previous enabled summary with a bounded next segment of older eligible messages, leaving the newest eight messages verbatim. Failed, canceled or interrupted updates never replace the current summary. Full message history remains intact.
 
 The persisted summary record links its source Run, exact source message IDs, coverage boundary, character offset for a partial last message, previous summary and editable conversation-scoped Memory entry. The UI exposes the result and provenance. Disabling or deleting that Memory entry stops its use immediately for future queued requests; older summaries are not silently restored. Already queued Runs keep their immutable context snapshots. Updating a summary while its prior Memory entry changes fails for inspection rather than overwriting that edit.
 
