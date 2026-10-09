@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Box, RefreshCw } from "lucide-react";
@@ -11,6 +11,7 @@ import {
   PageTitle,
 } from "../components/common";
 import { Button } from "../components/ui/button";
+import { useListKeyboard } from "./useListKeyboard";
 
 interface Compatibility {
   format: string;
@@ -86,6 +87,115 @@ const json = (method: string, body: unknown) => ({
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
 });
+
+function ModelFileCards({ models }: { models: ModelFile[] }) {
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    models,
+    (model) => model.id,
+  );
+  return (
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId} className="sr-only">
+        Models
+      </h2>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a model while the list is focused. Enter inspects it.
+      </p>
+      <div
+        ref={listRef}
+        className="model-grid"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {models.map((model, i) => (
+          <Link
+            className="panel model-card"
+            to={`/models/${model.id}`}
+            key={model.id}
+            aria-label={`Inspect ${model.filename} ${model.id.slice(0, 8)}`}
+            {...itemProps(i, model.id)}
+          >
+            <div className="row">
+              <Box size={20} aria-hidden="true" />
+              <span className="tiny-tag">{model.format}</span>
+              <span className="muted">{size(model.size_bytes)}</span>
+            </div>
+            <h2>{model.filename}</h2>
+            <div className="row model-tags">
+              <span>{model.category}</span>
+              {model.quantization && <span>{model.quantization}</span>}
+              <span>
+                {model.availability === "present"
+                  ? "Observed"
+                  : model.availability === "missing"
+                    ? "Not found in last scan"
+                    : "Not checked"}
+              </span>
+            </div>
+            <p className="muted model-path">{model.host_path}</p>
+            <small className="muted">
+              {model.last_seen_at
+                ? `Last seen ${new Date(model.last_seen_at).toLocaleString()}`
+                : "No verified observation"}
+            </small>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function DefinitionCards({ definitions }: { definitions: Definition[] }) {
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    definitions,
+    (item) => item.id,
+  );
+  return (
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId} className="sr-only">
+        Definitions
+      </h2>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a definition while the list is focused. Enter inspects
+        it.
+      </p>
+      <div
+        ref={listRef}
+        className="model-grid"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {definitions.map((item, i) => (
+          <Link
+            className="panel model-card"
+            to={item.file_id ? `/models/${item.file_id}` : "/models"}
+            key={item.id}
+            aria-label={`Inspect ${item.name} ${item.id.slice(0, 8)}`}
+            {...itemProps(i, item.id)}
+          >
+            <div className="row">
+              <Box size={20} aria-hidden="true" />
+              <Badge status={item.status} />
+            </div>
+            <h2>{item.name}</h2>
+            <p className="muted model-path">
+              {item.file?.filename ?? "Linked file missing"}
+            </p>
+            <small className="muted">
+              {item.compatibility?.operational
+                ? "Managed llama.cpp after a successful install"
+                : "Catalogued only · no managed adapter"}
+            </small>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export function Models() {
   const navigate = useNavigate();
@@ -200,51 +310,21 @@ export function Models() {
       {view === "files" ? (
         inventory.isPending ? (
           <Loading />
-        ) : inventory.data?.items.length === 0 ? (
+        ) : inventory.data?.items.length ? (
+          <ModelFileCards models={inventory.data.items} />
+        ) : (
           <section className="panel">
             <Empty title="No model files in this view">
               Use Discover models to scan the Host Runner’s configured roots, or
               adjust the filter. No models are downloaded automatically.
             </Empty>
           </section>
-        ) : (
-          <div className="model-grid">
-            {inventory.data?.items.map((model) => (
-              <Link
-                className="panel model-card"
-                to={`/models/${model.id}`}
-                key={model.id}
-              >
-                <div className="row">
-                  <Box size={20} />
-                  <span className="tiny-tag">{model.format}</span>
-                  <span className="muted">{size(model.size_bytes)}</span>
-                </div>
-                <h2>{model.filename}</h2>
-                <div className="row model-tags">
-                  <span>{model.category}</span>
-                  {model.quantization && <span>{model.quantization}</span>}
-                  <span>
-                    {model.availability === "present"
-                      ? "Observed"
-                      : model.availability === "missing"
-                        ? "Not found in last scan"
-                        : "Not checked"}
-                  </span>
-                </div>
-                <p className="muted model-path">{model.host_path}</p>
-                <small className="muted">
-                  {model.last_seen_at
-                    ? `Last seen ${new Date(model.last_seen_at).toLocaleString()}`
-                    : "No verified observation"}
-                </small>
-              </Link>
-            ))}
-          </div>
         )
       ) : definitions.isPending ? (
         <Loading />
-      ) : definitions.data?.items.length === 0 ? (
+      ) : definitions.data?.items.length ? (
+        <DefinitionCards definitions={definitions.data.items} />
+      ) : (
         <section className="panel">
           <Empty title="No curated definitions yet">
             Open an observed file and save a definition. Installation then
@@ -252,30 +332,6 @@ export function Models() {
             image.
           </Empty>
         </section>
-      ) : (
-        <div className="model-grid">
-          {definitions.data?.items.map((item) => (
-            <Link
-              className="panel model-card"
-              to={item.file_id ? `/models/${item.file_id}` : "/models"}
-              key={item.id}
-            >
-              <div className="row">
-                <Box size={20} />
-                <Badge status={item.status} />
-              </div>
-              <h2>{item.name}</h2>
-              <p className="muted model-path">
-                {item.file?.filename ?? "Linked file missing"}
-              </p>
-              <small className="muted">
-                {item.compatibility?.operational
-                  ? "Managed llama.cpp after a successful install"
-                  : "Catalogued only · no managed adapter"}
-              </small>
-            </Link>
-          ))}
-        </div>
       )}
       {view === "files" && (
         <div className="row">
