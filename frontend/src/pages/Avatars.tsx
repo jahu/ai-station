@@ -9,6 +9,10 @@ import MediaInput from "../components/media/MediaInput";
 import MediaResult from "../components/media/MediaResult";
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
+import {
+  AvatarClipChoiceList,
+  AvatarQualityChoiceList,
+} from "./AvatarChoiceLists";
 
 export default function Avatars({ video = false }: { video?: boolean }) {
   const [search, setSearch] = useSearchParams();
@@ -117,32 +121,22 @@ export default function Avatars({ video = false }: { video?: boolean }) {
               />
             </label>
             <div className="media-field-pair">
-              <label>
-                Quality
-                <select
-                  aria-label="Resolution"
+              <div>
+                <span>Quality</span>
+                <AvatarQualityChoiceList
                   value={size}
-                  onChange={(event) => setSize(Number(event.target.value))}
-                >
-                  <option value={256}>Draft · 256 px</option>
-                  <option value={384}>Balanced · 384 px</option>
-                  <option value={512}>Detailed · 512 px</option>
-                </select>
-              </label>
-              <label>
-                Clip length
-                <select
-                  aria-label="Maximum duration"
+                  disabled={busy || uploading}
+                  onChange={setSize}
+                />
+              </div>
+              <div>
+                <span>Clip length</span>
+                <AvatarClipChoiceList
                   value={frames}
-                  onChange={(event) => setFrames(Number(event.target.value))}
-                >
-                  {[17, 33, 49, 65, 81].map((n) => (
-                    <option key={n} value={n}>
-                      Up to {(n / 25).toFixed(2)} seconds
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  disabled={busy || uploading}
+                  onChange={setFrames}
+                />
+              </div>
             </div>
             <details className="media-advanced">
               <summary>
