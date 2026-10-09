@@ -172,6 +172,31 @@ def test_search_web_returns_public_sources(monkeypatch):
     assert len(result["sources"]) == 1
 
 
+def test_proposal_references_keep_fetch_text_and_search_snippets():
+    refs = public_http.proposal_references(
+        [
+            {
+                "request": {"tool": "fetch_url", "url": "https://www.koratimber.com/"},
+                "result": {
+                    "url": "https://www.koratimber.com/",
+                    "text": "ul. Przybyszewskiego 193, Łódź",
+                },
+            },
+            {
+                "request": {"tool": "list_files", "prefix": "", "offset": 0},
+                "result": {"files": ["index.html"]},
+            },
+            {
+                "request": {"tool": "web_search", "query": "Kora Timber"},
+                "result": {"query": "Kora Timber", "sources": [{"url": "https://www.koratimber.com/"}]},
+            },
+        ]
+    )
+    assert refs[0]["text"].startswith("ul. Przybyszewskiego")
+    assert refs[1]["sources"][0]["url"] == "https://www.koratimber.com/"
+    assert public_http.proposal_references([]) == []
+
+
 def test_search_web_requires_configured_endpoint(monkeypatch):
     monkeypatch.setattr(
         public_http,

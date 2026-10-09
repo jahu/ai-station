@@ -81,6 +81,41 @@ def prompt_public_urls(text, *, limit=3):
     return found
 
 
+def proposal_references(observations):
+    refs = []
+    if not isinstance(observations, list):
+        return refs
+    for item in observations:
+        if not isinstance(item, dict):
+            continue
+        request, result = item.get("request") or {}, item.get("result") or {}
+        if not isinstance(request, dict) or not isinstance(result, dict):
+            continue
+        if request.get("tool") == "fetch_url":
+            text = result.get("text")
+            if isinstance(text, str) and text.strip():
+                refs.append(
+                    {
+                        "url": result.get("url") or request.get("url"),
+                        "text": text[:MAX_TEXT],
+                        "untrusted": True,
+                    }
+                )
+        elif request.get("tool") == "web_search":
+            sources = result.get("sources")
+            if isinstance(sources, list) and sources:
+                refs.append(
+                    {
+                        "query": result.get("query"),
+                        "sources": sources[:5],
+                        "untrusted": True,
+                    }
+                )
+        if len(refs) == 6:
+            break
+    return refs
+
+
 def public_addresses(host):
     try:
         rows = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
