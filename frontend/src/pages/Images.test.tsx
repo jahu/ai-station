@@ -102,6 +102,68 @@ it("attaches a Library image for Edit without another upload", async () => {
   ).toBe(false);
 });
 
+it("moves through Images sources with arrow keys without queueing a Run", async () => {
+  const artifacts = [
+    {
+      id: "lib-one",
+      original_filename: "person.png",
+      type: "image",
+      mime_type: "image/png",
+      metadata: { width: 200, height: 100 },
+    },
+    {
+      id: "lib-two",
+      original_filename: "outfit.png",
+      type: "image",
+      mime_type: "image/png",
+      metadata: { width: 200, height: 100 },
+    },
+  ];
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
+    ok: options === undefined,
+    json: async () => {
+      const url = String(path);
+      if (url.includes("/hardware")) return { gpus: [] };
+      if (url.includes("/artifacts?")) return artifacts;
+      if (url.includes("/artifacts/lib-two")) return artifacts[1];
+      if (url.includes("/artifacts/lib-one")) return artifacts[0];
+      return { id: "run-recompose" };
+    },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  fireEvent.click(screen.getByRole("button", { name: "Recompose" }));
+  fireEvent.click(screen.getByRole("button", { name: "Images from Library" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Choose person.png lib-one" }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Choose outfit.png lib-two" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Attach 2 files" }));
+  const first = await screen.findByLabelText("Source 1 lib-one");
+  const second = screen.getByLabelText("Source 2 lib-two");
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByText(/There is no inspectable source Run/)).toBeTruthy();
+  fireEvent.keyDown(first.closest(".source-strip") as HTMLElement, {
+    key: "ArrowRight",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(document.activeElement).toBe(second);
+  expect(
+    screen.getByRole("button", { name: "Remove source 2 lib-two" }).tabIndex,
+  ).toBe(0);
+  fireEvent.keyDown(second.closest(".source-strip") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
+  fireEvent.keyDown(second.closest(".source-strip") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
+
 it("reuses a Library source, shows upscale dimensions, and submits its identity", async () => {
   const fetch = vi.fn(async (path: string) => ({
     ok: true,
