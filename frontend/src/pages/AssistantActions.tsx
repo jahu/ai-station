@@ -19,6 +19,7 @@ import { parseFilePaths } from "./filePaths";
 import { GpuChoiceList } from "./GpuChoiceList";
 import { ActionChoiceList } from "./ActionChoiceList";
 import { ProjectChoiceList } from "./ProjectChoiceList";
+import { CodingModelChoiceList } from "./CodingModelChoiceList";
 import { GgufChoiceList } from "./GgufChoiceList";
 import { RuntimeChoiceList } from "./RuntimeChoiceList";
 import {
@@ -34,6 +35,7 @@ export type CodingScope = {
   executor?: "cursor" | "codex";
   explore?: boolean;
   max_repair_attempts?: number;
+  model?: string;
 };
 export type CommitScope = {
   source_run_id: string;
@@ -318,6 +320,7 @@ export default function AssistantActions({
   const [files, setFiles] = useState("");
   const [explore, setExplore] = useState(true);
   const [repairAttempts, setRepairAttempts] = useState(0);
+  const [codingModel, setCodingModel] = useState("");
   const [external, setExternal] = useState(false);
   const [commitMessage, setCommitMessage] = useState("Apply reviewed changes");
   const [reviewed, setReviewed] = useState(false);
@@ -329,12 +332,25 @@ export default function AssistantActions({
   const codingTask = ["coding.local", "coding.cursor", "coding.codex"].includes(
     value.action,
   );
+  const externalCoding =
+    value.action === "coding.cursor" || value.action === "coding.codex";
+  const codingProvider =
+    value.action === "coding.codex" ? "codex" : "cursor";
   const proposals = sources.filter(proposalReady);
   const commits = sources.filter(commitReady);
   const projects = useQuery({
     queryKey: ["coding-projects"],
     queryFn: () => api<Project[]>("/projects?limit=500"),
     enabled: codingTask,
+  });
+  const codingCatalog = useQuery({
+    queryKey: ["coding-models", codingProvider],
+    queryFn: () =>
+      api<{ models: { id: string; name: string }[]; notice: string }>(
+        `/coding/models/${codingProvider}`,
+      ),
+    enabled: externalCoding,
+    staleTime: 120000,
   });
   const publishSource = commits.find((run) => run.id === publishSourceId);
   const preview = useQuery({
@@ -408,6 +424,7 @@ export default function AssistantActions({
   }
   function resetAction(action: string) {
     setExternal(false);
+    setCodingModel("");
     setReviewed(false);
     setPublishApproved(false);
     setCommitSourceId("");
@@ -488,6 +505,7 @@ export default function AssistantActions({
     action = value.action,
     auto = explore,
     repairs = repairAttempts,
+    nativeModel = codingModel,
   ) {
     const localExplore = action === "coding.local" && auto;
     const project = projects.data?.find((p) => p.id === id);
@@ -515,6 +533,9 @@ export default function AssistantActions({
               external_ai: action !== "coding.local",
               ...(action === "coding.codex"
                 ? { executor: "codex" as const }
+                : {}),
+              ...(action !== "coding.local" && nativeModel
+                ? { model: nativeModel }
                 : {}),
             }
           : null,
@@ -934,10 +955,37 @@ export default function AssistantActions({
               onChange={(id) => {
                 setProjectId(id);
                 setExternal(false);
-                scope(id, files, false);
+                setCodingModel("");
+                scope(id, files, false, value.action, explore, repairAttempts, "");
               }}
             />
           </div>
+          {externalCoding && (
+            <div>
+              <span>Model</span>
+              <CodingModelChoiceList
+                models={codingCatalog.data?.models ?? []}
+                value={codingModel}
+                disabled={busy}
+                onChange={(id) => {
+                  setCodingModel(id);
+                  scope(
+                    projectId,
+                    files,
+                    external,
+                    value.action,
+                    explore,
+                    repairAttempts,
+                    id,
+                  );
+                }}
+              />
+              <ErrorNotice error={codingCatalog.error} />
+              {codingCatalog.data?.notice && (
+                <small className="muted">{codingCatalog.data.notice}</small>
+              )}
+            </div>
+          )}
           {value.action === "coding.local" && (
             <ExploreChoiceList
               checked={explore}

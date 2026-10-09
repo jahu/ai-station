@@ -472,3 +472,7 @@ Frontend lint, TypeScript, 211 component tests and production build passed. Assi
 ## Coding Cursor/Codex model keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 215 component tests and production build passed. Coding start Cursor/Codex models reuse `useListKeyboard` with unique Model names. Space or Enter selects Auto or an installed CLI catalog model and does not start a coding Run. Auto remains the selected provider's CLI default and never a silent provider switch. Local AI still uses the existing llama.cpp picker. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant Cursor/Codex model select — 2026-10-09
+
+Frontend lint, TypeScript, 216 component tests, production build and `./scripts/check.sh` (685 passed, 5 skipped) passed. Assistant Cursor/Codex coding reuses the Coding native model radios. Space or Enter selects Auto or an installed CLI catalog model and does not send. Auto remains the selected provider's CLI default. The selected model is stored on `CodingScope` and applied to the existing Cursor/Codex coding Task; local coding still uses the conversation model. No Host Runner or schema migration. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
