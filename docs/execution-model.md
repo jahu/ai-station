@@ -114,4 +114,4 @@ Local coding uses the same worktree preparation, owned process lifecycle, checke
 
 ## Run inspector
 
-The inspector separates structured Activity from grouped Output and raw All events. Activity/raw pages show at most 50 events; sequence boundaries keep older pages stable as new events arrive. Full persisted events remain available. SSE resumes after the loaded sequence and merges batches into the cache without re-fetching the entire history per token. Large output, payloads and expandable parameters scroll within bounded panels.
+The inspector separates structured Activity from grouped Output and raw All events. Activity/raw pages show at most 50 events; sequence boundaries keep older pages stable as new events arrive. Arrow keys, Home and End move through the current page; older and newer paging stays outside that list. Full persisted events remain available. SSE resumes after the loaded sequence and merges batches into the cache without re-fetching the entire history per token. Large output, payloads and expandable parameters scroll within bounded panels.

@@ -328,3 +328,7 @@ Frontend lint, TypeScript, 128 component tests and production build passed. The 
 ## Unpublished connector adapters keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 129 component tests and production build passed. Unpublished connector kinds form one keyboard sequence (arrows, Home, End) with unique Adapter names. They stay unavailable; there is no inspectable adapter Run. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Run event timeline keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 130 component tests and production build passed. The Run inspector Activity/All-events page is one keyboard sequence (arrows, Home, End) with unique Event names including type and sequence. Older and newer paging stays outside the list. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
