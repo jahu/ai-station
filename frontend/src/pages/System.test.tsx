@@ -19,7 +19,12 @@ const lease = {
   replay: false,
 };
 
-function mount(leases: Array<typeof lease & { id: string }>) {
+function mount(
+  leases: Array<typeof lease & { id: string }>,
+  extras: {
+    checks?: { name: string; status: string; detail: string }[];
+  } = {},
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string) => ({
@@ -41,7 +46,8 @@ function mount(leases: Array<typeof lease & { id: string }>) {
             load: {},
           };
         }
-        if (url.includes("/system/diagnostics")) return { checks: [] };
+        if (url.includes("/system/diagnostics"))
+          return { checks: extras.checks ?? [] };
         if (url.includes("/system/status")) {
           return {
             counts: {},
@@ -163,6 +169,43 @@ it("moves through worker leases with arrow keys", async () => {
       .getByRole("link", { name: "Inspect bbbbbbbb" })
       .closest("[data-list-index]"),
   );
+  fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
+
+it("moves through integration checks with arrow keys", async () => {
+  mount([], {
+    checks: [
+      {
+        name: "Docker",
+        status: "available",
+        detail: "Engine is reachable.",
+      },
+      {
+        name: "GPU",
+        status: "unavailable",
+        detail: "No discovered GPU.",
+      },
+    ],
+  });
+  const first = await screen.findByLabelText("Check Docker");
+  const second = screen.getByLabelText("Check GPU");
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(
+    screen.getByRole("region", { name: "Integration checks" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByText(/There is no inspectable diagnostic Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
   fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
     key: "Home",
   });
