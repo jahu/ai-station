@@ -264,3 +264,7 @@ Frontend lint, TypeScript, 111 component tests and production build passed. The 
 ## Models list keyboard selection — 2026-10-09
 
 Frontend lint, TypeScript, 112 component tests and production build passed. Observed model files and curated definitions are each one keyboard sequence (arrows, Home, End, Enter inspects). Inspect names include the filename or definition name and short id. Decorative type icons stay out of the tab order. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Coding conversations keyboard selection — 2026-10-09
+
+Frontend lint, TypeScript, 113 component tests and production build passed. Coding conversation cards form one keyboard sequence (arrows, Home, End, Enter opens). Inspect names include the session title and short id. Decorative open icons stay out of the tab order. The list is a labelled Coding conversations landmark. Reuses `useListKeyboard`. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

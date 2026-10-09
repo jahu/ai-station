@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, NavLink, useParams } from "react-router-dom";
 import {
@@ -21,6 +21,7 @@ import { Button } from "../components/ui/button";
 import { terminal, time } from "../lib/utils";
 import CodingReview from "./CodingReview";
 import GithubPublication from "./GithubPublication";
+import { useListKeyboard } from "./useListKeyboard";
 
 type SessionRow = {
   id: string;
@@ -38,6 +39,50 @@ function useSessions(offset = 0) {
     refetchInterval: 10000,
   });
 }
+function SessionCards({ sessions }: { sessions: SessionRow[] }) {
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    sessions,
+    (session) => session.id,
+  );
+  return (
+    <section aria-labelledby={headingId}>
+      <h2 id={headingId} className="sr-only">
+        Coding conversations
+      </h2>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a conversation while the list is focused. Enter opens
+        it.
+      </p>
+      <div
+        ref={listRef}
+        className="coding-history"
+        aria-labelledby={labelId}
+        onKeyDown={onKeyDown}
+      >
+        {sessions.map((s, i) => (
+          <Link
+            className="panel coding-history-item"
+            key={s.id}
+            to={`/coding/${s.id}`}
+            aria-label={`Inspect ${s.title} ${s.id.slice(0, 8)}`}
+            {...itemProps(i, s.id)}
+          >
+            <span className="row spread">
+              <small>{s.project_name}</small>
+              <Badge status={s.status} />
+            </span>
+            <strong>{s.title}</strong>
+            <span className="text-link">
+              Open conversation <ArrowUpRight size={13} aria-hidden="true" />
+            </span>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
 export function CodingHistory() {
   const [offset, setOffset] = useState(0);
   const q = useSessions(offset);
@@ -47,24 +92,7 @@ export function CodingHistory() {
       {q.isPending ? (
         <Loading />
       ) : q.data?.length ? (
-        <div className="coding-history">
-          {q.data.map((s) => (
-            <Link
-              className="panel coding-history-item"
-              key={s.id}
-              to={`/coding/${s.id}`}
-            >
-              <span className="row spread">
-                <small>{s.project_name}</small>
-                <Badge status={s.status} />
-              </span>
-              <strong>{s.title}</strong>
-              <span className="text-link">
-                Open conversation <ArrowUpRight size={13} />
-              </span>
-            </Link>
-          ))}
-        </div>
+        <SessionCards sessions={q.data} />
       ) : (
         <Empty title="A fresh start">
           Your tasks and follow-up conversations will appear here.
