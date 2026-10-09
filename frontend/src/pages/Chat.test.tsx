@@ -176,3 +176,75 @@ it("moves through conversation messages with arrow keys", async () => {
   expect(articles[1].tabIndex).toBe(0);
   expect(inspect.tabIndex).toBe(0);
 });
+
+it("moves through conversation history with arrow keys", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path.endsWith("/chat/providers")
+          ? [builtin]
+          : path.includes("/chat/providers/")
+            ? builtin
+            : path.endsWith("/llama")
+              ? { models: [], instances: [] }
+              : path.endsWith("/hardware")
+                ? { gpus: [] }
+                : [
+                    {
+                      id: "chat-one",
+                      title: "Planning",
+                      provider: "local-openai-compatible",
+                      model: "test-model",
+                      system_prompt: "",
+                      temperature: 0.7,
+                      max_tokens: 2048,
+                      updated_at: "2026-10-09T12:00:00Z",
+                    },
+                    {
+                      id: "chat-two",
+                      title: "Evening notes",
+                      provider: "local-openai-compatible",
+                      model: "test-model",
+                      system_prompt: "",
+                      temperature: 0.7,
+                      max_tokens: 2048,
+                      updated_at: "2026-10-09T13:00:00Z",
+                    },
+                  ],
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/chat"]}>
+        <Routes>
+          <Route path="/chat" element={<Chat />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const first = await screen.findByRole("link", {
+    name: "Inspect Planning chat-one",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect Evening notes chat-two",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Conversations" })).toBeTruthy();
+  fireEvent.keyDown(first.closest(".chat-conversations") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(second);
+  fireEvent.keyDown(second.closest(".chat-conversations") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+});
