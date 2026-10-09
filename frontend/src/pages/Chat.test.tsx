@@ -57,6 +57,11 @@ it("creates a conversation with explicit local model settings", async () => {
     </QueryClientProvider>,
   );
   await screen.findByLabelText("Model");
+  expect(screen.getByLabelText("Mode")).toBeTruthy();
+  expect(screen.getByLabelText("Conversation title")).toBeTruthy();
+  expect(screen.getByLabelText("Provider")).toBeTruthy();
+  expect(screen.getByLabelText("Temperature")).toBeTruthy();
+  expect(screen.getByLabelText("Maximum tokens")).toBeTruthy();
   fireEvent.change(screen.getByLabelText("System prompt"), {
     target: { value: "Explain clearly" },
   });

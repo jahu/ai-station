@@ -14,7 +14,7 @@
   -webkit-font-smoothing: antialiased;
   color-scheme: dark;
   --accent: #b9f48a;
-  --muted: #858c94;
+  --muted: #9aa3ab;
   --border: #292c30;
 }
 * {
@@ -28,6 +28,10 @@ button,
 input,
 select {
   font: inherit;
+}
+::placeholder {
+  color: var(--muted);
+  opacity: 1;
 }
 button,
 a,
@@ -90,8 +94,8 @@ h3 {
 }
 .eyebrow {
   color: var(--muted);
-  font-size: 10px;
-  letter-spacing: 1.8px;
+  font-size: 11px;
+  letter-spacing: 1.4px;
   font-weight: 600;
 }
 .mt {
@@ -136,9 +140,9 @@ h3 {
 }
 .brand small {
   display: block;
-  font-size: 6px;
+  font-size: 11px;
   color: var(--muted);
-  letter-spacing: 1px;
+  letter-spacing: 0.6px;
   margin-top: 4px;
   font-weight: 500;
 }
@@ -148,7 +152,7 @@ h3 {
   background: #1b1d20;
   border: 1px solid #303337;
   border-radius: 6px;
-  color: #8d929a;
+  color: #b4babf;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -157,8 +161,8 @@ h3 {
 }
 kbd {
   font: inherit;
-  font-size: 10px;
-  color: #999fa6;
+  font-size: 11px;
+  color: #b4babf;
   margin-left: auto;
   white-space: nowrap;
 }
@@ -167,9 +171,9 @@ kbd {
 }
 .nav-label {
   padding: 0 12px;
-  font-size: 9px;
-  color: #666e76;
-  letter-spacing: 1.5px;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 1.2px;
   margin-bottom: 9px;
   font-weight: 600;
 }
@@ -219,15 +223,15 @@ a.active .nav-marker {
 }
 .local-card small {
   display: block;
-  font-size: 9px;
+  font-size: 11px;
   margin-top: 5px;
   color: var(--muted);
 }
 .tiny-tag {
-  font-size: 7px;
-  letter-spacing: 1px;
+  font-size: 10px;
+  letter-spacing: 0.8px;
   background: #242827;
-  color: #8b9e86;
+  color: #c5d4ba;
   border-radius: 3px;
   padding: 4px;
   margin-left: auto;
@@ -258,20 +262,20 @@ a.active .nav-marker {
 }
 .slash {
   margin: 0 14px;
-  color: #42474d;
+  color: var(--muted);
 }
 .private-label {
   display: flex;
   gap: 8px;
   align-items: center;
-  color: #99a295;
+  color: #c5d4ba;
   margin-right: 15px;
-  font-size: 10px;
+  font-size: 11px;
 }
 .icon-button {
   border: 0;
   background: transparent;
-  color: #99a0a7;
+  color: #c5cbce;
   display: grid;
   place-items: center;
   padding: 7px;
@@ -335,9 +339,9 @@ main {
   justify-content: space-between;
   align-items: center;
   margin: 0 0 13px;
-  font-size: 9px;
-  letter-spacing: 1.5px;
-  color: #b8bdc0;
+  font-size: 11px;
+  letter-spacing: 1.2px;
+  color: #c5cbce;
 }
 .section-label .muted {
   font-size: 10px;
@@ -483,8 +487,8 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: #b8c6ad;
-  font-size: 10px;
+  color: #c5d4ba;
+  font-size: 12px;
 }
 .metric .text-link {
   margin-top: 5px;
@@ -917,8 +921,8 @@ pre {
 }
 [cmdk-item] span {
   margin-left: auto;
-  color: #7d8a74;
-  font-size: 10px;
+  color: #b8c6ad;
+  font-size: 11px;
 }
 [cmdk-empty] {
   padding: 25px;
@@ -928,8 +932,8 @@ pre {
 .command-footer {
   border-top: 1px solid #343a3d;
   padding: 13px 18px;
-  font-size: 10px;
-  color: #7e8a7a;
+  font-size: 11px;
+  color: #b8c6ad;
   display: flex;
   justify-content: space-between;
 }

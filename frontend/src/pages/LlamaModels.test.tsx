@@ -75,6 +75,10 @@ it("selects a queued GGUF immediately so the conversation can wait for its load"
     </QueryClientProvider>,
   );
   fireEvent.click(screen.getByRole("button", { name: "Model" }));
+  expect(
+    await screen.findByRole("dialog", { name: "Choose a model" }),
+  ).toBeTruthy();
+  expect(screen.getByLabelText("Search models")).toBeTruthy();
   fireEvent.click(await screen.findByRole("button", { name: /27B/ }));
   fireEvent.click(screen.getByText("GPU, context and advanced options"));
   await screen.findByLabelText("GPU 7 · GPU B");

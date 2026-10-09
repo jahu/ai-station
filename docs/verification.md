@@ -196,3 +196,7 @@ Frontend lint, TypeScript, 96 component tests and production build passed. In-ap
 ## Inspect-only held and stale leases — 2026-10-09
 
 `./scripts/check.sh`: 671 Python tests passed (5 skipped), including GET `/api/system/status` listing held leases, marking expired ones stale, `replay: false`, refusing POST, and leaving the expired Run in `preparing`. Frontend lint, TypeScript, 97 component tests and production build passed. System shows expired leases and paused recovery when no worker is available, without restore/replay/requeue controls. Recovery still happens only on the next worker tick. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Workspace labels, dialog titles and contrast — 2026-10-09
+
+Frontend lint, TypeScript, 97 component tests and production build passed. Command palette, Library, model picker and media search fields expose accessible names. Overlay dialogs keep Radix titles (command palette, model picker, Library picker, edit/trash). Sidebar muted text, navigation labels, placeholders and link chrome use AA contrast tokens; 6px/7px decorative type was raised. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

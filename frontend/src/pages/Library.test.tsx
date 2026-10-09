@@ -72,6 +72,9 @@ it("edits annotations, confirms Trash, and restores using each returned version"
   vi.stubGlobal("fetch", fetch);
   mount();
   fireEvent.click(await screen.findByRole("button", { name: "Edit details" }));
+  expect(
+    screen.getByRole("dialog", { name: "Edit artifact details" }),
+  ).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Display name"), {
     target: { value: "My portrait" },
   });
@@ -92,6 +95,7 @@ it("edits annotations, confirms Trash, and restores using each returned version"
     }),
   );
   fireEvent.click(screen.getByRole("button", { name: "Move to Trash" }));
+  expect(screen.getByRole("dialog", { name: "Move to Trash?" })).toBeTruthy();
   expect(
     fetch.mock.calls.filter(([, init]) => init?.method === "DELETE"),
   ).toHaveLength(0);

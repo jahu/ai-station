@@ -84,8 +84,8 @@ export default function LibraryPicker({
           </Dialog.Description>
           <label className="model-search">
             <Search size={16} />
+            <span className="sr-only">Search input Library</span>
             <input
-              aria-label="Search input Library"
               maxLength={200}
               placeholder="Search names and notes…"
               value={search}
