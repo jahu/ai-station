@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import System from "./System";
@@ -9,7 +9,17 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("lists expired leases without offering replay or restore", async () => {
+const lease = {
+  status: "running",
+  worker_id: "w1",
+  executor_type: "fake",
+  retry_class: "inspect",
+  lease_expires_at: "2026-10-09T12:00:00Z",
+  stale: true,
+  replay: false,
+};
+
+function mount(leases: Array<typeof lease & { id: string }>) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string) => ({
@@ -38,20 +48,9 @@ it("lists expired leases without offering replay or restore", async () => {
             workers: [],
             scheduler: { available: false, last_heartbeat: null },
             lease_seconds: 45,
-            held_lease_count: 1,
-            stale_lease_count: 1,
-            leases: [
-              {
-                id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-                status: "running",
-                worker_id: "w1",
-                executor_type: "fake",
-                retry_class: "inspect",
-                lease_expires_at: "2026-10-09T12:00:00Z",
-                stale: true,
-                replay: false,
-              },
-            ],
+            held_lease_count: leases.length,
+            stale_lease_count: leases.filter((row) => row.stale).length,
+            leases,
           };
         }
         if (url.includes("/operator-auth")) {
@@ -114,6 +113,10 @@ it("lists expired leases without offering replay or restore", async () => {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+it("lists expired leases without offering replay or restore", async () => {
+  mount([{ ...lease, id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" }]);
   expect(
     await screen.findByText(/expired lease waiting for a worker tick/i),
   ).toBeTruthy();
@@ -124,10 +127,44 @@ it("lists expired leases without offering replay or restore", async () => {
     ),
   ).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: "aaaaaaaa" }).getAttribute("href"),
+    screen.getByRole("link", { name: "Inspect aaaaaaaa" }).getAttribute("href"),
   ).toBe("/runs/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
   expect(screen.getByText(/replay no/)).toBeTruthy();
   expect(
     screen.queryByRole("button", { name: /replay|restore|requeue|rollout/i }),
   ).toBeNull();
+});
+
+it("moves through worker leases with arrow keys", async () => {
+  mount([
+    { ...lease, id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" },
+    {
+      ...lease,
+      id: "bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
+      stale: false,
+      replay: false,
+    },
+  ]);
+  const first = await screen.findByRole("link", { name: "Inspect aaaaaaaa" });
+  const second = screen.getByRole("link", { name: "Inspect bbbbbbbb" });
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(screen.getByRole("region", { name: "Worker leases" })).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: /replay|restore|requeue|rollout/i }),
+  ).toBeNull();
+  fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(
+    screen
+      .getByRole("link", { name: "Inspect bbbbbbbb" })
+      .closest("[data-list-index]"),
+  );
+  fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
 });
