@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { Paperclip } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { ErrorNotice } from "../components/common";
+import { useListKeyboard } from "./useListKeyboard";
 
 export type TextAttachment = {
   name: string;
@@ -18,6 +19,92 @@ function kindOf(file: File): NonNullable<TextAttachment["kind"]> {
   )
     return "image";
   return "text";
+}
+
+function AttachmentCards({
+  attachments,
+  busy,
+  onChange,
+}: {
+  attachments: TextAttachment[];
+  busy: boolean;
+  onChange: (items: TextAttachment[]) => void;
+}) {
+  const labelId = useId();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    attachments,
+    (item) => item.name,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key === "Enter") event.preventDefault();
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose an attachment while the list is focused. Remove stays
+        on the selected file. Enter does not send. There is no inspectable
+        attachment Run.
+      </p>
+      <div
+        ref={listRef}
+        className="chat-attachment-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {attachments.map((item, i) => {
+          const current = i === index;
+          return (
+            <div
+              key={item.name}
+              className="panel content-panel"
+              aria-label={`Attachment ${item.name}`}
+              {...itemProps(i, item.name)}
+            >
+              <div className="row spread">
+                <strong>{item.name}</strong>
+                <button
+                  type="button"
+                  disabled={busy}
+                  tabIndex={current ? 0 : -1}
+                  onClick={() =>
+                    onChange(attachments.filter((other) => other !== item))
+                  }
+                  aria-label={`Remove ${item.name}`}
+                >
+                  Remove
+                </button>
+              </div>
+              {(item.kind ?? "text") === "text" && (
+                <details>
+                  <summary>Preview {item.name}</summary>
+                  <pre className="log-block">{item.content}</pre>
+                </details>
+              )}
+              {item.kind === "pdf" && (
+                <p className="muted">
+                  PDF · text will be extracted when you send
+                </p>
+              )}
+              {item.kind === "image" && (
+                <>
+                  <p className="muted">
+                    Image stored with the message. Pixels are not sent to the
+                    model.
+                  </p>
+                  <img
+                    className="chat-attachment-preview"
+                    alt={item.name}
+                    src={`data:${imageMime(item.name)};base64,${item.content}`}
+                  />
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
 }
 
 function imageMime(name: string) {
@@ -147,44 +234,13 @@ export default function TextAttachments({
         </p>
       </details>
       <ErrorNotice error={error} />
-      {attachments.map((item) => (
-        <div key={item.name} className="panel content-panel">
-          <div className="row spread">
-            <strong>{item.name}</strong>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() =>
-                onChange(attachments.filter((other) => other !== item))
-              }
-              aria-label={`Remove ${item.name}`}
-            >
-              Remove
-            </button>
-          </div>
-          {(item.kind ?? "text") === "text" && (
-            <details>
-              <summary>Preview text</summary>
-              <pre className="log-block">{item.content}</pre>
-            </details>
-          )}
-          {item.kind === "pdf" && (
-            <p className="muted">PDF · text will be extracted when you send</p>
-          )}
-          {item.kind === "image" && (
-            <>
-              <p className="muted">
-                Image stored with the message. Pixels are not sent to the model.
-              </p>
-              <img
-                className="chat-attachment-preview"
-                alt={item.name}
-                src={`data:${imageMime(item.name)};base64,${item.content}`}
-              />
-            </>
-          )}
-        </div>
-      ))}
+      {attachments.length > 0 && (
+        <AttachmentCards
+          attachments={attachments}
+          busy={busy}
+          onChange={onChange}
+        />
+      )}
     </div>
   );
 }

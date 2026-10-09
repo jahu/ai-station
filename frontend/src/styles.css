@@ -3031,6 +3031,10 @@ section:has(> .memory-grid) > .dashboard-note {
   flex-wrap: wrap;
   gap: 12px;
 }
+.assistant-reference-strip:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .assistant-reference {
   position: relative;
   width: 132px;
@@ -3039,6 +3043,10 @@ section:has(> .memory-grid) > .dashboard-note {
   overflow: hidden;
   background: #121713;
   margin-top: 12px;
+}
+.assistant-reference[aria-current="true"] {
+  border-color: #b9f48a66;
+  background: #1a2218;
 }
 .assistant-reference > img {
   display: block;
@@ -3115,6 +3123,14 @@ section:has(> .memory-grid) > .dashboard-note {
   flex: 1;
   min-width: 0;
   height: 34px;
+}
+.chat-attachment-list:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.chat-attachment-list > .panel[aria-current="true"] {
+  border-color: #b9f48a66;
+  background: rgba(185, 245, 139, 0.08);
 }
 .chat-text-attachments > .button {
   padding-left: 0;
