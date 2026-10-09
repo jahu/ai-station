@@ -25,11 +25,7 @@ class ReviewedCommit(BaseModel):
     reviewed: Literal[True]
 
 
-@router.post("/runs/{source_id}/commit", status_code=202)
-def enqueue(source_id: UUID, body: ReviewedCommit, session: Annotated[Session, Depends(session_scope)]):
-    source = session.get(Run, str(source_id))
-    if source is None:
-        raise HTTPException(404, "Coding Run not found")
+def enqueue_reviewed_commit(session, source, body: ReviewedCommit):
     review = source.metadata_json.get("coding_review")
     if (
         source.status != "succeeded"
@@ -78,5 +74,14 @@ def enqueue(source_id: UUID, body: ReviewedCommit, session: Annotated[Session, D
         },
     )
     source.metadata_json = {**source.metadata_json, "commit_run_id": run.id}
+    return run
+
+
+@router.post("/runs/{source_id}/commit", status_code=202)
+def enqueue(source_id: UUID, body: ReviewedCommit, session: Annotated[Session, Depends(session_scope)]):
+    source = session.get(Run, str(source_id))
+    if source is None:
+        raise HTTPException(404, "Coding Run not found")
+    run = enqueue_reviewed_commit(session, source, body)
     session.commit()
     return run_dict(run)

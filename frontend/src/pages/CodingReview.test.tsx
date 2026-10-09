@@ -8,6 +8,43 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+it("keeps a queued commit in the conversation when asked not to navigate", async () => {
+  const queued = vi.fn();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ id: "commit" }),
+    })),
+  );
+  const run = {
+    id: "coding",
+    status: "succeeded",
+    summary: "Fix selected files",
+    metadata: {
+      coding_review: {
+        branch: "ai/test",
+        files: [
+          { path: "file.py", diff: "+print(42)", insertions: 1, deletions: 0 },
+        ],
+      },
+    },
+  } as unknown as Run;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <CodingReview run={run} onQueued={queued} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("checkbox"));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Commit reviewed changes" }),
+  );
+  await vi.waitFor(() => expect(queued).toHaveBeenCalled());
+  expect(queued.mock.calls[0][0]).toEqual({ id: "commit" });
+  expect(screen.queryByRole("heading", { name: "Commit Run" })).toBeNull();
+});
 it("requires review acknowledgement and opens the queued commit", async () => {
   const fetch = vi.fn(async () => ({
     ok: true,

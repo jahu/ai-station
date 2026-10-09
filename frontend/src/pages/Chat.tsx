@@ -363,12 +363,21 @@ function ConversationView({
     });
     void cache.invalidateQueries({ queryKey: ["conversations"] });
   };
+  const gitContent =
+    options.commit?.message || options.publish?.title || "";
+  const gitReady =
+    (options.action === "coding.commit" && !!options.commit) ||
+    (options.action === "coding.publish" && !!options.publish);
+  const canSend =
+    options.action === "coding.commit" || options.action === "coding.publish"
+      ? gitReady
+      : !!draft.trim();
   const send = useMutation({
     mutationFn: () =>
       api<Run>(`/chat/conversations/${conversation.id}/messages`, {
         method: "POST",
         ...json({
-          content: draft,
+          content: draft.trim() || gitContent,
           attachments,
           ...(orchestrator ? options : {}),
           web_search: { enabled: webEnabled, query: webQuery },
@@ -541,6 +550,7 @@ function ConversationView({
                 result={message}
                 inputs={options}
                 busy={busy}
+                onQueued={orchestrator ? refresh : undefined}
                 onUse={
                   orchestrator
                     ? (artifact) =>
@@ -634,7 +644,7 @@ function ConversationView({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            if (draft.trim() && !busy) send.mutate();
+            if (canSend && !busy) send.mutate();
           }}
         >
           <label className="sr-only" htmlFor="chat-draft">
@@ -654,20 +664,23 @@ function ConversationView({
             onKeyDown={(e) => {
               if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
                 e.preventDefault();
-                if (draft.trim() && !busy) send.mutate();
+                if (canSend && !busy) send.mutate();
               }
             }}
           />
           {orchestrator && (
             <AssistantActions
               value={options}
+              sources={messages.flatMap((message) => message.coding_runs ?? [])}
               onChange={(next) => {
                 setOptions(next);
                 if (
                   !["auto", "chat"].includes(next.action) ||
                   next.image_artifact_ids.length ||
                   next.audio_artifact_id ||
-                  next.coding
+                  next.coding ||
+                  next.commit ||
+                  next.publish
                 )
                   setWebEnabled(false);
               }}
@@ -716,7 +729,7 @@ function ConversationView({
                 Stop
               </Button>
             ) : (
-              <Button type="submit" disabled={busy || !draft.trim()}>
+              <Button type="submit" disabled={busy || !canSend}>
                 <Send size={14} />
                 Send
               </Button>

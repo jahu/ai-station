@@ -4,8 +4,10 @@ import { Link } from "react-router-dom";
 import { ImagePlus, Mic, X, ArrowLeft, ArrowRight } from "lucide-react";
 import LibraryPicker from "../components/media/LibraryPicker";
 import { Button } from "../components/ui/button";
-import { api, type Artifact } from "../api";
+import { api, type Artifact, type Run } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
+import CodingReview from "./CodingReview";
+import GithubPublication from "./GithubPublication";
 
 export type CodingScope = {
   project_id: string;
@@ -16,11 +18,28 @@ export type CodingScope = {
   explore?: boolean;
   max_repair_attempts?: number;
 };
+export type CommitScope = {
+  source_run_id: string;
+  message: string;
+  reviewed: true;
+};
+export type PublishScope = {
+  source_run_id: string;
+  approved: true;
+  repository: string;
+  commit: string;
+  base: string;
+  expected_updated_at: string;
+  title: string;
+  body: string;
+};
 export type AssistantOptions = {
   action: string;
   image_artifact_ids: string[];
   audio_artifact_id?: string | null;
   coding: CodingScope | null;
+  commit: CommitScope | null;
+  publish: PublishScope | null;
 };
 type Project = { id: string; name: string; updated_at: string };
 export type ActionResult = {
@@ -33,6 +52,7 @@ export type ActionResult = {
     location: string;
   }[];
   artifacts?: Artifact[];
+  coding_runs?: Run[];
   task_status?: string;
 };
 
@@ -41,11 +61,13 @@ export function AssistantResults({
   inputs,
   busy,
   onUse,
+  onQueued,
 }: {
   result: ActionResult;
   inputs?: AssistantOptions;
   busy?: boolean;
   onUse?: (artifact: Artifact) => void;
+  onQueued?: (result: Run) => void;
 }) {
   if (!result.steps) return null;
   return (
@@ -60,6 +82,12 @@ export function AssistantResults({
           <Badge status={step.status} />{" "}
           <span className="chip">{step.location.toUpperCase()}</span>
           {step.error_message && <p className="notice">{step.error_message}</p>}
+        </div>
+      ))}
+      {result.coding_runs?.map((run) => (
+        <div key={`coding-${run.id}`}>
+          <CodingReview run={run} onQueued={onQueued} />
+          <GithubPublication run={run} onQueued={onQueued} />
         </div>
       ))}
       <div className="assistant-images">
@@ -129,16 +157,43 @@ export function AssistantResults({
   );
 }
 
+function proposalReady(run: Run) {
+  const review = run.metadata?.coding_review as
+    | { files?: unknown[] }
+    | undefined;
+  return (
+    ["cursor_proposal", "codex_proposal", "local_proposal"].includes(
+      run.executor_type,
+    ) &&
+    run.status === "succeeded" &&
+    !run.metadata?.repair_run_id &&
+    !run.metadata?.continuation_run_id &&
+    !run.metadata?.commit_run_id &&
+    !!review?.files?.length
+  );
+}
+
+function commitReady(run: Run) {
+  return (
+    run.executor_type === "reviewed_commit" &&
+    run.status === "succeeded" &&
+    !!run.metadata?.git_commit &&
+    !run.metadata?.publication_run_id
+  );
+}
+
 export default function AssistantActions({
   value,
   onChange,
   busy,
   onUploading,
+  sources = [],
 }: {
   value: AssistantOptions;
   onChange: (value: AssistantOptions) => void;
   busy: boolean;
   onUploading: (uploading: boolean) => void;
+  sources?: Run[];
 }) {
   const [error, setError] = useState<Error | null>(null);
   const imageInput = useRef<HTMLInputElement>(null);
@@ -148,11 +203,103 @@ export default function AssistantActions({
   const [explore, setExplore] = useState(true);
   const [repairAttempts, setRepairAttempts] = useState(0);
   const [external, setExternal] = useState(false);
+  const [commitMessage, setCommitMessage] = useState("Apply reviewed changes");
+  const [reviewed, setReviewed] = useState(false);
+  const [publishTitle, setPublishTitle] = useState("Review AI Station changes");
+  const [publishBody, setPublishBody] = useState("");
+  const [publishApproved, setPublishApproved] = useState(false);
+  const [publishSourceId, setPublishSourceId] = useState("");
+  const [commitSourceId, setCommitSourceId] = useState("");
+  const codingTask = ["coding.local", "coding.cursor", "coding.codex"].includes(
+    value.action,
+  );
+  const proposals = sources.filter(proposalReady);
+  const commits = sources.filter(commitReady);
   const projects = useQuery({
     queryKey: ["coding-projects"],
     queryFn: () => api<Project[]>("/projects?limit=500"),
-    enabled: value.action.startsWith("coding."),
+    enabled: codingTask,
   });
+  const publishSource = commits.find((run) => run.id === publishSourceId);
+  const preview = useQuery({
+    queryKey: ["publication-preview", publishSource?.id],
+    queryFn: () =>
+      api<{
+        repository: string;
+        commit: string;
+        base: string;
+        expected_updated_at: string;
+        blocked_reason: string | null;
+        github_cli_available: boolean;
+      }>(`/coding/runs/${publishSource!.id}/publication`),
+    enabled: value.action === "coding.publish" && !!publishSource,
+    retry: false,
+  });
+  function resetAction(action: string) {
+    setExternal(false);
+    setReviewed(false);
+    setPublishApproved(false);
+    setCommitSourceId("");
+    setPublishSourceId("");
+    if (["coding.commit", "coding.publish"].includes(action)) {
+      onChange({
+        action,
+        image_artifact_ids: [],
+        audio_artifact_id: null,
+        coding: null,
+        commit: null,
+        publish: null,
+      });
+      return;
+    }
+    scope(projectId, files, false, action);
+  }
+  function setCommit(sourceId: string, message: string, confirmed: boolean) {
+    onChange({
+      action: "coding.commit",
+      image_artifact_ids: [],
+      audio_artifact_id: null,
+      coding: null,
+      publish: null,
+      commit:
+        sourceId && message.trim() && confirmed
+          ? { source_run_id: sourceId, message: message.trim(), reviewed: true }
+          : null,
+    });
+  }
+  function setPublish(
+    sourceId: string,
+    title: string,
+    body: string,
+    confirmed: boolean,
+  ) {
+    const target = preview.data;
+    onChange({
+      action: "coding.publish",
+      image_artifact_ids: [],
+      audio_artifact_id: null,
+      coding: null,
+      commit: null,
+      publish:
+        sourceId &&
+        title.trim() &&
+        confirmed &&
+        target &&
+        !target.blocked_reason &&
+        target.github_cli_available
+          ? {
+              source_run_id: sourceId,
+              approved: true,
+              repository: target.repository,
+              commit: target.commit,
+              base: target.base,
+              expected_updated_at: target.expected_updated_at,
+              title: title.trim(),
+              body,
+            }
+          : null,
+    });
+  }
   function scope(
     id: string,
     paths: string,
@@ -170,6 +317,8 @@ export default function AssistantActions({
     onChange({
       ...value,
       action,
+      commit: null,
+      publish: null,
       coding:
         (action === "coding.local" ||
           (["coding.cursor", "coding.codex"].includes(action) && allow)) &&
@@ -226,10 +375,7 @@ export default function AssistantActions({
         <select
           aria-label="Action"
           value={value.action}
-          onChange={(e) => {
-            scope(projectId, files, false, e.target.value);
-            setExternal(false);
-          }}
+          onChange={(e) => resetAction(e.target.value)}
         >
           <option value="auto">Auto — let AI Station route this task</option>
           <option value="chat">Conversation</option>
@@ -245,6 +391,8 @@ export default function AssistantActions({
           <option value="coding.local">Coding with Local AI</option>
           <option value="coding.cursor">Coding with Cursor</option>
           <option value="coding.codex">Coding with Codex</option>
+          <option value="coding.commit">Commit reviewed changes</option>
+          <option value="coding.publish">Publish reviewed commit to GitHub</option>
         </select>
       </label>
       {!value.action.startsWith("coding.") && (
@@ -429,7 +577,170 @@ export default function AssistantActions({
           </div>
         </div>
       )}
-      {value.action.startsWith("coding.") && (
+      {value.action === "coding.commit" && (
+        <details open className="assistant-coding-scope">
+          <summary>Reviewed commit</summary>
+          <p className="muted">
+            Only proposals from this conversation can be committed. The model
+            cannot grant Git write permission.
+          </p>
+          <label>
+            Proposal
+            <select
+              aria-label="Commit proposal"
+              value={commitSourceId}
+              onChange={(event) => {
+                setCommitSourceId(event.target.value);
+                setCommit(event.target.value, commitMessage, reviewed);
+              }}
+            >
+              <option value="">Select a reviewed coding proposal</option>
+              {proposals.map((run) => (
+                <option key={run.id} value={run.id}>
+                  {run.summary || run.capability} · {run.id.slice(0, 8)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!proposals.length && (
+            <p className="notice">
+              Finish a coding task in this conversation and review its diff
+              first.
+            </p>
+          )}
+          <label>
+            Commit message
+            <input
+              maxLength={2000}
+              value={commitMessage}
+              onChange={(event) => {
+                setCommitMessage(event.target.value);
+                setCommit(commitSourceId, event.target.value, reviewed);
+              }}
+            />
+          </label>
+          <label className="project-checkbox">
+            <input
+              type="checkbox"
+              checked={reviewed}
+              onChange={(event) => {
+                setReviewed(event.target.checked);
+                setCommit(commitSourceId, commitMessage, event.target.checked);
+              }}
+            />
+            I reviewed the diff and validation results.
+          </label>
+        </details>
+      )}
+      {value.action === "coding.publish" && (
+        <details open className="assistant-coding-scope">
+          <summary>GitHub publication</summary>
+          <p className="muted">
+            Approve the exact repository, commit and draft PR. This never
+            merges. Enable task-branch push and integration PRs in the project
+            first.
+          </p>
+          <label>
+            Reviewed commit
+            <select
+              aria-label="Publish commit"
+              value={publishSourceId}
+              onChange={(event) => {
+                setPublishSourceId(event.target.value);
+                setPublishApproved(false);
+                setPublish(event.target.value, publishTitle, publishBody, false);
+              }}
+            >
+              <option value="">Select a successful reviewed commit</option>
+              {commits.map((run) => (
+                <option key={run.id} value={run.id}>
+                  {String(
+                    (run.metadata?.git_commit as { commit?: string })?.commit ??
+                      run.id,
+                  ).slice(0, 12)}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!commits.length && (
+            <p className="notice">
+              Commit reviewed changes in this conversation before publishing.
+            </p>
+          )}
+          <ErrorNotice error={preview.error} />
+          {preview.data?.blocked_reason && (
+            <p className="notice">{preview.data.blocked_reason}</p>
+          )}
+          {preview.data &&
+            !preview.data.blocked_reason &&
+            !preview.data.github_cli_available && (
+              <p className="notice">
+                GitHub CLI is unavailable on the Host Runner.
+              </p>
+            )}
+          {preview.data && (
+            <p className="mono">
+              {preview.data.repository}
+              <br />
+              {preview.data.base}
+              <br />
+              {preview.data.commit}
+            </p>
+          )}
+          <label>
+            PR title
+            <input
+              maxLength={200}
+              value={publishTitle}
+              onChange={(event) => {
+                setPublishTitle(event.target.value);
+                setPublish(
+                  publishSourceId,
+                  event.target.value,
+                  publishBody,
+                  publishApproved,
+                );
+              }}
+            />
+          </label>
+          <label>
+            PR description
+            <textarea
+              rows={4}
+              maxLength={20000}
+              value={publishBody}
+              onChange={(event) => {
+                setPublishBody(event.target.value);
+                setPublish(
+                  publishSourceId,
+                  publishTitle,
+                  event.target.value,
+                  publishApproved,
+                );
+              }}
+            />
+          </label>
+          <label className="project-checkbox">
+            <input
+              type="checkbox"
+              checked={publishApproved}
+              disabled={!preview.data || !!preview.data.blocked_reason}
+              onChange={(event) => {
+                setPublishApproved(event.target.checked);
+                setPublish(
+                  publishSourceId,
+                  publishTitle,
+                  publishBody,
+                  event.target.checked,
+                );
+              }}
+            />
+            I approve publishing this commit and PR text to the GitHub repository
+            shown above.
+          </label>
+        </details>
+      )}
+      {codingTask && (
         <details open className="assistant-coding-scope">
           <summary>Coding scope</summary>
           <label>

@@ -83,9 +83,7 @@ class PublishBody(BaseModel):
     body: str = Field(default="", max_length=20000)
 
 
-@router.post("/runs/{source_id}/publication", status_code=202)
-def publish(source_id: UUID, body: PublishBody, session: DB):
-    source = source_commit(session, source_id)
+def enqueue_publication(session, source, body: PublishBody):
     project = session.get(Project, source.project_id)
     if project is None or project.updated_at != body.expected_updated_at:
         raise HTTPException(409, "Project changed; reload publication details")
@@ -151,6 +149,12 @@ def publish(source_id: UUID, body: PublishBody, session: DB):
         session, run.id, "approval.requested", {"approval_id": approval.id, "action": approval.action}
     )
     append_event(session, run.id, "approval.granted", {"approval_id": approval.id, "by": "user"})
+    return run
+
+
+@router.post("/runs/{source_id}/publication", status_code=202)
+def publish(source_id: UUID, body: PublishBody, session: DB):
+    run = enqueue_publication(session, source_commit(session, source_id), body)
     session.commit()
     return run_dict(run)
 

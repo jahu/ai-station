@@ -12,7 +12,7 @@ The development target is the complete AI Station vision, confirmed on 2026-09-2
 | Connectors and tools | Registry/permission foundations and optional public search | HTTP/browser, GitHub and user-configured email/calendar/social integrations, secret references, audit and approvals |
 | Memory | Scoped provenance, FTS, pinned context, manual and opt-in automatic summaries and agent report memory | Workflow memory production, oversized-message chunking, optional embeddings with explicit model setup |
 | Nodes and operations | Portable local Docker control plane and private native Runner | Authenticated node registration/transport, target-aware resources, authentication before LAN exposure, packaging/upgrade/recovery and long-running reliability |
-| UX and observability | Workspaces, command palette, Runs/events/artifacts, telemetry | Unified actionable activity, rich coding review/actions, keyboard workflows, accessibility and end-to-end acceptance across enabled capabilities |
+| UX and observability | Workspaces, command palette, Runs/events/artifacts, telemetry, assistant coding review/commit/publish in the conversation | Unified actionable activity, remaining keyboard workflows, accessibility and end-to-end acceptance across enabled capabilities |
 
 All increments retain Task → Run → Events → Artifacts, typed runner operations, explicit permissions, protected release branches and data-preserving upgrades. Credentials, host changes or external account actions are requested only when actually needed for a concrete integration; routine implementation continues independently.
 

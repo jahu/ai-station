@@ -23,7 +23,13 @@ type Review = {
   }[];
 };
 
-export default function CodingReview({ run }: { run: Run }) {
+export default function CodingReview({
+  run,
+  onQueued,
+}: {
+  run: Run;
+  onQueued?: (result: Run) => void;
+}) {
   const local = run.metadata?.execution_location === "local";
   const next = run.metadata?.coding_run_id;
   const validation = run.metadata?.validation_run_id;
@@ -82,7 +88,11 @@ export default function CodingReview({ run }: { run: Run }) {
             </p>
           )}
           {typeof validation === "string" ? (
-            <ValidationActions run={run} validationId={validation} />
+            <ValidationActions
+              run={run}
+              validationId={validation}
+              onQueued={onQueued}
+            />
           ) : (
             <p className="notice">
               No validation commands were configured. This proposal has not been
@@ -145,14 +155,22 @@ export default function CodingReview({ run }: { run: Run }) {
             run.status === "succeeded" &&
             typeof validation !== "string" &&
             !run.metadata?.repair_run_id &&
-            !run.metadata?.continuation_run_id && <CommitReview run={run} />}
+            !run.metadata?.continuation_run_id && (
+              <CommitReview run={run} onQueued={onQueued} />
+            )}
         </>
       )}
     </section>
   );
 }
 
-function CommitReview({ run }: { run: Run }) {
+function CommitReview({
+  run,
+  onQueued,
+}: {
+  run: Run;
+  onQueued?: (result: Run) => void;
+}) {
   const navigate = useNavigate();
   const [message, setMessage] = useState(
     (run.summary || "Apply reviewed changes").slice(0, 2000),
@@ -165,7 +183,8 @@ function CommitReview({ run }: { run: Run }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message, reviewed: true }),
       }),
-    onSuccess: (result) => navigate(`/runs/${result.id}`),
+    onSuccess: (result) =>
+      onQueued ? onQueued(result) : navigate(`/runs/${result.id}`),
   });
   const next = run.metadata?.commit_run_id;
   if (typeof next === "string")
@@ -229,9 +248,11 @@ function CommitReview({ run }: { run: Run }) {
 function ValidationActions({
   run,
   validationId,
+  onQueued,
 }: {
   run: Run;
   validationId: string;
+  onQueued?: (result: Run) => void;
 }) {
   const navigate = useNavigate();
   const validation = useQuery({
@@ -247,7 +268,8 @@ function ValidationActions({
   const repair = useMutation({
     mutationFn: () =>
       api<Run>(`/coding/runs/${run.id}/repair`, { method: "POST" }),
-    onSuccess: (result) => navigate(`/runs/${result.id}`),
+    onSuccess: (result) =>
+      onQueued ? onQueued(result) : navigate(`/runs/${result.id}`),
   });
   const next =
     run.metadata?.continuation_run_id ??
@@ -298,7 +320,7 @@ function ValidationActions({
         validation.data?.status === "succeeded" &&
         run.status === "succeeded" &&
         !!(run.metadata?.coding_review as Review)?.files.length && (
-          <CommitReview run={run} />
+          <CommitReview run={run} onQueued={onQueued} />
         )}
     </div>
   );
