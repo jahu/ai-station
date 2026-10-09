@@ -330,7 +330,28 @@ export function ModelDetail() {
     queryKey: ["model", id],
     queryFn: () => api<ModelFile>(`/models/${id}`),
   });
+  const runtimes = useQuery({
+    queryKey: ["llama-models"],
+    queryFn: () =>
+      api<{
+        instances: {
+          id: string;
+          status: string;
+          metadata: {
+            model_file_id?: string;
+            health_run_id?: string;
+            health?: { status?: string; alive?: boolean; n_ctx?: number };
+          };
+        }[];
+      }>("/llama"),
+    refetchInterval: 5000,
+  });
   const definition = model.data?.definitions?.[0];
+  const instance =
+    runtimes.data?.instances?.find(
+      (item) => item.metadata.model_file_id === id && item.status !== "stopped",
+    ) ??
+    runtimes.data?.instances?.find((item) => item.metadata.model_file_id === id);
   const [name, setName] = useState<string | null>(null);
   const [context, setContext] = useState<number | null>(null);
   const [cacheType, setCacheType] = useState<"f16" | "q8_0" | null>(null);
@@ -385,6 +406,22 @@ export function ModelDetail() {
       api(`/models/definitions/${definitionId}`, { method: "DELETE" }),
     onSuccess: () => void cache.invalidateQueries({ queryKey: ["model", id] }),
   });
+  const health = useMutation({
+    mutationFn: (instanceId: string) =>
+      api<Run>(`/llama/${instanceId}/health`, json("POST", {})),
+    onSuccess: (run) => {
+      void cache.invalidateQueries({ queryKey: ["llama-models"] });
+      navigate(`/runs/${run.id}`);
+    },
+  });
+  const restart = useMutation({
+    mutationFn: (instanceId: string) =>
+      api<Run>(`/llama/${instanceId}/restart`, json("POST", {})),
+    onSuccess: (run) => {
+      void cache.invalidateQueries({ queryKey: ["llama-models"] });
+      navigate(`/runs/${run.id}`);
+    },
+  });
   if (model.isPending) return <Loading />;
   if (model.error) return <ErrorNotice error={model.error} />;
   const row = model.data!;
@@ -400,7 +437,13 @@ export function ModelDetail() {
       </PageTitle>
       <ErrorNotice
         error={
-          save.error ?? install.error ?? load.error ?? remove.error ?? null
+          save.error ??
+          install.error ??
+          load.error ??
+          remove.error ??
+          health.error ??
+          restart.error ??
+          null
         }
       />
       <section className="panel model-card">
@@ -581,6 +624,53 @@ export function ModelDetail() {
           pull images or copy weights. Load starts the existing owned llama.cpp
           Run.
         </p>
+        {instance && (
+          <div>
+            <h3>Owned runtime</h3>
+            <p>
+              Status: <Badge status={instance.status} />
+              {instance.metadata.health
+                ? ` · last health ${instance.metadata.health.status}${
+                    instance.metadata.health.n_ctx
+                      ? ` · n_ctx ${instance.metadata.health.n_ctx}`
+                      : ""
+                  }`
+                : " · no health check yet"}
+            </p>
+            <div className="row">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={health.isPending}
+                onClick={() => health.mutate(instance.id)}
+              >
+                Check health
+              </Button>
+              {(instance.status === "ready" ||
+                instance.status === "stopped" ||
+                instance.status === "failed") && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={restart.isPending}
+                  onClick={() => restart.mutate(instance.id)}
+                >
+                  Restart owned runtime
+                </Button>
+              )}
+              {instance.metadata.health_run_id && (
+                <Link to={`/runs/${instance.metadata.health_run_id}`}>
+                  Latest health Run
+                </Link>
+              )}
+            </div>
+            <p className="muted">
+              Health inspects only this AI Station-owned llama.cpp container. It
+              does not stop, restart or signal external processes such as
+              Ollama.
+            </p>
+          </div>
+        )}
         <Link to="/system">Inspect runtime diagnostics</Link>
       </section>
     </>

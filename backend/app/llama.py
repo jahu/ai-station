@@ -1,8 +1,10 @@
 """Model selection and durable ownership of llama.cpp runtime lifecycle."""
 
+import json
 import re
+import tempfile
 import time
-from pathlib import PurePosixPath
+from pathlib import Path, PurePosixPath
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -11,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.artifacts import register_file
 from app.db import session_scope, utcnow
 from app.events import append_event
 from app.models import ModelFile, ResourceLock, Run, RuntimeInstance, Task
@@ -38,6 +41,10 @@ class LoadModel(BaseModel):
     gpus: list[Annotated[int, Field(ge=0)]] = Field(max_length=16)
     context_size: int = Field(default=4096, ge=512, le=262144, multiple_of=256)
     cache_type: Literal["f16", "q8_0"] = "f16"
+
+
+class EmptyBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
 def q8_kv_bytes_per_token(size_bytes: int) -> int:
@@ -305,6 +312,89 @@ def stop(instance_id: UUID, session: DB):
     return run_dict(run)
 
 
+def managed_llama(session, instance_id):
+    instance = session.get(RuntimeInstance, str(instance_id))
+    if instance is None or instance.ownership != "managed" or instance.runtime_key != "llama.cpp":
+        raise HTTPException(404, "Managed llama.cpp runtime not found")
+    return instance
+
+
+def active_instance_runs(session, instance_id, executors):
+    for run in session.scalars(
+        select(Run).where(Run.executor_type.in_(executors), Run.status.not_in(TERMINAL))
+    ):
+        if run.parameters.get("instance_id") == instance_id:
+            return run
+    return None
+
+
+@router.post("/{instance_id}/health", status_code=202)
+def health(instance_id: UUID, body: EmptyBody, session: DB):
+    instance = managed_llama(session, instance_id)
+    if active_instance_runs(session, instance.id, ("llama_load", "llama_stop", "llama_health")):
+        raise HTTPException(409, "Cancel or wait for the current runtime operation first")
+    task = create_task(
+        session,
+        title="Health " + instance.name,
+        prompt="Inspect only this owned llama.cpp instance",
+        capability="runtime.health",
+    )
+    run = create_run(
+        session,
+        task,
+        run_type="runtime",
+        capability="runtime.health",
+        executor_type="llama_health",
+        execution_target="host",
+        permissions=["manage_models"],
+        retry_class="safe",
+        parameters={"instance_id": instance.id},
+    )
+    instance.metadata_json = {**instance.metadata_json, "health_run_id": run.id}
+    session.commit()
+    return run_dict(run)
+
+
+@router.post("/{instance_id}/restart", status_code=202)
+def restart(instance_id: UUID, body: EmptyBody, session: DB):
+    from app.dependencies import depend_on
+
+    instance = managed_llama(session, instance_id)
+    if instance.status == "unknown":
+        raise HTTPException(409, "Inspect the runtime before restarting it")
+    if instance.status in {"queued", "loading", "stopping"} or active_instance_runs(
+        session, instance.id, ("llama_load", "llama_stop", "llama_health")
+    ):
+        raise HTTPException(409, "Cancel or wait for the current runtime operation first")
+    meta = instance.metadata_json or {}
+    file_id = meta.get("model_file_id")
+    if not file_id:
+        raise HTTPException(409, "This runtime has no saved model preset")
+    stop_run = None
+    if instance.status == "ready":
+        stop_run = request_stop(session, instance)
+    load_run = enqueue_load(
+        LoadModel(
+            model_file_id=file_id,
+            gpus=list(meta.get("gpus") or []),
+            context_size=int(meta.get("context_size") or 4096),
+            cache_type=meta.get("cache_type") if meta.get("cache_type") in {"f16", "q8_0"} else "f16",
+        ),
+        session,
+        allow_stopping=True,
+    )
+    if stop_run is not None:
+        depend_on(session, load_run, stop_run)
+        append_event(
+            session,
+            load_run.id,
+            "runtime.restart_requested",
+            {"previous_instance_id": instance.id, "stop_run_id": stop_run.id},
+        )
+    session.commit()
+    return run_dict(load_run)
+
+
 def enqueue_stop(session, instance, *, task=None):
     task = task or create_task(
         session,
@@ -510,6 +600,75 @@ class LlamaExecutor:
                     mark_failed(session, run, "RuntimeRejected", str(exc))
                     return "done"
             raise
+
+
+class LlamaHealthExecutor:
+    name = "llama_health"
+
+    def execute(self, session, run):
+        require(run.effective_permissions, "manage_models")
+        instance = session.get(RuntimeInstance, run.parameters["instance_id"])
+        if instance is None or instance.ownership != "managed" or instance.runtime_key != "llama.cpp":
+            mark_failed(session, run, "RuntimeMissing", "Owned llama.cpp runtime missing")
+            return "done"
+        session.refresh(run)
+        if run.status == "cancel_requested":
+            transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
+            return "done"
+        transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
+        transition(
+            session, run, RunStatus.RUNNING, event_type="executor.started", payload={"mode": "inspect"}
+        )
+        session.commit()
+        session.refresh(run)
+        if run.status == "cancel_requested":
+            transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
+            return "done"
+        try:
+            info = RunnerClient().inspect_llama(instance.id)
+        except RunnerError as exc:
+            if exc.status_code == 404:
+                info = {"status": "stopped", "alive": False, "error": "Managed container is gone"}
+            elif exc.status_code < 500:
+                mark_failed(session, run, "RunnerRejected", str(exc))
+                return "done"
+            else:
+                raise
+        session.refresh(run)
+        if run.status == "cancel_requested":
+            transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
+            return "done"
+        if instance.status in {"ready", "loading", "unknown", "stopping"} or info.get("alive"):
+            update_instance(session, instance, info)
+        health = {
+            "status": info.get("status"),
+            "alive": bool(info.get("alive")),
+            "n_ctx": info.get("n_ctx"),
+            "n_ctx_train": info.get("n_ctx_train"),
+            "pid": info.get("pid"),
+            "error": info.get("error") or "",
+            "checked_at": utcnow().isoformat(),
+        }
+        instance.metadata_json = {**instance.metadata_json, "health": health, "health_run_id": run.id}
+        with tempfile.NamedTemporaryFile(mode="w+", suffix=".json") as handle:
+            json.dump({"instance_id": instance.id, **health, "observation": info}, handle)
+            handle.flush()
+            register_file(
+                session,
+                source=Path(handle.name),
+                artifact_type="json",
+                mime_type="application/json",
+                original_filename="runtime-health.json",
+                run_id=run.id,
+            )
+        append_event(session, run.id, "runtime.health", health)
+        run.summary = (
+            f"{instance.name} is {health['status']}"
+            + (f" · n_ctx {health['n_ctx']}" if isinstance(health["n_ctx"], int) else "")
+            + ". External runtimes were not signalled."
+        )
+        transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload=health)
+        return "done"
 
 
 def reconcile(session, runner):

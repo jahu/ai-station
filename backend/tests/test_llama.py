@@ -739,3 +739,89 @@ def test_ready_runtime_persists_observed_n_ctx(coding_fit, monkeypatch):
         assert ready["payload"]["n_ctx"] == fitted
         assert ready["payload"]["n_ctx_train"] == 262144
         assert ready["payload"]["context_size"] == fitted
+
+
+def test_health_inspects_owned_runtime_and_does_not_signal_externals(managed):
+    model_id, records = managed
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        instance = client.get("/api/llama").json()["instances"][0]
+        records[instance["id"]] = {
+            **records[instance["id"]],
+            "status": "ready",
+            "alive": True,
+            "n_ctx": 4096,
+            "pid": 4242,
+        }
+        response = client.post(f"/api/llama/{instance['id']}/health", json={})
+        assert response.status_code == 202, response.text
+        tick_once()
+        run = client.get("/api/runs/" + response.json()["id"]).json()
+        assert run["status"] == "succeeded"
+        assert "External runtimes were not signalled" in run["summary"]
+        assert client.get("/api/artifacts?run_id=" + run["id"]).json()[0]["type"] == "json"
+        stored = client.get("/api/llama").json()["instances"][0]
+        assert stored["metadata"]["health"]["alive"] is True
+        assert stored["metadata"]["health"]["n_ctx"] == 4096
+        assert client.post(f"/api/llama/{instance['id']}/health", json={"signal": 9}).status_code == 422
+
+
+def test_health_records_a_dead_owned_container_without_claiming_it_healthy(managed, monkeypatch):
+    model_id, _records = managed
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        instance = client.get("/api/llama").json()["instances"][0]
+
+        def missing(_self, _identity):
+            from app.runner_client import RunnerError
+
+            raise RunnerError(404, "gone")
+
+        monkeypatch.setattr(RunnerClient, "inspect_llama", missing)
+        run = client.post(f"/api/llama/{instance['id']}/health", json={}).json()
+        tick_once()
+        body = client.get("/api/runs/" + run["id"]).json()
+        assert body["status"] == "succeeded"
+        stored = client.get("/api/llama").json()["instances"][0]
+        assert stored["status"] == "stopped"
+        assert stored["metadata"]["health"]["alive"] is False
+
+
+def test_restart_stops_then_reloads_saved_preset_and_rejects_busy_or_external(managed, monkeypatch):
+    from app.models import RuntimeInstance
+
+    model_id, records = managed
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        instance = client.get("/api/llama").json()["instances"][0]
+        restart = client.post(f"/api/llama/{instance['id']}/restart", json={})
+        assert restart.status_code == 202, restart.text
+        tick_once()
+        tick_once()
+        load_id = restart.json()["id"]
+        with session_factory()() as session:
+            load_run = session.get(Run, load_id)
+            assert load_run.executor_type == "llama_load"
+            assert load_run.status == "succeeded"
+        deps = client.get(f"/api/runs/{load_id}/events").json()
+        assert any(event["event_type"] == "runtime.restart_requested" for event in deps)
+        catalog = client.get("/api/llama").json()["instances"]
+        assert any(item["status"] == "ready" and item["id"] != instance["id"] for item in catalog)
+        with session_factory()() as session:
+            foreign = RuntimeInstance(
+                runtime_key="llama.cpp", name="external", ownership="external", status="observed"
+            )
+            session.add(foreign)
+            session.commit()
+            foreign_id = foreign.id
+        assert client.post(f"/api/llama/{foreign_id}/health", json={}).status_code == 404
+        assert client.post(f"/api/llama/{foreign_id}/restart", json={}).status_code == 404
+        ready = next(
+            item for item in client.get("/api/llama").json()["instances"] if item["status"] == "ready"
+        )
+        conv = client.post("/api/chat/conversations", json={"model": "llamacpp:" + model_id}).json()
+        client.post(f"/api/chat/conversations/{conv['id']}/messages", json={"content": "Hello"})
+        assert client.post(f"/api/llama/{ready['id']}/restart", json={}).status_code == 409

@@ -93,7 +93,7 @@ The [llama.cpp adapter](managed-llama.md) is the first enabled container runtime
 
 ## Automatic managed-model scheduling
 
-Automatic reload reuses a previously selected GGUF and GPU/context preset. Idle eviction only queues typed stop operations for owned llama.cpp instances; it does not stop external providers. New consumers and eviction are serialized in the metadata transaction. Unknown ownership/state requires inspection instead of duplicate loading. No new shell, mount, network or download permission is granted.
+Automatic reload reuses a previously selected GGUF and GPU/context preset. Idle eviction only queues typed stop operations for owned llama.cpp instances; it does not stop external providers. Health and restart Runs target only AI Station-owned llama.cpp containers. New consumers and eviction are serialized in the metadata transaction. Unknown ownership/state requires inspection instead of duplicate loading. No new shell, mount, network or download permission is granted.
 
 Agent web research requires a separately saved public query and explicit `network_read` permission. Only that query reaches the configured search service; goals, memory and model output cannot select network requests. Search observations remain untrusted context. Shared search execution checks cancellation and agent deadlines, and reports do not render remote images.
 

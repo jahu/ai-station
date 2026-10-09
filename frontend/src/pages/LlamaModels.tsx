@@ -25,7 +25,15 @@ type Instance = {
     n_ctx_train?: number;
     load_run_id: string;
     operation_run_id?: string;
+    health_run_id?: string;
     observation?: { error?: string; n_ctx?: number };
+    health?: {
+      status?: string;
+      alive?: boolean;
+      n_ctx?: number;
+      error?: string;
+      checked_at?: string;
+    };
   };
 };
 type Catalog = { models: Model[]; instances: Instance[] };
@@ -133,7 +141,36 @@ export default function LlamaModels({
       void cache.invalidateQueries({ queryKey: ["llama-models"] });
     },
   });
-  const pending = busy || load.isPending || stop.isPending;
+  const health = useMutation({
+    mutationFn: (id: string) =>
+      api<Run>(`/llama/${id}/health`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }),
+    onSuccess: (run) => {
+      setRunId(run.id);
+      void cache.invalidateQueries({ queryKey: ["llama-models"] });
+    },
+  });
+  const restart = useMutation({
+    mutationFn: (id: string) =>
+      api<Run>(`/llama/${id}/restart`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      }),
+    onSuccess: (run) => {
+      setRunId(run.id);
+      void cache.invalidateQueries({ queryKey: ["llama-models"] });
+    },
+  });
+  const pending =
+    busy ||
+    load.isPending ||
+    stop.isPending ||
+    health.isPending ||
+    restart.isPending;
   const needsSetup = !!choice && !instance;
   const invalid =
     !draft.trim() ||
@@ -233,6 +270,8 @@ export default function LlamaModels({
                 catalog.error ??
                 load.error ??
                 stop.error ??
+                health.error ??
+                restart.error ??
                 (needsSetup ? hardware.error : null)
               }
             />
@@ -388,6 +427,50 @@ export default function LlamaModels({
                       </p>
                     )}
                   </fieldset>
+                  {instance?.metadata.health && (
+                    <p>
+                      Last health: {instance.metadata.health.status}
+                      {instance.metadata.health.alive ? " · process alive" : " · not running"}
+                      {instance.metadata.health.n_ctx
+                        ? ` · n_ctx ${instance.metadata.health.n_ctx}`
+                        : ""}
+                      {instance.metadata.health_run_id && (
+                        <>
+                          {" "}
+                          <Link
+                            to={`/runs/${instance.metadata.health_run_id}`}
+                            onClick={() => setOpen(false)}
+                          >
+                            Inspect health Run
+                          </Link>
+                        </>
+                      )}
+                    </p>
+                  )}
+                  {instance && (
+                    <div className="row">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={pending}
+                        onClick={() => health.mutate(instance.id)}
+                      >
+                        Check health
+                      </Button>
+                      {(instance.status === "ready" ||
+                        instance.status === "stopped" ||
+                        instance.status === "failed") && (
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          disabled={pending}
+                          onClick={() => restart.mutate(instance.id)}
+                        >
+                          Restart owned runtime
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   {instance?.status === "ready" && (
                     <Button
                       type="button"

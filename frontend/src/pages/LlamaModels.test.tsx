@@ -267,3 +267,71 @@ it("coding picker sends q8_0 and a 128k ceiling without promising that size", as
     }),
   );
 });
+
+it("checks owned runtime health without signalling an external process", async () => {
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () => {
+      if (path.endsWith("/hardware")) return { gpus: [] };
+      if (String(path).endsWith("/health") && options?.method === "POST") {
+        return { id: "health-run" };
+      }
+      return {
+        models: [
+          {
+            id: "file",
+            model_key: "llamacpp:file",
+            name: "27B.gguf",
+            size_bytes: 16000000000,
+          },
+        ],
+        instances: [
+          {
+            id: "owned",
+            status: "ready",
+            name: "27B",
+            metadata: {
+              model_file_id: "file",
+              gpus: [2, 7],
+              load_run_id: "load",
+              health: { status: "ready", alive: true, n_ctx: 4096 },
+              health_run_id: "health-run",
+            },
+          },
+        ],
+      };
+    },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <LlamaModels
+          value="llamacpp:file"
+          models={[]}
+          onSelect={() => undefined}
+          busy={false}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Model" }));
+  fireEvent.click(await screen.findByRole("button", { name: /27B/ }));
+  fireEvent.click(screen.getByText("GPU, context and advanced options"));
+  await screen.findByText(/Last health: ready/);
+  fireEvent.click(screen.getByRole("button", { name: "Check health" }));
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(
+        (call) =>
+          call[0] === "/api/llama/owned/health" &&
+          call[1]?.method === "POST" &&
+          call[1]?.body === "{}",
+      ),
+    ).toBe(true),
+  );
+});
