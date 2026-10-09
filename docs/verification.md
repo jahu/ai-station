@@ -408,3 +408,7 @@ Frontend lint, TypeScript, 159 component tests and production build passed. Codi
 ## GitHub publication approval keyboard — 2026-10-09
 
 Frontend lint, TypeScript, 162 component tests and production build passed. GitHub publication approval on the commit Run and in the assistant reuses `useListKeyboard` with a unique Publication name. Space or Enter selects it and does not POST a publication Run. Exact-scope approval, reconcile and draft-PR publication remain the existing endpoints. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Commit review acknowledgement keyboard — 2026-10-09
+
+Frontend lint, TypeScript, 165 component tests and production build passed. Coding and assistant review acknowledgement reuses `useListKeyboard` with a unique Review name. Space or Enter selects it and does not queue a `coding.commit` Run. File listbox, repair and publication remain unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

@@ -8,6 +8,7 @@ import { ErrorNotice } from "../components/common";
 import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import { useListKeyboard } from "./useListKeyboard";
+import { ReviewChoiceList } from "./ReviewChoiceList";
 
 type Review = {
   exploration?: {
@@ -369,15 +370,13 @@ function CommitReview({
           disabled={commit.isPending}
         />
       </label>
-      <label className="project-checkbox">
-        <input
-          type="checkbox"
-          checked={reviewed}
-          onChange={(event) => setReviewed(event.target.checked)}
-          disabled={commit.isPending}
-        />
+      <ReviewChoiceList
+        checked={reviewed}
+        disabled={commit.isPending}
+        onChange={setReviewed}
+      >
         I reviewed the diff and validation results.
-      </label>
+      </ReviewChoiceList>
       <Button disabled={!reviewed || !message.trim() || commit.isPending}>
         <GitCommitHorizontal size={16} />
         {commit.isPending ? "Queuing commit…" : "Commit reviewed changes"}

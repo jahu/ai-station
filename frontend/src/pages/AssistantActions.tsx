@@ -12,6 +12,7 @@ import { useListKeyboard } from "./useListKeyboard";
 import { FileChoiceList } from "./FileChoiceList";
 import { ConsentChoiceList } from "./ConsentChoiceList";
 import { PublicationChoiceList } from "./PublicationChoiceList";
+import { ReviewChoiceList } from "./ReviewChoiceList";
 import { parseFilePaths } from "./filePaths";
 import { GpuChoiceList } from "./GpuChoiceList";
 
@@ -740,17 +741,16 @@ export default function AssistantActions({
               }}
             />
           </label>
-          <label className="project-checkbox">
-            <input
-              type="checkbox"
-              checked={reviewed}
-              onChange={(event) => {
-                setReviewed(event.target.checked);
-                setCommit(commitSourceId, commitMessage, event.target.checked);
-              }}
-            />
+          <ReviewChoiceList
+            checked={reviewed}
+            disabled={busy}
+            onChange={(next) => {
+              setReviewed(next);
+              setCommit(commitSourceId, commitMessage, next);
+            }}
+          >
             I reviewed the diff and validation results.
-          </label>
+          </ReviewChoiceList>
         </details>
       )}
       {value.action === "coding.publish" && (
