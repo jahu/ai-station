@@ -22,7 +22,7 @@ Development targets the [complete product vision](docs/product-completion.md). E
 - Library: image/WAV import, search and type filters, editable names and notes, reversible Trash, source reuse and preserved Run history. See [Library management](docs/library.md).
 - Avatars and Video: local EchoMimic portrait animation from an image and speech, with inline playback and reusable Library outputs.
 - One-command startup of the native runner, API, worker, scheduler, and web UI.
-- Live GPU/CPU/RAM/storage dashboard, telemetry history, worker health, and read-only diagnostics.
+- Live GPU/CPU/RAM/storage dashboard, telemetry history, worker health, read-only diagnostics, optional operator password in Settings, and a local-only node list. Remote nodes and LAN publish stay unpublished.
 - Durable run state, atomic claims, leases, cancellation, conservative recovery, event replay over SSE, and a run inspector.
 - Alembic migrations and SQLite WAL persistence under one application-owned data directory.
 - Keyboard navigation through a command palette (`Ctrl+K` / `Cmd+K`).
@@ -54,7 +54,7 @@ The normal launcher uses `data/runtime/runner/runner.sock` with mode `0600` in a
 
 Configure `AI_STATION_LLM_BASE_URL` with the host endpoint. Compose defaults to `AI_STATION_LLM_TRANSPORT=runner`, carrying typed model requests over the private socket so loopback-only servers remain reachable without reconfiguration. Direct connections remain available with `AI_STATION_LLM_TRANSPORT=direct` and `AI_STATION_LLM_CONTAINER_BASE_URL`; `host.docker.internal` maps to the Linux host gateway. See [local model bridge](docs/local-model-bridge.md).
 
-Do not commit `.env` or secrets. The UI/API port is bound to localhost; authentication must be introduced before LAN exposure.
+Do not commit `.env` or secrets. The UI/API port is bound to localhost. Settings can store an operator password hash; a non-loopback bind is still refused because authenticated LAN/node transport is unpublished. See [nodes](docs/nodes.md).
 
 ## Local chat
 

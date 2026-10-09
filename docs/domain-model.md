@@ -94,6 +94,10 @@ A coarse lease such as `gpu:<index>`. The first scheduler policy is one heavy im
 
 A named external system: kind, status, health, capabilities, non-secret configuration, secret reference and enablement. Operational kind is HTTP GET of one reviewed public URL. Health checks are ordinary Runs. Secrets are not returned by the API. Browser, GitHub, email, calendar and social kinds stay unpublished.
 
+## Operator access and nodes
+
+The `operator_auth` setting stores PBKDF2 material for a local operator password. It is a control-plane secret, not a Run. The node inventory currently lists only this workstation's Host Runner. Remote registration and LAN listeners are unpublished; see [nodes](nodes.md).
+
 ## Chat provider
 
 A selectable OpenAI-compatible endpoint: key, name, local or external location, URL without credentials, optional secret reference, and enablement. The built-in local provider is seeded from environment settings. Conversations store the provider key; Runs snapshot the endpoint and secret reference, never the secret value.
