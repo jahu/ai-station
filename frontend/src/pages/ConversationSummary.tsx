@@ -1,9 +1,11 @@
+import { useId, type KeyboardEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../api";
 import { ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
+import { useListKeyboard } from "./useListKeyboard";
 
 export interface Summary {
   id: string;
@@ -17,6 +19,64 @@ export interface Summary {
   covered_offset?: number;
   covered_message_length?: number;
 }
+function AutoSummaryChoiceList({
+  checked,
+  disabled,
+  onChange,
+}: {
+  checked: boolean;
+  disabled: boolean;
+  onChange: (enabled: boolean) => void;
+}) {
+  const labelId = useId();
+  const items = ["auto_summary"] as const;
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    [...items],
+    (item) => item,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    if (disabled) return;
+    event.preventDefault();
+    onChange(!checked);
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose automatic memory while the list is focused. Space or
+        Enter selects it. Each update is a visible, cancelable Run. There is no
+        inspectable summary-policy Run.
+      </p>
+      <div
+        ref={listRef}
+        className="summary-choice-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        <div
+          aria-label="Summary auto_summary"
+          {...itemProps(0, "auto_summary")}
+        >
+          <label className="project-checkbox">
+            <input
+              type="checkbox"
+              checked={checked}
+              disabled={disabled}
+              tabIndex={index === 0 ? 0 : -1}
+              onChange={(event) => onChange(event.target.checked)}
+            />
+            Automatically maintain conversation memory
+          </label>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export default function ConversationSummary({
   conversationId,
   summary,
@@ -72,15 +132,11 @@ export default function ConversationSummary({
           longer than the 48,000-character segment is summarized in labeled
           chunks across later updates.
         </p>
-        <label className="project-checkbox">
-          <input
-            type="checkbox"
-            checked={autoSummary}
-            disabled={busy || policy.isPending}
-            onChange={(event) => policy.mutate(event.target.checked)}
-          />
-          Automatically maintain conversation memory
-        </label>
+        <AutoSummaryChoiceList
+          checked={autoSummary}
+          disabled={busy || policy.isPending}
+          onChange={(enabled) => policy.mutate(enabled)}
+        />
         <p className="muted">
           After successful replies, your local model summarizes older context
           when 16 messages or 40,000 characters accumulate. Each update is a

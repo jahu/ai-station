@@ -115,3 +115,32 @@ it("saves automatic memory only after an explicit user selection", async () => {
     ),
   );
 });
+
+it("moves through automatic memory without inventing a summary Run", async () => {
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ auto_summary: true }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  const option = screen.getByLabelText("Summary auto_summary");
+  expect(option.tabIndex).toBe(0);
+  expect(
+    screen.getByText(/There is no inspectable summary-policy Run/),
+  ).toBeTruthy();
+  expect(fetch).not.toHaveBeenCalled();
+  fireEvent.keyDown(option.closest(".summary-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  await vi.waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/chat/conversations/conversation/context",
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_summary: true }),
+      },
+    ),
+  );
+  expect(JSON.stringify(fetch.mock.calls)).not.toContain("/summarize");
+});
