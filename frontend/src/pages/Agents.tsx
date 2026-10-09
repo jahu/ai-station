@@ -149,6 +149,179 @@ const schedule = (agent: Agent) =>
         ? `Once: ${time(agent.run_at)}`
         : "Manual";
 
+function toolTitle(tool: Tool) {
+  return tool.name === "remember_report"
+    ? "Remember reports"
+    : tool.name === "remember_workflow"
+      ? "Remember workflow observations"
+      : tool.name === "http_fetch"
+        ? "HTTP fetch"
+        : tool.name;
+}
+
+function toggleValue(selected: string[], value: string, enabled: boolean) {
+  if (enabled)
+    return selected.includes(value) ? selected : [...selected, value];
+  return selected.filter((item) => item !== value);
+}
+
+function SkillChoiceList({
+  skills,
+  selected,
+  onChange,
+}: {
+  skills: Skill[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const labelId = useId();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    skills,
+    (skill) => skill.id,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    const skill = skills[index];
+    if (!skill) return;
+    event.preventDefault();
+    onChange(toggleValue(selected, skill.id, !selected.includes(skill.id)));
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a skill while the list is focused. Space or Enter
+        selects it. Review instructions stays on the selected row. Skills do not
+        grant tools. There is no inspectable Skill Run.
+      </p>
+      <div
+        ref={listRef}
+        className="agent-choice-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {skills.map((skill, i) => {
+          const current = i === index;
+          const checked = selected.includes(skill.id);
+          return (
+            <div
+              key={skill.id}
+              aria-label={`Skill ${skill.name} ${skill.id}`}
+              {...itemProps(i, skill.id)}
+            >
+              <label className="agent-tool">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  tabIndex={current ? 0 : -1}
+                  onChange={(event) =>
+                    onChange(
+                      toggleValue(selected, skill.id, event.target.checked),
+                    )
+                  }
+                />
+                <span>
+                  <strong>{skill.name}</strong>{" "}
+                  <small>
+                    {skill.id} {skill.version}. {skill.description}{" "}
+                    {skill.required_permissions.join(", ")}
+                  </small>
+                </span>
+              </label>
+              {checked && (
+                <details className="agent-skill-text">
+                  <summary>{`Review ${skill.name} ${skill.id} instructions`}</summary>
+                  <pre>{skill.instructions}</pre>
+                </details>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
+function ToolChoiceList({
+  tools,
+  selected,
+  onChange,
+}: {
+  tools: Tool[];
+  selected: string[];
+  onChange: (names: string[]) => void;
+}) {
+  const labelId = useId();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    tools,
+    (tool) => tool.name,
+  );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    const tool = tools[index];
+    if (!tool) return;
+    const checked = selected.includes(tool.name);
+    if (!tool.operational && !checked) return;
+    event.preventDefault();
+    onChange(toggleValue(selected, tool.name, !checked));
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a tool while the list is focused. Space or Enter
+        selects an operational tool. Unavailable tools stay visible and block
+        activation. There is no inspectable tool-selection Run.
+      </p>
+      <div
+        ref={listRef}
+        className="agent-choice-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {tools.map((tool, i) => {
+          const current = i === index;
+          const checked = selected.includes(tool.name);
+          return (
+            <div
+              key={tool.name}
+              aria-label={`Tool ${tool.name}`}
+              {...itemProps(i, tool.name)}
+            >
+              <label className="agent-tool">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  tabIndex={current ? 0 : -1}
+                  disabled={!tool.operational && !checked}
+                  onChange={(event) =>
+                    onChange(
+                      toggleValue(selected, tool.name, event.target.checked),
+                    )
+                  }
+                />
+                <span>
+                  <strong>{toolTitle(tool)}</strong>{" "}
+                  {!tool.operational && "— Unavailable"}
+                  <small>
+                    {tool.description} {tool.required_permissions.join(", ")}
+                  </small>
+                </span>
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 function AgentCards({ agents }: { agents: Agent[] }) {
   const headingId = useId();
   const labelId = useId();
@@ -889,37 +1062,13 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               skills directory to make one selectable.
             </p>
           )}
-          {skills.data?.map((skill) => (
-            <div key={skill.id}>
-              <label className="agent-tool">
-                <input
-                  type="checkbox"
-                  checked={(values.skills ?? []).includes(skill.id)}
-                  onChange={(e) =>
-                    update(
-                      "skills",
-                      e.target.checked
-                        ? [...(values.skills ?? []), skill.id]
-                        : (values.skills ?? []).filter((id) => id !== skill.id),
-                    )
-                  }
-                />
-                <span>
-                  <strong>{skill.name}</strong>{" "}
-                  <small>
-                    {skill.id} {skill.version}. {skill.description}{" "}
-                    {skill.required_permissions.join(", ")}
-                  </small>
-                </span>
-              </label>
-              {(values.skills ?? []).includes(skill.id) && (
-                <details className="agent-skill-text">
-                  <summary>Review instructions</summary>
-                  <pre>{skill.instructions}</pre>
-                </details>
-              )}
-            </div>
-          ))}
+          {!!skills.data?.length && (
+            <SkillChoiceList
+              skills={skills.data}
+              selected={values.skills ?? []}
+              onChange={(ids) => update("skills", ids)}
+            />
+          )}
         </div>
         <div className="agent-wide">
           <h3>Tools</h3>
@@ -928,40 +1077,13 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             Remember reports and remember workflow observations run after those
             successful steps. Unavailable tools prevent activation.
           </p>
-          {tools.data?.map((tool) => (
-            <label className="agent-tool" key={tool.name}>
-              <input
-                type="checkbox"
-                checked={values.tools.includes(tool.name)}
-                disabled={
-                  !tool.operational && !values.tools.includes(tool.name)
-                }
-                onChange={(e) =>
-                  update(
-                    "tools",
-                    e.target.checked
-                      ? [...values.tools, tool.name]
-                      : values.tools.filter((name) => name !== tool.name),
-                  )
-                }
-              />
-              <span>
-                <strong>
-                  {tool.name === "remember_report"
-                    ? "Remember reports"
-                    : tool.name === "remember_workflow"
-                      ? "Remember workflow observations"
-                      : tool.name === "http_fetch"
-                        ? "HTTP fetch"
-                        : tool.name}
-                </strong>{" "}
-                {!tool.operational && "— Unavailable"}
-                <small>
-                  {tool.description} {tool.required_permissions.join(", ")}
-                </small>
-              </span>
-            </label>
-          ))}
+          {!!tools.data?.length && (
+            <ToolChoiceList
+              tools={tools.data}
+              selected={values.tools}
+              onChange={(names) => update("tools", names)}
+            />
+          )}
         </div>
       </fieldset>
       <ErrorNotice error={save.error ?? tools.error ?? skills.error} />

@@ -822,3 +822,136 @@ it("moves through execution history with arrow keys", async () => {
   });
   expect(first.tabIndex).toBe(0);
 });
+it("moves through skills and tools with arrow keys without inventing a Run", async () => {
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
+    ok: options === undefined,
+    json: async () =>
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.endsWith("/chat/provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.includes("/skills")
+            ? [
+                {
+                  id: "daily-brief",
+                  name: "Daily brief",
+                  version: "1.0.0",
+                  description: "Local status format",
+                  required_permissions: [],
+                  instructions: "Always mention GPU memory.",
+                },
+                {
+                  id: "night-notes",
+                  name: "Night notes",
+                  version: "1.0.0",
+                  description: "Evening recap",
+                  required_permissions: [],
+                  instructions: "Keep the recap short.",
+                },
+              ]
+            : url.endsWith("tools")
+              ? [
+                  {
+                    name: "memory_search",
+                    description: "Search this agent’s memory",
+                    operational: true,
+                    required_permissions: [],
+                  },
+                  {
+                    name: "http_fetch",
+                    description: "GET reviewed public pages",
+                    operational: true,
+                    required_permissions: ["network_read"],
+                  },
+                ]
+              : url.endsWith("/hardware")
+                ? { gpus: [] }
+                : {
+                    id: "draft",
+                    name: "Morning review",
+                    description: "",
+                    goal: "Summarize",
+                    system_prompt: "",
+                    model: "local",
+                    tools: [],
+                    search_query: "",
+                    fetch_urls: [],
+                    skills: [],
+                    trigger: "manual",
+                    cron_expr: "",
+                    interval_seconds: null,
+                    run_at: null,
+                    maximum_runtime: 600,
+                    output_expectation: "Report",
+                    require_approval: false,
+                    workflow_mode: "sequential",
+                    tool_calling: "none",
+                    retry_policy: { mode: "none" },
+                    notification_policy: {
+                      on_success: false,
+                      on_failure: false,
+                      on_approval: false,
+                    },
+                    project_id: null,
+                    enabled: false,
+                    updated_at: "2026-10-09T12:00:00Z",
+                    next_run_at: null,
+                    last_run_at: null,
+                    last_status: "",
+                    failure_count: 0,
+                    effective_permissions: [],
+                    runs: [],
+                  },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  const firstSkill = await screen.findByLabelText(
+    "Skill Daily brief daily-brief",
+  );
+  const secondSkill = screen.getByLabelText("Skill Night notes night-notes");
+  expect(firstSkill.tabIndex).toBe(0);
+  expect(secondSkill.tabIndex).toBe(-1);
+  expect(
+    screen.getByText(/There is no inspectable Skill Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(firstSkill.closest(".agent-choice-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(secondSkill.tabIndex).toBe(0);
+  expect(firstSkill.tabIndex).toBe(-1);
+  expect(document.activeElement).toBe(secondSkill);
+  fireEvent.keyDown(secondSkill.closest(".agent-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(
+    (screen.getByRole("checkbox", { name: /Night notes/i }) as HTMLInputElement)
+      .checked,
+  ).toBe(true);
+  expect(
+    screen.getByText("Review Night notes night-notes instructions"),
+  ).toBeTruthy();
+  fireEvent.keyDown(secondSkill.closest(".agent-choice-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(firstSkill.tabIndex).toBe(0);
+  const firstTool = screen.getByLabelText("Tool memory_search");
+  const secondTool = screen.getByLabelText("Tool http_fetch");
+  expect(firstTool.tabIndex).toBe(0);
+  expect(secondTool.tabIndex).toBe(-1);
+  expect(
+    screen.getByText(/There is no inspectable tool-selection Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(firstTool.closest(".agent-choice-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(secondTool.tabIndex).toBe(0);
+  expect(document.activeElement).toBe(secondTool);
+  fireEvent.keyDown(secondTool.closest(".agent-choice-list") as HTMLElement, {
+    key: " ",
+  });
+  expect(
+    (screen.getByRole("checkbox", { name: /HTTP fetch/i }) as HTMLInputElement)
+      .checked,
+  ).toBe(true);
+  expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
+});
