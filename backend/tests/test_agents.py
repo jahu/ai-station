@@ -32,6 +32,19 @@ def run_now(api, agent):
     return response.json()
 
 
+def drain(session, worker="agent-test", limit=30):
+    for _ in range(limit):
+        if tick(session, worker) is None:
+            return
+    raise AssertionError("worker queue did not drain")
+
+
+def workflow_step(api, parent_id, key):
+    parent = api.get("/api/runs/" + parent_id).json()
+    step = next(item for item in parent["workflow"]["steps"] if item["key"] == key)
+    return api.get("/api/runs/" + step["run_id"]).json()
+
+
 def test_factory_disabled_activation_and_unsupported_tools():
     api = TestClient(app)
     draft = api.post(
@@ -80,9 +93,10 @@ def test_local_agent_context_artifact_status_and_restart(monkeypatch):
         session.commit()
     queued = run_now(api, agent)
     with session_factory()() as session:
-        tick(session, "agent-test")
-    run = api.get("/api/runs/" + queued["id"]).json()
-    assert run["status"] == "succeeded"
+        drain(session, "agent-test")
+    parent = api.get("/api/runs/" + queued["id"]).json()
+    run = workflow_step(api, queued["id"], "report")
+    assert parent["status"] == "succeeded" and run["status"] == "succeeded"
     assert "Relevant observation" in str(received[0]["messages"])
     assert "PRIVATE OTHER AGENT" not in str(received[0]["messages"])
     assert run["effective_permissions"] == []
@@ -92,7 +106,7 @@ def test_local_agent_context_artifact_status_and_restart(monkeypatch):
     reset_engine()
     saved = api.get("/api/agents/" + agent["id"]).json()
     assert saved["last_status"] == "succeeded" and saved["failure_count"] == 0
-    assert saved["runs"][0]["id"] == queued["id"]
+    assert queued["id"] in {item["id"] for item in saved["runs"]}
 
 
 def test_failure_is_not_reported_as_success(monkeypatch):
@@ -105,10 +119,12 @@ def test_failure_is_not_reported_as_success(monkeypatch):
     agent = create(api, enabled=True)
     queued = run_now(api, agent)
     with session_factory()() as session:
-        tick(session, "agent-test")
-    assert api.get("/api/runs/" + queued["id"]).json()["status"] == "failed"
+        drain(session, "agent-test")
+    report = workflow_step(api, queued["id"], "report")
+    assert api.get("/api/runs/" + queued["id"]).json()["status"] == "succeeded"
+    assert report["status"] == "failed"
     assert api.get("/api/agents/" + agent["id"]).json()["failure_count"] == 1
-    assert api.get("/api/artifacts?run_id=" + queued["id"]).json()[0]["metadata"]["partial"] is True
+    assert api.get("/api/artifacts?run_id=" + report["id"]).json()[0]["metadata"]["partial"] is True
 
 
 def test_silent_generation_cancels_and_closes_stream(monkeypatch):
@@ -130,9 +146,9 @@ def test_silent_generation_cancels_and_closes_stream(monkeypatch):
     agent = create(api, enabled=True)
     queued = run_now(api, agent)
     with session_factory()() as session:
-        tick(session, "agent-test")
+        drain(session, "agent-test")
     assert closed
-    assert api.get("/api/runs/" + queued["id"]).json()["status"] == "canceled"
+    assert workflow_step(api, queued["id"], "report")["status"] == "canceled"
     assert api.get("/api/agents/" + agent["id"]).json()["last_status"] == "canceled"
 
 
@@ -248,9 +264,9 @@ def test_tool_permissions_enforced_before_host_access(monkeypatch):
         run = session.get(Run, queued["id"])
         run.effective_permissions = []
         session.commit()
-        tick(session, "agent-test")
+        drain(session, "agent-test")
     assert not called
-    assert api.get("/api/runs/" + queued["id"]).json()["status"] == "failed"
+    assert workflow_step(api, queued["id"], "system_snapshot")["status"] == "failed"
 
 
 @pytest.fixture
@@ -313,18 +329,20 @@ def test_agent_web_research_snapshots_public_query_and_retains_sources(research,
             # An already-queued Run must retain the reviewed query even if stored settings change.
             session.get(Agent, agent["id"]).search_query = "different future query"
             session.commit()
-            tick(session, "research-test")
-        run = api.get("/api/runs/" + run_id).json()
-        assert run["status"] == "succeeded", run
-        assert run["effective_permissions"] == ["network_read"]
+            drain(session, "research-test")
+        parent = api.get("/api/runs/" + run_id).json()
+        search = workflow_step(api, run_id, "web_search")
+        run = workflow_step(api, run_id, "report")
+        assert parent["status"] == "succeeded" and run["status"] == "succeeded", run
+        assert parent["effective_permissions"] == ["network_read"]
         assert calls == ["public model releases"]
         assert "PRIVATE GOAL" in str(messages) and "Public finding" in str(messages)
         assert run["metadata"]["web_search"]["sources"][0]["url"] == "https://example.com/research"
-        artifacts = api.get("/api/artifacts?run_id=" + run_id).json()
-        assert {item["type"] for item in artifacts} == {"markdown", "json"}
+        assert {item["type"] for item in api.get("/api/artifacts?run_id=" + search["id"]).json()} == {"json"}
+        assert {item["type"] for item in api.get("/api/artifacts?run_id=" + run["id"]).json()} == {"markdown"}
         reset_engine()
-        assert api.get("/api/runs/" + run_id).json()["metadata"]["web_search"]["query"] == calls[0]
-        assert "tool.completed" in api.get("/api/runs/" + run_id + "/stream").text
+        assert api.get("/api/runs/" + search["id"]).json()["metadata"]["web_search"]["query"] == calls[0]
+        assert "tool.completed" in api.get("/api/runs/" + search["id"] + "/stream").text
 
 
 @pytest.mark.parametrize("mode", ["cancel", "timeout", "permission", "failure"])
@@ -364,13 +382,13 @@ def test_agent_search_cancels_bounds_runtime_and_enforces_permission(research, m
             if mode == "permission":
                 session.get(Run, run_id).effective_permissions = []
                 session.commit()
-            tick(session, "research-negative")
-        result = api.get("/api/runs/" + run_id).json()
-        assert result["status"] == ("canceled" if mode == "cancel" else "failed"), result
+            drain(session, "research-negative")
+        search = workflow_step(api, run_id, "web_search")
+        assert search["status"] == ("canceled" if mode == "cancel" else "failed"), search
         assert not research[1]
         if mode in {"cancel", "timeout"}:
             assert closed
-        assert api.get("/api/artifacts?run_id=" + run_id).json() == []
+        assert api.get("/api/artifacts?run_id=" + search["id"]).json() == []
 
 
 def test_agent_query_requires_explicit_review_before_activation(research):
@@ -460,18 +478,20 @@ def test_agent_http_fetch_snapshots_reviewed_urls_and_retains_pages(pages, sched
         with session_factory()() as session:
             session.get(Agent, agent["id"]).fetch_urls = ["https://www.example.com/later"]
             session.commit()
-            tick(session, "fetch-test")
-        run = api.get("/api/runs/" + run_id).json()
-        assert run["status"] == "succeeded", run
-        assert run["effective_permissions"] == ["network_read"]
+            drain(session, "fetch-test")
+        parent = api.get("/api/runs/" + run_id).json()
+        fetch = workflow_step(api, run_id, "http_fetch")
+        run = workflow_step(api, run_id, "report")
+        assert parent["status"] == "succeeded" and run["status"] == "succeeded", run
+        assert parent["effective_permissions"] == ["network_read"]
         assert calls == ["https://www.example.com/"]
         assert "PRIVATE GOAL" in str(messages) and "Public page excerpt" in str(messages)
         assert run["metadata"]["http_fetch"]["pages"][0]["url"] == "https://www.example.com/"
-        artifacts = api.get("/api/artifacts?run_id=" + run_id).json()
-        assert {item["type"] for item in artifacts} == {"markdown", "json"}
+        assert {item["type"] for item in api.get("/api/artifacts?run_id=" + fetch["id"]).json()} == {"json"}
+        assert {item["type"] for item in api.get("/api/artifacts?run_id=" + run["id"]).json()} == {"markdown"}
         reset_engine()
-        assert api.get("/api/runs/" + run_id).json()["metadata"]["http_fetch"]["urls"] == calls
-        assert "tool.completed" in api.get("/api/runs/" + run_id + "/stream").text
+        assert api.get("/api/runs/" + fetch["id"]).json()["metadata"]["http_fetch"]["urls"] == calls
+        assert "tool.completed" in api.get("/api/runs/" + fetch["id"] + "/stream").text
 
 
 @pytest.mark.parametrize("mode", ["cancel", "timeout", "permission", "failure", "ssrf"])
@@ -513,13 +533,13 @@ def test_agent_fetch_cancels_bounds_runtime_and_enforces_permission(pages, monke
             if mode == "permission":
                 session.get(Run, run_id).effective_permissions = []
                 session.commit()
-            tick(session, "fetch-negative")
-        result = api.get("/api/runs/" + run_id).json()
-        assert result["status"] == ("canceled" if mode == "cancel" else "failed"), result
+            drain(session, "fetch-negative")
+        fetch = workflow_step(api, run_id, "http_fetch")
+        assert fetch["status"] == ("canceled" if mode == "cancel" else "failed"), fetch
         assert not pages[1]
         if mode in {"cancel", "timeout"}:
             assert closed
-        assert api.get("/api/artifacts?run_id=" + run_id).json() == []
+        assert api.get("/api/artifacts?run_id=" + fetch["id"]).json() == []
 
 
 def test_agent_fetch_requires_explicit_review_before_activation():
@@ -568,6 +588,7 @@ def test_agent_search_migration_preserves_existing_definitions():
         saved = api.get("/api/agents/" + agent["id"]).json()
         assert saved["goal"] == agent["goal"] and saved["tools"] == ["memory_search"]
         assert saved["search_query"] == "" and saved["fetch_urls"] == []
+        assert saved["workflow_mode"] == "sequential"
 
 
 @pytest.mark.parametrize("remember", [False, True])
@@ -584,8 +605,8 @@ def test_report_memory_opt_in_provenance_and_next_scheduled_run(monkeypatch, rem
     agent = create(api, enabled=True, tools=tools, trigger="interval", interval_seconds=60)
     queued = run_now(api, agent)
     with session_factory()() as session:
-        tick(session, "memory-test")
-    run = api.get("/api/runs/" + queued["id"]).json()
+        drain(session, "memory-test")
+    run = workflow_step(api, queued["id"], "report")
     assert run["status"] == "succeeded"
     assert ("memory_write" in run["effective_permissions"]) is remember
     reset_engine()
@@ -608,12 +629,12 @@ def test_report_memory_opt_in_provenance_and_next_scheduled_run(monkeypatch, rem
         session.commit()
         assert len(scheduler_tick(session)) == 1
         session.commit()
-        tick(session, "memory-test")
+        drain(session, "memory-test")
     assert ("Retained observation" in str(received[1])) is remember
     other = create(api, name="Different scope", enabled=True, tools=["memory_search"])
     run_now(api, other)
     with session_factory()() as session:
-        tick(session, "memory-test")
+        drain(session, "memory-test")
     assert "Retained observation" not in str(received[2])
 
 
@@ -663,14 +684,14 @@ def test_unsuccessful_agent_never_retains_memory(monkeypatch, outcome):
 
         monkeypatch.setattr("app.agent_executor.upsert_memory", fail_write)
     with session_factory()() as session:
-        tick(session, "memory-test")
-    run = api.get("/api/runs/" + queued["id"]).json()
+        drain(session, "memory-test")
+    run = workflow_step(api, queued["id"], "report")
     assert run["status"] == ("canceled" if "cancel" in outcome else "failed")
     assert "memory_entry_id" not in run["metadata"]
     with session_factory()() as session:
         assert list(session.scalars(select(MemoryEntry))) == []
         assert session.scalar(text("SELECT count(*) FROM memory_fts")) == 0
-    artifacts = api.get("/api/artifacts?run_id=" + queued["id"]).json()
+    artifacts = api.get("/api/artifacts?run_id=" + run["id"]).json()
     assert len(artifacts) == (0 if outcome == "missing_permission" else 1)
     if artifacts:
         assert artifacts[0]["metadata"]["partial"] is (outcome != "write_failed")
@@ -692,11 +713,12 @@ def test_report_memory_excerpt_and_read_permission_are_independent(monkeypatch):
         session.commit()
     queued = run_now(api, agent)
     with session_factory()() as session:
-        tick(session, "memory-test")
-        entry = session.scalar(select(MemoryEntry).where(MemoryEntry.source_run_id == queued["id"]))
+        drain(session, "memory-test")
+    run = workflow_step(api, queued["id"], "report")
+    with session_factory()() as session:
+        entry = session.scalar(select(MemoryEntry).where(MemoryEntry.source_run_id == run["id"]))
         assert len(entry.content) == 12000 and "[Excerpt:" in entry.content
     assert "Do not retrieve this" not in str(received[0])
-    run = api.get("/api/runs/" + queued["id"]).json()
     assert run["status"] == "succeeded" and run["metadata"]["memory_excerpted"] is True
-    artifact = api.get("/api/artifacts?run_id=" + queued["id"]).json()[0]
+    artifact = api.get("/api/artifacts?run_id=" + run["id"]).json()[0]
     assert api.get(f"/api/artifacts/{artifact['id']}/file").text == report

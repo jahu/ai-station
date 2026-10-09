@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agent_executor import LocalAgentExecutor
+from app.agent_workflow import AgentToolExecutor, AgentWorkflowExecutor
 from app.artifacts import adopt_existing
 from app.assistant import AssistantExecutor
 from app.audio import AudioExecutor
@@ -300,6 +301,8 @@ EXECUTORS = {
     "local_proposal": LocalProposalExecutor(),
     "model_discovery": ModelDiscoveryExecutor(),
     "agent": LocalAgentExecutor(),
+    "agent_workflow": AgentWorkflowExecutor(),
+    "agent_tool": AgentToolExecutor(),
     "runtime_observation": RuntimeObservationExecutor(),
 }
 

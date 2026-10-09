@@ -194,3 +194,75 @@ it("lets the user grant a parked agent Run without starting it from the inspecto
     ).toBe(true),
   );
 });
+it("lists persisted workflow steps and keeps cancel available for the active child", async () => {
+  vi.stubGlobal(
+    "EventSource",
+    class {
+      close() {}
+      addEventListener() {}
+    },
+  );
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      String(url).includes("/events") || String(url).includes("/artifacts")
+        ? []
+        : {
+            id: "parent",
+            capability: "agent.workflow",
+            executor_type: "agent_workflow",
+            execution_target: "container",
+            status: "succeeded",
+            created_at: "2026-10-09T12:00:00Z",
+            started_at: "2026-10-09T12:00:01Z",
+            finished_at: "2026-10-09T12:00:02Z",
+            actual_gpu: null,
+            requested_gpu: "none",
+            parameters: {},
+            effective_permissions: [],
+            summary: "Published 2 workflow steps.",
+            error_type: "",
+            error_message: "",
+            worker_id: null,
+            workflow: {
+              parent_run_id: "parent",
+              mode: "sequential",
+              steps: [
+                {
+                  run_id: "step-search",
+                  key: "memory_search",
+                  gate: "none",
+                  status: "succeeded",
+                  capability: "agent.step",
+                },
+                {
+                  run_id: "step-report",
+                  key: "report",
+                  gate: "none",
+                  status: "running",
+                  capability: "agent.execute",
+                },
+              ],
+            },
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/runs/parent"]}>
+        <Routes>
+          <Route path="/runs/:id" element={<RunDetail />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByRole("heading", { name: "Workflow steps" })).toBeTruthy();
+  expect(
+    (await screen.findByRole("link", { name: /report/i })).getAttribute("href"),
+  ).toBe("/runs/step-report");
+  expect(screen.getByRole("button", { name: "Cancel run" })).toBeTruthy();
+});

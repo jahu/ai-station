@@ -49,10 +49,12 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
         raise ValueError("web_search requires an explicit public search query")
     if "http_fetch" in definition.tools and not definition.fetch_urls:
         raise ValueError("http_fetch requires 1 to 3 explicit public URLs")
+    from app.agent_workflow import planned_steps
     from app.skills import SkillError, snapshot_skills
 
     try:
         skill_snapshots = snapshot_skills(definition.skills)
+        steps = planned_steps(definition)
     except SkillError as exc:
         raise ValueError(str(exc)) from exc
     endpoint = model_endpoint(agent.model, session)
@@ -60,7 +62,7 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
         session,
         title=agent.name,
         prompt=agent.goal,
-        capability="agent.execute",
+        capability="agent.workflow",
         intent="agent",
         agent_id=agent.id,
         project_id=agent.project_id,
@@ -69,13 +71,14 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
         session,
         task,
         run_type="agent",
-        capability="agent.execute",
-        executor_type="agent",
+        capability="agent.workflow",
+        executor_type="agent_workflow",
         execution_target="container",
         parameters={
             "definition": definition.model_dump(mode="json"),
             "endpoint": endpoint,
             "skill_snapshots": skill_snapshots,
+            "steps": steps,
         },
         permissions=effective_permissions(agent.tools),
         retry_class="inspect",
@@ -97,13 +100,12 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str) -> str:
                 "model": agent.model,
                 "tools": list(agent.tools),
                 "skills": list(agent.skills),
+                "workflow_mode": definition.workflow_mode,
+                "steps": [step["key"] for step in steps],
                 "triggered_by": triggered_by,
             },
         )
     else:
-        from app.llama import prepare_consumer
-
-        prepare_consumer(session, run)
         agent.last_status = "queued"
     if agent.trigger == "datetime":
         agent.enabled, agent.next_run_at = False, None

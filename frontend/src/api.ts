@@ -73,6 +73,17 @@ export interface Run {
     resolved_at: string | null;
     resolution: string;
   };
+  workflow?: {
+    parent_run_id: string;
+    mode: string;
+    steps: {
+      run_id: string;
+      key: string;
+      gate: string;
+      status: string;
+      capability: string;
+    }[];
+  };
 }
 export interface RunEvent {
   id: string;

@@ -1,6 +1,6 @@
 # Domain model
 
-> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Project registration, policy editing, and read-only Git status are enabled with disposable-repository integration coverage. Owned worktree preparation is enabled through the worker and a managed native process. Scoped memory with pinned Chat context and managed model-file discovery are enabled. Local agents use disabled drafts, explicit activation, persistent schedules and bounded context tools. Bounded Cursor file-edit proposals, review artifacts and separate validation Runs are operational. Other coding adapters remain inactive. See README for runnable commands and limitations.
+> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Project registration, policy editing, and read-only Git status are enabled with disposable-repository integration coverage. Owned worktree preparation is enabled through the worker and a managed native process. Scoped memory with pinned Chat context and managed model-file discovery are enabled. Local agents use disabled drafts, explicit activation, persistent schedules, bounded context tools and sequential or gated workflow steps. Bounded Cursor file-edit proposals, review artifacts and separate validation Runs are operational. Other coding adapters remain inactive. See README for runnable commands and limitations.
 
 
 ## Task
@@ -55,7 +55,7 @@ Chat is durable. A completion is also a run. The prompt window is the recent mes
 
 ## Agent definition
 
-A persistent agent: goal, system prompt, provider, model, tools, skills, memory scope, trigger, permission profile, execution target, limits, and enablement. Enabling is explicit. Drafts are stored disabled.
+A persistent agent: goal, system prompt, provider, model, tools, skills, memory scope, trigger, permission profile, execution target, limits, workflow mode (`sequential` or `gated`), and enablement. Enabling is explicit. Drafts are stored disabled. A launch snapshots the step list and publishes child Runs with `RunDependency` edges; the model cannot invent extra steps.
 
 Triggers that exist: `manual`, `cron`, `interval`, `one-shot datetime`. Unimplemented triggers are not presented as working.
 
