@@ -8,24 +8,39 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const builtin = {
+  id: "builtin-id",
+  key: "local-openai-compatible",
+  name: "Local OpenAI-compatible",
+  kind: "openai-compatible",
+  location: "local",
+  endpoint: "http://localhost:8080/v1",
+  default_model: "test-model",
+  builtin: true,
+  enabled: true,
+  secret_source: "none",
+  secret_ref: "",
+  secret_present: false,
+  models: ["test-model"],
+  status: "available",
+  error: null,
+};
+
 it("creates a conversation with explicit local model settings", async () => {
   const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
     ok: true,
     json: async () =>
-      path.endsWith("/provider")
-        ? {
-            models: ["test-model"],
-            default_model: "test-model",
-            endpoint: "http://localhost:8080/v1",
-            location: "local",
-          }
-        : path.endsWith("/llama")
-          ? { models: [], instances: [] }
-          : path.endsWith("/hardware")
-            ? { gpus: [] }
-            : options?.method === "POST"
-              ? { id: "new" }
-              : [],
+      path.endsWith("/chat/providers")
+        ? [builtin]
+        : path.includes("/chat/providers/")
+          ? builtin
+          : path.endsWith("/llama")
+            ? { models: [], instances: [] }
+            : path.endsWith("/hardware")
+              ? { gpus: [] }
+              : options?.method === "POST"
+                ? { id: "new" }
+                : [],
   }));
   vi.stubGlobal("fetch", fetch);
   const cache = new QueryClient({
@@ -51,6 +66,12 @@ it("creates a conversation with explicit local model settings", async () => {
     "/api/chat/conversations",
     expect.objectContaining({
       body: expect.stringContaining('"system_prompt":"Explain clearly"'),
+    }),
+  );
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/chat/conversations",
+    expect.objectContaining({
+      body: expect.stringContaining('"provider":"local-openai-compatible"'),
     }),
   );
 });

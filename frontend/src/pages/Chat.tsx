@@ -4,6 +4,7 @@ import {
   type WebSources,
 } from "./ChatWebSearch";
 import LlamaModels from "./LlamaModels";
+import type { ChatProviderInfo } from "./ChatProviders";
 import { emptyOptions } from "./assistant-options";
 import AssistantActions, {
   AssistantResults,
@@ -33,6 +34,9 @@ type Conversation = {
   id: string;
   execution_mode?: "local" | "orchestrator";
   title: string;
+  provider: string;
+  provider_name?: string;
+  provider_location?: string;
   model: string;
   model_label?: string;
   system_prompt: string;
@@ -75,16 +79,7 @@ type Detail = Conversation & {
   active_run: Run | null;
   summary: Summary | null;
 };
-type Provider = {
-  id: string;
-  name: string;
-  location: string;
-  endpoint: string;
-  models: string[];
-  default_model: string;
-  status: string;
-  error: string | null;
-};
+type Provider = ChatProviderInfo;
 const json = (body: unknown) => ({
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
@@ -99,9 +94,21 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
     queryFn: () => api<Conversation[]>("/chat/conversations"),
     refetchInterval: 5000,
   });
+  const providers = useQuery({
+    queryKey: ["chat-providers"],
+    queryFn: () => api<Provider[]>("/chat/providers"),
+    retry: false,
+  });
+  const [providerKey, setProviderKey] = useState("");
+  const selectedKey =
+    providerKey ||
+    providers.data?.find((row) => row.builtin)?.key ||
+    providers.data?.[0]?.key ||
+    "";
   const provider = useQuery({
-    queryKey: ["chat-provider"],
-    queryFn: () => api<Provider>("/chat/provider"),
+    queryKey: ["chat-provider", selectedKey],
+    queryFn: () => api<Provider>(`/chat/providers/${selectedKey}`),
+    enabled: !!selectedKey,
     retry: false,
   });
   const detail = useQuery({
@@ -149,6 +156,7 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
       <ErrorNotice
         error={
           conversations.error ??
+          providers.error ??
           provider.error ??
           (id ? detail.error : null) ??
           create.error
@@ -188,33 +196,51 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
             <div className="content-panel">
               <h2>Start a conversation</h2>
               <p className="muted">
-                Choose Platform assistant to let this conversation use AI
-                Station capabilities, or Conversation only to talk with the
-                model.
+                Choose a chat provider, then Platform assistant to let this
+                conversation use AI Station capabilities, or Conversation only
+                to talk with the model. Secrets are never shown here; manage
+                them in{" "}
+                <Link to="/settings">Settings</Link>.
               </p>
               {provider.data && (
                 <>
                   <p>
-                    <span className="chip">LOCAL</span>{" "}
+                    <span className="chip">
+                      {provider.data.location.toUpperCase()}
+                    </span>{" "}
                     <span className="mono">{provider.data.endpoint}</span>
                   </p>
                   {provider.data.error && (
                     <p className="notice">
                       {provider.data.error}. A configured model name can still
-                      be saved.
+                      be saved when the provider is local and has no secret.
                     </p>
                   )}
+                  {provider.data.secret_source !== "none" &&
+                    !provider.data.secret_present && (
+                      <p className="notice">
+                        The selected provider secret is missing. Chat will fail
+                        closed until it is configured.
+                      </p>
+                    )}
                   <SettingsForm
-                    key={provider.data.default_model}
+                    key={`${provider.data.key}-${provider.data.default_model}`}
                     defaults={{
                       execution_mode: assistant ? "orchestrator" : "local",
                       title: "New conversation",
-                      model: provider.data.default_model,
+                      provider: provider.data.key,
+                      model:
+                        provider.data.default_model ||
+                        provider.data.models?.[0] ||
+                        "",
                       system_prompt: "",
                       temperature: 0.7,
                       max_tokens: 2048,
                     }}
-                    models={provider.data.models}
+                    providers={providers.data ?? []}
+                    provider={provider.data}
+                    onProviderChange={setProviderKey}
+                    models={provider.data.models ?? []}
                     pending={create.isPending}
                     submit={(body) => create.mutate(body)}
                     label="Create conversation"
@@ -230,7 +256,7 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
               <ConversationView
                 key={id}
                 conversation={detail.data}
-                models={provider.data?.models ?? []}
+                providers={providers.data ?? []}
               />
             )
           )}
@@ -241,12 +267,18 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
 }
 function SettingsForm({
   defaults,
+  providers,
+  provider,
+  onProviderChange,
   models,
   pending,
   submit,
   label,
 }: {
   defaults: Omit<Conversation, "id" | "updated_at">;
+  providers: Provider[];
+  provider?: Provider;
+  onProviderChange: (key: string) => void;
   models: string[];
   pending: boolean;
   submit: (body: unknown) => void;
@@ -254,6 +286,7 @@ function SettingsForm({
 }) {
   const [model, setModel] = useState(defaults.model);
   const [modelPending, setModelPending] = useState(false);
+  const localBuiltin = provider?.builtin && provider.location === "local";
   return (
     <form
       className="image-form chat-settings"
@@ -264,6 +297,7 @@ function SettingsForm({
         submit({
           execution_mode: fields.get("execution_mode"),
           title: fields.get("title"),
+          provider: fields.get("provider") || defaults.provider,
           model,
           system_prompt: fields.get("system_prompt"),
           temperature: Number(fields.get("temperature")),
@@ -292,14 +326,51 @@ function SettingsForm({
             defaultValue={defaults.title}
           />
         </label>
-        <LlamaModels
-          value={model}
-          label={model === defaults.model ? defaults.model_label : undefined}
-          models={models}
-          busy={pending}
-          onSelect={setModel}
-          onBusy={setModelPending}
-        />
+        <label>
+          Provider
+          <select
+            aria-label="Provider"
+            name="provider"
+            value={defaults.provider}
+            onChange={(event) => {
+              onProviderChange(event.target.value);
+              setModel("");
+            }}
+          >
+            {providers.map((row) => (
+              <option key={row.key} value={row.key} disabled={!row.enabled}>
+                {row.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {localBuiltin ? (
+          <LlamaModels
+            value={model}
+            label={model === defaults.model ? defaults.model_label : undefined}
+            models={models}
+            busy={pending}
+            onSelect={setModel}
+            onBusy={setModelPending}
+          />
+        ) : (
+          <label>
+            Model
+            <input
+              aria-label="Model"
+              list="chat-provider-models"
+              required
+              maxLength={200}
+              value={model}
+              onChange={(event) => setModel(event.target.value)}
+            />
+            <datalist id="chat-provider-models">
+              {models.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
+          </label>
+        )}
         <label>
           System prompt
           <textarea
@@ -341,12 +412,19 @@ function SettingsForm({
 }
 function ConversationView({
   conversation,
-  models,
+  providers,
 }: {
   conversation: Detail;
-  models: string[];
+  providers: Provider[];
 }) {
   const cache = useQueryClient();
+  const selected = useQuery({
+    queryKey: ["chat-provider", conversation.provider],
+    queryFn: () =>
+      api<Provider>(`/chat/providers/${conversation.provider}`),
+    retry: false,
+  });
+  const models = selected.data?.models ?? [];
   const [draft, setDraft] = useState("");
   const [options, setOptions] = useState(emptyOptions);
   const [webEnabled, setWebEnabled] = useState(false);
@@ -439,24 +517,32 @@ function ConversationView({
       <div className="chat-heading">
         <div>
           <h2>{conversation.title}</h2>
-          <LlamaModels
-            compact
-            value={conversation.model}
-            label={conversation.model_label}
-            models={models}
-            busy={busy}
-            onBusy={setModelPending}
-            onSelect={(model) =>
-              settings.mutate({
-                model,
-                execution_mode: conversation.execution_mode,
-                title: conversation.title,
-                system_prompt: conversation.system_prompt,
-                temperature: conversation.temperature,
-                max_tokens: conversation.max_tokens,
-              })
-            }
-          />
+          {selected.data?.builtin && selected.data.location === "local" ? (
+            <LlamaModels
+              compact
+              value={conversation.model}
+              label={conversation.model_label}
+              models={models}
+              busy={busy}
+              onBusy={setModelPending}
+              onSelect={(model) =>
+                settings.mutate({
+                  model,
+                  provider: conversation.provider,
+                  execution_mode: conversation.execution_mode,
+                  title: conversation.title,
+                  system_prompt: conversation.system_prompt,
+                  temperature: conversation.temperature,
+                  max_tokens: conversation.max_tokens,
+                })
+              }
+            />
+          ) : (
+            <p className="muted">
+              {conversation.provider_name ?? conversation.provider} ·{" "}
+              {conversation.model_label ?? conversation.model}
+            </p>
+          )}
         </div>
         {conversation.active_run && (
           <Link to={`/runs/${conversation.active_run.id}`}>
@@ -471,6 +557,19 @@ function ConversationView({
         <SettingsForm
           key={conversation.updated_at}
           defaults={conversation}
+          providers={providers}
+          provider={selected.data}
+          onProviderChange={(key) =>
+            settings.mutate({
+              provider: key,
+              model: conversation.model,
+              execution_mode: conversation.execution_mode,
+              title: conversation.title,
+              system_prompt: conversation.system_prompt,
+              temperature: conversation.temperature,
+              max_tokens: conversation.max_tokens,
+            })
+          }
           models={models}
           pending={busy || settings.isPending}
           submit={(body) => settings.mutate(body)}
@@ -489,7 +588,9 @@ function ConversationView({
           <Empty title="A fresh perspective starts here">
             {orchestrator
               ? "Describe what you want done. Attach image references, create an agent or select a project for coding."
-              : "Send a message to your local model. No external provider is selected."}
+              : conversation.provider_location === "external"
+                ? "Send a message through the selected external provider. The secret value is never displayed."
+                : "Send a message to the selected local provider."}
           </Empty>
         )}
         {messages

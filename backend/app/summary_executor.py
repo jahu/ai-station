@@ -6,9 +6,9 @@ from contextlib import suppress
 from pathlib import Path
 
 from app.artifacts import register_file
+from app.chat_providers import completion_stream, require_external_permission
 from app.conversation_summary import latest_summary, summary_memory
 from app.events import append_event
-from app.local_provider import LocalChatProvider
 from app.memory import upsert_memory
 from app.models import ConversationSummary, Message
 from app.providers import ProviderError
@@ -26,14 +26,15 @@ class SummaryExecutor:
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
             return "done"
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})
-        if run.parameters.get("provider") != LocalChatProvider.key:
+        if not run.parameters.get("provider"):
             raise ProviderError("Unsupported summary provider")
+        require_external_permission(run)
         transition(
             session,
             run,
             RunStatus.RUNNING,
             event_type="executor.started",
-            payload={"model": run.parameters["model"], "location": "local"},
+            payload={"model": run.parameters["model"], "location": run.parameters.get("location", "local")},
         )
         session.commit()
         try:
@@ -48,9 +49,7 @@ class SummaryExecutor:
 
     async def consume(self, session, run):
         params = run.parameters
-        stream = LocalChatProvider().stream(
-            **{key: params[key] for key in ("endpoint", "messages", "model", "temperature", "max_tokens")}
-        )
+        stream = completion_stream(session, params)
         pending, content = None, ""
         try:
             async with asyncio.timeout(600):

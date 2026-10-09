@@ -5,9 +5,9 @@ from contextlib import suppress
 
 from sqlalchemy import select
 
+from app.chat_providers import completion_stream, require_external_permission
 from app.db import utcnow
 from app.events import append_event
-from app.local_provider import LocalChatProvider
 from app.models import Conversation, Message
 from app.providers import ProviderError
 from app.runs import mark_failed, transition
@@ -27,14 +27,15 @@ class ChatExecutor:
         if message is None:
             raise ValueError("Chat run has no response message")
         params = run.parameters
-        if params.get("provider") != LocalChatProvider.key:
+        if not params.get("provider"):
             raise ProviderError("Unsupported chat provider")
+        require_external_permission(run)
         transition(
             session,
             run,
             RunStatus.RUNNING,
             event_type="executor.started",
-            payload={"model": params["model"], "location": "local"},
+            payload={"model": params["model"], "location": params.get("location", "local")},
         )
         session.commit()
         try:
@@ -58,9 +59,7 @@ class ChatExecutor:
             session.commit()
             return
         params = {**run.parameters, "messages": messages}
-        stream = LocalChatProvider().stream(
-            **{key: params[key] for key in ("endpoint", "messages", "model", "temperature", "max_tokens")}
-        )
+        stream = completion_stream(session, params)
         pending = None
         try:
             async with asyncio.timeout(600):

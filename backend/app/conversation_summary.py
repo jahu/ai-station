@@ -58,7 +58,7 @@ def eligible_messages(conversation_id):
     )
 
 
-def enqueue_summary(session, row, endpoint, *, commit=True, parent_run_id=None, triggered_by="user"):
+def enqueue_summary(session, row, snapshot, *, commit=True, parent_run_id=None, triggered_by="user"):
     prior = latest_summary(session, row.id)
     memory = summary_memory(session, prior)
     recent = list(
@@ -99,6 +99,8 @@ def enqueue_summary(session, row, endpoint, *, commit=True, parent_run_id=None, 
         capability="chat.summarize",
         conversation_id=row.id,
     )
+    from app.chat_providers import chat_permissions
+
     run = create_run(
         session,
         task,
@@ -109,9 +111,9 @@ def enqueue_summary(session, row, endpoint, *, commit=True, parent_run_id=None, 
         retry_class="inspect",
         parent_run_id=parent_run_id,
         triggered_by=triggered_by,
+        permissions=chat_permissions(snapshot),
         parameters={
-            "provider": row.provider,
-            "endpoint": endpoint,
+            **snapshot,
             "model": row.model,
             "temperature": 0,
             "max_tokens": 2048,
@@ -165,7 +167,13 @@ def maybe_enqueue_automatic_summary(session, conversation, completed_run):
             summary = enqueue_summary(
                 session,
                 conversation,
-                completed_run.parameters["endpoint"],
+                {
+                    "provider": completed_run.parameters.get("provider", conversation.provider),
+                    "provider_id": completed_run.parameters.get("provider_id"),
+                    "location": completed_run.parameters.get("location", "local"),
+                    "endpoint": completed_run.parameters["endpoint"],
+                    "secret_ref": completed_run.parameters.get("secret_ref", ""),
+                },
                 commit=False,
                 parent_run_id=completed_run.id,
                 triggered_by="automatic_context",
