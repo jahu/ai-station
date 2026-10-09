@@ -7,4 +7,6 @@ export const emptyOptions: AssistantOptions = {
   coding: null,
   commit: null,
   publish: null,
+  load: null,
+  stop: null,
 };

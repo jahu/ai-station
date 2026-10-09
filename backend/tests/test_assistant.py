@@ -606,3 +606,102 @@ def test_model_cannot_grant_github_publication(monkeypatch):
             row["executor_type"] == "github_publication"
             for row in detail["messages"][-1].get("coding_runs", [])
         )
+
+
+def test_explicit_runtime_load_uses_llama_service_without_model_permission():
+    from app.models import ModelFile
+
+    with session_factory()() as session:
+        model = ModelFile(
+            host_path="/models/assistant.gguf",
+            filename="assistant.gguf",
+            format="gguf",
+            category="llm",
+            availability="present",
+            size_bytes=1000,
+            mtime=1,
+        )
+        session.add(model)
+        session.commit()
+        model_id = model.id
+    with TestClient(app) as client:
+        cid = create(client)
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "content": "Load the selected local GGUF",
+                "action": "runtime.load",
+                "load": {"model_file_id": model_id, "gpus": [2], "context_size": 4096},
+            },
+        )
+        assert response.status_code == 202, response.text
+        assert "manage_models" not in response.json()["effective_permissions"]
+        assert "endpoint" not in response.json()["parameters"]
+        step()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        child = detail["active_run"]
+        assert child["capability"] == "runtime.load"
+        assert child["executor_type"] == "llama_load"
+        assert child["parameters"]["gpus"] == [2]
+        assert child["effective_permissions"] == ["manage_models", "filesystem_read"]
+        assert detail["model"] == "llamacpp:" + model_id
+        assert client.post(f"/api/runs/{child['id']}/cancel").status_code == 200
+
+
+def test_explicit_runtime_stop_unloads_only_owned_instance():
+    from app.models import RuntimeInstance
+
+    with session_factory()() as session:
+        instance = RuntimeInstance(
+            runtime_key="llama.cpp",
+            name="assistant.gguf",
+            ownership="managed",
+            status="ready",
+            endpoint="llamacpp:owned",
+        )
+        session.add(instance)
+        session.commit()
+        instance_id = instance.id
+    with TestClient(app) as client:
+        cid = create(client)
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "content": "Unload the selected owned llama.cpp instance",
+                "action": "runtime.stop",
+                "stop": {"instance_id": instance_id},
+            },
+        )
+        assert response.status_code == 202, response.text
+        assert "manage_models" not in response.json()["effective_permissions"]
+        step()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        child = detail["active_run"]
+        assert child["capability"] == "runtime.stop"
+        assert child["executor_type"] == "llama_stop"
+        assert child["parameters"]["instance_id"] == instance_id
+        assert child["effective_permissions"] == ["manage_models"]
+        assert client.post(f"/api/runs/{child['id']}/cancel").status_code == 200
+
+
+def test_model_cannot_grant_runtime_load_or_stop(monkeypatch):
+    async def plan(*args):
+        from app.assistant import Plan
+
+        return Plan(action="runtime.load", reason="Load a model")
+
+    monkeypatch.setattr(AssistantExecutor, "plan", plan)
+    with TestClient(app) as client:
+        cid = create(client)
+        client.post(f"/api/chat/conversations/{cid}/messages", json={"content": "load 27B"})
+        step()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        assert "cannot load a model from a plan" in detail["messages"][-1]["content"]
+        assert detail["active_run"] is None
+        assert (
+            client.post(
+                f"/api/chat/conversations/{cid}/messages",
+                json={"content": "Load", "action": "runtime.load"},
+            ).status_code
+            == 422
+        )

@@ -417,3 +417,50 @@ it("renders review and commit controls from conversation coding runs", () => {
     screen.getByRole("button", { name: "Commit reviewed changes" }),
   ).toBeTruthy();
 });
+
+it("requires an explicit GGUF before a load action is ready", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        String(path).includes("/llama")
+          ? {
+              models: [{ id: "gguf-1", name: "models · assistant.gguf" }],
+              instances: [],
+            }
+          : { gpus: [{ index: 0, name: "GPU 0" }] },
+    })),
+  );
+  function Composer() {
+    const [value, setValue] = useState(emptyOptions);
+    return (
+      <>
+        <AssistantActions
+          value={value}
+          onChange={setValue}
+          busy={false}
+          onUploading={() => {}}
+        />
+        <output data-testid="load">{JSON.stringify(value.load)}</output>
+      </>
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  fireEvent.change(screen.getByLabelText("Action"), {
+    target: { value: "runtime.load" },
+  });
+  expect(screen.getByTestId("load").textContent).toBe("null");
+  await screen.findByRole("option", { name: /assistant.gguf/ });
+  fireEvent.change(screen.getByLabelText("GGUF model"), {
+    target: { value: "gguf-1" },
+  });
+  expect(JSON.parse(screen.getByTestId("load").textContent!)).toMatchObject({
+    model_file_id: "gguf-1",
+    context_size: 4096,
+  });
+});

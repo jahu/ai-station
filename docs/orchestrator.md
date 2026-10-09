@@ -44,7 +44,9 @@ The design above describes the target. Each implementation increment records sep
 
 The default screen and new Chat conversations offer Platform assistant mode; Conversation only remains selectable and existing conversations keep their mode. Typed actions cover images, disabled agent drafts, explicitly scoped Cursor/Codex/local coding, reviewed task-branch commits and approved draft GitHub publication. Local model routing handles requests without an explicit action or deterministic match. Invalid plans produce clarification without executing a capability. Ordered image uploads, task-step status, generated images, coding diffs and links to coding/validation/commit/publication Runs appear in the transcript. Repeating an action requires a new user turn rather than completion regeneration.
 
-A model plan cannot commit or publish. Those actions require the user to select them and confirm the existing review/approval forms. They call the same `coding.commit` and `coding.publish` domain services as the Coding workspace, reuse the source Task, and inherit its conversation. Cancellation targets the queued Git Run. Managed llama.cpp load/unload from the conversation, image understanding, whole-repository coding and remaining media adapters follow as separate increments. Ollama remains supported alongside llama.cpp.
+A model plan cannot commit or publish. Those actions require the user to select them and confirm the existing review/approval forms. They call the same `coding.commit` and `coding.publish` domain services as the Coding workspace, reuse the source Task, and inherit its conversation. Cancellation targets the queued Git Run.
+
+Typed `runtime.load` and `runtime.stop` actions reuse the owned llama.cpp load/stop services. The user selects a discovered GGUF and GPUs, or an owned instance; a model plan cannot grant `manage_models` or stop an external Ollama/ComfyUI process. A successful load points this conversation at that GGUF. Cancellation targets the queued runtime Run. Image understanding, whole-repository coding and remaining media adapters follow as separate increments. Ollama remains supported alongside llama.cpp.
 
 ## Speech action
 
