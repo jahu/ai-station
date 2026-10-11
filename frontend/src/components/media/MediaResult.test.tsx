@@ -185,4 +185,15 @@ it("shows a generated image with source lineage in the workspace", async () => {
   });
   expect(source.getAttribute("href")).toBe("/library/portrait1");
   expect(screen.getByText(/There is no inspectable lineage Run/)).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "Edit edited01" }).getAttribute("href"),
+  ).toBe("/images?mode=img2img&input=edited01&run=photo");
+  expect(
+    screen
+      .getByRole("link", { name: "Recompose edited01" })
+      .getAttribute("href"),
+  ).toBe("/images?mode=recompose&input=edited01&run=photo");
+  expect(
+    screen.getByRole("link", { name: "Upscale edited01" }).getAttribute("href"),
+  ).toBe("/images?mode=upscale&input=edited01&run=photo");
 });

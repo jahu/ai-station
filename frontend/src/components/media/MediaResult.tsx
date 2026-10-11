@@ -122,6 +122,26 @@ export default function MediaResult({
               Download {text.download}
             </a>
           </div>
+          {kind === "image" && (
+            <div className="media-result-reuse">
+              {(
+                [
+                  ["img2img", "Edit"],
+                  ["recompose", "Recompose"],
+                  ["upscale", "Upscale"],
+                ] as const
+              ).map(([mode, label]) => (
+                <Button key={mode} asChild variant="secondary">
+                  <Link
+                    to={`/images?mode=${mode}&input=${result.id}${runId ? `&run=${runId}` : ""}`}
+                    aria-label={`${label} ${result.id.slice(0, 8)}`}
+                  >
+                    {label}
+                  </Link>
+                </Button>
+              ))}
+            </div>
+          )}
           <ArtifactLineage artifactId={result.id} />
         </div>
       ) : (
