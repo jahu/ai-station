@@ -72,9 +72,9 @@ function SessionCards({ sessions }: { sessions: SessionRow[] }) {
       </h2>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a conversation while the list is focused. Enter opens
-        it. Inspect project stays on a saved project and does not start a coding
-        Run. Filter project uses GET /api/coding/sessions?project_id= and does
-        not start a coding Run.
+        it. Inspect project and View tagged Runs stay on a saved project and do
+        not start a coding Run. Filter project uses GET
+        /api/coding/sessions?project_id= and does not start a coding Run.
       </p>
       <div
         ref={listRef}
@@ -102,15 +102,27 @@ function SessionCards({ sessions }: { sessions: SessionRow[] }) {
             >
               <span className="row spread">
                 {s.project_id ? (
-                  <Link
-                    className="text-link"
-                    to={`/projects/${s.project_id}`}
-                    tabIndex={current ? 0 : -1}
-                    aria-label={`Inspect project ${s.project_id}`}
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    {s.project_name}
-                  </Link>
+                  <span>
+                    <Link
+                      className="text-link"
+                      to={`/projects/${s.project_id}`}
+                      tabIndex={current ? 0 : -1}
+                      aria-label={`Inspect project ${s.project_id}`}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {s.project_name}
+                    </Link>
+                    {" · "}
+                    <Link
+                      className="text-link"
+                      to={`/runs?project_id=${s.project_id}`}
+                      tabIndex={current ? 0 : -1}
+                      aria-label={`View tagged Runs ${s.project_id}`}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      View tagged Runs
+                    </Link>
+                  </span>
                 ) : (
                   <small>{s.project_name}</small>
                 )}

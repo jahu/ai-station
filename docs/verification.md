@@ -736,3 +736,7 @@ Frontend lint, TypeScript, 330 component tests and production build passed. The 
 ## Open coding conversation opens tagged project Runs — 2026-10-12
 
 Frontend lint, TypeScript, 331 component tests and production build passed. The open Coding conversation shows View tagged Runs through `/runs?project_id=` from the saved `project_id`. Inspect project stays beside it. Those links do not start a coding Run. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Coding list opens tagged project Runs — 2026-10-12
+
+Frontend lint, TypeScript, 331 component tests and production build passed. Coding conversation cards show View tagged Runs through `/runs?project_id=` from the saved `project_id`. Inspect project stays on that row. Those links do not start a coding Run. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
