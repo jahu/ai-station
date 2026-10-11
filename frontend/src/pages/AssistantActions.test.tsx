@@ -67,39 +67,131 @@ it("keeps ordered image uploads and removes one reference", async () => {
   expect(screen.queryByAltText("Reference 2")).toBeNull();
 });
 
-it("shows a failed child even when planning succeeded", () => {
-  render(
-    <MemoryRouter>
-      <AssistantResults
-        result={{
-          task_status: "failed",
-          steps: [
-            {
-              id: "plan",
-              capability: "assistant.orchestrate",
-              status: "succeeded",
-              summary: "",
-              error_message: "",
-              location: "local",
-            },
-            {
-              id: "image",
-              capability: "image.recompose",
-              status: "failed",
-              summary: "",
-              error_message: "GPU unavailable",
-              location: "local",
-            },
-          ],
-          artifacts: [],
-        }}
-      />
-    </MemoryRouter>,
+function failedImageResult(
+  extra: NonNullable<
+    Parameters<typeof AssistantResults>[0]["result"]["steps"]
+  > = [],
+) {
+  return {
+    task_status: "failed" as const,
+    steps: [
+      {
+        id: "plan",
+        capability: "assistant.orchestrate",
+        status: "succeeded",
+        summary: "",
+        error_message: "",
+        location: "local",
+      },
+      {
+        id: "image",
+        capability: "image.recompose",
+        status: "failed",
+        summary: "",
+        error_message: "GPU unavailable",
+        location: "local",
+      },
+      ...extra,
+    ],
+    artifacts: [] as [],
+  };
+}
+
+function mountResults(
+  result: Parameters<typeof AssistantResults>[0]["result"],
+  onQueued?: Parameters<typeof AssistantResults>[0]["onQueued"],
+) {
+  return render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AssistantResults result={result} onQueued={onQueued} />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
+}
+
+it("shows a failed child even when planning succeeded", () => {
+  mountResults(failedImageResult());
   expect(screen.getByText("GPU unavailable")).toBeTruthy();
   expect(
     screen.getByRole("link", { name: "image.recompose" }).getAttribute("href"),
   ).toBe("/runs/image");
+});
+
+it("retries a failed image step in the conversation without opening the inspector", async () => {
+  const queued = vi.fn();
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST" && String(path).endsWith("/retry")
+        ? { id: "retry-id", status: "queued" }
+        : { id: "image", sources: [], derived: [] },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mountResults(failedImageResult(), queued);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Retry as a new run image" }),
+  );
+  await waitFor(() =>
+    expect(queued).toHaveBeenCalledWith({
+      id: "retry-id",
+      status: "queued",
+    }),
+  );
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/images/runs/image/retry",
+    expect.objectContaining({ method: "POST" }),
+  );
+  expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
+  expect(screen.queryByRole("link", { name: /Images/ })).toBeNull();
+});
+
+it("does not retry audio, avatars, or an image step that already has a later image run", () => {
+  mountResults({
+    task_status: "failed",
+    steps: [
+      {
+        id: "speech",
+        capability: "audio.speech",
+        status: "failed",
+        summary: "",
+        error_message: "Chatterbox missing",
+        location: "local",
+      },
+      {
+        id: "avatar",
+        capability: "avatar.animate",
+        status: "canceled",
+        summary: "",
+        error_message: "",
+        location: "local",
+      },
+      {
+        id: "image",
+        capability: "image.generate",
+        status: "failed",
+        summary: "",
+        error_message: "GPU lost",
+        location: "local",
+      },
+      {
+        id: "retry-id",
+        capability: "image.generate",
+        status: "queued",
+        summary: "",
+        error_message: "",
+        location: "local",
+      },
+    ],
+    artifacts: [],
+  });
+  expect(
+    screen.queryByRole("button", { name: /Retry as a new run/ }),
+  ).toBeNull();
 });
 
 it("reuses Library images in selection order, reorders them, and attaches a voice without uploads", async () => {

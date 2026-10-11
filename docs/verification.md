@@ -532,3 +532,7 @@ Frontend lint, TypeScript, 243 component tests and production build passed. Exec
 ## Library collection actions — 2026-10-11
 
 Frontend lint, TypeScript, 244 component tests and production build passed. Library collection cards and Run inspector artifact cards reuse Edit details, Trash and Restore with unique names. Saving still PATCHes or DELETEs the existing artifact endpoint and does not invent a Run. Enter inspects. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant image retry — 2026-10-11
+
+Frontend lint, TypeScript, 246 component tests and production build passed. A failed, canceled or interrupted Images child in the conversation can Retry as a new run through the existing `POST /api/images/runs/{id}/retry` endpoint. The conversation stays on that transcript; the inspector is not opened. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
