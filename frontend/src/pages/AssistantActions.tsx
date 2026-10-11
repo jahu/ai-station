@@ -178,13 +178,23 @@ export function AssistantResults({
       {result.coding_runs?.map((run) => (
         <div key={`coding-${run.id}`}>
           {run.project_id ? (
-            <Link
-              className="text-link"
-              to={`/projects/${run.project_id}`}
-              aria-label={`Inspect project ${run.project_id}`}
-            >
-              Inspect project
-            </Link>
+            <>
+              <Link
+                className="text-link"
+                to={`/projects/${run.project_id}`}
+                aria-label={`Inspect project ${run.project_id}`}
+              >
+                Inspect project
+              </Link>
+              {" · "}
+              <Link
+                className="text-link"
+                to={`/runs?project_id=${run.project_id}`}
+                aria-label={`View tagged Runs ${run.project_id}`}
+              >
+                View tagged Runs
+              </Link>
+            </>
           ) : null}
           <CodingReview run={run} onQueued={onQueued} />
           <GithubPublication run={run} onQueued={onQueued} />

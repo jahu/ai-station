@@ -861,9 +861,14 @@ it("renders review and commit controls from conversation coding runs", () => {
       "href",
     ),
   ).toBe("/projects/project-1");
+  expect(
+    screen
+      .getByRole("link", { name: "View tagged Runs project-1" })
+      .getAttribute("href"),
+  ).toBe("/runs?project_id=project-1");
 });
 
-it("opens the project from conversation coding results without starting a Run", () => {
+it("opens tagged Runs from conversation coding results without starting a Run", () => {
   const fetch = vi.fn(async (path: string) => ({
     ok: true,
     json: async () => (path.includes("/api/") ? [] : []),
@@ -911,6 +916,11 @@ it("opens the project from conversation coding results without starting a Run", 
       "href",
     ),
   ).toBe("/projects/project-1");
+  expect(
+    screen
+      .getByRole("link", { name: "View tagged Runs project-1" })
+      .getAttribute("href"),
+  ).toBe("/runs?project_id=project-1");
   expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
   expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
   expect(
