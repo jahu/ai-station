@@ -181,6 +181,18 @@ function mount(agent = draft) {
                         required_permissions: ["network_read"],
                       },
                       {
+                        name: "remember_report",
+                        description: "Save successful reports as observations.",
+                        operational: true,
+                        required_permissions: ["memory_write"],
+                      },
+                      {
+                        name: "remember_workflow",
+                        description: "Save workflow observations.",
+                        operational: true,
+                        required_permissions: ["memory_write"],
+                      },
+                      {
                         name: "browser",
                         description:
                           "Browser automation is not implemented for agents.",
@@ -623,6 +635,33 @@ it("saves a schedule from the conversation without Enable or Run now", async () 
     expected_updated_at: "2026-10-11T10:00:00Z",
   });
   expect(await screen.findByText("30 6 * * 1-5 (UTC)")).toBeTruthy();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("shows report and workflow memory notices without Enable or Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    tools: ["remember_report", "remember_workflow"],
+  });
+  expect(
+    await screen.findByRole("note", { name: "Report memory agent-on" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("note", { name: "Workflow memory agent-on" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByText(/Successful reports will be stored in this agent’s memory/i),
+  ).toBeTruthy();
+  expect(
+    screen.getByText(
+      /Successful telemetry, public search and HTTP fetch steps/i,
+    ),
+  ).toBeTruthy();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
   ).toBe(true);

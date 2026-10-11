@@ -787,6 +787,31 @@ export function AssistantAgentDraft({
                     });
                   }}
                 />
+                {agent.tools?.includes("remember_report") ? (
+                  <p
+                    className="notice"
+                    role="note"
+                    aria-label={`Report memory ${shortId}`}
+                  >
+                    Successful reports will be stored in this agent’s memory
+                    with their source Run. They are observations, not verified
+                    facts. Select memory_search to use them on future runs. You
+                    can edit, disable or delete them in Memory.
+                  </p>
+                ) : null}
+                {agent.tools?.includes("remember_workflow") ? (
+                  <p
+                    className="notice"
+                    role="note"
+                    aria-label={`Workflow memory ${shortId}`}
+                  >
+                    Successful telemetry, public search and HTTP fetch steps
+                    will be stored in this agent’s memory with their source
+                    Run. memory_search results are not copied. Failures and
+                    cancellation write nothing. Select memory_search to use
+                    them on future runs.
+                  </p>
+                ) : null}
               </dd>
             </div>
             <div>
@@ -1015,7 +1040,9 @@ export function AssistantAgentDraft({
             call Enable. Removing an unavailable tool or a missing skill stores
             the remaining list on the definition and does not call Enable.
             Adding an operational registry tool stores it on the definition and
-            does not call Enable. Unpublished adapters cannot be added. Adding
+            does not call Enable. Unpublished adapters cannot be added.
+            Attached remember-reports or remember-workflow tools show how
+            observations are stored and do not invent a Run. Adding
             an installed skill stores it on the definition and does not call
             Enable. At most four skills. Enable stays off until the saved
             definition can activate. Duplicate as draft stays disabled. Run now

@@ -652,3 +652,7 @@ Frontend lint, TypeScript, 304 component tests and production build passed. Afte
 ## Conversation saves agent description — 2026-10-11
 
 Frontend lint, TypeScript, 305 component tests and production build passed. After `agent.create`, the conversation can save the description through `PUT /api/agents/{id}`. Saving it does not invent a conversation Run or call Enable. Enable stays off until the saved definition can activate. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Conversation inspects agent memory notices — 2026-10-11
+
+Frontend lint, TypeScript, 306 component tests and production build passed. After `agent.create`, attached remember-reports or remember-workflow tools show how observations are stored. That does not invent a conversation Run or call Enable. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
