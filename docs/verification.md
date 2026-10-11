@@ -756,3 +756,7 @@ Frontend lint, TypeScript, 333 component tests and production build passed. Proj
 ## Coding project radios open tagged project Runs — 2026-10-12
 
 Frontend lint, TypeScript, 334 component tests and production build passed. Coding and assistant project radios show Inspect project and View tagged Runs through `/projects/{id}` and `/runs?project_id=`. Those links do not start a coding Run or send. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Run inspector opens tagged agent Runs — 2026-10-12
+
+Frontend lint, TypeScript, 335 component tests and production build passed. The Run inspector shows View tagged Runs through `/runs?agent_id=` when only `agent_id` is present. Inspect agent stays beside it. The existing agent+project filter is unchanged. Those links do not Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

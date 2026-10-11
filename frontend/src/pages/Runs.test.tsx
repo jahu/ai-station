@@ -294,6 +294,75 @@ it("opens the tagged agent from the Run inspector without Enable or Run now", as
   ).toBe(true);
 });
 
+it("opens tagged Runs from the inspector when only agent_id is present", async () => {
+  vi.stubGlobal(
+    "EventSource",
+    class {
+      close() {}
+      addEventListener() {}
+    },
+  );
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      String(url).includes("/events") || String(url).includes("/artifacts")
+        ? []
+        : {
+            id: "agent-run",
+            capability: "agent.workflow",
+            executor_type: "agent_workflow",
+            execution_target: "container",
+            status: "succeeded",
+            created_at: "2026-10-12T12:00:00Z",
+            started_at: "2026-10-12T12:00:01Z",
+            finished_at: "2026-10-12T12:00:02Z",
+            actual_gpu: null,
+            requested_gpu: "none",
+            parameters: {},
+            effective_permissions: [],
+            summary: "",
+            error_type: "",
+            error_message: "",
+            worker_id: null,
+            project_id: null,
+            agent_id: "agentone",
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/runs/agent-run"]}>
+        <Routes>
+          <Route path="/runs/:id" element={<RunDetail />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    (
+      await screen.findByRole("link", { name: "Inspect agent agentone" })
+    ).getAttribute("href"),
+  ).toBe("/agents/agentone");
+  expect(
+    screen.getByRole("link", { name: "View tagged Runs agentone" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/runs?agent_id=agentone");
+  expect(screen.queryByRole("link", { name: /Inspect project/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
 it("opens tagged Runs from the inspector when only project_id is present", async () => {
   vi.stubGlobal(
     "EventSource",
