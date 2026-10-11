@@ -76,6 +76,13 @@ function scheduleLabel(agent: AgentDraft) {
   return "Manual";
 }
 
+function parseFetchUrls(text: string) {
+  return text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 function AgentSearchQuery({
   agentId,
   query,
@@ -124,6 +131,62 @@ function AgentSearchQuery({
         aria-label={`Save public search query ${shortId}`}
       >
         Save public search query
+      </Button>
+    </form>
+  );
+}
+
+function AgentFetchUrls({
+  agentId,
+  urls,
+  tabIndex,
+  disabled,
+  pending,
+  onSave,
+}: {
+  agentId: string;
+  urls: string[];
+  tabIndex: number;
+  disabled: boolean;
+  pending: boolean;
+  onSave: (urls: string[]) => void;
+}) {
+  const shortId = agentId.slice(0, 8);
+  const saved = urls.join("\n");
+  const [value, setValue] = useState(saved);
+  const next = parseFetchUrls(value);
+  return (
+    <form
+      className="assistant-agent-search"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!next.length || next.join("\n") === saved || disabled) return;
+        onSave(next);
+      }}
+    >
+      <label>
+        Reviewed URLs
+        <textarea
+          required
+          rows={3}
+          value={value}
+          tabIndex={tabIndex}
+          aria-label={`Reviewed URLs ${shortId}`}
+          disabled={disabled}
+          onChange={(event) => setValue(event.target.value)}
+          placeholder="https://www.example.com/"
+        />
+      </label>
+      <Button
+        type="submit"
+        variant="secondary"
+        disabled={
+          disabled || pending || !next.length || next.join("\n") === saved
+        }
+        tabIndex={tabIndex}
+        aria-label={`Save reviewed URLs ${shortId}`}
+      >
+        Save reviewed URLs
       </Button>
     </form>
   );
@@ -324,10 +387,20 @@ export function AssistantAgentDraft({
                 </dd>
               </div>
             ) : null}
-            {agent.fetch_urls?.length ? (
+            {agent.tools?.includes("http_fetch") ? (
               <div>
                 <dt>Reviewed URLs</dt>
-                <dd>{agent.fetch_urls.join(", ")}</dd>
+                <dd>
+                  <AgentFetchUrls
+                    key={agent.updated_at}
+                    agentId={agent.id}
+                    urls={agent.fetch_urls ?? []}
+                    tabIndex={tabIndex}
+                    disabled={busy || active}
+                    pending={saveSettings.isPending}
+                    onSave={(fetch_urls) => saveSettings.mutate({ fetch_urls })}
+                  />
+                </dd>
               </div>
             ) : null}
             {agent.require_approval ? (
@@ -412,9 +485,10 @@ export function AssistantAgentDraft({
           <p className="muted">
             Activation stays explicit and uses the saved definition. It does not
             invent a conversation Run. Use model saves a local model on that
-            definition and does not call Enable. Saving a public search query
-            stores that exact query on the definition and does not call Enable.
-            Enable stays off until the saved definition can activate. Duplicate as draft stays disabled.
+            definition and does not call Enable. Saving a public search query or
+            reviewed URLs stores those values on the definition and does not
+            call Enable. Enable stays off until the saved definition can
+            activate. Duplicate as draft stays disabled.
             Run now queues a new workflow from that saved definition and stays
             on this transcript. A waiting Run can Approve and queue or Deny here
             without opening the inspector. Stop stays on an in-progress history
