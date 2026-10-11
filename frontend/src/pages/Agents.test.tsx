@@ -1244,3 +1244,82 @@ it("retries a failed workflow from Agents history without Run now", async () => 
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
 });
+it("approves a waiting Run from Agents without Run now or the inspector", async () => {
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.endsWith("/chat/provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.includes("/skills") || url.endsWith("tools")
+            ? []
+            : url.endsWith("/hardware")
+              ? { gpus: [] }
+              : options?.method === "POST" && String(url).includes("/approval")
+                ? { id: "wait-run-cccc", status: "queued" }
+                : {
+                    id: "draft",
+                    name: "Morning review",
+                    description: "",
+                    goal: "Summarize",
+                    system_prompt: "",
+                    model: "local",
+                    tools: [],
+                    search_query: "",
+                    fetch_urls: [],
+                    skills: [],
+                    trigger: "manual",
+                    cron_expr: "",
+                    interval_seconds: null,
+                    run_at: null,
+                    maximum_runtime: 600,
+                    output_expectation: "Report",
+                    require_approval: true,
+                    workflow_mode: "sequential",
+                    tool_calling: "none",
+                    retry_policy: { mode: "none" },
+                    notification_policy: {
+                      on_success: false,
+                      on_failure: false,
+                      on_approval: true,
+                    },
+                    project_id: null,
+                    enabled: true,
+                    updated_at: "2026-10-11T12:00:00Z",
+                    next_run_at: null,
+                    last_run_at: "2026-10-11T12:00:00Z",
+                    last_status: "waiting_for_approval",
+                    failure_count: 0,
+                    effective_permissions: [],
+                    runs: [
+                      {
+                        id: "wait-run-cccc",
+                        capability: "agent.workflow",
+                        status: "waiting_for_approval",
+                        created_at: "2026-10-11T12:00:00Z",
+                      },
+                    ],
+                  },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Approve and queue waiting Run wait-run",
+    }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/runs/wait-run-cccc/approval",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ resolution: "granted" }),
+      }),
+    ),
+  );
+  expect(screen.getByRole("heading", { name: "Morning review" })).toBeTruthy();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});

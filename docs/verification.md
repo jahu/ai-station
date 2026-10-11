@@ -544,3 +544,7 @@ Frontend lint, TypeScript, 248 component tests and production build passed. An i
 ## Home agent workflow retry — 2026-10-11
 
 `./scripts/check.sh`: 689 Python tests passed (5 skipped). Frontend lint, TypeScript, 249 component tests and production build passed. A failed agent notice on Home whose saved policy allows manual retry can Retry as a new workflow through `POST /api/runs/{id}/retry-workflow` using the parent workflow id. That does not call Run now or Mark read. Audio and avatar retries stay unpublished. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant agent approval — 2026-10-11
+
+Frontend lint, TypeScript, 251 component tests and production build passed. A parked agent Run in the conversation or Agents can Approve and queue or Deny through the existing `POST /api/runs/{id}/approval` endpoint. Granting queues that Run and does not start tools, call Run now, or open the inspector. Deny cancels it. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
