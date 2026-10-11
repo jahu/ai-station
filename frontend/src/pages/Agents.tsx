@@ -19,6 +19,7 @@ import {
   AgentLinkedProjectLinks,
   AgentProjectList,
 } from "./AgentProjectList";
+import ProjectAgents from "./ProjectAgents";
 import {
   ApprovalChoiceList,
   NoticeChoiceList,
@@ -624,6 +625,12 @@ export function AgentDetail() {
             projects.data?.find((item) => item.id === agent.project_id)?.name
           }
         />
+        {agent.project_id ? (
+          <ProjectAgents
+            projectId={agent.project_id}
+            excludeAgentId={agent.id}
+          />
+        ) : null}
         <ErrorNotice error={action.error ?? detail.error ?? projects.error} />
       </section>
       <AgentEditor key={agent.id} agent={agent} active={active} />

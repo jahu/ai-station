@@ -9,7 +9,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function mount() {
+function mount(excludeAgentId?: string) {
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -19,7 +19,12 @@ function mount() {
         <Routes>
           <Route
             path="/projects/project-1"
-            element={<ProjectAgents projectId="project-1" />}
+            element={
+              <ProjectAgents
+                projectId="project-1"
+                excludeAgentId={excludeAgentId}
+              />
+            }
           />
           <Route path="/agents/:id" element={<h1>Agent definition</h1>} />
           <Route path="/agents" element={<h1>Filtered agents</h1>} />
@@ -135,6 +140,42 @@ it("moves through linked agents with arrow keys", async () => {
     key: "Enter",
   });
   await screen.findByRole("heading", { name: "Agent definition" });
+});
+
+it("omits the current agent when listing siblings on a definition", async () => {
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.includes("project_id=project-1")
+        ? [
+            { ...row, id: "agentone", name: "Morning review" },
+            { ...row, id: "agenttwo", name: "Evening check" },
+          ]
+        : [],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("agentone");
+  expect(
+    await screen.findByRole("link", {
+      name: "Inspect agent Evening check agenttwo",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "Other agents on this project" }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("link", {
+      name: "Inspect agent Morning review agentone",
+    }),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
 });
 
 it("shows an empty state when no agents tag this project", async () => {

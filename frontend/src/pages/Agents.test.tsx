@@ -847,6 +847,106 @@ it("saves a linked project from the definition without enabling or running", asy
     "/runs?project_id=project-1&agent_id=draft",
   );
 });
+it("lists other agents on the same linked project without Enable or Run now", async () => {
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.endsWith("/chat/provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.includes("/projects")
+            ? [{ id: "project-1", name: "Workstation docs" }]
+            : url.includes("/skills") || url.endsWith("/tools")
+              ? []
+              : url.includes("project_id=project-1")
+                ? [
+                    {
+                      id: "draft",
+                      name: "Morning review",
+                      goal: "Summarize",
+                      model: "local",
+                      enabled: false,
+                      last_status: "",
+                      next_run_at: null,
+                    },
+                    {
+                      id: "agenttwo",
+                      name: "Evening check",
+                      goal: "Check GPUs",
+                      model: "local",
+                      enabled: true,
+                      last_status: "succeeded",
+                      next_run_at: null,
+                    },
+                  ]
+                : {
+                    id: "draft",
+                    name: "Morning review",
+                    description: "",
+                    goal: "Summarize",
+                    system_prompt: "",
+                    model: "local",
+                    tools: [],
+                    search_query: "",
+                    fetch_urls: [],
+                    skills: [],
+                    trigger: "manual",
+                    cron_expr: "",
+                    interval_seconds: null,
+                    run_at: null,
+                    maximum_runtime: 600,
+                    output_expectation: "Report",
+                    workflow_mode: "sequential",
+                    tool_calling: "none",
+                    retry_policy: { mode: "none" },
+                    notification_policy: {
+                      on_success: false,
+                      on_failure: false,
+                      on_approval: false,
+                    },
+                    project_id: "project-1",
+                    enabled: false,
+                    updated_at: "2026-10-09T12:00:00Z",
+                    next_run_at: null,
+                    last_run_at: null,
+                    last_status: "",
+                    failure_count: 0,
+                    effective_permissions: [],
+                    runs: [],
+                  },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  expect(
+    await screen.findByRole("heading", {
+      name: "Other agents on this project",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("link", {
+      name: "Inspect agent Evening check agenttwo",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("link", {
+      name: "Inspect agent Morning review draft",
+    }),
+  ).toBeNull();
+  expect(
+    fetch.mock.calls.some(
+      (call) =>
+        String(call[0]) ===
+        "/api/agents?limit=50&offset=0&project_id=project-1",
+    ),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
 it("moves through linked projects with arrow keys without inventing a Run", async () => {
   const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
     ok: options === undefined,

@@ -94,8 +94,17 @@ function AgentCards({
   );
 }
 
-export default function ProjectAgents({ projectId }: { projectId: string }) {
+export default function ProjectAgents({
+  projectId,
+  excludeAgentId,
+}: {
+  projectId: string;
+  excludeAgentId?: string;
+}) {
   const headingId = useId();
+  const heading = excludeAgentId
+    ? "Other agents on this project"
+    : "Linked agents";
   const agents = useQuery({
     queryKey: ["project-agents", projectId],
     queryFn: () =>
@@ -103,10 +112,13 @@ export default function ProjectAgents({ projectId }: { projectId: string }) {
         `/agents?limit=50&offset=0&project_id=${encodeURIComponent(projectId)}`,
       ),
   });
+  const rows = Array.isArray(agents.data)
+    ? agents.data.filter((agent) => agent.id !== excludeAgentId)
+    : [];
   return (
     <section className="panel content-panel mt" aria-labelledby={headingId}>
       <div className="row spread">
-        <h2 id={headingId}>Linked agents</h2>
+        <h2 id={headingId}>{heading}</h2>
         <Link
           className="text-link"
           to={`/agents?project_id=${projectId}`}
@@ -123,10 +135,14 @@ export default function ProjectAgents({ projectId }: { projectId: string }) {
       <ErrorNotice error={agents.error} />
       {agents.isPending ? (
         <Loading />
-      ) : agents.data?.length ? (
-        <AgentCards agents={agents.data} projectId={projectId} />
+      ) : rows.length ? (
+        <AgentCards agents={rows} projectId={projectId} />
       ) : (
-        <Empty title="No linked agents">
+        <Empty
+          title={
+            excludeAgentId ? "No other linked agents" : "No linked agents"
+          }
+        >
           Link a project from Agents to tag those Runs for filtering.
         </Empty>
       )}
