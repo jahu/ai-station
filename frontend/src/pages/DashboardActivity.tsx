@@ -179,13 +179,13 @@ function taggedAgentLinks(
   current: boolean,
   includeAgent = false,
 ) {
-  if (!agentId) return null;
+  if (!agentId && !projectId) return null;
   if (!includeAgent && !projectId) return null;
   const tab = current ? 0 : -1;
-  const shortId = agentId.slice(0, 8);
+  const shortId = agentId?.slice(0, 8);
   return (
     <>
-      {includeAgent ? (
+      {includeAgent && agentId ? (
         <Link
           className="text-link"
           to={`/agents/${agentId}`}
@@ -205,14 +205,16 @@ function taggedAgentLinks(
           >
             Inspect project
           </Link>
-          <Link
-            className="text-link"
-            to={`/runs?project_id=${projectId}&agent_id=${agentId}`}
-            tabIndex={tab}
-            aria-label={`View tagged Runs ${shortId}`}
-          >
-            View tagged Runs
-          </Link>
+          {agentId ? (
+            <Link
+              className="text-link"
+              to={`/runs?project_id=${projectId}&agent_id=${agentId}`}
+              tabIndex={tab}
+              aria-label={`View tagged Runs ${shortId}`}
+            >
+              View tagged Runs
+            </Link>
+          ) : null}
         </>
       ) : null}
     </>
@@ -464,7 +466,8 @@ function AttentionList({
         Stop, Retry as a new run, Retry as a new workflow, Mark inspected, Mark
         read, Approve and Deny stay on the selected row. Inspect agent, Inspect
         project and View tagged Runs stay on a notice or agent Run with a saved
-        link.
+        link. Inspect project stays on a coding or worktree Run with a saved
+        project.
       </p>
       <ul
         ref={listRef}

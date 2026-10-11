@@ -708,3 +708,7 @@ Frontend lint, TypeScript, 322 component tests and production build passed. The 
 ## Coding conversations open the linked project — 2026-10-12
 
 Frontend lint, TypeScript, 323 component tests and production build passed. Coding conversation cards and the open conversation use the saved `project_id` from `GET /api/coding/sessions`. Inspect project stays on that row and does not start a coding Run. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Home coding Runs open the linked project — 2026-10-12
+
+`./scripts/check.sh` and frontend lint, TypeScript, 324 component tests and production build passed. Home in-progress coding and worktree Runs include the saved `project_id` from `/api/dashboard` even without an `agent_id`. Inspect project stays on that row and does not start a coding Run. Stop stays on that row. Those links do not Enable or Run now. Audio and avatar retries stay unpublished. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
