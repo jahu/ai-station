@@ -516,3 +516,7 @@ Frontend lint, TypeScript, 235 component tests and production build passed. Afte
 ## Assistant agent duplicate — 2026-10-11
 
 Frontend lint, TypeScript, 236 component tests and production build passed. After `agent.create`, Duplicate as draft posts `POST /api/agents/{id}/duplicate` with the expected version. The copy stays disabled and links into Agents. That does not invent a conversation Run and does not call Run now. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Media result Library details — 2026-10-11
+
+Frontend lint, TypeScript, 238 component tests and production build passed. Images, Audio, Avatars and assistant inline results reuse Library Edit details and Trash with unique names. Saving PATCHes the existing artifact endpoint and does not queue a Run. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

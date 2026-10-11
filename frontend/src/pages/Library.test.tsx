@@ -76,7 +76,9 @@ it("edits annotations, confirms Trash, and restores using each returned version"
   });
   vi.stubGlobal("fetch", fetch);
   mount();
-  fireEvent.click(await screen.findByRole("button", { name: "Edit details" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Edit details portrait" }),
+  );
   expect(screen.queryByRole("heading", { name: "Lineage" })).toBeNull();
   expect(
     screen.getByRole("dialog", { name: "Edit artifact details" }),
@@ -100,7 +102,9 @@ it("edits annotations, confirms Trash, and restores using each returned version"
       }),
     }),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Move to Trash" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Move to Trash portrait" }),
+  );
   expect(screen.getByRole("dialog", { name: "Move to Trash?" })).toBeTruthy();
   expect(
     fetch.mock.calls.filter(([, init]) => init?.method === "DELETE"),
@@ -114,7 +118,9 @@ it("edits annotations, confirms Trash, and restores using each returned version"
       body: JSON.stringify({ expected_updated_at: "2026-09-28T11:00:00Z" }),
     }),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Restore to Library" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Restore to Library portrait" }),
+  );
   await waitFor(() =>
     expect(screen.queryByText(/This artifact is in Trash/)).toBeNull(),
   );
