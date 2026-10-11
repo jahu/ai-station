@@ -676,3 +676,7 @@ Frontend lint, TypeScript, 310 component tests and production build passed. The 
 ## Project page lists linked agents — 2026-10-11
 
 Frontend lint, TypeScript, 314 component tests and production build passed. Project details list linked agents from `GET /api/agents?project_id=`. Enter inspects the selected definition. View tagged Runs stays on that row. View all linked agents opens the Agents filter. Linking does not grant coding, Git or repository access. That list does not Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Home opens a linked agent project — 2026-10-11
+
+`./scripts/check.sh` and frontend lint, TypeScript, 315 component tests and production build passed. Home enabled agents and upcoming schedules include a saved `project_id` from `/api/dashboard`. Inspect project and View tagged Runs stay on that row. Linking does not grant coding, Git or repository access. Those links do not Enable or Run now. Audio and avatar retries stay unpublished. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

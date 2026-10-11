@@ -513,6 +513,41 @@ it("moves through Home activity lists with unique inspect names", async () => {
   ).toBe("/system");
 });
 
+it("opens a linked project from Home without Enable or Run now", async () => {
+  const data = overview();
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.includes("/dashboard")
+        ? {
+            ...data,
+            agents: [{ ...data.agents[0], project_id: "project-1" }],
+          }
+        : [],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  const inspect = await screen.findByRole("link", {
+    name: "Inspect project project-1",
+  });
+  expect(inspect.getAttribute("href")).toBe("/projects/project-1");
+  expect(
+    screen
+      .getByRole("link", { name: "View tagged Runs agent" })
+      .getAttribute("href"),
+  ).toBe("/runs?project_id=project-1&agent_id=agent");
+  expect(screen.getByText(/Linked project/)).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+  expect(fetch).toHaveBeenCalledWith("/api/dashboard", undefined);
+});
+
 it("shows an error instead of claiming there is no activity", async () => {
   vi.stubGlobal(
     "fetch",
