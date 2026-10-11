@@ -864,7 +864,7 @@ export function AgentDetail() {
         </div>
         <p className="muted">
           Activation uses the saved definition. Pausing stops future scheduling;
-          cancel an active execution from its Run page.
+          Stop stays on an in-progress history Run and does not call Run now.
           {agent.require_approval
             ? " Each workflow waits for an explicit approval before any step is published. Approve and queue or Deny stays here and does not call Run now."
             : ""}

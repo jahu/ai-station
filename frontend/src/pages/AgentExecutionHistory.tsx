@@ -13,6 +13,8 @@ function runLabel(run: Run) {
     : run.capability;
 }
 
+const CANCELABLE = new Set(["queued", "claimed", "preparing", "running"]);
+
 export function RunApprovalActions({
   runId,
   name,
@@ -70,7 +72,7 @@ export function RunApprovalActions({
 export function AgentExecutionHistory({
   runs,
   tabIndex = 0,
-  hint = "Arrow keys choose a Run while the list is focused. Enter inspects it. Approve and queue or Deny stays on a waiting Run. Retry as a new workflow stays on a failed snapshot when the saved policy allows it.",
+  hint = "Arrow keys choose a Run while the list is focused. Enter inspects it. Stop stays on an in-progress Run. Approve and queue or Deny stays on a waiting Run. Retry as a new workflow stays on a failed snapshot when the saved policy allows it.",
 }: {
   runs: Run[];
   tabIndex?: number;
@@ -89,6 +91,17 @@ export function AgentExecutionHistory({
       void cache.invalidateQueries({ queryKey: ["agent"] });
       void cache.invalidateQueries({ queryKey: ["agents"] });
       void cache.invalidateQueries({ queryKey: ["runs"] });
+    },
+  });
+  const cancel = useMutation({
+    mutationFn: (runId: string) =>
+      api<Run>(`/runs/${runId}/cancel`, { method: "POST" }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["agent"] });
+      void cache.invalidateQueries({ queryKey: ["agents"] });
+      void cache.invalidateQueries({ queryKey: ["runs"] });
+      void cache.invalidateQueries({ queryKey: ["conversation"] });
+      void cache.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
   const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
@@ -113,7 +126,7 @@ export function AgentExecutionHistory({
       <p id={labelId} className="dashboard-note">
         {hint}
       </p>
-      <ErrorNotice error={retry.error} />
+      <ErrorNotice error={retry.error ?? cancel.error} />
       {queued ? (
         <p>
           Queued a new workflow from that snapshot.{" "}
@@ -154,12 +167,27 @@ export function AgentExecutionHistory({
                 >
                   {shortId}
                 </Link>
+                {CANCELABLE.has(run.status) ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={cancel.isPending || retry.isPending}
+                    tabIndex={active && current ? 0 : -1}
+                    aria-label={`Stop ${label} ${shortId}`}
+                    onClick={() => cancel.mutate(run.id)}
+                  >
+                    {cancel.isPending ? "Stopping…" : "Stop"}
+                  </Button>
+                ) : null}
+                {run.status === "cancel_requested" ? (
+                  <span className="muted">Stopping…</span>
+                ) : null}
                 {run.status === "waiting_for_approval" ? (
                   <RunApprovalActions
                     runId={run.id}
                     name={label}
                     tabIndex={active && current ? 0 : -1}
-                    disabled={retry.isPending}
+                    disabled={retry.isPending || cancel.isPending}
                   />
                 ) : null}
                 {run.retry?.allowed ? (
@@ -180,10 +208,11 @@ export function AgentExecutionHistory({
         })}
       </div>
       <p className="muted">
-        Latest 100 Runs. Approve and queue grants a parked Run without
+        Latest 100 Runs. Stop targets the selected in-progress Run and does
+        not call Run now. Approve and queue grants a parked Run without
         starting tools here. Deny cancels it. Manual retry queues a new
         workflow from the failed snapshot. It does not resume an uncertain
-        step or call Run now.
+        step.
       </p>
     </section>
   );

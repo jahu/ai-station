@@ -67,7 +67,9 @@ function mount(agent = draft) {
                 status: "queued",
                 retry: { allowed: false, retry_of: "fail-run-dddd" },
               }
-            : String(path).includes("/approval") && options?.method === "POST"
+            : String(path).endsWith("/cancel") && options?.method === "POST"
+              ? { id: "run-live-eeee", status: "cancel_requested" }
+              : String(path).includes("/approval") && options?.method === "POST"
               ? {
                   id: "wait-run-cccc",
                   status:
@@ -203,9 +205,43 @@ it("inspects ordinary execution history from the conversation without Run now", 
   });
   expect(first.tabIndex).toBe(0);
   expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Stop / })).toBeNull();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
+});
+
+it("stops an in-progress Run from conversation history without Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    enabled: true,
+    last_status: "running",
+    last_run_at: "2026-10-11T12:00:00Z",
+    runs: [
+      {
+        id: "run-live-eeee",
+        capability: "agent.workflow",
+        status: "running",
+        created_at: "2026-10-11T12:00:00Z",
+      },
+    ],
+  });
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Stop agent.workflow run-live",
+    }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/runs/run-live-eeee/cancel",
+      expect.objectContaining({ method: "POST" }),
+    ),
+  );
+  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+  expect(screen.getByText("Morning briefing")).toBeTruthy();
 });
 
 it("approves a waiting Run from the conversation without Run now or the inspector", async () => {
@@ -242,6 +278,7 @@ it("approves a waiting Run from the conversation without Run now or the inspecto
     ),
   );
   expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Stop / })).toBeNull();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
