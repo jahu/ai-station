@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import or_, select, update
+from sqlalchemy import or_, select, text, update
 from sqlalchemy.orm import Session
 
 from app.db import session_scope, utcnow
@@ -16,6 +16,42 @@ from app.serialize import artifact_dict
 
 router = APIRouter(prefix="/api/artifacts")
 DB = Annotated[Session, Depends(session_scope)]
+DERIVED_LIMIT = 50
+
+
+def _artifacts_in_order(session: Session, ids: list[str]) -> list[Artifact]:
+    ordered = [item for item in dict.fromkeys(ids) if item]
+    if not ordered:
+        return []
+    rows = {row.id: row for row in session.scalars(select(Artifact).where(Artifact.id.in_(ordered)))}
+    return [rows[item] for item in ordered if item in rows]
+
+
+def derived_artifact_ids(session: Session, artifact_id: str, limit: int = DERIVED_LIMIT) -> list[str]:
+    rows = session.execute(
+        text(
+            "SELECT artifacts.id FROM artifacts, "
+            "json_each(artifacts.parent_artifact_ids) AS parent "
+            "WHERE parent.value = :artifact_id AND artifacts.id != :artifact_id "
+            "GROUP BY artifacts.id "
+            "ORDER BY MAX(artifacts.created_at) DESC, artifacts.id "
+            "LIMIT :limit"
+        ),
+        {"artifact_id": artifact_id, "limit": limit},
+    )
+    return [row[0] for row in rows]
+
+
+def lineage_dict(session: Session, artifact: Artifact) -> dict:
+    sources = _artifacts_in_order(
+        session, [item for item in artifact.parent_artifact_ids if item != artifact.id]
+    )
+    derived = _artifacts_in_order(session, derived_artifact_ids(session, artifact.id))
+    return {
+        "id": artifact.id,
+        "sources": [artifact_dict(row) for row in sources],
+        "derived": [artifact_dict(row) for row in derived],
+    }
 
 
 @router.get("")
@@ -51,6 +87,14 @@ def artifacts(
         )
     statement = statement.order_by(Artifact.created_at.desc(), Artifact.id).offset(offset).limit(limit)
     return [artifact_dict(row) for row in session.scalars(statement)]
+
+
+@router.get("/{artifact_id}/lineage")
+def lineage(artifact_id: UUID, session: DB):
+    row = session.get(Artifact, str(artifact_id))
+    if row is None:
+        raise HTTPException(404, "Artifact not found")
+    return lineage_dict(session, row)
 
 
 class Version(BaseModel):

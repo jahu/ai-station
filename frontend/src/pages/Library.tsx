@@ -16,7 +16,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import LibraryActions from "./LibraryActions";
-import { api, type Artifact } from "../api";
+import { api, type Artifact, type ArtifactLineage } from "../api";
 import { ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
@@ -124,6 +124,87 @@ export function ArtifactCards({
     </section>
   );
 }
+
+function LineagePreview({ artifact }: { artifact: Artifact }) {
+  if (artifact.type === "image") {
+    return (
+      <img src={`/api/artifacts/${artifact.id}/thumbnail`} alt="" loading="lazy" />
+    );
+  }
+  const parentThumb =
+    artifact.type === "video" && artifact.parent_artifact_ids[0]
+      ? `/api/artifacts/${artifact.parent_artifact_ids[0]}/thumbnail`
+      : "";
+  return (
+    <div className={`artifact-placeholder artifact-kind-${artifact.type}`}>
+      {parentThumb ? (
+        <img src={parentThumb} alt="" loading="lazy" />
+      ) : artifact.type === "audio" ? (
+        <AudioLines size={28} aria-hidden="true" />
+      ) : artifact.type === "video" ? (
+        <Film size={28} aria-hidden="true" />
+      ) : (
+        <FileText size={24} aria-hidden="true" />
+      )}
+    </div>
+  );
+}
+
+function LineageStrip({
+  artifacts,
+  role,
+}: {
+  artifacts: Artifact[];
+  role: "source" | "derived";
+}) {
+  const headingId = useId();
+  const labelId = useId();
+  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+    artifacts,
+    (artifact) => artifact.id,
+  );
+  const heading = role === "source" ? "Source artifacts" : "Derived artifacts";
+  const noun = role === "source" ? "source" : "derived";
+  if (!artifacts.length) return null;
+  return (
+    <section aria-labelledby={headingId}>
+      <h3 id={headingId}>{heading}</h3>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a {role === "source" ? "source" : "derived artifact"}{" "}
+        while the list is focused. Enter inspects it. There is no inspectable
+        lineage Run.
+      </p>
+      <div
+        ref={listRef}
+        className="lineage-strip"
+        aria-labelledby={`${headingId} ${labelId}`}
+        onKeyDown={onKeyDown}
+      >
+        {artifacts.map((related, i) => {
+          const name = artifactName(related);
+          const shortId = related.id.slice(0, 8);
+          return (
+            <Link
+              key={related.id}
+              to={`/library/${related.id}`}
+              className="lineage-card"
+              aria-label={`Inspect ${noun} ${name} ${shortId}`}
+              {...itemProps(i, related.id)}
+            >
+              <LineagePreview artifact={related} />
+              <strong>{name}</strong>
+              <small>
+                {related.type.replaceAll("_", " ")}
+                {related.trashed_at ? " · Trash" : ""}
+              </small>
+            </Link>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
 export function Library() {
   const [kind, setKind] = useState("");
   const [view, setView] = useState("active");
@@ -330,13 +411,21 @@ export function Library() {
 }
 export function ArtifactDetail() {
   const { id } = useParams();
+  const lineageHeadingId = useId();
   const [copied, setCopied] = useState(false);
   const [copyError, setCopyError] = useState<Error | null>(null);
   const query = useQuery({
     queryKey: ["artifact", id],
     queryFn: () => api<Artifact>(`/artifacts/${id}`),
   });
+  const lineageQuery = useQuery({
+    queryKey: ["artifact-lineage", id],
+    queryFn: () => api<ArtifactLineage>(`/artifacts/${id}/lineage`),
+    enabled: Boolean(id),
+  });
   const a = query.data;
+  const sources = lineageQuery.data?.sources ?? [];
+  const derived = lineageQuery.data?.derived ?? [];
   const prompt =
     a?.metadata.edit_prompt || a?.metadata.prompt || a?.metadata.text || "";
   return (
@@ -349,9 +438,9 @@ export function ArtifactDetail() {
         title={a?.title || a?.original_filename || "Artifact"}
         action={a && <LibraryActions artifact={a} />}
       >
-        Source, parameters, and execution history.
+        Sources, derived artifacts, parameters, and execution history.
       </PageTitle>
-      <ErrorNotice error={query.error ?? copyError} />
+      <ErrorNotice error={query.error ?? lineageQuery.error ?? copyError} />
       {a?.trashed_at && (
         <div className="notice">
           <Trash2 size={16} />
@@ -464,24 +553,15 @@ export function ArtifactDetail() {
                   <Link to={`/runs/${a.run_id}`}>Inspect source run →</Link>
                 </p>
               )}
-              {a.parent_artifact_ids.length > 0 && (
-                <>
-                  <h3>Source artifacts</h3>
-                  <div className="source-strip">
-                    {a.parent_artifact_ids.map((parent) => (
-                      <Link key={parent} to={`/library/${parent}`}>
-                        {a.type === "image" ? (
-                          <img
-                            src={`/api/artifacts/${parent}/thumbnail`}
-                            alt={`Source ${parent.slice(0, 8)}`}
-                          />
-                        ) : (
-                          `Reference ${parent.slice(0, 8)} →`
-                        )}
-                      </Link>
-                    ))}
-                  </div>
-                </>
+              {(sources.length > 0 || derived.length > 0) && (
+                <section
+                  className="artifact-lineage"
+                  aria-labelledby={lineageHeadingId}
+                >
+                  <h2 id={lineageHeadingId}>Lineage</h2>
+                  <LineageStrip artifacts={sources} role="source" />
+                  <LineageStrip artifacts={derived} role="derived" />
+                </section>
               )}
               <details>
                 <summary>All parameters</summary>

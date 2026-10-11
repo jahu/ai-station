@@ -188,3 +188,9 @@ export interface Artifact {
     [key: string]: unknown;
   };
 }
+
+export interface ArtifactLineage {
+  id: string;
+  sources: Artifact[];
+  derived: Artifact[];
+}
