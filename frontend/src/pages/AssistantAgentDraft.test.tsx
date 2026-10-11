@@ -443,6 +443,37 @@ it("saves approval, retry, notice and workflow policies from the conversation wi
   ).toBe(true);
 });
 
+it("saves bounded tool calling from the conversation without Enable or Run now", async () => {
+  const fetch = mount();
+  const box = (await screen.findByRole("checkbox", {
+    name: /Bounded tool calling during the report/i,
+  })) as HTMLInputElement;
+  expect(box.checked).toBe(false);
+  fireEvent.click(box);
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("checkbox", {
+          name: /Bounded tool calling during the report/i,
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(write[0]).toBe("/api/agents/agent-one");
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    tool_calling: "bounded",
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+  });
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
 it("saves a schedule from the conversation without Enable or Run now", async () => {
   const fetch = mount();
   expect(await screen.findByText("0 7 * * 1-5 (UTC)")).toBeTruthy();
