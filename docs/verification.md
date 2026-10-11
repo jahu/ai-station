@@ -580,3 +580,7 @@ Frontend lint, TypeScript, 267 component tests and production build passed. Afte
 ## Assistant agent Run now — 2026-10-11
 
 Frontend lint, TypeScript, 268 component tests and production build passed. After `agent.create`, an enabled idle definition can Run now from the conversation through `POST /api/agents/{id}/run`. The new workflow stays on the transcript; the inspector is not opened. A disabled draft or an already-active Run keeps that control disabled. Tools and schedule stay in Agents. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant agent skill review — 2026-10-11
+
+Frontend lint, TypeScript, 271 component tests and production build passed. After `agent.create`, attached skills are listed from `GET /api/skills`. Review instructions stays on the selected row. A stored id missing from the catalog stays visible. That does not invent a Skill Run or call Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

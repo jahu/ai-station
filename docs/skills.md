@@ -25,7 +25,7 @@ Cite only supplied tool results. Do not invent host actions.
 
 ## Lifecycle
 
-The Agents editor lists installed skills from `GET /api/skills` and never invents ids. Arrow keys move through that list; Space or Enter selects the focused skill. Review the instruction text before enabling the agent. There is no inspectable Skill Run. Natural-language draft creation may attach an installed skill when the instruction mentions its id or name; the draft stays disabled.
+The Agents editor lists installed skills from `GET /api/skills` and never invents ids. Arrow keys move through that list; Space or Enter selects the focused skill. Review the instruction text before enabling the agent. There is no inspectable Skill Run. Natural-language draft creation may attach an installed skill when the instruction mentions its id or name; the draft stays disabled. After `agent.create`, the conversation shows those attached skills from the same catalog; Review instructions stays on the selected row. A stored id that is not installed stays visible and is not invented. Space or Enter does not select or start a Run.
 
 Queueing a Run snapshots the selected documents, including hashes, into `run.parameters["skill_snapshots"]`. The worker re-reads the files and fails the Run if a hash changed, a skill was removed, or the files are no longer readable. Verified ids, versions and hashes are recorded as a `skills.verified` event. Cancellation still closes the model stream; skill files are not processes.
 

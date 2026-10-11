@@ -88,6 +88,17 @@ function mount(agent = draft) {
                 capability: "agent.workflow",
                 status: "queued",
               }
+          : String(path).includes("/skills")
+            ? [
+                {
+                  id: "station-briefing",
+                  name: "Station briefing",
+                  version: "1.0.0",
+                  description: "Local status report format",
+                  required_permissions: [],
+                  instructions: "Always mention GPU memory when it appears.",
+                },
+              ]
           : String(path).includes("/retry-workflow")
             ? {
                 id: "retry-run",
@@ -121,6 +132,23 @@ function mount(agent = draft) {
   );
   return fetch;
 }
+
+it("reviews attached skill instructions from the conversation without inventing a Run", async () => {
+  const fetch = mount();
+  expect(await screen.findByText("Station briefing")).toBeTruthy();
+  fireEvent.click(
+    await screen.findByText(
+      "Review Station briefing station-briefing instructions",
+    ),
+  );
+  expect(
+    screen.getByText("Always mention GPU memory when it appears."),
+  ).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
 
 it("inspects the saved definition without queueing Run now", async () => {
   const fetch = mount();
@@ -160,7 +188,9 @@ it("enables a disabled draft from the conversation without inventing a Run", asy
   expect(screen.getByText(/Disabled draft/)).toBeTruthy();
   expect(screen.getByText("0 7 * * 1-5 (UTC)")).toBeTruthy();
   expect(screen.getByText("telemetry, web_search")).toBeTruthy();
-  expect(screen.getByText("station-briefing")).toBeTruthy();
+  expect(
+    await screen.findByLabelText("Skill Station briefing station-briefing"),
+  ).toBeTruthy();
   expect(screen.getByText("workstation GPU news")).toBeTruthy();
   expect(screen.getByText("Required before each Run")).toBeTruthy();
   expect(screen.getByText("Gated")).toBeTruthy();
