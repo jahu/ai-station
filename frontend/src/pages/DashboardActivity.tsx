@@ -79,6 +79,7 @@ type AttentionItem = {
   action?: "acknowledge" | "stop" | "stopping" | "read" | "approve";
   runId?: string;
   noticeId?: string;
+  executorType?: string;
 };
 
 function Section({
@@ -227,10 +228,12 @@ function attentionAction(
     cancelPending: boolean;
     readPending: boolean;
     decidePending: boolean;
+    retryPending: boolean;
     onAcknowledge: (runId: string) => void;
     onStop: (runId: string) => void;
     onRead: (noticeId: string) => void;
     onDecide: (runId: string, resolution: "granted" | "denied") => void;
+    onRetry: (runId: string) => void;
     onSelect: () => void;
   },
 ) {
@@ -239,17 +242,32 @@ function attentionAction(
   const actionId = attentionShortId(item, "action");
   if (item.action === "acknowledge" && runId) {
     return (
-      <Button
-        type="button"
-        variant="secondary"
-        tabIndex={current ? 0 : -1}
-        disabled={handlers.acknowledgePending}
-        aria-label={`Mark inspected ${item.title} ${actionId}`}
-        onFocus={handlers.onSelect}
-        onClick={() => handlers.onAcknowledge(runId)}
-      >
-        Mark inspected
-      </Button>
+      <>
+        {item.executorType === "photo_pipe" ? (
+          <Button
+            type="button"
+            variant="secondary"
+            tabIndex={current ? 0 : -1}
+            disabled={handlers.retryPending}
+            aria-label={`Retry as a new run ${item.title} ${actionId}`}
+            onFocus={handlers.onSelect}
+            onClick={() => handlers.onRetry(runId)}
+          >
+            Retry as a new run
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="secondary"
+          tabIndex={current ? 0 : -1}
+          disabled={handlers.acknowledgePending}
+          aria-label={`Mark inspected ${item.title} ${actionId}`}
+          onFocus={handlers.onSelect}
+          onClick={() => handlers.onAcknowledge(runId)}
+        >
+          Mark inspected
+        </Button>
+      </>
     );
   }
   if (item.action === "stop" && runId) {
@@ -321,20 +339,24 @@ function AttentionList({
   cancelPending,
   readPending,
   decidePending,
+  retryPending,
   onAcknowledge,
   onStop,
   onRead,
   onDecide,
+  onRetry,
 }: {
   items: AttentionItem[];
   acknowledgePending: boolean;
   cancelPending: boolean;
   readPending: boolean;
   decidePending: boolean;
+  retryPending: boolean;
   onAcknowledge: (runId: string) => void;
   onStop: (runId: string) => void;
   onRead: (noticeId: string) => void;
   onDecide: (runId: string, resolution: "granted" | "denied") => void;
+  onRetry: (runId: string) => void;
 }) {
   const labelId = useId();
   const { listRef, index, setSelectedKey, onKeyDown, itemProps } =
@@ -346,8 +368,8 @@ function AttentionList({
     <>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose an item while the list is focused. Enter inspects it.
-        Stop, Mark inspected, Mark read, Approve and Deny stay on the selected
-        row.
+        Stop, Retry as a new run, Mark inspected, Mark read, Approve and Deny
+        stay on the selected row.
       </p>
       <ul
         ref={listRef}
@@ -373,10 +395,12 @@ function AttentionList({
                 cancelPending,
                 readPending,
                 decidePending,
+                retryPending,
                 onAcknowledge,
                 onStop,
                 onRead,
                 onDecide,
+                onRetry,
                 onSelect: () => setSelectedKey(item.key),
               })}
             />
@@ -444,6 +468,14 @@ export default function DashboardActivity() {
       void cache.invalidateQueries({ queryKey: ["runs"] });
     },
   });
+  const retryImage = useMutation({
+    mutationFn: (runId: string) =>
+      api(`/images/runs/${runId}/retry`, { method: "POST" }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["dashboard"] });
+      void cache.invalidateQueries({ queryKey: ["runs"] });
+    },
+  });
   const data = query.data;
   const interrupted = data?.interrupted_runs ?? [];
   const notices = data?.notices ?? [];
@@ -458,6 +490,7 @@ export default function DashboardActivity() {
       status: run.status,
       action: "acknowledge" as const,
       runId: run.id,
+      executorType: run.executor_type,
     })),
     ...notices
       .filter((notice) => !interruptedIds.has(notice.run_id))
@@ -499,7 +532,8 @@ export default function DashboardActivity() {
           acknowledge.error ??
           cancel.error ??
           markRead.error ??
-          decide.error
+          decide.error ??
+          retryImage.error
         }
       />
       {query.isPending && <Loading />}
@@ -518,17 +552,20 @@ export default function DashboardActivity() {
                 cancelPending={cancel.isPending}
                 readPending={markRead.isPending}
                 decidePending={decide.isPending}
+                retryPending={retryImage.isPending}
                 onAcknowledge={(runId) => acknowledge.mutate(runId)}
                 onStop={(runId) => cancel.mutate(runId)}
                 onRead={(noticeId) => markRead.mutate(noticeId)}
                 onDecide={(runId, resolution) =>
                   decide.mutate({ runId, resolution })
                 }
+                onRetry={(runId) => retryImage.mutate(runId)}
               />
             ) : (
               <Empty title="Nothing needs you right now">
                 Interrupted work, notices and in-progress Runs will appear here
-                with Stop, Mark inspected, Mark read, Approve or Deny.
+                with Stop, Retry as a new run, Mark inspected, Mark read,
+                Approve or Deny.
               </Empty>
             )}
           </Section>
