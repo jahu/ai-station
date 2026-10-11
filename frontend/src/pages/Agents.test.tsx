@@ -1818,3 +1818,136 @@ it("shows recorded registry tool calls next to the latest report from Agents wit
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
 });
+it("shows last-parent workflow steps next to history from Agents without Run now", async () => {
+  const agent = {
+    id: "draft",
+    name: "Morning review",
+    description: "",
+    goal: "Summarize",
+    system_prompt: "",
+    model: "local",
+    tools: ["telemetry"],
+    search_query: "",
+    fetch_urls: [],
+    skills: [],
+    trigger: "manual",
+    cron_expr: "",
+    interval_seconds: null,
+    run_at: null,
+    maximum_runtime: 600,
+    output_expectation: "Report",
+    require_approval: false,
+    workflow_mode: "sequential",
+    tool_calling: "none",
+    retry_policy: { mode: "none" },
+    notification_policy: {
+      on_success: false,
+      on_failure: false,
+      on_approval: false,
+    },
+    project_id: null,
+    enabled: true,
+    updated_at: "2026-10-11T12:00:00Z",
+    next_run_at: null,
+    last_run_at: "2026-10-11T12:00:00Z",
+    last_status: "succeeded",
+    failure_count: 0,
+    effective_permissions: [],
+    runs: [
+      {
+        id: "report-run",
+        capability: "agent.report",
+        executor_type: "agent",
+        parent_run_id: "flow-run",
+        status: "succeeded",
+        created_at: "2026-10-11T12:01:00Z",
+      },
+      {
+        id: "flow-run",
+        capability: "agent.workflow",
+        executor_type: "agent_workflow",
+        status: "succeeded",
+        created_at: "2026-10-11T12:00:00Z",
+        workflow: {
+          parent_run_id: "flow-run",
+          mode: "sequential",
+          steps: [
+            {
+              run_id: "step-search",
+              key: "memory_search",
+              gate: "none",
+              status: "succeeded",
+              capability: "agent.step",
+            },
+            {
+              run_id: "step-report",
+              key: "report",
+              gate: "none",
+              status: "succeeded",
+              capability: "agent.execute",
+            },
+          ],
+        },
+      },
+      {
+        id: "old-flow",
+        capability: "agent.workflow",
+        executor_type: "agent_workflow",
+        status: "succeeded",
+        created_at: "2026-10-10T12:00:00Z",
+        workflow: {
+          parent_run_id: "old-flow",
+          mode: "gated",
+          steps: [
+            {
+              run_id: "old-step",
+              key: "system_snapshot",
+              gate: "none",
+              status: "succeeded",
+              capability: "agent.step",
+            },
+          ],
+        },
+      },
+    ],
+  };
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.endsWith("/chat/provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.includes("/skills") || url.endsWith("tools")
+            ? []
+            : url.endsWith("/hardware")
+              ? { gpus: [] }
+              : url.includes("/artifacts")
+                ? []
+                : agent,
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  expect(
+    await screen.findByRole("heading", { name: "Workflow steps" }),
+  ).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect step memory_search step-sea" })
+      .getAttribute("href"),
+  ).toBe("/runs/step-search");
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect step report step-rep" })
+      .getAttribute("href"),
+  ).toBe("/runs/step-report");
+  expect(
+    screen.queryByRole("link", { name: /Inspect step system_snapshot/ }),
+  ).toBeNull();
+  expect(
+    screen.getByRole("region", { name: "Workflow steps" }).textContent,
+  ).toMatch(/Stop stays on execution history/);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});

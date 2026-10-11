@@ -6,7 +6,7 @@ import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import { RegistryToolCalls, type RegistryToolCall } from "./AgentToolCalls";
 import GithubPublication from "./GithubPublication";
 import CodingReview from "./CodingReview";
-import { useId, type FormEvent, type KeyboardEvent } from "react";
+import { useId, type FormEvent } from "react";
 import {
   Link,
   useParams,
@@ -27,6 +27,7 @@ import { Button } from "../components/ui/button";
 import { terminal, time } from "../lib/utils";
 import { ArtifactCards } from "./Library";
 import { DependencyResults, ValidationResults } from "./ProjectResults";
+import { WorkflowStepCards } from "./AgentWorkflowSteps";
 import { useListKeyboard } from "./useListKeyboard";
 
 type RunRow = {
@@ -37,94 +38,6 @@ type RunRow = {
   status: string;
   created_at: string;
 };
-type Workflow = NonNullable<Run["workflow"]>;
-
-function WorkflowStepCards({ workflow }: { workflow: Workflow }) {
-  const headingId = useId();
-  const labelId = useId();
-  const navigate = useNavigate();
-  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
-    workflow.steps,
-    (step) => step.run_id,
-  );
-  const selected = workflow.steps[index];
-  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
-    onKeyDown(event);
-    if (event.key !== "Enter" || event.defaultPrevented) return;
-    const target = event.target as HTMLElement;
-    if (target.closest("a, button, textarea, input")) return;
-    if (selected?.run_id) {
-      event.preventDefault();
-      navigate(`/runs/${selected.run_id}`);
-    }
-  };
-  return (
-    <section className="panel" aria-labelledby={headingId}>
-      <h2 id={headingId}>Workflow steps</h2>
-      <p className="muted">
-        {workflow.mode === "gated"
-          ? "Gated: the report waits for approval after context tools."
-          : "Sequential: each step waits for the previous one to succeed."}{" "}
-        {workflow.tool_calling === "bounded"
-          ? "The report may request selected registry tools; invented tools fail closed. "
-          : ""}
-        Cancel targets the currently active child.
-      </p>
-      {workflow.steps.length ? (
-        <>
-          <p id={labelId} className="dashboard-note">
-            Arrow keys choose a step while the list is focused. Enter inspects
-            its child Run. Cancel stays outside this list.
-          </p>
-          <div
-            ref={listRef}
-            className="diagnostic-list"
-            aria-labelledby={labelId}
-            onKeyDown={handleKey}
-          >
-            {workflow.steps.map((step, i) => {
-              const current = i === index;
-              const shortId = step.run_id.slice(0, 8);
-              return (
-                <div key={step.run_id} {...itemProps(i, step.run_id)}>
-                  <div>
-                    <strong>{step.key}</strong>
-                    <p>
-                      {step.capability}
-                      {step.gate === "approval" ? " · approval gate" : ""}
-                    </p>
-                    {!!step.tool_calls?.length && (
-                      <p>
-                        {step.tool_calls.length} registry call
-                        {step.tool_calls.length === 1 ? "" : "s"}
-                      </p>
-                    )}
-                    {step.memory_id && <p>saved observation</p>}
-                  </div>
-                  <div className="row">
-                    <Badge status={step.status} />
-                    <Link
-                      className="text-link"
-                      to={`/runs/${step.run_id}`}
-                      tabIndex={current ? 0 : -1}
-                      aria-label={`Inspect ${step.key} ${shortId}`}
-                    >
-                      {shortId}
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      ) : (
-        <p className="muted">
-          Steps are published after this workflow Run starts.
-        </p>
-      )}
-    </section>
-  );
-}
 
 function RunTable({ runs }: { runs: RunRow[] }) {
   const labelId = useId();
@@ -718,4 +631,3 @@ export function RunDetail() {
     </>
   );
 }
-
