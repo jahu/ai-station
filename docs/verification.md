@@ -564,3 +564,7 @@ Frontend lint, TypeScript, 258 component tests and production build passed. Afte
 ## Assistant agent fetched pages — 2026-10-11
 
 Frontend lint, TypeScript, 261 component tests and production build passed. After `agent.create`, the conversation and Agents show independently recorded fetched-page cards next to the latest ordinary agent report from that report Run's `metadata.http_fetch`, or from the matching `http_fetch` sibling before that copy exists. Enter opens the selected public URL. Page HTML is not rendered. JavaScript is not executed. That is reviewed GET, not browser automation, and does not invent a conversation Run or call Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant agent registry tool calls — 2026-10-11
+
+Frontend lint, TypeScript, 263 component tests and production build passed. After `agent.create`, the conversation and Agents show independently recorded registry tool calls next to the latest ordinary agent report from that report Run's `metadata.tool_calls`. There is no inspectable tool-call Run. That does not invent a conversation Run or call Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
