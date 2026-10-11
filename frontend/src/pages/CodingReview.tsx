@@ -2,13 +2,14 @@ import { Link, useNavigate } from "react-router-dom";
 import { useId, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, GitCommitHorizontal, Check } from "lucide-react";
-import { api, type Artifact, type Run } from "../api";
+import { api, type Artifact, type Run, type RunEvent } from "../api";
 import { Button } from "../components/ui/button";
 import { ErrorNotice } from "../components/common";
 import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import { useListKeyboard } from "./useListKeyboard";
 import { ReviewChoiceList } from "./ReviewChoiceList";
+import { ValidationResults } from "./ProjectResults";
 
 type Review = {
   exploration?: {
@@ -389,6 +390,8 @@ function CommitReview({
   );
 }
 
+const TERMINAL = new Set(["succeeded", "failed", "canceled", "interrupted"]);
+
 function ValidationActions({
   run,
   validationId,
@@ -403,11 +406,12 @@ function ValidationActions({
     queryKey: ["run", validationId],
     queryFn: () => api<Run>(`/runs/${validationId}`),
     refetchInterval: (query) =>
-      ["succeeded", "failed", "canceled", "interrupted"].includes(
-        query.state.data?.status ?? "",
-      )
-        ? false
-        : 3000,
+      TERMINAL.has(query.state.data?.status ?? "") ? false : 3000,
+  });
+  const events = useQuery({
+    queryKey: ["events", validationId],
+    queryFn: () => api<RunEvent[]>(`/runs/${validationId}/events`),
+    refetchInterval: TERMINAL.has(validation.data?.status ?? "") ? false : 3000,
   });
   const repair = useMutation({
     mutationFn: () =>
@@ -419,6 +423,7 @@ function ValidationActions({
     run.metadata?.continuation_run_id ??
     run.metadata?.repair_run_id ??
     validation.data?.metadata?.repair_run_id;
+  const recorded = Array.isArray(events.data) ? events.data : [];
   return (
     <div className="content-panel">
       <p>
@@ -427,7 +432,8 @@ function ValidationActions({
           {validation.data?.status.replaceAll("_", " ") ?? "loading"} →
         </Link>
       </p>
-      <ErrorNotice error={validation.error || repair.error} />
+      <ErrorNotice error={validation.error || events.error || repair.error} />
+      <ValidationResults events={recorded} />
       {validation.data?.metadata?.repair_budget_exhausted === true && (
         <p className="notice">
           Automatic repair limit reached. Inspect the latest diff and failures

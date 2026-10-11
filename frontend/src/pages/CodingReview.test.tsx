@@ -118,7 +118,9 @@ it("moves through commit review without queueing a commit", () => {
   );
   const option = screen.getByLabelText("Review commit");
   expect(option.tabIndex).toBe(0);
-  expect(screen.getByText(/There is no inspectable review-ack Run/)).toBeTruthy();
+  expect(
+    screen.getByText(/There is no inspectable review-ack Run/),
+  ).toBeTruthy();
   fireEvent.keyDown(option.closest(".review-choice-list") as HTMLElement, {
     key: "Enter",
   });
@@ -132,18 +134,28 @@ it("moves through commit review without queueing a commit", () => {
   expect(JSON.stringify(fetch.mock.calls)).not.toContain("/commit");
 });
 
-it("offers a local repair only after confirmed failing validation", async () => {
-  const fetch = vi.fn(async (_url: string, options?: RequestInit) => ({
+function validationFetch(
+  extra?: Record<string, unknown>,
+  events: unknown[] = [],
+) {
+  return vi.fn(async (path: string, options?: RequestInit) => ({
     ok: true,
     json: async () =>
-      options
+      options?.method === "POST"
         ? { id: "repair" }
-        : {
-            id: "validation",
-            status: "failed",
-            error_type: "ValidationFailed",
-          },
+        : String(path).endsWith("/events")
+          ? events
+          : {
+              id: "validation",
+              status: "failed",
+              error_type: "ValidationFailed",
+              ...extra,
+            },
   }));
+}
+
+it("offers a local repair only after confirmed failing validation", async () => {
+  const fetch = validationFetch();
   vi.stubGlobal("fetch", fetch);
   const run = {
     id: "coding",
@@ -179,14 +191,63 @@ it("offers a local repair only after confirmed failing validation", async () => 
   );
 });
 
-it("links to an existing repair and prevents committing a superseded proposal", async () => {
+it("shows saved validation commands in the review without inventing a child Run", async () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn(async () => ({
-      ok: true,
-      json: async () => ({ status: "failed", error_type: "ValidationFailed" }),
-    })),
+    validationFetch(undefined, [
+      {
+        id: "val-test",
+        sequence: 1,
+        event_type: "validation.completed",
+        payload: {
+          kind: "test",
+          argv: ["pytest", "-q"],
+          exit_code: 1,
+          duration_seconds: 0.8,
+        },
+        created_at: "2026-10-11T12:00:00Z",
+      },
+    ]),
   );
+  const run = {
+    id: "coding",
+    executor_type: "local_proposal",
+    status: "succeeded",
+    metadata: {
+      execution_location: "local",
+      validation_run_id: "validation",
+      coding_review: {
+        branch: "ai/task",
+        files: [
+          { path: "app.py", diff: "+print(1)", insertions: 1, deletions: 0 },
+        ],
+      },
+    },
+  } as unknown as Run;
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <CodingReview run={run} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByLabelText("Command test val-test")).toBeTruthy();
+  expect(screen.getByText(/\["pytest","-q"\]/)).toBeTruthy();
+  expect(screen.getByText(/There is no inspectable child Run/)).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: /Validation: failed/ })
+      .getAttribute("href"),
+  ).toBe("/runs/validation");
+  expect(screen.queryByRole("heading", { name: "Commit Run" })).toBeNull();
+});
+
+it("links to an existing repair and prevents committing a superseded proposal", async () => {
+  vi.stubGlobal("fetch", validationFetch());
   const run = {
     id: "coding",
     executor_type: "local_proposal",
@@ -247,17 +308,17 @@ it("moves between files with arrow keys and shows only the selected patch", () =
     name: /Arrow keys choose a file/,
   });
   expect(
-    screen.getByRole("option", { name: "File one.py" }).getAttribute(
-      "aria-selected",
-    ),
+    screen
+      .getByRole("option", { name: "File one.py" })
+      .getAttribute("aria-selected"),
   ).toBe("true");
   expect(screen.getByLabelText("Diff for one.py")).toBeTruthy();
   expect(screen.queryByLabelText("Diff for two.py")).toBeNull();
   fireEvent.keyDown(list, { key: "ArrowDown" });
   expect(
-    screen.getByRole("option", { name: "File two.py" }).getAttribute(
-      "aria-selected",
-    ),
+    screen
+      .getByRole("option", { name: "File two.py" })
+      .getAttribute("aria-selected"),
   ).toBe("true");
   expect(screen.getByLabelText("Diff for two.py")).toBeTruthy();
   expect(screen.queryByLabelText("Diff for one.py")).toBeNull();
@@ -381,9 +442,7 @@ it("moves through exploration steps with arrow keys without inventing a Run", ()
             result: { content: "print(1)" },
           },
         ],
-        files: [
-          { path: "one.py", diff: "+one", insertions: 1, deletions: 0 },
-        ],
+        files: [{ path: "one.py", diff: "+one", insertions: 1, deletions: 0 }],
       },
     },
   } as unknown as Run;
