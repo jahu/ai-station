@@ -121,6 +121,54 @@ it("keeps saved settings visible when live Git inspection is unavailable", async
   ).toBe("/coding?project_id=saved");
 });
 
+it("opens tagged Runs from a project without Enable or Run now", async () => {
+  const fetch = vi.fn(async (path: string) => ({
+    ok: !path.endsWith("/status"),
+    json: async () =>
+      path.endsWith("/status")
+        ? { detail: "Host Runner is unavailable" }
+        : path.endsWith("/worktrees") ||
+            path.includes("/agents") ||
+            path.includes("/coding/sessions")
+          ? []
+          : {
+              id: "saved",
+              name: "Saved project",
+              repo_path: "/repos/saved",
+              default_branch: "main",
+              integration_branch: "develop",
+              protected_branches: ["main", "master"],
+              preferred_executor: "codex",
+              test_commands: [],
+              lint_commands: [],
+              build_commands: [],
+              agent_rules: "Preserve the API",
+              pr_policy: {},
+              updated_at: "2026-09-24T12:00:00Z",
+            },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(<ProjectDetail />, "/projects/saved");
+  expect(
+    (
+      await screen.findByRole("link", { name: "View tagged Runs saved" })
+    ).getAttribute("href"),
+  ).toBe("/runs?project_id=saved");
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every(
+      (call) => !String(call[0]).includes("/api/coding/cursor"),
+    ),
+  ).toBe(true);
+});
+
 it("moves through the project list with arrow keys", async () => {
   const row = {
     repo_path: "/repos/example",
