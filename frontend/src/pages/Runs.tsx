@@ -548,19 +548,18 @@ export function RunDetail() {
                   aria-label={`Inspect agent ${run.data.agent_id.slice(0, 8)}`}
                 >
                   Open agent definition
+                </Link>{" "}
+                <Link
+                  className="text-link"
+                  to={
+                    run.data.project_id
+                      ? `/runs?project_id=${run.data.project_id}&agent_id=${run.data.agent_id}`
+                      : `/runs?agent_id=${run.data.agent_id}`
+                  }
+                  aria-label={`View tagged Runs ${run.data.agent_id.slice(0, 8)}`}
+                >
+                  View tagged Runs
                 </Link>
-                {run.data.project_id ? (
-                  <>
-                    {" "}
-                    <Link
-                      className="text-link"
-                      to={`/runs?project_id=${run.data.project_id}&agent_id=${run.data.agent_id}`}
-                      aria-label={`View tagged Runs ${run.data.agent_id.slice(0, 8)}`}
-                    >
-                      View tagged Runs
-                    </Link>
-                  </>
-                ) : null}
               </p>
             ) : null}
             {run.data.project_id && (
