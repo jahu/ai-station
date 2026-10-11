@@ -263,6 +263,15 @@ export function AssistantAgentDraft({
                 Open in Agents
               </Link>
             </Button>
+            <Button asChild variant="secondary">
+              <Link
+                to={`/memory?scope=agent&scope_id=${agentId}`}
+                tabIndex={tabIndex}
+                aria-label={`Inspect agent memory ${shortId}`}
+              >
+                Inspect this agent's memory
+              </Link>
+            </Button>
           </div>
           {history.length ? (
             <>

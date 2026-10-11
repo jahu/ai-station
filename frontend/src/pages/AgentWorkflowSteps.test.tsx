@@ -24,6 +24,8 @@ const lastParent: Run = {
         gate: "none",
         status: "succeeded",
         capability: "agent.step",
+        memory_id: "memory-1",
+        memory_excerpted: true,
       },
       {
         run_id: "step-report",
@@ -84,6 +86,14 @@ it("shows last-parent steps without inventing a Run now control", () => {
       .getAttribute("href"),
   ).toBe("/runs/step-report");
   expect(screen.queryByRole("link", { name: /system_snapshot/ })).toBeNull();
+  expect(
+    screen
+      .getByRole("link", {
+        name: "View saved observation memory_search memory-1",
+      })
+      .getAttribute("href"),
+  ).toBe("/memory/memory-1");
+  expect(screen.getByText(/Memory contains an excerpt/)).toBeTruthy();
   expect(screen.getByText("1 registry call")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Cancel/ })).toBeNull();
