@@ -616,6 +616,68 @@ it("opens the tagged agent from in-progress and waiting Home Runs without Enable
   ).toBe(true);
 });
 
+it("opens a linked project from in-progress coding and worktree Home Runs without Enable or Run now", async () => {
+  const data = overview();
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.includes("/dashboard")
+        ? {
+            ...data,
+            interrupted_runs: [],
+            notices: [],
+            active_runs: [
+              {
+                id: "coding-run",
+                title: "Fix the parser",
+                executor_type: "local_proposal",
+                execution_target: "host",
+                status: "running",
+                project_id: "project-1",
+              },
+              {
+                id: "worktree-run",
+                title: "Prepare worktree",
+                executor_type: "worktree_prepare",
+                execution_target: "host",
+                status: "running",
+                project_id: "project-1",
+              },
+            ],
+          }
+        : [],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  const inspect = await screen.findAllByRole("link", {
+    name: "Inspect project project-1",
+  });
+  expect(inspect).toHaveLength(2);
+  expect(inspect[0].getAttribute("href")).toBe("/projects/project-1");
+  expect(inspect[1].getAttribute("href")).toBe("/projects/project-1");
+  expect(screen.queryByRole("link", { name: /Inspect agent/ })).toBeNull();
+  expect(screen.queryByRole("link", { name: /View tagged Runs/ })).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Stop Fix the parser coding-r" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Stop Prepare worktree worktree" }),
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every(
+      (call) => !String(call[0]).includes("/api/coding"),
+    ),
+  ).toBe(true);
+});
+
 it("opens the tagged agent from a Home notice without Enable or Run now", async () => {
   const data = overview();
   const fetch = vi.fn(async (url: string) => ({

@@ -158,6 +158,45 @@ def test_dashboard_active_agent_run_includes_linked_project(session):
     assert "private" not in str(data)
 
 
+def test_dashboard_active_coding_run_includes_project_without_agent(session):
+    project = Project(name="Workstation docs", repo_path="/fixture/repo")
+    session.add(project)
+    session.flush()
+    task = create_task(
+        session,
+        title="Coding task",
+        prompt="private prompt",
+        capability="coding.proposal",
+        project_id=project.id,
+    )
+    running = create_run(
+        session,
+        task,
+        run_type="coding",
+        capability="coding.proposal",
+        executor_type="local_proposal",
+        project_id=project.id,
+    )
+    running.status = "running"
+    worktree = create_run(
+        session,
+        task,
+        run_type="worktree",
+        capability="project.worktree",
+        executor_type="worktree_prepare",
+        project_id=project.id,
+    )
+    worktree.status = "running"
+    session.commit()
+    data = TestClient(app).get("/api/dashboard").json()
+    by_id = {row["id"]: row for row in data["active_runs"]}
+    assert by_id[running.id]["agent_id"] is None
+    assert by_id[running.id]["project_id"] == project.id
+    assert by_id[worktree.id]["agent_id"] is None
+    assert by_id[worktree.id]["project_id"] == project.id
+    assert "private" not in str(data)
+
+
 def test_empty_overview_does_not_require_runner_or_model():
     data = TestClient(app).get("/api/dashboard").json()
     assert data["active_run_count"] == data["enabled_agent_count"] == 0
