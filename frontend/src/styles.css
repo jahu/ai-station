@@ -1156,11 +1156,24 @@ main:focus-visible {
 .image-operation-choice-list button[aria-current="true"] {
   box-shadow: inset 0 0 0 1px rgba(185, 245, 139, 0.35);
 }
+.image-live-workspace {
+  display: grid;
+  grid-template-columns: minmax(380px, 1.15fr) minmax(320px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
 .image-workspace {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(270px, 1fr);
   gap: 24px;
   align-items: start;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.image-live-workspace .image-workspace {
+  grid-template-columns: 1fr;
 }
 .image-form {
   display: flex;
@@ -1306,6 +1319,11 @@ main:focus-visible {
 .prompt-text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+@media (max-width: 1100px) {
+  .image-live-workspace {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 1000px) {
   .image-workspace {
@@ -2425,12 +2443,16 @@ section:has(> .memory-grid) > .dashboard-note {
 .media-finished {
   padding: 20px;
 }
-.media-finished video {
+.media-finished video,
+.media-finished img {
   display: block;
   width: 100%;
   max-height: 480px;
   background: #0b0d0c;
   border-radius: 7px;
+}
+.media-finished img {
+  object-fit: contain;
 }
 .media-audio-output {
   display: flex;

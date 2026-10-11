@@ -480,3 +480,7 @@ Frontend lint, TypeScript, 216 component tests, production build and `./scripts/
 ## Assistant Cursor/Codex automatic file discovery — 2026-10-09
 
 Frontend lint, TypeScript, 217 component tests, production build and `./scripts/check.sh` (687 passed, 5 skipped) passed. Assistant Cursor and Codex coding reuse the existing Explore checkbox and worktree discovery path. Space or Enter selects it and does not send. Cursor and Codex stay repository-only; public GET remains Local AI only. Explore plus explicit files is still rejected. No Host Runner or schema migration. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Images workspace inline results — 2026-10-11
+
+Frontend lint, TypeScript, 224 component tests and production build passed. Images no longer navigates to the Run inspector after queueing. The workspace keeps live GPU wait/progress, Stop, the finished image, shared source/derived lineage and a logs link; the Run ID stays in the URL for refresh. Library `mode`/`input` deep links still remount the composer. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

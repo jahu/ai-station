@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AudioLines,
   Film,
+  Image as ImageIcon,
   LoaderCircle,
   ArrowUpRight,
   Square,
@@ -14,13 +15,42 @@ import { Button } from "../ui/button";
 import { mediaBusy } from "./media-run";
 import { ArtifactLineage } from "../../pages/ArtifactLineage";
 
+const copy = {
+  audio: {
+    title: "Your voice, ready to play",
+    idleTitle: "Turn your words into speech",
+    idleBody: "Add a short voice reference and the words you want it to say.",
+    spec: "WAV audio",
+    download: "WAV",
+    label: "Generated audio",
+  },
+  video: {
+    title: "Your portrait in motion",
+    idleTitle: "A portrait. A voice. A living moment.",
+    idleBody:
+      "Add a portrait and a speech recording. The finished video will appear here.",
+    spec: "MP4 video",
+    download: "MP4",
+    label: "Generated video",
+  },
+  image: {
+    title: "Your image, ready to inspect",
+    idleTitle: "Make the picture here",
+    idleBody:
+      "Describe a scene or attach a source. The finished image will appear here.",
+    spec: "Image artifact",
+    download: "image",
+    label: "Generated image",
+  },
+} as const;
+
 export default function MediaResult({
   kind,
   runId,
   run,
   error,
 }: {
-  kind: "audio" | "video";
+  kind: "audio" | "video" | "image";
   runId: string;
   run: Run | undefined;
   error: Error | null;
@@ -35,25 +65,24 @@ export default function MediaResult({
     mutationFn: () => api(`/runs/${runId}/cancel`, { method: "POST" }),
     onSuccess: () => cache.invalidateQueries({ queryKey: ["run", runId] }),
   });
-  const Icon = kind === "audio" ? AudioLines : Film;
+  const Icon =
+    kind === "audio" ? AudioLines : kind === "video" ? Film : ImageIcon;
   const result = artifacts.data?.find((a) => a.type === kind);
   const busy = mediaBusy(run);
+  const text = copy[kind];
   const statusText =
     run?.status === "queued"
       ? "Waiting for an available GPU"
       : run?.status === "cancel_requested"
         ? "Stopping generation…"
         : "Creating on your workstation";
+  const file = result ? `/api/artifacts/${result.id}/file` : "";
   return (
     <aside className="panel media-result">
       <div className="media-result-heading">
         <div>
           <span className="eyebrow">OUTPUT</span>
-          <h2>
-            {kind === "audio"
-              ? "Your voice, ready to play"
-              : "Your portrait in motion"}
-          </h2>
+          <h2>{text.title}</h2>
         </div>
         {run && <Badge status={run.status} />}
       </div>
@@ -64,17 +93,21 @@ export default function MediaResult({
             <video
               controls
               preload="metadata"
-              src={`/api/artifacts/${result.id}/file`}
-              aria-label="Generated video"
+              src={file}
+              aria-label={text.label}
             />
+          ) : kind === "image" ? (
+            <a href={file} target="_blank" rel="noreferrer">
+              <img src={file} alt={text.label} />
+            </a>
           ) : (
             <div className="media-audio-output">
               <AudioLines size={50} />
               <audio
                 controls
                 preload="metadata"
-                src={`/api/artifacts/${result.id}/file`}
-                aria-label="Generated audio"
+                src={file}
+                aria-label={text.label}
               />
             </div>
           )}
@@ -85,8 +118,8 @@ export default function MediaResult({
                 Open in Library
               </Link>
             </Button>
-            <a href={`/api/artifacts/${result.id}/file`} download>
-              Download {kind === "audio" ? "WAV" : "MP4"}
+            <a href={file} download>
+              Download {text.download}
             </a>
           </div>
           <ArtifactLineage artifactId={result.id} />
@@ -110,9 +143,7 @@ export default function MediaResult({
                 ? "Generation did not complete"
                 : run
                   ? "Loading your result…"
-                  : kind === "audio"
-                    ? "Turn your words into speech"
-                    : "A portrait. A voice. A living moment."}
+                  : text.idleTitle}
           </h3>
           <p>
             {busy
@@ -120,13 +151,11 @@ export default function MediaResult({
               : run
                 ? run.error_message ||
                   "Inspect the run for details, then start a new generation."
-                : kind === "audio"
-                  ? "Add a short voice reference and the words you want it to say."
-                  : "Add a portrait and a speech recording. The finished video will appear here."}
+                : text.idleBody}
           </p>
           {!run && (
             <div className="media-output-spec">
-              <span>{kind === "audio" ? "WAV audio" : "MP4 video"}</span>
+              <span>{text.spec}</span>
               <span>Saved to Library</span>
               <span>Local execution</span>
             </div>
@@ -140,6 +169,7 @@ export default function MediaResult({
           </Link>
           {busy && (
             <Button
+              type="button"
               variant="ghost"
               disabled={cancel.isPending || run?.status === "cancel_requested"}
               onClick={() => cancel.mutate()}

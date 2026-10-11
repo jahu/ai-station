@@ -1,11 +1,13 @@
 import { useId, useState, type KeyboardEvent } from "react";
-import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { ImagePlus, Sparkles, X } from "lucide-react";
 import { api, useHardware, type Artifact, type Run } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import LibraryPicker from "../components/media/LibraryPicker";
+import MediaResult from "../components/media/MediaResult";
+import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { useListKeyboard } from "./useListKeyboard";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import {
@@ -90,10 +92,11 @@ function SourceStrip({
 
 export default function Images() {
   const [search] = useSearchParams();
-  // Remount when navigating here from a Library action.
+  // Remount when Library chooses a different operation or source, not when a
+  // generation Run is recorded in the URL.
   return (
     <ImageForm
-      key={search.toString()}
+      key={`${search.get("mode") ?? ""}|${search.get("input") ?? ""}`}
       initialMode={search.get("mode") ?? "t2i"}
       initialInput={search.get("input")}
     />
@@ -122,8 +125,10 @@ function ImageForm({
   const [ids, setIds] = useState<string[]>(initialInput ? [initialInput] : []);
   const [localError, setLocalError] = useState<Error | null>(null);
   const hardware = useHardware();
-  const navigate = useNavigate();
+  const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
+  const runId = search.get("run") ?? "";
+  const run = useMediaRun(runId);
   const sources = useQueries({
     queries: ids.map((id) => ({
       queryKey: ["artifact", id],
@@ -193,12 +198,18 @@ function ImageForm({
         body: JSON.stringify(parameters),
       });
     },
-    onSuccess: (run) => {
+    onSuccess: (result) => {
+      cache.setQueryData(["run", result.id], result);
       void cache.invalidateQueries({ queryKey: ["runs"] });
-      navigate(`/runs/${run.id}`);
+      setSearch((current) => {
+        const next = new URLSearchParams(current);
+        next.set("run", result.id);
+        return next;
+      });
     },
   });
   const source = sources[0]?.data;
+  const busy = create.isPending || mediaBusy(run.data);
   const oversized =
     mode === "upscale" && source?.metadata.width && source.metadata.height
       ? source.metadata.width * source.metadata.height * 16 > 64 * 1024 * 1024
@@ -221,7 +232,7 @@ function ImageForm({
       </PageTitle>
       <ImageOperationChoiceList
         value={mode}
-        disabled={upload.isPending || create.isPending}
+        disabled={upload.isPending || busy}
         onChange={(key) => {
           setMode(key);
           setSteps(key === "t2i" ? 35 : 30);
@@ -233,264 +244,277 @@ function ImageForm({
           create.reset();
         }}
       />
-      <form
-        className="image-workspace"
-        onSubmit={(e) => {
-          e.preventDefault();
-          create.mutate();
-        }}
-      >
-        <section className="panel content-panel image-form">
-          <div className="row spread">
-            <h2>{modes[mode]}</h2>
-            <span className="chip">LOCAL · photo_pipe</span>
-          </div>
-          {mode === "img2img" && (
-            <p className="muted">
-              Preserves the original image as much as possible.
-            </p>
-          )}
-          {mode === "recompose" && (
-            <p className="muted">
-              Preserves identity while allowing pose, clothing, scene and
-              composition to change.
-            </p>
-          )}
-          {mode === "upscale" && (
-            <p className="muted">RealESRGAN increases each dimension by 4×.</p>
-          )}
-          {mode !== "t2i" && (
-            <>
-              <label
-                className="upload-zone"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  addFiles(Array.from(e.dataTransfer.files));
-                }}
-              >
-                <ImagePlus size={28} />
-                <strong>
-                  {upload.isPending ? "Uploading…" : "Drop source images here"}
-                </strong>
-                <span>or choose PNG, JPEG, WebP · 20 MiB each</span>
-                <input
-                  aria-label="Upload source images"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  multiple={mode === "recompose"}
-                  disabled={upload.isPending}
-                  onChange={(e) => {
-                    addFiles(Array.from(e.target.files ?? []));
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-              <LibraryPicker
-                kind="image"
-                existing={ids}
-                limit={(mode === "recompose" ? 8 : 1) - ids.length}
-                busy={upload.isPending}
-                onSelect={(items) => {
-                  const maximum = mode === "recompose" ? 8 : 1;
-                  if (items.length + ids.length > maximum) {
-                    setLocalError(
-                      new Error(
-                        `This mode accepts ${maximum} source image${maximum > 1 ? "s" : ""}. Remove a source before adding another.`,
-                      ),
-                    );
-                    return;
-                  }
-                  setLocalError(null);
-                  for (const artifact of items) {
-                    cache.setQueryData(["artifact", artifact.id], artifact);
-                  }
-                  setIds((current) => [
-                    ...current,
-                    ...items.map((artifact) => artifact.id),
-                  ]);
-                }}
-              />
-              <SourceStrip
-                ids={ids}
-                busy={upload.isPending}
-                onChange={setIds}
-              />
-            </>
-          )}
-          {mode !== "upscale" && (
-            <label>
-              {mode === "img2img" ? "Edit instruction" : "Prompt"}
-              <textarea
-                required
-                maxLength={10000}
-                rows={6}
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder={
-                  mode === "img2img"
-                    ? "Describe what to change…"
-                    : "Describe the scene, subject, light, and mood…"
+      <div className="image-live-workspace">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!busy && !upload.isPending) create.mutate();
+          }}
+        >
+          <fieldset
+            className="image-workspace"
+            disabled={upload.isPending || busy}
+          >
+            <section className="panel content-panel image-form">
+              <div className="row spread">
+                <h2>{modes[mode]}</h2>
+                <span className="chip">LOCAL · photo_pipe</span>
+              </div>
+              {mode === "img2img" && (
+                <p className="muted">
+                  Preserves the original image as much as possible.
+                </p>
+              )}
+              {mode === "recompose" && (
+                <p className="muted">
+                  Preserves identity while allowing pose, clothing, scene and
+                  composition to change.
+                </p>
+              )}
+              {mode === "upscale" && (
+                <p className="muted">
+                  RealESRGAN increases each dimension by 4×.
+                </p>
+              )}
+              {mode !== "t2i" && (
+                <>
+                  <label
+                    className="upload-zone"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      addFiles(Array.from(e.dataTransfer.files));
+                    }}
+                  >
+                    <ImagePlus size={28} />
+                    <strong>
+                      {upload.isPending
+                        ? "Uploading…"
+                        : "Drop source images here"}
+                    </strong>
+                    <span>or choose PNG, JPEG, WebP · 20 MiB each</span>
+                    <input
+                      aria-label="Upload source images"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      multiple={mode === "recompose"}
+                      disabled={upload.isPending}
+                      onChange={(e) => {
+                        addFiles(Array.from(e.target.files ?? []));
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                  <LibraryPicker
+                    kind="image"
+                    existing={ids}
+                    limit={(mode === "recompose" ? 8 : 1) - ids.length}
+                    busy={upload.isPending}
+                    onSelect={(items) => {
+                      const maximum = mode === "recompose" ? 8 : 1;
+                      if (items.length + ids.length > maximum) {
+                        setLocalError(
+                          new Error(
+                            `This mode accepts ${maximum} source image${maximum > 1 ? "s" : ""}. Remove a source before adding another.`,
+                          ),
+                        );
+                        return;
+                      }
+                      setLocalError(null);
+                      for (const artifact of items) {
+                        cache.setQueryData(["artifact", artifact.id], artifact);
+                      }
+                      setIds((current) => [
+                        ...current,
+                        ...items.map((artifact) => artifact.id),
+                      ]);
+                    }}
+                  />
+                  <SourceStrip
+                    ids={ids}
+                    busy={upload.isPending}
+                    onChange={setIds}
+                  />
+                </>
+              )}
+              {mode !== "upscale" && (
+                <label>
+                  {mode === "img2img" ? "Edit instruction" : "Prompt"}
+                  <textarea
+                    required
+                    maxLength={10000}
+                    rows={6}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    placeholder={
+                      mode === "img2img"
+                        ? "Describe what to change…"
+                        : "Describe the scene, subject, light, and mood…"
+                    }
+                  />
+                </label>
+              )}
+              {mode === "t2i" && backend === "juggernaut" && (
+                <label>
+                  Negative prompt
+                  <textarea
+                    rows={2}
+                    maxLength={10000}
+                    value={negative}
+                    onChange={(e) => setNegative(e.target.value)}
+                    placeholder="Elements to avoid…"
+                  />
+                </label>
+              )}
+              {mode === "upscale" && source?.metadata.width && (
+                <p className={oversized ? "notice" : "muted"}>
+                  Expected output: {source.metadata.width * 4} ×{" "}
+                  {(source.metadata.height ?? 0) * 4}
+                  {oversized
+                    ? " — exceeds the 64 megapixel limit. Choose a smaller source."
+                    : ""}
+                </p>
+              )}
+              <ErrorNotice
+                error={
+                  localError ??
+                  upload.error ??
+                  create.error ??
+                  sources.find((s) => s.error)?.error ??
+                  null
                 }
               />
-            </label>
-          )}
-          {mode === "t2i" && backend === "juggernaut" && (
-            <label>
-              Negative prompt
-              <textarea
-                rows={2}
-                maxLength={10000}
-                value={negative}
-                onChange={(e) => setNegative(e.target.value)}
-                placeholder="Elements to avoid…"
-              />
-            </label>
-          )}
-          {mode === "upscale" && source?.metadata.width && (
-            <p className={oversized ? "notice" : "muted"}>
-              Expected output: {source.metadata.width * 4} ×{" "}
-              {(source.metadata.height ?? 0) * 4}
-              {oversized
-                ? " — exceeds the 64 megapixel limit. Choose a smaller source."
-                : ""}
-            </p>
-          )}
-          <ErrorNotice
-            error={
-              localError ??
-              upload.error ??
-              create.error ??
-              sources.find((s) => s.error)?.error ??
-              null
-            }
-          />
-          <Button
-            type="submit"
-            disabled={
-              create.isPending || upload.isPending || missing || !!oversized
-            }
-          >
-            <Sparkles size={16} />
-            {create.isPending
-              ? "Queueing…"
-              : `Queue ${modes[mode].toLowerCase()}`}
-          </Button>
-        </section>
-        <aside className="panel content-panel image-form">
-          <h2>Generation settings</h2>
-          {mode === "t2i" && (
-            <div>
-              <span>Backend</span>
-              <ImageBackendChoiceList
-                value={backend}
-                disabled={create.isPending || upload.isPending}
-                onChange={setBackend}
-              />
-            </div>
-          )}
-          {(mode === "t2i" || mode === "recompose") && (
-            <>
-              <div className="field-pair">
+              <Button
+                type="submit"
+                disabled={busy || upload.isPending || missing || !!oversized}
+              >
+                <Sparkles size={16} />
+                {busy ? "Generating…" : `Queue ${modes[mode].toLowerCase()}`}
+              </Button>
+            </section>
+            <aside className="panel content-panel image-form">
+              <h2>Generation settings</h2>
+              {mode === "t2i" && (
+                <div>
+                  <span>Backend</span>
+                  <ImageBackendChoiceList
+                    value={backend}
+                    disabled={create.isPending || upload.isPending}
+                    onChange={setBackend}
+                  />
+                </div>
+              )}
+              {(mode === "t2i" || mode === "recompose") && (
+                <>
+                  <div className="field-pair">
+                    <label>
+                      Width
+                      <input
+                        type="number"
+                        min={256}
+                        max={2048}
+                        step={32}
+                        value={width}
+                        onChange={(e) => setWidth(e.target.valueAsNumber)}
+                      />
+                    </label>
+                    <label>
+                      Height
+                      <input
+                        type="number"
+                        min={256}
+                        max={2048}
+                        step={32}
+                        value={height}
+                        onChange={(e) => setHeight(e.target.valueAsNumber)}
+                      />
+                    </label>
+                  </div>
+                  <label>
+                    CFG
+                    <input
+                      type="number"
+                      min={0}
+                      max={30}
+                      step={0.1}
+                      value={cfg}
+                      onChange={(e) => setCfg(e.target.valueAsNumber)}
+                    />
+                  </label>
+                </>
+              )}
+              {mode === "img2img" && (
                 <label>
-                  Width
+                  Maximum side
                   <input
                     type="number"
                     min={256}
-                    max={2048}
+                    max={4096}
                     step={32}
-                    value={width}
-                    onChange={(e) => setWidth(e.target.valueAsNumber)}
+                    value={maxSide}
+                    onChange={(e) => setMaxSide(e.target.valueAsNumber)}
                   />
                 </label>
+              )}
+              {mode !== "upscale" && (
                 <label>
-                  Height
+                  Steps
                   <input
                     type="number"
-                    min={256}
-                    max={2048}
-                    step={32}
-                    value={height}
-                    onChange={(e) => setHeight(e.target.valueAsNumber)}
+                    min={1}
+                    max={150}
+                    value={steps}
+                    onChange={(e) => setSteps(e.target.valueAsNumber)}
                   />
                 </label>
-              </div>
-              <label>
-                CFG
-                <input
-                  type="number"
-                  min={0}
-                  max={30}
-                  step={0.1}
-                  value={cfg}
-                  onChange={(e) => setCfg(e.target.valueAsNumber)}
+              )}
+              {mode === "t2i" && backend === "juggernaut" && (
+                <label>
+                  Seed
+                  <input
+                    type="number"
+                    min={0}
+                    max={4294967295}
+                    value={seed}
+                    onChange={(e) => setSeed(e.target.valueAsNumber)}
+                  />
+                </label>
+              )}
+              <div>
+                <span>GPU</span>
+                <GpuTargetChoiceList
+                  value={gpu}
+                  gpus={hardware.data?.gpus ?? []}
+                  disabled={create.isPending || upload.isPending}
+                  onChange={setGpu}
                 />
-              </label>
-            </>
-          )}
-          {mode === "img2img" && (
-            <label>
-              Maximum side
-              <input
-                type="number"
-                min={256}
-                max={4096}
-                step={32}
-                value={maxSide}
-                onChange={(e) => setMaxSide(e.target.valueAsNumber)}
-              />
-            </label>
-          )}
-          {mode !== "upscale" && (
-            <label>
-              Steps
-              <input
-                type="number"
-                min={1}
-                max={150}
-                value={steps}
-                onChange={(e) => setSteps(e.target.valueAsNumber)}
-              />
-            </label>
-          )}
-          {mode === "t2i" && backend === "juggernaut" && (
-            <label>
-              Seed
-              <input
-                type="number"
-                min={0}
-                max={4294967295}
-                value={seed}
-                onChange={(e) => setSeed(e.target.valueAsNumber)}
-              />
-            </label>
-          )}
-          <div>
-            <span>GPU</span>
-            <GpuTargetChoiceList
-              value={gpu}
-              gpus={hardware.data?.gpus ?? []}
-              disabled={create.isPending || upload.isPending}
-              onChange={setGpu}
-            />
-          </div>
-          {hardware.error && (
-            <p className="muted">
-              GPU discovery is unavailable. The worker will verify the runner
-              before execution.
-            </p>
-          )}
-          <p className="muted">
-            Jobs use the configured native pipeline and installed models.
-            Missing models fail with an inspectable error; downloads are
-            disabled.
-          </p>
-          <p className="muted">
-            Follow progress, logs and cancellation in Runs. Completed images
-            appear in Library.
-          </p>
-        </aside>
-      </form>
+              </div>
+              {hardware.error && (
+                <p className="muted">
+                  GPU discovery is unavailable. The worker will verify the
+                  runner before execution.
+                </p>
+              )}
+              <p className="muted">
+                Jobs use the configured native pipeline and installed models.
+                Missing models fail with an inspectable error; downloads are
+                disabled.
+              </p>
+              <p className="muted">
+                Generation stays in this workspace. Stop it here, inspect
+                lineage on the finished image, and open the Run only for logs.
+                Completed images also remain in Library.
+              </p>
+            </aside>
+          </fieldset>
+        </form>
+        <MediaResult
+          kind="image"
+          runId={runId}
+          run={run.data}
+          error={run.error}
+        />
+      </div>
     </>
   );
 }
