@@ -664,3 +664,7 @@ Frontend lint, TypeScript, 307 component tests and production build passed. Afte
 ## Agents definition editor saves a linked project — 2026-10-11
 
 Frontend lint, TypeScript, 309 component tests and production build passed. The Agents definition editor can save a linked project through `PUT /api/agents/{id}` with unique Linked project names. Saving it tags this agent's Runs for filtering and does not grant coding, Git or repository access. Selecting a project does not Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Agents list and conversation open tagged project Runs — 2026-10-11
+
+Frontend lint, TypeScript, 310 component tests and production build passed. The Agents list shows a linked project name on the card. Agents and the conversation open that project and the tagged Runs filter through unique Inspect project and View tagged Runs names. Those links do not grant coding, Git or repository access and do not call Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

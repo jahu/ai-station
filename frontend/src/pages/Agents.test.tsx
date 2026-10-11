@@ -835,6 +835,17 @@ it("saves a linked project from the definition without enabling or running", asy
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
+  const project = await screen.findByRole("link", {
+    name: "Inspect project project-1",
+  });
+  expect(project.getAttribute("href")).toBe("/projects/project-1");
+  expect(project.textContent).toBe("Workstation docs");
+  const tagged = screen.getByRole("link", {
+    name: "View tagged Runs draft",
+  });
+  expect(tagged.getAttribute("href")).toBe(
+    "/runs?project_id=project-1&agent_id=draft",
+  );
 });
 it("moves through linked projects with arrow keys without inventing a Run", async () => {
   const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
@@ -990,6 +1001,70 @@ it("saves workflow memory without enabling the draft", async () => {
   expect(
     screen.getByText(/Successful telemetry, public search and HTTP fetch/i),
   ).toBeTruthy();
+});
+it("shows a linked project name on the agent list without inventing a Run", async () => {
+  const row = {
+    description: "",
+    goal: "Summarize",
+    system_prompt: "",
+    model: "local",
+    tools: [],
+    search_query: "",
+    fetch_urls: [],
+    skills: [],
+    trigger: "manual",
+    cron_expr: "",
+    interval_seconds: null,
+    run_at: null,
+    maximum_runtime: 600,
+    output_expectation: "Report",
+    require_approval: false,
+    workflow_mode: "sequential",
+    tool_calling: "none",
+    retry_policy: { mode: "none" },
+    notification_policy: {
+      on_success: false,
+      on_failure: false,
+      on_approval: false,
+    },
+    project_id: "project-1",
+    enabled: false,
+    updated_at: "2026-10-09T12:00:00Z",
+    next_run_at: null,
+    last_run_at: null,
+    last_status: "",
+    failure_count: 0,
+    effective_permissions: [],
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url.endsWith("/llama")
+          ? { models: [], instances: [] }
+          : url.includes("provider")
+            ? { models: ["local"], default_model: "local" }
+            : url.includes("/projects")
+              ? [{ id: "project-1", name: "Workstation docs" }]
+              : url.includes("/agents")
+                ? [{ ...row, id: "agentone", name: "Morning review" }]
+                : [],
+    })),
+  );
+  mount();
+  expect(
+    await screen.findByRole("link", {
+      name: "Inspect Morning review agentone",
+    }),
+  ).toBeTruthy();
+  expect(screen.getByText(/Linked project: Workstation docs/)).toBeTruthy();
+  expect(
+    screen.queryByRole("link", { name: "Inspect project project-1" }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /Enable|Run now/ }),
+  ).toBeNull();
 });
 it("moves through the agent list with arrow keys", async () => {
   const row = {

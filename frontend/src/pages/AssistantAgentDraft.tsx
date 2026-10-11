@@ -22,7 +22,10 @@ import {
   ToolCallingChoiceList,
   WorkflowModeChoiceList,
 } from "./AgentPolicyLists";
-import { AgentProjectList } from "./AgentProjectList";
+import {
+  AgentLinkedProjectLinks,
+  AgentProjectList,
+} from "./AgentProjectList";
 import LlamaModels from "./LlamaModels";
 
 type AgentDraft = {
@@ -745,6 +748,15 @@ export function AssistantAgentDraft({
                   tabIndex={tabIndex}
                   disabled={busy || active}
                   onSave={(project_id) => saveSettings.mutate({ project_id })}
+                />
+                <AgentLinkedProjectLinks
+                  agentId={agent.id}
+                  projectId={agent.project_id ?? null}
+                  projectName={
+                    projects.data?.find((item) => item.id === agent.project_id)
+                      ?.name
+                  }
+                  tabIndex={tabIndex}
                 />
               </dd>
             </div>

@@ -532,6 +532,17 @@ it("saves a linked project from the conversation without Enable or Run now", asy
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
+  const project = await screen.findByRole("link", {
+    name: "Inspect project project-1",
+  });
+  expect(project.getAttribute("href")).toBe("/projects/project-1");
+  expect(project.textContent).toBe("Workstation docs");
+  const tagged = screen.getByRole("link", {
+    name: "View tagged Runs agent-on",
+  });
+  expect(tagged.getAttribute("href")).toBe(
+    "/runs?project_id=project-1&agent_id=agent-one",
+  );
 });
 
 it("saves description from the conversation without Enable or Run now", async () => {

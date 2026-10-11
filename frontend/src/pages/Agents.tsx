@@ -15,7 +15,10 @@ import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import { useListKeyboard } from "./useListKeyboard";
 import { activationBlock } from "./agentActivation";
 import { agentSettingsPayload } from "./agentSettings";
-import { AgentProjectList } from "./AgentProjectList";
+import {
+  AgentLinkedProjectLinks,
+  AgentProjectList,
+} from "./AgentProjectList";
 import {
   ApprovalChoiceList,
   NoticeChoiceList,
@@ -263,7 +266,13 @@ function ToolChoiceList({
   );
 }
 
-function AgentCards({ agents }: { agents: Agent[] }) {
+function AgentCards({
+  agents,
+  projects,
+}: {
+  agents: Agent[];
+  projects: { id: string; name: string }[];
+}) {
   const headingId = useId();
   const labelId = useId();
   const { listRef, onKeyDown, itemProps } = useListKeyboard(
@@ -303,6 +312,9 @@ function AgentCards({ agents }: { agents: Agent[] }) {
               <p className="agent-goal">{agent.goal}</p>
               <p className="muted">
                 {schedule(agent)} · {agent.model || "No model selected"}
+                {agent.project_id
+                  ? ` · Linked project: ${projects.find((item) => item.id === agent.project_id)?.name ?? agent.project_id}`
+                  : ""}
               </p>
               <p>Last: {agent.last_status || "Never run"}</p>
               <small className="muted">Next: {time(agent.next_run_at)}</small>
@@ -329,6 +341,10 @@ export function Agents() {
     queryKey: ["chat-provider"],
     queryFn: () =>
       api<{ models: string[]; default_model: string }>("/chat/provider"),
+  });
+  const projects = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => api<{ id: string; name: string }[]>("/projects?limit=500"),
   });
   const draft = useMutation({
     mutationFn: () =>
@@ -400,7 +416,7 @@ export function Agents() {
           </Empty>
         </section>
       ) : (
-        <AgentCards agents={agents.data} />
+        <AgentCards agents={agents.data} projects={projects.data ?? []} />
       )}
       <div className="row">
         <Button
@@ -460,6 +476,10 @@ export function AgentDetail() {
   const skillsCatalog = useQuery({
     queryKey: ["skills"],
     queryFn: () => api<unknown>("/skills"),
+  });
+  const projects = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => api<{ id: string; name: string }[]>("/projects?limit=500"),
   });
   const agent = detail.data;
   if (!agent)
@@ -563,7 +583,14 @@ export function AgentDetail() {
         <Link to={`/memory?scope=agent&scope_id=${agent.id}`}>
           Inspect this agent's memory
         </Link>
-        <ErrorNotice error={action.error ?? detail.error} />
+        <AgentLinkedProjectLinks
+          agentId={agent.id}
+          projectId={agent.project_id}
+          projectName={
+            projects.data?.find((item) => item.id === agent.project_id)?.name
+          }
+        />
+        <ErrorNotice error={action.error ?? detail.error ?? projects.error} />
       </section>
       <AgentEditor key={agent.id} agent={agent} active={active} />
       {agent.runs?.length ? (
