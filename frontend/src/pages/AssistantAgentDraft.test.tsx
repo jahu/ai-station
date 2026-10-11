@@ -684,3 +684,176 @@ it("uses the latest report's search sibling when the report has not copied sourc
   expect(screen.queryByRole("heading", { name: "Agent report" })).toBeNull();
   expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
 });
+
+it("shows recorded fetched pages next to the latest report without Run now", async () => {
+  const agent = {
+    ...draft,
+    enabled: true,
+    last_status: "succeeded",
+    last_run_at: "2026-10-11T12:00:00Z",
+    fetch_urls: ["https://www.example.com/"],
+    runs: [
+      {
+        id: "report-run",
+        capability: "agent.report",
+        executor_type: "agent",
+        parent_run_id: "flow-run",
+        status: "succeeded",
+        created_at: "2026-10-11T12:00:00Z",
+        metadata: {
+          http_fetch: {
+            urls: ["https://www.example.com/"],
+            fetched_at: "2026-10-11T12:00:00Z",
+            pages: [
+              {
+                url: "https://www.example.com/",
+                status: 200,
+                text: "<script>alert(1)</script>Public excerpt",
+                untrusted: true,
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: "old-fetch",
+        capability: "agent.step",
+        executor_type: "agent_tool",
+        parent_run_id: "old-flow",
+        status: "succeeded",
+        created_at: "2026-10-10T12:00:00Z",
+        parameters: { tool: "http_fetch" },
+        metadata: {
+          http_fetch: {
+            urls: ["https://example.com/stale"],
+            fetched_at: "2026-10-10T12:00:00Z",
+            pages: [
+              {
+                url: "https://example.com/stale",
+                status: 200,
+                text: "Older excerpt",
+                untrusted: true,
+              },
+            ],
+          },
+        },
+      },
+    ],
+  };
+  const fetch = vi.fn(async (path: string) => {
+    if (String(path).includes("/artifacts?")) {
+      return {
+        ok: true,
+        json: async () => [
+          {
+            id: "report-md",
+            type: "markdown",
+            mime_type: "text/markdown",
+            original_filename: "agent-report.md",
+            size_bytes: 12,
+            created_at: "2026-10-11T12:00:00Z",
+            run_id: "report-run",
+            parent_artifact_ids: [],
+            metadata: {},
+          },
+        ],
+      };
+    }
+    if (String(path).endsWith("/artifacts/report-md/file")) {
+      return { ok: true, text: async () => "GPU idle." };
+    }
+    return { ok: true, json: async () => agent };
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AssistantAgentDraft agentId={agent.id} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Agent report" }),
+  ).toBeTruthy();
+  const page = await screen.findByRole("link", {
+    name: "Page https://www.example.com/",
+  });
+  expect(page.getAttribute("href")).toBe("https://www.example.com/");
+  expect(screen.getByText("HTML/text excerpt stored")).toBeTruthy();
+  expect(screen.queryByText("Public excerpt")).toBeNull();
+  expect(screen.queryByRole("link", { name: /stale/ })).toBeNull();
+  expect(document.querySelector("script")).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("uses the latest report's fetch sibling when the report has not copied pages yet", async () => {
+  const agent = {
+    ...draft,
+    enabled: true,
+    runs: [
+      {
+        id: "report-run",
+        capability: "agent.report",
+        executor_type: "agent",
+        parent_run_id: "flow-run",
+        status: "running",
+        created_at: "2026-10-11T12:01:00Z",
+      },
+      {
+        id: "fetch-run",
+        capability: "agent.step",
+        executor_type: "agent_tool",
+        parent_run_id: "flow-run",
+        status: "succeeded",
+        created_at: "2026-10-11T12:00:00Z",
+        parameters: { tool: "http_fetch" },
+        metadata: {
+          http_fetch: {
+            urls: ["https://www.example.com/"],
+            fetched_at: "2026-10-11T12:00:00Z",
+            pages: [
+              {
+                url: "https://www.example.com/",
+                status: 200,
+                text: "Public excerpt",
+                untrusted: true,
+              },
+            ],
+          },
+        },
+      },
+    ],
+  };
+  const fetch = vi.fn(async (path: string) => {
+    if (String(path).includes("/artifacts?")) {
+      return { ok: true, json: async () => [] };
+    }
+    return { ok: true, json: async () => agent };
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AssistantAgentDraft agentId={agent.id} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const page = await screen.findByRole("link", {
+    name: "Page https://www.example.com/",
+  });
+  expect(page.getAttribute("href")).toBe("https://www.example.com/");
+  expect(screen.queryByText("Public excerpt")).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Agent report" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+});

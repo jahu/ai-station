@@ -1604,3 +1604,115 @@ it("shows recorded search sources next to the latest report from Agents without 
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
 });
+it("shows recorded fetched pages next to the latest report from Agents without Run now", async () => {
+  const agent = {
+    id: "draft",
+    name: "Morning review",
+    description: "",
+    goal: "Summarize",
+    system_prompt: "",
+    model: "local",
+    tools: ["http_fetch"],
+    search_query: "",
+    fetch_urls: ["https://www.example.com/"],
+    skills: [],
+    trigger: "manual",
+    cron_expr: "",
+    interval_seconds: null,
+    run_at: null,
+    maximum_runtime: 600,
+    output_expectation: "Report",
+    require_approval: false,
+    workflow_mode: "sequential",
+    tool_calling: "none",
+    retry_policy: { mode: "none" },
+    notification_policy: {
+      on_success: false,
+      on_failure: false,
+      on_approval: false,
+    },
+    project_id: null,
+    enabled: true,
+    updated_at: "2026-10-11T12:00:00Z",
+    next_run_at: null,
+    last_run_at: "2026-10-11T12:00:00Z",
+    last_status: "succeeded",
+    failure_count: 0,
+    effective_permissions: [],
+    runs: [
+      {
+        id: "report-run",
+        capability: "agent.report",
+        executor_type: "agent",
+        parent_run_id: "flow-run",
+        status: "succeeded",
+        created_at: "2026-10-11T12:00:00Z",
+        metadata: {
+          http_fetch: {
+            urls: ["https://www.example.com/"],
+            fetched_at: "2026-10-11T12:00:00Z",
+            pages: [
+              {
+                url: "https://www.example.com/",
+                status: 200,
+                text: "<script>alert(1)</script>Public excerpt",
+                untrusted: true,
+              },
+            ],
+          },
+        },
+      },
+    ],
+  };
+  const fetch = vi.fn(async (url: string) => {
+    if (String(url).includes("/artifacts?")) {
+      return {
+        ok: true,
+        json: async () => [
+          {
+            id: "report-md",
+            type: "markdown",
+            mime_type: "text/markdown",
+            original_filename: "agent-report.md",
+            size_bytes: 12,
+            created_at: "2026-10-11T12:00:00Z",
+            run_id: "report-run",
+            parent_artifact_ids: [],
+            metadata: {},
+          },
+        ],
+      };
+    }
+    if (String(url).endsWith("/artifacts/report-md/file")) {
+      return { ok: true, text: async () => "GPU idle." };
+    }
+    return {
+      ok: true,
+      json: async () =>
+        url.endsWith("/llama")
+          ? { models: [], instances: [] }
+          : url.endsWith("/chat/provider")
+            ? { models: ["local"], default_model: "local" }
+            : url.includes("/skills") || url.endsWith("tools")
+              ? []
+              : url.endsWith("/hardware")
+                ? { gpus: [] }
+                : agent,
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  expect(
+    await screen.findByRole("heading", { name: "Agent report" }),
+  ).toBeTruthy();
+  const page = await screen.findByRole("link", {
+    name: "Page https://www.example.com/",
+  });
+  expect(page.getAttribute("href")).toBe("https://www.example.com/");
+  expect(screen.getByText("HTML/text excerpt stored")).toBeTruthy();
+  expect(screen.queryByText("Public excerpt")).toBeNull();
+  expect(document.querySelector("script")).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
