@@ -19,6 +19,7 @@ import {
   ApprovalChoiceList,
   NoticeChoiceList,
   RetryChoiceList,
+  ToolCallingChoiceList,
   WorkflowModeChoiceList,
 } from "./AgentPolicyLists";
 import LlamaModels from "./LlamaModels";
@@ -620,12 +621,30 @@ export function AssistantAgentDraft({
                 />
               </dd>
             </div>
-            {agent.tool_calling === true || agent.tool_calling === "bounded" ? (
-              <div>
-                <dt>Tool calling</dt>
-                <dd>Bounded registry tools during the report</dd>
-              </div>
-            ) : null}
+            <div>
+              <dt>Tool calling</dt>
+              <dd>
+                <ToolCallingChoiceList
+                  mode={
+                    agent.tool_calling === true ||
+                    agent.tool_calling === "bounded"
+                      ? "bounded"
+                      : "none"
+                  }
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  onChange={(tool_calling) => {
+                    const current =
+                      agent.tool_calling === true ||
+                      agent.tool_calling === "bounded"
+                        ? "bounded"
+                        : "none";
+                    if (tool_calling === current) return;
+                    saveSettings.mutate({ tool_calling });
+                  }}
+                />
+              </dd>
+            </div>
             <div>
               <dt>Retry</dt>
               <dd>
@@ -741,8 +760,9 @@ export function AssistantAgentDraft({
             without opening the inspector. Stop stays on an in-progress history
             Run. Manual retry queues a new workflow from a failed snapshot.
             Saving a schedule stores it on the definition and does not call
-            Enable. Saving approval, retry, notice or workflow policies stores
-            them on the definition and does not call Enable.
+            Enable. Saving approval, retry, notice, workflow or bounded tool
+            calling policies stores them on the definition and does not call
+            Enable.
           </p>
           {copy ? (
             <p>
