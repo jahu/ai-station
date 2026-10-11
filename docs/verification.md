@@ -728,3 +728,7 @@ Frontend lint, TypeScript, 329 component tests and production build passed. Conv
 ## Home coding Runs open tagged project Runs — 2026-10-12
 
 Frontend lint, TypeScript, 329 component tests and production build passed. Home in-progress coding and worktree Runs with a saved `project_id` and no `agent_id` open Inspect project and View tagged Runs through `/runs?project_id=`. Stop stays on that row. Those links do not Enable or Run now and do not start a coding Run. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Open coding conversation Inspect project is valid HTML — 2026-10-12
+
+Frontend lint, TypeScript, 330 component tests and production build passed. The open Coding conversation keeps Inspect project beside the page title instead of nesting a paragraph inside `PageTitle`. Inspect project still uses the saved `project_id` and does not start a coding Run. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
