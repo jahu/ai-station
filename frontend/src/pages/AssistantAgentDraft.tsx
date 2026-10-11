@@ -260,7 +260,6 @@ export function AssistantAgentDraft({
   });
   const catalog = useQuery({
     queryKey: ["agent-tools"],
-    enabled: !!detail.data?.tools?.length,
     queryFn: () => api<unknown>("/agents/tools"),
   });
   const skillsCatalog = useQuery({
@@ -359,24 +358,26 @@ export function AssistantAgentDraft({
             <div>
               <dt>Tools</dt>
               <dd>
-                {agent.tools?.length ? (
-                  <AgentAttachedTools
-                    names={agent.tools}
-                    agentId={agent.id}
-                    tabIndex={tabIndex}
-                    disabled={busy || active}
-                    pending={saveSettings.isPending}
-                    onRemove={(name) =>
-                      saveSettings.mutate({
-                        tools: (agent.tools ?? []).filter(
-                          (tool) => tool !== name,
-                        ),
-                      })
-                    }
-                  />
-                ) : (
-                  "No tools"
-                )}
+                <AgentAttachedTools
+                  names={agent.tools ?? []}
+                  agentId={agent.id}
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  pending={saveSettings.isPending}
+                  onRemove={(name) =>
+                    saveSettings.mutate({
+                      tools: (agent.tools ?? []).filter(
+                        (tool) => tool !== name,
+                      ),
+                    })
+                  }
+                  onAdd={(name) => {
+                    if ((agent.tools ?? []).includes(name)) return;
+                    saveSettings.mutate({
+                      tools: [...(agent.tools ?? []), name],
+                    });
+                  }}
+                />
               </dd>
             </div>
             {agent.skills?.length ? (
@@ -520,13 +521,14 @@ export function AssistantAgentDraft({
             reviewed URLs stores those values on the definition and does not
             call Enable. Removing an unavailable tool or a missing skill stores
             the remaining list on the definition and does not call Enable.
-            Enable stays off until the saved definition can activate. Duplicate
-            as draft stays disabled. Run now queues a new workflow from that
-            saved definition and stays on this transcript. A waiting Run can
-            Approve and queue or Deny here without opening the inspector. Stop
-            stays on an in-progress history Run. Manual retry queues a new
-            workflow from a failed snapshot. Adding tools, skills and schedule
-            stay in Agents.
+            Adding an operational registry tool stores it on the definition and
+            does not call Enable. Unpublished adapters cannot be added. Enable
+            stays off until the saved definition can activate. Duplicate as
+            draft stays disabled. Run now queues a new workflow from that saved
+            definition and stays on this transcript. A waiting Run can Approve
+            and queue or Deny here without opening the inspector. Stop stays on
+            an in-progress history Run. Manual retry queues a new workflow from
+            a failed snapshot. Adding skills and schedule stay in Agents.
           </p>
           {copy ? (
             <p>
