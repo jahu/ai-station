@@ -6,7 +6,13 @@ import { api, type Artifact } from "../api";
 import { ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 
-export default function LibraryActions({ artifact }: { artifact: Artifact }) {
+export default function LibraryActions({
+  artifact,
+  tabIndex,
+}: {
+  artifact: Artifact;
+  tabIndex?: number;
+}) {
   const [action, setAction] = useState<"edit" | "trash" | null>(null);
   const [title, setTitle] = useState("");
   const [notes, setNotes] = useState("");
@@ -63,6 +69,7 @@ export default function LibraryActions({ artifact }: { artifact: Artifact }) {
       <div className="library-detail-actions">
         <Button
           variant="secondary"
+          tabIndex={tabIndex}
           aria-label={`Edit details ${shortId}`}
           onClick={() => open("edit")}
         >
@@ -72,6 +79,7 @@ export default function LibraryActions({ artifact }: { artifact: Artifact }) {
         {artifact.trashed_at ? (
           <Button
             variant="secondary"
+            tabIndex={tabIndex}
             disabled={mutation.isPending}
             aria-label={`Restore to Library ${shortId}`}
             onClick={() =>
@@ -87,6 +95,7 @@ export default function LibraryActions({ artifact }: { artifact: Artifact }) {
         ) : (
           <Button
             variant="ghost"
+            tabIndex={tabIndex}
             aria-label={`Move to Trash ${shortId}`}
             onClick={() => open("trash")}
           >

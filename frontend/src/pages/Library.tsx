@@ -5,7 +5,7 @@ import {
   useInfiniteQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useState, useRef, useEffect, useId } from "react";
+import { useState, useRef, useEffect, useId, type KeyboardEvent } from "react";
 import {
   Upload,
   Search,
@@ -33,10 +33,22 @@ export function ArtifactCards({
 }) {
   const headingId = useId();
   const labelId = useId();
-  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+  const navigate = useNavigate();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
     artifacts,
     (artifact) => artifact.id,
   );
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key !== "Enter" || event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input")) return;
+    const selected = artifacts[index];
+    if (selected?.id) {
+      event.preventDefault();
+      navigate(`/library/${selected.id}`);
+    }
+  };
   return (
     <section aria-labelledby={headingId}>
       <h2 id={headingId} className="sr-only">
@@ -44,68 +56,81 @@ export function ArtifactCards({
       </h2>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose an artifact while the grid is focused. Enter inspects
-        it.
+        it. Edit details, Trash and Restore stay on the selected artifact.
       </p>
       <div
         ref={listRef}
         className="artifact-grid"
         aria-labelledby={labelId}
-        onKeyDown={onKeyDown}
+        onKeyDown={handleKey}
       >
         {artifacts.map((a, i) => {
           const name = artifactName(a);
+          const current = i === index;
+          const shortId = a.id.slice(0, 8);
           return (
-            <Link
+            <div
               className="artifact-card panel"
               key={a.id}
-              to={`/library/${a.id}`}
-              aria-label={`Inspect ${name} ${a.id.slice(0, 8)}`}
               {...itemProps(i, a.id)}
             >
-              {a.type === "image" ? (
-                <img
-                  loading="lazy"
-                  src={`/api/artifacts/${a.id}/thumbnail`}
-                  alt=""
-                />
-              ) : (
-                <div className={`artifact-placeholder artifact-kind-${a.type}`}>
-                  {a.type === "video" &&
-                  a.metadata.capability === "avatar.animate" &&
-                  a.parent_artifact_ids[0] ? (
-                    <img
-                      src={`/api/artifacts/${a.parent_artifact_ids[0]}/thumbnail`}
-                      alt=""
-                      loading="lazy"
-                    />
-                  ) : a.type === "audio" ? (
-                    <AudioLines size={34} aria-hidden="true" />
-                  ) : a.type === "video" ? (
-                    <Film size={34} aria-hidden="true" />
-                  ) : (
-                    <FileText size={30} aria-hidden="true" />
-                  )}
-                  <span className="artifact-kind-label">
-                    {a.type === "video" ? (
-                      <Film size={12} aria-hidden="true" />
+              <Link
+                className="artifact-card-inspect"
+                to={`/library/${a.id}`}
+                tabIndex={current ? 0 : -1}
+                aria-label={`Inspect ${name} ${shortId}`}
+              >
+                {a.type === "image" ? (
+                  <img
+                    loading="lazy"
+                    src={`/api/artifacts/${a.id}/thumbnail`}
+                    alt=""
+                  />
+                ) : (
+                  <div
+                    className={`artifact-placeholder artifact-kind-${a.type}`}
+                  >
+                    {a.type === "video" &&
+                    a.metadata.capability === "avatar.animate" &&
+                    a.parent_artifact_ids[0] ? (
+                      <img
+                        src={`/api/artifacts/${a.parent_artifact_ids[0]}/thumbnail`}
+                        alt=""
+                        loading="lazy"
+                      />
                     ) : a.type === "audio" ? (
-                      <AudioLines size={12} aria-hidden="true" />
-                    ) : null}
-                    {a.type.replaceAll("_", " ")}
+                      <AudioLines size={34} aria-hidden="true" />
+                    ) : a.type === "video" ? (
+                      <Film size={34} aria-hidden="true" />
+                    ) : (
+                      <FileText size={30} aria-hidden="true" />
+                    )}
+                    <span className="artifact-kind-label">
+                      {a.type === "video" ? (
+                        <Film size={12} aria-hidden="true" />
+                      ) : a.type === "audio" ? (
+                        <AudioLines size={12} aria-hidden="true" />
+                      ) : null}
+                      {a.type.replaceAll("_", " ")}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <strong>{name}</strong>
+                  <span>
+                    {a.metadata.backend ?? a.type}
+                    {a.metadata.width
+                      ? ` · ${a.metadata.width} × ${a.metadata.height}`
+                      : ""}
                   </span>
+                  <small>{time(a.created_at)}</small>
                 </div>
-              )}
-              <div>
-                <strong>{name}</strong>
-                <span>
-                  {a.metadata.backend ?? a.type}
-                  {a.metadata.width
-                    ? ` · ${a.metadata.width} × ${a.metadata.height}`
-                    : ""}
-                </span>
-                <small>{time(a.created_at)}</small>
-              </div>
-            </Link>
+              </Link>
+              <LibraryActions
+                artifact={a}
+                tabIndex={current ? 0 : -1}
+              />
+            </div>
           );
         })}
       </div>

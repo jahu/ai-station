@@ -528,3 +528,7 @@ Frontend lint, TypeScript, 241 component tests and production build passed. A fa
 ## Assistant agent workflow retry — 2026-10-11
 
 Frontend lint, TypeScript, 243 component tests and production build passed. Execution history in the conversation and Agents can Retry as a new workflow through `POST /api/runs/{id}/retry-workflow` when `retry.allowed` is set. That does not call Run now. The conversation also shows a saved manual retry policy. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Library collection actions — 2026-10-11
+
+Frontend lint, TypeScript, 244 component tests and production build passed. Library collection cards and Run inspector artifact cards reuse Edit details, Trash and Restore with unique names. Saving still PATCHes or DELETEs the existing artifact endpoint and does not invent a Run. Enter inspects. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

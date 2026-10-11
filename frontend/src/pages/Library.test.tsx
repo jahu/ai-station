@@ -197,19 +197,105 @@ it("moves through Library artifacts with arrow keys", async () => {
   const second = screen.getByRole("link", {
     name: "Inspect Voice take voicecli",
   });
+  const grid = first.closest(".artifact-grid") as HTMLElement;
+  const cards = grid.querySelectorAll<HTMLElement>("[data-list-index]");
   expect(first.tabIndex).toBe(0);
   expect(second.tabIndex).toBe(-1);
+  expect(cards[0].tabIndex).toBe(0);
+  expect(cards[1].tabIndex).toBe(-1);
+  expect(
+    screen.getByRole("button", { name: "Edit details portrait" }).tabIndex,
+  ).toBe(0);
+  expect(
+    screen.getByRole("button", { name: "Edit details voicecli" }).tabIndex,
+  ).toBe(-1);
   expect(screen.getByRole("region", { name: "Library" })).toBeTruthy();
-  fireEvent.keyDown(first.closest(".artifact-grid") as HTMLElement, {
+  fireEvent.keyDown(grid, {
     key: "ArrowDown",
   });
   expect(second.tabIndex).toBe(0);
   expect(first.tabIndex).toBe(-1);
-  expect(document.activeElement).toBe(second);
-  fireEvent.keyDown(second.closest(".artifact-grid") as HTMLElement, {
+  expect(cards[1].tabIndex).toBe(0);
+  expect(document.activeElement).toBe(cards[1]);
+  fireEvent.keyDown(grid, {
     key: "Home",
   });
   expect(first.tabIndex).toBe(0);
+  expect(cards[0].tabIndex).toBe(0);
+});
+it("edits and trashes a collection artifact without opening the inspector", async () => {
+  let row = {
+    ...original,
+    title: "Portrait",
+    library_updated_at: "2026-10-11T10:00:00Z",
+  };
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (init?.method === "PATCH")
+      row = {
+        ...row,
+        ...JSON.parse(String(init.body)),
+        library_updated_at: "2026-10-11T11:00:00Z",
+      };
+    if (init?.method === "DELETE")
+      row = {
+        ...row,
+        trashed_at: "2026-10-11T12:00:00Z",
+        library_updated_at: "2026-10-11T12:00:00Z",
+      };
+    return {
+      ok: true,
+      json: async () =>
+        String(path).includes("?") && !init ? [row] : { ...row },
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount("/library");
+  expect(
+    await screen.findByRole("heading", {
+      name: "Everything you create, in one place.",
+    }),
+  ).toBeTruthy();
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Edit details portrait" }),
+  );
+  fireEvent.change(screen.getByLabelText("Display name"), {
+    target: { value: "Evening study" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save details" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/artifacts/portrait",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({
+          expected_updated_at: "2026-10-11T10:00:00Z",
+          title: "Evening study",
+          notes: "",
+        }),
+      }),
+    ),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Move to Trash portrait" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Move to Trash" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/artifacts/portrait",
+      expect.objectContaining({
+        method: "DELETE",
+        body: JSON.stringify({
+          expected_updated_at: "2026-10-11T11:00:00Z",
+        }),
+      }),
+    ),
+  );
+  expect(
+    screen.getByRole("heading", {
+      name: "Everything you create, in one place.",
+    }),
+  ).toBeTruthy();
+  expect(screen.queryByRole("heading", { name: "Lineage" })).toBeNull();
 });
 it("shows shared source and derived lineage without inventing a Run", async () => {
   const portrait: Artifact = {
