@@ -328,6 +328,77 @@ function AgentFetchUrls({
   );
 }
 
+function AgentInstructions({
+  agentId,
+  goal,
+  systemPrompt,
+  tabIndex,
+  disabled,
+  pending,
+  onSave,
+}: {
+  agentId: string;
+  goal: string;
+  systemPrompt: string;
+  tabIndex: number;
+  disabled: boolean;
+  pending: boolean;
+  onSave: (patch: { goal: string; system_prompt: string }) => void;
+}) {
+  const shortId = agentId.slice(0, 8);
+  const [nextGoal, setNextGoal] = useState(goal);
+  const [prompt, setPrompt] = useState(systemPrompt);
+  const trimmedGoal = nextGoal.trim();
+  const trimmedPrompt = prompt.trim();
+  const valid = trimmedGoal.length > 0 && trimmedGoal.length <= 16000;
+  const unchanged = trimmedGoal === goal && trimmedPrompt === systemPrompt;
+  return (
+    <form
+      className="assistant-agent-search"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!valid || unchanged || disabled) return;
+        onSave({ goal: trimmedGoal, system_prompt: trimmedPrompt });
+      }}
+    >
+      <label>
+        Goal
+        <textarea
+          required
+          maxLength={16000}
+          rows={3}
+          value={nextGoal}
+          tabIndex={tabIndex}
+          aria-label={`Goal ${shortId}`}
+          disabled={disabled}
+          onChange={(event) => setNextGoal(event.target.value)}
+        />
+      </label>
+      <label>
+        System prompt
+        <textarea
+          maxLength={8000}
+          rows={3}
+          value={prompt}
+          tabIndex={tabIndex}
+          aria-label={`System prompt ${shortId}`}
+          disabled={disabled}
+          onChange={(event) => setPrompt(event.target.value)}
+        />
+      </label>
+      <Button
+        type="submit"
+        variant="secondary"
+        disabled={disabled || pending || !valid || unchanged}
+        tabIndex={tabIndex}
+        aria-label={`Save instructions ${shortId}`}
+      >
+        Save instructions
+      </Button>
+    </form>
+  );
+}
+
 export function AssistantAgentDraft({
   agentId,
   tabIndex = 0,
@@ -437,7 +508,6 @@ export function AssistantAgentDraft({
   const enableLabel = agent?.enabled
     ? `Pause agent ${shortId}`
     : `Enable saved definition ${shortId}`;
-  const instructions = (agent?.goal || agent?.system_prompt || "").trim();
   const waiting = agent?.runs?.find(
     (run) => run.status === "waiting_for_approval",
   );
@@ -696,16 +766,21 @@ export function AssistantAgentDraft({
                 />
               </dd>
             </div>
-            {instructions ? (
-              <div>
-                <dt>Instructions</dt>
-                <dd>
-                  <pre className="assistant-agent-instructions">
-                    {instructions}
-                  </pre>
-                </dd>
-              </div>
-            ) : null}
+            <div>
+              <dt>Instructions</dt>
+              <dd>
+                <AgentInstructions
+                  key={agent.updated_at}
+                  agentId={agent.id}
+                  goal={agent.goal ?? ""}
+                  systemPrompt={agent.system_prompt ?? ""}
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  pending={saveSettings.isPending}
+                  onSave={(patch) => saveSettings.mutate(patch)}
+                />
+              </dd>
+            </div>
             <div>
               <dt>Next run</dt>
               <dd>{time(agent.next_run_at ?? null)}</dd>
@@ -762,7 +837,8 @@ export function AssistantAgentDraft({
             Saving a schedule stores it on the definition and does not call
             Enable. Saving approval, retry, notice, workflow or bounded tool
             calling policies stores them on the definition and does not call
-            Enable.
+            Enable. Saving instructions stores the goal and system prompt on
+            the definition and does not call Enable.
           </p>
           {copy ? (
             <p>

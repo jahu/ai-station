@@ -474,6 +474,42 @@ it("saves bounded tool calling from the conversation without Enable or Run now",
   ).toBe(true);
 });
 
+it("saves instructions from the conversation without Enable or Run now", async () => {
+  const fetch = mount();
+  const goal = (await screen.findByLabelText(
+    "Goal agent-on",
+  )) as HTMLTextAreaElement;
+  expect(goal.value).toBe("Summarize GPU telemetry every weekday.");
+  fireEvent.change(goal, {
+    target: { value: "Summarize idle GPUs each morning." },
+  });
+  fireEvent.change(screen.getByLabelText("System prompt agent-on"), {
+    target: { value: "Stay factual." },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Save instructions agent-on" }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    goal: "Summarize idle GPUs each morning.",
+    system_prompt: "Stay factual.",
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+  });
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
 it("saves a schedule from the conversation without Enable or Run now", async () => {
   const fetch = mount();
   expect(await screen.findByText("0 7 * * 1-5 (UTC)")).toBeTruthy();
@@ -524,8 +560,10 @@ it("inspects the saved definition without queueing Run now", async () => {
   expect(screen.getByLabelText("Tool system_snapshot")).toBeTruthy();
   expect(screen.getByLabelText("Tool web_search")).toBeTruthy();
   expect(
-    screen.getByText("Summarize GPU telemetry every weekday."),
-  ).toBeTruthy();
+    (
+      screen.getByLabelText("Goal agent-on") as HTMLTextAreaElement
+    ).value,
+  ).toBe("Summarize GPU telemetry every weekday.");
   expect(
     screen.getByText(
       "No executions yet. Run now queues a new workflow from the saved definition.",
@@ -579,8 +617,10 @@ it("enables a disabled draft from the conversation without inventing a Run", asy
     (screen.getByRole("radio", { name: /Gated/i }) as HTMLInputElement).checked,
   ).toBe(true);
   expect(
-    screen.getByText("Summarize GPU telemetry every weekday."),
-  ).toBeTruthy();
+    (
+      screen.getByLabelText("Goal agent-on") as HTMLTextAreaElement
+    ).value,
+  ).toBe("Summarize GPU telemetry every weekday.");
   expect(screen.getByText(/does not invent a conversation Run/)).toBeTruthy();
   expect(
     screen.getByText(
