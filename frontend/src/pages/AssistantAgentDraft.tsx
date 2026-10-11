@@ -216,8 +216,9 @@ export function AssistantAgentDraft({
             Activation stays explicit and uses the saved definition. It does not
             invent a conversation Run. Duplicate as draft stays disabled. A
             waiting Run can Approve and queue or Deny here without opening the
-            inspector. Manual retry queues a new workflow from a failed
-            snapshot. Run now, tools and schedule stay in Agents.
+            inspector. Stop stays on an in-progress history Run. Manual retry
+            queues a new workflow from a failed snapshot. Run now, tools and
+            schedule stay in Agents.
           </p>
           {copy ? (
             <p>
@@ -265,7 +266,7 @@ export function AssistantAgentDraft({
             <AgentExecutionHistory
               runs={history}
               tabIndex={tabIndex}
-              hint="Arrow keys choose a Run while the list is focused. Enter inspects it. Approve and queue or Deny stays on a waiting Run. Retry as a new workflow stays on a failed snapshot when the saved policy allows it. Run now stays in Agents."
+              hint="Arrow keys choose a Run while the list is focused. Enter inspects it. Stop stays on an in-progress Run. Approve and queue or Deny stays on a waiting Run. Retry as a new workflow stays on a failed snapshot when the saved policy allows it. Run now stays in Agents."
             />
           ) : (
             <p className="muted">No executions yet. Run now stays in Agents.</p>

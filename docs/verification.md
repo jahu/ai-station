@@ -548,3 +548,7 @@ Frontend lint, TypeScript, 248 component tests and production build passed. An i
 ## Assistant agent approval — 2026-10-11
 
 Frontend lint, TypeScript, 251 component tests and production build passed. A parked agent Run in the conversation or Agents can Approve and queue or Deny through the existing `POST /api/runs/{id}/approval` endpoint. Granting queues that Run and does not start tools, call Run now, or open the inspector. Deny cancels it. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant agent Stop — 2026-10-11
+
+Frontend lint, TypeScript, 253 component tests and production build passed. An in-progress agent Run in conversation or Agents history can Stop through the existing `POST /api/runs/{id}/cancel` endpoint. That does not call Run now or open the inspector. Waiting Runs keep Approve and Deny instead of Stop. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
