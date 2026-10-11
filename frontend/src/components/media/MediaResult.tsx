@@ -12,6 +12,7 @@ import { Badge, ErrorNotice } from "../common";
 import { Button } from "../ui/button";
 
 import { mediaBusy } from "./media-run";
+import { ArtifactLineage } from "../../pages/ArtifactLineage";
 
 export default function MediaResult({
   kind,
@@ -88,6 +89,7 @@ export default function MediaResult({
               Download {kind === "audio" ? "WAV" : "MP4"}
             </a>
           </div>
+          <ArtifactLineage artifactId={result.id} />
         </div>
       ) : (
         <div

@@ -170,7 +170,7 @@ it("reuses Library images in selection order, reorders them, and attaches a voic
   expect(screen.queryByLabelText("Voice reference preview")).toBeNull();
 });
 
-it("stages inline results as next-message inputs and prevents duplicate reuse", () => {
+it("stages inline results as next-message inputs and prevents duplicate reuse", async () => {
   const use = vi.fn();
   const artifact = {
     id: "result",
@@ -184,29 +184,90 @@ it("stages inline results as next-message inputs and prevents duplicate reuse", 
     run_id: null,
   };
   const result = { steps: [], artifacts: [artifact] };
-  const { rerender } = render(
-    <MemoryRouter>
-      <AssistantResults result={result} inputs={emptyOptions} onUse={use} />
-    </MemoryRouter>,
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ id: artifact.id, sources: [], derived: [] }),
+    })),
   );
+  const tree = (inputs = emptyOptions) => (
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AssistantResults result={result} inputs={inputs} onUse={use} />
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+  const { rerender } = render(tree());
+  await screen.findByRole("button", { name: "Use as image reference" });
   fireEvent.click(
     screen.getByRole("button", { name: "Use as image reference" }),
   );
   expect(use).toHaveBeenCalledWith(artifact);
-  rerender(
-    <MemoryRouter>
-      <AssistantResults
-        result={result}
-        inputs={{ ...emptyOptions, image_artifact_ids: ["result"] }}
-        onUse={use}
-      />
-    </MemoryRouter>,
-  );
+  rerender(tree({ ...emptyOptions, image_artifact_ids: ["result"] }));
   expect(
     screen
       .getByRole("button", { name: "Added to next message" })
       .hasAttribute("disabled"),
   ).toBe(true);
+});
+
+it("shows shared lineage on inline media results without inventing a Run", async () => {
+  const portrait = {
+    id: "portrait1",
+    type: "image",
+    mime_type: "image/png",
+    original_filename: "portrait.png",
+    title: "Portrait",
+    metadata: {},
+    parent_artifact_ids: [],
+    size_bytes: 20,
+    created_at: "2026-09-29T00:00:00Z",
+    run_id: null,
+  };
+  const video = {
+    ...portrait,
+    id: "avatar01",
+    type: "video",
+    mime_type: "video/mp4",
+    original_filename: "avatar.mp4",
+    title: "Avatar take",
+    parent_artifact_ids: ["portrait1"],
+    metadata: { capability: "avatar.animate" },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      expect(init?.method ?? "GET").toBe("GET");
+      return {
+        ok: true,
+        json: async () =>
+          String(path).endsWith("/lineage")
+            ? { id: video.id, sources: [portrait], derived: [] }
+            : video,
+      };
+    }),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AssistantResults result={{ steps: [], artifacts: [video] }} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const source = await screen.findByRole("link", {
+    name: "Inspect source Portrait portrait",
+  });
+  expect(source.getAttribute("href")).toBe("/library/portrait1");
+  expect(screen.getByText(/There is no inspectable lineage Run/)).toBeTruthy();
 });
 
 it("stages local coding scope without granting Cursor consent", async () => {

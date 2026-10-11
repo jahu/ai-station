@@ -52,7 +52,7 @@ Typed `runtime.load` and `runtime.stop` actions reuse the owned llama.cpp load/s
 
 `audio.speech` reads the submitted message in Polish using one uploaded WAV voice reference. It creates an ordinary child Run on the same Task; its output is played inline and remains in the Library. The assistant exposes the action explicitly, can route spoken-text requests with a reference, and clarifies missing references or oversized text. This is speech synthesis, not audio transcription or music generation.
 
-With one portrait and one WAV, the assistant dispatches `avatar.animate` through the ordinary media Run engine and renders the resulting video inline. The selected action can override automatic routing; no media attachment grants additional permissions.
+With one portrait and one WAV, the assistant dispatches `avatar.animate` through the ordinary media Run engine and renders the resulting video inline. Source and derived lineage reuse the Library inspector graph; Enter inspects the related artifact and does not invent a lineage Run. The selected action can override automatic routing; no media attachment grants additional permissions.
 
 ## Reusing Library inputs
 
