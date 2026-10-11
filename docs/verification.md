@@ -632,3 +632,7 @@ Frontend lint, TypeScript, 299 component tests and production build passed. Afte
 ## Conversation saves an agent UTC schedule — 2026-10-11
 
 Frontend lint, TypeScript, 300 component tests and production build passed. After `agent.create`, the conversation can save the UTC schedule through `PUT /api/agents/{id}`. Saving it does not invent a conversation Run or call Enable. Enable stays off until the saved definition can activate. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Conversation saves agent approval, retry, notice and workflow policies — 2026-10-11
+
+Frontend lint, TypeScript, 301 component tests and production build passed. After `agent.create`, the conversation can save approval, retry, notice and sequential or gated workflow policies through `PUT /api/agents/{id}`. Saving them does not invent a conversation Run or call Enable. Enable stays off until the saved definition can activate. Bounded tool calling still stays in Agents. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
