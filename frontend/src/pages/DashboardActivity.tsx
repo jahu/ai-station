@@ -26,6 +26,8 @@ interface Overview {
     status: string;
     executor_type: string;
     execution_target: string;
+    agent_id?: string | null;
+    project_id?: string | null;
   }[];
   upcoming: AgentSummary[];
   agents: AgentSummary[];
@@ -68,6 +70,8 @@ interface Overview {
     status: string;
     executor_type: string;
     replay?: boolean;
+    agent_id?: string | null;
+    project_id?: string | null;
   }[];
 }
 
@@ -300,9 +304,11 @@ function attentionAction(
   const noticeId = item.noticeId;
   const workflowId = item.retryWorkflowId;
   const actionId = attentionShortId(item, "action");
+  const tagged = taggedAgentLinks(item.agentId, item.projectId, current, true);
   if (item.action === "acknowledge" && runId) {
     return (
       <>
+        {tagged}
         {item.executorType === "photo_pipe" ? (
           <Button
             type="button"
@@ -332,26 +338,34 @@ function attentionAction(
   }
   if (item.action === "stop" && runId) {
     return (
-      <Button
-        type="button"
-        variant="secondary"
-        tabIndex={current ? 0 : -1}
-        disabled={handlers.cancelPending}
-        aria-label={`Stop ${item.title} ${actionId}`}
-        onFocus={handlers.onSelect}
-        onClick={() => handlers.onStop(runId)}
-      >
-        Stop
-      </Button>
+      <>
+        {tagged}
+        <Button
+          type="button"
+          variant="secondary"
+          tabIndex={current ? 0 : -1}
+          disabled={handlers.cancelPending}
+          aria-label={`Stop ${item.title} ${actionId}`}
+          onFocus={handlers.onSelect}
+          onClick={() => handlers.onStop(runId)}
+        >
+          Stop
+        </Button>
+      </>
     );
   }
   if (item.action === "stopping") {
-    return <span className="muted">Stopping…</span>;
+    return (
+      <>
+        {tagged}
+        <span className="muted">Stopping…</span>
+      </>
+    );
   }
   if (item.action === "read" && noticeId) {
     return (
       <>
-        {taggedAgentLinks(item.agentId, item.projectId, current, true)}
+        {tagged}
         {workflowId ? (
           <Button
             type="button"
@@ -382,6 +396,7 @@ function attentionAction(
   if (item.action === "approve" && runId) {
     return (
       <>
+        {tagged}
         <Button
           type="button"
           tabIndex={current ? 0 : -1}
@@ -448,7 +463,8 @@ function AttentionList({
         Arrow keys choose an item while the list is focused. Enter inspects it.
         Stop, Retry as a new run, Retry as a new workflow, Mark inspected, Mark
         read, Approve and Deny stay on the selected row. Inspect agent, Inspect
-        project and View tagged Runs stay on a notice with a saved link.
+        project and View tagged Runs stay on a notice or agent Run with a saved
+        link.
       </p>
       <ul
         ref={listRef}
@@ -579,6 +595,8 @@ export default function DashboardActivity() {
       status: run.status,
       action: "acknowledge" as const,
       runId: run.id,
+      agentId: run.agent_id ?? undefined,
+      projectId: run.project_id,
       executorType: run.executor_type,
     })),
     ...notices
@@ -616,6 +634,8 @@ export default function DashboardActivity() {
               ? ("stopping" as const)
               : undefined,
       runId: run.id,
+      agentId: run.agent_id ?? undefined,
+      projectId: run.project_id,
     })),
   ];
   const attention = attentionItems.length;

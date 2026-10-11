@@ -548,6 +548,74 @@ it("opens a linked project from Home without Enable or Run now", async () => {
   expect(fetch).toHaveBeenCalledWith("/api/dashboard", undefined);
 });
 
+it("opens the tagged agent from in-progress and waiting Home Runs without Enable or Run now", async () => {
+  const data = overview();
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.includes("/dashboard")
+        ? {
+            ...data,
+            interrupted_runs: [],
+            notices: [],
+            active_runs: [
+              {
+                id: "running-agent",
+                title: "Morning review",
+                executor_type: "agent_workflow",
+                execution_target: "container",
+                status: "running",
+                agent_id: "agent",
+                project_id: "project-1",
+              },
+              {
+                id: "parked",
+                title: "Evening check",
+                executor_type: "agent_workflow",
+                execution_target: "container",
+                status: "waiting_for_approval",
+                agent_id: "agent",
+                project_id: "project-1",
+              },
+            ],
+          }
+        : [],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  const inspectAgent = await screen.findAllByRole("link", {
+    name: "Inspect agent agent",
+  });
+  expect(inspectAgent).toHaveLength(2);
+  expect(inspectAgent[0].getAttribute("href")).toBe("/agents/agent");
+  expect(
+    screen.getAllByRole("link", { name: "Inspect project project-1" })[0].getAttribute(
+      "href",
+    ),
+  ).toBe("/projects/project-1");
+  expect(
+    screen
+      .getAllByRole("link", { name: "View tagged Runs agent" })[0]
+      .getAttribute("href"),
+  ).toBe("/runs?project_id=project-1&agent_id=agent");
+  expect(
+    screen.getByRole("button", { name: "Stop Morning review running-" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", {
+      name: "Approve and queue Evening check parked",
+    }),
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
 it("opens the tagged agent from a Home notice without Enable or Run now", async () => {
   const data = overview();
   const fetch = vi.fn(async (url: string) => ({
