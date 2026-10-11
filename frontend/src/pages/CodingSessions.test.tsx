@@ -192,6 +192,65 @@ it("keeps Inspect project out of a nested paragraph on the open conversation", a
   expect(inspect.closest(".page-title p")).toBeNull();
 });
 
+it("opens tagged Runs from the open coding conversation without starting a Run", async () => {
+  const fetch = vi.fn(async (_path: string) => ({
+    ok: true,
+    json: async () => ({
+      id: "task",
+      title: "Build a site",
+      project_id: "project-1",
+      project_name: "Studio",
+      status: "succeeded",
+      active_run_id: null,
+      latest_proposal_id: "proposal",
+      runs: [
+        {
+          id: "proposal",
+          task_id: "task",
+          executor_type: "codex_proposal",
+          status: "succeeded",
+          created_at: "2026-10-08T00:00:00Z",
+          parameters: { prompt: "Build my homepage" },
+          summary: "Homepage created",
+          metadata: { execution_location: "external" },
+        },
+      ],
+    }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/coding/task"]}>
+        <Routes>
+          <Route path="/coding/:id" element={<CodingSession />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    (
+      await screen.findByRole("link", { name: "Inspect project project-1" })
+    ).getAttribute("href"),
+  ).toBe("/projects/project-1");
+  expect(
+    screen
+      .getByRole("link", { name: "View tagged Runs project-1" })
+      .getAttribute("href"),
+  ).toBe("/runs?project_id=project-1");
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).includes("/coding/cursor")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).includes("/messages")),
+  ).toBe(true);
+});
+
 it("opens the project from a coding conversation without starting a Run", async () => {
   const fetch = vi.fn(async (path: string) => ({
     ok: true,
