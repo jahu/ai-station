@@ -80,6 +80,12 @@ function stationCatalog(path: string) {
   if (String(path).endsWith("/chat/provider")) {
     return { models: ["local-27b", "qwen3:8b"], default_model: "local-27b" };
   }
+  if (
+    String(path).endsWith("/projects") ||
+    String(path).includes("/projects?")
+  ) {
+    return [{ id: "project-1", name: "Workstation docs" }];
+  }
   return null;
 }
 
@@ -481,6 +487,45 @@ it("saves bounded tool calling from the conversation without Enable or Run now",
     enabled: false,
     expected_updated_at: "2026-10-11T10:00:00Z",
   });
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("saves a linked project from the conversation without Enable or Run now", async () => {
+  const fetch = mount();
+  const none = (await screen.findByRole("radio", {
+    name: "Linked project none agent-on",
+  })) as HTMLInputElement;
+  expect(none.checked).toBe(true);
+  expect(
+    screen.getByText(/does not grant coding, Git or repository access/),
+  ).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("radio", { name: "Linked project project-1" }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    project_id: "project-1",
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+  });
+  expect(
+    (
+      screen.getByRole("radio", {
+        name: "Linked project project-1",
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
   ).toBe(true);
