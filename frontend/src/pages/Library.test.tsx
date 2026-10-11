@@ -291,3 +291,51 @@ it("shows shared source and derived lineage without inventing a Run", async () =
   expect(derived.tabIndex).toBe(0);
   expect(derived.getAttribute("href")).toBe("/library/avatar01");
 });
+it("stages Library images and speech into Avatars without a Run", async () => {
+  const voice: Artifact = {
+    ...original,
+    id: "voiceclip",
+    type: "audio",
+    mime_type: "audio/wav",
+    original_filename: "voice.wav",
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      expect(init?.method ?? "GET").toBe("GET");
+      return {
+        ok: true,
+        json: async () =>
+          String(path).endsWith("/lineage")
+            ? {
+                id: String(path).includes("voiceclip")
+                  ? "voiceclip"
+                  : "portrait",
+                sources: [],
+                derived: [],
+              }
+            : String(path).includes("voiceclip")
+              ? voice
+              : original,
+      };
+    }),
+  );
+  mount("/library/portrait");
+  expect(
+    (
+      await screen.findByRole("link", { name: "Use as portrait portrait" })
+    ).getAttribute("href"),
+  ).toBe("/avatars?image=portrait");
+  cleanup();
+  mount("/library/voiceclip");
+  expect(
+    (
+      await screen.findByRole("link", { name: "Use as speech voicecli" })
+    ).getAttribute("href"),
+  ).toBe("/avatars?audio=voiceclip");
+  expect(
+    screen
+      .getByRole("link", { name: "Use as voice reference" })
+      .getAttribute("href"),
+  ).toBe("/audio?input=voiceclip");
+});

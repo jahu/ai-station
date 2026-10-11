@@ -7,12 +7,27 @@ import {
   within,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Avatars from "./Avatars";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+function mount(entry = "/avatars") {
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={[entry]}>
+        <Routes>
+          <Route path="/avatars" element={<Avatars />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
 it("selects existing inputs, queues video and keeps the live result beside the form", async () => {
   const artifacts = [
     {
@@ -40,24 +55,18 @@ it("selects existing inputs, queues video and keeps the live result beside the f
             : artifacts.find((a) => path.endsWith(a.id)),
   }));
   vi.stubGlobal("fetch", fetch);
-  render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <MemoryRouter>
-        <Avatars />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+  mount();
   fireEvent.click(
     screen.getAllByRole("button", { name: "Choose from Library" })[0],
   );
   fireEvent.click(
     await within(
       screen.getByRole("region", { name: "Portrait library" }),
-    ).findByRole("button", { name: "Choose Portrait.png portrait" }, { timeout: 5000 }),
+    ).findByRole(
+      "button",
+      { name: "Choose Portrait.png portrait" },
+      { timeout: 5000 },
+    ),
   );
   fireEvent.click(
     screen.getAllByRole("button", { name: "Choose from Library" })[1],
@@ -107,16 +116,44 @@ it("restores a completed video from the workspace URL", async () => {
               : { gpus: [] },
     })),
   );
-  render(
-    <QueryClientProvider client={new QueryClient()}>
-      <MemoryRouter initialEntries={["/avatars?run=done"]}>
-        <Avatars />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+  mount("/avatars?run=done");
   const video = await screen.findByLabelText("Generated video");
   expect(video.getAttribute("src")).toBe("/api/artifacts/movie/file");
   expect(
     screen.getByRole("link", { name: "Open in Library" }).getAttribute("href"),
   ).toBe("/library/movie");
+});
+it("stages a portrait and speech from the URL without queueing a Run", async () => {
+  const artifacts = [
+    {
+      id: "portrait",
+      type: "image",
+      mime_type: "image/png",
+      original_filename: "Portrait.png",
+    },
+    {
+      id: "speech",
+      type: "audio",
+      mime_type: "audio/wav",
+      original_filename: "Speech.wav",
+    },
+  ];
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
+    ok: options === undefined,
+    json: async () => {
+      const url = String(path);
+      if (url.endsWith("/hardware")) return { gpus: [] };
+      return artifacts.find((artifact) => url.endsWith(artifact.id)) ?? {};
+    },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("/avatars?image=portrait&audio=speech");
+  await screen.findByText("Portrait.png");
+  await screen.findByText("Speech.wav");
+  expect(
+    screen
+      .getByRole("button", { name: "Generate avatar video" })
+      .hasAttribute("disabled"),
+  ).toBe(false);
+  expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
 });

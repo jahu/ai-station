@@ -140,6 +140,14 @@ export default function MediaResult({
                   </Link>
                 </Button>
               ))}
+              <Button asChild variant="secondary">
+                <Link
+                  to={`/avatars?image=${result.id}`}
+                  aria-label={`Use as portrait ${result.id.slice(0, 8)}`}
+                >
+                  Use as portrait
+                </Link>
+              </Button>
             </div>
           )}
           {kind === "audio" && (
@@ -150,6 +158,14 @@ export default function MediaResult({
                   aria-label={`Use as voice reference ${result.id.slice(0, 8)}`}
                 >
                   Use as voice reference
+                </Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link
+                  to={`/avatars?audio=${result.id}`}
+                  aria-label={`Use as speech ${result.id.slice(0, 8)}`}
+                >
+                  Use as speech
                 </Link>
               </Button>
             </div>

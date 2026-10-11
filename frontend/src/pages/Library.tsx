@@ -412,14 +412,32 @@ export function ArtifactDetail() {
                       </Link>
                     </Button>
                   ))}
+                  <Button asChild variant="secondary">
+                    <Link
+                      to={`/avatars?image=${a.id}`}
+                      aria-label={`Use as portrait ${a.id.slice(0, 8)}`}
+                    >
+                      Use as portrait
+                    </Link>
+                  </Button>
                 </div>
               )}
               {a.type === "audio" && (
-                <Button asChild variant="secondary">
-                  <Link to={`/audio?input=${a.id}`}>
-                    Use as voice reference
-                  </Link>
-                </Button>
+                <div className="artifact-actions">
+                  <Button asChild variant="secondary">
+                    <Link to={`/audio?input=${a.id}`}>
+                      Use as voice reference
+                    </Link>
+                  </Button>
+                  <Button asChild variant="secondary">
+                    <Link
+                      to={`/avatars?audio=${a.id}`}
+                      aria-label={`Use as speech ${a.id.slice(0, 8)}`}
+                    >
+                      Use as speech
+                    </Link>
+                  </Button>
+                </div>
               )}
               {prompt && (
                 <>
