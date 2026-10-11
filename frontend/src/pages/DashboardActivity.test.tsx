@@ -89,6 +89,7 @@ function overview() {
         kind: "failed",
         title: "Agent workflow failed",
         created_at: "2026-09-25T10:00:00Z",
+        retry: { allowed: false, run_id: null },
       },
     ],
     interrupted_runs: [
@@ -314,6 +315,61 @@ it("does not retry an interrupted non-image Run from Home", async () => {
   expect(
     screen.queryByRole("button", { name: /Retry as a new run/ }),
   ).toBeNull();
+});
+
+it("retries a failed agent workflow from Home without Run now or the inspector", async () => {
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    if (
+      path === "/api/runs/parent-workflow/retry-workflow" &&
+      options?.method === "POST"
+    ) {
+      return {
+        ok: true,
+        json: async () => ({ id: "retry-run", status: "queued" }),
+      };
+    }
+    return {
+      ok: true,
+      json: async () => ({
+        ...overview(),
+        interrupted_runs: [],
+        active_runs: [],
+        notices: [
+          {
+            id: "notice",
+            agent_id: "agent",
+            run_id: "failed-run",
+            kind: "failed",
+            title: "Agent workflow failed",
+            created_at: "2026-09-25T10:00:00Z",
+            retry: { allowed: true, run_id: "parent-workflow" },
+          },
+        ],
+      }),
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Retry as a new workflow Agent workflow failed notice",
+    }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/runs/parent-workflow/retry-workflow",
+      expect.objectContaining({ method: "POST" }),
+    ),
+  );
+  expect(
+    fetch.mock.calls.some((call) =>
+      String(call[0]).includes("/agents/agent/run"),
+    ),
+  ).toBe(false);
+  expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
+  expect(
+    screen.getByRole("heading", { name: "Needs attention · 1" }),
+  ).toBeTruthy();
 });
 
 it("grants a parked Run from Home without starting inference", async () => {

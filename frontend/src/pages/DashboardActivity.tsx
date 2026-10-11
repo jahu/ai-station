@@ -58,6 +58,7 @@ interface Overview {
     kind: string;
     title: string;
     created_at: string;
+    retry?: { allowed?: boolean; run_id?: string | null };
   }[];
   interrupted_runs?: {
     id: string;
@@ -80,6 +81,7 @@ type AttentionItem = {
   runId?: string;
   noticeId?: string;
   executorType?: string;
+  retryWorkflowId?: string;
 };
 
 function Section({
@@ -234,11 +236,13 @@ function attentionAction(
     onRead: (noticeId: string) => void;
     onDecide: (runId: string, resolution: "granted" | "denied") => void;
     onRetry: (runId: string) => void;
+    onRetryWorkflow: (runId: string) => void;
     onSelect: () => void;
   },
 ) {
   const runId = item.runId;
   const noticeId = item.noticeId;
+  const workflowId = item.retryWorkflowId;
   const actionId = attentionShortId(item, "action");
   if (item.action === "acknowledge" && runId) {
     return (
@@ -290,17 +294,32 @@ function attentionAction(
   }
   if (item.action === "read" && noticeId) {
     return (
-      <Button
-        type="button"
-        variant="secondary"
-        tabIndex={current ? 0 : -1}
-        disabled={handlers.readPending}
-        aria-label={`Mark read ${item.title} ${actionId}`}
-        onFocus={handlers.onSelect}
-        onClick={() => handlers.onRead(noticeId)}
-      >
-        Mark read
-      </Button>
+      <>
+        {workflowId ? (
+          <Button
+            type="button"
+            variant="secondary"
+            tabIndex={current ? 0 : -1}
+            disabled={handlers.retryPending}
+            aria-label={`Retry as a new workflow ${item.title} ${actionId}`}
+            onFocus={handlers.onSelect}
+            onClick={() => handlers.onRetryWorkflow(workflowId)}
+          >
+            Retry as a new workflow
+          </Button>
+        ) : null}
+        <Button
+          type="button"
+          variant="secondary"
+          tabIndex={current ? 0 : -1}
+          disabled={handlers.readPending}
+          aria-label={`Mark read ${item.title} ${actionId}`}
+          onFocus={handlers.onSelect}
+          onClick={() => handlers.onRead(noticeId)}
+        >
+          Mark read
+        </Button>
+      </>
     );
   }
   if (item.action === "approve" && runId) {
@@ -345,6 +364,7 @@ function AttentionList({
   onRead,
   onDecide,
   onRetry,
+  onRetryWorkflow,
 }: {
   items: AttentionItem[];
   acknowledgePending: boolean;
@@ -357,6 +377,7 @@ function AttentionList({
   onRead: (noticeId: string) => void;
   onDecide: (runId: string, resolution: "granted" | "denied") => void;
   onRetry: (runId: string) => void;
+  onRetryWorkflow: (runId: string) => void;
 }) {
   const labelId = useId();
   const { listRef, index, setSelectedKey, onKeyDown, itemProps } =
@@ -368,8 +389,8 @@ function AttentionList({
     <>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose an item while the list is focused. Enter inspects it.
-        Stop, Retry as a new run, Mark inspected, Mark read, Approve and Deny
-        stay on the selected row.
+        Stop, Retry as a new run, Retry as a new workflow, Mark inspected, Mark
+        read, Approve and Deny stay on the selected row.
       </p>
       <ul
         ref={listRef}
@@ -401,6 +422,7 @@ function AttentionList({
                 onRead,
                 onDecide,
                 onRetry,
+                onRetryWorkflow,
                 onSelect: () => setSelectedKey(item.key),
               })}
             />
@@ -476,6 +498,15 @@ export default function DashboardActivity() {
       void cache.invalidateQueries({ queryKey: ["runs"] });
     },
   });
+  const retryWorkflow = useMutation({
+    mutationFn: (runId: string) =>
+      api(`/runs/${runId}/retry-workflow`, { method: "POST" }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["dashboard"] });
+      void cache.invalidateQueries({ queryKey: ["runs"] });
+      void cache.invalidateQueries({ queryKey: ["agents"] });
+    },
+  });
   const data = query.data;
   const interrupted = data?.interrupted_runs ?? [];
   const notices = data?.notices ?? [];
@@ -502,6 +533,10 @@ export default function DashboardActivity() {
         action: "read" as const,
         noticeId: notice.id,
         runId: notice.run_id,
+        retryWorkflowId:
+          notice.retry?.allowed && notice.retry.run_id
+            ? notice.retry.run_id
+            : undefined,
       })),
     ...active.map((run) => ({
       key: run.id,
@@ -533,7 +568,8 @@ export default function DashboardActivity() {
           cancel.error ??
           markRead.error ??
           decide.error ??
-          retryImage.error
+          retryImage.error ??
+          retryWorkflow.error
         }
       />
       {query.isPending && <Loading />}
@@ -552,7 +588,7 @@ export default function DashboardActivity() {
                 cancelPending={cancel.isPending}
                 readPending={markRead.isPending}
                 decidePending={decide.isPending}
-                retryPending={retryImage.isPending}
+                retryPending={retryImage.isPending || retryWorkflow.isPending}
                 onAcknowledge={(runId) => acknowledge.mutate(runId)}
                 onStop={(runId) => cancel.mutate(runId)}
                 onRead={(noticeId) => markRead.mutate(noticeId)}
@@ -560,12 +596,13 @@ export default function DashboardActivity() {
                   decide.mutate({ runId, resolution })
                 }
                 onRetry={(runId) => retryImage.mutate(runId)}
+                onRetryWorkflow={(runId) => retryWorkflow.mutate(runId)}
               />
             ) : (
               <Empty title="Nothing needs you right now">
                 Interrupted work, notices and in-progress Runs will appear here
-                with Stop, Retry as a new run, Mark inspected, Mark read,
-                Approve or Deny.
+                with Stop, Retry as a new run, Retry as a new workflow, Mark
+                inspected, Mark read, Approve or Deny.
               </Empty>
             )}
           </Section>
