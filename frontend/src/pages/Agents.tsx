@@ -15,6 +15,7 @@ import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import { useListKeyboard } from "./useListKeyboard";
 import { activationBlock } from "./agentActivation";
 import { agentSettingsPayload } from "./agentSettings";
+import { AgentProjectList } from "./AgentProjectList";
 import {
   ApprovalChoiceList,
   NoticeChoiceList,
@@ -610,6 +611,10 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
     queryKey: ["skills"],
     queryFn: () => api<Skill[]>("/skills"),
   });
+  const projects = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => api<{ id: string; name: string }[]>("/projects?limit=500"),
+  });
   const update = <K extends keyof Agent>(key: K, value: Agent[K]) =>
     setValues((current) => ({ ...current, [key]: value }));
   const save = useMutation({
@@ -684,6 +689,16 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             onChange={(e) => update("description", e.target.value)}
           />
         </label>
+        <div className="agent-wide">
+          <h3>Linked project</h3>
+          <AgentProjectList
+            agentId={agent.id}
+            projectId={values.project_id ?? null}
+            projects={projects.data ?? []}
+            disabled={active || save.isPending}
+            onSave={(project_id) => update("project_id", project_id)}
+          />
+        </div>
         <label className="agent-wide">
           Goal
           <textarea
@@ -925,7 +940,9 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           )}
         </div>
       </fieldset>
-      <ErrorNotice error={save.error ?? tools.error ?? skills.error} />
+      <ErrorNotice
+        error={save.error ?? tools.error ?? skills.error ?? projects.error}
+      />
       <div>
         <Button disabled={active || stale || modelBusy || save.isPending}>
           Save definition
