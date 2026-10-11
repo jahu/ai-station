@@ -17,6 +17,7 @@ import { api, type Run } from "../api";
 import { Empty, ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import ProjectAgents from "./ProjectAgents";
+import ProjectCodingSessions from "./ProjectCodingSessions";
 import ProjectWorktrees from "./ProjectWorktrees";
 import { terminal } from "../lib/utils";
 import { useListKeyboard } from "./useListKeyboard";
@@ -662,6 +663,7 @@ export function ProjectDetail() {
       <ErrorNotice error={project.error} />
       {project.isPending && <Loading />}
       {project.data && <ProjectWorktrees project={project.data} />}
+      {project.data && <ProjectCodingSessions projectId={project.data.id} />}
       {project.data && <ProjectAgents projectId={project.data.id} />}
       {project.data && (
         <div className="image-workspace">
