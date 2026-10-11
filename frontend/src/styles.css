@@ -2098,6 +2098,10 @@ section:has(> .memory-grid) > .dashboard-note {
   white-space: pre-wrap;
   font: inherit;
 }
+.assistant-agent-draft .panel {
+  margin: 0;
+  padding: 12px;
+}
 .assistant-results {
   border-left: 2px solid var(--accent);
   padding-left: 12px;
