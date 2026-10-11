@@ -504,3 +504,7 @@ Frontend lint, TypeScript, 231 component tests and production build passed. Imag
 ## Assistant media workspace reuse — 2026-10-11
 
 Frontend lint, TypeScript, 232 component tests and production build passed. Inline conversation images can Edit, Recompose, Upscale or become an Avatars portrait without another Run. WAV results can open in Audio or become Avatars speech the same way. Next-message Use as image/voice reference is unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant agent definition review — 2026-10-11
+
+Frontend lint, TypeScript, 233 component tests and production build passed. After `agent.create`, the conversation shows the saved schedule, tools, skills and instructions from `GET /api/agents/{id}` before enable or pause. That does not invent a conversation Run and does not call Run now. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
