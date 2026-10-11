@@ -69,11 +69,16 @@ def tools():
 
 
 @router.get("")
-def agents(session: DB, limit: int = Query(100, ge=1, le=200), offset: int = Query(0, ge=0)):
-    return [
-        definition_dict(agent)
-        for agent in session.scalars(select(Agent).order_by(Agent.name, Agent.id).limit(limit).offset(offset))
-    ]
+def agents(
+    session: DB,
+    project_id: UUID | None = None,
+    limit: int = Query(100, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
+    statement = select(Agent).order_by(Agent.name, Agent.id).limit(limit).offset(offset)
+    if project_id is not None:
+        statement = statement.where(Agent.project_id == str(project_id))
+    return [definition_dict(agent) for agent in session.scalars(statement)]
 
 
 @router.post("", status_code=201)

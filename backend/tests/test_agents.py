@@ -9,7 +9,7 @@ from app.db import reset_engine, session_factory, utcnow
 from app.engine import tick
 from app.local_provider import LocalChatProvider
 from app.memory import upsert_memory
-from app.models import Agent, MemoryEntry, Run
+from app.models import Agent, MemoryEntry, Project, Run
 from app.providers import ProviderError
 from app.runs import request_cancel
 from app.schedule import scheduler_tick
@@ -229,6 +229,24 @@ def test_one_shot_and_duplicate_never_auto_reactivate():
 def test_agent_definition_rejects_unimplemented_or_unsafe_fields(extra):
     response = TestClient(app).post("/api/agents", json={"name": "Test", "goal": "Report", **extra})
     assert response.status_code == 422
+
+
+def test_agents_list_filters_by_linked_project(session):
+    project = Project(name="Workstation docs", repo_path="/fixture/repo")
+    session.add(project)
+    session.commit()
+    api = TestClient(app)
+    linked = create(api, name="Linked briefing", project_id=project.id)
+    create(api, name="Unlinked briefing")
+    listed = api.get("/api/agents", params={"project_id": project.id}).json()
+    assert [row["id"] for row in listed] == [linked["id"]]
+    assert {row["name"] for row in api.get("/api/agents").json()} == {
+        "Linked briefing",
+        "Unlinked briefing",
+    }
+    assert api.get("/api/agents", params={"project_id": "not-a-uuid"}).status_code == 422
+    missing = "00000000-0000-0000-0000-000000000001"
+    assert api.get("/api/agents", params={"project_id": missing}).json() == []
 
 
 def test_long_factory_draft_is_valid_and_stale_edits_are_rejected():
