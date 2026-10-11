@@ -226,6 +226,62 @@ it("enables a draft after unavailable tools are removed and saved", async () => 
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
   ).toBe(true);
 });
+it("keeps Enable disabled when a saved skill is missing from the catalog", async () => {
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.endsWith("/chat/provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.includes("/skills")
+            ? []
+            : url.endsWith("/tools")
+              ? []
+              : {
+                  id: "draft",
+                  name: "Draft",
+                  description: "",
+                  goal: "Research",
+                  system_prompt: "",
+                  model: "local",
+                  tools: [] as string[],
+                  skills: ["gone-skill"],
+                  search_query: "",
+                  fetch_urls: [] as string[],
+                  trigger: "manual",
+                  cron_expr: "",
+                  interval_seconds: null,
+                  run_at: null,
+                  maximum_runtime: 600,
+                  output_expectation: "Report",
+                  project_id: null,
+                  enabled: false,
+                  updated_at: "2026-09-25T12:00:00Z",
+                  next_run_at: null,
+                  last_run_at: null,
+                  last_status: "",
+                  failure_count: 0,
+                  effective_permissions: [] as string[],
+                  runs: [] as unknown[],
+                },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  expect(
+    await screen.findByText("Missing skills prevent activation: gone-skill."),
+  ).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+});
 it("saves a reviewed public query separately from the private goal without activation", async () => {
   let agent = {
     id: "draft",

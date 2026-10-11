@@ -248,6 +248,78 @@ it("reviews attached skill instructions from the conversation without inventing 
   ).toBeTruthy();
   expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   expect(
+    screen.queryByRole("button", {
+      name: "Remove skill station-briefing agent-on",
+    }),
+  ).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("keeps Enable disabled when a saved skill is missing from the catalog", async () => {
+  const fetch = mount({
+    ...draft,
+    tools: ["system_snapshot"],
+    search_query: "",
+    skills: ["gone-skill"],
+  });
+  expect(
+    await screen.findByText("Missing skills prevent activation: gone-skill."),
+  ).toBeTruthy();
+  expect(screen.getByText("Not in the installed catalog.")).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+});
+
+it("removes a missing skill from the conversation definition without Enable or Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    tools: ["system_snapshot"],
+    search_query: "",
+    skills: ["gone-skill"],
+  });
+  expect(
+    await screen.findByText("Missing skills prevent activation: gone-skill."),
+  ).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Remove skill gone-skill agent-on",
+    }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    skills: [],
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+  });
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Enable saved definition agent-on",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
 });
