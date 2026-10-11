@@ -648,3 +648,7 @@ Frontend lint, TypeScript, 303 component tests and production build passed. Afte
 ## Conversation saves agent identity — 2026-10-11
 
 Frontend lint, TypeScript, 304 component tests and production build passed. After `agent.create`, the conversation can save the name, time limit and expected outcome through `PUT /api/agents/{id}`. Saving them does not invent a conversation Run or call Enable. Enable stays off until the saved definition can activate. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Conversation saves agent description — 2026-10-11
+
+Frontend lint, TypeScript, 305 component tests and production build passed. After `agent.create`, the conversation can save the description through `PUT /api/agents/{id}`. Saving it does not invent a conversation Run or call Enable. Enable stays off until the saved definition can activate. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

@@ -433,6 +433,60 @@ function AgentIdentity({
   );
 }
 
+function AgentDescription({
+  agentId,
+  description,
+  tabIndex,
+  disabled,
+  pending,
+  onSave,
+}: {
+  agentId: string;
+  description: string;
+  tabIndex: number;
+  disabled: boolean;
+  pending: boolean;
+  onSave: (patch: { description: string }) => void;
+}) {
+  const shortId = agentId.slice(0, 8);
+  const [next, setNext] = useState(description);
+  const trimmed = next.trim();
+  const valid = trimmed.length <= 4000;
+  const unchanged = trimmed === description;
+  return (
+    <form
+      className="assistant-agent-search"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!valid || unchanged || disabled) return;
+        onSave({ description: trimmed });
+      }}
+    >
+      <label>
+        Description
+        <textarea
+          maxLength={4000}
+          rows={2}
+          value={next}
+          tabIndex={tabIndex}
+          aria-label={`Description ${shortId}`}
+          disabled={disabled}
+          onChange={(event) => setNext(event.target.value)}
+        />
+      </label>
+      <Button
+        type="submit"
+        variant="secondary"
+        disabled={disabled || pending || !valid || unchanged}
+        tabIndex={tabIndex}
+        aria-label={`Save description ${shortId}`}
+      >
+        Save description
+      </Button>
+    </form>
+  );
+}
+
 function AgentInstructions({
   agentId,
   goal,
@@ -653,6 +707,20 @@ export function AssistantAgentDraft({
                   name={agent.name}
                   maximumRuntime={agent.maximum_runtime ?? 600}
                   outputExpectation={agent.output_expectation ?? ""}
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  pending={saveSettings.isPending}
+                  onSave={(patch) => saveSettings.mutate(patch)}
+                />
+              </dd>
+            </div>
+            <div>
+              <dt>Description</dt>
+              <dd>
+                <AgentDescription
+                  key={agent.updated_at}
+                  agentId={agent.id}
+                  description={agent.description ?? ""}
                   tabIndex={tabIndex}
                   disabled={busy || active}
                   pending={saveSettings.isPending}
@@ -961,7 +1029,8 @@ export function AssistantAgentDraft({
             Enable. Saving instructions stores the goal and system prompt on
             the definition and does not call Enable. Saving identity stores
             the name, time limit and expected outcome on the definition and
-            does not call Enable.
+            does not call Enable. Saving description stores that text on the
+            definition and does not call Enable.
           </p>
           {copy ? (
             <p>
