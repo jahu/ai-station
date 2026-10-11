@@ -612,3 +612,7 @@ Frontend lint, TypeScript, 284 component tests and production build passed. Afte
 ## Conversation saves agent reviewed fetch URLs — 2026-10-11
 
 Frontend lint, TypeScript, 285 component tests and production build passed. After `agent.create`, when `http_fetch` is attached, the conversation can save reviewed public URLs through `PUT /api/agents/{id}`. Saving them does not invent a conversation Run or call Enable. Enable stays off until the saved definition can activate. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Conversation removes an unavailable agent tool — 2026-10-11
+
+Frontend lint, TypeScript, 288 component tests and production build passed. After `agent.create`, the conversation can remove an unavailable or unknown attached tool through `PUT /api/agents/{id}`. Removing it does not invent a conversation Run or call Enable. Adding tools stays in Agents. Enable stays off until the saved definition can activate. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

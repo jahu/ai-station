@@ -14,10 +14,7 @@ import { AgentAttachedSkills } from "./AgentAttachedSkills";
 import { AgentAttachedTools } from "./AgentAttachedTools";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import { activationBlock } from "./agentActivation";
-import {
-  agentSettingsPayload,
-  type AgentSettingsInput,
-} from "./agentSettings";
+import { agentSettingsPayload, type AgentSettingsInput } from "./agentSettings";
 import LlamaModels from "./LlamaModels";
 
 type AgentDraft = {
@@ -126,7 +123,9 @@ function AgentSearchQuery({
       <Button
         type="submit"
         variant="secondary"
-        disabled={disabled || pending || !value.trim() || value.trim() === query}
+        disabled={
+          disabled || pending || !value.trim() || value.trim() === query
+        }
         tabIndex={tabIndex}
         aria-label={`Save public search query ${shortId}`}
       >
@@ -355,7 +354,20 @@ export function AssistantAgentDraft({
               <dt>Tools</dt>
               <dd>
                 {agent.tools?.length ? (
-                  <AgentAttachedTools names={agent.tools} tabIndex={tabIndex} />
+                  <AgentAttachedTools
+                    names={agent.tools}
+                    agentId={agent.id}
+                    tabIndex={tabIndex}
+                    disabled={busy || active}
+                    pending={saveSettings.isPending}
+                    onRemove={(name) =>
+                      saveSettings.mutate({
+                        tools: (agent.tools ?? []).filter(
+                          (tool) => tool !== name,
+                        ),
+                      })
+                    }
+                  />
                 ) : (
                   "No tools"
                 )}
@@ -487,13 +499,14 @@ export function AssistantAgentDraft({
             invent a conversation Run. Use model saves a local model on that
             definition and does not call Enable. Saving a public search query or
             reviewed URLs stores those values on the definition and does not
-            call Enable. Enable stays off until the saved definition can
-            activate. Duplicate as draft stays disabled.
-            Run now queues a new workflow from that saved definition and stays
-            on this transcript. A waiting Run can Approve and queue or Deny here
-            without opening the inspector. Stop stays on an in-progress history
-            Run. Manual retry queues a new workflow from a failed snapshot.
-            Tools and schedule stay in Agents.
+            call Enable. Removing an unavailable tool stores the remaining list
+            on the definition and does not call Enable. Enable stays off until
+            the saved definition can activate. Duplicate as draft stays
+            disabled. Run now queues a new workflow from that saved definition
+            and stays on this transcript. A waiting Run can Approve and queue or
+            Deny here without opening the inspector. Stop stays on an
+            in-progress history Run. Manual retry queues a new workflow from a
+            failed snapshot. Adding tools and schedule stay in Agents.
           </p>
           {copy ? (
             <p>
