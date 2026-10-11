@@ -344,11 +344,100 @@ it("shows saved notice policy from the conversation without inventing a Run", as
     },
   });
   expect(
-    await screen.findByText(
-      "In-app notices on failure or interruption, waiting for approval",
-    ),
-  ).toBeTruthy();
-  expect(screen.queryByText(/In-app notices on.*success/)).toBeNull();
+    (
+      await screen.findByRole("checkbox", {
+        name: /When a workflow or report fails or is interrupted/i,
+      })
+    ) as HTMLInputElement,
+  ).toMatchObject({ checked: true });
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: /When a report succeeds/i,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(false);
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: /When a Run is waiting for approval/i,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("saves approval, retry, notice and workflow policies from the conversation without Enable or Run now", async () => {
+  const fetch = mount();
+  const approval = (await screen.findByRole("checkbox", {
+    name: /Require approval before each Run/i,
+  })) as HTMLInputElement;
+  expect(approval.checked).toBe(true);
+  fireEvent.click(approval);
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("checkbox", {
+          name: /Require approval before each Run/i,
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(false),
+  );
+  fireEvent.click(screen.getByRole("radio", { name: /Sequential/i }));
+  await waitFor(() =>
+    expect(
+      (screen.getByRole("radio", { name: /Sequential/i }) as HTMLInputElement)
+        .checked,
+    ).toBe(true),
+  );
+  fireEvent.click(screen.getByRole("radio", { name: /Manual retry/i }));
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("radio", { name: /Manual retry/i }) as HTMLInputElement
+      ).checked,
+    ).toBe(true),
+  );
+  fireEvent.click(
+    screen.getByRole("checkbox", {
+      name: /When a workflow or report fails or is interrupted/i,
+    }),
+  );
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("checkbox", {
+          name: /When a workflow or report fails or is interrupted/i,
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(true),
+  );
+  const writes = fetch.mock.calls.filter((call) => call[1]?.method === "PUT");
+  expect(writes.length).toBe(4);
+  expect(writes.every((call) => call[0] === "/api/agents/agent-one")).toBe(
+    true,
+  );
+  expect(JSON.parse(String(writes[0][1]?.body))).toMatchObject({
+    require_approval: false,
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+  });
+  expect(JSON.parse(String(writes.at(-1)?.[1]?.body))).toMatchObject({
+    require_approval: false,
+    workflow_mode: "sequential",
+    retry_policy: { mode: "manual" },
+    notification_policy: {
+      on_failure: true,
+      on_success: false,
+      on_approval: false,
+    },
+    enabled: false,
+  });
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
@@ -448,8 +537,16 @@ it("enables a disabled draft from the conversation without inventing a Run", asy
     (screen.getByLabelText("Public search query agent-on") as HTMLInputElement)
       .value,
   ).toBe("workstation GPU news");
-  expect(screen.getByText("Required before each Run")).toBeTruthy();
-  expect(screen.getByText("Gated")).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("checkbox", {
+        name: /Require approval before each Run/i,
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  expect(
+    (screen.getByRole("radio", { name: /Gated/i }) as HTMLInputElement).checked,
+  ).toBe(true);
   expect(
     screen.getByText("Summarize GPU telemetry every weekday."),
   ).toBeTruthy();
@@ -1266,8 +1363,12 @@ it("retries a failed workflow from conversation history without Run now", async 
     ],
   });
   expect(
-    await screen.findByText("Manual retry of a failed snapshot"),
-  ).toBeTruthy();
+    (
+      await screen.findByRole("radio", {
+        name: /Manual retry/i,
+      })
+    ) as HTMLInputElement,
+  ).toMatchObject({ checked: true });
   expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   fireEvent.click(
     screen.getByRole("button", {

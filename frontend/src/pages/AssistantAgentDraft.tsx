@@ -15,6 +15,12 @@ import { AgentAttachedTools } from "./AgentAttachedTools";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import { activationBlock } from "./agentActivation";
 import { agentSettingsPayload, type AgentSettingsInput } from "./agentSettings";
+import {
+  ApprovalChoiceList,
+  NoticeChoiceList,
+  RetryChoiceList,
+  WorkflowModeChoiceList,
+} from "./AgentPolicyLists";
 import LlamaModels from "./LlamaModels";
 
 type AgentDraft = {
@@ -53,17 +59,6 @@ type AgentDraft = {
 };
 
 const TERMINAL = new Set(["succeeded", "failed", "canceled", "interrupted"]);
-
-function noticeLabel(policy: AgentDraft["notification_policy"]) {
-  if (!policy) return "";
-  return [
-    policy.on_failure ? "failure or interruption" : "",
-    policy.on_success ? "success" : "",
-    policy.on_approval ? "waiting for approval" : "",
-  ]
-    .filter(Boolean)
-    .join(", ");
-}
 
 function scheduleLabel(agent: AgentDraft) {
   if (agent.trigger === "cron") return `${agent.cron_expr} (UTC)`;
@@ -593,38 +588,95 @@ export function AssistantAgentDraft({
                 </dd>
               </div>
             ) : null}
-            {agent.require_approval ? (
-              <div>
-                <dt>Approval</dt>
-                <dd>Required before each Run</dd>
-              </div>
-            ) : null}
-            {agent.workflow_mode === "gated" ? (
-              <div>
-                <dt>Workflow</dt>
-                <dd>Gated</dd>
-              </div>
-            ) : null}
+            <div>
+              <dt>Approval</dt>
+              <dd>
+                <ApprovalChoiceList
+                  checked={Boolean(agent.require_approval)}
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  onChange={(require_approval) => {
+                    if (require_approval === Boolean(agent.require_approval))
+                      return;
+                    saveSettings.mutate({ require_approval });
+                  }}
+                />
+              </dd>
+            </div>
+            <div>
+              <dt>Workflow</dt>
+              <dd>
+                <WorkflowModeChoiceList
+                  mode={agent.workflow_mode === "gated" ? "gated" : "sequential"}
+                  name={`workflow_mode_${shortId}`}
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  onChange={(workflow_mode) => {
+                    const current =
+                      agent.workflow_mode === "gated" ? "gated" : "sequential";
+                    if (workflow_mode === current) return;
+                    saveSettings.mutate({ workflow_mode });
+                  }}
+                />
+              </dd>
+            </div>
             {agent.tool_calling === true || agent.tool_calling === "bounded" ? (
               <div>
                 <dt>Tool calling</dt>
                 <dd>Bounded registry tools during the report</dd>
               </div>
             ) : null}
-            {agent.retry_policy?.mode === "manual" ? (
-              <div>
-                <dt>Retry</dt>
-                <dd>Manual retry of a failed snapshot</dd>
-              </div>
-            ) : null}
-            {noticeLabel(agent.notification_policy) ? (
-              <div>
-                <dt>Notices</dt>
-                <dd>
-                  In-app notices on {noticeLabel(agent.notification_policy)}
-                </dd>
-              </div>
-            ) : null}
+            <div>
+              <dt>Retry</dt>
+              <dd>
+                <RetryChoiceList
+                  mode={
+                    agent.retry_policy?.mode === "manual" ? "manual" : "none"
+                  }
+                  name={`retry_policy_${shortId}`}
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  onChange={(mode) => {
+                    const current =
+                      agent.retry_policy?.mode === "manual" ? "manual" : "none";
+                    if (mode === current) return;
+                    saveSettings.mutate({ retry_policy: { mode } });
+                  }}
+                />
+              </dd>
+            </div>
+            <div>
+              <dt>Notices</dt>
+              <dd>
+                <NoticeChoiceList
+                  policy={{
+                    on_success: agent.notification_policy?.on_success === true,
+                    on_failure: agent.notification_policy?.on_failure === true,
+                    on_approval:
+                      agent.notification_policy?.on_approval === true,
+                  }}
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  onChange={(notification_policy) => {
+                    const current = {
+                      on_success:
+                        agent.notification_policy?.on_success === true,
+                      on_failure:
+                        agent.notification_policy?.on_failure === true,
+                      on_approval:
+                        agent.notification_policy?.on_approval === true,
+                    };
+                    if (
+                      notification_policy.on_success === current.on_success &&
+                      notification_policy.on_failure === current.on_failure &&
+                      notification_policy.on_approval === current.on_approval
+                    )
+                      return;
+                    saveSettings.mutate({ notification_policy });
+                  }}
+                />
+              </dd>
+            </div>
             {instructions ? (
               <div>
                 <dt>Instructions</dt>
@@ -689,7 +741,8 @@ export function AssistantAgentDraft({
             without opening the inspector. Stop stays on an in-progress history
             Run. Manual retry queues a new workflow from a failed snapshot.
             Saving a schedule stores it on the definition and does not call
-            Enable.
+            Enable. Saving approval, retry, notice or workflow policies stores
+            them on the definition and does not call Enable.
           </p>
           {copy ? (
             <p>
