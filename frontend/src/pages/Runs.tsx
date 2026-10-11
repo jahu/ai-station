@@ -572,6 +572,18 @@ export function RunDetail() {
                 >
                   Open project and worktrees →
                 </Link>
+                {!run.data.agent_id ? (
+                  <>
+                    {" "}
+                    <Link
+                      className="text-link"
+                      to={`/runs?project_id=${run.data.project_id}`}
+                      aria-label={`View tagged Runs ${run.data.project_id}`}
+                    >
+                      View tagged Runs
+                    </Link>
+                  </>
+                ) : null}
               </p>
             )}
             {run.data.parent_run_id && (
