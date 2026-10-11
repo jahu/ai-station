@@ -328,6 +328,111 @@ function AgentFetchUrls({
   );
 }
 
+function AgentIdentity({
+  agentId,
+  name,
+  maximumRuntime,
+  outputExpectation,
+  tabIndex,
+  disabled,
+  pending,
+  onSave,
+}: {
+  agentId: string;
+  name: string;
+  maximumRuntime: number;
+  outputExpectation: string;
+  tabIndex: number;
+  disabled: boolean;
+  pending: boolean;
+  onSave: (patch: {
+    name: string;
+    maximum_runtime: number;
+    output_expectation: string;
+  }) => void;
+}) {
+  const shortId = agentId.slice(0, 8);
+  const [nextName, setNextName] = useState(name);
+  const [limit, setLimit] = useState(String(maximumRuntime));
+  const [outcome, setOutcome] = useState(outputExpectation);
+  const trimmedName = nextName.trim();
+  const trimmedOutcome = outcome.trim();
+  const runtime = Number(limit);
+  const valid =
+    trimmedName.length > 0 &&
+    trimmedName.length <= 200 &&
+    Number.isInteger(runtime) &&
+    runtime >= 5 &&
+    runtime <= 3600 &&
+    trimmedOutcome.length <= 4000;
+  const unchanged =
+    trimmedName === name &&
+    runtime === maximumRuntime &&
+    trimmedOutcome === outputExpectation;
+  return (
+    <form
+      className="assistant-agent-search"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!valid || unchanged || disabled) return;
+        onSave({
+          name: trimmedName,
+          maximum_runtime: runtime,
+          output_expectation: trimmedOutcome,
+        });
+      }}
+    >
+      <label>
+        Name
+        <input
+          required
+          maxLength={200}
+          value={nextName}
+          tabIndex={tabIndex}
+          aria-label={`Name ${shortId}`}
+          disabled={disabled}
+          onChange={(event) => setNextName(event.target.value)}
+        />
+      </label>
+      <label>
+        Time limit (seconds)
+        <input
+          type="number"
+          required
+          min={5}
+          max={3600}
+          value={limit}
+          tabIndex={tabIndex}
+          aria-label={`Time limit ${shortId}`}
+          disabled={disabled}
+          onChange={(event) => setLimit(event.target.value)}
+        />
+      </label>
+      <label>
+        Expected outcome
+        <textarea
+          maxLength={4000}
+          rows={2}
+          value={outcome}
+          tabIndex={tabIndex}
+          aria-label={`Expected outcome ${shortId}`}
+          disabled={disabled}
+          onChange={(event) => setOutcome(event.target.value)}
+        />
+      </label>
+      <Button
+        type="submit"
+        variant="secondary"
+        disabled={disabled || pending || !valid || unchanged}
+        tabIndex={tabIndex}
+        aria-label={`Save identity ${shortId}`}
+      >
+        Save identity
+      </Button>
+    </form>
+  );
+}
+
 function AgentInstructions({
   agentId,
   goal,
@@ -539,6 +644,22 @@ export function AssistantAgentDraft({
             {agent.enabled ? " · Enabled" : " · Disabled draft"}
           </p>
           <dl className="assistant-agent-definition">
+            <div>
+              <dt>Identity</dt>
+              <dd>
+                <AgentIdentity
+                  key={agent.updated_at}
+                  agentId={agent.id}
+                  name={agent.name}
+                  maximumRuntime={agent.maximum_runtime ?? 600}
+                  outputExpectation={agent.output_expectation ?? ""}
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  pending={saveSettings.isPending}
+                  onSave={(patch) => saveSettings.mutate(patch)}
+                />
+              </dd>
+            </div>
             <div>
               <dt>Model</dt>
               <dd>
@@ -838,7 +959,9 @@ export function AssistantAgentDraft({
             Enable. Saving approval, retry, notice, workflow or bounded tool
             calling policies stores them on the definition and does not call
             Enable. Saving instructions stores the goal and system prompt on
-            the definition and does not call Enable.
+            the definition and does not call Enable. Saving identity stores
+            the name, time limit and expected outcome on the definition and
+            does not call Enable.
           </p>
           {copy ? (
             <p>
