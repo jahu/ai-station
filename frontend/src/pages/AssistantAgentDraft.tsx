@@ -10,6 +10,7 @@ import {
   RunApprovalActions,
 } from "./AgentExecutionHistory";
 import { AgentLatestReport } from "./AgentLatestReport";
+import { AgentAttachedSkills } from "./AgentAttachedSkills";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 
 type AgentDraft = {
@@ -151,7 +152,12 @@ export function AssistantAgentDraft({
             {agent.skills?.length ? (
               <div>
                 <dt>Skills</dt>
-                <dd>{agent.skills.join(", ")}</dd>
+                <dd>
+                  <AgentAttachedSkills
+                    ids={agent.skills}
+                    tabIndex={tabIndex}
+                  />
+                </dd>
               </div>
             ) : null}
             {agent.search_query ? (
