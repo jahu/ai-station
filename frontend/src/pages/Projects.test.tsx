@@ -80,7 +80,7 @@ it("keeps saved settings visible when live Git inspection is unavailable", async
       json: async () =>
         path.endsWith("/status")
           ? { detail: "Host Runner is unavailable" }
-          : path.endsWith("/worktrees")
+          : path.endsWith("/worktrees") || path.includes("/agents")
             ? []
             : {
                 id: "saved",
@@ -105,6 +105,12 @@ it("keeps saved settings visible when live Git inspection is unavailable", async
     (screen.getByLabelText("Agent rules") as HTMLTextAreaElement).value,
   ).toBe("Preserve the API");
   expect(screen.queryByText("Clean")).toBeNull();
+  expect(await screen.findByText("No linked agents")).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "View all linked agents" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/agents?project_id=saved");
 });
 
 it("moves through the project list with arrow keys", async () => {
@@ -170,7 +176,7 @@ it("moves through Git policy checkboxes without inventing a Run", async () => {
     json: async () =>
       path.endsWith("/status")
         ? { detail: "Host Runner is unavailable" }
-        : path.endsWith("/worktrees")
+        : path.endsWith("/worktrees") || path.includes("/agents")
           ? []
           : {
               id: "saved",
