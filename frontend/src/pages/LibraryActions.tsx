@@ -38,7 +38,13 @@ export default function LibraryActions({ artifact }: { artifact: Artifact }) {
       ),
     onSuccess: (result) => {
       cache.setQueryData(["artifact", artifact.id], result);
-      for (const key of ["library", "artifacts", "media-inputs", "dashboard"])
+      for (const key of [
+        "library",
+        "artifacts",
+        "media-inputs",
+        "dashboard",
+        "artifact-lineage",
+      ])
         void cache.invalidateQueries({ queryKey: [key] });
       setAction(null);
     },

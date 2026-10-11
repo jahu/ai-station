@@ -127,7 +127,7 @@ Portrait animation uses the same owned-process media lifecycle as images and spe
 
 Reviewed Coding commits use `coding.commit` Runs and a typed native job. A private Git index limits the commit to verified review snapshots; compare-and-swap advances only the owned task ref. Worktree manifests retain their original base and current owned HEAD. NativeJobExecutor shares the existing dispatch/poll/cancel lifecycle with Cursor proposals.
 
-[Library management](library.md) separates versioned user annotations and reversible Trash from immutable execution provenance. Run history and source lineage retain access to artifacts in Trash.
+[Library management](library.md) separates versioned user annotations and reversible Trash from immutable execution provenance. Run history and source/derived lineage retain access to artifacts in Trash.
 
 [Local coding proposals](local-coding.md) extend the existing owned-worktree proposal and validation flow with local inference through the private Runner bridge. The native snapshot/write boundary and review artifacts are shared across proposal providers.
 

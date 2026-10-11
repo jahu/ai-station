@@ -39,7 +39,7 @@ Append-only records (`run.created`, `stdout`, `tool.completed`, `approval.reques
 
 A typed output of a run: `image`, `video`, `audio`, `text`, `markdown`, `json`, `code_patch`, `git_diff`, `document`, `log`, `archive`.
 
-AI Station-owned bytes live under the data root with a UUID filename. `original_filename` is metadata. `parent_artifact_ids` links edits and upscales to their sources. External model files are never copied in as artifacts.
+AI Station-owned bytes live under the data root with a UUID filename. `original_filename` is metadata. `parent_artifact_ids` links edits, speech, avatars and upscales to their sources. Library lineage resolves those parents and the reverse derived set without creating a Run. External model files are never copied in as artifacts.
 
 ## Project
 

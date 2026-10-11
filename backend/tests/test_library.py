@@ -1,11 +1,24 @@
 import io
+import wave
+from uuid import uuid4
 
 from app.api import app
 from app.db import session_factory
-from app.models import Artifact
+from app.models import Artifact, Run
 from app.runs import create_run, create_task
 from fastapi.testclient import TestClient
 from PIL import Image
+from sqlalchemy import func, select
+
+
+def wav_bytes():
+    result = io.BytesIO()
+    with wave.open(result, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        wav.writeframes(b"\0\0" * 3200)
+    return result.getvalue()
 
 
 def upload(client, filename="source.png"):
@@ -100,3 +113,74 @@ def test_library_migration_preserves_existing_artifacts():
         assert migrated["title"] == migrated["notes"] == ""
         assert migrated["library_updated_at"] is migrated["trashed_at"] is None
         assert client.get(f"/api/artifacts/{source['id']}/file").status_code == 200
+
+
+def test_shared_media_lineage_resolves_sources_and_derived_across_types():
+    with TestClient(app) as client:
+        portrait = upload(client, "portrait.png")
+        voice = client.post("/api/audio/uploads", files={"file": ("voice.wav", wav_bytes(), "audio/wav")})
+        assert voice.status_code == 201, voice.text
+        voice = voice.json()
+        edited = upload(client, "edited.png")
+        with session_factory()() as session:
+            session.get(Artifact, edited["id"]).parent_artifact_ids = [portrait["id"]]
+            video = Artifact(
+                artifact_type="video",
+                mime_type="video/mp4",
+                relative_path=f"artifacts/{uuid4().hex}.mp4",
+                original_filename="avatar.mp4",
+                parent_artifact_ids=[edited["id"], voice["id"]],
+                metadata_json={"capability": "avatar.animate"},
+            )
+            session.add(video)
+            session.commit()
+            video_id = video.id
+            run_count = session.scalar(select(func.count()).select_from(Run))
+        client.request(
+            "DELETE",
+            f"/api/artifacts/{edited['id']}",
+            json={"expected_updated_at": None},
+        )
+        missing = str(uuid4())
+        with session_factory()() as session:
+            session.get(Artifact, video_id).parent_artifact_ids = [
+                edited["id"],
+                voice["id"],
+                missing,
+            ]
+            session.commit()
+
+        video_lineage = client.get(f"/api/artifacts/{video_id}/lineage")
+        assert video_lineage.status_code == 200, video_lineage.text
+        assert video_lineage.json()["id"] == video_id
+        assert [item["id"] for item in video_lineage.json()["sources"]] == [edited["id"], voice["id"]]
+        assert video_lineage.json()["sources"][0]["trashed_at"] is not None
+        assert video_lineage.json()["sources"][1]["type"] == "audio"
+        assert video_lineage.json()["derived"] == []
+
+        portrait_lineage = client.get(f"/api/artifacts/{portrait['id']}/lineage").json()
+        assert portrait_lineage["sources"] == []
+        assert [item["id"] for item in portrait_lineage["derived"]] == [edited["id"]]
+
+        edited_lineage = client.get(f"/api/artifacts/{edited['id']}/lineage").json()
+        assert [item["id"] for item in edited_lineage["sources"]] == [portrait["id"]]
+        assert [item["id"] for item in edited_lineage["derived"]] == [video_id]
+
+        voice_lineage = client.get(f"/api/artifacts/{voice['id']}/lineage").json()
+        assert [item["id"] for item in voice_lineage["derived"]] == [video_id]
+
+        later = upload(client, "later.png")
+        with session_factory()() as session:
+            row = session.get(Artifact, later["id"])
+            row.parent_artifact_ids = [portrait["id"], portrait["id"], later["id"], ""]
+            session.commit()
+        later_lineage = client.get(f"/api/artifacts/{later['id']}/lineage").json()
+        assert [item["id"] for item in later_lineage["sources"]] == [portrait["id"]]
+        portrait_derived = [
+            item["id"] for item in client.get(f"/api/artifacts/{portrait['id']}/lineage").json()["derived"]
+        ]
+        assert portrait_derived == [later["id"], edited["id"]]
+
+        assert client.get(f"/api/artifacts/{uuid4()}/lineage").status_code == 404
+        with session_factory()() as session:
+            assert session.scalar(select(func.count()).select_from(Run)) == run_count
