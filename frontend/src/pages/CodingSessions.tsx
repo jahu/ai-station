@@ -1,6 +1,6 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, NavLink, useParams } from "react-router-dom";
+import { Link, NavLink, useNavigate, useParams } from "react-router-dom";
 import {
   ChevronDown,
   Code2,
@@ -27,6 +27,7 @@ import { useListKeyboard } from "./useListKeyboard";
 type SessionRow = {
   id: string;
   title: string;
+  project_id?: string | null;
   project_name: string;
   status: string;
   active_run_id: string | null;
@@ -43,10 +44,22 @@ function useSessions(offset = 0) {
 function SessionCards({ sessions }: { sessions: SessionRow[] }) {
   const headingId = useId();
   const labelId = useId();
-  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+  const navigate = useNavigate();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
     sessions,
     (session) => session.id,
   );
+  const selected = sessions[index];
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key !== "Enter" || event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, select")) return;
+    if (selected?.id) {
+      event.preventDefault();
+      navigate(`/coding/${selected.id}`);
+    }
+  };
   return (
     <section aria-labelledby={headingId}>
       <h2 id={headingId} className="sr-only">
@@ -54,32 +67,63 @@ function SessionCards({ sessions }: { sessions: SessionRow[] }) {
       </h2>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a conversation while the list is focused. Enter opens
-        it.
+        it. Inspect project stays on a saved project and does not start a coding
+        Run.
       </p>
       <div
         ref={listRef}
         className="coding-history"
         aria-labelledby={labelId}
-        onKeyDown={onKeyDown}
+        onKeyDown={handleKey}
       >
-        {sessions.map((s, i) => (
-          <Link
-            className="panel coding-history-item"
-            key={s.id}
-            to={`/coding/${s.id}`}
-            aria-label={`Inspect ${s.title} ${s.id.slice(0, 8)}`}
-            {...itemProps(i, s.id)}
-          >
-            <span className="row spread">
-              <small>{s.project_name}</small>
-              <Badge status={s.status} />
-            </span>
-            <strong>{s.title}</strong>
-            <span className="text-link">
-              Open conversation <ArrowUpRight size={13} aria-hidden="true" />
-            </span>
-          </Link>
-        ))}
+        {sessions.map((s, i) => {
+          const current = i === index;
+          const shortId = s.id.slice(0, 8);
+          return (
+            <article
+              className="panel coding-history-item"
+              key={s.id}
+              {...itemProps(i, s.id)}
+              onClick={(event) => {
+                if (
+                  (event.target as HTMLElement).closest(
+                    "a, button, textarea, input, select",
+                  )
+                )
+                  return;
+                navigate(`/coding/${s.id}`);
+              }}
+            >
+              <span className="row spread">
+                {s.project_id ? (
+                  <Link
+                    className="text-link"
+                    to={`/projects/${s.project_id}`}
+                    tabIndex={current ? 0 : -1}
+                    aria-label={`Inspect project ${s.project_id}`}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    {s.project_name}
+                  </Link>
+                ) : (
+                  <small>{s.project_name}</small>
+                )}
+                <Badge status={s.status} />
+              </span>
+              <Link
+                className="text-link"
+                to={`/coding/${s.id}`}
+                tabIndex={current ? 0 : -1}
+                aria-label={`Inspect ${s.title} ${shortId}`}
+              >
+                <strong>{s.title}</strong>
+              </Link>
+              <span className="text-link">
+                Open conversation <ArrowUpRight size={13} aria-hidden="true" />
+              </span>
+            </article>
+          );
+        })}
       </div>
     </section>
   );
@@ -223,6 +267,17 @@ export default function CodingSession() {
       >
         Your instructions, the agent’s results and the same workspace across
         every turn.
+        {q.data?.project_id ? (
+          <p className="mt">
+            <Link
+              className="text-link"
+              to={`/projects/${q.data.project_id}`}
+              aria-label={`Inspect project ${q.data.project_id}`}
+            >
+              {q.data.project_name}
+            </Link>
+          </p>
+        ) : null}
       </PageTitle>
       <ErrorNotice error={q.error ?? send.error ?? cancel.error} />
       {q.isPending ? (
