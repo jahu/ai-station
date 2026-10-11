@@ -29,6 +29,16 @@ const draft = {
   require_approval: true,
   workflow_mode: "gated",
   search_query: "workstation GPU news",
+  last_status: "",
+  last_run_at: null as string | null,
+  next_run_at: null as string | null,
+  runs: [] as {
+    id: string;
+    capability: string;
+    status: string;
+    created_at: string;
+    parameters?: { tool?: string };
+  }[],
 };
 
 function mount(agent = draft) {
@@ -61,6 +71,12 @@ it("inspects the saved definition without queueing Run now", async () => {
   expect(
     screen.getByText("Summarize GPU telemetry every weekday."),
   ).toBeTruthy();
+  expect(
+    screen.getByText("No executions yet. Run now stays in Agents."),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("region", { name: "Execution history" }),
+  ).toBeNull();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
@@ -109,6 +125,80 @@ it("enables a disabled draft from the conversation without inventing a Run", asy
       .getByRole("link", { name: "Review agent agent-on" })
       .getAttribute("href"),
   ).toBe("/agents/agent-one");
+});
+
+it("inspects ordinary execution history from the conversation without Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    enabled: true,
+    last_status: "succeeded",
+    last_run_at: "2026-10-11T11:00:00Z",
+    next_run_at: "2026-10-12T07:00:00Z",
+    runs: [
+      {
+        id: "run-one-aaaa",
+        capability: "agent.workflow",
+        status: "succeeded",
+        created_at: "2026-10-11T11:00:00Z",
+      },
+      {
+        id: "run-two-bbbb",
+        capability: "agent.step",
+        status: "succeeded",
+        created_at: "2026-10-11T11:01:00Z",
+        parameters: { tool: "memory_search" },
+      },
+    ],
+  });
+  expect(await screen.findByText(/Enabled/)).toBeTruthy();
+  expect(screen.getByText(/· succeeded/)).toBeTruthy();
+  const first = await screen.findByRole("link", {
+    name: "Inspect agent.workflow run-one-",
+  });
+  const second = screen.getByRole("link", {
+    name: "Inspect memory_search run-two-",
+  });
+  expect(first.getAttribute("href")).toBe("/runs/run-one-aaaa");
+  expect(second.getAttribute("href")).toBe("/runs/run-two-bbbb");
+  expect(first.tabIndex).toBe(0);
+  expect(second.tabIndex).toBe(-1);
+  expect(
+    screen.getByRole("region", { name: "Execution history" }),
+  ).toBeTruthy();
+  fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
+    key: "Home",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("links a waiting approval from conversation history without starting tools", async () => {
+  mount({
+    ...draft,
+    enabled: true,
+    runs: [
+      {
+        id: "wait-run-cccc",
+        capability: "agent.workflow",
+        status: "waiting_for_approval",
+        created_at: "2026-10-11T12:00:00Z",
+      },
+    ],
+  });
+  expect(
+    (
+      await screen.findByRole("link", { name: "Review waiting Run wait-run" })
+    ).getAttribute("href"),
+  ).toBe("/runs/wait-run-cccc");
+  expect(screen.queryByRole("button", { name: /Approve/ })).toBeNull();
 });
 
 it("pauses an enabled agent from the conversation without starting a Run", async () => {

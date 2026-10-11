@@ -1,8 +1,10 @@
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api";
+import { api, type Run } from "../api";
 import { ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
+import { time } from "../lib/utils";
+import { AgentExecutionHistory } from "./AgentExecutionHistory";
 
 type AgentDraft = {
   id: string;
@@ -20,9 +22,13 @@ type AgentDraft = {
   run_at?: string | null;
   require_approval?: boolean;
   workflow_mode?: string;
-  tool_calling?: boolean;
+  tool_calling?: boolean | string;
   search_query?: string;
   fetch_urls?: string[];
+  next_run_at?: string | null;
+  last_run_at?: string | null;
+  last_status?: string;
+  runs?: Run[];
 };
 
 function scheduleLabel(agent: AgentDraft) {
@@ -45,6 +51,7 @@ export function AssistantAgentDraft({
   const detail = useQuery({
     queryKey: ["agent", agentId],
     queryFn: () => api<AgentDraft>(`/agents/${agentId}`),
+    refetchInterval: 3000,
   });
   const toggle = useMutation({
     mutationFn: (enabled: boolean) =>
@@ -57,7 +64,12 @@ export function AssistantAgentDraft({
         }),
       }),
     onSuccess: (result) => {
-      cache.setQueryData(["agent", agentId], result);
+      cache.setQueryData(["agent", agentId], (previous?: AgentDraft) => ({
+        ...previous,
+        ...result,
+        runs: previous?.runs ?? result.runs ?? [],
+      }));
+      void cache.invalidateQueries({ queryKey: ["agent", agentId] });
       void cache.invalidateQueries({ queryKey: ["agents"] });
     },
   });
@@ -66,6 +78,10 @@ export function AssistantAgentDraft({
     ? `Pause agent ${shortId}`
     : `Enable saved definition ${shortId}`;
   const instructions = (agent?.goal || agent?.system_prompt || "").trim();
+  const waiting = agent?.runs?.find(
+    (run) => run.status === "waiting_for_approval",
+  );
+  const history = agent?.runs ?? [];
   return (
     <div className="assistant-agent-draft">
       <ErrorNotice error={detail.error ?? toggle.error} />
@@ -117,7 +133,7 @@ export function AssistantAgentDraft({
                 <dd>Gated</dd>
               </div>
             ) : null}
-            {agent.tool_calling ? (
+            {agent.tool_calling === true || agent.tool_calling === "bounded" ? (
               <div>
                 <dt>Tool calling</dt>
                 <dd>Bounded registry tools during the report</dd>
@@ -133,7 +149,30 @@ export function AssistantAgentDraft({
                 </dd>
               </div>
             ) : null}
+            <div>
+              <dt>Next run</dt>
+              <dd>{time(agent.next_run_at ?? null)}</dd>
+            </div>
+            <div>
+              <dt>Last run</dt>
+              <dd>
+                {time(agent.last_run_at ?? null)}
+                {agent.last_status ? ` · ${agent.last_status}` : ""}
+              </dd>
+            </div>
           </dl>
+          {waiting ? (
+            <p className="notice">
+              A Run is waiting for approval.{" "}
+              <Link
+                to={`/runs/${waiting.id}`}
+                tabIndex={tabIndex}
+                aria-label={`Review waiting Run ${waiting.id.slice(0, 8)}`}
+              >
+                Review it
+              </Link>
+            </p>
+          ) : null}
           <p className="muted">
             Activation stays explicit and uses the saved definition. It does not
             invent a conversation Run. Run now, tools and schedule stay in
@@ -159,6 +198,15 @@ export function AssistantAgentDraft({
               </Link>
             </Button>
           </div>
+          {history.length ? (
+            <AgentExecutionHistory
+              runs={history}
+              tabIndex={tabIndex}
+              hint="Arrow keys choose a Run while the list is focused. Enter inspects it. Run now stays in Agents."
+            />
+          ) : (
+            <p className="muted">No executions yet. Run now stays in Agents.</p>
+          )}
         </>
       )}
     </div>

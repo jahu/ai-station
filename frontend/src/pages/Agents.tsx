@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Run } from "../api";
 import {
-  Badge,
   Empty,
   ErrorNotice,
   Loading,
@@ -12,6 +11,7 @@ import {
 import { Button } from "../components/ui/button";
 import LlamaModels from "./LlamaModels";
 import { time } from "../lib/utils";
+import { AgentExecutionHistory } from "./AgentExecutionHistory";
 import { useListKeyboard } from "./useListKeyboard";
 
 type Trigger = "manual" | "interval" | "cron" | "datetime";
@@ -71,75 +71,6 @@ const json = (method: string, body: unknown) => ({
   body: JSON.stringify(body),
 });
 const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
-function runLabel(run: Run) {
-  return run.capability === "agent.step"
-    ? String(run.parameters?.tool ?? "step")
-    : run.capability;
-}
-
-function ExecutionHistoryCards({ runs }: { runs: Run[] }) {
-  const headingId = useId();
-  const labelId = useId();
-  const navigate = useNavigate();
-  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
-    runs,
-    (run) => run.id,
-  );
-  const selected = runs[index];
-  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
-    onKeyDown(event);
-    if (event.key !== "Enter" || event.defaultPrevented) return;
-    const target = event.target as HTMLElement;
-    if (target.closest("a, button, textarea, input")) return;
-    if (selected?.id) {
-      event.preventDefault();
-      navigate(`/runs/${selected.id}`);
-    }
-  };
-  return (
-    <section className="panel agent-form" aria-labelledby={headingId}>
-      <h2 id={headingId}>Execution history</h2>
-      <p id={labelId} className="dashboard-note">
-        Arrow keys choose a Run while the list is focused. Enter inspects it.
-      </p>
-      <div
-        ref={listRef}
-        className="diagnostic-list"
-        aria-labelledby={labelId}
-        onKeyDown={handleKey}
-      >
-        {runs.map((run, i) => {
-          const current = i === index;
-          const shortId = run.id.slice(0, 8);
-          const label = runLabel(run);
-          return (
-            <div key={run.id} {...itemProps(i, run.id)}>
-              <div>
-                <strong>{label}</strong>
-                <p>{time(run.created_at)}</p>
-              </div>
-              <div className="row">
-                <Badge status={run.status} />
-                <Link
-                  className="text-link"
-                  to={`/runs/${run.id}`}
-                  tabIndex={current ? 0 : -1}
-                  aria-label={`Inspect ${label} ${shortId}`}
-                >
-                  {shortId}
-                </Link>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <p className="muted">
-        Latest 100 Runs. Open a Run to inspect events, parameters, errors, and
-        report artifacts.
-      </p>
-    </section>
-  );
-}
 const schedule = (agent: Agent) =>
   agent.trigger === "cron"
     ? `${agent.cron_expr} (UTC)`
@@ -966,7 +897,7 @@ export function AgentDetail() {
       </section>
       <AgentEditor key={agent.id} agent={agent} active={active} />
       {agent.runs?.length ? (
-        <ExecutionHistoryCards runs={agent.runs} />
+        <AgentExecutionHistory runs={agent.runs} />
       ) : (
         <section className="panel agent-form">
           <h2>Execution history</h2>
