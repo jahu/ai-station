@@ -35,8 +35,8 @@ def notification_policy(raw) -> NotificationPolicy:
     return NotificationPolicy.model_validate(raw or {})
 
 
-def notice_dict(row: Notice) -> dict:
-    return {
+def notice_dict(row: Notice, session: Session | None = None) -> dict:
+    payload = {
         "id": row.id,
         "agent_id": row.agent_id,
         "run_id": row.run_id,
@@ -45,7 +45,22 @@ def notice_dict(row: Notice) -> dict:
         "body": row.body,
         "created_at": iso(row.created_at),
         "read_at": iso(row.read_at),
+        "retry": {"allowed": False, "run_id": None},
     }
+    if session is None:
+        return payload
+    run = session.get(Run, row.run_id)
+    if run is None:
+        return payload
+    from app.schedule import retry_view, workflow_source
+
+    source = workflow_source(session, run)
+    retry = retry_view(session, source)
+    payload["retry"] = {
+        "allowed": retry["allowed"],
+        "run_id": source.id if source.executor_type == "agent_workflow" else None,
+    }
+    return payload
 
 
 def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
@@ -95,7 +110,7 @@ def list_notices(
     statement = select(Notice).order_by(Notice.created_at.desc(), Notice.id)
     if unread:
         statement = statement.where(Notice.read_at.is_(None))
-    return [notice_dict(row) for row in session.scalars(statement.limit(limit).offset(offset))]
+    return [notice_dict(row, session) for row in session.scalars(statement.limit(limit).offset(offset))]
 
 
 class ReadBody(BaseModel):
@@ -110,4 +125,4 @@ def mark_read(notice_id: UUID, body: ReadBody, session: DB):
         raise HTTPException(404, "Notice not found")
     row.read_at = utcnow() if body.read else None
     session.commit()
-    return notice_dict(row)
+    return notice_dict(row, session)

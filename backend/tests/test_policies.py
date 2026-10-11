@@ -118,6 +118,36 @@ def test_failure_notice_is_opt_in_and_can_be_marked_read(monkeypatch):
     assert dashboard["notices"] == []
 
 
+def test_failure_notice_exposes_manual_retry_of_the_parent_workflow(monkeypatch):
+    async def fail(self, **kwargs):
+        raise RuntimeError("provider down")
+        yield
+
+    monkeypatch.setattr(LocalChatProvider, "stream", fail)
+    api = TestClient(app)
+    agent = create(
+        api,
+        enabled=True,
+        retry_policy={"mode": "manual"},
+        notification_policy={"on_failure": True, "on_success": False, "on_approval": False},
+    )
+    queued = run_now(api, agent)
+    with session_factory()() as session:
+        drain(session)
+    dashboard = api.get("/api/dashboard").json()
+    assert dashboard["unread_notice_count"] == 1
+    notice = dashboard["notices"][0]
+    assert notice["kind"] == "failed"
+    assert notice["run_id"] != queued["id"]
+    assert notice["retry"] == {"allowed": True, "run_id": queued["id"]}
+    created = api.post(f"/api/runs/{notice['retry']['run_id']}/retry-workflow")
+    assert created.status_code == 202, created.text
+    assert created.json()["retry"]["retry_of"] == queued["id"]
+    listed = api.get("/api/notices?unread=true").json()
+    assert listed[0]["retry"]["allowed"] is False
+    assert listed[0]["retry"]["run_id"] == queued["id"]
+
+
 def test_success_notice_is_opt_in_and_skips_the_parent_publish(monkeypatch):
     async def complete(self, **kwargs):
         yield "Policy report"

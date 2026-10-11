@@ -129,6 +129,30 @@ def workflow_retryable(session: Session, source: Run) -> bool:
     return any(child.status in {RunStatus.FAILED.value, RunStatus.INTERRUPTED.value} for child in children)
 
 
+def workflow_source(session: Session, run: Run) -> Run:
+    if run.executor_type == "agent_workflow":
+        return run
+    if run.parent_run_id:
+        parent = session.get(Run, run.parent_run_id)
+        if parent is not None and parent.executor_type == "agent_workflow":
+            return parent
+    return run
+
+
+def retry_view(session: Session, run: Run) -> dict:
+    from app.notices import retry_policy
+
+    return {
+        "allowed": (
+            workflow_retryable(session, run)
+            and retry_policy((run.parameters.get("definition") or {}).get("retry_policy")).mode == "manual"
+            and not run.metadata_json.get("retry_run_id")
+        ),
+        "retry_run_id": run.metadata_json.get("retry_run_id"),
+        "retry_of": run.metadata_json.get("retry_of"),
+    }
+
+
 def retry_workflow(session: Session, source: Run) -> str:
     from app.events import append_event
     from app.notices import retry_policy

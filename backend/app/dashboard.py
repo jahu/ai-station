@@ -110,7 +110,7 @@ def overview(session: DB):
             select(func.count()).select_from(Notice).where(Notice.read_at.is_(None))
         ),
         "notices": [
-            notice_dict(row)
+            notice_dict(row, session)
             for row in session.scalars(
                 select(Notice).where(Notice.read_at.is_(None)).order_by(Notice.created_at.desc()).limit(8)
             )

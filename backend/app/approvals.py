@@ -39,18 +39,9 @@ def run_public(session: Session, run: Run) -> dict:
     workflow = workflow_view(session, run)
     if workflow is not None:
         payload["workflow"] = workflow
-    from app.notices import retry_policy
-    from app.schedule import workflow_retryable
+    from app.schedule import retry_view
 
-    payload["retry"] = {
-        "allowed": (
-            workflow_retryable(session, run)
-            and retry_policy((run.parameters.get("definition") or {}).get("retry_policy")).mode == "manual"
-            and not run.metadata_json.get("retry_run_id")
-        ),
-        "retry_run_id": run.metadata_json.get("retry_run_id"),
-        "retry_of": run.metadata_json.get("retry_of"),
-    }
+    payload["retry"] = retry_view(session, run)
     return payload
 
 
