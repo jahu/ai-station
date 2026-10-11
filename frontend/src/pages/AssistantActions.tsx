@@ -1,5 +1,5 @@
 import { useId, useRef, useState, type KeyboardEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ImagePlus, Mic, X, ArrowLeft, ArrowRight } from "lucide-react";
 import LibraryPicker from "../components/media/LibraryPicker";
@@ -72,19 +72,77 @@ export type AssistantOptions = {
   stop: StopScope | null;
 };
 type Project = { id: string; name: string; updated_at: string };
+type TaskStep = {
+  id: string;
+  capability: string;
+  status: string;
+  summary: string;
+  error_message: string;
+  location: string;
+};
 export type ActionResult = {
-  steps?: {
-    id: string;
-    capability: string;
-    status: string;
-    summary: string;
-    error_message: string;
-    location: string;
-  }[];
+  steps?: TaskStep[];
   artifacts?: Artifact[];
   coding_runs?: Run[];
   task_status?: string;
 };
+const IMAGE_STEPS = new Set([
+  "image.generate",
+  "image.edit",
+  "image.recompose",
+  "image.upscale",
+]);
+const RETRYABLE = new Set(["failed", "canceled", "interrupted"]);
+
+function imageRetryable(step: TaskStep, steps: TaskStep[]) {
+  if (!IMAGE_STEPS.has(step.capability) || !RETRYABLE.has(step.status))
+    return false;
+  const index = steps.findIndex((row) => row.id === step.id);
+  return !steps
+    .slice(index + 1)
+    .some((row) => IMAGE_STEPS.has(row.capability));
+}
+
+function ImageStepRetry({
+  step,
+  busy,
+  onQueued,
+}: {
+  step: TaskStep;
+  busy?: boolean;
+  onQueued?: (result: Run) => void;
+}) {
+  const cache = useQueryClient();
+  const retry = useMutation({
+    mutationFn: () =>
+      api<Run>(`/images/runs/${step.id}/retry`, { method: "POST" }),
+    onSuccess: (next) => {
+      cache.setQueryData(["run", next.id], next);
+      void cache.invalidateQueries({ queryKey: ["conversation"] });
+      void cache.invalidateQueries({ queryKey: ["runs"] });
+      onQueued?.(next);
+    },
+  });
+  return (
+    <div className="assistant-step-retry">
+      <p className="muted">
+        A retry creates a new run with the same parameters and source images.
+        Inspect logs and any partial output before repeating an interrupted
+        run. The conversation stays here.
+      </p>
+      <ErrorNotice error={retry.error} />
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={busy || retry.isPending}
+        aria-label={`Retry as a new run ${step.id.slice(0, 8)}`}
+        onClick={() => retry.mutate()}
+      >
+        {retry.isPending ? "Retrying…" : "Retry as a new run"}
+      </Button>
+    </div>
+  );
+}
 
 export function AssistantResults({
   result,
@@ -112,6 +170,9 @@ export function AssistantResults({
           <Badge status={step.status} />{" "}
           <span className="chip">{step.location.toUpperCase()}</span>
           {step.error_message && <p className="notice">{step.error_message}</p>}
+          {imageRetryable(step, result.steps ?? []) && (
+            <ImageStepRetry step={step} busy={busy} onQueued={onQueued} />
+          )}
         </div>
       ))}
       {result.coding_runs?.map((run) => (

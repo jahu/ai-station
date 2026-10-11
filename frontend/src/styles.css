@@ -2115,6 +2115,11 @@ section:has(> .memory-grid) > .dashboard-note {
   padding-left: 12px;
   margin-top: 12px;
 }
+.assistant-step-retry {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
 
 /* Media composition: inputs and live output stay in the same workspace. */
 .media-workspace {
