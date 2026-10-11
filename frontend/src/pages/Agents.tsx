@@ -13,6 +13,7 @@ import {
 import { AgentLatestReport } from "./AgentLatestReport";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import { useListKeyboard } from "./useListKeyboard";
+import { activationBlock } from "./agentActivation";
 
 type Trigger = "manual" | "interval" | "cron" | "datetime";
 interface Agent {
@@ -807,6 +808,10 @@ export function AgentDetail() {
       if (variables.operation === "duplicate") navigate(`/agents/${result.id}`);
     },
   });
+  const catalog = useQuery({
+    queryKey: ["agent-tools"],
+    queryFn: () => api<Tool[]>("/agents/tools"),
+  });
   const agent = detail.data;
   if (!agent)
     return (
@@ -815,6 +820,7 @@ export function AgentDetail() {
         {detail.isPending && <Loading />}
       </>
     );
+  const block = activationBlock(agent, catalog.data);
   const active = agent.runs?.some((run) => !terminal.has(run.status)) ?? false;
   const waiting = agent.runs?.find(
     (run) => run.status === "waiting_for_approval",
@@ -835,9 +841,10 @@ export function AgentDetail() {
         {agent.skills?.length ? ` · Skills: ${agent.skills.join(", ")}` : ""}
       </PageTitle>
       <section className="panel agent-form">
+        {block.reason ? <p className="notice">{block.reason}</p> : null}
         <div className="row">
           <Button
-            disabled={action.isPending}
+            disabled={action.isPending || block.blocked}
             onClick={() =>
               action.mutate({ operation: "enabled", enabled: !agent.enabled })
             }
@@ -860,8 +867,9 @@ export function AgentDetail() {
           </Button>
         </div>
         <p className="muted">
-          Activation uses the saved definition. Pausing stops future scheduling;
-          Stop stays on an in-progress history Run and does not call Run now.
+          Activation uses the saved definition. Enable stays off until that
+          saved definition can activate. Pausing stops future scheduling; Stop
+          stays on an in-progress history Run and does not call Run now.
           {agent.require_approval
             ? " Each workflow waits for an explicit approval before any step is published. Approve and queue or Deny stays here and does not call Run now."
             : ""}
