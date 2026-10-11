@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type Artifact, type Run } from "../api";
 import { ErrorNotice } from "../components/common";
 import AgentReport from "./AgentReport";
+import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import { SearchSources, type WebSources } from "./ChatWebSearch";
 
 const TERMINAL = new Set(["succeeded", "failed", "canceled", "interrupted"]);
@@ -20,21 +21,35 @@ function isWebSources(value: unknown): value is WebSources {
   );
 }
 
-function latestSearchSources(runs: Run[], reportRun: Run): WebSources | null {
-  if (isWebSources(reportRun.metadata?.web_search)) {
-    return reportRun.metadata.web_search;
-  }
+function isFetchResult(value: unknown): value is FetchResult {
+  if (!value || typeof value !== "object") return false;
+  const result = value as Record<string, unknown>;
+  return (
+    Array.isArray(result.urls) &&
+    typeof result.fetched_at === "string" &&
+    Array.isArray(result.pages)
+  );
+}
+
+function latestToolMetadata<T>(
+  runs: Run[],
+  reportRun: Run,
+  tool: string,
+  key: "web_search" | "http_fetch",
+  guard: (value: unknown) => value is T,
+): T | null {
+  const fromReport = reportRun.metadata?.[key];
+  if (guard(fromReport)) return fromReport;
   const parentId = reportRun.parent_run_id;
   if (!parentId) return null;
   const sibling = runs.find(
     (run) =>
       run.parent_run_id === parentId &&
-      run.parameters?.tool === "web_search" &&
-      isWebSources(run.metadata?.web_search),
+      run.parameters?.tool === tool &&
+      guard(run.metadata?.[key]),
   );
-  return sibling && isWebSources(sibling.metadata?.web_search)
-    ? sibling.metadata.web_search
-    : null;
+  const fromSibling = sibling?.metadata?.[key];
+  return guard(fromSibling) ? fromSibling : null;
 }
 
 export function AgentLatestReport({ runs }: { runs: Run[] }) {
@@ -47,7 +62,20 @@ export function AgentLatestReport({ runs }: { runs: Run[] }) {
       reportRun && !TERMINAL.has(reportRun.status) ? 3000 : false,
   });
   if (!reportRun) return null;
-  const search = latestSearchSources(runs, reportRun);
+  const search = latestToolMetadata(
+    runs,
+    reportRun,
+    "web_search",
+    "web_search",
+    isWebSources,
+  );
+  const pages = latestToolMetadata(
+    runs,
+    reportRun,
+    "http_fetch",
+    "http_fetch",
+    isFetchResult,
+  );
   return (
     <>
       <ErrorNotice error={artifacts.error} />
@@ -63,6 +91,7 @@ export function AgentLatestReport({ runs }: { runs: Run[] }) {
         />
       ) : null}
       {search ? <SearchSources result={search} /> : null}
+      {pages ? <FetchedPages result={pages} /> : null}
     </>
   );
 }
