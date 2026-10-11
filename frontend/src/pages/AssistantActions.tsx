@@ -179,6 +179,59 @@ export function AssistantResults({
                       : "Use as voice reference"}
                 </Button>
               )}
+            {artifact.type === "image" && (
+              <div className="media-result-reuse">
+                {(
+                  [
+                    ["img2img", "Edit"],
+                    ["recompose", "Recompose"],
+                    ["upscale", "Upscale"],
+                  ] as const
+                ).map(([mode, label]) => (
+                  <Button key={mode} asChild variant="secondary">
+                    <Link
+                      to={`/images?mode=${mode}&input=${artifact.id}${
+                        artifact.run_id ? `&run=${artifact.run_id}` : ""
+                      }`}
+                      aria-label={`${label} ${artifact.id.slice(0, 8)}`}
+                    >
+                      {label}
+                    </Link>
+                  </Button>
+                ))}
+                <Button asChild variant="secondary">
+                  <Link
+                    to={`/avatars?image=${artifact.id}`}
+                    aria-label={`Use as portrait ${artifact.id.slice(0, 8)}`}
+                  >
+                    Use as portrait
+                  </Link>
+                </Button>
+              </div>
+            )}
+            {artifact.type === "audio" &&
+              artifact.mime_type === "audio/wav" && (
+                <div className="media-result-reuse">
+                  <Button asChild variant="secondary">
+                    <Link
+                      to={`/audio?input=${artifact.id}${
+                        artifact.run_id ? `&run=${artifact.run_id}` : ""
+                      }`}
+                      aria-label={`Use in Audio ${artifact.id.slice(0, 8)}`}
+                    >
+                      Use in Audio
+                    </Link>
+                  </Button>
+                  <Button asChild variant="secondary">
+                    <Link
+                      to={`/avatars?audio=${artifact.id}`}
+                      aria-label={`Use as speech ${artifact.id.slice(0, 8)}`}
+                    >
+                      Use as speech
+                    </Link>
+                  </Button>
+                </div>
+              )}
             <ArtifactLineage artifactId={artifact.id} />
           </div>
         ))}

@@ -8,7 +8,9 @@ import AssistantActions, { AssistantResults } from "./AssistantActions";
 
 function chooseAction(key: string) {
   fireEvent.click(
-    screen.getByLabelText(`Action ${key}`).querySelector("input") as HTMLElement,
+    screen
+      .getByLabelText(`Action ${key}`)
+      .querySelector("input") as HTMLElement,
   );
 }
 
@@ -214,6 +216,66 @@ it("stages inline results as next-message inputs and prevents duplicate reuse", 
       .getByRole("button", { name: "Added to next message" })
       .hasAttribute("disabled"),
   ).toBe(true);
+  expect(
+    screen.getByRole("link", { name: "Edit result" }).getAttribute("href"),
+  ).toBe("/images?mode=img2img&input=result");
+  expect(
+    screen.getByRole("link", { name: "Recompose result" }).getAttribute("href"),
+  ).toBe("/images?mode=recompose&input=result");
+  expect(
+    screen.getByRole("link", { name: "Upscale result" }).getAttribute("href"),
+  ).toBe("/images?mode=upscale&input=result");
+  expect(
+    screen
+      .getByRole("link", { name: "Use as portrait result" })
+      .getAttribute("href"),
+  ).toBe("/avatars?image=result");
+});
+
+it("stages inline speech into Audio and Avatars without inventing a Run", async () => {
+  const spoken = {
+    id: "spoken01",
+    type: "audio",
+    mime_type: "audio/wav",
+    original_filename: "line.wav",
+    title: "Spoken line",
+    metadata: {},
+    parent_artifact_ids: [],
+    size_bytes: 20,
+    created_at: "2026-09-29T00:00:00Z",
+    run_id: "speech",
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ id: spoken.id, sources: [], derived: [] }),
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AssistantResults
+          result={{ steps: [], artifacts: [spoken] }}
+          inputs={emptyOptions}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    (
+      await screen.findByRole("link", { name: "Use in Audio spoken01" })
+    ).getAttribute("href"),
+  ).toBe("/audio?input=spoken01&run=speech");
+  expect(
+    screen
+      .getByRole("link", { name: "Use as speech spoken01" })
+      .getAttribute("href"),
+  ).toBe("/avatars?audio=spoken01");
 });
 
 it("shows shared lineage on inline media results without inventing a Run", async () => {
@@ -347,9 +409,9 @@ it("stages local coding scope without granting Cursor consent", async () => {
       }) as HTMLInputElement
     ).checked,
   ).toBe(true);
-  const repairList = screen.getByLabelText("Repair 0").closest(
-    ".repair-choice-list",
-  ) as HTMLElement;
+  const repairList = screen
+    .getByLabelText("Repair 0")
+    .closest(".repair-choice-list") as HTMLElement;
   fireEvent.keyDown(repairList, { key: "End" });
   fireEvent.keyDown(repairList, { key: "Enter" });
   expect(
@@ -431,15 +493,15 @@ it("selects a native Cursor model without sending", async () => {
   await screen.findByLabelText("Model available-model");
   expect(
     (
-      screen.getByLabelText("Model auto").querySelector(
-        "input",
-      ) as HTMLInputElement
+      screen
+        .getByLabelText("Model auto")
+        .querySelector("input") as HTMLInputElement
     ).checked,
   ).toBe(true);
   fireEvent.click(
-    screen.getByLabelText("Model available-model").querySelector(
-      "input",
-    ) as HTMLElement,
+    screen
+      .getByLabelText("Model available-model")
+      .querySelector("input") as HTMLElement,
   );
   fireEvent.click(screen.getByRole("checkbox", { name: /Allow sending/ }));
   expect(JSON.parse(screen.getByTestId("scope").textContent!)).toMatchObject({
@@ -452,7 +514,9 @@ it("selects a native Cursor model without sending", async () => {
     .closest(".coding-model-choice-list") as HTMLElement;
   fireEvent.keyDown(list, { key: "Home" });
   fireEvent.keyDown(list, { key: "Enter" });
-  expect(JSON.parse(screen.getByTestId("scope").textContent!).model).toBeUndefined();
+  expect(
+    JSON.parse(screen.getByTestId("scope").textContent!).model,
+  ).toBeUndefined();
   expect(
     screen.getByText(/There is no inspectable model-selection Run/),
   ).toBeTruthy();
@@ -667,7 +731,9 @@ it("requires an explicit GGUF before a load action is ready", async () => {
     ".gguf-choice-list",
   ) as HTMLElement;
   fireEvent.keyDown(ggufList, { key: "Enter" });
-  expect(screen.getByText(/There is no inspectable GGUF-selection Run/)).toBeTruthy();
+  expect(
+    screen.getByText(/There is no inspectable GGUF-selection Run/),
+  ).toBeTruthy();
   expect(JSON.parse(screen.getByTestId("load").textContent!)).toMatchObject({
     model_file_id: "gguf-1",
     context_size: 4096,
