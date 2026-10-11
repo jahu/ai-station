@@ -2786,3 +2786,46 @@ def test_real_codex_workspace_followup(repository, owned_runner):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps({"first": first, "second": second, "original_unchanged": True}, indent=2))
         path.chmod(0o600)
+
+
+def test_coding_sessions_filter_by_project(session):
+    linked = Project(name="Linked repo", repo_path="/fixture/linked")
+    other = Project(name="Other repo", repo_path="/fixture/other")
+    session.add_all([linked, other])
+    session.flush()
+    linked_task = create_task(
+        session,
+        title="Linked coding",
+        prompt="private prompt",
+        capability="coding.local",
+        project_id=linked.id,
+    )
+    other_task = create_task(
+        session,
+        title="Other coding",
+        prompt="private prompt",
+        capability="coding.local",
+        project_id=other.id,
+    )
+    for task in (linked_task, other_task):
+        run = create_run(
+            session,
+            task,
+            run_type="coding",
+            capability="coding.local",
+            executor_type="local_proposal",
+            project_id=task.project_id,
+        )
+        run.status = "succeeded"
+    session.commit()
+    api = TestClient(app)
+    listed = api.get("/api/coding/sessions", params={"project_id": linked.id}).json()
+    assert [row["id"] for row in listed] == [linked_task.id]
+    assert {row["id"] for row in api.get("/api/coding/sessions").json()} == {
+        linked_task.id,
+        other_task.id,
+    }
+    assert api.get("/api/coding/sessions", params={"project_id": "not-a-uuid"}).status_code == 422
+    missing = "00000000-0000-0000-0000-000000000001"
+    assert api.get("/api/coding/sessions", params={"project_id": missing}).json() == []
+    assert "private" not in str(listed)

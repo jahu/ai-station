@@ -712,3 +712,7 @@ Frontend lint, TypeScript, 323 component tests and production build passed. Codi
 ## Home coding Runs open the linked project — 2026-10-12
 
 `./scripts/check.sh` and frontend lint, TypeScript, 324 component tests and production build passed. Home in-progress coding and worktree Runs include the saved `project_id` from `/api/dashboard` even without an `agent_id`. Inspect project stays on that row and does not start a coding Run. Stop stays on that row. Those links do not Enable or Run now. Audio and avatar retries stay unpublished. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Coding list filters conversations by project — 2026-10-12
+
+`./scripts/check.sh` and frontend lint, TypeScript, 325 component tests and production build passed. `GET /api/coding/sessions?project_id=` returns only conversations for that project. The Coding list Filter project uses that query and does not start a coding Run. Audio and avatar retries stay unpublished. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
