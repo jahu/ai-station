@@ -660,6 +660,17 @@ export function ProjectDetail() {
       >
         {project.data?.repo_path}
       </PageTitle>
+      {project.data ? (
+        <p className="muted">
+          <Link
+            className="text-link"
+            to={`/runs?project_id=${project.data.id}`}
+            aria-label={`View tagged Runs ${project.data.id}`}
+          >
+            View tagged Runs
+          </Link>
+        </p>
+      ) : null}
       <ErrorNotice error={project.error} />
       {project.isPending && <Loading />}
       {project.data && <ProjectWorktrees project={project.data} />}
