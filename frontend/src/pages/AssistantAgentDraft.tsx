@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Run } from "../api";
@@ -23,6 +23,9 @@ import {
   WorkflowModeChoiceList,
 } from "./AgentPolicyLists";
 import LlamaModels from "./LlamaModels";
+import { useListKeyboard } from "./useListKeyboard";
+
+type StationProject = { id: string; name: string };
 
 type AgentDraft = {
   id: string;
@@ -433,6 +436,100 @@ function AgentIdentity({
   );
 }
 
+function AgentProject({
+  agentId,
+  projectId,
+  projects,
+  tabIndex,
+  disabled,
+  onSave,
+}: {
+  agentId: string;
+  projectId: string | null;
+  projects: StationProject[];
+  tabIndex: number;
+  disabled: boolean;
+  onSave: (project_id: string | null) => void;
+}) {
+  const shortId = agentId.slice(0, 8);
+  const labelId = useId();
+  const items = [
+    { id: "", name: "No linked project" },
+    ...projects,
+  ];
+  const saved = projectId ?? "";
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
+    items,
+    (item) => item.id || "none",
+    { initialKey: saved || "none" },
+  );
+  const active = tabIndex >= 0;
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.defaultPrevented) return;
+    if (event.key !== " " && event.key !== "Enter") return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, summary, select")) return;
+    const item = items[index];
+    if (!item || disabled) return;
+    event.preventDefault();
+    const next = item.id || null;
+    if (next === saved) return;
+    onSave(next);
+  };
+  return (
+    <>
+      <p id={labelId} className="dashboard-note">
+        Arrow keys choose a linked project while the list is focused. Space or
+        Enter selects it. That tags this agent’s Runs for filtering. It does
+        not grant coding, Git or repository access. There is no inspectable
+        project-link Run.
+      </p>
+      <div
+        ref={listRef}
+        className="agent-choice-list"
+        aria-labelledby={labelId}
+        onKeyDown={handleKey}
+      >
+        {items.map((item, i) => {
+          const current = i === index;
+          const rowTab = active && current ? 0 : -1;
+          const value = item.id || null;
+          const name = item.id
+            ? `Linked project ${item.id}`
+            : `Linked project none ${shortId}`;
+          return (
+            <div
+              key={item.id || "none"}
+              aria-label={name}
+              {...itemProps(i, item.id || "none")}
+              tabIndex={rowTab}
+            >
+              <label className="agent-tool">
+                <input
+                  type="radio"
+                  name={`linked_project_${shortId}`}
+                  checked={saved === item.id}
+                  disabled={disabled}
+                  tabIndex={rowTab}
+                  aria-label={name}
+                  onChange={() => {
+                    if (disabled || value === (projectId ?? null)) return;
+                    onSave(value);
+                  }}
+                />
+                <span>
+                  <strong>{item.name}</strong>
+                </span>
+              </label>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 function AgentDescription({
   agentId,
   description,
@@ -638,6 +735,10 @@ export function AssistantAgentDraft({
     queryFn: () =>
       api<{ models: string[]; default_model: string }>("/chat/provider"),
   });
+  const projects = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => api<StationProject[]>("/projects?limit=500"),
+  });
   const saveSettings = useMutation({
     mutationFn: (patch: Partial<AgentSettingsInput>) =>
       api<AgentDraft>(`/agents/${agentId}`, {
@@ -688,7 +789,8 @@ export function AssistantAgentDraft({
           runNow.error ??
           saveSettings.error ??
           provider.error ??
-          skillsCatalog.error
+          skillsCatalog.error ??
+          projects.error
         }
       />
       {agent && (
@@ -725,6 +827,20 @@ export function AssistantAgentDraft({
                   disabled={busy || active}
                   pending={saveSettings.isPending}
                   onSave={(patch) => saveSettings.mutate(patch)}
+                />
+              </dd>
+            </div>
+            <div>
+              <dt>Linked project</dt>
+              <dd>
+                <AgentProject
+                  key={agent.updated_at}
+                  agentId={agent.id}
+                  projectId={agent.project_id ?? null}
+                  projects={projects.data ?? []}
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  onSave={(project_id) => saveSettings.mutate({ project_id })}
                 />
               </dd>
             </div>
@@ -1057,7 +1173,8 @@ export function AssistantAgentDraft({
             the definition and does not call Enable. Saving identity stores
             the name, time limit and expected outcome on the definition and
             does not call Enable. Saving description stores that text on the
-            definition and does not call Enable.
+            definition and does not call Enable. Saving a linked project stores
+            it on the definition and does not call Enable.
           </p>
           {copy ? (
             <p>
