@@ -1102,7 +1102,7 @@ it("saves workflow memory without enabling the draft", async () => {
     screen.getByText(/Successful telemetry, public search and HTTP fetch/i),
   ).toBeTruthy();
 });
-it("shows a linked project name on the agent list without inventing a Run", async () => {
+it("opens a linked project from the agent list without Enable or Run now", async () => {
   const row = {
     description: "",
     goal: "Summarize",
@@ -1136,35 +1136,49 @@ it("shows a linked project name on the agent list without inventing a Run", asyn
     failure_count: 0,
     effective_permissions: [],
   };
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (url: string) => ({
-      ok: true,
-      json: async () =>
-        url.endsWith("/llama")
-          ? { models: [], instances: [] }
-          : url.includes("provider")
-            ? { models: ["local"], default_model: "local" }
-            : url.includes("/projects")
-              ? [{ id: "project-1", name: "Workstation docs" }]
-              : url.includes("/agents")
-                ? [{ ...row, id: "agentone", name: "Morning review" }]
-                : [],
-    })),
-  );
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.includes("provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.includes("/projects")
+            ? [{ id: "project-1", name: "Workstation docs" }]
+            : url.includes("/agents")
+              ? [{ ...row, id: "agentone", name: "Morning review" }]
+              : [],
+  }));
+  vi.stubGlobal("fetch", fetch);
   mount();
   expect(
-    await screen.findByRole("link", {
-      name: "Inspect Morning review agentone",
-    }),
-  ).toBeTruthy();
-  expect(screen.getByText(/Linked project: Workstation docs/)).toBeTruthy();
+    (
+      await screen.findByRole("link", {
+        name: "Inspect Morning review agentone",
+      })
+    ).getAttribute("href"),
+  ).toBe("/agents/agentone");
   expect(
-    screen.queryByRole("link", { name: "Inspect project project-1" }),
-  ).toBeNull();
+    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/projects/project-1");
   expect(
-    screen.queryByRole("button", { name: /Enable|Run now/ }),
-  ).toBeNull();
+    screen.getByRole("link", { name: "Inspect project project-1" }).textContent,
+  ).toBe("Workstation docs");
+  expect(
+    screen
+      .getByRole("link", { name: "View tagged Runs agentone" })
+      .getAttribute("href"),
+  ).toBe("/runs?project_id=project-1&agent_id=agentone");
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
 });
 it("filters the agent list by linked project without inventing a Run", async () => {
   const row = {
@@ -1333,7 +1347,13 @@ it("moves through the agent list with arrow keys", async () => {
   });
   expect(second.tabIndex).toBe(0);
   expect(first.tabIndex).toBe(-1);
-  expect(document.activeElement).toBe(second);
+  expect(document.activeElement).toBe(
+    screen
+      .getByRole("link", {
+        name: "Inspect Evening check agenttwo",
+      })
+      .closest("[data-list-index]"),
+  );
   fireEvent.keyDown(second.closest(".memory-grid") as HTMLElement, {
     key: "Home",
   });

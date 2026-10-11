@@ -276,10 +276,22 @@ function AgentCards({
 }) {
   const headingId = useId();
   const labelId = useId();
-  const { listRef, onKeyDown, itemProps } = useListKeyboard(
+  const navigate = useNavigate();
+  const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
     agents,
     (agent) => agent.id,
   );
+  const selected = agents[index];
+  const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    onKeyDown(event);
+    if (event.key !== "Enter" || event.defaultPrevented) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, textarea, input, select")) return;
+    if (selected?.id) {
+      event.preventDefault();
+      navigate(`/agents/${selected.id}`);
+    }
+  };
   return (
     <section aria-labelledby={headingId}>
       <h2 id={headingId} className="sr-only">
@@ -287,21 +299,33 @@ function AgentCards({
       </h2>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose an agent while the list is focused. Enter inspects it.
+        Inspect project and View tagged Runs stay on a saved link. Linking does
+        not grant coding, Git or repository access. This list does not Enable or
+        Run now.
       </p>
       <div
         ref={listRef}
         className="memory-grid"
         aria-labelledby={labelId}
-        onKeyDown={onKeyDown}
+        onKeyDown={handleKey}
       >
         {agents.map((agent, i) => {
+          const current = i === index;
+          const shortId = agent.id.slice(0, 8);
           return (
-            <Link
+            <article
               className="panel memory-card"
-              to={`/agents/${agent.id}`}
               key={agent.id}
-              aria-label={`Inspect ${agent.name} ${agent.id.slice(0, 8)}`}
               {...itemProps(i, agent.id)}
+              onClick={(event) => {
+                if (
+                  (event.target as HTMLElement).closest(
+                    "a, button, textarea, input, select",
+                  )
+                )
+                  return;
+                navigate(`/agents/${agent.id}`);
+              }}
             >
               <div className="row">
                 <span className="tiny-tag">LOCAL</span>
@@ -309,17 +333,31 @@ function AgentCards({
                   {agent.enabled ? "Enabled" : "Paused / draft"}
                 </span>
               </div>
-              <h2>{agent.name}</h2>
+              <h2>
+                <Link
+                  className="text-link"
+                  to={`/agents/${agent.id}`}
+                  tabIndex={current ? 0 : -1}
+                  aria-label={`Inspect ${agent.name} ${shortId}`}
+                >
+                  {agent.name}
+                </Link>
+              </h2>
               <p className="agent-goal">{agent.goal}</p>
               <p className="muted">
                 {schedule(agent)} · {agent.model || "No model selected"}
-                {agent.project_id
-                  ? ` · Linked project: ${projects.find((item) => item.id === agent.project_id)?.name ?? agent.project_id}`
-                  : ""}
               </p>
               <p>Last: {agent.last_status || "Never run"}</p>
               <small className="muted">Next: {time(agent.next_run_at)}</small>
-            </Link>
+              <AgentLinkedProjectLinks
+                agentId={agent.id}
+                projectId={agent.project_id}
+                projectName={
+                  projects.find((item) => item.id === agent.project_id)?.name
+                }
+                tabIndex={current ? 0 : -1}
+              />
+            </article>
           );
         })}
       </div>
