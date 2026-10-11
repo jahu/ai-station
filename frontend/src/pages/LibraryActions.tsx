@@ -44,6 +44,7 @@ export default function LibraryActions({ artifact }: { artifact: Artifact }) {
         "media-inputs",
         "dashboard",
         "artifact-lineage",
+        "media-result",
       ])
         void cache.invalidateQueries({ queryKey: [key] });
       setAction(null);
@@ -56,10 +57,15 @@ export default function LibraryActions({ artifact }: { artifact: Artifact }) {
     setNotes(artifact.notes ?? "");
     setAction(next);
   }
+  const shortId = artifact.id.slice(0, 8);
   return (
     <>
       <div className="library-detail-actions">
-        <Button variant="secondary" onClick={() => open("edit")}>
+        <Button
+          variant="secondary"
+          aria-label={`Edit details ${shortId}`}
+          onClick={() => open("edit")}
+        >
           <Pencil size={15} />
           Edit details
         </Button>
@@ -67,6 +73,7 @@ export default function LibraryActions({ artifact }: { artifact: Artifact }) {
           <Button
             variant="secondary"
             disabled={mutation.isPending}
+            aria-label={`Restore to Library ${shortId}`}
             onClick={() =>
               mutation.mutate({
                 operation: "restore",
@@ -80,7 +87,7 @@ export default function LibraryActions({ artifact }: { artifact: Artifact }) {
         ) : (
           <Button
             variant="ghost"
-            aria-label="Move to Trash"
+            aria-label={`Move to Trash ${shortId}`}
             onClick={() => open("trash")}
           >
             <Trash2 size={17} />

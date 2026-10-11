@@ -228,3 +228,77 @@ it("reuses generated speech as the next voice without inventing a Run", async ()
       .getAttribute("href"),
   ).toBe("/avatars?audio=spoken01");
 });
+
+it("edits Library details on a finished image without queueing a Run", async () => {
+  const edited: Artifact = {
+    ...portrait,
+    id: "edited01",
+    title: "Dusk room",
+    notes: "",
+    library_updated_at: "2026-10-11T10:00:00Z",
+  };
+  const run = { id: "photo", status: "succeeded" } as Run;
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    const url = String(path);
+    if (init?.method === "PATCH") {
+      return {
+        ok: true,
+        json: async () => ({
+          ...edited,
+          title: "Evening study",
+          library_updated_at: "2026-10-11T11:00:00Z",
+        }),
+      };
+    }
+    expect(init?.method ?? "GET").toBe("GET");
+    return {
+      ok: true,
+      json: async () =>
+        url.endsWith("/lineage")
+          ? { id: edited.id, sources: [], derived: [] }
+          : url.includes("/artifacts?")
+            ? [edited]
+            : run,
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <MediaResult kind="image" runId={run.id} run={run} error={null} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(await screen.findByText("Dusk room")).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Edit details edited01" }),
+  );
+  fireEvent.change(screen.getByLabelText("Display name"), {
+    target: { value: "Evening study" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save details" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/artifacts/edited01",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({
+          expected_updated_at: "2026-10-11T10:00:00Z",
+          title: "Evening study",
+          notes: "",
+        }),
+      }),
+    ),
+  );
+  expect(
+    fetch.mock.calls.every(
+      (call) =>
+        !String(call[0]).includes("/runs/") &&
+        (call[1]?.method ?? "GET") !== "POST",
+    ),
+  ).toBe(true);
+});

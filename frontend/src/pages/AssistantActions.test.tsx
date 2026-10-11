@@ -1,6 +1,12 @@
 import { emptyOptions } from "./assistant-options";
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { useState } from "react";
@@ -230,6 +236,73 @@ it("stages inline results as next-message inputs and prevents duplicate reuse", 
       .getByRole("link", { name: "Use as portrait result" })
       .getAttribute("href"),
   ).toBe("/avatars?image=result");
+});
+
+it("edits Library details on an inline result without queueing a Run", async () => {
+  const artifact = {
+    id: "result",
+    type: "image",
+    mime_type: "image/png",
+    original_filename: "result.png",
+    title: "Result",
+    notes: "",
+    library_updated_at: "2026-10-11T10:00:00Z",
+    metadata: {},
+    parent_artifact_ids: [],
+    size_bytes: 20,
+    created_at: "2026-09-29T00:00:00Z",
+    run_id: null,
+  };
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    if (init?.method === "PATCH") {
+      return {
+        ok: true,
+        json: async () => ({ ...artifact, title: "Named still" }),
+      };
+    }
+    return {
+      ok: true,
+      json: async () =>
+        String(path).endsWith("/lineage")
+          ? { id: artifact.id, sources: [], derived: [] }
+          : artifact,
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AssistantResults result={{ steps: [], artifacts: [artifact] }} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Edit details result" }),
+  );
+  fireEvent.change(screen.getByLabelText("Display name"), {
+    target: { value: "Named still" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save details" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/artifacts/result",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({
+          expected_updated_at: "2026-10-11T10:00:00Z",
+          title: "Named still",
+          notes: "",
+        }),
+      }),
+    ),
+  );
+  expect(
+    fetch.mock.calls.every((call) => (call[1]?.method ?? "GET") !== "POST"),
+  ).toBe(true);
 });
 
 it("stages inline speech into Audio and Avatars without inventing a Run", async () => {

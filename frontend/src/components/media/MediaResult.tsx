@@ -14,6 +14,7 @@ import { Button } from "../ui/button";
 
 import { mediaBusy } from "./media-run";
 import { ArtifactLineage } from "../../pages/ArtifactLineage";
+import LibraryActions from "../../pages/LibraryActions";
 
 const copy = {
   audio: {
@@ -111,6 +112,9 @@ export default function MediaResult({
               />
             </div>
           )}
+          <p className="media-result-title">
+            {result.title || result.original_filename}
+          </p>
           <div className="media-result-actions">
             <Button asChild variant="secondary">
               <Link to={`/library/${result.id}`}>
@@ -122,6 +126,7 @@ export default function MediaResult({
               Download {text.download}
             </a>
           </div>
+          <LibraryActions artifact={result} />
           {kind === "image" && (
             <div className="media-result-reuse">
               {(

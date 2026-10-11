@@ -2500,12 +2500,16 @@ section:has(> .memory-grid) > .dashboard-note {
 .media-audio-output audio {
   width: 100%;
 }
+.media-result-title {
+  margin: 16px 0 0;
+  font-weight: 600;
+}
 .media-result-actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 12px;
   font-size: 11px;
 }
 .media-result-actions > a {
