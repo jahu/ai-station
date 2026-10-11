@@ -18,6 +18,7 @@ import { RepairChoiceList } from "./RepairChoiceList";
 import { parseFilePaths } from "./filePaths";
 import { GpuChoiceList } from "./GpuChoiceList";
 import { ActionChoiceList } from "./ActionChoiceList";
+import { ArtifactLineage } from "./ArtifactLineage";
 import { ProjectChoiceList } from "./ProjectChoiceList";
 import { CodingModelChoiceList } from "./CodingModelChoiceList";
 import { GgufChoiceList } from "./GgufChoiceList";
@@ -178,6 +179,7 @@ export function AssistantResults({
                       : "Use as voice reference"}
                 </Button>
               )}
+            <ArtifactLineage artifactId={artifact.id} />
           </div>
         ))}
       </div>

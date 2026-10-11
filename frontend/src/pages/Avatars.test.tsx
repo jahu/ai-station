@@ -98,11 +98,13 @@ it("restores a completed video from the workspace URL", async () => {
     vi.fn(async (path: string) => ({
       ok: true,
       json: async () =>
-        path.includes("/artifacts?")
-          ? [{ id: "movie", type: "video" }]
-          : path.includes("/runs/")
-            ? { id: "done", status: "succeeded" }
-            : { gpus: [] },
+        path.endsWith("/lineage")
+          ? { id: "movie", sources: [], derived: [] }
+          : path.includes("/artifacts?")
+            ? [{ id: "movie", type: "video" }]
+            : path.includes("/runs/")
+              ? { id: "done", status: "succeeded" }
+              : { gpus: [] },
     })),
   );
   render(
