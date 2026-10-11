@@ -857,3 +857,97 @@ it("uses the latest report's fetch sibling when the report has not copied pages 
   expect(screen.queryByRole("heading", { name: "Agent report" })).toBeNull();
   expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
 });
+
+it("shows recorded registry tool calls next to the latest report without Run now", async () => {
+  const agent = {
+    ...draft,
+    enabled: true,
+    last_status: "succeeded",
+    last_run_at: "2026-10-11T12:00:00Z",
+    tool_calling: "bounded",
+    runs: [
+      {
+        id: "report-run",
+        capability: "agent.report",
+        executor_type: "agent",
+        parent_run_id: "flow-run",
+        status: "succeeded",
+        created_at: "2026-10-11T12:00:00Z",
+        metadata: {
+          tool_calls: [
+            {
+              id: "call-0-0",
+              tool: "system_snapshot",
+              arguments: {},
+              round: 0,
+            },
+          ],
+        },
+      },
+      {
+        id: "old-report",
+        capability: "agent.report",
+        executor_type: "agent",
+        parent_run_id: "old-flow",
+        status: "succeeded",
+        created_at: "2026-10-10T12:00:00Z",
+        metadata: {
+          tool_calls: [
+            {
+              id: "call-old",
+              tool: "memory_search",
+              arguments: { query: "stale" },
+              round: 0,
+            },
+          ],
+        },
+      },
+    ],
+  };
+  const fetch = vi.fn(async (path: string) => {
+    if (String(path).includes("/artifacts?")) {
+      expect(path).toBe("/api/artifacts?run_id=report-run");
+      return {
+        ok: true,
+        json: async () => [
+          {
+            id: "report-md",
+            type: "markdown",
+            mime_type: "text/markdown",
+            original_filename: "agent-report.md",
+            size_bytes: 12,
+            created_at: "2026-10-11T12:00:00Z",
+            run_id: "report-run",
+            parent_artifact_ids: [],
+            metadata: {},
+          },
+        ],
+      };
+    }
+    if (String(path).endsWith("/artifacts/report-md/file")) {
+      return { ok: true, text: async () => "GPU idle." };
+    }
+    return { ok: true, json: async () => agent };
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AssistantAgentDraft agentId={agent.id} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Registry tool calls" }),
+  ).toBeTruthy();
+  expect(screen.getByLabelText("Call system_snapshot call-0-0")).toBeTruthy();
+  expect(screen.queryByLabelText(/memory_search/)).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});

@@ -3,6 +3,10 @@ import { api, type Artifact, type Run } from "../api";
 import { ErrorNotice } from "../components/common";
 import AgentReport from "./AgentReport";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
+import {
+  RegistryToolCalls,
+  type RegistryToolCall,
+} from "./AgentToolCalls";
 import { SearchSources, type WebSources } from "./ChatWebSearch";
 
 const TERMINAL = new Set(["succeeded", "failed", "canceled", "interrupted"]);
@@ -18,6 +22,20 @@ function isWebSources(value: unknown): value is WebSources {
     typeof result.query === "string" &&
     typeof result.searched_at === "string" &&
     Array.isArray(result.sources)
+  );
+}
+
+function isRegistryToolCalls(value: unknown): value is RegistryToolCall[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (item) =>
+        item &&
+        typeof item === "object" &&
+        typeof item.id === "string" &&
+        typeof item.tool === "string" &&
+        typeof item.round === "number",
+    )
   );
 }
 
@@ -76,6 +94,8 @@ export function AgentLatestReport({ runs }: { runs: Run[] }) {
     "http_fetch",
     isFetchResult,
   );
+  const recordedCalls = reportRun.metadata?.tool_calls;
+  const calls = isRegistryToolCalls(recordedCalls) ? recordedCalls : [];
   return (
     <>
       <ErrorNotice error={artifacts.error} />
@@ -92,6 +112,7 @@ export function AgentLatestReport({ runs }: { runs: Run[] }) {
       ) : null}
       {search ? <SearchSources result={search} /> : null}
       {pages ? <FetchedPages result={pages} /> : null}
+      {calls.length ? <RegistryToolCalls calls={calls} /> : null}
     </>
   );
 }
