@@ -116,6 +116,48 @@ def test_dashboard_notice_includes_linked_project(session):
     assert data["notices"][0]["project_id"] == project.id
 
 
+def test_dashboard_active_agent_run_includes_linked_project(session):
+    project = Project(name="Workstation docs", repo_path="/fixture/repo")
+    session.add(project)
+    session.flush()
+    agent = Agent(name="Morning review", enabled=True, project_id=project.id)
+    session.add(agent)
+    session.flush()
+    task = create_task(
+        session,
+        title="Agent task",
+        prompt="private prompt",
+        capability="agent.workflow",
+        agent_id=agent.id,
+    )
+    running = create_run(
+        session,
+        task,
+        run_type="agent",
+        capability="agent.workflow",
+        executor_type="agent_workflow",
+        agent_id=agent.id,
+    )
+    running.status = "running"
+    waiting = create_run(
+        session,
+        task,
+        run_type="agent",
+        capability="agent.workflow",
+        executor_type="agent_workflow",
+        agent_id=agent.id,
+    )
+    waiting.status = "waiting_for_approval"
+    session.commit()
+    data = TestClient(app).get("/api/dashboard").json()
+    by_id = {row["id"]: row for row in data["active_runs"]}
+    assert by_id[running.id]["agent_id"] == agent.id
+    assert by_id[running.id]["project_id"] == project.id
+    assert by_id[waiting.id]["agent_id"] == agent.id
+    assert by_id[waiting.id]["project_id"] == project.id
+    assert "private" not in str(data)
+
+
 def test_empty_overview_does_not_require_runner_or_model():
     data = TestClient(app).get("/api/dashboard").json()
     assert data["active_run_count"] == data["enabled_agent_count"] == 0

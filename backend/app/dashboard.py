@@ -60,6 +60,12 @@ def overview(session: DB):
     runtimes = session.scalars(
         select(RuntimeInstance).order_by(RuntimeInstance.updated_at.desc(), RuntimeInstance.id).limit(6)
     ).all()
+    agent_ids = {row.agent_id for row, _title in active if row.agent_id}
+    agents_by_id = (
+        {agent.id: agent for agent in session.scalars(select(Agent).where(Agent.id.in_(agent_ids)))}
+        if agent_ids
+        else {}
+    )
     return {
         "sampled_at": iso(now),
         "active_run_count": session.scalar(
@@ -76,6 +82,10 @@ def overview(session: DB):
                 "executor_type": row.executor_type,
                 "execution_target": row.execution_target,
                 "created_at": iso(row.created_at),
+                "agent_id": row.agent_id,
+                "project_id": (
+                    agents_by_id[row.agent_id].project_id if row.agent_id in agents_by_id else row.project_id
+                ),
             }
             for row, title in active
         ],
