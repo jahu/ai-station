@@ -354,6 +354,45 @@ it("shows saved notice policy from the conversation without inventing a Run", as
   ).toBe(true);
 });
 
+it("saves a schedule from the conversation without Enable or Run now", async () => {
+  const fetch = mount();
+  expect(await screen.findByText("0 7 * * 1-5 (UTC)")).toBeTruthy();
+  expect(
+    (screen.getByLabelText("Schedule trigger agent-on") as HTMLSelectElement)
+      .value,
+  ).toBe("cron");
+  expect(
+    (screen.getByLabelText("Cron expression agent-on") as HTMLInputElement)
+      .value,
+  ).toBe("0 7 * * 1-5");
+  fireEvent.change(screen.getByLabelText("Cron expression agent-on"), {
+    target: { value: "30 6 * * 1-5" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Save schedule agent-on" }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    trigger: "cron",
+    cron_expr: "30 6 * * 1-5",
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+  });
+  expect(await screen.findByText("30 6 * * 1-5 (UTC)")).toBeTruthy();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
 it("inspects the saved definition without queueing Run now", async () => {
   const fetch = mount();
   expect(await screen.findByText("0 7 * * 1-5 (UTC)")).toBeTruthy();

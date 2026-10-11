@@ -73,6 +73,147 @@ function scheduleLabel(agent: AgentDraft) {
   return "Manual";
 }
 
+type ScheduleTrigger = "manual" | "interval" | "cron" | "datetime";
+
+function AgentSchedule({
+  agentId,
+  trigger,
+  cronExpr,
+  intervalSeconds,
+  runAt,
+  tabIndex,
+  disabled,
+  pending,
+  onSave,
+}: {
+  agentId: string;
+  trigger: string;
+  cronExpr: string;
+  intervalSeconds: number | null;
+  runAt: string | null;
+  tabIndex: number;
+  disabled: boolean;
+  pending: boolean;
+  onSave: (patch: {
+    trigger: ScheduleTrigger;
+    cron_expr: string;
+    interval_seconds: number | null;
+    run_at: string | null;
+  }) => void;
+}) {
+  const shortId = agentId.slice(0, 8);
+  const saved = trigger || "manual";
+  const [nextTrigger, setNextTrigger] = useState<ScheduleTrigger>(
+    saved === "interval" || saved === "cron" || saved === "datetime"
+      ? saved
+      : "manual",
+  );
+  const [cron, setCron] = useState(cronExpr);
+  const [interval, setInterval] = useState(String(intervalSeconds ?? 3600));
+  const [once, setOnce] = useState(runAt?.slice(0, 16) ?? "");
+  const intervalValue = Number(interval);
+  const nextRunAt = once ? `${once}:00Z` : null;
+  const valid =
+    nextTrigger === "manual" ||
+    (nextTrigger === "cron" && cron.trim().split(/\s+/).length === 5) ||
+    (nextTrigger === "interval" &&
+      Number.isFinite(intervalValue) &&
+      intervalValue >= 60 &&
+      intervalValue <= 31536000) ||
+    (nextTrigger === "datetime" && !!once);
+  const unchanged =
+    nextTrigger === saved &&
+    (nextTrigger !== "cron" || cron.trim() === cronExpr) &&
+    (nextTrigger !== "interval" || intervalValue === (intervalSeconds ?? 3600)) &&
+    (nextTrigger !== "datetime" || nextRunAt === runAt);
+  return (
+    <form
+      className="assistant-agent-search"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!valid || unchanged || disabled) return;
+        onSave({
+          trigger: nextTrigger,
+          cron_expr: nextTrigger === "cron" ? cron.trim() : "",
+          interval_seconds: nextTrigger === "interval" ? intervalValue : null,
+          run_at: nextTrigger === "datetime" ? nextRunAt : null,
+        });
+      }}
+    >
+      <label>
+        Schedule trigger
+        <select
+          value={nextTrigger}
+          tabIndex={tabIndex}
+          aria-label={`Schedule trigger ${shortId}`}
+          disabled={disabled}
+          onChange={(event) =>
+            setNextTrigger(event.target.value as ScheduleTrigger)
+          }
+        >
+          <option value="manual">Manual</option>
+          <option value="interval">Interval</option>
+          <option value="cron">Cron (UTC)</option>
+          <option value="datetime">One-shot (UTC)</option>
+        </select>
+      </label>
+      {nextTrigger === "interval" ? (
+        <label>
+          Interval seconds
+          <input
+            type="number"
+            required
+            min={60}
+            max={31536000}
+            value={interval}
+            tabIndex={tabIndex}
+            aria-label={`Interval seconds ${shortId}`}
+            disabled={disabled}
+            onChange={(event) => setInterval(event.target.value)}
+          />
+        </label>
+      ) : null}
+      {nextTrigger === "cron" ? (
+        <label>
+          Cron expression (UTC)
+          <input
+            required
+            value={cron}
+            tabIndex={tabIndex}
+            aria-label={`Cron expression ${shortId}`}
+            disabled={disabled}
+            placeholder="0 8 * * *"
+            onChange={(event) => setCron(event.target.value)}
+          />
+        </label>
+      ) : null}
+      {nextTrigger === "datetime" ? (
+        <label>
+          One-shot time (UTC)
+          <input
+            required
+            type="datetime-local"
+            value={once}
+            tabIndex={tabIndex}
+            aria-label={`One-shot time ${shortId}`}
+            disabled={disabled}
+            onChange={(event) => setOnce(event.target.value)}
+          />
+        </label>
+      ) : null}
+      <Button
+        type="submit"
+        variant="secondary"
+        disabled={disabled || pending || !valid || unchanged}
+        tabIndex={tabIndex}
+        aria-label={`Save schedule ${shortId}`}
+      >
+        Save schedule
+      </Button>
+    </form>
+  );
+}
+
 function parseFetchUrls(text: string) {
   return text
     .split("\n")
@@ -352,7 +493,21 @@ export function AssistantAgentDraft({
             </div>
             <div>
               <dt>Schedule</dt>
-              <dd>{scheduleLabel(agent)}</dd>
+              <dd>
+                <p>{scheduleLabel(agent)}</p>
+                <AgentSchedule
+                  key={agent.updated_at}
+                  agentId={agent.id}
+                  trigger={agent.trigger ?? "manual"}
+                  cronExpr={agent.cron_expr ?? ""}
+                  intervalSeconds={agent.interval_seconds ?? null}
+                  runAt={agent.run_at ?? null}
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  pending={saveSettings.isPending}
+                  onSave={(patch) => saveSettings.mutate(patch)}
+                />
+              </dd>
             </div>
             <div>
               <dt>Tools</dt>
@@ -533,7 +688,8 @@ export function AssistantAgentDraft({
             transcript. A waiting Run can Approve and queue or Deny here
             without opening the inspector. Stop stays on an in-progress history
             Run. Manual retry queues a new workflow from a failed snapshot.
-            Adding schedule stays in Agents.
+            Saving a schedule stores it on the definition and does not call
+            Enable.
           </p>
           {copy ? (
             <p>

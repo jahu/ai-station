@@ -628,3 +628,7 @@ Frontend lint, TypeScript, 295 component tests and production build passed. Afte
 ## Conversation attaches an installed agent skill — 2026-10-11
 
 Frontend lint, TypeScript, 299 component tests and production build passed. After `agent.create`, the conversation can attach an installed skill from `GET /api/skills` through `PUT /api/agents/{id}`. Adding it does not invent a conversation Run or call Enable. At most four skills. Enable stays off until the saved definition can activate. Adding schedule stays in Agents. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Conversation saves an agent UTC schedule — 2026-10-11
+
+Frontend lint, TypeScript, 300 component tests and production build passed. After `agent.create`, the conversation can save the UTC schedule through `PUT /api/agents/{id}`. Saving it does not invent a conversation Run or call Enable. Enable stays off until the saved definition can activate. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
