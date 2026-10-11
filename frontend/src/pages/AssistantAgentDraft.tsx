@@ -38,6 +38,8 @@ type AgentDraft = {
   runs?: Run[];
 };
 
+const TERMINAL = new Set(["succeeded", "failed", "canceled", "interrupted"]);
+
 function scheduleLabel(agent: AgentDraft) {
   if (agent.trigger === "cron") return `${agent.cron_expr} (UTC)`;
   if (agent.trigger === "interval")
@@ -95,6 +97,23 @@ export function AssistantAgentDraft({
       void cache.invalidateQueries({ queryKey: ["agents"] });
     },
   });
+  const runNow = useMutation({
+    mutationFn: () =>
+      api<Run>(`/agents/${agentId}/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expected_updated_at: detail.data!.updated_at,
+        }),
+      }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["agent", agentId] });
+      void cache.invalidateQueries({ queryKey: ["agents"] });
+      void cache.invalidateQueries({ queryKey: ["runs"] });
+      void cache.invalidateQueries({ queryKey: ["conversation"] });
+      void cache.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
   const agent = detail.data;
   const enableLabel = agent?.enabled
     ? `Pause agent ${shortId}`
@@ -104,9 +123,13 @@ export function AssistantAgentDraft({
     (run) => run.status === "waiting_for_approval",
   );
   const history = agent?.runs ?? [];
+  const busy = toggle.isPending || duplicate.isPending || runNow.isPending;
+  const active = history.some((run) => !TERMINAL.has(run.status));
   return (
     <div className="assistant-agent-draft">
-      <ErrorNotice error={detail.error ?? toggle.error ?? duplicate.error} />
+      <ErrorNotice
+        error={detail.error ?? toggle.error ?? duplicate.error ?? runNow.error}
+      />
       {agent && (
         <>
           <p>
@@ -216,11 +239,12 @@ export function AssistantAgentDraft({
           ) : null}
           <p className="muted">
             Activation stays explicit and uses the saved definition. It does not
-            invent a conversation Run. Duplicate as draft stays disabled. A
-            waiting Run can Approve and queue or Deny here without opening the
-            inspector. Stop stays on an in-progress history Run. Manual retry
-            queues a new workflow from a failed snapshot. Run now, tools and
-            schedule stay in Agents.
+            invent a conversation Run. Duplicate as draft stays disabled. Run
+            now queues a new workflow from that saved definition and stays on
+            this transcript. A waiting Run can Approve and queue or Deny here
+            without opening the inspector. Stop stays on an in-progress history
+            Run. Manual retry queues a new workflow from a failed snapshot.
+            Tools and schedule stay in Agents.
           </p>
           {copy ? (
             <p>
@@ -237,7 +261,7 @@ export function AssistantAgentDraft({
           <div className="row">
             <Button
               type="button"
-              disabled={toggle.isPending || duplicate.isPending}
+              disabled={busy}
               tabIndex={tabIndex}
               aria-label={enableLabel}
               onClick={() => toggle.mutate(!agent.enabled)}
@@ -247,7 +271,17 @@ export function AssistantAgentDraft({
             <Button
               type="button"
               variant="secondary"
-              disabled={toggle.isPending || duplicate.isPending}
+              disabled={busy || !agent.enabled || active}
+              tabIndex={tabIndex}
+              aria-label={`Run now ${shortId}`}
+              onClick={() => runNow.mutate()}
+            >
+              Run now
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy}
               tabIndex={tabIndex}
               aria-label={`Duplicate as draft ${shortId}`}
               onClick={() => duplicate.mutate()}
@@ -280,11 +314,14 @@ export function AssistantAgentDraft({
               <AgentExecutionHistory
                 runs={history}
                 tabIndex={tabIndex}
-                hint="Arrow keys choose a Run while the list is focused. Enter inspects it. Stop stays on an in-progress Run. Approve and queue or Deny stays on a waiting Run. Retry as a new workflow stays on a failed snapshot when the saved policy allows it. The latest report and its recorded search sources, fetched pages and registry tool calls stay here. Workflow steps of the last parent stay next to this history. Run now stays in Agents."
+                hint="Arrow keys choose a Run while the list is focused. Enter inspects it. Stop stays on an in-progress Run. Approve and queue or Deny stays on a waiting Run. Retry as a new workflow stays on a failed snapshot when the saved policy allows it. The latest report and its recorded search sources, fetched pages and registry tool calls stay here. Workflow steps of the last parent stay next to this history. Run now stays on the saved definition."
               />
             </>
           ) : (
-            <p className="muted">No executions yet. Run now stays in Agents.</p>
+            <p className="muted">
+              No executions yet. Run now queues a new workflow from the saved
+              definition.
+            </p>
           )}
         </>
       )}
