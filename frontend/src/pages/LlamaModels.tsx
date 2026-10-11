@@ -71,6 +71,8 @@ export default function LlamaModels({
   onBusy,
   compact = false,
   coding = false,
+  tabIndex,
+  triggerLabel,
 }: {
   value: string;
   label?: string;
@@ -80,6 +82,8 @@ export default function LlamaModels({
   onBusy?: (busy: boolean) => void;
   compact?: boolean;
   coding?: boolean;
+  tabIndex?: number;
+  triggerLabel?: string;
 }) {
   const cache = useQueryClient();
   const hardware = useHardware();
@@ -98,7 +102,7 @@ export default function LlamaModels({
     gpus ?? (hardware.data?.gpus ?? []).map((g) => Number(g.index));
   function instanceFor(model?: Model) {
     const matching =
-      catalog.data?.instances.filter(
+      catalog.data?.instances?.filter(
         (i) => i.metadata.model_file_id === model?.id,
       ) ?? [];
     return (
@@ -106,9 +110,9 @@ export default function LlamaModels({
       matching.at(-1)
     );
   }
-  const choice = catalog.data?.models.find((m) => m.model_key === draft);
+  const choice = catalog.data?.models?.find((m) => m.model_key === draft);
   const instance = instanceFor(choice);
-  const current = catalog.data?.models.find((m) => m.model_key === value);
+  const current = catalog.data?.models?.find((m) => m.model_key === value);
   const localModels = [
     ...new Set(models.filter((m) => !m.startsWith("llamacpp:"))),
   ];
@@ -188,7 +192,7 @@ export default function LlamaModels({
         context % 256 !== 0));
   const matches = (name: string) =>
     name.toLowerCase().includes(search.toLowerCase());
-  const available = catalog.data?.models.filter((m) => matches(m.name)) ?? [];
+  const available = catalog.data?.models?.filter((m) => matches(m.name)) ?? [];
   const providers = localModels.filter(matches);
   const pickerKeys = [...available.map((model) => model.model_key), ...providers];
   const headingId = useId();
@@ -225,7 +229,10 @@ export default function LlamaModels({
             type="button"
             className="model-picker-trigger"
             disabled={pending}
-            aria-label={compact ? "Change model" : "Model"}
+            tabIndex={tabIndex}
+            aria-label={
+              triggerLabel ?? (compact ? "Change model" : "Model")
+            }
           >
             <Cpu size={18} />
             <span>

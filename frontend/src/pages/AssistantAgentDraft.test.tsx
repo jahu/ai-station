@@ -71,92 +71,130 @@ const draft = {
   }[],
 };
 
+function stationCatalog(path: string) {
+  if (String(path).endsWith("/llama")) return { models: [], instances: [] };
+  if (String(path).endsWith("/hardware")) return { gpus: [] };
+  if (String(path).endsWith("/chat/provider")) {
+    return { models: ["local-27b", "qwen3:8b"], default_model: "local-27b" };
+  }
+  return null;
+}
+
+function withCatalog(
+  handler: (
+    path: string,
+    options?: RequestInit,
+  ) => Promise<{ ok: boolean; json?: () => Promise<unknown>; text?: () => Promise<string> }>,
+) {
+  return async (path: string, options?: RequestInit) => {
+    const catalog = stationCatalog(path);
+    if (catalog) return { ok: true, json: async () => catalog };
+    return handler(path, options);
+  };
+}
+
 function mount(agent = draft) {
-  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
-    ok: true,
-    json: async () =>
-      String(path).endsWith("/enabled")
-        ? { ...agent, enabled: true, updated_at: "2026-10-11T10:01:00Z" }
-        : String(path).endsWith("/duplicate")
-          ? {
-              ...agent,
-              id: "agent-copy",
-              name: `${agent.name} (copy)`,
-              enabled: false,
-              last_run_at: null,
-              next_run_at: null,
-              last_status: "",
-              runs: [],
-            }
-          : String(path).endsWith("/run") && options?.method === "POST"
+  let current = { ...agent };
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    const url = String(path);
+    const catalog = stationCatalog(url);
+    if (catalog) return { ok: true, json: async () => catalog };
+    if (options?.method === "PUT" && url.endsWith(`/agents/${current.id}`)) {
+      current = {
+        ...current,
+        ...JSON.parse(String(options.body)),
+        updated_at: "2026-10-11T10:02:00Z",
+      };
+      return { ok: true, json: async () => current };
+    }
+    return {
+      ok: true,
+      json: async () =>
+        url.endsWith("/enabled")
+          ? { ...current, enabled: true, updated_at: "2026-10-11T10:01:00Z" }
+          : url.endsWith("/duplicate")
             ? {
-                id: "queued-run-ffff",
-                capability: "agent.workflow",
-                status: "queued",
+                ...current,
+                id: "agent-copy",
+                name: `${current.name} (copy)`,
+                enabled: false,
+                last_run_at: null,
+                next_run_at: null,
+                last_status: "",
+                runs: [],
               }
-            : String(path).includes("/skills")
-              ? [
-                  {
-                    id: "station-briefing",
-                    name: "Station briefing",
-                    version: "1.0.0",
-                    description: "Local status report format",
-                    required_permissions: [],
-                    instructions: "Always mention GPU memory when it appears.",
-                  },
-                ]
-              : String(path).endsWith("/tools")
+            : url.endsWith("/run") && options?.method === "POST"
+              ? {
+                  id: "queued-run-ffff",
+                  capability: "agent.workflow",
+                  status: "queued",
+                }
+              : url.includes("/skills")
                 ? [
                     {
-                      name: "system_snapshot",
-                      description:
-                        "Read current host hardware telemetry through the Host Runner.",
-                      operational: true,
-                      required_permissions: ["filesystem_read"],
-                    },
-                    {
-                      name: "web_search",
-                      description:
-                        "Search public pages through the configured search service.",
-                      operational: true,
-                      required_permissions: ["network_read"],
-                    },
-                    {
-                      name: "http_fetch",
-                      description: "GET reviewed public pages.",
-                      operational: true,
-                      required_permissions: ["network_read"],
-                    },
-                    {
-                      name: "browser",
-                      description:
-                        "Browser automation is not implemented for agents.",
-                      operational: false,
+                      id: "station-briefing",
+                      name: "Station briefing",
+                      version: "1.0.0",
+                      description: "Local status report format",
                       required_permissions: [],
+                      instructions:
+                        "Always mention GPU memory when it appears.",
                     },
                   ]
-                : String(path).includes("/retry-workflow")
-                  ? {
-                      id: "retry-run",
-                      capability: "agent.workflow",
-                      status: "queued",
-                      retry: { allowed: false, retry_of: "fail-run-dddd" },
-                    }
-                  : String(path).endsWith("/cancel") &&
-                      options?.method === "POST"
-                    ? { id: "run-live-eeee", status: "cancel_requested" }
-                    : String(path).includes("/approval") &&
-                        options?.method === "POST"
-                      ? {
-                          id: "wait-run-cccc",
-                          status:
-                            JSON.parse(String(options.body)).resolution ===
-                            "denied"
-                              ? "canceled"
-                              : "queued",
-                        }
-                      : agent,
-  }));
+                : url.endsWith("/tools")
+                  ? [
+                      {
+                        name: "system_snapshot",
+                        description:
+                          "Read current host hardware telemetry through the Host Runner.",
+                        operational: true,
+                        required_permissions: ["filesystem_read"],
+                      },
+                      {
+                        name: "web_search",
+                        description:
+                          "Search public pages through the configured search service.",
+                        operational: true,
+                        required_permissions: ["network_read"],
+                      },
+                      {
+                        name: "http_fetch",
+                        description: "GET reviewed public pages.",
+                        operational: true,
+                        required_permissions: ["network_read"],
+                      },
+                      {
+                        name: "browser",
+                        description:
+                          "Browser automation is not implemented for agents.",
+                        operational: false,
+                        required_permissions: [],
+                      },
+                    ]
+                  : url.includes("/retry-workflow")
+                    ? {
+                        id: "retry-run",
+                        capability: "agent.workflow",
+                        status: "queued",
+                        retry: {
+                          allowed: false,
+                          retry_of: "fail-run-dddd",
+                        },
+                      }
+                    : url.endsWith("/cancel") && options?.method === "POST"
+                      ? { id: "run-live-eeee", status: "cancel_requested" }
+                      : url.includes("/approval") && options?.method === "POST"
+                        ? {
+                            id: "wait-run-cccc",
+                            status:
+                              JSON.parse(String(options.body)).resolution ===
+                              "denied"
+                                ? "canceled"
+                                : "queued",
+                          }
+                        : current,
+    };
+  });
   vi.stubGlobal("fetch", fetch);
   render(
     <QueryClientProvider
@@ -415,6 +453,61 @@ it("keeps Enable disabled when the saved definition has no model", async () => {
   expect(
     screen.getByText("Select a local model before enabling."),
   ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Saved model agent-on" }),
+  ).toBeTruthy();
+});
+
+it("saves a local model on the conversation definition without Enable or Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    model: "",
+    tools: ["system_snapshot"],
+    search_query: "",
+  });
+  expect(
+    await screen.findByText("Select a local model before enabling."),
+  ).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Saved model agent-on" }));
+  fireEvent.click(
+    await screen.findByRole("button", { name: "qwen3:8b, local server" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Use model" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    model: "qwen3:8b",
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+    tools: ["system_snapshot"],
+  });
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Enable saved definition agent-on",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
 });
 
 it("queues Run now from the conversation without opening the inspector", async () => {
@@ -633,13 +726,15 @@ it("denies a waiting Run from conversation history without Run now", async () =>
 
 it("pauses an enabled agent from the conversation without starting a Run", async () => {
   const enabled = { ...draft, enabled: true };
-  const fetch = vi.fn(async (path: string) => ({
-    ok: true,
-    json: async () =>
-      String(path).endsWith("/enabled")
-        ? { ...enabled, enabled: false }
-        : enabled,
-  }));
+  const fetch = vi.fn(
+    withCatalog(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        String(path).endsWith("/enabled")
+          ? { ...enabled, enabled: false }
+          : enabled,
+    })),
+  );
   vi.stubGlobal("fetch", fetch);
   render(
     <QueryClientProvider
@@ -769,7 +864,8 @@ it("shows the latest agent report in the conversation without Run now", async ()
       },
     ],
   };
-  const fetch = vi.fn(async (path: string) => {
+  const fetch = vi.fn(
+    withCatalog(async (path: string) => {
     if (String(path).includes("/artifacts?")) {
       expect(path).toBe("/api/artifacts?run_id=report-run");
       return {
@@ -796,7 +892,8 @@ it("shows the latest agent report in the conversation without Run now", async ()
       };
     }
     return { ok: true, json: async () => agent };
-  });
+  }),
+  );
   vi.stubGlobal("fetch", fetch);
   render(
     <QueryClientProvider
@@ -878,7 +975,8 @@ it("shows recorded search sources next to the latest report without Run now", as
       },
     ],
   };
-  const fetch = vi.fn(async (path: string) => {
+  const fetch = vi.fn(
+    withCatalog(async (path: string) => {
     if (String(path).includes("/artifacts?")) {
       return {
         ok: true,
@@ -901,7 +999,8 @@ it("shows recorded search sources next to the latest report without Run now", as
       return { ok: true, text: async () => "GPU idle." };
     }
     return { ok: true, json: async () => agent };
-  });
+  }),
+  );
   vi.stubGlobal("fetch", fetch);
   render(
     <QueryClientProvider
@@ -968,12 +1067,14 @@ it("uses the latest report's search sibling when the report has not copied sourc
       },
     ],
   };
-  const fetch = vi.fn(async (path: string) => {
+  const fetch = vi.fn(
+    withCatalog(async (path: string) => {
     if (String(path).includes("/artifacts?")) {
       return { ok: true, json: async () => [] };
     }
     return { ok: true, json: async () => agent };
-  });
+  }),
+  );
   vi.stubGlobal("fetch", fetch);
   render(
     <QueryClientProvider
@@ -1049,7 +1150,8 @@ it("shows recorded fetched pages next to the latest report without Run now", asy
       },
     ],
   };
-  const fetch = vi.fn(async (path: string) => {
+  const fetch = vi.fn(
+    withCatalog(async (path: string) => {
     if (String(path).includes("/artifacts?")) {
       return {
         ok: true,
@@ -1072,7 +1174,8 @@ it("shows recorded fetched pages next to the latest report without Run now", asy
       return { ok: true, text: async () => "GPU idle." };
     }
     return { ok: true, json: async () => agent };
-  });
+  }),
+  );
   vi.stubGlobal("fetch", fetch);
   render(
     <QueryClientProvider
@@ -1140,12 +1243,14 @@ it("uses the latest report's fetch sibling when the report has not copied pages 
       },
     ],
   };
-  const fetch = vi.fn(async (path: string) => {
+  const fetch = vi.fn(
+    withCatalog(async (path: string) => {
     if (String(path).includes("/artifacts?")) {
       return { ok: true, json: async () => [] };
     }
     return { ok: true, json: async () => agent };
-  });
+  }),
+  );
   vi.stubGlobal("fetch", fetch);
   render(
     <QueryClientProvider
@@ -1213,7 +1318,8 @@ it("shows recorded registry tool calls next to the latest report without Run now
       },
     ],
   };
-  const fetch = vi.fn(async (path: string) => {
+  const fetch = vi.fn(
+    withCatalog(async (path: string) => {
     if (String(path).includes("/artifacts?")) {
       expect(path).toBe("/api/artifacts?run_id=report-run");
       return {
@@ -1237,7 +1343,8 @@ it("shows recorded registry tool calls next to the latest report without Run now
       return { ok: true, text: async () => "GPU idle." };
     }
     return { ok: true, json: async () => agent };
-  });
+  }),
+  );
   vi.stubGlobal("fetch", fetch);
   render(
     <QueryClientProvider
