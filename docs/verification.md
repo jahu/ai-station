@@ -512,3 +512,7 @@ Frontend lint, TypeScript, 233 component tests and production build passed. Afte
 ## Assistant agent execution history — 2026-10-11
 
 Frontend lint, TypeScript, 235 component tests and production build passed. After `agent.create`, the conversation shows next/last run and ordinary execution history from `GET /api/agents/{id}`. Arrow keys choose a history Run; Enter inspects it with unique Inspect names. A waiting approval links to that Run. Enable/pause still uses the existing endpoint and does not call Run now. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant agent duplicate — 2026-10-11
+
+Frontend lint, TypeScript, 236 component tests and production build passed. After `agent.create`, Duplicate as draft posts `POST /api/agents/{id}/duplicate` with the expected version. The copy stays disabled and links into Agents. That does not invent a conversation Run and does not call Run now. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

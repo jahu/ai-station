@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Run } from "../api";
@@ -48,6 +49,7 @@ export function AssistantAgentDraft({
 }) {
   const cache = useQueryClient();
   const shortId = agentId.slice(0, 8);
+  const [copy, setCopy] = useState<AgentDraft | null>(null);
   const detail = useQuery({
     queryKey: ["agent", agentId],
     queryFn: () => api<AgentDraft>(`/agents/${agentId}`),
@@ -73,6 +75,20 @@ export function AssistantAgentDraft({
       void cache.invalidateQueries({ queryKey: ["agents"] });
     },
   });
+  const duplicate = useMutation({
+    mutationFn: () =>
+      api<AgentDraft>(`/agents/${agentId}/duplicate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          expected_updated_at: detail.data!.updated_at,
+        }),
+      }),
+    onSuccess: (result) => {
+      setCopy(result);
+      void cache.invalidateQueries({ queryKey: ["agents"] });
+    },
+  });
   const agent = detail.data;
   const enableLabel = agent?.enabled
     ? `Pause agent ${shortId}`
@@ -84,7 +100,7 @@ export function AssistantAgentDraft({
   const history = agent?.runs ?? [];
   return (
     <div className="assistant-agent-draft">
-      <ErrorNotice error={detail.error ?? toggle.error} />
+      <ErrorNotice error={detail.error ?? toggle.error ?? duplicate.error} />
       {agent && (
         <>
           <p>
@@ -175,18 +191,40 @@ export function AssistantAgentDraft({
           ) : null}
           <p className="muted">
             Activation stays explicit and uses the saved definition. It does not
-            invent a conversation Run. Run now, tools and schedule stay in
-            Agents.
+            invent a conversation Run. Duplicate as draft stays disabled. Run
+            now, tools and schedule stay in Agents.
           </p>
+          {copy ? (
+            <p>
+              Copied as disabled draft <strong>{copy.name}</strong>.{" "}
+              <Link
+                to={`/agents/${copy.id}`}
+                tabIndex={tabIndex}
+                aria-label={`Review copy ${copy.id.slice(0, 8)}`}
+              >
+                Open copy in Agents
+              </Link>
+            </p>
+          ) : null}
           <div className="row">
             <Button
               type="button"
-              disabled={toggle.isPending}
+              disabled={toggle.isPending || duplicate.isPending}
               tabIndex={tabIndex}
               aria-label={enableLabel}
               onClick={() => toggle.mutate(!agent.enabled)}
             >
               {agent.enabled ? "Pause agent" : "Enable saved definition"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={toggle.isPending || duplicate.isPending}
+              tabIndex={tabIndex}
+              aria-label={`Duplicate as draft ${shortId}`}
+              onClick={() => duplicate.mutate()}
+            >
+              Duplicate as draft
             </Button>
             <Button asChild variant="secondary">
               <Link
