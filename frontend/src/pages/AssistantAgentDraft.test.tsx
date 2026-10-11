@@ -22,6 +22,7 @@ const draft = {
   enabled: false,
   updated_at: "2026-10-11T10:00:00Z",
   goal: "Summarize GPU telemetry every weekday.",
+  description: "Weekday GPU briefing draft.",
   maximum_runtime: 600,
   output_expectation: "A concise, factual report.",
   tools: ["system_snapshot", "web_search"],
@@ -465,6 +466,38 @@ it("saves bounded tool calling from the conversation without Enable or Run now",
   expect(write[0]).toBe("/api/agents/agent-one");
   expect(JSON.parse(String(write[1]?.body))).toMatchObject({
     tool_calling: "bounded",
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+  });
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("saves description from the conversation without Enable or Run now", async () => {
+  const fetch = mount();
+  const description = (await screen.findByLabelText(
+    "Description agent-on",
+  )) as HTMLTextAreaElement;
+  expect(description.value).toBe("Weekday GPU briefing draft.");
+  fireEvent.change(description, {
+    target: { value: "Idle GPU briefing draft." },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Save description agent-on" }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    description: "Idle GPU briefing draft.",
     enabled: false,
     expected_updated_at: "2026-10-11T10:00:00Z",
   });
