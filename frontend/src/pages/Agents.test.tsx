@@ -43,7 +43,7 @@ it("creates a reviewable draft without enabling or running it", async () => {
           ? { models: ["local"], default_model: "local" }
           : url.endsWith("/llama")
             ? { models: [], instances: [] }
-            : url.includes("/skills")
+            : url.includes("/skills") || url.includes("/projects")
               ? []
               : [],
   }));
@@ -72,7 +72,7 @@ it("keeps a draft inactive and makes unsupported tools inspectable and removable
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills")
+          : url.includes("/skills") || url.includes("/projects")
             ? []
             : url.endsWith("tools")
               ? [
@@ -187,7 +187,7 @@ it("enables a draft after unavailable tools are removed and saved", async () => 
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills")
+            : url.includes("/skills") || url.includes("/projects")
               ? []
               : url.endsWith("/tools")
                 ? [
@@ -234,7 +234,7 @@ it("keeps Enable disabled when a saved skill is missing from the catalog", async
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills")
+          : url.includes("/skills") || url.includes("/projects")
             ? []
             : url.endsWith("/tools")
               ? []
@@ -317,7 +317,7 @@ it("saves a reviewed public query separately from the private goal without activ
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills")
+            : url.includes("/skills") || url.includes("/projects")
               ? []
               : url.endsWith("/tools")
                 ? [
@@ -384,7 +384,7 @@ it("saves reviewed public fetch URLs separately from the private goal", async ()
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills")
+            : url.includes("/skills") || url.includes("/projects")
               ? []
               : url.endsWith("/tools")
                 ? [
@@ -455,20 +455,22 @@ it("lets a reviewer attach an installed skill without showing extra tools", asyn
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills")
-              ? [
-                  {
-                    id: "daily-brief",
-                    name: "Daily brief",
-                    version: "1.0.0",
-                    description: "Local status format",
-                    required_permissions: [],
-                    instructions: "Always mention GPU memory.",
-                  },
-                ]
-              : url.endsWith("/tools")
-                ? []
-                : agent,
+            : url.includes("/projects")
+              ? []
+              : url.includes("/skills")
+                ? [
+                    {
+                      id: "daily-brief",
+                      name: "Daily brief",
+                      version: "1.0.0",
+                      description: "Local status format",
+                      required_permissions: [],
+                      instructions: "Always mention GPU memory.",
+                    },
+                  ]
+                : url.endsWith("/tools")
+                  ? []
+                  : agent,
     };
   });
   vi.stubGlobal("fetch", fetch);
@@ -527,7 +529,7 @@ it("saves gated workflow steps without enabling the draft", async () => {
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills")
+            : url.includes("/skills") || url.includes("/projects")
               ? []
               : url.endsWith("/tools")
                 ? []
@@ -588,7 +590,7 @@ it("saves bounded tool calling without enabling the draft", async () => {
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills")
+            : url.includes("/skills") || url.includes("/projects")
               ? []
               : url.endsWith("/tools")
                 ? []
@@ -658,7 +660,7 @@ it("saves retry and notification policies without enabling the draft", async () 
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills")
+            : url.includes("/skills") || url.includes("/projects")
               ? []
               : url.endsWith("/tools")
                 ? []
@@ -721,7 +723,7 @@ it("saves an explicit approval requirement without enabling the draft", async ()
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills")
+            : url.includes("/skills") || url.includes("/projects")
               ? []
               : url.endsWith("/tools")
                 ? []
@@ -744,6 +746,176 @@ it("saves an explicit approval requirement without enabling the draft", async ()
     require_approval: true,
     enabled: false,
   });
+});
+it("saves a linked project from the definition without enabling or running", async () => {
+  let agent = {
+    id: "draft",
+    name: "Guarded",
+    description: "",
+    goal: "Summarize the workstation",
+    system_prompt: "",
+    model: "local",
+    search_query: "",
+    fetch_urls: [] as string[],
+    skills: [] as string[],
+    tools: [] as string[],
+    require_approval: false,
+    trigger: "manual",
+    interval_seconds: null,
+    cron_expr: "",
+    run_at: null,
+    maximum_runtime: 600,
+    output_expectation: "Report",
+    project_id: null as string | null,
+    enabled: false,
+    updated_at: "2026-10-09T12:00:00Z",
+    next_run_at: null,
+    last_run_at: null,
+    last_status: "",
+    failure_count: 0,
+    effective_permissions: [] as string[],
+    runs: [],
+  };
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => {
+    if (options) agent = { ...agent, ...JSON.parse(options.body as string) };
+    return {
+      ok: true,
+      json: async () =>
+        url.endsWith("/llama")
+          ? { models: [], instances: [] }
+          : url.endsWith("/chat/provider")
+            ? { models: ["local"], default_model: "local" }
+            : url.includes("/projects")
+              ? [{ id: "project-1", name: "Workstation docs" }]
+              : url.includes("/skills")
+                ? []
+                : url.endsWith("/tools")
+                  ? []
+                  : agent,
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  const none = (await screen.findByRole("radio", {
+    name: "Linked project none draft",
+  })) as HTMLInputElement;
+  expect(none.checked).toBe(true);
+  expect(
+    screen.getByText(/does not grant coding, Git or repository access/),
+  ).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("radio", { name: "Linked project project-1" }),
+  );
+  expect(
+    fetch.mock.calls.every((call) => call[1]?.method !== "PUT"),
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Save definition" }));
+  await vi.waitFor(() =>
+    expect(fetch.mock.calls.filter((c) => c[1]?.method === "PUT")).toHaveLength(
+      1,
+    ),
+  );
+  expect(
+    JSON.parse(fetch.mock.calls.find((c) => c[1]?.method === "PUT")![1]!.body as string),
+  ).toMatchObject({
+    project_id: "project-1",
+    enabled: false,
+    expected_updated_at: "2026-10-09T12:00:00Z",
+  });
+  expect(
+    (
+      screen.getByRole("radio", {
+        name: "Linked project project-1",
+      }) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+it("moves through linked projects with arrow keys without inventing a Run", async () => {
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
+    ok: options === undefined,
+    json: async () =>
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.endsWith("/chat/provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.includes("/projects")
+            ? [
+                { id: "project-1", name: "Workstation docs" },
+                { id: "project-2", name: "Second repo" },
+              ]
+            : url.includes("/skills") || url.endsWith("tools")
+              ? []
+              : {
+                  id: "draft",
+                  name: "Morning review",
+                  description: "",
+                  goal: "Summarize",
+                  system_prompt: "",
+                  model: "local",
+                  tools: [],
+                  search_query: "",
+                  fetch_urls: [],
+                  skills: [],
+                  trigger: "manual",
+                  cron_expr: "",
+                  interval_seconds: null,
+                  run_at: null,
+                  maximum_runtime: 600,
+                  output_expectation: "Report",
+                  project_id: null,
+                  enabled: false,
+                  updated_at: "2026-10-09T12:00:00Z",
+                  next_run_at: null,
+                  last_run_at: null,
+                  last_status: "",
+                  failure_count: 0,
+                  effective_permissions: [],
+                  runs: [],
+                },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  const none = (await screen.findByRole("radio", {
+    name: "Linked project none draft",
+  })) as HTMLInputElement;
+  const first = screen.getByRole("radio", {
+    name: "Linked project project-1",
+  }) as HTMLInputElement;
+  const second = screen.getByRole("radio", {
+    name: "Linked project project-2",
+  }) as HTMLInputElement;
+  expect(none.checked).toBe(true);
+  expect(none.tabIndex).toBe(0);
+  expect(first.tabIndex).toBe(-1);
+  expect(
+    screen.getByText(/There is no inspectable project-link Run/),
+  ).toBeTruthy();
+  fireEvent.keyDown(none.closest(".agent-choice-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(first.tabIndex).toBe(0);
+  expect(none.tabIndex).toBe(-1);
+  expect(document.activeElement?.getAttribute("aria-label")).toBe(
+    "Linked project project-1",
+  );
+  fireEvent.keyDown(first.closest(".agent-choice-list") as HTMLElement, {
+    key: "Enter",
+  });
+  expect(first.checked).toBe(true);
+  fireEvent.keyDown(first.closest(".agent-choice-list") as HTMLElement, {
+    key: "End",
+  });
+  expect(second.tabIndex).toBe(0);
+  expect(document.activeElement?.getAttribute("aria-label")).toBe(
+    "Linked project project-2",
+  );
+  expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
 });
 it("saves workflow memory without enabling the draft", async () => {
   let agent = {
@@ -784,7 +956,7 @@ it("saves workflow memory without enabling the draft", async () => {
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills")
+            : url.includes("/skills") || url.includes("/projects")
               ? []
               : url.endsWith("/tools")
                 ? [
@@ -903,7 +1075,7 @@ it("moves through execution history with arrow keys", async () => {
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills") || url.endsWith("tools")
+            : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
               ? []
               : url.endsWith("/hardware")
                 ? { gpus: [] }
@@ -994,7 +1166,9 @@ it("moves through skills and tools with arrow keys without inventing a Run", asy
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills")
+          : url.includes("/projects")
+            ? []
+            : url.includes("/skills")
             ? [
                 {
                   id: "daily-brief",
@@ -1125,7 +1299,7 @@ it("moves through approval, retry and notice policies without inventing a Run", 
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills") || url.endsWith("tools")
+          : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
             ? []
             : url.endsWith("/hardware")
               ? { gpus: [] }
@@ -1233,7 +1407,7 @@ it("moves through workflow mode and tool calling without inventing a Run", async
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills") || url.endsWith("tools")
+          : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
             ? []
             : url.endsWith("/hardware")
               ? { gpus: [] }
@@ -1324,7 +1498,7 @@ it("retries a failed workflow from Agents history without Run now", async () => 
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills") || url.endsWith("tools")
+          : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
             ? []
             : url.endsWith("/hardware")
               ? { gpus: [] }
@@ -1410,7 +1584,7 @@ it("stops an in-progress Run from Agents history without Run now", async () => {
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills") || url.endsWith("tools")
+          : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
             ? []
             : url.endsWith("/hardware")
               ? { gpus: [] }
@@ -1486,7 +1660,7 @@ it("approves a waiting Run from Agents without Run now or the inspector", async 
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills") || url.endsWith("tools")
+          : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
             ? []
             : url.endsWith("/hardware")
               ? { gpus: [] }
@@ -1633,7 +1807,7 @@ it("shows the latest agent report from Agents without Run now", async () => {
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills") || url.endsWith("tools")
+            : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
               ? []
               : url.endsWith("/hardware")
                 ? { gpus: [] }
@@ -1741,7 +1915,7 @@ it("shows recorded search sources next to the latest report from Agents without 
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills") || url.endsWith("tools")
+            : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
               ? []
               : url.endsWith("/hardware")
                 ? { gpus: [] }
@@ -1851,7 +2025,7 @@ it("shows recorded fetched pages next to the latest report from Agents without R
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills") || url.endsWith("tools")
+            : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
               ? []
               : url.endsWith("/hardware")
                 ? { gpus: [] }
@@ -1959,7 +2133,7 @@ it("shows recorded registry tool calls next to the latest report from Agents wit
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills") || url.endsWith("tools")
+            : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
               ? []
               : url.endsWith("/hardware")
                 ? { gpus: [] }
@@ -2077,7 +2251,7 @@ it("shows last-parent workflow steps next to history from Agents without Run now
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills") || url.endsWith("tools")
+          : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
             ? []
             : url.endsWith("/hardware")
               ? { gpus: [] }

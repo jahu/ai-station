@@ -660,3 +660,7 @@ Frontend lint, TypeScript, 306 component tests and production build passed. Afte
 ## Conversation saves a linked agent project — 2026-10-11
 
 Frontend lint, TypeScript, 307 component tests and production build passed. After `agent.create`, the conversation can save a linked project through `PUT /api/agents/{id}`. Saving it tags this agent's Runs for filtering and does not grant coding, Git or repository access. It does not invent a conversation Run or call Enable. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Agents definition editor saves a linked project — 2026-10-11
+
+Frontend lint, TypeScript, 309 component tests and production build passed. The Agents definition editor can save a linked project through `PUT /api/agents/{id}` with unique Linked project names. Saving it tags this agent's Runs for filtering and does not grant coding, Git or repository access. Selecting a project does not Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
