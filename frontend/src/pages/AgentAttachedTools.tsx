@@ -3,28 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api";
 import { ErrorNotice } from "../components/common";
 import { useListKeyboard } from "./useListKeyboard";
+import { isAgentToolList, type AgentToolSpec } from "./agentActivation";
 
-type Tool = {
-  name: string;
-  description: string;
-  operational: boolean;
-  required_permissions: string[];
-};
-
-function isToolList(value: unknown): value is Tool[] {
-  return (
-    Array.isArray(value) &&
-    value.every(
-      (item) =>
-        item &&
-        typeof item === "object" &&
-        typeof item.name === "string" &&
-        typeof item.description === "string" &&
-        typeof item.operational === "boolean" &&
-        Array.isArray(item.required_permissions),
-    )
-  );
-}
+type Tool = AgentToolSpec;
 
 function toolTitle(tool: Pick<Tool, "name">) {
   return tool.name === "remember_report"
@@ -49,7 +30,7 @@ export function AgentAttachedTools({
     enabled: names.length > 0,
     queryFn: () => api<Tool[]>("/agents/tools"),
   });
-  const registered = isToolList(catalog.data) ? catalog.data : [];
+  const registered = isAgentToolList(catalog.data) ? catalog.data : [];
   const byName = new Map(registered.map((tool) => [tool.name, tool]));
   const rows = names.map(
     (name) =>

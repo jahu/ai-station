@@ -596,3 +596,7 @@ Frontend lint, TypeScript, 275 component tests and production build passed. Afte
 ## Coding review validation commands — 2026-10-11
 
 Frontend lint, TypeScript, 276 component tests and production build passed. Coding review in the conversation, Coding workspace and proposal inspector lists saved validation commands from `GET /api/runs/{id}/events` on the existing validation Run. There is no inspectable child Run. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Agent Enable stays off until activation is possible — 2026-10-11
+
+Frontend lint, TypeScript, 282 component tests and production build passed. Enable in the conversation and Agents stays disabled when saved tools are unavailable or unknown, the model is missing, or web_search/http_fetch lack their saved query or URLs. Pause, Duplicate and Open in Agents stay available. That does not invent a conversation Run or call Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

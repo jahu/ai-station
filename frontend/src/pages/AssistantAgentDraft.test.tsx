@@ -29,6 +29,7 @@ const draft = {
   require_approval: true,
   workflow_mode: "gated",
   search_query: "workstation GPU news",
+  fetch_urls: [] as string[],
   last_status: "",
   last_run_at: null as string | null,
   next_run_at: null as string | null,
@@ -117,6 +118,12 @@ function mount(agent = draft) {
                       name: "web_search",
                       description:
                         "Search public pages through the configured search service.",
+                      operational: true,
+                      required_permissions: ["network_read"],
+                    },
+                    {
+                      name: "http_fetch",
+                      description: "GET reviewed public pages.",
                       operational: true,
                       required_permissions: ["network_read"],
                     },
@@ -316,6 +323,98 @@ it("enables a disabled draft from the conversation without inventing a Run", asy
       .getByRole("link", { name: "Review agent agent-on" })
       .getAttribute("href"),
   ).toBe("/agents/agent-one");
+});
+
+it("keeps Enable disabled when an attached tool is unavailable", async () => {
+  const fetch = mount({ ...draft, tools: ["browser"] });
+  expect(await screen.findByText(/— Unavailable/)).toBeTruthy();
+  const enable = screen.getByRole("button", {
+    name: "Enable saved definition agent-on",
+  });
+  expect((enable as HTMLButtonElement).disabled).toBe(true);
+  expect(
+    screen.getByText("Unavailable tools prevent activation: browser."),
+  ).toBeTruthy();
+  fireEvent.click(enable);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Duplicate as draft agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(false);
+});
+
+it("keeps Enable disabled when a saved tool is missing from the registry", async () => {
+  const fetch = mount({ ...draft, tools: ["invented_shell"] });
+  expect(await screen.findByText("Not in the tool registry.")).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(
+    await screen.findByText(
+      "Unavailable tools prevent activation: invented_shell.",
+    ),
+  ).toBeTruthy();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+});
+
+it("keeps Enable disabled when web_search has no public query", async () => {
+  mount({ ...draft, search_query: "" });
+  expect(await screen.findByLabelText("Tool web_search")).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(
+    screen.getByText(
+      "web_search needs a public search query before activation.",
+    ),
+  ).toBeTruthy();
+});
+
+it("keeps Enable disabled when http_fetch has no reviewed URLs", async () => {
+  mount({ ...draft, tools: ["http_fetch"], fetch_urls: [] });
+  expect(await screen.findByLabelText("Tool http_fetch")).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(
+    screen.getByText(
+      "http_fetch needs reviewed public URLs before activation.",
+    ),
+  ).toBeTruthy();
+});
+
+it("keeps Enable disabled when the saved definition has no model", async () => {
+  mount({ ...draft, model: "" });
+  expect(await screen.findByText("Morning briefing")).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(
+    screen.getByText("Select a local model before enabling."),
+  ).toBeTruthy();
 });
 
 it("queues Run now from the conversation without opening the inspector", async () => {

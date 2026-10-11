@@ -13,6 +13,7 @@ import { AgentLatestReport } from "./AgentLatestReport";
 import { AgentAttachedSkills } from "./AgentAttachedSkills";
 import { AgentAttachedTools } from "./AgentAttachedTools";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
+import { activationBlock } from "./agentActivation";
 
 type AgentDraft = {
   id: string;
@@ -132,7 +133,15 @@ export function AssistantAgentDraft({
       void cache.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
+  const catalog = useQuery({
+    queryKey: ["agent-tools"],
+    enabled: !!detail.data?.tools?.length,
+    queryFn: () => api<unknown>("/agents/tools"),
+  });
   const agent = detail.data;
+  const block = agent
+    ? activationBlock(agent, catalog.data)
+    : { blocked: false, reason: null };
   const enableLabel = agent?.enabled
     ? `Pause agent ${shortId}`
     : `Enable saved definition ${shortId}`;
@@ -271,12 +280,13 @@ export function AssistantAgentDraft({
           ) : null}
           <p className="muted">
             Activation stays explicit and uses the saved definition. It does not
-            invent a conversation Run. Duplicate as draft stays disabled. Run
-            now queues a new workflow from that saved definition and stays on
-            this transcript. A waiting Run can Approve and queue or Deny here
-            without opening the inspector. Stop stays on an in-progress history
-            Run. Manual retry queues a new workflow from a failed snapshot.
-            Tools and schedule stay in Agents.
+            invent a conversation Run. Enable stays off until that saved
+            definition can activate. Duplicate as draft stays disabled. Run now
+            queues a new workflow from that saved definition and stays on this
+            transcript. A waiting Run can Approve and queue or Deny here without
+            opening the inspector. Stop stays on an in-progress history Run.
+            Manual retry queues a new workflow from a failed snapshot. Tools and
+            schedule stay in Agents.
           </p>
           {copy ? (
             <p>
@@ -290,10 +300,11 @@ export function AssistantAgentDraft({
               </Link>
             </p>
           ) : null}
+          {block.reason ? <p className="notice">{block.reason}</p> : null}
           <div className="row">
             <Button
               type="button"
-              disabled={busy}
+              disabled={busy || block.blocked}
               tabIndex={tabIndex}
               aria-label={enableLabel}
               onClick={() => toggle.mutate(!agent.enabled)}

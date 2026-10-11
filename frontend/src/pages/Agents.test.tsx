@@ -91,7 +91,7 @@ it("keeps a draft inactive and makes unsupported tools inspectable and removable
                   system_prompt: "",
                   model: "local",
                   tools: ["web_search"],
-                  search_query: "",
+                  search_query: "workstation news",
                   fetch_urls: [],
                   trigger: "manual",
                   cron_expr: "",
@@ -119,10 +119,112 @@ it("keeps a draft inactive and makes unsupported tools inspectable and removable
   ).toBe(true);
   const checkbox = await screen.findByRole("checkbox", { name: /web_search/i });
   expect((checkbox as HTMLInputElement).checked).toBe(true);
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(
+    screen.getByText("Unavailable tools prevent activation: web_search."),
+  ).toBeTruthy();
   fireEvent.click(checkbox);
   expect((checkbox as HTMLInputElement).checked).toBe(false);
   expect((checkbox as HTMLInputElement).disabled).toBe(true);
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
   expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
+});
+it("enables a draft after unavailable tools are removed and saved", async () => {
+  let agent = {
+    id: "draft",
+    name: "Draft",
+    description: "",
+    goal: "Research",
+    system_prompt: "",
+    model: "local",
+    tools: ["web_search"],
+    search_query: "workstation news",
+    fetch_urls: [] as string[],
+    trigger: "manual",
+    cron_expr: "",
+    interval_seconds: null as number | null,
+    run_at: null as string | null,
+    maximum_runtime: 600,
+    output_expectation: "Report",
+    project_id: null as string | null,
+    enabled: false,
+    updated_at: "2026-09-25T12:00:00Z",
+    next_run_at: null as string | null,
+    last_run_at: null as string | null,
+    last_status: "",
+    failure_count: 0,
+    effective_permissions: [] as string[],
+    runs: [] as unknown[],
+  };
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => {
+    if (
+      options &&
+      String(url).includes("/agents/draft") &&
+      !String(url).endsWith("/enabled")
+    ) {
+      agent = {
+        ...agent,
+        ...JSON.parse(String(options.body)),
+        updated_at: "2026-09-25T12:01:00Z",
+      };
+    }
+    return {
+      ok: true,
+      json: async () =>
+        url.endsWith("/llama")
+          ? { models: [], instances: [] }
+          : url.endsWith("/chat/provider")
+            ? { models: ["local"], default_model: "local" }
+            : url.includes("/skills")
+              ? []
+              : url.endsWith("/tools")
+                ? [
+                    {
+                      name: "web_search",
+                      description: "Unavailable search",
+                      operational: false,
+                      required_permissions: [],
+                    },
+                  ]
+                : agent,
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  await screen.findByRole("heading", { name: "Definition" });
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  fireEvent.click(await screen.findByRole("checkbox", { name: /web_search/i }));
+  fireEvent.click(screen.getByRole("button", { name: "Save definition" }));
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Enable saved definition",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
 });
 it("saves a reviewed public query separately from the private goal without activation", async () => {
   let agent = {
