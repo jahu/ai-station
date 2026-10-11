@@ -22,6 +22,8 @@ const draft = {
   enabled: false,
   updated_at: "2026-10-11T10:00:00Z",
   goal: "Summarize GPU telemetry every weekday.",
+  maximum_runtime: 600,
+  output_expectation: "A concise, factual report.",
   tools: ["system_snapshot", "web_search"],
   skills: ["station-briefing"],
   trigger: "cron",
@@ -466,6 +468,53 @@ it("saves bounded tool calling from the conversation without Enable or Run now",
     enabled: false,
     expected_updated_at: "2026-10-11T10:00:00Z",
   });
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("saves identity from the conversation without Enable or Run now", async () => {
+  const fetch = mount();
+  const name = (await screen.findByLabelText(
+    "Name agent-on",
+  )) as HTMLInputElement;
+  expect(name.value).toBe("Morning briefing");
+  expect(
+    (screen.getByLabelText("Time limit agent-on") as HTMLInputElement).value,
+  ).toBe("600");
+  expect(
+    (
+      screen.getByLabelText("Expected outcome agent-on") as HTMLTextAreaElement
+    ).value,
+  ).toBe("A concise, factual report.");
+  fireEvent.change(name, { target: { value: "Idle GPU brief" } });
+  fireEvent.change(screen.getByLabelText("Time limit agent-on"), {
+    target: { value: "900" },
+  });
+  fireEvent.change(screen.getByLabelText("Expected outcome agent-on"), {
+    target: { value: "List idle GPUs in one paragraph." },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Save identity agent-on" }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    name: "Idle GPU brief",
+    maximum_runtime: 900,
+    output_expectation: "List idle GPUs in one paragraph.",
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+  });
+  expect(await screen.findByText("Idle GPU brief")).toBeTruthy();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
   ).toBe(true);
