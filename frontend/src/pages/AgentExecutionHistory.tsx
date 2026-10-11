@@ -13,10 +13,64 @@ function runLabel(run: Run) {
     : run.capability;
 }
 
+export function RunApprovalActions({
+  runId,
+  name,
+  tabIndex = 0,
+  disabled,
+}: {
+  runId: string;
+  name: string;
+  tabIndex?: number;
+  disabled?: boolean;
+}) {
+  const cache = useQueryClient();
+  const decide = useMutation({
+    mutationFn: (resolution: "granted" | "denied") =>
+      api<Run>(`/runs/${runId}/approval`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resolution }),
+      }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["agent"] });
+      void cache.invalidateQueries({ queryKey: ["agents"] });
+      void cache.invalidateQueries({ queryKey: ["runs"] });
+      void cache.invalidateQueries({ queryKey: ["conversation"] });
+      void cache.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+  const shortId = runId.slice(0, 8);
+  return (
+    <>
+      <ErrorNotice error={decide.error} />
+      <Button
+        type="button"
+        disabled={disabled || decide.isPending}
+        tabIndex={tabIndex}
+        aria-label={`Approve and queue ${name} ${shortId}`}
+        onClick={() => decide.mutate("granted")}
+      >
+        Approve and queue
+      </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={disabled || decide.isPending}
+        tabIndex={tabIndex}
+        aria-label={`Deny ${name} ${shortId}`}
+        onClick={() => decide.mutate("denied")}
+      >
+        Deny
+      </Button>
+    </>
+  );
+}
+
 export function AgentExecutionHistory({
   runs,
   tabIndex = 0,
-  hint = "Arrow keys choose a Run while the list is focused. Enter inspects it. Retry as a new workflow stays on a failed snapshot when the saved policy allows it.",
+  hint = "Arrow keys choose a Run while the list is focused. Enter inspects it. Approve and queue or Deny stays on a waiting Run. Retry as a new workflow stays on a failed snapshot when the saved policy allows it.",
 }: {
   runs: Run[];
   tabIndex?: number;
@@ -100,6 +154,14 @@ export function AgentExecutionHistory({
                 >
                   {shortId}
                 </Link>
+                {run.status === "waiting_for_approval" ? (
+                  <RunApprovalActions
+                    runId={run.id}
+                    name={label}
+                    tabIndex={active && current ? 0 : -1}
+                    disabled={retry.isPending}
+                  />
+                ) : null}
                 {run.retry?.allowed ? (
                   <Button
                     type="button"
@@ -118,8 +180,10 @@ export function AgentExecutionHistory({
         })}
       </div>
       <p className="muted">
-        Latest 100 Runs. Manual retry queues a new workflow from the failed
-        snapshot. It does not resume an uncertain step or call Run now.
+        Latest 100 Runs. Approve and queue grants a parked Run without
+        starting tools here. Deny cancels it. Manual retry queues a new
+        workflow from the failed snapshot. It does not resume an uncertain
+        step or call Run now.
       </p>
     </section>
   );

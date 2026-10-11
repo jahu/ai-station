@@ -5,7 +5,10 @@ import { api, type Run } from "../api";
 import { ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
-import { AgentExecutionHistory } from "./AgentExecutionHistory";
+import {
+  AgentExecutionHistory,
+  RunApprovalActions,
+} from "./AgentExecutionHistory";
 
 type AgentDraft = {
   id: string;
@@ -185,22 +188,36 @@ export function AssistantAgentDraft({
             </div>
           </dl>
           {waiting ? (
-            <p className="notice">
-              A Run is waiting for approval.{" "}
-              <Link
-                to={`/runs/${waiting.id}`}
-                tabIndex={tabIndex}
-                aria-label={`Review waiting Run ${waiting.id.slice(0, 8)}`}
-              >
-                Review it
-              </Link>
-            </p>
+            <div className="assistant-agent-approval">
+              <p className="notice">
+                A Run is waiting for approval. Granting queues it for the
+                worker; tools and inference have not started. Deny cancels it.
+                That does not call Run now.
+              </p>
+              <div className="row">
+                <RunApprovalActions
+                  runId={waiting.id}
+                  name="waiting Run"
+                  tabIndex={tabIndex}
+                />
+                <Button asChild variant="secondary">
+                  <Link
+                    to={`/runs/${waiting.id}`}
+                    tabIndex={tabIndex}
+                    aria-label={`Review waiting Run ${waiting.id.slice(0, 8)}`}
+                  >
+                    Review it
+                  </Link>
+                </Button>
+              </div>
+            </div>
           ) : null}
           <p className="muted">
             Activation stays explicit and uses the saved definition. It does not
-            invent a conversation Run. Duplicate as draft stays disabled. Manual
-            retry queues a new workflow from a failed snapshot. Run now, tools
-            and schedule stay in Agents.
+            invent a conversation Run. Duplicate as draft stays disabled. A
+            waiting Run can Approve and queue or Deny here without opening the
+            inspector. Manual retry queues a new workflow from a failed
+            snapshot. Run now, tools and schedule stay in Agents.
           </p>
           {copy ? (
             <p>
@@ -248,7 +265,7 @@ export function AssistantAgentDraft({
             <AgentExecutionHistory
               runs={history}
               tabIndex={tabIndex}
-              hint="Arrow keys choose a Run while the list is focused. Enter inspects it. Retry as a new workflow stays on a failed snapshot when the saved policy allows it. Run now stays in Agents."
+              hint="Arrow keys choose a Run while the list is focused. Enter inspects it. Approve and queue or Deny stays on a waiting Run. Retry as a new workflow stays on a failed snapshot when the saved policy allows it. Run now stays in Agents."
             />
           ) : (
             <p className="muted">No executions yet. Run now stays in Agents.</p>

@@ -44,7 +44,7 @@ const draft = {
 };
 
 function mount(agent = draft) {
-  const fetch = vi.fn(async (path: string) => ({
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
     ok: true,
     json: async () =>
       String(path).endsWith("/enabled")
@@ -67,7 +67,15 @@ function mount(agent = draft) {
                 status: "queued",
                 retry: { allowed: false, retry_of: "fail-run-dddd" },
               }
-            : agent,
+            : String(path).includes("/approval") && options?.method === "POST"
+              ? {
+                  id: "wait-run-cccc",
+                  status:
+                    JSON.parse(String(options.body)).resolution === "denied"
+                      ? "canceled"
+                      : "queued",
+                }
+              : agent,
   }));
   vi.stubGlobal("fetch", fetch);
   render(
@@ -200,8 +208,48 @@ it("inspects ordinary execution history from the conversation without Run now", 
   ).toBe(true);
 });
 
-it("links a waiting approval from conversation history without starting tools", async () => {
-  mount({
+it("approves a waiting Run from the conversation without Run now or the inspector", async () => {
+  const waiting = {
+    ...draft,
+    enabled: true,
+    runs: [
+      {
+        id: "wait-run-cccc",
+        capability: "agent.workflow",
+        status: "waiting_for_approval",
+        created_at: "2026-10-11T12:00:00Z",
+      },
+    ],
+  };
+  const fetch = mount(waiting);
+  expect(
+    (
+      await screen.findByRole("link", { name: "Review waiting Run wait-run" })
+    ).getAttribute("href"),
+  ).toBe("/runs/wait-run-cccc");
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Approve and queue waiting Run wait-run",
+    }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/runs/wait-run-cccc/approval",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ resolution: "granted" }),
+      }),
+    ),
+  );
+  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+  expect(screen.getByText("Morning briefing")).toBeTruthy();
+});
+
+it("denies a waiting Run from conversation history without Run now", async () => {
+  const fetch = mount({
     ...draft,
     enabled: true,
     runs: [
@@ -213,12 +261,23 @@ it("links a waiting approval from conversation history without starting tools", 
       },
     ],
   });
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Deny agent.workflow wait-run",
+    }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/runs/wait-run-cccc/approval",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ resolution: "denied" }),
+      }),
+    ),
+  );
   expect(
-    (
-      await screen.findByRole("link", { name: "Review waiting Run wait-run" })
-    ).getAttribute("href"),
-  ).toBe("/runs/wait-run-cccc");
-  expect(screen.queryByRole("button", { name: /Approve/ })).toBeNull();
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
 });
 
 it("pauses an enabled agent from the conversation without starting a Run", async () => {

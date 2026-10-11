@@ -11,7 +11,10 @@ import {
 import { Button } from "../components/ui/button";
 import LlamaModels from "./LlamaModels";
 import { time } from "../lib/utils";
-import { AgentExecutionHistory } from "./AgentExecutionHistory";
+import {
+  AgentExecutionHistory,
+  RunApprovalActions,
+} from "./AgentExecutionHistory";
 import { useListKeyboard } from "./useListKeyboard";
 
 type Trigger = "manual" | "interval" | "cron" | "datetime";
@@ -816,6 +819,9 @@ export function AgentDetail() {
       </>
     );
   const active = agent.runs?.some((run) => !terminal.has(run.status)) ?? false;
+  const waiting = agent.runs?.find(
+    (run) => run.status === "waiting_for_approval",
+  );
   return (
     <>
       <PageTitle
@@ -860,7 +866,7 @@ export function AgentDetail() {
           Activation uses the saved definition. Pausing stops future scheduling;
           cancel an active execution from its Run page.
           {agent.require_approval
-            ? " Each workflow waits for an explicit approval before any step is published."
+            ? " Each workflow waits for an explicit approval before any step is published. Approve and queue or Deny stays here and does not call Run now."
             : ""}
           {agent.workflow_mode === "gated"
             ? " Gated mode parks the report after context tools so you can inspect those artifacts first."
@@ -869,16 +875,26 @@ export function AgentDetail() {
             ? " Bounded tool calling lets the report request selected registry tools; invented tools, URLs and commands fail closed."
             : ""}
         </p>
-        {agent.runs?.find((run) => run.status === "waiting_for_approval") && (
-          <p className="notice">
-            A Run is waiting for approval.{" "}
-            <Link
-              to={`/runs/${agent.runs.find((run) => run.status === "waiting_for_approval")!.id}`}
-            >
-              Review it
-            </Link>
-          </p>
-        )}
+        {waiting ? (
+          <div className="agent-approval">
+            <p className="notice">
+              A Run is waiting for approval. Granting queues it for the worker;
+              tools and inference have not started. Deny cancels it. That does
+              not call Run now.
+            </p>
+            <div className="row">
+              <RunApprovalActions runId={waiting.id} name="waiting Run" />
+              <Button asChild variant="secondary">
+                <Link
+                  to={`/runs/${waiting.id}`}
+                  aria-label={`Review waiting Run ${waiting.id.slice(0, 8)}`}
+                >
+                  Review it
+                </Link>
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <div className="agent-fields">
           <div>Next run: {time(agent.next_run_at)}</div>
           <div>Last run: {time(agent.last_run_at)}</div>
