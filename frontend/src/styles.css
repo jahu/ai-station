@@ -2077,6 +2077,27 @@ section:has(> .memory-grid) > .dashboard-note {
 .assistant-agent-draft p {
   margin: 0;
 }
+.assistant-agent-definition {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+.assistant-agent-definition > div {
+  display: grid;
+  gap: 2px;
+}
+.assistant-agent-definition dt {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+.assistant-agent-definition dd {
+  margin: 0;
+}
+.assistant-agent-instructions {
+  margin: 0;
+  white-space: pre-wrap;
+  font: inherit;
+}
 .assistant-results {
   border-left: 2px solid var(--accent);
   padding-left: 12px;

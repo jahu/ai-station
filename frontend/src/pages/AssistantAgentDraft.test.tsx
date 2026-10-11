@@ -21,6 +21,14 @@ const draft = {
   model: "local-27b",
   enabled: false,
   updated_at: "2026-10-11T10:00:00Z",
+  goal: "Summarize GPU telemetry every weekday.",
+  tools: ["telemetry", "web_search"],
+  skills: ["station-briefing"],
+  trigger: "cron",
+  cron_expr: "0 7 * * 1-5",
+  require_approval: true,
+  workflow_mode: "gated",
+  search_query: "workstation GPU news",
 };
 
 function mount(agent = draft) {
@@ -46,11 +54,38 @@ function mount(agent = draft) {
   return fetch;
 }
 
+it("inspects the saved definition without queueing Run now", async () => {
+  const fetch = mount();
+  expect(await screen.findByText("0 7 * * 1-5 (UTC)")).toBeTruthy();
+  expect(screen.getByText("telemetry, web_search")).toBeTruthy();
+  expect(
+    screen.getByText("Summarize GPU telemetry every weekday."),
+  ).toBeTruthy();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+});
+
 it("enables a disabled draft from the conversation without inventing a Run", async () => {
   const fetch = mount();
   expect(await screen.findByText("Morning briefing")).toBeTruthy();
   expect(screen.getByText(/Disabled draft/)).toBeTruthy();
+  expect(screen.getByText("0 7 * * 1-5 (UTC)")).toBeTruthy();
+  expect(screen.getByText("telemetry, web_search")).toBeTruthy();
+  expect(screen.getByText("station-briefing")).toBeTruthy();
+  expect(screen.getByText("workstation GPU news")).toBeTruthy();
+  expect(screen.getByText("Required before each Run")).toBeTruthy();
+  expect(screen.getByText("Gated")).toBeTruthy();
+  expect(
+    screen.getByText("Summarize GPU telemetry every weekday."),
+  ).toBeTruthy();
   expect(screen.getByText(/does not invent a conversation Run/)).toBeTruthy();
+  expect(
+    screen.getByText(/Run now, tools and schedule stay in Agents/),
+  ).toBeTruthy();
   fireEvent.click(
     screen.getByRole("button", { name: "Enable saved definition agent-on" }),
   );
