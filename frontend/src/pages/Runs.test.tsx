@@ -166,6 +166,134 @@ it("restores combined filters from the URL and resets paging when applying a cha
   );
   expect(screen.getByText("Page 1 · up to 100 runs")).toBeTruthy();
 });
+
+it("opens the tagged agent and project from the Runs filter without Enable or Run now", async () => {
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      String(url).includes("/projects")
+        ? [{ id: "project-1", name: "Workstation docs" }]
+        : String(url).includes("/agents")
+          ? [{ id: "agentone", name: "Morning review" }]
+          : [],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter
+        initialEntries={["/runs?project_id=project-1&agent_id=agentone"]}
+      >
+        <Runs />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Tagged Runs" }),
+  ).toBeTruthy();
+  expect(
+    (
+      await screen.findByRole("link", {
+        name: "Inspect agent Morning review agentone",
+      })
+    ).getAttribute("href"),
+  ).toBe("/agents/agentone");
+  expect(
+    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/projects/project-1");
+  expect(
+    screen.getByRole("link", { name: "View all linked agents" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/agents?project_id=project-1");
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("opens the tagged agent from the Run inspector without Enable or Run now", async () => {
+  vi.stubGlobal(
+    "EventSource",
+    class {
+      close() {}
+      addEventListener() {}
+    },
+  );
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      String(url).includes("/events") || String(url).includes("/artifacts")
+        ? []
+        : {
+            id: "agent-run",
+            capability: "agent.workflow",
+            executor_type: "agent_workflow",
+            execution_target: "container",
+            status: "succeeded",
+            created_at: "2026-10-12T12:00:00Z",
+            started_at: "2026-10-12T12:00:01Z",
+            finished_at: "2026-10-12T12:00:02Z",
+            actual_gpu: null,
+            requested_gpu: "none",
+            parameters: {},
+            effective_permissions: [],
+            summary: "",
+            error_type: "",
+            error_message: "",
+            worker_id: null,
+            project_id: "project-1",
+            agent_id: "agentone",
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/runs/agent-run"]}>
+        <Routes>
+          <Route path="/runs/:id" element={<RunDetail />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    (
+      await screen.findByRole("link", { name: "Inspect agent agentone" })
+    ).getAttribute("href"),
+  ).toBe("/agents/agentone");
+  expect(
+    screen.getByRole("link", { name: "View tagged Runs agentone" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/runs?project_id=project-1&agent_id=agentone");
+  expect(
+    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/projects/project-1");
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
 it("lets the user grant a parked agent Run without starting it from the inspector", async () => {
   vi.stubGlobal(
     "EventSource",
