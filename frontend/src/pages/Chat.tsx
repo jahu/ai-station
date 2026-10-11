@@ -11,15 +11,10 @@ import AssistantActions, {
   type ActionResult,
   type AssistantOptions,
 } from "./AssistantActions";
+import { AssistantAgentDraft } from "./AssistantAgentDraft";
 import TextAttachments, { type TextAttachment } from "./TextAttachments";
 import ConversationSummary, { type Summary } from "./ConversationSummary";
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Markdown from "react-markdown";
@@ -264,8 +259,7 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
                 Choose a chat provider, then Platform assistant to let this
                 conversation use AI Station capabilities, or Conversation only
                 to talk with the model. Secrets are never shown here; manage
-                them in{" "}
-                <Link to="/settings">Settings</Link>.
+                them in <Link to="/settings">Settings</Link>.
               </p>
               {provider.data && (
                 <>
@@ -551,7 +545,9 @@ function Transcript({
   options: AssistantOptions;
   busy: boolean;
   refresh: () => void;
-  setOptions: (update: (previous: AssistantOptions) => AssistantOptions) => void;
+  setOptions: (
+    update: (previous: AssistantOptions) => AssistantOptions,
+  ) => void;
   setClipboardError: (error: Error | null) => void;
   emptyHint: string;
 }) {
@@ -662,15 +658,10 @@ function Transcript({
                 <SearchSources result={message.metadata.web_search} />
               )}
               {message.metadata.agent_id && (
-                <p>
-                  <Link
-                    to={`/agents/${message.metadata.agent_id}`}
-                    tabIndex={current ? 0 : -1}
-                    aria-label={`Review and enable agent ${message.metadata.agent_id.slice(0, 8)}`}
-                  >
-                    Review and enable agent
-                  </Link>
-                </p>
+                <AssistantAgentDraft
+                  agentId={message.metadata.agent_id}
+                  tabIndex={current ? 0 : -1}
+                />
               )}
               <AssistantResults
                 result={message}
@@ -754,8 +745,7 @@ function ConversationView({
   const cache = useQueryClient();
   const selected = useQuery({
     queryKey: ["chat-provider", conversation.provider],
-    queryFn: () =>
-      api<Provider>(`/chat/providers/${conversation.provider}`),
+    queryFn: () => api<Provider>(`/chat/providers/${conversation.provider}`),
     retry: false,
   });
   const models = selected.data?.models ?? [];
@@ -779,8 +769,7 @@ function ConversationView({
     });
     void cache.invalidateQueries({ queryKey: ["conversations"] });
   };
-  const gitContent =
-    options.commit?.message || options.publish?.title || "";
+  const gitContent = options.commit?.message || options.publish?.title || "";
   const runtimeReady =
     (options.action === "runtime.load" && !!options.load) ||
     (options.action === "runtime.stop" && !!options.stop);

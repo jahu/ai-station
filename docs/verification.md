@@ -488,3 +488,7 @@ Frontend lint, TypeScript, 224 component tests and production build passed. Imag
 ## Images result reuse — 2026-10-11
 
 Frontend lint, TypeScript, 225 component tests and production build passed. A finished Images result can Edit, Recompose or Upscale that artifact in the same workspace. Those links stage it as the next source, keep the previous Run in the URL for the still-visible output, and do not queue a Run. Library's equivalent actions are unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant agent enable from conversation — 2026-10-11
+
+Frontend lint, TypeScript, 227 component tests and production build passed. After `agent.create`, the conversation loads the saved definition and can enable or pause it through `POST /api/agents/{id}/enabled` with the expected version. That does not invent a conversation Run and does not call Run now. Open in Agents remains available for tools, schedule and execution. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
