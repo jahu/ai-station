@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AudioLines,
@@ -15,6 +15,8 @@ import { Button } from "../ui/button";
 import { mediaBusy } from "./media-run";
 import { ArtifactLineage } from "../../pages/ArtifactLineage";
 import LibraryActions from "../../pages/LibraryActions";
+
+const RETRYABLE = new Set(["failed", "canceled", "interrupted"]);
 
 const copy = {
   audio: {
@@ -57,6 +59,7 @@ export default function MediaResult({
   error: Error | null;
 }) {
   const cache = useQueryClient();
+  const [, setSearch] = useSearchParams();
   const artifacts = useQuery({
     queryKey: ["media-result", runId],
     queryFn: () => api<Artifact[]>(`/artifacts?run_id=${runId}`),
@@ -66,6 +69,19 @@ export default function MediaResult({
     mutationFn: () => api(`/runs/${runId}/cancel`, { method: "POST" }),
     onSuccess: () => cache.invalidateQueries({ queryKey: ["run", runId] }),
   });
+  const retry = useMutation({
+    mutationFn: () => api<Run>(`/images/runs/${runId}/retry`, { method: "POST" }),
+    onSuccess: (next) => {
+      cache.setQueryData(["run", next.id], next);
+      void cache.invalidateQueries({ queryKey: ["runs"] });
+      setSearch((current) => {
+        const params = new URLSearchParams(current);
+        params.set("run", next.id);
+        return params;
+      });
+    },
+  });
+  const canRetry = kind === "image" && !!run && RETRYABLE.has(run.status);
   const Icon =
     kind === "audio" ? AudioLines : kind === "video" ? Film : ImageIcon;
   const result = artifacts.data?.find((a) => a.type === kind);
@@ -87,7 +103,9 @@ export default function MediaResult({
         </div>
         {run && <Badge status={run.status} />}
       </div>
-      <ErrorNotice error={error ?? artifacts.error ?? cancel.error} />
+      <ErrorNotice
+        error={error ?? artifacts.error ?? cancel.error ?? retry.error}
+      />
       {result ? (
         <div className="media-finished">
           {kind === "video" ? (
@@ -206,6 +224,24 @@ export default function MediaResult({
                   "Inspect the run for details, then start a new generation."
                 : text.idleBody}
           </p>
+          {canRetry && (
+            <div className="media-result-retry">
+              <p className="muted">
+                A retry creates a new run with the same parameters and source
+                images. Inspect logs and any partial output before repeating an
+                interrupted run.
+              </p>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={retry.isPending}
+                aria-label={`Retry as a new run ${runId.slice(0, 8)}`}
+                onClick={() => retry.mutate()}
+              >
+                {retry.isPending ? "Retrying…" : "Retry as a new run"}
+              </Button>
+            </div>
+          )}
           {!run && (
             <div className="media-output-spec">
               <span>{text.spec}</span>

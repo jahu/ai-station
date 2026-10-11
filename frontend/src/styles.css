@@ -2521,6 +2521,13 @@ section:has(> .memory-grid) > .dashboard-note {
   gap: 8px;
   margin-top: 12px;
 }
+.media-result-retry {
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  max-width: 28rem;
+  margin-top: 8px;
+}
 .media-result-footer {
   display: flex;
   align-items: center;

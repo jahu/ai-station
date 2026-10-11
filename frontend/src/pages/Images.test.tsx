@@ -265,6 +265,47 @@ it("restores a completed image from the workspace URL", async () => {
   expect(screen.getByText(/There is no inspectable lineage Run/)).toBeTruthy();
 });
 
+it("retries a failed image run in the workspace without opening the inspector", async () => {
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    const url = String(path);
+    const method = options?.method ?? "GET";
+    return {
+      ok: true,
+      json: async () => {
+        if (url.endsWith("/hardware")) return { gpus: [] };
+        if (method === "POST" && url.endsWith("/retry"))
+          return { id: "retry-id", status: "queued" };
+        if (url.includes("/runs/retry-id"))
+          return { id: "retry-id", status: "queued" };
+        if (url.includes("/runs/failed"))
+          return {
+            id: "failed",
+            status: "failed",
+            error_message: "GPU lost",
+          };
+        return { gpus: [] };
+      },
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount("/images?run=failed");
+  expect(await screen.findByText("Generation did not complete")).toBeTruthy();
+  expect(screen.getByText("GPU lost")).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Retry as a new run failed" }),
+  );
+  await screen.findByText("Waiting for an available GPU");
+  expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
+  expect(
+    screen.getByRole("link", { name: "View run & logs" }).getAttribute("href"),
+  ).toBe("/runs/retry-id");
+  expect(screen.getByRole("button", { name: "Stop generation" })).toBeTruthy();
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/images/runs/failed/retry",
+    expect.objectContaining({ method: "POST" }),
+  );
+});
+
 it("reuses the finished image as an Edit source without queueing a Run", async () => {
   const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
     ok: options === undefined,
