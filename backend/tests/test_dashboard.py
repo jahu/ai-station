@@ -2,13 +2,16 @@ from datetime import timedelta
 
 from app.api import app
 from app.db import utcnow
-from app.models import Agent, Artifact, Conversation, RuntimeInstance
+from app.models import Agent, Artifact, Conversation, Project, RuntimeInstance
 from app.runs import create_run, create_task
 from fastapi.testclient import TestClient
 
 
 def test_overview_is_bounded_and_preserves_schedule_and_runtime_truth(session):
     now = utcnow()
+    project = Project(name="Workstation docs", repo_path="/fixture/repo")
+    session.add(project)
+    session.flush()
     for i in range(12):
         task = create_task(session, title=f"Task {i}", prompt="private prompt", capability="test")
         run = create_run(session, task, run_type="test", capability="test", executor_type="fake")
@@ -23,6 +26,7 @@ def test_overview_is_bounded_and_preserves_schedule_and_runtime_truth(session):
                 interval_seconds=3600,
                 next_run_at=now + timedelta(minutes=i - 1),
                 system_prompt="private agent prompt",
+                project_id=project.id if i == 0 else None,
             )
         )
     session.add(Agent(name="Paused", enabled=False, trigger="interval", next_run_at=now - timedelta(days=1)))
@@ -55,7 +59,9 @@ def test_overview_is_bounded_and_preserves_schedule_and_runtime_truth(session):
     assert data["enabled_agent_count"] == 13 and len(data["agents"]) == 6
     assert len(data["upcoming"]) == 6
     assert data["upcoming"][0]["name"] == "Agent 0" and data["upcoming"][0]["overdue"]
+    assert data["upcoming"][0]["project_id"] == project.id
     assert all(row["name"] not in {"Paused", "Manual"} for row in data["upcoming"])
+    assert all("project_id" in row for row in data["agents"])
     assert len(data["conversations"]) == 5 and len(data["artifacts"]) == 6
     assert all(row["type"] == "markdown" for row in data["artifacts"])
     runtimes = {row["name"]: row for row in data["runtimes"]}

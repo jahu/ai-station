@@ -26,6 +26,7 @@ def agent_summary(row):
         "trigger": row.trigger,
         "next_run_at": iso(row.next_run_at),
         "last_status": row.last_status,
+        "project_id": row.project_id,
     }
 
 

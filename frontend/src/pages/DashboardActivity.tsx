@@ -15,6 +15,7 @@ interface AgentSummary {
   next_run_at: string | null;
   last_status: string;
   overdue?: boolean;
+  project_id?: string | null;
 }
 interface Overview {
   active_run_count: number;
@@ -165,6 +166,32 @@ function ActivityRow({
   );
 }
 
+function linkedProjectAction(agent: AgentSummary, current: boolean) {
+  if (!agent.project_id) return undefined;
+  const tab = current ? 0 : -1;
+  const shortId = agent.id.slice(0, 8);
+  return (
+    <>
+      <Link
+        className="text-link"
+        to={`/projects/${agent.project_id}`}
+        tabIndex={tab}
+        aria-label={`Inspect project ${agent.project_id}`}
+      >
+        Inspect project
+      </Link>
+      <Link
+        className="text-link"
+        to={`/runs?project_id=${agent.project_id}&agent_id=${agent.id}`}
+        tabIndex={tab}
+        aria-label={`View tagged Runs ${shortId}`}
+      >
+        View tagged Runs
+      </Link>
+    </>
+  );
+}
+
 function KeyboardActivityList({
   items,
   hint,
@@ -178,6 +205,7 @@ function KeyboardActivityList({
     thumbnail?: boolean;
     fallback?: ReactNode;
     inspectLabel: string;
+    action?: (current: boolean) => ReactNode;
   }[];
   hint: string;
 }) {
@@ -209,6 +237,7 @@ function KeyboardActivityList({
             inspectLabel={item.inspectLabel}
             inspectProps={itemProps(i, item.key)}
             current={i === index}
+            action={item.action?.(i === index)}
           />
         ))}
       </ul>
@@ -613,15 +642,16 @@ export default function DashboardActivity() {
           >
             {data.upcoming.length ? (
               <KeyboardActivityList
-                hint="Arrow keys choose a schedule while the list is focused. Enter inspects the agent."
+                hint="Arrow keys choose a schedule while the list is focused. Enter inspects the agent. Inspect project and View tagged Runs stay on a saved link. Linking does not grant coding, Git or repository access. This list does not Enable or Run now."
                 items={data.upcoming.map((agent) => ({
                   key: agent.id,
                   to: `/agents/${agent.id}`,
                   title: agent.name,
                   detail: `${time(agent.next_run_at)} · ${agent.trigger}${
                     agent.overdue ? " · Due / waiting for scheduler" : ""
-                  }`,
+                  }${agent.project_id ? " · Linked project" : ""}`,
                   inspectLabel: `Inspect scheduled ${agent.name} ${agent.id.slice(0, 8)}`,
+                  action: (current) => linkedProjectAction(agent, current),
                 }))}
               />
             ) : (
@@ -637,17 +667,20 @@ export default function DashboardActivity() {
           >
             {data.agents.length ? (
               <KeyboardActivityList
-                hint="Arrow keys choose an agent while the list is focused. Enter inspects it."
+                hint="Arrow keys choose an agent while the list is focused. Enter inspects it. Inspect project and View tagged Runs stay on a saved link. Linking does not grant coding, Git or repository access. This list does not Enable or Run now."
                 items={data.agents.map((agent) => ({
                   key: agent.id,
                   to: `/agents/${agent.id}`,
                   title: agent.name,
-                  detail: `${agent.model} · ${agent.trigger}`,
+                  detail: `${agent.model} · ${agent.trigger}${
+                    agent.project_id ? " · Linked project" : ""
+                  }`,
                   status: agent.last_status || undefined,
                   inspectLabel: `Inspect ${agent.name} ${agent.id.slice(0, 8)}`,
                   fallback: agent.last_status ? undefined : (
                     <span className="muted">Not run yet</span>
                   ),
+                  action: (current) => linkedProjectAction(agent, current),
                 }))}
               />
             ) : (
