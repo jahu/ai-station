@@ -55,6 +55,7 @@ interface Overview {
   notices?: {
     id: string;
     agent_id: string;
+    project_id?: string | null;
     run_id: string;
     kind: string;
     title: string;
@@ -81,6 +82,8 @@ type AttentionItem = {
   action?: "acknowledge" | "stop" | "stopping" | "read" | "approve";
   runId?: string;
   noticeId?: string;
+  agentId?: string;
+  projectId?: string | null;
   executorType?: string;
   retryWorkflowId?: string;
 };
@@ -166,30 +169,54 @@ function ActivityRow({
   );
 }
 
-function linkedProjectAction(agent: AgentSummary, current: boolean) {
-  if (!agent.project_id) return undefined;
+function taggedAgentLinks(
+  agentId: string | undefined,
+  projectId: string | null | undefined,
+  current: boolean,
+  includeAgent = false,
+) {
+  if (!agentId) return null;
+  if (!includeAgent && !projectId) return null;
   const tab = current ? 0 : -1;
-  const shortId = agent.id.slice(0, 8);
+  const shortId = agentId.slice(0, 8);
   return (
     <>
-      <Link
-        className="text-link"
-        to={`/projects/${agent.project_id}`}
-        tabIndex={tab}
-        aria-label={`Inspect project ${agent.project_id}`}
-      >
-        Inspect project
-      </Link>
-      <Link
-        className="text-link"
-        to={`/runs?project_id=${agent.project_id}&agent_id=${agent.id}`}
-        tabIndex={tab}
-        aria-label={`View tagged Runs ${shortId}`}
-      >
-        View tagged Runs
-      </Link>
+      {includeAgent ? (
+        <Link
+          className="text-link"
+          to={`/agents/${agentId}`}
+          tabIndex={tab}
+          aria-label={`Inspect agent ${shortId}`}
+        >
+          Inspect agent
+        </Link>
+      ) : null}
+      {projectId ? (
+        <>
+          <Link
+            className="text-link"
+            to={`/projects/${projectId}`}
+            tabIndex={tab}
+            aria-label={`Inspect project ${projectId}`}
+          >
+            Inspect project
+          </Link>
+          <Link
+            className="text-link"
+            to={`/runs?project_id=${projectId}&agent_id=${agentId}`}
+            tabIndex={tab}
+            aria-label={`View tagged Runs ${shortId}`}
+          >
+            View tagged Runs
+          </Link>
+        </>
+      ) : null}
     </>
   );
+}
+
+function linkedProjectAction(agent: AgentSummary, current: boolean) {
+  return taggedAgentLinks(agent.id, agent.project_id, current);
 }
 
 function KeyboardActivityList({
@@ -324,6 +351,7 @@ function attentionAction(
   if (item.action === "read" && noticeId) {
     return (
       <>
+        {taggedAgentLinks(item.agentId, item.projectId, current, true)}
         {workflowId ? (
           <Button
             type="button"
@@ -419,7 +447,8 @@ function AttentionList({
       <p id={labelId} className="dashboard-note">
         Arrow keys choose an item while the list is focused. Enter inspects it.
         Stop, Retry as a new run, Retry as a new workflow, Mark inspected, Mark
-        read, Approve and Deny stay on the selected row.
+        read, Approve and Deny stay on the selected row. Inspect agent, Inspect
+        project and View tagged Runs stay on a notice with a saved link.
       </p>
       <ul
         ref={listRef}
@@ -562,6 +591,8 @@ export default function DashboardActivity() {
         action: "read" as const,
         noticeId: notice.id,
         runId: notice.run_id,
+        agentId: notice.agent_id,
+        projectId: notice.project_id,
         retryWorkflowId:
           notice.retry?.allowed && notice.retry.run_id
             ? notice.retry.run_id

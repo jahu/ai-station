@@ -548,6 +548,52 @@ it("opens a linked project from Home without Enable or Run now", async () => {
   expect(fetch).toHaveBeenCalledWith("/api/dashboard", undefined);
 });
 
+it("opens the tagged agent from a Home notice without Enable or Run now", async () => {
+  const data = overview();
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.includes("/dashboard")
+        ? {
+            ...data,
+            interrupted_runs: [],
+            active_runs: [],
+            notices: [
+              {
+                ...data.notices[0],
+                project_id: "project-1",
+              },
+            ],
+          }
+        : [],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  expect(
+    (
+      await screen.findByRole("link", { name: "Inspect agent agent" })
+    ).getAttribute("href"),
+  ).toBe("/agents/agent");
+  expect(
+    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/projects/project-1");
+  expect(
+    screen
+      .getByRole("link", { name: "View tagged Runs agent" })
+      .getAttribute("href"),
+  ).toBe("/runs?project_id=project-1&agent_id=agent");
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
 it("shows an error instead of claiming there is no activity", async () => {
   vi.stubGlobal(
     "fetch",

@@ -3,6 +3,7 @@ from datetime import timedelta
 from app.api import app
 from app.db import utcnow
 from app.models import Agent, Artifact, Conversation, Project, RuntimeInstance
+from app.notices import emit_agent_notice
 from app.runs import create_run, create_task
 from fastapi.testclient import TestClient
 
@@ -70,6 +71,49 @@ def test_overview_is_bounded_and_preserves_schedule_and_runtime_truth(session):
     assert "private" not in response.text
     session.expire_all()
     assert run.status == "running"
+
+
+def test_dashboard_notice_includes_linked_project(session):
+    project = Project(name="Workstation docs", repo_path="/fixture/repo")
+    session.add(project)
+    session.flush()
+    agent = Agent(
+        name="Morning review",
+        enabled=True,
+        project_id=project.id,
+        notification_policy={
+            "on_failure": True,
+            "on_success": False,
+            "on_approval": False,
+        },
+    )
+    session.add(agent)
+    session.flush()
+    task = create_task(session, title="Agent task", prompt="private prompt", capability="agent.execute")
+    run = create_run(
+        session,
+        task,
+        run_type="agent",
+        capability="agent.execute",
+        executor_type="agent",
+        agent_id=agent.id,
+        parameters={
+            "definition": {
+                "notification_policy": {
+                    "on_failure": True,
+                    "on_success": False,
+                    "on_approval": False,
+                }
+            }
+        },
+    )
+    notice = emit_agent_notice(session, run, "failed")
+    assert notice is not None
+    session.commit()
+    data = TestClient(app).get("/api/dashboard").json()
+    assert data["unread_notice_count"] == 1
+    assert data["notices"][0]["agent_id"] == agent.id
+    assert data["notices"][0]["project_id"] == project.id
 
 
 def test_empty_overview_does_not_require_runner_or_model():
