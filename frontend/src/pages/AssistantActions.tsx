@@ -242,7 +242,8 @@ export function AssistantResults({
 
 function proposalReady(run: Run) {
   const review = run.metadata?.coding_review as
-    { files?: unknown[] } | undefined;
+    | { files?: unknown[] }
+    | undefined;
   return (
     ["cursor_proposal", "codex_proposal", "local_proposal"].includes(
       run.executor_type,
@@ -307,10 +308,7 @@ function ImageReferenceStrip({
               {...itemProps(i, id)}
             >
               <span className="assistant-reference-number">{i + 1}</span>
-              <img
-                src={`/api/artifacts/${id}/file`}
-                alt={`Reference ${i + 1}`}
-              />
+              <img src={`/api/artifacts/${id}/file`} alt={`Reference ${i + 1}`} />
               <button
                 className="assistant-reference-remove"
                 aria-label={`Remove reference ${i + 1} ${shortId}`}
@@ -391,7 +389,8 @@ export default function AssistantActions({
   );
   const externalCoding =
     value.action === "coding.cursor" || value.action === "coding.codex";
-  const codingProvider = value.action === "coding.codex" ? "codex" : "cursor";
+  const codingProvider =
+    value.action === "coding.codex" ? "codex" : "cursor";
   const proposals = sources.filter(proposalReady);
   const commits = sources.filter(commitReady);
   const projects = useQuery({
@@ -486,12 +485,9 @@ export default function AssistantActions({
     setCommitSourceId("");
     setPublishSourceId("");
     if (
-      [
-        "coding.commit",
-        "coding.publish",
-        "runtime.load",
-        "runtime.stop",
-      ].includes(action)
+      ["coding.commit", "coding.publish", "runtime.load", "runtime.stop"].includes(
+        action,
+      )
     ) {
       onChange({
         action,
@@ -642,51 +638,49 @@ export default function AssistantActions({
       </div>
       {!value.action.startsWith("coding.") &&
         !value.action.startsWith("runtime.") && (
-          <div className="assistant-attachment-toolbar">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => imageInput.current?.click()}
-              disabled={value.image_artifact_ids.length >= 8}
-            >
-              <ImagePlus size={15} /> Add images
-            </Button>
-            <LibraryPicker
-              kind="image"
-              existing={value.image_artifact_ids}
-              limit={8 - value.image_artifact_ids.length}
-              busy={busy}
-              onSelect={(items) =>
-                onChange({
-                  ...value,
-                  image_artifact_ids: [
-                    ...value.image_artifact_ids,
-                    ...items.map((a) => a.id),
-                  ],
-                })
-              }
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => voiceInput.current?.click()}
-            >
-              <Mic size={15} />{" "}
-              {value.audio_artifact_id ? "Replace voice" : "Add voice"}
-            </Button>
-            <LibraryPicker
-              kind="audio"
-              existing={
-                value.audio_artifact_id ? [value.audio_artifact_id] : []
-              }
-              limit={1}
-              busy={busy}
-              onSelect={(items) =>
-                onChange({ ...value, audio_artifact_id: items[0].id })
-              }
-            />
-          </div>
-        )}
+        <div className="assistant-attachment-toolbar">
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => imageInput.current?.click()}
+            disabled={value.image_artifact_ids.length >= 8}
+          >
+            <ImagePlus size={15} /> Add images
+          </Button>
+          <LibraryPicker
+            kind="image"
+            existing={value.image_artifact_ids}
+            limit={8 - value.image_artifact_ids.length}
+            busy={busy}
+            onSelect={(items) =>
+              onChange({
+                ...value,
+                image_artifact_ids: [
+                  ...value.image_artifact_ids,
+                  ...items.map((a) => a.id),
+                ],
+              })
+            }
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => voiceInput.current?.click()}
+          >
+            <Mic size={15} />{" "}
+            {value.audio_artifact_id ? "Replace voice" : "Add voice"}
+          </Button>
+          <LibraryPicker
+            kind="audio"
+            existing={value.audio_artifact_id ? [value.audio_artifact_id] : []}
+            limit={1}
+            busy={busy}
+            onSelect={(items) =>
+              onChange({ ...value, audio_artifact_id: items[0].id })
+            }
+          />
+        </div>
+      )}
       <input
         ref={voiceInput}
         hidden
@@ -918,8 +912,8 @@ export default function AssistantActions({
               setPublish(publishSourceId, publishTitle, publishBody, next);
             }}
           >
-            I approve publishing this commit and PR text to the GitHub
-            repository shown above.
+            I approve publishing this commit and PR text to the GitHub repository
+            shown above.
           </PublicationChoiceList>
         </details>
       )}
@@ -957,9 +951,7 @@ export default function AssistantActions({
                 setLoad(value.load?.model_file_id ?? "", next, loadContext);
               }}
             />
-            <small>
-              No cards selected uses CPU. Several cards split layers.
-            </small>
+            <small>No cards selected uses CPU. Several cards split layers.</small>
           </fieldset>
           <label>
             Context size
@@ -987,8 +979,8 @@ export default function AssistantActions({
         <details open className="assistant-coding-scope">
           <summary>Owned llama.cpp unload</summary>
           <p className="muted">
-            Stops only the selected AI Station-owned instance after its
-            consumers finish. External runtimes are not touched.
+            Stops only the selected AI Station-owned instance after its consumers
+            finish. External runtimes are not touched.
           </p>
           <ErrorNotice error={catalog.error} />
           <div>
@@ -1021,15 +1013,7 @@ export default function AssistantActions({
                 setProjectId(id);
                 setExternal(false);
                 setCodingModel("");
-                scope(
-                  id,
-                  files,
-                  false,
-                  value.action,
-                  explore,
-                  repairAttempts,
-                  "",
-                );
+                scope(id, files, false, value.action, explore, repairAttempts, "");
               }}
             />
           </div>
@@ -1136,8 +1120,8 @@ export default function AssistantActions({
               {explore
                 ? "relevant source files found by the agent"
                 : "the selected files"}{" "}
-              to external {value.action === "coding.codex" ? "Codex" : "Cursor"}
-              .
+              to external{" "}
+              {value.action === "coding.codex" ? "Codex" : "Cursor"}.
             </ConsentChoiceList>
           )}
           <ErrorNotice error={projects.error} />
