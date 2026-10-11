@@ -499,6 +499,65 @@ it("keeps Enable disabled when http_fetch has no reviewed URLs", async () => {
       "http_fetch needs reviewed public URLs before activation.",
     ),
   ).toBeTruthy();
+  expect(
+    (screen.getByLabelText("Reviewed URLs agent-on") as HTMLTextAreaElement)
+      .value,
+  ).toBe("");
+});
+
+it("saves reviewed fetch URLs from the conversation without Enable or Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    tools: ["http_fetch"],
+    fetch_urls: [],
+    search_query: "",
+  });
+  expect(
+    await screen.findByText(
+      "http_fetch needs reviewed public URLs before activation.",
+    ),
+  ).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  fireEvent.change(screen.getByLabelText("Reviewed URLs agent-on"), {
+    target: { value: "https://www.example.com/" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Save reviewed URLs agent-on" }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    fetch_urls: ["https://www.example.com/"],
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+    tools: ["http_fetch"],
+  });
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Enable saved definition agent-on",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
 });
 
 it("keeps Enable disabled when the saved definition has no model", async () => {
