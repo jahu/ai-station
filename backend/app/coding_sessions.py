@@ -50,19 +50,21 @@ def summary(session, task, runs):
 
 
 @router.get("/sessions")
-def sessions(session: DB, limit: int = Query(30, ge=1, le=100), offset: int = Query(0, ge=0)):
-    tasks = session.scalars(
-        select(Task)
-        .where(
-            or_(
-                Task.capability.in_(["coding.local", "coding.cursor", "coding.codex"]),
-                Task.id.in_(select(Run.task_id).where(Run.executor_type.in_(PROPOSALS))),
-            )
+def sessions(
+    session: DB,
+    project_id: UUID | None = None,
+    limit: int = Query(30, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    statement = select(Task).where(
+        or_(
+            Task.capability.in_(["coding.local", "coding.cursor", "coding.codex"]),
+            Task.id.in_(select(Run.task_id).where(Run.executor_type.in_(PROPOSALS))),
         )
-        .order_by(Task.updated_at.desc(), Task.id)
-        .limit(limit)
-        .offset(offset)
     )
+    if project_id is not None:
+        statement = statement.where(Task.project_id == str(project_id))
+    tasks = session.scalars(statement.order_by(Task.updated_at.desc(), Task.id).limit(limit).offset(offset))
     result = []
     for task in tasks:
         _, runs = history(session, task.id)

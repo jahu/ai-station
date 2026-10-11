@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, NavLink, useNavigate, useParams } from "react-router-dom";
+import { Link, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ChevronDown,
   Code2,
@@ -33,11 +33,16 @@ type SessionRow = {
   active_run_id: string | null;
   latest_proposal_id: string | null;
 };
-function useSessions(offset = 0) {
+function useSessions(offset = 0, projectId = "") {
   return useQuery({
-    queryKey: ["coding-sessions", offset],
-    queryFn: () =>
-      api<SessionRow[]>(`/coding/sessions${offset ? `?offset=${offset}` : ""}`),
+    queryKey: ["coding-sessions", offset, projectId],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (offset) params.set("offset", String(offset));
+      if (projectId) params.set("project_id", projectId);
+      const query = params.toString();
+      return api<SessionRow[]>(`/coding/sessions${query ? `?${query}` : ""}`);
+    },
     refetchInterval: 10000,
   });
 }
@@ -68,7 +73,8 @@ function SessionCards({ sessions }: { sessions: SessionRow[] }) {
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a conversation while the list is focused. Enter opens
         it. Inspect project stays on a saved project and does not start a coding
-        Run.
+        Run. Filter project uses GET /api/coding/sessions?project_id= and does
+        not start a coding Run.
       </p>
       <div
         ref={listRef}
@@ -129,18 +135,52 @@ function SessionCards({ sessions }: { sessions: SessionRow[] }) {
   );
 }
 export function CodingHistory() {
+  const [params, setParams] = useSearchParams();
   const [offset, setOffset] = useState(0);
-  const q = useSessions(offset);
+  const projectId = params.get("project_id") ?? "";
+  const q = useSessions(offset, projectId);
+  const projects = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => api<{ id: string; name: string }[]>("/projects?limit=500"),
+  });
   return (
     <>
+      <div className="toolbar">
+        <label>
+          Filter project{" "}
+          <select
+            value={projectId}
+            onChange={(event) => {
+              const next = new URLSearchParams(params);
+              if (event.target.value) next.set("project_id", event.target.value);
+              else next.delete("project_id");
+              setParams(next, { replace: true });
+              setOffset(0);
+            }}
+          >
+            <option value="">All projects</option>
+            {projectId &&
+              !(projects.data ?? []).some((row) => row.id === projectId) && (
+                <option value={projectId}>{projectId}</option>
+              )}
+            {(projects.data ?? []).map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
       <ErrorNotice error={q.error} />
       {q.isPending ? (
         <Loading />
       ) : q.data?.length ? (
         <SessionCards sessions={q.data} />
       ) : (
-        <Empty title="A fresh start">
-          Your tasks and follow-up conversations will appear here.
+        <Empty title={projectId ? "No conversations for this project" : "A fresh start"}>
+          {projectId
+            ? "Coding conversations for this project will appear here."
+            : "Your tasks and follow-up conversations will appear here."}
         </Empty>
       )}
       <div className="row mt">
