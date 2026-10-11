@@ -30,6 +30,8 @@ import { DependencyResults, ValidationResults } from "./ProjectResults";
 import { WorkflowStepCards } from "./AgentWorkflowSteps";
 import { useListKeyboard } from "./useListKeyboard";
 
+type NamedRow = { id: string; name: string };
+
 type RunRow = {
   id: string;
   capability: string;
@@ -38,6 +40,72 @@ type RunRow = {
   status: string;
   created_at: string;
 };
+
+function TaggedRunLinks({
+  projectId,
+  agentId,
+  projects,
+  agents,
+}: {
+  projectId: string;
+  agentId: string;
+  projects: NamedRow[];
+  agents: NamedRow[];
+}) {
+  const headingId = useId();
+  if (!projectId && !agentId) return null;
+  const project = Array.isArray(projects)
+    ? projects.find((row) => row.id === projectId)
+    : undefined;
+  const agent = Array.isArray(agents)
+    ? agents.find((row) => row.id === agentId)
+    : undefined;
+  const agentLabel = agent?.name || agentId;
+  const projectLabel = project?.name || projectId;
+  const shortId = agentId.slice(0, 8);
+  return (
+    <section className="panel content-panel" aria-labelledby={headingId}>
+      <h2 id={headingId}>Tagged Runs</h2>
+      <p className="muted">
+        This filter tags Runs for inspection. Linking does not grant coding, Git
+        or repository access. This page does not Enable or Run now.
+      </p>
+      <div className="row">
+        {agentId ? (
+          <Link
+            className="text-link"
+            to={`/agents/${agentId}`}
+            aria-label={
+              agent?.name
+                ? `Inspect agent ${agent.name} ${shortId}`
+                : `Inspect agent ${shortId}`
+            }
+          >
+            {agentLabel}
+          </Link>
+        ) : null}
+        {projectId ? (
+          <>
+            <Link
+              className="text-link"
+              to={`/projects/${projectId}`}
+              aria-label={`Inspect project ${projectId}`}
+            >
+              {projectLabel}
+            </Link>
+            <Link
+              className="text-link"
+              to={`/agents?project_id=${projectId}`}
+              aria-label="View all linked agents"
+            >
+              View all linked agents
+            </Link>
+          </>
+        ) : null}
+      </div>
+    </section>
+  );
+}
 
 function RunTable({ runs }: { runs: RunRow[] }) {
   const labelId = useId();
@@ -288,6 +356,12 @@ export function Runs() {
         </p>
       </details>
       <ErrorNotice error={query.error ?? projects.error ?? agents.error} />
+      <TaggedRunLinks
+        projectId={filters.project_id}
+        agentId={filters.agent_id}
+        projects={projects.data ?? []}
+        agents={agents.data ?? []}
+      />
       {query.isPending ? (
         <Loading />
       ) : (
@@ -466,11 +540,35 @@ export function RunDetail() {
                 {run.data.error_message}
               </div>
             )}
+            {run.data.agent_id ? (
+              <p className="mt">
+                <Link
+                  className="text-link"
+                  to={`/agents/${run.data.agent_id}`}
+                  aria-label={`Inspect agent ${run.data.agent_id.slice(0, 8)}`}
+                >
+                  Open agent definition
+                </Link>
+                {run.data.project_id ? (
+                  <>
+                    {" "}
+                    <Link
+                      className="text-link"
+                      to={`/runs?project_id=${run.data.project_id}&agent_id=${run.data.agent_id}`}
+                      aria-label={`View tagged Runs ${run.data.agent_id.slice(0, 8)}`}
+                    >
+                      View tagged Runs
+                    </Link>
+                  </>
+                ) : null}
+              </p>
+            ) : null}
             {run.data.project_id && (
               <p className="mt">
                 <Link
                   className="back-link"
                   to={`/projects/${run.data.project_id}`}
+                  aria-label={`Inspect project ${run.data.project_id}`}
                 >
                   Open project and worktrees →
                 </Link>
