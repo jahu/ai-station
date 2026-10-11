@@ -32,12 +32,14 @@ const draft = {
   last_status: "",
   last_run_at: null as string | null,
   next_run_at: null as string | null,
+  retry_policy: { mode: "none" as string },
   runs: [] as {
     id: string;
     capability: string;
     status: string;
     created_at: string;
     parameters?: { tool?: string };
+    retry?: { allowed: boolean; retry_run_id?: string | null };
   }[],
 };
 
@@ -58,7 +60,14 @@ function mount(agent = draft) {
               last_status: "",
               runs: [],
             }
-          : agent,
+          : String(path).includes("/retry-workflow")
+            ? {
+                id: "retry-run",
+                capability: "agent.workflow",
+                status: "queued",
+                retry: { allowed: false, retry_of: "fail-run-dddd" },
+              }
+            : agent,
   }));
   vi.stubGlobal("fetch", fetch);
   render(
@@ -282,5 +291,47 @@ it("duplicates as a disabled draft from the conversation without Run now", async
   ).toBe(true);
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+});
+
+it("retries a failed workflow from conversation history without Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    enabled: true,
+    retry_policy: { mode: "manual" },
+    last_status: "failed",
+    last_run_at: "2026-10-11T12:00:00Z",
+    runs: [
+      {
+        id: "fail-run-dddd",
+        capability: "agent.workflow",
+        status: "failed",
+        created_at: "2026-10-11T12:00:00Z",
+        retry: { allowed: true, retry_run_id: null },
+      },
+    ],
+  });
+  expect(
+    await screen.findByText("Manual retry of a failed snapshot"),
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Retry as a new workflow fail-run",
+    }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/runs/fail-run-dddd/retry-workflow",
+      expect.objectContaining({ method: "POST" }),
+    ),
+  );
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect retry retry-ru" })
+      .getAttribute("href"),
+  ).toBe("/runs/retry-run");
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
 });

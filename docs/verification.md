@@ -524,3 +524,7 @@ Frontend lint, TypeScript, 238 component tests and production build passed. Imag
 ## Images workspace retry — 2026-10-11
 
 Frontend lint, TypeScript, 241 component tests and production build passed. A failed, canceled or interrupted Images generation can Retry as a new run in the workspace through the existing `POST /api/images/runs/{id}/retry` endpoint. The new Run ID replaces the previous one in the URL; the inspector is not opened. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant agent workflow retry — 2026-10-11
+
+Frontend lint, TypeScript, 243 component tests and production build passed. Execution history in the conversation and Agents can Retry as a new workflow through `POST /api/runs/{id}/retry-workflow` when `retry.allowed` is set. That does not call Run now. The conversation also shows a saved manual retry policy. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

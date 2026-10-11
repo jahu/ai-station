@@ -1,7 +1,9 @@
-import { useId, type KeyboardEvent } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { type Run } from "../api";
-import { Badge } from "../components/common";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, type Run } from "../api";
+import { Badge, ErrorNotice } from "../components/common";
+import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
 import { useListKeyboard } from "./useListKeyboard";
 
@@ -14,7 +16,7 @@ function runLabel(run: Run) {
 export function AgentExecutionHistory({
   runs,
   tabIndex = 0,
-  hint = "Arrow keys choose a Run while the list is focused. Enter inspects it.",
+  hint = "Arrow keys choose a Run while the list is focused. Enter inspects it. Retry as a new workflow stays on a failed snapshot when the saved policy allows it.",
 }: {
   runs: Run[];
   tabIndex?: number;
@@ -23,6 +25,18 @@ export function AgentExecutionHistory({
   const headingId = useId();
   const labelId = useId();
   const navigate = useNavigate();
+  const cache = useQueryClient();
+  const [queued, setQueued] = useState<Run | null>(null);
+  const retry = useMutation({
+    mutationFn: (runId: string) =>
+      api<Run>(`/runs/${runId}/retry-workflow`, { method: "POST" }),
+    onSuccess: (result) => {
+      setQueued(result);
+      void cache.invalidateQueries({ queryKey: ["agent"] });
+      void cache.invalidateQueries({ queryKey: ["agents"] });
+      void cache.invalidateQueries({ queryKey: ["runs"] });
+    },
+  });
   const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
     runs,
     (run) => run.id,
@@ -45,6 +59,20 @@ export function AgentExecutionHistory({
       <p id={labelId} className="dashboard-note">
         {hint}
       </p>
+      <ErrorNotice error={retry.error} />
+      {queued ? (
+        <p>
+          Queued a new workflow from that snapshot.{" "}
+          <Link
+            className="text-link"
+            to={`/runs/${queued.id}`}
+            tabIndex={tabIndex}
+            aria-label={`Inspect retry ${queued.id.slice(0, 8)}`}
+          >
+            Inspect retry
+          </Link>
+        </p>
+      ) : null}
       <div
         ref={listRef}
         className="diagnostic-list"
@@ -72,14 +100,26 @@ export function AgentExecutionHistory({
                 >
                   {shortId}
                 </Link>
+                {run.retry?.allowed ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={retry.isPending}
+                    tabIndex={active && current ? 0 : -1}
+                    aria-label={`Retry as a new workflow ${shortId}`}
+                    onClick={() => retry.mutate(run.id)}
+                  >
+                    Retry as a new workflow
+                  </Button>
+                ) : null}
               </div>
             </div>
           );
         })}
       </div>
       <p className="muted">
-        Latest 100 Runs. Open a Run to inspect events, parameters, errors, and
-        report artifacts.
+        Latest 100 Runs. Manual retry queues a new workflow from the failed
+        snapshot. It does not resume an uncertain step or call Run now.
       </p>
     </section>
   );
