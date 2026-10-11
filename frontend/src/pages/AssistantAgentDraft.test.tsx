@@ -84,7 +84,11 @@ function withCatalog(
   handler: (
     path: string,
     options?: RequestInit,
-  ) => Promise<{ ok: boolean; json?: () => Promise<unknown>; text?: () => Promise<string> }>,
+  ) => Promise<{
+    ok: boolean;
+    json?: () => Promise<unknown>;
+    text?: () => Promise<string>;
+  }>,
 ) {
   return async (path: string, options?: RequestInit) => {
     const catalog = stationCatalog(path);
@@ -406,6 +410,103 @@ it("keeps Enable disabled when a saved tool is missing from the registry", async
   ).toBeTruthy();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+});
+
+it("removes an unavailable tool from the conversation definition without Enable or Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    tools: ["system_snapshot", "browser"],
+    search_query: "",
+  });
+  expect(
+    await screen.findByText("Unavailable tools prevent activation: browser."),
+  ).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(
+    screen.queryByRole("button", {
+      name: "Remove tool system_snapshot agent-on",
+    }),
+  ).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Remove tool browser agent-on" }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    tools: ["system_snapshot"],
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+  });
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Enable saved definition agent-on",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("removes a tool missing from the registry without Enable or Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    tools: ["system_snapshot", "invented_shell"],
+    search_query: "",
+  });
+  expect(
+    await screen.findByText(
+      "Unavailable tools prevent activation: invented_shell.",
+    ),
+  ).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Remove tool invented_shell agent-on",
+    }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    tools: ["system_snapshot"],
+    enabled: false,
+  });
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Enable saved definition agent-on",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
 });
 
@@ -986,33 +1087,33 @@ it("shows the latest agent report in the conversation without Run now", async ()
   };
   const fetch = vi.fn(
     withCatalog(async (path: string) => {
-    if (String(path).includes("/artifacts?")) {
-      expect(path).toBe("/api/artifacts?run_id=report-run");
-      return {
-        ok: true,
-        json: async () => [
-          {
-            id: "report-md",
-            type: "markdown",
-            mime_type: "text/markdown",
-            original_filename: "agent-report.md",
-            size_bytes: 40,
-            created_at: "2026-10-11T12:00:00Z",
-            run_id: "report-run",
-            parent_artifact_ids: [],
-            metadata: { partial: false },
-          },
-        ],
-      };
-    }
-    if (String(path).endsWith("/artifacts/report-md/file")) {
-      return {
-        ok: true,
-        text: async () => "## Morning briefing\n\nGPU idle.",
-      };
-    }
-    return { ok: true, json: async () => agent };
-  }),
+      if (String(path).includes("/artifacts?")) {
+        expect(path).toBe("/api/artifacts?run_id=report-run");
+        return {
+          ok: true,
+          json: async () => [
+            {
+              id: "report-md",
+              type: "markdown",
+              mime_type: "text/markdown",
+              original_filename: "agent-report.md",
+              size_bytes: 40,
+              created_at: "2026-10-11T12:00:00Z",
+              run_id: "report-run",
+              parent_artifact_ids: [],
+              metadata: { partial: false },
+            },
+          ],
+        };
+      }
+      if (String(path).endsWith("/artifacts/report-md/file")) {
+        return {
+          ok: true,
+          text: async () => "## Morning briefing\n\nGPU idle.",
+        };
+      }
+      return { ok: true, json: async () => agent };
+    }),
   );
   vi.stubGlobal("fetch", fetch);
   render(
@@ -1097,29 +1198,29 @@ it("shows recorded search sources next to the latest report without Run now", as
   };
   const fetch = vi.fn(
     withCatalog(async (path: string) => {
-    if (String(path).includes("/artifacts?")) {
-      return {
-        ok: true,
-        json: async () => [
-          {
-            id: "report-md",
-            type: "markdown",
-            mime_type: "text/markdown",
-            original_filename: "agent-report.md",
-            size_bytes: 12,
-            created_at: "2026-10-11T12:00:00Z",
-            run_id: "report-run",
-            parent_artifact_ids: [],
-            metadata: {},
-          },
-        ],
-      };
-    }
-    if (String(path).endsWith("/artifacts/report-md/file")) {
-      return { ok: true, text: async () => "GPU idle." };
-    }
-    return { ok: true, json: async () => agent };
-  }),
+      if (String(path).includes("/artifacts?")) {
+        return {
+          ok: true,
+          json: async () => [
+            {
+              id: "report-md",
+              type: "markdown",
+              mime_type: "text/markdown",
+              original_filename: "agent-report.md",
+              size_bytes: 12,
+              created_at: "2026-10-11T12:00:00Z",
+              run_id: "report-run",
+              parent_artifact_ids: [],
+              metadata: {},
+            },
+          ],
+        };
+      }
+      if (String(path).endsWith("/artifacts/report-md/file")) {
+        return { ok: true, text: async () => "GPU idle." };
+      }
+      return { ok: true, json: async () => agent };
+    }),
   );
   vi.stubGlobal("fetch", fetch);
   render(
@@ -1189,11 +1290,11 @@ it("uses the latest report's search sibling when the report has not copied sourc
   };
   const fetch = vi.fn(
     withCatalog(async (path: string) => {
-    if (String(path).includes("/artifacts?")) {
-      return { ok: true, json: async () => [] };
-    }
-    return { ok: true, json: async () => agent };
-  }),
+      if (String(path).includes("/artifacts?")) {
+        return { ok: true, json: async () => [] };
+      }
+      return { ok: true, json: async () => agent };
+    }),
   );
   vi.stubGlobal("fetch", fetch);
   render(
@@ -1272,29 +1373,29 @@ it("shows recorded fetched pages next to the latest report without Run now", asy
   };
   const fetch = vi.fn(
     withCatalog(async (path: string) => {
-    if (String(path).includes("/artifacts?")) {
-      return {
-        ok: true,
-        json: async () => [
-          {
-            id: "report-md",
-            type: "markdown",
-            mime_type: "text/markdown",
-            original_filename: "agent-report.md",
-            size_bytes: 12,
-            created_at: "2026-10-11T12:00:00Z",
-            run_id: "report-run",
-            parent_artifact_ids: [],
-            metadata: {},
-          },
-        ],
-      };
-    }
-    if (String(path).endsWith("/artifacts/report-md/file")) {
-      return { ok: true, text: async () => "GPU idle." };
-    }
-    return { ok: true, json: async () => agent };
-  }),
+      if (String(path).includes("/artifacts?")) {
+        return {
+          ok: true,
+          json: async () => [
+            {
+              id: "report-md",
+              type: "markdown",
+              mime_type: "text/markdown",
+              original_filename: "agent-report.md",
+              size_bytes: 12,
+              created_at: "2026-10-11T12:00:00Z",
+              run_id: "report-run",
+              parent_artifact_ids: [],
+              metadata: {},
+            },
+          ],
+        };
+      }
+      if (String(path).endsWith("/artifacts/report-md/file")) {
+        return { ok: true, text: async () => "GPU idle." };
+      }
+      return { ok: true, json: async () => agent };
+    }),
   );
   vi.stubGlobal("fetch", fetch);
   render(
@@ -1365,11 +1466,11 @@ it("uses the latest report's fetch sibling when the report has not copied pages 
   };
   const fetch = vi.fn(
     withCatalog(async (path: string) => {
-    if (String(path).includes("/artifacts?")) {
-      return { ok: true, json: async () => [] };
-    }
-    return { ok: true, json: async () => agent };
-  }),
+      if (String(path).includes("/artifacts?")) {
+        return { ok: true, json: async () => [] };
+      }
+      return { ok: true, json: async () => agent };
+    }),
   );
   vi.stubGlobal("fetch", fetch);
   render(
@@ -1440,30 +1541,30 @@ it("shows recorded registry tool calls next to the latest report without Run now
   };
   const fetch = vi.fn(
     withCatalog(async (path: string) => {
-    if (String(path).includes("/artifacts?")) {
-      expect(path).toBe("/api/artifacts?run_id=report-run");
-      return {
-        ok: true,
-        json: async () => [
-          {
-            id: "report-md",
-            type: "markdown",
-            mime_type: "text/markdown",
-            original_filename: "agent-report.md",
-            size_bytes: 12,
-            created_at: "2026-10-11T12:00:00Z",
-            run_id: "report-run",
-            parent_artifact_ids: [],
-            metadata: {},
-          },
-        ],
-      };
-    }
-    if (String(path).endsWith("/artifacts/report-md/file")) {
-      return { ok: true, text: async () => "GPU idle." };
-    }
-    return { ok: true, json: async () => agent };
-  }),
+      if (String(path).includes("/artifacts?")) {
+        expect(path).toBe("/api/artifacts?run_id=report-run");
+        return {
+          ok: true,
+          json: async () => [
+            {
+              id: "report-md",
+              type: "markdown",
+              mime_type: "text/markdown",
+              original_filename: "agent-report.md",
+              size_bytes: 12,
+              created_at: "2026-10-11T12:00:00Z",
+              run_id: "report-run",
+              parent_artifact_ids: [],
+              metadata: {},
+            },
+          ],
+        };
+      }
+      if (String(path).endsWith("/artifacts/report-md/file")) {
+        return { ok: true, text: async () => "GPU idle." };
+      }
+      return { ok: true, json: async () => agent };
+    }),
   );
   vi.stubGlobal("fetch", fetch);
   render(

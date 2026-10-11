@@ -35,9 +35,13 @@ const catalog = [
   },
 ];
 
-function mount(names: string[], tools = catalog) {
+function mount(
+  names: string[],
+  tools = catalog,
+  onRemove?: (name: string) => void,
+) {
   const fetch = vi.fn(async (path: string) => ({
-    ok: !String(path).endsWith("/run"),
+    ok: !String(path).endsWith("/run") && !String(path).endsWith("/enabled"),
     json: async () => tools,
   }));
   vi.stubGlobal("fetch", fetch);
@@ -47,7 +51,11 @@ function mount(names: string[], tools = catalog) {
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <AgentAttachedTools names={names} />
+      <AgentAttachedTools
+        names={names}
+        agentId="agent-one"
+        onRemove={onRemove}
+      />
     </QueryClientProvider>,
   );
   return fetch;
@@ -103,5 +111,33 @@ it("moves through attached tools with arrow keys without inventing a Run", async
   });
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("offers Remove on unavailable tools without inventing a Run", async () => {
+  const onRemove = vi.fn();
+  const fetch = mount(["web_search", "browser", "missing"], catalog, onRemove);
+  expect(
+    await screen.findByText(
+      "Browser automation is not implemented for agents.",
+    ),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Remove tool web_search agent-on" }),
+  ).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Remove tool browser agent-on" }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Remove tool missing agent-on" }),
+  );
+  expect(onRemove.mock.calls).toEqual([["browser"], ["missing"]]);
+  expect(screen.queryByRole("button", { name: /Enable/ })).toBeNull();
+  expect(
+    fetch.mock.calls.every(
+      (call) =>
+        !String(call[0]).endsWith("/run") &&
+        !String(call[0]).endsWith("/enabled"),
+    ),
   ).toBe(true);
 });
