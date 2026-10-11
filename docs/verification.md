@@ -500,3 +500,7 @@ Frontend lint, TypeScript, 229 component tests and production build passed. A fi
 ## Avatars source staging — 2026-10-11
 
 Frontend lint, TypeScript, 231 component tests and production build passed. Images, Audio and Library can stage a portrait or WAV into Avatars through `?image=` / `?audio=` without queueing a Run. The Avatars composer remounts on those sources and keeps a generation Run in the URL separately. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant media workspace reuse — 2026-10-11
+
+Frontend lint, TypeScript, 232 component tests and production build passed. Inline conversation images can Edit, Recompose, Upscale or become an Avatars portrait without another Run. WAV results can open in Audio or become Avatars speech the same way. Next-message Use as image/voice reference is unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
