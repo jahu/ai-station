@@ -130,6 +130,11 @@ it("inspects the saved definition without queueing Run now", async () => {
     screen.queryByRole("region", { name: "Execution history" }),
   ).toBeNull();
   expect(
+    screen
+      .getByRole("link", { name: "Inspect agent memory agent-on" })
+      .getAttribute("href"),
+  ).toBe("/memory?scope=agent&scope_id=agent-one");
+  expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
   expect(
@@ -1055,7 +1060,11 @@ it("shows last-parent workflow steps next to history without Run now", async () 
       .getByRole("link", { name: "Inspect step report step-rep" })
       .getAttribute("href"),
   ).toBe("/runs/step-report");
-  expect(screen.getByText("saved observation")).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "View saved observation report memory-1" })
+      .getAttribute("href"),
+  ).toBe("/memory/memory-1");
   expect(
     screen.queryByRole("link", { name: /Inspect step system_snapshot/ }),
   ).toBeNull();

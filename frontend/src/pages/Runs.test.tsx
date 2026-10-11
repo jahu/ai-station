@@ -339,7 +339,13 @@ it("lists persisted workflow steps and keeps cancel available for the active chi
     (await screen.findByRole("link", { name: /report/i })).getAttribute("href"),
   ).toBe("/runs/step-report");
   expect(screen.getByRole("button", { name: "Cancel run" })).toBeTruthy();
-  expect(screen.getByText("saved observation")).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", {
+        name: "View saved observation system_snapshot memory-1",
+      })
+      .getAttribute("href"),
+  ).toBe("/memory/memory-1");
   expect(screen.getByText("1 registry call")).toBeTruthy();
   expect(
     screen.getByText(/The report may request selected registry tools/i),

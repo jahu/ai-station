@@ -19,8 +19,8 @@ export function WorkflowStepCards({
   workflow,
   tabIndex = 0,
   inspectPrefix = "Inspect",
-  extra = "Cancel targets the currently active child.",
-  hint = "Arrow keys choose a step while the list is focused. Enter inspects its child Run. Cancel stays outside this list.",
+  extra = "Cancel targets the currently active child. Saved observations open Memory.",
+  hint = "Arrow keys choose a step while the list is focused. Enter inspects its child Run. A saved observation opens Memory. Cancel stays outside this list.",
 }: {
   workflow: Workflow;
   tabIndex?: number;
@@ -92,7 +92,21 @@ export function WorkflowStepCards({
                         {step.tool_calls.length === 1 ? "" : "s"}
                       </p>
                     )}
-                    {step.memory_id && <p>saved observation</p>}
+                    {step.memory_id ? (
+                      <p>
+                        <Link
+                          className="text-link"
+                          to={`/memory/${step.memory_id}`}
+                          tabIndex={active && current ? 0 : -1}
+                          aria-label={`View saved observation ${step.key} ${step.memory_id.slice(0, 8)}`}
+                        >
+                          saved observation
+                        </Link>
+                        {step.memory_excerpted
+                          ? " · Memory contains an excerpt"
+                          : ""}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="row">
                     <Badge status={step.status} />
@@ -133,8 +147,8 @@ export function AgentLastWorkflowSteps({
       workflow={workflow}
       tabIndex={tabIndex}
       inspectPrefix="Inspect step"
-      extra="Run now stays in Agents. Stop stays on execution history."
-      hint="Arrow keys choose a step while the list is focused. Enter inspects its child Run. Run now stays in Agents. Stop stays on execution history."
+      extra="Saved observations open Memory. Run now stays in Agents. Stop stays on execution history."
+      hint="Arrow keys choose a step while the list is focused. Enter inspects its child Run. A saved observation opens Memory. Run now stays in Agents. Stop stays on execution history."
     />
   );
 }

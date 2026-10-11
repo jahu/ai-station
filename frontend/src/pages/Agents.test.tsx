@@ -1878,6 +1878,7 @@ it("shows last-parent workflow steps next to history from Agents without Run now
               gate: "none",
               status: "succeeded",
               capability: "agent.step",
+              memory_id: "memory-1",
             },
             {
               run_id: "step-report",
@@ -1944,6 +1945,13 @@ it("shows last-parent workflow steps next to history from Agents without Run now
   expect(
     screen.queryByRole("link", { name: /Inspect step system_snapshot/ }),
   ).toBeNull();
+  expect(
+    screen
+      .getByRole("link", {
+        name: "View saved observation memory_search memory-1",
+      })
+      .getAttribute("href"),
+  ).toBe("/memory/memory-1");
   expect(
     screen.getByRole("region", { name: "Workflow steps" }).textContent,
   ).toMatch(/Stop stays on execution history/);
