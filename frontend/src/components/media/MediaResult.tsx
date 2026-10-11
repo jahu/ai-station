@@ -142,6 +142,18 @@ export default function MediaResult({
               ))}
             </div>
           )}
+          {kind === "audio" && (
+            <div className="media-result-reuse">
+              <Button asChild variant="secondary">
+                <Link
+                  to={`/audio?input=${result.id}${runId ? `&run=${runId}` : ""}`}
+                  aria-label={`Use as voice reference ${result.id.slice(0, 8)}`}
+                >
+                  Use as voice reference
+                </Link>
+              </Button>
+            </div>
+          )}
           <ArtifactLineage artifactId={result.id} />
         </div>
       ) : (
