@@ -1,4 +1,5 @@
 import { useId, type KeyboardEvent } from "react";
+import { Link } from "react-router-dom";
 import { useListKeyboard } from "./useListKeyboard";
 
 export type CodingProjectChoice = {
@@ -49,8 +50,9 @@ export function ProjectChoiceList({
     <>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a project while the list is focused. Space or Enter
-        selects it. Enter does not start a coding Run. There is no inspectable
-        project-selection Run.
+        selects it. Inspect project and View tagged Runs stay on that row and
+        do not start a coding Run. There is no inspectable project-selection
+        Run.
       </p>
       <div
         ref={listRef}
@@ -80,6 +82,27 @@ export function ProjectChoiceList({
                   <small>{preferredLabel(item.preferred_executor)}</small>
                 </span>
               </label>
+              <span>
+                <Link
+                  className="text-link"
+                  to={`/projects/${item.id}`}
+                  tabIndex={current ? 0 : -1}
+                  aria-label={`Inspect project ${item.id}`}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  Inspect project
+                </Link>
+                {" · "}
+                <Link
+                  className="text-link"
+                  to={`/runs?project_id=${item.id}`}
+                  tabIndex={current ? 0 : -1}
+                  aria-label={`View tagged Runs ${item.id}`}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  View tagged Runs
+                </Link>
+              </span>
             </div>
           );
         })}
