@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.agent_schema import NotificationPolicy, RetryPolicy
 from app.db import session_scope, utcnow
 from app.events import append_event
-from app.models import Notice, Run
+from app.models import Agent, Notice, Run
 from app.serialize import iso
 
 router = APIRouter(prefix="/api/notices", tags=["notices"])
@@ -46,9 +46,12 @@ def notice_dict(row: Notice, session: Session | None = None) -> dict:
         "created_at": iso(row.created_at),
         "read_at": iso(row.read_at),
         "retry": {"allowed": False, "run_id": None},
+        "project_id": None,
     }
     if session is None:
         return payload
+    agent = session.get(Agent, row.agent_id)
+    payload["project_id"] = agent.project_id if agent else None
     run = session.get(Run, row.run_id)
     if run is None:
         return payload

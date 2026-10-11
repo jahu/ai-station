@@ -138,6 +138,7 @@ def test_failure_notice_exposes_manual_retry_of_the_parent_workflow(monkeypatch)
     assert dashboard["unread_notice_count"] == 1
     notice = dashboard["notices"][0]
     assert notice["kind"] == "failed"
+    assert "project_id" in notice
     assert notice["run_id"] != queued["id"]
     assert notice["retry"] == {"allowed": True, "run_id": queued["id"]}
     created = api.post(f"/api/runs/{notice['retry']['run_id']}/retry-workflow")

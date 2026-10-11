@@ -692,3 +692,7 @@ Frontend lint, TypeScript, 318 component tests and production build passed. Afte
 ## Tagged Runs open the linked agent — 2026-10-12
 
 Frontend lint, TypeScript, 320 component tests and production build passed. The tagged Runs list and Run inspector open the saved agent and project with unique Inspect agent and Inspect project names. View all linked agents opens the Agents filter. Those links do not grant coding, Git or repository access and do not Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Home notices open the tagged agent — 2026-10-12
+
+`./scripts/check.sh` and frontend lint, TypeScript, 321 component tests and production build passed. Home attention notices include the saved agent and `project_id` from `/api/dashboard`. Inspect agent, Inspect project and View tagged Runs stay on that row. Those links do not grant coding, Git or repository access and do not Enable or Run now. Audio and avatar retries stay unpublished. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
