@@ -82,6 +82,12 @@ function mount(agent = draft) {
               last_status: "",
               runs: [],
             }
+          : String(path).endsWith("/run") && options?.method === "POST"
+            ? {
+                id: "queued-run-ffff",
+                capability: "agent.workflow",
+                status: "queued",
+              }
           : String(path).includes("/retry-workflow")
             ? {
                 id: "retry-run",
@@ -124,8 +130,14 @@ it("inspects the saved definition without queueing Run now", async () => {
     screen.getByText("Summarize GPU telemetry every weekday."),
   ).toBeTruthy();
   expect(
-    screen.getByText("No executions yet. Run now stays in Agents."),
+    screen.getByText(
+      "No executions yet. Run now queues a new workflow from the saved definition.",
+    ),
   ).toBeTruthy();
+  expect(
+    (screen.getByRole("button", { name: "Run now agent-on" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
   expect(
     screen.queryByRole("region", { name: "Execution history" }),
   ).toBeNull();
@@ -157,8 +169,12 @@ it("enables a disabled draft from the conversation without inventing a Run", asy
   ).toBeTruthy();
   expect(screen.getByText(/does not invent a conversation Run/)).toBeTruthy();
   expect(
-    screen.getByText(/Run now, tools and schedule stay in Agents/),
+    screen.getByText(/Run now queues a new workflow from that saved definition/),
   ).toBeTruthy();
+  expect(
+    (screen.getByRole("button", { name: "Run now agent-on" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
   fireEvent.click(
     screen.getByRole("button", { name: "Enable saved definition agent-on" }),
   );
@@ -182,6 +198,33 @@ it("enables a disabled draft from the conversation without inventing a Run", asy
       .getByRole("link", { name: "Review agent agent-on" })
       .getAttribute("href"),
   ).toBe("/agents/agent-one");
+});
+
+it("queues Run now from the conversation without opening the inspector", async () => {
+  const fetch = mount({ ...draft, enabled: true });
+  const button = await screen.findByRole("button", { name: "Run now agent-on" });
+  expect((button as HTMLButtonElement).disabled).toBe(false);
+  expect(screen.getByText("Morning briefing")).toBeTruthy();
+  expect(screen.getByText(/Enabled/)).toBeTruthy();
+  fireEvent.click(button);
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one/run",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          expected_updated_at: "2026-10-11T10:00:00Z",
+        }),
+      }),
+    ),
+  );
+  expect(screen.getByText("Morning briefing")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
+  expect(
+    fetch.mock.calls.every(
+      (call) => !String(call[0]).includes("/runs/queued-run"),
+    ),
+  ).toBe(true);
 });
 
 it("inspects ordinary execution history from the conversation without Run now", async () => {
@@ -231,7 +274,7 @@ it("inspects ordinary execution history from the conversation without Run now", 
     key: "Home",
   });
   expect(first.tabIndex).toBe(0);
-  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /^Stop / })).toBeNull();
   expect(screen.queryByRole("heading", { name: "Agent report" })).toBeNull();
   expect(
@@ -257,8 +300,15 @@ it("stops an in-progress Run from conversation history without Run now", async (
       },
     ],
   });
+  expect(
+    (
+      (await screen.findByRole("button", {
+        name: "Run now agent-on",
+      })) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
   fireEvent.click(
-    await screen.findByRole("button", {
+    screen.getByRole("button", {
       name: "Stop agent.workflow run-live",
     }),
   );
@@ -268,7 +318,7 @@ it("stops an in-progress Run from conversation history without Run now", async (
       expect.objectContaining({ method: "POST" }),
     ),
   );
-  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
@@ -294,6 +344,10 @@ it("approves a waiting Run from the conversation without Run now or the inspecto
       await screen.findByRole("link", { name: "Review waiting Run wait-run" })
     ).getAttribute("href"),
   ).toBe("/runs/wait-run-cccc");
+  expect(
+    (screen.getByRole("button", { name: "Run now agent-on" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
   fireEvent.click(
     screen.getByRole("button", {
       name: "Approve and queue waiting Run wait-run",
@@ -308,7 +362,7 @@ it("approves a waiting Run from the conversation without Run now or the inspecto
       }),
     ),
   );
-  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /^Stop / })).toBeNull();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
@@ -329,8 +383,15 @@ it("denies a waiting Run from conversation history without Run now", async () =>
       },
     ],
   });
+  expect(
+    (
+      (await screen.findByRole("button", {
+        name: "Run now agent-on",
+      })) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
   fireEvent.click(
-    await screen.findByRole("button", {
+    screen.getByRole("button", {
       name: "Deny agent.workflow wait-run",
     }),
   );
@@ -412,7 +473,7 @@ it("duplicates as a disabled draft from the conversation without Run now", async
       .getByRole("link", { name: "Review copy agent-co" })
       .getAttribute("href"),
   ).toBe("/agents/agent-copy");
-  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
@@ -441,7 +502,7 @@ it("retries a failed workflow from conversation history without Run now", async 
   expect(
     await screen.findByText("Manual retry of a failed snapshot"),
   ).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   fireEvent.click(
     screen.getByRole("button", {
       name: "Retry as a new workflow fail-run",
@@ -533,7 +594,7 @@ it("shows the latest agent report in the conversation without Run now", async ()
   expect(
     screen.getByRole("heading", { name: "Morning briefing" }),
   ).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
@@ -640,7 +701,7 @@ it("shows recorded search sources next to the latest report without Run now", as
   expect(source.getAttribute("href")).toBe("https://example.com/gpu");
   expect(screen.getByText(/Searched: workstation GPU news/)).toBeTruthy();
   expect(screen.queryByRole("link", { name: /Stale source/ })).toBeNull();
-  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
@@ -708,7 +769,7 @@ it("uses the latest report's search sibling when the report has not copied sourc
   });
   expect(source.getAttribute("href")).toBe("https://example.com/gpu");
   expect(screen.queryByRole("heading", { name: "Agent report" })).toBeNull();
-  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
 });
 
 it("shows recorded fetched pages next to the latest report without Run now", async () => {
@@ -813,7 +874,7 @@ it("shows recorded fetched pages next to the latest report without Run now", asy
   expect(screen.queryByText("Public excerpt")).toBeNull();
   expect(screen.queryByRole("link", { name: /stale/ })).toBeNull();
   expect(document.querySelector("script")).toBeNull();
-  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
@@ -881,7 +942,7 @@ it("uses the latest report's fetch sibling when the report has not copied pages 
   expect(page.getAttribute("href")).toBe("https://www.example.com/");
   expect(screen.queryByText("Public excerpt")).toBeNull();
   expect(screen.queryByRole("heading", { name: "Agent report" })).toBeNull();
-  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
 });
 
 it("shows recorded registry tool calls next to the latest report without Run now", async () => {
@@ -972,7 +1033,7 @@ it("shows recorded registry tool calls next to the latest report without Run now
   ).toBeTruthy();
   expect(screen.getByLabelText("Call system_snapshot call-0-0")).toBeTruthy();
   expect(screen.queryByLabelText(/memory_search/)).toBeNull();
-  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
@@ -1068,7 +1129,7 @@ it("shows last-parent workflow steps next to history without Run now", async () 
   expect(
     screen.queryByRole("link", { name: /Inspect step system_snapshot/ }),
   ).toBeNull();
-  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   expect(
     screen.getByRole("region", { name: "Workflow steps" }).textContent,
   ).toMatch(/Stop stays on execution history/);

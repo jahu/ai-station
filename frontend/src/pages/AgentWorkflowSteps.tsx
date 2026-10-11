@@ -147,8 +147,8 @@ export function AgentLastWorkflowSteps({
       workflow={workflow}
       tabIndex={tabIndex}
       inspectPrefix="Inspect step"
-      extra="Saved observations open Memory. Run now stays in Agents. Stop stays on execution history."
-      hint="Arrow keys choose a step while the list is focused. Enter inspects its child Run. A saved observation opens Memory. Run now stays in Agents. Stop stays on execution history."
+      extra="Saved observations open Memory. Run now stays on the saved definition. Stop stays on execution history."
+      hint="Arrow keys choose a step while the list is focused. Enter inspects its child Run. A saved observation opens Memory. Run now stays on the saved definition. Stop stays on execution history."
     />
   );
 }
