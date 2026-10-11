@@ -14,10 +14,13 @@ import { AgentAttachedSkills } from "./AgentAttachedSkills";
 import { AgentAttachedTools } from "./AgentAttachedTools";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import { activationBlock } from "./agentActivation";
+import { agentSettingsPayload } from "./agentSettings";
+import LlamaModels from "./LlamaModels";
 
 type AgentDraft = {
   id: string;
   name: string;
+  description?: string;
   model: string;
   enabled: boolean;
   updated_at: string;
@@ -29,6 +32,8 @@ type AgentDraft = {
   cron_expr?: string | null;
   interval_seconds?: number | null;
   run_at?: string | null;
+  maximum_runtime?: number;
+  output_expectation?: string;
   require_approval?: boolean;
   workflow_mode?: string;
   tool_calling?: boolean | string;
@@ -40,6 +45,7 @@ type AgentDraft = {
   };
   search_query?: string;
   fetch_urls?: string[];
+  project_id?: string | null;
   next_run_at?: string | null;
   last_run_at?: string | null;
   last_status?: string;
@@ -77,6 +83,7 @@ export function AssistantAgentDraft({
   const cache = useQueryClient();
   const shortId = agentId.slice(0, 8);
   const [copy, setCopy] = useState<AgentDraft | null>(null);
+  const [modelBusy, setModelBusy] = useState(false);
   const detail = useQuery({
     queryKey: ["agent", agentId],
     queryFn: () => api<AgentDraft>(`/agents/${agentId}`),
@@ -138,6 +145,33 @@ export function AssistantAgentDraft({
     enabled: !!detail.data?.tools?.length,
     queryFn: () => api<unknown>("/agents/tools"),
   });
+  const provider = useQuery({
+    queryKey: ["chat-provider"],
+    queryFn: () =>
+      api<{ models: string[]; default_model: string }>("/chat/provider"),
+  });
+  const saveModel = useMutation({
+    mutationFn: (model: string) =>
+      api<AgentDraft>(`/agents/${agentId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          agentSettingsPayload(detail.data!, {
+            model,
+            enabled: detail.data!.enabled,
+          }),
+        ),
+      }),
+    onSuccess: (result) => {
+      cache.setQueryData(["agent", agentId], (previous?: AgentDraft) => ({
+        ...previous,
+        ...result,
+        runs: previous?.runs ?? result.runs ?? [],
+      }));
+      void cache.invalidateQueries({ queryKey: ["agent", agentId] });
+      void cache.invalidateQueries({ queryKey: ["agents"] });
+    },
+  });
   const agent = detail.data;
   const block = agent
     ? activationBlock(agent, catalog.data)
@@ -150,21 +184,50 @@ export function AssistantAgentDraft({
     (run) => run.status === "waiting_for_approval",
   );
   const history = agent?.runs ?? [];
-  const busy = toggle.isPending || duplicate.isPending || runNow.isPending;
+  const busy =
+    toggle.isPending ||
+    duplicate.isPending ||
+    runNow.isPending ||
+    saveModel.isPending ||
+    modelBusy;
   const active = history.some((run) => !TERMINAL.has(run.status));
   return (
     <div className="assistant-agent-draft">
       <ErrorNotice
-        error={detail.error ?? toggle.error ?? duplicate.error ?? runNow.error}
+        error={
+          detail.error ??
+          toggle.error ??
+          duplicate.error ??
+          runNow.error ??
+          saveModel.error ??
+          provider.error
+        }
       />
       {agent && (
         <>
           <p>
             <strong>{agent.name}</strong>
             {agent.enabled ? " · Enabled" : " · Disabled draft"}
-            {agent.model ? ` · ${agent.model}` : ""}
           </p>
           <dl className="assistant-agent-definition">
+            <div>
+              <dt>Model</dt>
+              <dd>
+                <LlamaModels
+                  compact
+                  value={agent.model}
+                  models={provider.data?.models ?? []}
+                  triggerLabel={`Saved model ${shortId}`}
+                  tabIndex={tabIndex}
+                  busy={busy || active}
+                  onBusy={setModelBusy}
+                  onSelect={(model) => {
+                    if (model === agent.model || active) return;
+                    saveModel.mutate(model);
+                  }}
+                />
+              </dd>
+            </div>
             <div>
               <dt>Schedule</dt>
               <dd>{scheduleLabel(agent)}</dd>
@@ -280,13 +343,14 @@ export function AssistantAgentDraft({
           ) : null}
           <p className="muted">
             Activation stays explicit and uses the saved definition. It does not
-            invent a conversation Run. Enable stays off until that saved
-            definition can activate. Duplicate as draft stays disabled. Run now
-            queues a new workflow from that saved definition and stays on this
-            transcript. A waiting Run can Approve and queue or Deny here without
-            opening the inspector. Stop stays on an in-progress history Run.
-            Manual retry queues a new workflow from a failed snapshot. Tools and
-            schedule stay in Agents.
+            invent a conversation Run. Use model saves a local model on that
+            definition and does not call Enable. Enable stays off until the
+            saved definition can activate. Duplicate as draft stays disabled.
+            Run now queues a new workflow from that saved definition and stays
+            on this transcript. A waiting Run can Approve and queue or Deny here
+            without opening the inspector. Stop stays on an in-progress history
+            Run. Manual retry queues a new workflow from a failed snapshot.
+            Tools and schedule stay in Agents.
           </p>
           {copy ? (
             <p>

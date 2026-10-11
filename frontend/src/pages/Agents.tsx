@@ -14,6 +14,7 @@ import { AgentLatestReport } from "./AgentLatestReport";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import { useListKeyboard } from "./useListKeyboard";
 import { activationBlock } from "./agentActivation";
+import { agentSettingsPayload } from "./agentSettings";
 
 type Trigger = "manual" | "interval" | "cron" | "datetime";
 interface Agent {
@@ -968,38 +969,13 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
     mutationFn: () =>
       api<Agent>(
         `/agents/${agent.id}`,
-        json("PUT", {
-          expected_updated_at: values.updated_at,
-          name: values.name,
-          description: values.description,
-          goal: values.goal,
-          system_prompt: values.system_prompt,
-          model: values.model,
-          tools: values.tools,
-          search_query: values.search_query ?? "",
-          fetch_urls: parseFetchUrls(fetchText),
-          skills: values.skills ?? [],
-          trigger: values.trigger,
-          cron_expr: values.trigger === "cron" ? values.cron_expr : "",
-          interval_seconds:
-            values.trigger === "interval"
-              ? (values.interval_seconds ?? 3600)
-              : null,
-          run_at: values.trigger === "datetime" ? values.run_at : null,
-          maximum_runtime: values.maximum_runtime,
-          output_expectation: values.output_expectation,
-          require_approval: values.require_approval ?? false,
-          workflow_mode: values.workflow_mode ?? "sequential",
-          tool_calling: values.tool_calling ?? "none",
-          retry_policy: values.retry_policy ?? { mode: "none" },
-          notification_policy: values.notification_policy ?? {
-            on_success: false,
-            on_failure: false,
-            on_approval: false,
-          },
-          project_id: values.project_id,
-          enabled: agent.enabled,
-        }),
+        json(
+          "PUT",
+          agentSettingsPayload(values, {
+            fetch_urls: parseFetchUrls(fetchText),
+            enabled: agent.enabled,
+          }),
+        ),
       ),
     onSuccess: (result) => {
       setValues(result);
