@@ -205,16 +205,18 @@ function taggedAgentLinks(
           >
             Inspect project
           </Link>
-          {agentId ? (
-            <Link
-              className="text-link"
-              to={`/runs?project_id=${projectId}&agent_id=${agentId}`}
-              tabIndex={tab}
-              aria-label={`View tagged Runs ${shortId}`}
-            >
-              View tagged Runs
-            </Link>
-          ) : null}
+          <Link
+            className="text-link"
+            to={
+              agentId
+                ? `/runs?project_id=${projectId}&agent_id=${agentId}`
+                : `/runs?project_id=${projectId}`
+            }
+            tabIndex={tab}
+            aria-label={`View tagged Runs ${shortId ?? projectId}`}
+          >
+            View tagged Runs
+          </Link>
         </>
       ) : null}
     </>
@@ -466,8 +468,8 @@ function AttentionList({
         Stop, Retry as a new run, Retry as a new workflow, Mark inspected, Mark
         read, Approve and Deny stay on the selected row. Inspect agent, Inspect
         project and View tagged Runs stay on a notice or agent Run with a saved
-        link. Inspect project stays on a coding or worktree Run with a saved
-        project.
+        link. Inspect project and View tagged Runs stay on a coding or worktree
+        Run with a saved project.
       </p>
       <ul
         ref={listRef}
