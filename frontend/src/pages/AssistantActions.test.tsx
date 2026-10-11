@@ -527,7 +527,9 @@ it("stages local coding scope without granting Cursor consent", async () => {
   }
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <Composer />
+      <MemoryRouter>
+        <Composer />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
   chooseAction("coding.local");
@@ -645,7 +647,9 @@ it("selects a native Cursor model without sending", async () => {
   }
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <Composer />
+      <MemoryRouter>
+        <Composer />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
   chooseAction("coding.cursor");
@@ -717,7 +721,9 @@ it("enables Cursor automatic file discovery without sending", async () => {
   }
   render(
     <QueryClientProvider client={new QueryClient()}>
-      <Composer />
+      <MemoryRouter>
+        <Composer />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
   chooseAction("coding.cursor");

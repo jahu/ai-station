@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { afterEach, expect, it } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { ProjectChoiceList } from "./ProjectChoiceList";
 
 afterEach(cleanup);
@@ -13,20 +14,22 @@ const PROJECTS = [
 function Host({ disabled = false }: { disabled?: boolean }) {
   const [value, setValue] = useState("");
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        throw new Error("form submitted");
-      }}
-    >
-      <ProjectChoiceList
-        projects={PROJECTS}
-        value={value}
-        disabled={disabled}
-        onChange={setValue}
-      />
-      <button type="submit">Start coding</button>
-    </form>
+    <MemoryRouter>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          throw new Error("form submitted");
+        }}
+      >
+        <ProjectChoiceList
+          projects={PROJECTS}
+          value={value}
+          disabled={disabled}
+          onChange={setValue}
+        />
+        <button type="submit">Start coding</button>
+      </form>
+    </MemoryRouter>
   );
 }
 
@@ -76,4 +79,35 @@ it("does not submit the form when Enter selects a focused project", () => {
     (screen.getByRole("radio", { name: /^Alpha/ }) as HTMLInputElement)
       .checked,
   ).toBe(true);
+});
+
+it("opens tagged Runs from a coding project choice without starting a Run", () => {
+  render(<Host />);
+  expect(
+    screen.getByRole("link", { name: "Inspect project alpha" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/projects/alpha");
+  expect(
+    screen.getByRole("link", { name: "View tagged Runs alpha" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/runs?project_id=alpha");
+  expect(
+    screen.getByRole("link", { name: "Inspect project beta" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/projects/beta");
+  expect(
+    screen.getByRole("link", { name: "View tagged Runs beta" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/runs?project_id=beta");
+  fireEvent.click(screen.getByRole("link", { name: "View tagged Runs alpha" }));
+  expect(
+    (screen.getByRole("radio", { name: /^Alpha/ }) as HTMLInputElement)
+      .checked,
+  ).toBe(false);
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
 });
