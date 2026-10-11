@@ -197,3 +197,24 @@ it("shows a generated image with source lineage in the workspace", async () => {
     screen.getByRole("link", { name: "Upscale edited01" }).getAttribute("href"),
   ).toBe("/images?mode=upscale&input=edited01&run=photo");
 });
+
+it("reuses generated speech as the next voice without inventing a Run", async () => {
+  const speech: Artifact = {
+    ...voice,
+    id: "spoken01",
+    title: "Spoken line",
+    parent_artifact_ids: ["voiceclip"],
+  };
+  mount(
+    { id: "speech", status: "succeeded" } as Run,
+    { id: "spoken01", sources: [voice], derived: [] },
+    speech,
+  );
+  expect(
+    (
+      await screen.findByRole("link", {
+        name: "Use as voice reference spoken01",
+      })
+    ).getAttribute("href"),
+  ).toBe("/audio?input=spoken01&run=speech");
+});

@@ -11,9 +11,21 @@ import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 
 export default function Audio() {
+  const [search] = useSearchParams();
+  // Remount when Library or a finished result chooses a different voice, not
+  // when a generation Run is recorded in the URL.
+  return (
+    <AudioForm
+      key={search.get("input") ?? ""}
+      initialInput={search.get("input")}
+    />
+  );
+}
+
+function AudioForm({ initialInput }: { initialInput: string | null }) {
   const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
-  const [reference, setReference] = useState(search.get("input") ?? "");
+  const [reference, setReference] = useState(initialInput ?? "");
   const [text, setText] = useState("");
   const [gpu, setGpu] = useState("auto");
   const [uploading, setUploading] = useState(false);
@@ -29,7 +41,11 @@ export default function Audio() {
       }),
     onSuccess: (result) => {
       cache.setQueryData(["run", result.id], result);
-      setSearch({ run: result.id });
+      setSearch((current) => {
+        const next = new URLSearchParams(current);
+        next.set("run", result.id);
+        return next;
+      });
     },
   });
   const busy = generate.isPending || mediaBusy(run.data);

@@ -492,3 +492,7 @@ Frontend lint, TypeScript, 225 component tests and production build passed. A fi
 ## Assistant agent enable from conversation — 2026-10-11
 
 Frontend lint, TypeScript, 227 component tests and production build passed. After `agent.create`, the conversation loads the saved definition and can enable or pause it through `POST /api/agents/{id}/enabled` with the expected version. That does not invent a conversation Run and does not call Run now. Open in Agents remains available for tools, schedule and execution. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Audio result voice reuse — 2026-10-11
+
+Frontend lint, TypeScript, 229 component tests and production build passed. A finished Audio result can be used as the next voice reference in the same workspace. That link stages the WAV as the source, keeps the previous Run in the URL for the still-visible output, and does not queue a Run. Library's equivalent action is unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
