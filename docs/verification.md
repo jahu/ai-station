@@ -704,3 +704,7 @@ Frontend lint, TypeScript, 320 component tests and production build passed. The 
 ## Agents list opens a linked project — 2026-10-12
 
 Frontend lint, TypeScript, 322 component tests and production build passed. The Agents list opens a saved linked project with unique Inspect project and View tagged Runs names. Enter still inspects the selected definition. Those links do not grant coding, Git or repository access and do not Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Coding conversations open the linked project — 2026-10-12
+
+Frontend lint, TypeScript, 323 component tests and production build passed. Coding conversation cards and the open conversation use the saved `project_id` from `GET /api/coding/sessions`. Inspect project stays on that row and does not start a coding Run. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

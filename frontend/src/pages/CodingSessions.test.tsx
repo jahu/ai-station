@@ -12,6 +12,7 @@ it("reopens task history and sends a guarded follow-up to the same conversation"
   const task = {
     id: "task",
     title: "Build a site",
+    project_id: "project-1",
     project_name: "Studio",
     status: "succeeded",
     active_run_id: null,
@@ -50,6 +51,11 @@ it("reopens task history and sends a guarded follow-up to the same conversation"
   );
   await screen.findByText("Homepage created");
   expect(screen.getByText("Build my homepage")).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/projects/project-1");
   fireEvent.change(screen.getByLabelText("Follow-up instruction"), {
     target: { value: "Add a contact form" },
   });
@@ -80,6 +86,7 @@ it("moves through follow-up consent without starting a Run", async () => {
   const task = {
     id: "task",
     title: "Build a site",
+    project_id: "project-1",
     project_name: "Studio",
     status: "succeeded",
     active_run_id: null,
@@ -134,6 +141,57 @@ it("moves through follow-up consent without starting a Run", async () => {
   ).toBe(true);
 });
 
+it("opens the project from a coding conversation without starting a Run", async () => {
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path.includes("/coding/sessions")
+        ? [
+            {
+              id: "sess-one",
+              title: "Build a site",
+              project_id: "project-1",
+              project_name: "Studio",
+              status: "succeeded",
+              active_run_id: null,
+              latest_proposal_id: "proposal",
+            },
+          ]
+        : [],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <CodingHistory />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    (
+      await screen.findByRole("link", { name: "Inspect project project-1" })
+    ).getAttribute("href"),
+  ).toBe("/projects/project-1");
+  expect(
+    screen.getByRole("link", { name: "Inspect project project-1" }).textContent,
+  ).toBe("Studio");
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect Build a site sess-one" })
+      .getAttribute("href"),
+  ).toBe("/coding/sess-one");
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).includes("/coding/cursor")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).includes("/messages")),
+  ).toBe(true);
+});
+
 it("moves through coding conversations with arrow keys", async () => {
   const row = {
     project_name: "Studio",
@@ -178,7 +236,13 @@ it("moves through coding conversations with arrow keys", async () => {
   });
   expect(second.tabIndex).toBe(0);
   expect(first.tabIndex).toBe(-1);
-  expect(document.activeElement).toBe(second);
+  expect(document.activeElement).toBe(
+    screen
+      .getByRole("link", {
+        name: "Inspect Fix the form sess-two",
+      })
+      .closest("[data-list-index]"),
+  );
   fireEvent.keyDown(second.closest(".coding-history") as HTMLElement, {
     key: "Home",
   });
