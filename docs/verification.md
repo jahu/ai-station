@@ -604,3 +604,7 @@ Frontend lint, TypeScript, 282 component tests and production build passed. Enab
 ## Conversation saves a local agent model — 2026-10-11
 
 Frontend lint, TypeScript, 283 component tests and production build passed. After `agent.create`, the conversation can save a local model on that definition through `PUT /api/agents/{id}` and the existing model picker. Use model does not invent a conversation Run or call Enable. Enable stays off until the saved definition can activate. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Conversation saves an agent public search query — 2026-10-11
+
+Frontend lint, TypeScript, 284 component tests and production build passed. After `agent.create`, when `web_search` is attached, the conversation can save the public search query through `PUT /api/agents/{id}`. Saving it does not invent a conversation Run or call Enable. Enable stays off until the saved definition can activate. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
