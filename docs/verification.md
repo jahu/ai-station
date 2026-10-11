@@ -552,3 +552,7 @@ Frontend lint, TypeScript, 251 component tests and production build passed. A pa
 ## Assistant agent Stop — 2026-10-11
 
 Frontend lint, TypeScript, 253 component tests and production build passed. An in-progress agent Run in conversation or Agents history can Stop through the existing `POST /api/runs/{id}/cancel` endpoint. That does not call Run now or open the inspector. Waiting Runs keep Approve and Deny instead of Stop. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant agent report — 2026-10-11
+
+Frontend lint, TypeScript, 255 component tests and production build passed. After `agent.create`, the conversation and Agents show the latest ordinary agent report inline from `GET /api/artifacts?run_id=` and the stored markdown file. Remote Markdown images are omitted. That does not invent a conversation Run or call Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
