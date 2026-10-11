@@ -2477,6 +2477,12 @@ section:has(> .memory-grid) > .dashboard-note {
 .media-result-actions > a {
   color: #b7c5b1;
 }
+.media-result-reuse {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
 .media-result-footer {
   display: flex;
   align-items: center;

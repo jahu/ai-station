@@ -484,3 +484,7 @@ Frontend lint, TypeScript, 217 component tests, production build and `./scripts/
 ## Images workspace inline results — 2026-10-11
 
 Frontend lint, TypeScript, 224 component tests and production build passed. Images no longer navigates to the Run inspector after queueing. The workspace keeps live GPU wait/progress, Stop, the finished image, shared source/derived lineage and a logs link; the Run ID stays in the URL for refresh. Library `mode`/`input` deep links still remount the composer. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Images result reuse — 2026-10-11
+
+Frontend lint, TypeScript, 225 component tests and production build passed. A finished Images result can Edit, Recompose or Upscale that artifact in the same workspace. Those links stage it as the next source, keep the previous Run in the URL for the still-visible output, and do not queue a Run. Library's equivalent actions are unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

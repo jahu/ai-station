@@ -264,3 +264,26 @@ it("restores a completed image from the workspace URL", async () => {
   ).toBe("/library/source");
   expect(screen.getByText(/There is no inspectable lineage Run/)).toBeTruthy();
 });
+
+it("reuses the finished image as an Edit source without queueing a Run", async () => {
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
+    ok: options === undefined,
+    json: async () =>
+      String(path).endsWith("/lineage")
+        ? { id: "photo", sources: [], derived: [] }
+        : String(path).includes("/artifacts?")
+          ? [{ id: "photo", type: "image" }]
+          : String(path).includes("/runs/")
+            ? { id: "done", status: "succeeded" }
+            : String(path).includes("/artifacts/")
+              ? { id: "photo", metadata: { width: 200, height: 100 } }
+              : { gpus: [] },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("/images?run=done");
+  fireEvent.click(await screen.findByRole("link", { name: "Edit photo" }));
+  await screen.findByRole("heading", { name: "Edit" });
+  await screen.findByLabelText("Source 1 photo");
+  expect(screen.getByAltText("Generated image")).toBeTruthy();
+  expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
+});
