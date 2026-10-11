@@ -22,7 +22,7 @@ const draft = {
   enabled: false,
   updated_at: "2026-10-11T10:00:00Z",
   goal: "Summarize GPU telemetry every weekday.",
-  tools: ["telemetry", "web_search"],
+  tools: ["system_snapshot", "web_search"],
   skills: ["station-briefing"],
   trigger: "cron",
   cron_expr: "0 7 * * 1-5",
@@ -93,35 +93,62 @@ function mount(agent = draft) {
                 capability: "agent.workflow",
                 status: "queued",
               }
-          : String(path).includes("/skills")
-            ? [
-                {
-                  id: "station-briefing",
-                  name: "Station briefing",
-                  version: "1.0.0",
-                  description: "Local status report format",
-                  required_permissions: [],
-                  instructions: "Always mention GPU memory when it appears.",
-                },
-              ]
-          : String(path).includes("/retry-workflow")
-            ? {
-                id: "retry-run",
-                capability: "agent.workflow",
-                status: "queued",
-                retry: { allowed: false, retry_of: "fail-run-dddd" },
-              }
-            : String(path).endsWith("/cancel") && options?.method === "POST"
-              ? { id: "run-live-eeee", status: "cancel_requested" }
-              : String(path).includes("/approval") && options?.method === "POST"
-                ? {
-                    id: "wait-run-cccc",
-                    status:
-                      JSON.parse(String(options.body)).resolution === "denied"
-                        ? "canceled"
-                        : "queued",
-                  }
-                : agent,
+            : String(path).includes("/skills")
+              ? [
+                  {
+                    id: "station-briefing",
+                    name: "Station briefing",
+                    version: "1.0.0",
+                    description: "Local status report format",
+                    required_permissions: [],
+                    instructions: "Always mention GPU memory when it appears.",
+                  },
+                ]
+              : String(path).endsWith("/tools")
+                ? [
+                    {
+                      name: "system_snapshot",
+                      description:
+                        "Read current host hardware telemetry through the Host Runner.",
+                      operational: true,
+                      required_permissions: ["filesystem_read"],
+                    },
+                    {
+                      name: "web_search",
+                      description:
+                        "Search public pages through the configured search service.",
+                      operational: true,
+                      required_permissions: ["network_read"],
+                    },
+                    {
+                      name: "browser",
+                      description:
+                        "Browser automation is not implemented for agents.",
+                      operational: false,
+                      required_permissions: [],
+                    },
+                  ]
+                : String(path).includes("/retry-workflow")
+                  ? {
+                      id: "retry-run",
+                      capability: "agent.workflow",
+                      status: "queued",
+                      retry: { allowed: false, retry_of: "fail-run-dddd" },
+                    }
+                  : String(path).endsWith("/cancel") &&
+                      options?.method === "POST"
+                    ? { id: "run-live-eeee", status: "cancel_requested" }
+                    : String(path).includes("/approval") &&
+                        options?.method === "POST"
+                      ? {
+                          id: "wait-run-cccc",
+                          status:
+                            JSON.parse(String(options.body)).resolution ===
+                            "denied"
+                              ? "canceled"
+                              : "queued",
+                        }
+                      : agent,
   }));
   vi.stubGlobal("fetch", fetch);
   render(
@@ -137,6 +164,27 @@ function mount(agent = draft) {
   );
   return fetch;
 }
+
+it("reviews attached tools from the conversation without inventing a Run", async () => {
+  const fetch = mount({
+    ...draft,
+    tools: ["web_search", "browser", "missing"],
+  });
+  expect(
+    await screen.findByText(
+      "Search public pages through the configured search service. network_read",
+    ),
+  ).toBeTruthy();
+  expect(screen.getByLabelText("Tool web_search")).toBeTruthy();
+  expect(screen.getByLabelText("Tool browser")).toBeTruthy();
+  expect(screen.getByText(/— Unavailable/)).toBeTruthy();
+  expect(screen.getByLabelText("Tool missing")).toBeTruthy();
+  expect(screen.getByText("Not in the tool registry.")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
 
 it("reviews attached skill instructions from the conversation without inventing a Run", async () => {
   const fetch = mount();
@@ -178,7 +226,13 @@ it("shows saved notice policy from the conversation without inventing a Run", as
 it("inspects the saved definition without queueing Run now", async () => {
   const fetch = mount();
   expect(await screen.findByText("0 7 * * 1-5 (UTC)")).toBeTruthy();
-  expect(screen.getByText("telemetry, web_search")).toBeTruthy();
+  expect(
+    await screen.findByText(
+      "Read current host hardware telemetry through the Host Runner. filesystem_read",
+    ),
+  ).toBeTruthy();
+  expect(screen.getByLabelText("Tool system_snapshot")).toBeTruthy();
+  expect(screen.getByLabelText("Tool web_search")).toBeTruthy();
   expect(
     screen.getByText("Summarize GPU telemetry every weekday."),
   ).toBeTruthy();
@@ -188,8 +242,11 @@ it("inspects the saved definition without queueing Run now", async () => {
     ),
   ).toBeTruthy();
   expect(
-    (screen.getByRole("button", { name: "Run now agent-on" }) as HTMLButtonElement)
-      .disabled,
+    (
+      screen.getByRole("button", {
+        name: "Run now agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
   ).toBe(true);
   expect(
     screen.queryByRole("region", { name: "Execution history" }),
@@ -212,7 +269,8 @@ it("enables a disabled draft from the conversation without inventing a Run", asy
   expect(await screen.findByText("Morning briefing")).toBeTruthy();
   expect(screen.getByText(/Disabled draft/)).toBeTruthy();
   expect(screen.getByText("0 7 * * 1-5 (UTC)")).toBeTruthy();
-  expect(screen.getByText("telemetry, web_search")).toBeTruthy();
+  expect(await screen.findByLabelText("Tool system_snapshot")).toBeTruthy();
+  expect(screen.getByLabelText("Tool web_search")).toBeTruthy();
   expect(
     await screen.findByLabelText("Skill Station briefing station-briefing"),
   ).toBeTruthy();
@@ -224,11 +282,16 @@ it("enables a disabled draft from the conversation without inventing a Run", asy
   ).toBeTruthy();
   expect(screen.getByText(/does not invent a conversation Run/)).toBeTruthy();
   expect(
-    screen.getByText(/Run now queues a new workflow from that saved definition/),
+    screen.getByText(
+      /Run now queues a new workflow from that saved definition/,
+    ),
   ).toBeTruthy();
   expect(
-    (screen.getByRole("button", { name: "Run now agent-on" }) as HTMLButtonElement)
-      .disabled,
+    (
+      screen.getByRole("button", {
+        name: "Run now agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
   ).toBe(true);
   fireEvent.click(
     screen.getByRole("button", { name: "Enable saved definition agent-on" }),
@@ -257,7 +320,9 @@ it("enables a disabled draft from the conversation without inventing a Run", asy
 
 it("queues Run now from the conversation without opening the inspector", async () => {
   const fetch = mount({ ...draft, enabled: true });
-  const button = await screen.findByRole("button", { name: "Run now agent-on" });
+  const button = await screen.findByRole("button", {
+    name: "Run now agent-on",
+  });
   expect((button as HTMLButtonElement).disabled).toBe(false);
   expect(screen.getByText("Morning briefing")).toBeTruthy();
   expect(screen.getByText(/Enabled/)).toBeTruthy();
@@ -400,8 +465,11 @@ it("approves a waiting Run from the conversation without Run now or the inspecto
     ).getAttribute("href"),
   ).toBe("/runs/wait-run-cccc");
   expect(
-    (screen.getByRole("button", { name: "Run now agent-on" }) as HTMLButtonElement)
-      .disabled,
+    (
+      screen.getByRole("button", {
+        name: "Run now agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
   ).toBe(true);
   fireEvent.click(
     screen.getByRole("button", {
