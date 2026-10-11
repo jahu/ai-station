@@ -229,6 +229,74 @@ it("reuses generated speech as the next voice without inventing a Run", async ()
   ).toBe("/avatars?audio=spoken01");
 });
 
+it("retries a failed image run in the workspace without opening the inspector", async () => {
+  const fetch = vi.fn(async (_path: string, init?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      init?.method === "POST"
+        ? { id: "retry-id", status: "queued" }
+        : { id: "failed", status: "failed", error_message: "GPU lost" },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <MediaResult
+          kind="image"
+          runId="failed01"
+          run={
+            {
+              id: "failed01",
+              status: "failed",
+              error_message: "GPU lost",
+            } as Run
+          }
+          error={null}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText("Generation did not complete")).toBeTruthy();
+  expect(screen.getByText("GPU lost")).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Retry as a new run failed01" }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/images/runs/failed01/retry",
+      expect.objectContaining({ method: "POST" }),
+    ),
+  );
+  expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
+});
+
+it("does not retry a failed audio run from the shared result panel", async () => {
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <MediaResult
+          kind="audio"
+          runId="speech01"
+          run={{ id: "speech01", status: "failed" } as Run}
+          error={null}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText("Generation did not complete")).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: /Retry as a new run/ }),
+  ).toBeNull();
+});
+
 it("edits Library details on a finished image without queueing a Run", async () => {
   const edited: Artifact = {
     ...portrait,

@@ -503,7 +503,8 @@ function ImageForm({
               <p className="muted">
                 Generation stays in this workspace. Stop it here, inspect
                 lineage on the finished image, and open the Run only for logs.
-                Completed images also remain in Library.
+                Failed, canceled or interrupted generation can retry here as a
+                new run. Completed images also remain in Library.
               </p>
             </aside>
           </fieldset>
