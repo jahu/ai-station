@@ -193,29 +193,32 @@ it("keeps Inspect project out of a nested paragraph on the open conversation", a
 });
 
 it("opens tagged Runs from the open coding conversation without starting a Run", async () => {
-  const fetch = vi.fn(async (_path: string) => ({
+  const fetch = vi.fn(async (path: string) => ({
     ok: true,
-    json: async () => ({
-      id: "task",
-      title: "Build a site",
-      project_id: "project-1",
-      project_name: "Studio",
-      status: "succeeded",
-      active_run_id: null,
-      latest_proposal_id: "proposal",
-      runs: [
-        {
-          id: "proposal",
-          task_id: "task",
-          executor_type: "codex_proposal",
-          status: "succeeded",
-          created_at: "2026-10-08T00:00:00Z",
-          parameters: { prompt: "Build my homepage" },
-          summary: "Homepage created",
-          metadata: { execution_location: "external" },
-        },
-      ],
-    }),
+    json: async () =>
+      path.includes("/coding/sessions/task")
+        ? {
+            id: "task",
+            title: "Build a site",
+            project_id: "project-1",
+            project_name: "Studio",
+            status: "succeeded",
+            active_run_id: null,
+            latest_proposal_id: "proposal",
+            runs: [
+              {
+                id: "proposal",
+                task_id: "task",
+                executor_type: "codex_proposal",
+                status: "succeeded",
+                created_at: "2026-10-08T00:00:00Z",
+                parameters: { prompt: "Build my homepage" },
+                summary: "Homepage created",
+                metadata: { execution_location: "external" },
+              },
+            ],
+          }
+        : [],
   }));
   vi.stubGlobal("fetch", fetch);
   render(
@@ -289,6 +292,11 @@ it("opens the project from a coding conversation without starting a Run", async 
   expect(
     screen.getByRole("link", { name: "Inspect project project-1" }).textContent,
   ).toBe("Studio");
+  expect(
+    screen
+      .getByRole("link", { name: "View tagged Runs project-1" })
+      .getAttribute("href"),
+  ).toBe("/runs?project_id=project-1");
   expect(
     screen
       .getByRole("link", { name: "Inspect Build a site sess-one" })
