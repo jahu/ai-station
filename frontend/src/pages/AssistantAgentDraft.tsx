@@ -11,6 +11,7 @@ import {
 } from "./AgentExecutionHistory";
 import { AgentLatestReport } from "./AgentLatestReport";
 import { AgentAttachedSkills } from "./AgentAttachedSkills";
+import { AgentAttachedTools } from "./AgentAttachedTools";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 
 type AgentDraft = {
@@ -162,17 +163,18 @@ export function AssistantAgentDraft({
             <div>
               <dt>Tools</dt>
               <dd>
-                {agent.tools?.length ? agent.tools.join(", ") : "No tools"}
+                {agent.tools?.length ? (
+                  <AgentAttachedTools names={agent.tools} tabIndex={tabIndex} />
+                ) : (
+                  "No tools"
+                )}
               </dd>
             </div>
             {agent.skills?.length ? (
               <div>
                 <dt>Skills</dt>
                 <dd>
-                  <AgentAttachedSkills
-                    ids={agent.skills}
-                    tabIndex={tabIndex}
-                  />
+                  <AgentAttachedSkills ids={agent.skills} tabIndex={tabIndex} />
                 </dd>
               </div>
             ) : null}
