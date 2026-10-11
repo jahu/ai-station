@@ -15,6 +15,7 @@ import {
   AgentExecutionHistory,
   RunApprovalActions,
 } from "./AgentExecutionHistory";
+import { AgentLatestReport } from "./AgentLatestReport";
 import { useListKeyboard } from "./useListKeyboard";
 
 type Trigger = "manual" | "interval" | "cron" | "datetime";
@@ -913,7 +914,10 @@ export function AgentDetail() {
       </section>
       <AgentEditor key={agent.id} agent={agent} active={active} />
       {agent.runs?.length ? (
-        <AgentExecutionHistory runs={agent.runs} />
+        <>
+          <AgentLatestReport runs={agent.runs} />
+          <AgentExecutionHistory runs={agent.runs} />
+        </>
       ) : (
         <section className="panel agent-form">
           <h2>Execution history</h2>
