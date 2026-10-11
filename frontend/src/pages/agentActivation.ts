@@ -20,15 +20,26 @@ export function isAgentToolList(value: unknown): value is AgentToolSpec[] {
   );
 }
 
+export function isAgentSkillList(value: unknown): value is { id: string }[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (item) => item && typeof item === "object" && typeof item.id === "string",
+    )
+  );
+}
+
 export function activationBlock(
   agent: {
     enabled: boolean;
     model?: string | null;
     tools?: string[];
+    skills?: string[];
     search_query?: string | null;
     fetch_urls?: string[] | null;
   },
   catalog: unknown,
+  skillsCatalog?: unknown,
 ): { blocked: boolean; reason: string | null } {
   if (agent.enabled) return { blocked: false, reason: null };
   if (!(agent.model ?? "").trim()) {
@@ -49,6 +60,24 @@ export function activationBlock(
       blocked: true,
       reason: "http_fetch needs reviewed public URLs before activation.",
     };
+  }
+  const skillIds = agent.skills ?? [];
+  if (skillIds.length) {
+    if (skillsCatalog == null) return { blocked: true, reason: null };
+    if (!isAgentSkillList(skillsCatalog)) {
+      return {
+        blocked: true,
+        reason: "Missing skills prevent activation.",
+      };
+    }
+    const byId = new Map(skillsCatalog.map((skill) => [skill.id, skill]));
+    const missing = skillIds.filter((id) => !byId.has(id));
+    if (missing.length) {
+      return {
+        blocked: true,
+        reason: `Missing skills prevent activation: ${missing.join(", ")}.`,
+      };
+    }
   }
   if (!names.length) return { blocked: false, reason: null };
   if (catalog == null) return { blocked: true, reason: null };

@@ -263,6 +263,11 @@ export function AssistantAgentDraft({
     enabled: !!detail.data?.tools?.length,
     queryFn: () => api<unknown>("/agents/tools"),
   });
+  const skillsCatalog = useQuery({
+    queryKey: ["skills"],
+    enabled: !!detail.data?.skills?.length,
+    queryFn: () => api<unknown>("/skills"),
+  });
   const provider = useQuery({
     queryKey: ["chat-provider"],
     queryFn: () =>
@@ -292,7 +297,7 @@ export function AssistantAgentDraft({
   });
   const agent = detail.data;
   const block = agent
-    ? activationBlock(agent, catalog.data)
+    ? activationBlock(agent, catalog.data, skillsCatalog.data)
     : { blocked: false, reason: null };
   const enableLabel = agent?.enabled
     ? `Pause agent ${shortId}`
@@ -318,7 +323,8 @@ export function AssistantAgentDraft({
           duplicate.error ??
           runNow.error ??
           saveSettings.error ??
-          provider.error
+          provider.error ??
+          skillsCatalog.error
         }
       />
       {agent && (
@@ -377,7 +383,20 @@ export function AssistantAgentDraft({
               <div>
                 <dt>Skills</dt>
                 <dd>
-                  <AgentAttachedSkills ids={agent.skills} tabIndex={tabIndex} />
+                  <AgentAttachedSkills
+                    ids={agent.skills}
+                    agentId={agent.id}
+                    tabIndex={tabIndex}
+                    disabled={busy || active}
+                    pending={saveSettings.isPending}
+                    onRemove={(id) =>
+                      saveSettings.mutate({
+                        skills: (agent.skills ?? []).filter(
+                          (skill) => skill !== id,
+                        ),
+                      })
+                    }
+                  />
                 </dd>
               </div>
             ) : null}
@@ -499,14 +518,15 @@ export function AssistantAgentDraft({
             invent a conversation Run. Use model saves a local model on that
             definition and does not call Enable. Saving a public search query or
             reviewed URLs stores those values on the definition and does not
-            call Enable. Removing an unavailable tool stores the remaining list
-            on the definition and does not call Enable. Enable stays off until
-            the saved definition can activate. Duplicate as draft stays
-            disabled. Run now queues a new workflow from that saved definition
-            and stays on this transcript. A waiting Run can Approve and queue or
-            Deny here without opening the inspector. Stop stays on an
-            in-progress history Run. Manual retry queues a new workflow from a
-            failed snapshot. Adding tools and schedule stay in Agents.
+            call Enable. Removing an unavailable tool or a missing skill stores
+            the remaining list on the definition and does not call Enable.
+            Enable stays off until the saved definition can activate. Duplicate
+            as draft stays disabled. Run now queues a new workflow from that
+            saved definition and stays on this transcript. A waiting Run can
+            Approve and queue or Deny here without opening the inspector. Stop
+            stays on an in-progress history Run. Manual retry queues a new
+            workflow from a failed snapshot. Adding tools, skills and schedule
+            stay in Agents.
           </p>
           {copy ? (
             <p>

@@ -813,6 +813,10 @@ export function AgentDetail() {
     queryKey: ["agent-tools"],
     queryFn: () => api<Tool[]>("/agents/tools"),
   });
+  const skillsCatalog = useQuery({
+    queryKey: ["skills"],
+    queryFn: () => api<unknown>("/skills"),
+  });
   const agent = detail.data;
   if (!agent)
     return (
@@ -821,7 +825,7 @@ export function AgentDetail() {
         {detail.isPending && <Loading />}
       </>
     );
-  const block = activationBlock(agent, catalog.data);
+  const block = activationBlock(agent, catalog.data, skillsCatalog.data);
   const active = agent.runs?.some((run) => !terminal.has(run.status)) ?? false;
   const waiting = agent.runs?.find(
     (run) => run.status === "waiting_for_approval",

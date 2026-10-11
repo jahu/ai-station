@@ -27,9 +27,13 @@ const skills = [
   },
 ];
 
-function mount(ids: string[], catalog = skills) {
+function mount(
+  ids: string[],
+  catalog = skills,
+  onRemove?: (id: string) => void,
+) {
   const fetch = vi.fn(async (path: string) => ({
-    ok: !String(path).endsWith("/run"),
+    ok: !String(path).endsWith("/run") && !String(path).endsWith("/enabled"),
     json: async () => catalog,
   }));
   vi.stubGlobal("fetch", fetch);
@@ -39,7 +43,7 @@ function mount(ids: string[], catalog = skills) {
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <AgentAttachedSkills ids={ids} />
+      <AgentAttachedSkills ids={ids} agentId="agent-one" onRemove={onRemove} />
     </QueryClientProvider>,
   );
   return fetch;
@@ -90,5 +94,30 @@ it("moves through attached skills with arrow keys without inventing a Run", asyn
   });
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("offers Remove on a missing skill without inventing a Run", async () => {
+  const onRemove = vi.fn();
+  const fetch = mount(["station-briefing", "missing-skill"], skills, onRemove);
+  expect(await screen.findByText("Not in the installed catalog.")).toBeTruthy();
+  expect(
+    screen.queryByRole("button", {
+      name: "Remove skill station-briefing agent-on",
+    }),
+  ).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Remove skill missing-skill agent-on",
+    }),
+  );
+  expect(onRemove.mock.calls).toEqual([["missing-skill"]]);
+  expect(screen.queryByRole("button", { name: /Enable/ })).toBeNull();
+  expect(
+    fetch.mock.calls.every(
+      (call) =>
+        !String(call[0]).endsWith("/run") &&
+        !String(call[0]).endsWith("/enabled"),
+    ),
   ).toBe(true);
 });
