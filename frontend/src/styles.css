@@ -2068,6 +2068,15 @@ section:has(> .memory-grid) > .dashboard-note {
   display: grid;
   gap: 8px;
 }
+.assistant-agent-draft {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+}
+.assistant-agent-draft p {
+  margin: 0;
+}
 .assistant-results {
   border-left: 2px solid var(--accent);
   padding-left: 12px;
