@@ -536,3 +536,7 @@ Frontend lint, TypeScript, 244 component tests and production build passed. Libr
 ## Assistant image retry — 2026-10-11
 
 Frontend lint, TypeScript, 246 component tests and production build passed. A failed, canceled or interrupted Images child in the conversation can Retry as a new run through the existing `POST /api/images/runs/{id}/retry` endpoint. The conversation stays on that transcript; the inspector is not opened. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Home interrupted image retry — 2026-10-11
+
+Frontend lint, TypeScript, 248 component tests and production build passed. An interrupted `photo_pipe` Run on the Home attention list can Retry as a new run through the existing `POST /api/images/runs/{id}/retry` endpoint. Home stays in place; the inspector is not opened. Mark inspected still does not replay. Interrupted non-image Runs and Audio/avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

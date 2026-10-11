@@ -223,6 +223,11 @@ it("moves through the attention list with arrow keys", async () => {
   expect(active.tabIndex).toBe(-1);
   expect(
     screen.getByRole("button", {
+      name: "Retry as a new run Image task needs inspection interrup",
+    }).tabIndex,
+  ).toBe(0);
+  expect(
+    screen.getByRole("button", {
       name: "Mark inspected Image task needs inspection interrup",
     }).tabIndex,
   ).toBe(0);
@@ -250,6 +255,65 @@ it("moves through the attention list with arrow keys", async () => {
   ).toBe(0);
   fireEvent.keyDown(active.closest("ul") as HTMLElement, { key: "Home" });
   expect(first.tabIndex).toBe(0);
+});
+
+it("retries an interrupted image from Home without opening the inspector", async () => {
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    if (
+      path === "/api/images/runs/interrupted-run/retry" &&
+      options?.method === "POST"
+    ) {
+      return { ok: true, json: async () => ({ id: "retry-id", status: "queued" }) };
+    }
+    return { ok: true, json: async () => overview() };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Retry as a new run Image task needs inspection interrup",
+    }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/images/runs/interrupted-run/retry",
+      expect.objectContaining({ method: "POST" }),
+    ),
+  );
+  expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
+  expect(
+    screen.getByRole("heading", { name: "Needs attention · 3" }),
+  ).toBeTruthy();
+});
+
+it("does not retry an interrupted non-image Run from Home", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        ...overview(),
+        interrupted_runs: [
+          {
+            id: "coding-run",
+            title: "Local proposal needs inspection",
+            executor_type: "local_proposal",
+            status: "interrupted",
+            replay: false,
+          },
+        ],
+        notices: [],
+        active_runs: [],
+      }),
+    })),
+  );
+  mount();
+  await screen.findByRole("button", {
+    name: "Mark inspected Local proposal needs inspection coding-r",
+  });
+  expect(
+    screen.queryByRole("button", { name: /Retry as a new run/ }),
+  ).toBeNull();
 });
 
 it("grants a parked Run from Home without starting inference", async () => {
