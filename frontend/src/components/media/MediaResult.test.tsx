@@ -196,6 +196,11 @@ it("shows a generated image with source lineage in the workspace", async () => {
   expect(
     screen.getByRole("link", { name: "Upscale edited01" }).getAttribute("href"),
   ).toBe("/images?mode=upscale&input=edited01&run=photo");
+  expect(
+    screen
+      .getByRole("link", { name: "Use as portrait edited01" })
+      .getAttribute("href"),
+  ).toBe("/avatars?image=edited01");
 });
 
 it("reuses generated speech as the next voice without inventing a Run", async () => {
@@ -217,4 +222,9 @@ it("reuses generated speech as the next voice without inventing a Run", async ()
       })
     ).getAttribute("href"),
   ).toBe("/audio?input=spoken01&run=speech");
+  expect(
+    screen
+      .getByRole("link", { name: "Use as speech spoken01" })
+      .getAttribute("href"),
+  ).toBe("/avatars?audio=spoken01");
 });

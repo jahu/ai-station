@@ -496,3 +496,7 @@ Frontend lint, TypeScript, 227 component tests and production build passed. Afte
 ## Audio result voice reuse — 2026-10-11
 
 Frontend lint, TypeScript, 229 component tests and production build passed. A finished Audio result can be used as the next voice reference in the same workspace. That link stages the WAV as the source, keeps the previous Run in the URL for the still-visible output, and does not queue a Run. Library's equivalent action is unchanged. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Avatars source staging — 2026-10-11
+
+Frontend lint, TypeScript, 231 component tests and production build passed. Images, Audio and Library can stage a portrait or WAV into Avatars through `?image=` / `?audio=` without queueing a Run. The Avatars composer remounts on those sources and keeps a generation Run in the URL separately. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

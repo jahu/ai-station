@@ -15,10 +15,32 @@ import {
 } from "./AvatarChoiceLists";
 
 export default function Avatars({ video = false }: { video?: boolean }) {
+  const [search] = useSearchParams();
+  // Remount when Library or a finished result chooses a portrait or speech,
+  // not when a generation Run is recorded in the URL.
+  return (
+    <AvatarForm
+      key={`${search.get("image") ?? ""}|${search.get("audio") ?? ""}`}
+      video={video}
+      initialImage={search.get("image")}
+      initialAudio={search.get("audio")}
+    />
+  );
+}
+
+function AvatarForm({
+  video,
+  initialImage,
+  initialAudio,
+}: {
+  video: boolean;
+  initialImage: string | null;
+  initialAudio: string | null;
+}) {
   const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
-  const [image, setImage] = useState("");
-  const [audio, setAudio] = useState("");
+  const [image, setImage] = useState(initialImage ?? "");
+  const [audio, setAudio] = useState(initialAudio ?? "");
   const [uploading, setUploading] = useState(false);
   const [prompt, setPrompt] = useState(
     "A person speaking naturally, static camera.",
@@ -49,7 +71,11 @@ export default function Avatars({ video = false }: { video?: boolean }) {
       }),
     onSuccess: (result) => {
       cache.setQueryData(["run", result.id], result);
-      setSearch({ run: result.id });
+      setSearch((current) => {
+        const next = new URLSearchParams(current);
+        next.set("run", result.id);
+        return next;
+      });
     },
   });
   const busy = generate.isPending || mediaBusy(run.data);
