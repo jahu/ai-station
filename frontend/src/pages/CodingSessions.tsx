@@ -317,6 +317,14 @@ export default function CodingSession() {
           >
             {q.data.project_name}
           </Link>
+          .{" "}
+          <Link
+            className="text-link"
+            to={`/runs?project_id=${q.data.project_id}`}
+            aria-label={`View tagged Runs ${q.data.project_id}`}
+          >
+            View tagged Runs
+          </Link>
         </p>
       ) : null}
       <ErrorNotice error={q.error ?? send.error ?? cancel.error} />
