@@ -556,3 +556,7 @@ Frontend lint, TypeScript, 253 component tests and production build passed. An i
 ## Assistant agent report — 2026-10-11
 
 Frontend lint, TypeScript, 255 component tests and production build passed. After `agent.create`, the conversation and Agents show the latest ordinary agent report inline from `GET /api/artifacts?run_id=` and the stored markdown file. Remote Markdown images are omitted. That does not invent a conversation Run or call Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant agent search sources — 2026-10-11
+
+Frontend lint, TypeScript, 258 component tests and production build passed. After `agent.create`, the conversation and Agents show independently recorded search sources next to the latest ordinary agent report from that report Run's `metadata.web_search`, or from the matching `web_search` sibling before that copy exists. Enter opens the selected public URL. That is search, not browser automation, and does not invent a conversation Run or call Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

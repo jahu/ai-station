@@ -39,9 +39,10 @@ const draft = {
     status: string;
     created_at: string;
     executor_type?: string;
+    parent_run_id?: string;
     parameters?: { tool?: string };
     retry?: { allowed: boolean; retry_run_id?: string | null };
-    metadata?: { memory_entry_id?: string; memory_excerpted?: boolean };
+    metadata?: Record<string, unknown>;
   }[],
 };
 
@@ -510,4 +511,176 @@ it("shows the latest agent report in the conversation without Run now", async ()
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
+});
+
+it("shows recorded search sources next to the latest report without Run now", async () => {
+  const agent = {
+    ...draft,
+    enabled: true,
+    last_status: "succeeded",
+    last_run_at: "2026-10-11T12:00:00Z",
+    runs: [
+      {
+        id: "report-run",
+        capability: "agent.report",
+        executor_type: "agent",
+        parent_run_id: "flow-run",
+        status: "succeeded",
+        created_at: "2026-10-11T12:00:00Z",
+        metadata: {
+          web_search: {
+            query: "workstation GPU news",
+            searched_at: "2026-10-11T12:00:00Z",
+            partial: false,
+            sources: [
+              {
+                id: 1,
+                title: "GPU briefing",
+                url: "https://example.com/gpu",
+                snippet: "Untrusted excerpt",
+              },
+            ],
+          },
+        },
+      },
+      {
+        id: "old-search",
+        capability: "agent.step",
+        executor_type: "agent_tool",
+        parent_run_id: "old-flow",
+        status: "succeeded",
+        created_at: "2026-10-10T12:00:00Z",
+        parameters: { tool: "web_search" },
+        metadata: {
+          web_search: {
+            query: "stale query",
+            searched_at: "2026-10-10T12:00:00Z",
+            partial: false,
+            sources: [
+              {
+                id: 1,
+                title: "Stale source",
+                url: "https://example.com/stale",
+                snippet: "Older excerpt",
+              },
+            ],
+          },
+        },
+      },
+    ],
+  };
+  const fetch = vi.fn(async (path: string) => {
+    if (String(path).includes("/artifacts?")) {
+      return {
+        ok: true,
+        json: async () => [
+          {
+            id: "report-md",
+            type: "markdown",
+            mime_type: "text/markdown",
+            original_filename: "agent-report.md",
+            size_bytes: 12,
+            created_at: "2026-10-11T12:00:00Z",
+            run_id: "report-run",
+            parent_artifact_ids: [],
+            metadata: {},
+          },
+        ],
+      };
+    }
+    if (String(path).endsWith("/artifacts/report-md/file")) {
+      return { ok: true, text: async () => "GPU idle." };
+    }
+    return { ok: true, json: async () => agent };
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AssistantAgentDraft agentId={agent.id} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    await screen.findByRole("heading", { name: "Agent report" }),
+  ).toBeTruthy();
+  const source = await screen.findByRole("link", {
+    name: "Source GPU briefing 1",
+  });
+  expect(source.getAttribute("href")).toBe("https://example.com/gpu");
+  expect(screen.getByText(/Searched: workstation GPU news/)).toBeTruthy();
+  expect(screen.queryByRole("link", { name: /Stale source/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("uses the latest report's search sibling when the report has not copied sources yet", async () => {
+  const agent = {
+    ...draft,
+    enabled: true,
+    runs: [
+      {
+        id: "report-run",
+        capability: "agent.report",
+        executor_type: "agent",
+        parent_run_id: "flow-run",
+        status: "running",
+        created_at: "2026-10-11T12:01:00Z",
+      },
+      {
+        id: "search-run",
+        capability: "agent.step",
+        executor_type: "agent_tool",
+        parent_run_id: "flow-run",
+        status: "succeeded",
+        created_at: "2026-10-11T12:00:00Z",
+        parameters: { tool: "web_search" },
+        metadata: {
+          web_search: {
+            query: "workstation GPU news",
+            searched_at: "2026-10-11T12:00:00Z",
+            partial: false,
+            sources: [
+              {
+                id: 1,
+                title: "GPU briefing",
+                url: "https://example.com/gpu",
+                snippet: "Untrusted excerpt",
+              },
+            ],
+          },
+        },
+      },
+    ],
+  };
+  const fetch = vi.fn(async (path: string) => {
+    if (String(path).includes("/artifacts?")) {
+      return { ok: true, json: async () => [] };
+    }
+    return { ok: true, json: async () => agent };
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AssistantAgentDraft agentId={agent.id} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const source = await screen.findByRole("link", {
+    name: "Source GPU briefing 1",
+  });
+  expect(source.getAttribute("href")).toBe("https://example.com/gpu");
+  expect(screen.queryByRole("heading", { name: "Agent report" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
 });
