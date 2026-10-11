@@ -47,7 +47,18 @@ function mount(agent = draft) {
     json: async () =>
       String(path).endsWith("/enabled")
         ? { ...agent, enabled: true, updated_at: "2026-10-11T10:01:00Z" }
-        : agent,
+        : String(path).endsWith("/duplicate")
+          ? {
+              ...agent,
+              id: "agent-copy",
+              name: `${agent.name} (copy)`,
+              enabled: false,
+              last_run_at: null,
+              next_run_at: null,
+              last_status: "",
+              runs: [],
+            }
+          : agent,
   }));
   vi.stubGlobal("fetch", fetch);
   render(
@@ -239,5 +250,37 @@ it("pauses an enabled agent from the conversation without starting a Run", async
   );
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("duplicates as a disabled draft from the conversation without Run now", async () => {
+  const fetch = mount();
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Duplicate as draft agent-on" }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one/duplicate",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          expected_updated_at: "2026-10-11T10:00:00Z",
+        }),
+      }),
+    ),
+  );
+  expect(screen.getByText("Morning briefing (copy)")).toBeTruthy();
+  expect(screen.getByText(/Copied as disabled draft/)).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "Review copy agent-co" })
+      .getAttribute("href"),
+  ).toBe("/agents/agent-copy");
+  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
   ).toBe(true);
 });
