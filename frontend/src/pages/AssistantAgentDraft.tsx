@@ -10,6 +10,7 @@ import {
   RunApprovalActions,
 } from "./AgentExecutionHistory";
 import { AgentLatestReport } from "./AgentLatestReport";
+import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 
 type AgentDraft = {
   id: string;
@@ -266,10 +267,11 @@ export function AssistantAgentDraft({
           {history.length ? (
             <>
               <AgentLatestReport runs={history} />
+              <AgentLastWorkflowSteps runs={history} tabIndex={tabIndex} />
               <AgentExecutionHistory
                 runs={history}
                 tabIndex={tabIndex}
-                hint="Arrow keys choose a Run while the list is focused. Enter inspects it. Stop stays on an in-progress Run. Approve and queue or Deny stays on a waiting Run. Retry as a new workflow stays on a failed snapshot when the saved policy allows it. The latest report and its recorded search sources, fetched pages and registry tool calls stay here. Run now stays in Agents."
+                hint="Arrow keys choose a Run while the list is focused. Enter inspects it. Stop stays on an in-progress Run. Approve and queue or Deny stays on a waiting Run. Retry as a new workflow stays on a failed snapshot when the saved policy allows it. The latest report and its recorded search sources, fetched pages and registry tool calls stay here. Workflow steps of the last parent stay next to this history. Run now stays in Agents."
               />
             </>
           ) : (

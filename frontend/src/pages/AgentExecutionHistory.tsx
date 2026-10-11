@@ -72,7 +72,7 @@ export function RunApprovalActions({
 export function AgentExecutionHistory({
   runs,
   tabIndex = 0,
-  hint = "Arrow keys choose a Run while the list is focused. Enter inspects it. Stop stays on an in-progress Run. Approve and queue or Deny stays on a waiting Run. Retry as a new workflow stays on a failed snapshot when the saved policy allows it.",
+  hint = "Arrow keys choose a Run while the list is focused. Enter inspects it. Stop stays on an in-progress Run. Approve and queue or Deny stays on a waiting Run. Retry as a new workflow stays on a failed snapshot when the saved policy allows it. Workflow steps of the last parent stay next to this history.",
 }: {
   runs: Run[];
   tabIndex?: number;
@@ -208,11 +208,10 @@ export function AgentExecutionHistory({
         })}
       </div>
       <p className="muted">
-        Latest 100 Runs. Stop targets the selected in-progress Run and does
-        not call Run now. Approve and queue grants a parked Run without
-        starting tools here. Deny cancels it. Manual retry queues a new
-        workflow from the failed snapshot. It does not resume an uncertain
-        step.
+        Latest 100 Runs. Stop targets the selected in-progress Run and does not
+        call Run now. Approve and queue grants a parked Run without starting
+        tools here. Deny cancels it. Manual retry queues a new workflow from the
+        failed snapshot. It does not resume an uncertain step.
       </p>
     </section>
   );

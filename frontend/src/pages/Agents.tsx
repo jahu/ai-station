@@ -2,12 +2,7 @@ import { useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, type Run } from "../api";
-import {
-  Empty,
-  ErrorNotice,
-  Loading,
-  PageTitle,
-} from "../components/common";
+import { Empty, ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import LlamaModels from "./LlamaModels";
 import { time } from "../lib/utils";
@@ -16,6 +11,7 @@ import {
   RunApprovalActions,
 } from "./AgentExecutionHistory";
 import { AgentLatestReport } from "./AgentLatestReport";
+import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import { useListKeyboard } from "./useListKeyboard";
 
 type Trigger = "manual" | "interval" | "cron" | "datetime";
@@ -916,6 +912,7 @@ export function AgentDetail() {
       {agent.runs?.length ? (
         <>
           <AgentLatestReport runs={agent.runs} />
+          <AgentLastWorkflowSteps runs={agent.runs} />
           <AgentExecutionHistory runs={agent.runs} />
         </>
       ) : (

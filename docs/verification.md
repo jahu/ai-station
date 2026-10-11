@@ -568,3 +568,7 @@ Frontend lint, TypeScript, 261 component tests and production build passed. Afte
 ## Assistant agent registry tool calls — 2026-10-11
 
 Frontend lint, TypeScript, 263 component tests and production build passed. After `agent.create`, the conversation and Agents show independently recorded registry tool calls next to the latest ordinary agent report from that report Run's `metadata.tool_calls`. There is no inspectable tool-call Run. That does not invent a conversation Run or call Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant agent last-parent workflow steps — 2026-10-11
+
+Frontend lint, TypeScript, 267 component tests and production build passed. After `agent.create`, the conversation and Agents show `workflow.steps` of the last parent next to execution history from `GET /api/agents/{id}`. Enter inspects the child Run. That does not invent a conversation Run or call Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

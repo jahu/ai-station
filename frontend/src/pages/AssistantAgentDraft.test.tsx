@@ -43,6 +43,25 @@ const draft = {
     parameters?: { tool?: string };
     retry?: { allowed: boolean; retry_run_id?: string | null };
     metadata?: Record<string, unknown>;
+    workflow?: {
+      parent_run_id: string;
+      mode: string;
+      tool_calling?: string;
+      steps: {
+        run_id: string;
+        key: string;
+        gate: string;
+        status: string;
+        capability: string;
+        tool_calls?: {
+          id: string;
+          tool: string;
+          arguments: Record<string, unknown>;
+          round: number;
+        }[];
+        memory_id?: string | null;
+      }[];
+    };
   }[],
 };
 
@@ -73,14 +92,14 @@ function mount(agent = draft) {
             : String(path).endsWith("/cancel") && options?.method === "POST"
               ? { id: "run-live-eeee", status: "cancel_requested" }
               : String(path).includes("/approval") && options?.method === "POST"
-              ? {
-                  id: "wait-run-cccc",
-                  status:
-                    JSON.parse(String(options.body)).resolution === "denied"
-                      ? "canceled"
-                      : "queued",
-                }
-              : agent,
+                ? {
+                    id: "wait-run-cccc",
+                    status:
+                      JSON.parse(String(options.body)).resolution === "denied"
+                        ? "canceled"
+                        : "queued",
+                  }
+                : agent,
   }));
   vi.stubGlobal("fetch", fetch);
   render(
@@ -506,7 +525,9 @@ it("shows the latest agent report in the conversation without Run now", async ()
     await screen.findByRole("heading", { name: "Agent report" }),
   ).toBeTruthy();
   expect(await screen.findByText("GPU idle.")).toBeTruthy();
-  expect(screen.getByRole("heading", { name: "Morning briefing" })).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "Morning briefing" }),
+  ).toBeTruthy();
   expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
@@ -947,6 +968,101 @@ it("shows recorded registry tool calls next to the latest report without Run now
   expect(screen.getByLabelText("Call system_snapshot call-0-0")).toBeTruthy();
   expect(screen.queryByLabelText(/memory_search/)).toBeNull();
   expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("shows last-parent workflow steps next to history without Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    enabled: true,
+    last_status: "succeeded",
+    last_run_at: "2026-10-11T12:00:00Z",
+    runs: [
+      {
+        id: "report-run",
+        capability: "agent.report",
+        executor_type: "agent",
+        parent_run_id: "flow-run",
+        status: "succeeded",
+        created_at: "2026-10-11T12:01:00Z",
+      },
+      {
+        id: "flow-run",
+        capability: "agent.workflow",
+        executor_type: "agent_workflow",
+        status: "succeeded",
+        created_at: "2026-10-11T12:00:00Z",
+        workflow: {
+          parent_run_id: "flow-run",
+          mode: "sequential",
+          tool_calling: "bounded",
+          steps: [
+            {
+              run_id: "step-search",
+              key: "memory_search",
+              gate: "none",
+              status: "succeeded",
+              capability: "agent.step",
+            },
+            {
+              run_id: "step-report",
+              key: "report",
+              gate: "none",
+              status: "succeeded",
+              capability: "agent.execute",
+              memory_id: "memory-1",
+            },
+          ],
+        },
+      },
+      {
+        id: "old-flow",
+        capability: "agent.workflow",
+        executor_type: "agent_workflow",
+        status: "succeeded",
+        created_at: "2026-10-10T12:00:00Z",
+        workflow: {
+          parent_run_id: "old-flow",
+          mode: "gated",
+          steps: [
+            {
+              run_id: "old-step",
+              key: "system_snapshot",
+              gate: "none",
+              status: "succeeded",
+              capability: "agent.step",
+            },
+          ],
+        },
+      },
+    ],
+  });
+  expect(
+    await screen.findByRole("heading", { name: "Workflow steps" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("region", { name: "Execution history" }),
+  ).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect step memory_search step-sea" })
+      .getAttribute("href"),
+  ).toBe("/runs/step-search");
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect step report step-rep" })
+      .getAttribute("href"),
+  ).toBe("/runs/step-report");
+  expect(screen.getByText("saved observation")).toBeTruthy();
+  expect(
+    screen.queryByRole("link", { name: /Inspect step system_snapshot/ }),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/ })).toBeNull();
+  expect(
+    screen.getByRole("region", { name: "Workflow steps" }).textContent,
+  ).toMatch(/Stop stays on execution history/);
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
