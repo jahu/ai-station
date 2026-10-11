@@ -51,11 +51,11 @@ it("reopens task history and sends a guarded follow-up to the same conversation"
   );
   await screen.findByText("Homepage created");
   expect(screen.getByText("Build my homepage")).toBeTruthy();
-  expect(
-    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
-      "href",
-    ),
-  ).toBe("/projects/project-1");
+  const inspect = screen.getByRole("link", {
+    name: "Inspect project project-1",
+  });
+  expect(inspect.getAttribute("href")).toBe("/projects/project-1");
+  expect(inspect.closest("p")?.parentElement?.closest("p")).toBeNull();
   fireEvent.change(screen.getByLabelText("Follow-up instruction"), {
     target: { value: "Add a contact form" },
   });
@@ -139,6 +139,57 @@ it("moves through follow-up consent without starting a Run", async () => {
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).includes("/messages")),
   ).toBe(true);
+});
+
+it("keeps Inspect project out of a nested paragraph on the open conversation", async () => {
+  const task = {
+    id: "task",
+    title: "Build a site",
+    project_id: "project-1",
+    project_name: "Studio",
+    status: "succeeded",
+    active_run_id: null,
+    latest_proposal_id: "proposal",
+    runs: [
+      {
+        id: "proposal",
+        task_id: "task",
+        executor_type: "codex_proposal",
+        status: "succeeded",
+        created_at: "2026-10-08T00:00:00Z",
+        parameters: { prompt: "Build my homepage" },
+        summary: "Homepage created",
+        metadata: { execution_location: "external" },
+      },
+    ],
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => task,
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/coding/task"]}>
+        <Routes>
+          <Route path="/coding/:id" element={<CodingSession />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const inspect = await screen.findByRole("link", {
+    name: "Inspect project project-1",
+  });
+  expect(inspect.getAttribute("href")).toBe("/projects/project-1");
+  expect(inspect.textContent).toBe("Studio");
+  expect(inspect.closest("p")?.parentElement?.closest("p")).toBeNull();
+  expect(inspect.closest(".page-title p")).toBeNull();
 });
 
 it("opens the project from a coding conversation without starting a Run", async () => {

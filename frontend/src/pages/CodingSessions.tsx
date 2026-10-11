@@ -307,18 +307,18 @@ export default function CodingSession() {
       >
         Your instructions, the agent’s results and the same workspace across
         every turn.
-        {q.data?.project_id ? (
-          <p className="mt">
-            <Link
-              className="text-link"
-              to={`/projects/${q.data.project_id}`}
-              aria-label={`Inspect project ${q.data.project_id}`}
-            >
-              {q.data.project_name}
-            </Link>
-          </p>
-        ) : null}
       </PageTitle>
+      {q.data?.project_id ? (
+        <p className="muted">
+          <Link
+            className="text-link"
+            to={`/projects/${q.data.project_id}`}
+            aria-label={`Inspect project ${q.data.project_id}`}
+          >
+            {q.data.project_name}
+          </Link>
+        </p>
+      ) : null}
       <ErrorNotice error={q.error ?? send.error ?? cancel.error} />
       {q.isPending ? (
         <Loading />
