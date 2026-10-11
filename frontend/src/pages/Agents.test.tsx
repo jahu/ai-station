@@ -1,5 +1,11 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { Agents, AgentDetail } from "./Agents";
@@ -1151,4 +1157,90 @@ it("moves through workflow mode and tool calling without inventing a Run", async
   });
   expect(sequential.tabIndex).toBe(0);
   expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
+});
+it("retries a failed workflow from Agents history without Run now", async () => {
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.endsWith("/chat/provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.includes("/skills") || url.endsWith("tools")
+            ? []
+            : url.endsWith("/hardware")
+              ? { gpus: [] }
+              : options?.method === "POST" &&
+                  String(url).includes("/retry-workflow")
+                ? {
+                    id: "retry-run",
+                    capability: "agent.workflow",
+                    status: "queued",
+                  }
+                : {
+                    id: "draft",
+                    name: "Morning review",
+                    description: "",
+                    goal: "Summarize",
+                    system_prompt: "",
+                    model: "local",
+                    tools: [],
+                    search_query: "",
+                    fetch_urls: [],
+                    skills: [],
+                    trigger: "manual",
+                    cron_expr: "",
+                    interval_seconds: null,
+                    run_at: null,
+                    maximum_runtime: 600,
+                    output_expectation: "Report",
+                    require_approval: false,
+                    workflow_mode: "sequential",
+                    tool_calling: "none",
+                    retry_policy: { mode: "manual" },
+                    notification_policy: {
+                      on_success: false,
+                      on_failure: false,
+                      on_approval: false,
+                    },
+                    project_id: null,
+                    enabled: true,
+                    updated_at: "2026-10-11T12:00:00Z",
+                    next_run_at: null,
+                    last_run_at: "2026-10-11T12:00:00Z",
+                    last_status: "failed",
+                    failure_count: 1,
+                    effective_permissions: [],
+                    runs: [
+                      {
+                        id: "fail-run-dddd",
+                        capability: "agent.workflow",
+                        status: "failed",
+                        created_at: "2026-10-11T12:00:00Z",
+                        retry: { allowed: true, retry_run_id: null },
+                      },
+                    ],
+                  },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Retry as a new workflow fail-run",
+    }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/runs/fail-run-dddd/retry-workflow",
+      expect.objectContaining({ method: "POST" }),
+    ),
+  );
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect retry retry-ru" })
+      .getAttribute("href"),
+  ).toBe("/runs/retry-run");
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
 });

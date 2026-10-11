@@ -24,6 +24,7 @@ type AgentDraft = {
   require_approval?: boolean;
   workflow_mode?: string;
   tool_calling?: boolean | string;
+  retry_policy?: { mode?: string };
   search_query?: string;
   fetch_urls?: string[];
   next_run_at?: string | null;
@@ -155,6 +156,12 @@ export function AssistantAgentDraft({
                 <dd>Bounded registry tools during the report</dd>
               </div>
             ) : null}
+            {agent.retry_policy?.mode === "manual" ? (
+              <div>
+                <dt>Retry</dt>
+                <dd>Manual retry of a failed snapshot</dd>
+              </div>
+            ) : null}
             {instructions ? (
               <div>
                 <dt>Instructions</dt>
@@ -191,8 +198,9 @@ export function AssistantAgentDraft({
           ) : null}
           <p className="muted">
             Activation stays explicit and uses the saved definition. It does not
-            invent a conversation Run. Duplicate as draft stays disabled. Run
-            now, tools and schedule stay in Agents.
+            invent a conversation Run. Duplicate as draft stays disabled. Manual
+            retry queues a new workflow from a failed snapshot. Run now, tools
+            and schedule stay in Agents.
           </p>
           {copy ? (
             <p>
@@ -240,7 +248,7 @@ export function AssistantAgentDraft({
             <AgentExecutionHistory
               runs={history}
               tabIndex={tabIndex}
-              hint="Arrow keys choose a Run while the list is focused. Enter inspects it. Run now stays in Agents."
+              hint="Arrow keys choose a Run while the list is focused. Enter inspects it. Retry as a new workflow stays on a failed snapshot when the saved policy allows it. Run now stays in Agents."
             />
           ) : (
             <p className="muted">No executions yet. Run now stays in Agents.</p>
