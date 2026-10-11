@@ -684,3 +684,7 @@ Frontend lint, TypeScript, 314 component tests and production build passed. Proj
 ## Agents definition lists other linked agents — 2026-10-11
 
 Frontend lint, TypeScript, 317 component tests and production build passed. The Agents definition lists other agents on the same linked project from `GET /api/agents?project_id=` and omits the current definition. Enter inspects a sibling. View tagged Runs stays on that row. View all linked agents opens the Agents filter. That list does not grant coding, Git or repository access and does not Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Conversation lists other linked agents — 2026-10-12
+
+Frontend lint, TypeScript, 318 component tests and production build passed. After `agent.create`, the conversation lists other agents on the same linked project from `GET /api/agents?project_id=` and omits the current definition. Enter inspects a sibling. View tagged Runs stays on that row. View all linked agents opens the Agents filter. That list does not grant coding, Git or repository access and does not Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.

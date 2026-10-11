@@ -142,6 +142,8 @@ function mount(agent = draft) {
                   capability: "agent.workflow",
                   status: "queued",
                 }
+              : url.includes("/agents?") && url.includes("project_id=")
+                ? []
               : url.includes("/artifacts")
               ? []
               : url.includes("/skills")
@@ -543,6 +545,93 @@ it("saves a linked project from the conversation without Enable or Run now", asy
   expect(tagged.getAttribute("href")).toBe(
     "/runs?project_id=project-1&agent_id=agent-one",
   );
+});
+
+it("lists other agents on the same linked project from conversation without Enable or Run now", async () => {
+  const agent = { ...draft, project_id: "project-1" };
+  const fetch = vi.fn(
+    withCatalog(async (path: string) => {
+      if (String(path).includes("project_id=project-1")) {
+        return {
+          ok: true,
+          json: async () => [
+            {
+              id: "agent-one",
+              name: "Morning briefing",
+              goal: "Summarize GPU telemetry every weekday.",
+              model: "local-27b",
+              enabled: false,
+              last_status: "",
+              next_run_at: null,
+            },
+            {
+              id: "agenttwo",
+              name: "Evening check",
+              goal: "Check GPUs",
+              model: "local",
+              enabled: true,
+              last_status: "succeeded",
+              next_run_at: null,
+            },
+          ],
+        };
+      }
+      if (String(path).includes("/skills") || String(path).endsWith("/tools")) {
+        return { ok: true, json: async () => [] };
+      }
+      return { ok: true, json: async () => agent };
+    }),
+  );
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AssistantAgentDraft agentId={agent.id} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    await screen.findByRole("heading", {
+      name: "Other agents on this project",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("link", {
+      name: "Inspect agent Evening check agenttwo",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("link", {
+      name: "Inspect agent Morning briefing agent-on",
+    }),
+  ).toBeNull();
+  expect(
+    screen.getByRole("link", { name: "View tagged Runs agenttwo" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/runs?project_id=project-1&agent_id=agenttwo");
+  expect(
+    screen.getByRole("link", { name: "View all linked agents" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/agents?project_id=project-1");
+  expect(
+    fetch.mock.calls.some(
+      (call) =>
+        String(call[0]) ===
+        "/api/agents?limit=50&offset=0&project_id=project-1",
+    ),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
 });
 
 it("saves description from the conversation without Enable or Run now", async () => {

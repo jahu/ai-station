@@ -27,6 +27,7 @@ import {
   AgentProjectList,
 } from "./AgentProjectList";
 import LlamaModels from "./LlamaModels";
+import ProjectAgents from "./ProjectAgents";
 
 type AgentDraft = {
   id: string;
@@ -758,6 +759,12 @@ export function AssistantAgentDraft({
                   }
                   tabIndex={tabIndex}
                 />
+                {agent.project_id ? (
+                  <ProjectAgents
+                    projectId={agent.project_id}
+                    excludeAgentId={agent.id}
+                  />
+                ) : null}
               </dd>
             </div>
             <div>
@@ -1090,7 +1097,8 @@ export function AssistantAgentDraft({
             the name, time limit and expected outcome on the definition and
             does not call Enable. Saving description stores that text on the
             definition and does not call Enable. Saving a linked project stores
-            it on the definition and does not call Enable.
+            it on the definition and does not call Enable. Other agents on that
+            same project stay next to that link and do not Enable or Run now.
           </p>
           {copy ? (
             <p>
