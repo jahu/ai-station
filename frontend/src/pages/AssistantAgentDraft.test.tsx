@@ -146,6 +146,14 @@ function mount(agent = draft) {
                       instructions:
                         "Always mention GPU memory when it appears.",
                     },
+                    {
+                      id: "daily-brief",
+                      name: "Daily brief",
+                      version: "1.2.0",
+                      description: "Morning format",
+                      required_permissions: [],
+                      instructions: "Cite only supplied tool results.",
+                    },
                   ]
                 : url.endsWith("/tools")
                   ? [
@@ -576,6 +584,56 @@ it("removes a tool missing from the registry without Enable or Run now", async (
       ).disabled,
     ).toBe(false),
   );
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("attaches an installed skill from the conversation without Enable or Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    tools: ["system_snapshot"],
+    search_query: "",
+    skills: ["station-briefing"],
+  });
+  expect(
+    await screen.findByRole("button", {
+      name: "Add skill daily-brief agent-on",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", {
+      name: "Add skill station-briefing agent-on",
+    }),
+  ).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Add skill daily-brief agent-on" }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    skills: ["station-briefing", "daily-brief"],
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+  });
+  expect(
+    await screen.findByLabelText("Skill Daily brief daily-brief"),
+  ).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(false);
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
   ).toBe(true);

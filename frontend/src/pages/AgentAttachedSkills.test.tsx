@@ -31,6 +31,7 @@ function mount(
   ids: string[],
   catalog = skills,
   onRemove?: (id: string) => void,
+  onAdd?: (id: string) => void,
 ) {
   const fetch = vi.fn(async (path: string) => ({
     ok: !String(path).endsWith("/run") && !String(path).endsWith("/enabled"),
@@ -43,7 +44,12 @@ function mount(
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <AgentAttachedSkills ids={ids} agentId="agent-one" onRemove={onRemove} />
+      <AgentAttachedSkills
+        ids={ids}
+        agentId="agent-one"
+        onRemove={onRemove}
+        onAdd={onAdd}
+      />
     </QueryClientProvider>,
   );
   return fetch;
@@ -119,5 +125,112 @@ it("offers Remove on a missing skill without inventing a Run", async () => {
         !String(call[0]).endsWith("/run") &&
         !String(call[0]).endsWith("/enabled"),
     ),
+  ).toBe(true);
+});
+
+it("offers Add on installed catalog skills without inventing a Run", async () => {
+  const onAdd = vi.fn();
+  const fetch = mount(["station-briefing"], skills, undefined, onAdd);
+  expect(
+    await screen.findByRole("button", {
+      name: "Add skill daily-brief agent-on",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", {
+      name: "Add skill station-briefing agent-on",
+    }),
+  ).toBeNull();
+  expect(screen.getByText(/Add stays on an installed catalog skill/)).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Add skill daily-brief agent-on" }),
+  );
+  expect(onAdd.mock.calls).toEqual([["daily-brief"]]);
+  expect(screen.queryByRole("button", { name: /Enable/ })).toBeNull();
+  expect(
+    fetch.mock.calls.every(
+      (call) =>
+        !String(call[0]).endsWith("/run") &&
+        !String(call[0]).endsWith("/enabled"),
+    ),
+  ).toBe(true);
+});
+
+it("adds an installed catalog skill with Space without inventing a Run", async () => {
+  const onAdd = vi.fn();
+  const fetch = mount(["station-briefing"], skills, undefined, onAdd);
+  expect(await screen.findByLabelText("Skill Daily brief daily-brief")).toBeTruthy();
+  const attached = screen.getByLabelText(
+    "Skill Station briefing station-briefing",
+  );
+  const extra = screen.getByLabelText("Skill Daily brief daily-brief");
+  expect(attached.tabIndex).toBe(0);
+  fireEvent.keyDown(attached.closest(".agent-choice-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(extra.tabIndex).toBe(0);
+  fireEvent.keyDown(extra.closest(".agent-choice-list") as HTMLElement, {
+    key: " ",
+  });
+  expect(onAdd.mock.calls).toEqual([["daily-brief"]]);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("does not offer Add when four skills are already attached", async () => {
+  const onAdd = vi.fn();
+  const full = [
+    ...skills,
+    {
+      id: "third-skill",
+      name: "Third",
+      version: "1.0.0",
+      description: "Third pack",
+      required_permissions: [] as string[],
+      instructions: "Third.",
+    },
+    {
+      id: "fourth-skill",
+      name: "Fourth",
+      version: "1.0.0",
+      description: "Fourth pack",
+      required_permissions: [] as string[],
+      instructions: "Fourth.",
+    },
+    {
+      id: "fifth-skill",
+      name: "Fifth",
+      version: "1.0.0",
+      description: "Fifth pack",
+      required_permissions: [] as string[],
+      instructions: "Fifth.",
+    },
+  ];
+  const fetch = mount(
+    ["station-briefing", "daily-brief", "third-skill", "fourth-skill"],
+    full,
+    undefined,
+    onAdd,
+  );
+  expect(await screen.findByLabelText("Skill Fifth fifth-skill")).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Add skill fifth-skill agent-on" }),
+  ).toBeNull();
+  fireEvent.keyDown(
+    screen.getByLabelText("Skill Fifth fifth-skill").closest(
+      ".agent-choice-list",
+    ) as HTMLElement,
+    { key: "End" },
+  );
+  fireEvent.keyDown(
+    screen.getByLabelText("Skill Fifth fifth-skill").closest(
+      ".agent-choice-list",
+    ) as HTMLElement,
+    { key: " " },
+  );
+  expect(onAdd).not.toHaveBeenCalled();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
 });

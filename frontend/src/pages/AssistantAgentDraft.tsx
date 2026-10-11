@@ -264,7 +264,6 @@ export function AssistantAgentDraft({
   });
   const skillsCatalog = useQuery({
     queryKey: ["skills"],
-    enabled: !!detail.data?.skills?.length,
     queryFn: () => api<unknown>("/skills"),
   });
   const provider = useQuery({
@@ -380,27 +379,31 @@ export function AssistantAgentDraft({
                 />
               </dd>
             </div>
-            {agent.skills?.length ? (
-              <div>
-                <dt>Skills</dt>
-                <dd>
-                  <AgentAttachedSkills
-                    ids={agent.skills}
-                    agentId={agent.id}
-                    tabIndex={tabIndex}
-                    disabled={busy || active}
-                    pending={saveSettings.isPending}
-                    onRemove={(id) =>
-                      saveSettings.mutate({
-                        skills: (agent.skills ?? []).filter(
-                          (skill) => skill !== id,
-                        ),
-                      })
-                    }
-                  />
-                </dd>
-              </div>
-            ) : null}
+            <div>
+              <dt>Skills</dt>
+              <dd>
+                <AgentAttachedSkills
+                  ids={agent.skills ?? []}
+                  agentId={agent.id}
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  pending={saveSettings.isPending}
+                  onRemove={(id) =>
+                    saveSettings.mutate({
+                      skills: (agent.skills ?? []).filter(
+                        (skill) => skill !== id,
+                      ),
+                    })
+                  }
+                  onAdd={(id) => {
+                    if ((agent.skills ?? []).includes(id)) return;
+                    saveSettings.mutate({
+                      skills: [...(agent.skills ?? []), id],
+                    });
+                  }}
+                />
+              </dd>
+            </div>
             {agent.tools?.includes("web_search") ? (
               <div>
                 <dt>Public search query</dt>
@@ -522,13 +525,15 @@ export function AssistantAgentDraft({
             call Enable. Removing an unavailable tool or a missing skill stores
             the remaining list on the definition and does not call Enable.
             Adding an operational registry tool stores it on the definition and
-            does not call Enable. Unpublished adapters cannot be added. Enable
-            stays off until the saved definition can activate. Duplicate as
-            draft stays disabled. Run now queues a new workflow from that saved
-            definition and stays on this transcript. A waiting Run can Approve
-            and queue or Deny here without opening the inspector. Stop stays on
-            an in-progress history Run. Manual retry queues a new workflow from
-            a failed snapshot. Adding skills and schedule stay in Agents.
+            does not call Enable. Unpublished adapters cannot be added. Adding
+            an installed skill stores it on the definition and does not call
+            Enable. At most four skills. Enable stays off until the saved
+            definition can activate. Duplicate as draft stays disabled. Run now
+            queues a new workflow from that saved definition and stays on this
+            transcript. A waiting Run can Approve and queue or Deny here
+            without opening the inspector. Stop stays on an in-progress history
+            Run. Manual retry queues a new workflow from a failed snapshot.
+            Adding schedule stays in Agents.
           </p>
           {copy ? (
             <p>
