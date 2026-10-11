@@ -1,4 +1,5 @@
 import { useId, type KeyboardEvent } from "react";
+import { Link } from "react-router-dom";
 import { useListKeyboard } from "./useListKeyboard";
 
 export type LinkedProject = { id: string; name: string };
@@ -91,5 +92,45 @@ export function AgentProjectList({
         })}
       </div>
     </>
+  );
+}
+
+export function AgentLinkedProjectLinks({
+  agentId,
+  projectId,
+  projectName,
+  tabIndex = 0,
+}: {
+  agentId: string;
+  projectId: string | null;
+  projectName?: string;
+  tabIndex?: number;
+}) {
+  if (!projectId) return null;
+  const shortId = agentId.slice(0, 8);
+  const label = projectName || projectId;
+  const active = tabIndex >= 0;
+  return (
+    <p className="muted">
+      Linked project{" "}
+      <Link
+        className="text-link"
+        to={`/projects/${projectId}`}
+        tabIndex={active ? 0 : -1}
+        aria-label={`Inspect project ${projectId}`}
+      >
+        {label}
+      </Link>
+      .{" "}
+      <Link
+        className="text-link"
+        to={`/runs?project_id=${projectId}&agent_id=${agentId}`}
+        tabIndex={active ? 0 : -1}
+        aria-label={`View tagged Runs ${shortId}`}
+      >
+        View tagged Runs
+      </Link>
+      . That filter does not grant coding, Git or repository access.
+    </p>
   );
 }
