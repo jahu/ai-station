@@ -14,7 +14,10 @@ import { AgentAttachedSkills } from "./AgentAttachedSkills";
 import { AgentAttachedTools } from "./AgentAttachedTools";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import { activationBlock } from "./agentActivation";
-import { agentSettingsPayload } from "./agentSettings";
+import {
+  agentSettingsPayload,
+  type AgentSettingsInput,
+} from "./agentSettings";
 import LlamaModels from "./LlamaModels";
 
 type AgentDraft = {
@@ -71,6 +74,59 @@ function scheduleLabel(agent: AgentDraft) {
     return `Every ${agent.interval_seconds} seconds`;
   if (agent.trigger === "datetime") return `Once: ${agent.run_at}`;
   return "Manual";
+}
+
+function AgentSearchQuery({
+  agentId,
+  query,
+  tabIndex,
+  disabled,
+  pending,
+  onSave,
+}: {
+  agentId: string;
+  query: string;
+  tabIndex: number;
+  disabled: boolean;
+  pending: boolean;
+  onSave: (query: string) => void;
+}) {
+  const shortId = agentId.slice(0, 8);
+  const [value, setValue] = useState(query);
+  return (
+    <form
+      className="assistant-agent-search"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const next = value.trim();
+        if (!next || next === query || disabled) return;
+        onSave(next);
+      }}
+    >
+      <label>
+        Public search query
+        <input
+          required
+          maxLength={500}
+          value={value}
+          tabIndex={tabIndex}
+          aria-label={`Public search query ${shortId}`}
+          disabled={disabled}
+          onChange={(event) => setValue(event.target.value)}
+          placeholder="Exact public query sent to search"
+        />
+      </label>
+      <Button
+        type="submit"
+        variant="secondary"
+        disabled={disabled || pending || !value.trim() || value.trim() === query}
+        tabIndex={tabIndex}
+        aria-label={`Save public search query ${shortId}`}
+      >
+        Save public search query
+      </Button>
+    </form>
+  );
 }
 
 export function AssistantAgentDraft({
@@ -150,14 +206,14 @@ export function AssistantAgentDraft({
     queryFn: () =>
       api<{ models: string[]; default_model: string }>("/chat/provider"),
   });
-  const saveModel = useMutation({
-    mutationFn: (model: string) =>
+  const saveSettings = useMutation({
+    mutationFn: (patch: Partial<AgentSettingsInput>) =>
       api<AgentDraft>(`/agents/${agentId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(
           agentSettingsPayload(detail.data!, {
-            model,
+            ...patch,
             enabled: detail.data!.enabled,
           }),
         ),
@@ -188,7 +244,7 @@ export function AssistantAgentDraft({
     toggle.isPending ||
     duplicate.isPending ||
     runNow.isPending ||
-    saveModel.isPending ||
+    saveSettings.isPending ||
     modelBusy;
   const active = history.some((run) => !TERMINAL.has(run.status));
   return (
@@ -199,7 +255,7 @@ export function AssistantAgentDraft({
           toggle.error ??
           duplicate.error ??
           runNow.error ??
-          saveModel.error ??
+          saveSettings.error ??
           provider.error
         }
       />
@@ -223,7 +279,7 @@ export function AssistantAgentDraft({
                   onBusy={setModelBusy}
                   onSelect={(model) => {
                     if (model === agent.model || active) return;
-                    saveModel.mutate(model);
+                    saveSettings.mutate({ model });
                   }}
                 />
               </dd>
@@ -250,10 +306,22 @@ export function AssistantAgentDraft({
                 </dd>
               </div>
             ) : null}
-            {agent.search_query ? (
+            {agent.tools?.includes("web_search") ? (
               <div>
                 <dt>Public search query</dt>
-                <dd>{agent.search_query}</dd>
+                <dd>
+                  <AgentSearchQuery
+                    key={agent.updated_at}
+                    agentId={agent.id}
+                    query={agent.search_query ?? ""}
+                    tabIndex={tabIndex}
+                    disabled={busy || active}
+                    pending={saveSettings.isPending}
+                    onSave={(search_query) =>
+                      saveSettings.mutate({ search_query })
+                    }
+                  />
+                </dd>
               </div>
             ) : null}
             {agent.fetch_urls?.length ? (
@@ -344,8 +412,9 @@ export function AssistantAgentDraft({
           <p className="muted">
             Activation stays explicit and uses the saved definition. It does not
             invent a conversation Run. Use model saves a local model on that
-            definition and does not call Enable. Enable stays off until the
-            saved definition can activate. Duplicate as draft stays disabled.
+            definition and does not call Enable. Saving a public search query
+            stores that exact query on the definition and does not call Enable.
+            Enable stays off until the saved definition can activate. Duplicate as draft stays disabled.
             Run now queues a new workflow from that saved definition and stays
             on this transcript. A waiting Run can Approve and queue or Deny here
             without opening the inspector. Stop stays on an in-progress history

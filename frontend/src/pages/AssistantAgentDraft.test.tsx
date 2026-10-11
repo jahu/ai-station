@@ -319,7 +319,10 @@ it("enables a disabled draft from the conversation without inventing a Run", asy
   expect(
     await screen.findByLabelText("Skill Station briefing station-briefing"),
   ).toBeTruthy();
-  expect(screen.getByText("workstation GPU news")).toBeTruthy();
+  expect(
+    (screen.getByLabelText("Public search query agent-on") as HTMLInputElement)
+      .value,
+  ).toBe("workstation GPU news");
   expect(screen.getByText("Required before each Run")).toBeTruthy();
   expect(screen.getByText("Gated")).toBeTruthy();
   expect(
@@ -421,6 +424,64 @@ it("keeps Enable disabled when web_search has no public query", async () => {
       "web_search needs a public search query before activation.",
     ),
   ).toBeTruthy();
+  expect(
+    (screen.getByLabelText("Public search query agent-on") as HTMLInputElement)
+      .value,
+  ).toBe("");
+});
+
+it("saves a public search query from the conversation without Enable or Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    search_query: "",
+    tools: ["web_search"],
+  });
+  expect(
+    await screen.findByText(
+      "web_search needs a public search query before activation.",
+    ),
+  ).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  fireEvent.change(screen.getByLabelText("Public search query agent-on"), {
+    target: { value: "open weight language models" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Save public search query agent-on" }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    search_query: "open weight language models",
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+    tools: ["web_search"],
+  });
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Enable saved definition agent-on",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
 });
 
 it("keeps Enable disabled when http_fetch has no reviewed URLs", async () => {
