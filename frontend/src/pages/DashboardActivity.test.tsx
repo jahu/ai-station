@@ -616,7 +616,7 @@ it("opens the tagged agent from in-progress and waiting Home Runs without Enable
   ).toBe(true);
 });
 
-it("opens a linked project from in-progress coding and worktree Home Runs without Enable or Run now", async () => {
+it("opens tagged Runs from in-progress coding and worktree Home Runs without Enable or Run now", async () => {
   const data = overview();
   const fetch = vi.fn(async (url: string) => ({
     ok: true,
@@ -656,7 +656,12 @@ it("opens a linked project from in-progress coding and worktree Home Runs withou
   expect(inspect[0].getAttribute("href")).toBe("/projects/project-1");
   expect(inspect[1].getAttribute("href")).toBe("/projects/project-1");
   expect(screen.queryByRole("link", { name: /Inspect agent/ })).toBeNull();
-  expect(screen.queryByRole("link", { name: /View tagged Runs/ })).toBeNull();
+  const tagged = screen.getAllByRole("link", {
+    name: "View tagged Runs project-1",
+  });
+  expect(tagged).toHaveLength(2);
+  expect(tagged[0].getAttribute("href")).toBe("/runs?project_id=project-1");
+  expect(tagged[1].getAttribute("href")).toBe("/runs?project_id=project-1");
   expect(
     screen.getByRole("button", { name: "Stop Fix the parser coding-r" }),
   ).toBeTruthy();
