@@ -592,3 +592,7 @@ Frontend lint, TypeScript, 272 component tests and production build passed. Afte
 ## Assistant agent tool review — 2026-10-11
 
 Frontend lint, TypeScript, 275 component tests and production build passed. After `agent.create`, attached tools are listed from `GET /api/agents/tools`. Unavailable tools stay visible and still block activation. A stored name missing from that registry stays visible. That does not invent a tool-selection Run or call Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Coding review validation commands — 2026-10-11
+
+Frontend lint, TypeScript, 276 component tests and production build passed. Coding review in the conversation, Coding workspace and proposal inspector lists saved validation commands from `GET /api/runs/{id}/events` on the existing validation Run. There is no inspectable child Run. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
