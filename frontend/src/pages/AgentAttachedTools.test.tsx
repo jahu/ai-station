@@ -39,6 +39,7 @@ function mount(
   names: string[],
   tools = catalog,
   onRemove?: (name: string) => void,
+  onAdd?: (name: string) => void,
 ) {
   const fetch = vi.fn(async (path: string) => ({
     ok: !String(path).endsWith("/run") && !String(path).endsWith("/enabled"),
@@ -55,6 +56,7 @@ function mount(
         names={names}
         agentId="agent-one"
         onRemove={onRemove}
+        onAdd={onAdd}
       />
     </QueryClientProvider>,
   );
@@ -139,5 +141,63 @@ it("offers Remove on unavailable tools without inventing a Run", async () => {
         !String(call[0]).endsWith("/run") &&
         !String(call[0]).endsWith("/enabled"),
     ),
+  ).toBe(true);
+});
+
+it("offers Add on operational catalog tools without inventing a Run", async () => {
+  const onAdd = vi.fn();
+  const fetch = mount(["web_search"], catalog, undefined, onAdd);
+  expect(
+    await screen.findByRole("button", {
+      name: "Add tool http_fetch agent-on",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", {
+      name: "Add tool remember_report agent-on",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Add tool web_search agent-on" }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Add tool browser agent-on" }),
+  ).toBeNull();
+  expect(screen.getByLabelText("Tool browser")).toBeTruthy();
+  expect(screen.getByText(/— Unavailable/)).toBeTruthy();
+  expect(
+    screen.getByText(/Unpublished adapters cannot be added/),
+  ).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Add tool http_fetch agent-on" }),
+  );
+  expect(onAdd.mock.calls).toEqual([["http_fetch"]]);
+  expect(screen.queryByRole("button", { name: /Enable/ })).toBeNull();
+  expect(
+    fetch.mock.calls.every(
+      (call) =>
+        !String(call[0]).endsWith("/run") &&
+        !String(call[0]).endsWith("/enabled"),
+    ),
+  ).toBe(true);
+});
+
+it("adds an operational catalog tool with Space without inventing a Run", async () => {
+  const onAdd = vi.fn();
+  const fetch = mount(["web_search"], catalog, undefined, onAdd);
+  expect(await screen.findByLabelText("Tool http_fetch")).toBeTruthy();
+  const attached = screen.getByLabelText("Tool web_search");
+  const extra = screen.getByLabelText("Tool http_fetch");
+  expect(attached.tabIndex).toBe(0);
+  fireEvent.keyDown(attached.closest(".agent-choice-list") as HTMLElement, {
+    key: "ArrowDown",
+  });
+  expect(extra.tabIndex).toBe(0);
+  fireEvent.keyDown(extra.closest(".agent-choice-list") as HTMLElement, {
+    key: " ",
+  });
+  expect(onAdd.mock.calls).toEqual([["http_fetch"]]);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
 });

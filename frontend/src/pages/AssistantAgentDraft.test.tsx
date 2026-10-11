@@ -133,6 +133,8 @@ function mount(agent = draft) {
                   capability: "agent.workflow",
                   status: "queued",
                 }
+              : url.includes("/artifacts")
+              ? []
               : url.includes("/skills")
                 ? [
                     {
@@ -574,6 +576,63 @@ it("removes a tool missing from the registry without Enable or Run now", async (
       ).disabled,
     ).toBe(false),
   );
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("attaches an operational registry tool from the conversation without Enable or Run now", async () => {
+  const fetch = mount({
+    ...draft,
+    tools: ["system_snapshot"],
+    search_query: "",
+  });
+  expect(
+    await screen.findByRole("button", {
+      name: "Add tool http_fetch agent-on",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Add tool web_search agent-on" }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Add tool browser agent-on" }),
+  ).toBeNull();
+  expect(screen.getByLabelText("Tool browser")).toBeTruthy();
+  expect(screen.queryByLabelText("Reviewed URLs agent-on")).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Add tool http_fetch agent-on" }),
+  );
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents/agent-one",
+      expect.objectContaining({ method: "PUT" }),
+    ),
+  );
+  const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+  expect(JSON.parse(String(write[1]?.body))).toMatchObject({
+    tools: ["system_snapshot", "http_fetch"],
+    enabled: false,
+    expected_updated_at: "2026-10-11T10:00:00Z",
+  });
+  expect(
+    await screen.findByLabelText("Reviewed URLs agent-on"),
+  ).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Enable saved definition agent-on",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(
+    screen.getByText(
+      "http_fetch needs reviewed public URLs before activation.",
+    ),
+  ).toBeTruthy();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
   ).toBe(true);

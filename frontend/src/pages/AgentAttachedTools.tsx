@@ -18,6 +18,15 @@ function toolTitle(tool: Pick<Tool, "name">) {
         : tool.name;
 }
 
+function placeholderTool(name: string): Tool {
+  return {
+    name,
+    description: "",
+    operational: false,
+    required_permissions: [],
+  };
+}
+
 export function AgentAttachedTools({
   names,
   agentId,
@@ -25,6 +34,7 @@ export function AgentAttachedTools({
   disabled = false,
   pending = false,
   onRemove,
+  onAdd,
 }: {
   names: string[];
   agentId?: string;
@@ -32,39 +42,43 @@ export function AgentAttachedTools({
   disabled?: boolean;
   pending?: boolean;
   onRemove?: (name: string) => void;
+  onAdd?: (name: string) => void;
 }) {
   const labelId = useId();
   const catalog = useQuery({
     queryKey: ["agent-tools"],
-    enabled: names.length > 0,
+    enabled: names.length > 0 || !!onAdd,
     queryFn: () => api<Tool[]>("/agents/tools"),
   });
   const registered = isAgentToolList(catalog.data) ? catalog.data : [];
   const byName = new Map(registered.map((tool) => [tool.name, tool]));
   const catalogReady = isAgentToolList(catalog.data);
-  const rows = names.map(
-    (name) =>
-      byName.get(name) ?? {
-        name,
-        description: "",
-        operational: false,
-        required_permissions: [] as string[],
-      },
-  );
+  const attached = names.map((name) => byName.get(name) ?? placeholderTool(name));
+  const extras =
+    catalogReady && onAdd
+      ? registered.filter((tool) => !names.includes(tool.name))
+      : [];
+  const rows = [...attached, ...extras];
   const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
     rows,
     (tool) => tool.name,
   );
   const active = tabIndex >= 0;
   const shortId = agentId?.slice(0, 8) ?? "";
+  const addable = (tool: Tool) =>
+    !!onAdd && catalogReady && !!byName.get(tool.name)?.operational;
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
     onKeyDown(event);
     if (event.key !== "Enter" && event.key !== " ") return;
     const target = event.target as HTMLElement;
     if (target.closest("a, button, textarea, input, summary, select")) return;
     event.preventDefault();
+    const tool = rows[index];
+    if (!tool || names.includes(tool.name) || !addable(tool)) return;
+    if (disabled || pending) return;
+    onAdd?.(tool.name);
   };
-  if (!names.length) return null;
+  if (!rows.length) return null;
   return (
     <>
       <ErrorNotice error={catalog.error} />
@@ -72,8 +86,13 @@ export function AgentAttachedTools({
         Arrow keys choose a tool while the list is focused. Unavailable tools
         stay visible and block activation.
         {onRemove
-          ? " Remove stays on an unavailable tool. Adding tools stays in Agents."
-          : " Tools stay in Agents."}{" "}
+          ? " Remove stays on an unavailable tool."
+          : ""}
+        {onAdd
+          ? " Add stays on an operational catalog tool. Unpublished adapters cannot be added."
+          : onRemove
+            ? " Adding tools stays in Agents."
+            : " Tools stay in Agents."}{" "}
         There is no inspectable tool-selection Run.
       </p>
       <div
@@ -85,13 +104,20 @@ export function AgentAttachedTools({
         {rows.map((tool, i) => {
           const current = i === index;
           const registeredTool = byName.get(tool.name);
+          const attachedName = names.includes(tool.name);
           const removable =
             !!onRemove &&
+            attachedName &&
             catalogReady &&
             (!registeredTool || !registeredTool.operational);
+          const canAdd = addable(tool) && !attachedName;
+          const actionTab = active && current ? 0 : -1;
           const removeName = shortId
             ? `Remove tool ${tool.name} ${shortId}`
             : `Remove tool ${tool.name}`;
+          const addName = shortId
+            ? `Add tool ${tool.name} ${shortId}`
+            : `Add tool ${tool.name}`;
           return (
             <div
               key={tool.name}
@@ -122,12 +148,23 @@ export function AgentAttachedTools({
                   <Button
                     type="button"
                     variant="secondary"
-                    tabIndex={active && current ? 0 : -1}
+                    tabIndex={actionTab}
                     disabled={disabled || pending}
                     aria-label={removeName}
                     onClick={() => onRemove?.(tool.name)}
                   >
                     Remove
+                  </Button>
+                ) : canAdd ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    tabIndex={actionTab}
+                    disabled={disabled || pending}
+                    aria-label={addName}
+                    onClick={() => onAdd?.(tool.name)}
+                  >
+                    Add
                   </Button>
                 ) : null}
               </div>
