@@ -33,6 +33,11 @@ const draft = {
   last_run_at: null as string | null,
   next_run_at: null as string | null,
   retry_policy: { mode: "none" as string },
+  notification_policy: {
+    on_success: false,
+    on_failure: false,
+    on_approval: false,
+  },
   runs: [] as {
     id: string;
     capability: string;
@@ -145,6 +150,26 @@ it("reviews attached skill instructions from the conversation without inventing 
     screen.getByText("Always mention GPU memory when it appears."),
   ).toBeTruthy();
   expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
+it("shows saved notice policy from the conversation without inventing a Run", async () => {
+  const fetch = mount({
+    ...draft,
+    notification_policy: {
+      on_failure: true,
+      on_success: false,
+      on_approval: true,
+    },
+  });
+  expect(
+    await screen.findByText(
+      "In-app notices on failure or interruption, waiting for approval",
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText(/In-app notices on.*success/)).toBeNull();
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);

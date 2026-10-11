@@ -31,6 +31,11 @@ type AgentDraft = {
   workflow_mode?: string;
   tool_calling?: boolean | string;
   retry_policy?: { mode?: string };
+  notification_policy?: {
+    on_success?: boolean;
+    on_failure?: boolean;
+    on_approval?: boolean;
+  };
   search_query?: string;
   fetch_urls?: string[];
   next_run_at?: string | null;
@@ -40,6 +45,17 @@ type AgentDraft = {
 };
 
 const TERMINAL = new Set(["succeeded", "failed", "canceled", "interrupted"]);
+
+function noticeLabel(policy: AgentDraft["notification_policy"]) {
+  if (!policy) return "";
+  return [
+    policy.on_failure ? "failure or interruption" : "",
+    policy.on_success ? "success" : "",
+    policy.on_approval ? "waiting for approval" : "",
+  ]
+    .filter(Boolean)
+    .join(", ");
+}
 
 function scheduleLabel(agent: AgentDraft) {
   if (agent.trigger === "cron") return `${agent.cron_expr} (UTC)`;
@@ -194,6 +210,14 @@ export function AssistantAgentDraft({
               <div>
                 <dt>Retry</dt>
                 <dd>Manual retry of a failed snapshot</dd>
+              </div>
+            ) : null}
+            {noticeLabel(agent.notification_policy) ? (
+              <div>
+                <dt>Notices</dt>
+                <dd>
+                  In-app notices on {noticeLabel(agent.notification_policy)}
+                </dd>
               </div>
             ) : null}
             {instructions ? (

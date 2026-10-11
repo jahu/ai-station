@@ -584,3 +584,7 @@ Frontend lint, TypeScript, 268 component tests and production build passed. Afte
 ## Assistant agent skill review — 2026-10-11
 
 Frontend lint, TypeScript, 271 component tests and production build passed. After `agent.create`, attached skills are listed from `GET /api/skills`. Review instructions stays on the selected row. A stored id missing from the catalog stays visible. That does not invent a Skill Run or call Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Assistant agent notice policy — 2026-10-11
+
+Frontend lint, TypeScript, 272 component tests and production build passed. After `agent.create`, a saved in-app notice policy is shown on the definition. Unselected notice kinds stay omitted. That does not invent a conversation Run or call Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
