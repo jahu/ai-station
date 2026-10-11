@@ -1,5 +1,11 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import MediaResult from "./MediaResult";
@@ -66,7 +72,13 @@ function mount(run: Run, lineage: ArtifactLineage, artifact: Artifact) {
     >
       <MemoryRouter>
         <MediaResult
-          kind={artifact.type === "audio" ? "audio" : "video"}
+          kind={
+            artifact.type === "audio"
+              ? "audio"
+              : artifact.type === "image"
+                ? "image"
+                : "video"
+          }
           runId={run.id}
           run={run}
           error={null}
@@ -116,4 +128,61 @@ it("shows speech source lineage beside the generated WAV", async () => {
   });
   expect(source.getAttribute("href")).toBe("/library/voiceclip");
   expect(screen.getByLabelText("Generated audio")).toBeTruthy();
+});
+
+it("stops a queued image run from the workspace", async () => {
+  const fetch = vi.fn(async (_path: string, init?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      init?.method === "POST" ? {} : { id: "run-id", status: "queued" },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <MediaResult
+          kind="image"
+          runId="run-id"
+          run={{ id: "run-id", status: "queued" } as Run}
+          error={null}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Stop generation" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/runs/run-id/cancel",
+      expect.objectContaining({ method: "POST" }),
+    ),
+  );
+});
+
+it("shows a generated image with source lineage in the workspace", async () => {
+  const edited: Artifact = {
+    ...portrait,
+    id: "edited01",
+    title: "Dusk room",
+    parent_artifact_ids: ["portrait1"],
+    metadata: { mode: "img2img" },
+  };
+  mount(
+    { id: "photo", status: "succeeded" } as Run,
+    { id: "edited01", sources: [portrait], derived: [] },
+    edited,
+  );
+  const image = await screen.findByAltText("Generated image");
+  expect(image.getAttribute("src")).toBe("/api/artifacts/edited01/file");
+  expect(
+    screen.getByRole("link", { name: "Open in Library" }).getAttribute("href"),
+  ).toBe("/library/edited01");
+  const source = await screen.findByRole("link", {
+    name: "Inspect source Portrait portrait",
+  });
+  expect(source.getAttribute("href")).toBe("/library/portrait1");
+  expect(screen.getByText(/There is no inspectable lineage Run/)).toBeTruthy();
 });

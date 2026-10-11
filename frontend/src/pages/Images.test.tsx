@@ -29,13 +29,13 @@ function mount(entry = "/images") {
     </QueryClientProvider>,
   );
 }
-it("queues Juggernaut parameters and opens the durable run", async () => {
+it("queues Juggernaut parameters and keeps generation in the workspace", async () => {
   const fetch = vi.fn(async (path: string) => ({
     ok: true,
     json: async () =>
       path.endsWith("/hardware")
         ? { gpus: [{ index: 7, name: "GPU" }] }
-        : { id: "run-id" },
+        : { id: "run-id", status: "queued" },
   }));
   vi.stubGlobal("fetch", fetch);
   mount();
@@ -49,13 +49,26 @@ it("queues Juggernaut parameters and opens the durable run", async () => {
   });
   fireEvent.change(screen.getByLabelText("Seed"), { target: { value: "123" } });
   await screen.findByLabelText("Target GPU 7");
-  const gpuList = screen.getByLabelText("Target GPU auto").closest(
-    ".gpu-target-choice-list",
-  ) as HTMLElement;
+  const gpuList = screen
+    .getByLabelText("Target GPU auto")
+    .closest(".gpu-target-choice-list") as HTMLElement;
   fireEvent.keyDown(gpuList, { key: "End" });
   fireEvent.keyDown(gpuList, { key: "Enter" });
   fireEvent.click(screen.getByRole("button", { name: "Queue generate" }));
-  await screen.findByRole("heading", { name: "Run inspector" });
+  await screen.findByText("Waiting for an available GPU");
+  expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
+  expect((screen.getByLabelText("Prompt") as HTMLTextAreaElement).value).toBe(
+    "A forest",
+  );
+  expect(
+    screen
+      .getByRole("button", { name: "Generating…" })
+      .hasAttribute("disabled"),
+  ).toBe(true);
+  expect(
+    screen.getByRole("link", { name: "View run & logs" }).getAttribute("href"),
+  ).toBe("/runs/run-id");
+  expect(screen.getByRole("button", { name: "Stop generation" })).toBeTruthy();
   expect(fetch).toHaveBeenCalledWith(
     "/api/images/runs",
     expect.objectContaining({ body: expect.stringContaining('"seed":123') }),
@@ -80,7 +93,7 @@ it("attaches a Library image for Edit without another upload", async () => {
       if (url.includes("/hardware")) return { gpus: [] };
       if (url.includes("/artifacts?")) return [artifact];
       if (url.includes("/artifacts/")) return artifact;
-      return { id: "run-edit" };
+      return { id: "run-edit", status: "queued" };
     },
   }));
   vi.stubGlobal("fetch", fetch);
@@ -102,7 +115,8 @@ it("attaches a Library image for Edit without another upload", async () => {
     ).toBe(false),
   );
   fireEvent.click(screen.getByRole("button", { name: "Queue edit" }));
-  await screen.findByRole("heading", { name: "Run inspector" });
+  await screen.findByText("Waiting for an available GPU");
+  expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
   expect(fetch).toHaveBeenCalledWith(
     "/api/images/runs",
     expect.objectContaining({
@@ -110,7 +124,9 @@ it("attaches a Library image for Edit without another upload", async () => {
     }),
   );
   expect(
-    fetch.mock.calls.some((call) => String(call[0]).includes("/images/uploads")),
+    fetch.mock.calls.some((call) =>
+      String(call[0]).includes("/images/uploads"),
+    ),
   ).toBe(false);
 });
 
@@ -184,7 +200,7 @@ it("reuses a Library source, shows upscale dimensions, and submits its identity"
         ? { id: "source", metadata: { width: 200, height: 100 } }
         : path.endsWith("/hardware")
           ? { gpus: [] }
-          : { id: "next" },
+          : { id: "next", status: "queued" },
   }));
   vi.stubGlobal("fetch", fetch);
   mount("/images?mode=upscale&input=source");
@@ -197,11 +213,54 @@ it("reuses a Library source, shows upscale dimensions, and submits its identity"
     ).toBe(false),
   );
   fireEvent.click(screen.getByRole("button", { name: "Queue upscale" }));
-  await screen.findByRole("heading", { name: "Run inspector" });
+  await screen.findByText("Waiting for an available GPU");
+  expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
   expect(fetch).toHaveBeenCalledWith(
     "/api/images/runs",
     expect.objectContaining({
       body: expect.stringContaining('"input_artifact_ids":["source"]'),
     }),
   );
+});
+
+it("restores a completed image from the workspace URL", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path.endsWith("/lineage")
+          ? {
+              id: "photo",
+              sources: [
+                {
+                  id: "source",
+                  type: "image",
+                  title: "Room",
+                  original_filename: "room.png",
+                },
+              ],
+              derived: [],
+            }
+          : path.includes("/artifacts?")
+            ? [{ id: "photo", type: "image" }]
+            : path.includes("/runs/")
+              ? { id: "done", status: "succeeded" }
+              : path.includes("/artifacts/")
+                ? { id: "source", metadata: { width: 200, height: 100 } }
+                : { gpus: [] },
+    })),
+  );
+  mount("/images?run=done");
+  const image = await screen.findByAltText("Generated image");
+  expect(image.getAttribute("src")).toBe("/api/artifacts/photo/file");
+  expect(
+    screen.getByRole("link", { name: "Open in Library" }).getAttribute("href"),
+  ).toBe("/library/photo");
+  expect(
+    (
+      await screen.findByRole("link", { name: "Inspect source Room source" })
+    ).getAttribute("href"),
+  ).toBe("/library/source");
+  expect(screen.getByText(/There is no inspectable lineage Run/)).toBeTruthy();
 });
