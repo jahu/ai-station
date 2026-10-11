@@ -744,3 +744,7 @@ Frontend lint, TypeScript, 331 component tests and production build passed. Codi
 ## Conversation coding results open tagged project Runs — 2026-10-12
 
 Frontend lint, TypeScript, 331 component tests and production build passed. Conversation coding results show View tagged Runs through `/runs?project_id=` from the Run's saved `project_id`. Inspect project stays on that result. Those links do not start a coding Run. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Run inspector opens tagged project Runs — 2026-10-12
+
+Frontend lint, TypeScript, 332 component tests and production build passed. The Run inspector shows View tagged Runs through `/runs?project_id=` when only `project_id` is present. Inspect project stays beside it. The existing agent+project filter is unchanged. Those links do not Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
