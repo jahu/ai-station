@@ -1,6 +1,6 @@
 import { useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, type Run } from "../api";
 import { Empty, ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
@@ -328,13 +328,20 @@ function AgentCards({
 
 export function Agents() {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const [instruction, setInstruction] = useState("");
   const [model, setModel] = useState("");
   const [modelBusy, setModelBusy] = useState(false);
   const [offset, setOffset] = useState(0);
+  const projectId = params.get("project_id") ?? "";
   const agents = useQuery({
-    queryKey: ["agents", offset],
-    queryFn: () => api<Agent[]>(`/agents?limit=50&offset=${offset}`),
+    queryKey: ["agents", offset, projectId],
+    queryFn: () =>
+      api<Agent[]>(
+        `/agents?limit=50&offset=${offset}${
+          projectId ? `&project_id=${encodeURIComponent(projectId)}` : ""
+        }`,
+      ),
     refetchInterval: 5000,
   });
   const provider = useQuery({
@@ -405,14 +412,41 @@ export function Agents() {
           </Button>
         </div>
       </form>
-      <ErrorNotice error={agents.error} />
+      <div className="toolbar">
+        <label>
+          Filter linked project{" "}
+          <select
+            value={projectId}
+            onChange={(event) => {
+              const next = new URLSearchParams(params);
+              if (event.target.value) next.set("project_id", event.target.value);
+              else next.delete("project_id");
+              setParams(next, { replace: true });
+              setOffset(0);
+            }}
+          >
+            <option value="">All projects</option>
+            {projectId &&
+              !(projects.data ?? []).some((row) => row.id === projectId) && (
+                <option value={projectId}>{projectId}</option>
+              )}
+            {(projects.data ?? []).map((row) => (
+              <option key={row.id} value={row.id}>
+                {row.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <ErrorNotice error={agents.error ?? projects.error} />
       {agents.isPending ? (
         <Loading />
       ) : !agents.data?.length ? (
         <section className="panel">
           <Empty title="No agents in this view">
-            Start with a draft, inspect its permissions and schedule, then
-            enable it.
+            {projectId
+              ? "No agents are linked to this project. Linking tags Runs for filtering and does not grant coding, Git or repository access."
+              : "Start with a draft, inspect its permissions and schedule, then enable it."}
           </Empty>
         </section>
       ) : (

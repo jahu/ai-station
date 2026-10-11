@@ -1066,6 +1066,105 @@ it("shows a linked project name on the agent list without inventing a Run", asyn
     screen.queryByRole("button", { name: /Enable|Run now/ }),
   ).toBeNull();
 });
+it("filters the agent list by linked project without inventing a Run", async () => {
+  const row = {
+    description: "",
+    goal: "Summarize",
+    system_prompt: "",
+    model: "local",
+    tools: [],
+    search_query: "",
+    fetch_urls: [],
+    skills: [],
+    trigger: "manual",
+    cron_expr: "",
+    interval_seconds: null,
+    run_at: null,
+    maximum_runtime: 600,
+    output_expectation: "Report",
+    require_approval: false,
+    workflow_mode: "sequential",
+    tool_calling: "none",
+    retry_policy: { mode: "none" },
+    notification_policy: {
+      on_success: false,
+      on_failure: false,
+      on_approval: false,
+    },
+    enabled: false,
+    updated_at: "2026-10-09T12:00:00Z",
+    next_run_at: null,
+    last_run_at: null,
+    last_status: "",
+    failure_count: 0,
+    effective_permissions: [],
+  };
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.includes("provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.includes("/projects")
+            ? [{ id: "project-1", name: "Workstation docs" }]
+            : url.includes("project_id=project-1")
+              ? [
+                  {
+                    ...row,
+                    id: "agentone",
+                    name: "Morning review",
+                    project_id: "project-1",
+                  },
+                ]
+              : url.includes("/agents")
+                ? [
+                    {
+                      ...row,
+                      id: "agentone",
+                      name: "Morning review",
+                      project_id: "project-1",
+                    },
+                    {
+                      ...row,
+                      id: "agenttwo",
+                      name: "Evening check",
+                      project_id: null,
+                    },
+                  ]
+                : [],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  expect(
+    await screen.findByRole("link", {
+      name: "Inspect Evening check agenttwo",
+    }),
+  ).toBeTruthy();
+  fireEvent.change(screen.getByRole("combobox", { name: "Filter linked project" }), {
+    target: { value: "project-1" },
+  });
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/agents?limit=50&offset=0&project_id=project-1",
+      undefined,
+    ),
+  );
+  expect(
+    await screen.findByRole("link", {
+      name: "Inspect Morning review agentone",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("link", { name: "Inspect Evening check agenttwo" }),
+  ).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
 it("moves through the agent list with arrow keys", async () => {
   const row = {
     description: "",

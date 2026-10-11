@@ -668,3 +668,7 @@ Frontend lint, TypeScript, 309 component tests and production build passed. The 
 ## Agents list and conversation open tagged project Runs — 2026-10-11
 
 Frontend lint, TypeScript, 310 component tests and production build passed. The Agents list shows a linked project name on the card. Agents and the conversation open that project and the tagged Runs filter through unique Inspect project and View tagged Runs names. Those links do not grant coding, Git or repository access and do not call Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Agents list filters by linked project — 2026-10-11
+
+`./scripts/check.sh` and frontend lint, TypeScript, 311 component tests and production build passed. `GET /api/agents?project_id=` returns only agents linked to that project. The Agents list Filter linked project uses that query. It does not grant coding, Git or repository access and does not Enable or Run now. Audio and avatar retries stay unpublished. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
