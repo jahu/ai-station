@@ -831,6 +831,7 @@ it("renders review and commit controls from conversation coding runs", () => {
                 status: "succeeded",
                 summary: "Update app.py",
                 executor_type: "local_proposal",
+                project_id: "project-1",
                 metadata: {
                   coding_review: {
                     branch: "ai/task",
@@ -855,6 +856,69 @@ it("renders review and commit controls from conversation coding runs", () => {
   expect(
     screen.getByRole("button", { name: "Commit reviewed changes" }),
   ).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/projects/project-1");
+});
+
+it("opens the project from conversation coding results without starting a Run", () => {
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () => (path.includes("/api/") ? [] : []),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <AssistantResults
+          result={{
+            task_status: "succeeded",
+            steps: [
+              {
+                id: "proposal",
+                capability: "coding.local",
+                status: "succeeded",
+                summary: "Update app.py",
+                error_message: "",
+                location: "local",
+              },
+            ],
+            artifacts: [],
+            coding_runs: [
+              {
+                id: "proposal",
+                status: "succeeded",
+                summary: "Update app.py",
+                executor_type: "local_proposal",
+                project_id: "project-1",
+                metadata: {
+                  coding_review: {
+                    branch: "ai/task",
+                    files: [{ path: "app.py", diff: "+x", insertions: 1 }],
+                  },
+                },
+              } as never,
+            ],
+          }}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/projects/project-1");
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).includes("/coding/cursor")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).includes("/messages")),
+  ).toBe(true);
 });
 
 it("requires an explicit GGUF before a load action is ready", async () => {

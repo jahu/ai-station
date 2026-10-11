@@ -720,3 +720,7 @@ Frontend lint, TypeScript, 323 component tests and production build passed. Codi
 ## Project page lists coding conversations — 2026-10-12
 
 Frontend lint, TypeScript, 328 component tests and production build passed. Project details list coding conversations from `GET /api/coding/sessions?project_id=`. Enter opens the selected conversation. View all coding conversations opens the Coding filter. That list does not start a coding Run. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Conversation coding results open the linked project — 2026-10-12
+
+Frontend lint, TypeScript, 329 component tests and production build passed. Conversation coding results use the saved `project_id` from the Run. Inspect project stays on that result and does not start a coding Run. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
