@@ -292,6 +292,70 @@ it("queues saved validation for a ready owned worktree without sending commands"
   );
 });
 
+it("opens tagged Runs from a prepared worktree without Enable, Run now or a coding Run", async () => {
+  const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method === "POST"
+        ? { id: "unexpected" }
+        : [
+            {
+              id: "tree-one",
+              run_id: "run-one",
+              run_status: "succeeded",
+              owned: true,
+              removed_at: null,
+              expires_at: null,
+              branch: "ai/one-workspace",
+              relative_path: "worktrees/project/task",
+            },
+          ],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/projects/one"]}>
+        <Routes>
+          <Route
+            path="/projects/one"
+            element={
+              <ProjectWorktrees
+                project={{
+                  id: "one",
+                  updated_at: "version",
+                  integration_branch: "develop",
+                }}
+              />
+            }
+          />
+          <Route path="/runs" element={<h1>Tagged Runs</h1>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    (
+      await screen.findByRole("link", { name: "View tagged Runs tree-one" })
+    ).getAttribute("href"),
+  ).toBe("/runs?project_id=one");
+  expect(
+    screen.getByRole("link", { name: "Inspect ai/one-workspace tree-one" }),
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  fireEvent.click(
+    screen.getByRole("link", { name: "View tagged Runs tree-one" }),
+  );
+  await screen.findByRole("heading", { name: "Tagged Runs" });
+  expect(
+    fetch.mock.calls.filter(([, options]) => options?.method === "POST"),
+  ).toHaveLength(0);
+});
+
 it("moves through prepared worktrees with arrow keys", async () => {
   const row = {
     run_status: "succeeded",

@@ -22,6 +22,7 @@ interface Worktree {
 
 function WorktreeCards({
   worktrees,
+  projectId,
   busy,
   confirmId,
   setConfirmId,
@@ -35,6 +36,7 @@ function WorktreeCards({
   onRemove,
 }: {
   worktrees: Worktree[];
+  projectId: string;
   busy: boolean;
   confirmId: string | null;
   setConfirmId: (id: string | null) => void;
@@ -72,8 +74,9 @@ function WorktreeCards({
       </h3>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a worktree while the list is focused. Enter inspects
-        its preparation Run. Install, validate, keep and remove stay on the
-        selected row.
+        its preparation Run. View tagged Runs stays on the selected row.
+        Install, validate, keep and remove stay on the selected row. Those
+        links do not Enable or Run now or start a coding Run.
       </p>
       <div
         ref={listRef}
@@ -101,6 +104,14 @@ function WorktreeCards({
                   status={worktree.removed_at ? "removed" : worktree.run_status}
                 />
               </div>
+              <Link
+                className="text-link"
+                to={`/runs?project_id=${projectId}`}
+                tabIndex={current ? 0 : -1}
+                aria-label={`View tagged Runs ${shortId}`}
+              >
+                View tagged Runs
+              </Link>
               {worktree.owned &&
                 worktree.run_status === "succeeded" &&
                 !worktree.removed_at && (
@@ -323,6 +334,7 @@ export default function ProjectWorktrees({
       ) : worktrees.data?.length ? (
         <WorktreeCards
           worktrees={worktrees.data}
+          projectId={project.id}
           busy={busy}
           confirmId={confirmId}
           setConfirmId={setConfirmId}
