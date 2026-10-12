@@ -776,3 +776,12 @@ Frontend lint, TypeScript, 338 component tests and production build passed. Home
 ## Project coding conversations open tagged project Runs — 2026-10-12
 
 Frontend lint, TypeScript, 339 component tests and production build passed. Project coding conversation rows show View tagged Runs through `/runs?project_id=` from the saved project id. Enter still opens the selected conversation. Those links do not Enable or Run now or start a coding Run. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+
+## Worktree preservation and preview upgrade — 2026-10-12
+
+Automatic worktree deletion is disabled, including old queued scheduler removal Runs. Real disposable Git tests preserve uncommitted files, untracked files and unmerged commits; explicit confirmed removal retains its existing coverage. No GPU or external coding-provider workload was launched.
+
+Local verification: Ruff lint and formatting passed. The complete Python suite passed 694 tests with 5 opt-in skips and exposed one new test's incorrect response decoding; after correcting that test, both preservation cases passed and `pytest --lf` passed the outstanding case. Thus all 695 normal tests are covered with no outstanding failure. Tests used this worktree's backend/runner via explicit PYTHONPATH. Frontend lint, typecheck, 339 tests and production build passed. Both Compose configurations and the Docker build passed. Changed frontend files pass Prettier; the repository-wide format check still reports 59 pre-existing files outside this change, which are left untouched. These are equivalent local checks under the manual-CI repository policy.
+
+A disposable SQLite snapshot of the previous preview migrated from revision 0007 to 0019. Integrity check passed and counts of Runs, Projects, Agents, Conversations, Artifacts and Memories were unchanged. This rehearsal is not a real inference smoke test. Machine-specific diagnosis, backup paths and deployment evidence are kept under ignored `data/acceptance/safety-redeploy-20261012/`.
