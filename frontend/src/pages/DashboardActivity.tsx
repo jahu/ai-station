@@ -180,9 +180,13 @@ function taggedAgentLinks(
   includeAgent = false,
 ) {
   if (!agentId && !projectId) return null;
-  if (!includeAgent && !projectId) return null;
   const tab = current ? 0 : -1;
   const shortId = agentId?.slice(0, 8);
+  const taggedTo = agentId
+    ? projectId
+      ? `/runs?project_id=${projectId}&agent_id=${agentId}`
+      : `/runs?agent_id=${agentId}`
+    : `/runs?project_id=${projectId}`;
   return (
     <>
       {includeAgent && agentId ? (
@@ -196,29 +200,23 @@ function taggedAgentLinks(
         </Link>
       ) : null}
       {projectId ? (
-        <>
-          <Link
-            className="text-link"
-            to={`/projects/${projectId}`}
-            tabIndex={tab}
-            aria-label={`Inspect project ${projectId}`}
-          >
-            Inspect project
-          </Link>
-          <Link
-            className="text-link"
-            to={
-              agentId
-                ? `/runs?project_id=${projectId}&agent_id=${agentId}`
-                : `/runs?project_id=${projectId}`
-            }
-            tabIndex={tab}
-            aria-label={`View tagged Runs ${shortId ?? projectId}`}
-          >
-            View tagged Runs
-          </Link>
-        </>
+        <Link
+          className="text-link"
+          to={`/projects/${projectId}`}
+          tabIndex={tab}
+          aria-label={`Inspect project ${projectId}`}
+        >
+          Inspect project
+        </Link>
       ) : null}
+      <Link
+        className="text-link"
+        to={taggedTo}
+        tabIndex={tab}
+        aria-label={`View tagged Runs ${shortId ?? projectId}`}
+      >
+        View tagged Runs
+      </Link>
     </>
   );
 }
@@ -466,9 +464,10 @@ function AttentionList({
       <p id={labelId} className="dashboard-note">
         Arrow keys choose an item while the list is focused. Enter inspects it.
         Stop, Retry as a new run, Retry as a new workflow, Mark inspected, Mark
-        read, Approve and Deny stay on the selected row. Inspect agent, Inspect
+        read, Approve and Deny stay on the selected row.         Inspect agent, Inspect
         project and View tagged Runs stay on a notice or agent Run with a saved
-        link. Inspect project and View tagged Runs stay on a coding or worktree
+        link. View tagged Runs stays on a saved agent even without a project.
+        Inspect project and View tagged Runs stay on a coding or worktree
         Run with a saved project.
       </p>
       <ul
@@ -698,7 +697,7 @@ export default function DashboardActivity() {
           >
             {data.upcoming.length ? (
               <KeyboardActivityList
-                hint="Arrow keys choose a schedule while the list is focused. Enter inspects the agent. Inspect project and View tagged Runs stay on a saved link. Linking does not grant coding, Git or repository access. This list does not Enable or Run now."
+                hint="Arrow keys choose a schedule while the list is focused. Enter inspects the agent. Inspect project and View tagged Runs stay on a saved link. View tagged Runs stays on a saved agent even without a project. Linking does not grant coding, Git or repository access. This list does not Enable or Run now."
                 items={data.upcoming.map((agent) => ({
                   key: agent.id,
                   to: `/agents/${agent.id}`,
@@ -723,7 +722,7 @@ export default function DashboardActivity() {
           >
             {data.agents.length ? (
               <KeyboardActivityList
-                hint="Arrow keys choose an agent while the list is focused. Enter inspects it. Inspect project and View tagged Runs stay on a saved link. Linking does not grant coding, Git or repository access. This list does not Enable or Run now."
+                hint="Arrow keys choose an agent while the list is focused. Enter inspects it. Inspect project and View tagged Runs stay on a saved link. View tagged Runs stays on a saved agent even without a project. Linking does not grant coding, Git or repository access. This list does not Enable or Run now."
                 items={data.agents.map((agent) => ({
                   key: agent.id,
                   to: `/agents/${agent.id}`,

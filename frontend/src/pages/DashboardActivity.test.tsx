@@ -521,6 +521,9 @@ it("opens a linked project from Home without Enable or Run now", async () => {
       url.includes("/dashboard")
         ? {
             ...data,
+            upcoming: [],
+            notices: [],
+            interrupted_runs: [],
             agents: [{ ...data.agents[0], project_id: "project-1" }],
           }
         : [],
@@ -556,6 +559,8 @@ it("opens the tagged agent from in-progress and waiting Home Runs without Enable
       url.includes("/dashboard")
         ? {
             ...data,
+            upcoming: [],
+            agents: [],
             interrupted_runs: [],
             notices: [],
             active_runs: [
@@ -683,6 +688,36 @@ it("opens tagged Runs from in-progress coding and worktree Home Runs without Ena
   ).toBe(true);
 });
 
+it("opens tagged Runs from Home when no project is linked", async () => {
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () => (url.includes("/dashboard") ? overview() : []),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  const tagged = await screen.findAllByRole("link", {
+    name: "View tagged Runs agent",
+  });
+  expect(tagged.length).toBeGreaterThan(0);
+  expect(
+    tagged.every((link) => link.getAttribute("href") === "/runs?agent_id=agent"),
+  ).toBe(true);
+  expect(
+    screen.getByRole("link", { name: "Inspect agent agent" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/agents/agent");
+  expect(screen.queryByRole("link", { name: /Inspect project/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
+});
+
 it("opens the tagged agent from a Home notice without Enable or Run now", async () => {
   const data = overview();
   const fetch = vi.fn(async (url: string) => ({
@@ -691,6 +726,8 @@ it("opens the tagged agent from a Home notice without Enable or Run now", async 
       url.includes("/dashboard")
         ? {
             ...data,
+            upcoming: [],
+            agents: [],
             interrupted_runs: [],
             active_runs: [],
             notices: [

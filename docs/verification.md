@@ -768,3 +768,7 @@ Frontend lint, TypeScript, 336 component tests and production build passed. Prep
 ## Agents list opens tagged agent Runs — 2026-10-12
 
 Frontend lint, TypeScript, 337 component tests and production build passed. The Agents list, a saved definition and the conversation show View tagged Runs through `/runs?agent_id=` when no project is linked. Inspect project stays off until a project is saved. The existing agent+project filter is unchanged. Those links do not Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
+
+## Home opens tagged agent Runs — 2026-10-12
+
+Frontend lint, TypeScript, 338 component tests and production build passed. Home enabled agents, upcoming schedules, attention notices and in-progress or waiting agent Runs show View tagged Runs through `/runs?agent_id=` when no project is linked. Inspect project stays off until a project is saved. The existing agent+project filter is unchanged. Those links do not Enable or Run now. Audio and avatar retries stay unpublished. No Python or Host Runner changes. Restore, image rollout and LAN publish remain unpublished. Live preview `:8765` is an older image and was not used as evidence. Claude Code remains untested and unavailable.
