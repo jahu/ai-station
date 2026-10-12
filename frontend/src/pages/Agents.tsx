@@ -299,7 +299,8 @@ function AgentCards({
       </h2>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose an agent while the list is focused. Enter inspects it.
-        Inspect project and View tagged Runs stay on a saved link. Linking does
+        Inspect project and View tagged Runs stay on a saved link. View tagged
+        Runs stays on a saved agent even without a project. Linking does
         not grant coding, Git or repository access. This list does not Enable or
         Run now.
       </p>

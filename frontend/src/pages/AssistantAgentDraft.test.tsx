@@ -504,8 +504,15 @@ it("saves a linked project from the conversation without Enable or Run now", asy
   })) as HTMLInputElement;
   expect(none.checked).toBe(true);
   expect(
-    screen.getByText(/does not grant coding, Git or repository access/),
-  ).toBeTruthy();
+    screen.getAllByText(/does not grant coding, Git or repository access/)
+      .length,
+  ).toBeGreaterThan(0);
+  expect(
+    screen
+      .getByRole("link", { name: "View tagged Runs agent-on" })
+      .getAttribute("href"),
+  ).toBe("/runs?agent_id=agent-one");
+  expect(screen.queryByRole("link", { name: /Inspect project/ })).toBeNull();
   fireEvent.click(
     screen.getByRole("radio", { name: "Linked project project-1" }),
   );

@@ -106,25 +106,30 @@ export function AgentLinkedProjectLinks({
   projectName?: string;
   tabIndex?: number;
 }) {
-  if (!projectId) return null;
   const shortId = agentId.slice(0, 8);
-  const label = projectName || projectId;
   const active = tabIndex >= 0;
+  const taggedTo = projectId
+    ? `/runs?project_id=${projectId}&agent_id=${agentId}`
+    : `/runs?agent_id=${agentId}`;
   return (
     <p className="muted">
-      Linked project{" "}
+      {projectId ? (
+        <>
+          Linked project{" "}
+          <Link
+            className="text-link"
+            to={`/projects/${projectId}`}
+            tabIndex={active ? 0 : -1}
+            aria-label={`Inspect project ${projectId}`}
+          >
+            {projectName || projectId}
+          </Link>
+          .{" "}
+        </>
+      ) : null}
       <Link
         className="text-link"
-        to={`/projects/${projectId}`}
-        tabIndex={active ? 0 : -1}
-        aria-label={`Inspect project ${projectId}`}
-      >
-        {label}
-      </Link>
-      .{" "}
-      <Link
-        className="text-link"
-        to={`/runs?project_id=${projectId}&agent_id=${agentId}`}
+        to={taggedTo}
         tabIndex={active ? 0 : -1}
         aria-label={`View tagged Runs ${shortId}`}
       >
