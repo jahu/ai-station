@@ -464,7 +464,7 @@ function AttentionList({
       <p id={labelId} className="dashboard-note">
         Arrow keys choose an item while the list is focused. Enter inspects it.
         Stop, Retry as a new run, Retry as a new workflow, Mark inspected, Mark
-        read, Approve and Deny stay on the selected row.         Inspect agent, Inspect
+        read, Approve and Deny stay on the selected row. Inspect agent, Inspect
         project and View tagged Runs stay on a notice or agent Run with a saved
         link. View tagged Runs stays on a saved agent even without a project.
         Inspect project and View tagged Runs stay on a coding or worktree
