@@ -801,8 +801,15 @@ it("saves a linked project from the definition without enabling or running", asy
   })) as HTMLInputElement;
   expect(none.checked).toBe(true);
   expect(
-    screen.getByText(/does not grant coding, Git or repository access/),
-  ).toBeTruthy();
+    screen.getAllByText(/does not grant coding, Git or repository access/)
+      .length,
+  ).toBeGreaterThan(0);
+  expect(
+    screen.getByRole("link", { name: "View tagged Runs draft" }).getAttribute(
+      "href",
+    ),
+  ).toBe("/runs?agent_id=draft");
+  expect(screen.queryByRole("link", { name: /Inspect project/ })).toBeNull();
   fireEvent.click(
     screen.getByRole("radio", { name: "Linked project project-1" }),
   );
@@ -1101,6 +1108,77 @@ it("saves workflow memory without enabling the draft", async () => {
   expect(
     screen.getByText(/Successful telemetry, public search and HTTP fetch/i),
   ).toBeTruthy();
+});
+it("opens tagged Runs from the agent list when no project is linked", async () => {
+  const row = {
+    description: "",
+    goal: "Summarize",
+    system_prompt: "",
+    model: "local",
+    tools: [],
+    search_query: "",
+    fetch_urls: [],
+    skills: [],
+    trigger: "manual",
+    cron_expr: "",
+    interval_seconds: null,
+    run_at: null,
+    maximum_runtime: 600,
+    output_expectation: "Report",
+    require_approval: false,
+    workflow_mode: "sequential",
+    tool_calling: "none",
+    retry_policy: { mode: "none" },
+    notification_policy: {
+      on_success: false,
+      on_failure: false,
+      on_approval: false,
+    },
+    project_id: null,
+    enabled: false,
+    updated_at: "2026-10-09T12:00:00Z",
+    next_run_at: null,
+    last_run_at: null,
+    last_status: "",
+    failure_count: 0,
+    effective_permissions: [],
+  };
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.endsWith("/llama")
+        ? { models: [], instances: [] }
+        : url.includes("provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.includes("/projects")
+            ? []
+            : url.includes("/agents")
+              ? [{ ...row, id: "agentone", name: "Morning review" }]
+              : [],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  expect(
+    (
+      await screen.findByRole("link", {
+        name: "Inspect Morning review agentone",
+      })
+    ).getAttribute("href"),
+  ).toBe("/agents/agentone");
+  expect(
+    screen
+      .getByRole("link", { name: "View tagged Runs agentone" })
+      .getAttribute("href"),
+  ).toBe("/runs?agent_id=agentone");
+  expect(screen.queryByRole("link", { name: /Inspect project/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
+  ).toBe(true);
+  expect(
+    fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
+  ).toBe(true);
 });
 it("opens a linked project from the agent list without Enable or Run now", async () => {
   const row = {
