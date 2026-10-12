@@ -13,7 +13,13 @@ interface CodingSession {
   updated_at: string;
 }
 
-function SessionCards({ sessions }: { sessions: CodingSession[] }) {
+function SessionCards({
+  sessions,
+  projectId,
+}: {
+  sessions: CodingSession[];
+  projectId: string;
+}) {
   const labelId = useId();
   const navigate = useNavigate();
   const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
@@ -35,7 +41,8 @@ function SessionCards({ sessions }: { sessions: CodingSession[] }) {
     <>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a conversation while the list is focused. Enter opens
-        it. This list does not start a coding Run.
+        it. View tagged Runs stays on the selected row. This list does not
+        start a coding Run.
       </p>
       <div
         ref={listRef}
@@ -60,6 +67,14 @@ function SessionCards({ sessions }: { sessions: CodingSession[] }) {
                 <Badge status={session.status} />
               </div>
               <p className="muted">{time(session.updated_at)}</p>
+              <Link
+                className="text-link"
+                to={`/runs?project_id=${projectId}`}
+                tabIndex={current ? 0 : -1}
+                aria-label={`View tagged Runs ${shortId}`}
+              >
+                View tagged Runs
+              </Link>
             </article>
           );
         })}
@@ -96,13 +111,13 @@ export default function ProjectCodingSessions({
       </div>
       <p className="muted">
         Persistent coding Tasks for this project. Opening a conversation does
-        not start a coding Run.
+        not start a coding Run. View tagged Runs stays on the selected row.
       </p>
       <ErrorNotice error={sessions.error} />
       {sessions.isPending ? (
         <Loading />
       ) : rows.length ? (
-        <SessionCards sessions={rows} />
+        <SessionCards sessions={rows} projectId={projectId} />
       ) : (
         <Empty title="No coding conversations">
           Start a coding conversation from Coding to continue work on this
