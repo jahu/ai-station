@@ -60,11 +60,15 @@ it("rejects binary and oversized files without adding them", async () => {
 it("stages a PDF and image without treating them as UTF-8 text", async () => {
   render(<Composer />);
   fireEvent.change(screen.getByLabelText("Attach files"), {
-    target: { files: [file("notes.pdf", new Uint8Array([0x25, 0x50, 0x44, 0x46]))] },
+    target: {
+      files: [file("notes.pdf", new Uint8Array([0x25, 0x50, 0x44, 0x46]))],
+    },
   });
   await screen.findByText("PDF · text will be extracted when you send");
   fireEvent.change(screen.getByLabelText("Attach files"), {
-    target: { files: [file("photo.png", new Uint8Array([0x89, 0x50, 0x4e, 0x47]))] },
+    target: {
+      files: [file("photo.png", new Uint8Array([0x89, 0x50, 0x4e, 0x47]))],
+    },
   });
   await screen.findByText(/Pixels are not sent to the model/);
   expect(screen.getByRole("img", { name: "photo.png" })).toBeTruthy();

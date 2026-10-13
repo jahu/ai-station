@@ -259,9 +259,7 @@ export default function App() {
           <div className="row">
             <span className="private-label">
               <span className="status-dot" />
-              {sessionActive
-                ? "Loopback session"
-                : "Local control plane"}
+              {sessionActive ? "Loopback session" : "Local control plane"}
             </span>
             {sessionActive ? (
               <Button

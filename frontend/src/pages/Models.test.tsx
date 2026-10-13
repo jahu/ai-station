@@ -26,7 +26,10 @@ it("saves a definition and installs it only after an explicit action", async () 
           note: "Declared pairings, not a successful load",
         };
       }
-      if (String(url).includes("/models/definitions") && options?.method === "POST") {
+      if (
+        String(url).includes("/models/definitions") &&
+        options?.method === "POST"
+      ) {
         return { id: "def-1", status: "unverified", name: "Qwen" };
       }
       if (String(url).includes("/install")) {
@@ -54,7 +57,9 @@ it("saves a definition and installs it only after an explicit action", async () 
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  expect(await screen.findByText(/Declared pairings, not a successful load/)).toBeTruthy();
+  expect(
+    await screen.findByText(/Declared pairings, not a successful load/),
+  ).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Definitions" }));
   await screen.findByRole("heading", { name: "No curated definitions yet" });
   expect(
@@ -110,7 +115,10 @@ it("registers a definition from a present file without installing until asked", 
       if (String(url).includes("/llama")) {
         return { models: [], instances: [] };
       }
-      if (String(url).includes("/models/definitions") && options?.method === "POST") {
+      if (
+        String(url).includes("/models/definitions") &&
+        options?.method === "POST"
+      ) {
         definition = {
           id: "def-1",
           name: JSON.parse(String(options.body)).name,

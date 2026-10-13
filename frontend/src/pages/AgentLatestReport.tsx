@@ -3,10 +3,7 @@ import { api, type Artifact, type Run } from "../api";
 import { ErrorNotice } from "../components/common";
 import AgentReport from "./AgentReport";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
-import {
-  RegistryToolCalls,
-  type RegistryToolCall,
-} from "./AgentToolCalls";
+import { RegistryToolCalls, type RegistryToolCall } from "./AgentToolCalls";
 import { SearchSources, type WebSources } from "./ChatWebSearch";
 
 const TERMINAL = new Set(["succeeded", "failed", "canceled", "interrupted"]);

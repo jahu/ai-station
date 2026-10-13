@@ -53,7 +53,9 @@ export function AgentAttachedTools({
   const registered = isAgentToolList(catalog.data) ? catalog.data : [];
   const byName = new Map(registered.map((tool) => [tool.name, tool]));
   const catalogReady = isAgentToolList(catalog.data);
-  const attached = names.map((name) => byName.get(name) ?? placeholderTool(name));
+  const attached = names.map(
+    (name) => byName.get(name) ?? placeholderTool(name),
+  );
   const extras =
     catalogReady && onAdd
       ? registered.filter((tool) => !names.includes(tool.name))
@@ -85,9 +87,7 @@ export function AgentAttachedTools({
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a tool while the list is focused. Unavailable tools
         stay visible and block activation.
-        {onRemove
-          ? " Remove stays on an unavailable tool."
-          : ""}
+        {onRemove ? " Remove stays on an unavailable tool." : ""}
         {onAdd
           ? " Add stays on an operational catalog tool. Unpublished adapters cannot be added."
           : onRemove

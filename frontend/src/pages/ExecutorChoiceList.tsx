@@ -7,7 +7,8 @@ const EXECUTORS = [
   {
     key: "auto" as const,
     title: "Auto",
-    detail: "Uses the project's preferred executor. Never a silent provider switch.",
+    detail:
+      "Uses the project's preferred executor. Never a silent provider switch.",
   },
   {
     key: "local" as const,

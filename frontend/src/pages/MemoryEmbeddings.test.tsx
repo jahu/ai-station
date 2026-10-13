@@ -23,7 +23,10 @@ it("keeps embeddings off until an explicit local setup is saved", async () => {
   const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
     ok: true,
     json: async () => {
-      if (String(url).includes("/embeddings/setup") && options?.method === "PUT") {
+      if (
+        String(url).includes("/embeddings/setup") &&
+        options?.method === "PUT"
+      ) {
         const body = JSON.parse(String(options.body));
         setup = body.clear
           ? { ...setup, configured: false, endpoint: "", model: "" }
@@ -55,8 +58,11 @@ it("keeps embeddings off until an explicit local setup is saved", async () => {
   );
   expect(await screen.findByText(/Embeddings are not configured/)).toBeTruthy();
   expect(
-    (screen.getByRole("button", { name: "Check endpoint" }) as HTMLButtonElement)
-      .disabled,
+    (
+      screen.getByRole("button", {
+        name: "Check endpoint",
+      }) as HTMLButtonElement
+    ).disabled,
   ).toBe(true);
   fireEvent.change(screen.getByLabelText("Local embeddings base URL"), {
     target: { value: "http://127.0.0.1:11434/v1" },
@@ -66,7 +72,9 @@ it("keeps embeddings off until an explicit local setup is saved", async () => {
     { target: { value: "nomic-embed-text" } },
   );
   fireEvent.click(screen.getByRole("button", { name: "Save local setup" }));
-  await screen.findByText(/Using nomic-embed-text at http:\/\/127.0.0.1:11434\/v1/);
+  await screen.findByText(
+    /Using nomic-embed-text at http:\/\/127.0.0.1:11434\/v1/,
+  );
   expect(
     fetch.mock.calls.some(
       (call) =>

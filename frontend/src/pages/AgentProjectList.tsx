@@ -46,8 +46,8 @@ export function AgentProjectList({
     <>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a linked project while the list is focused. Space or
-        Enter selects it. That tags this agent’s Runs for filtering. It does
-        not grant coding, Git or repository access. There is no inspectable
+        Enter selects it. That tags this agent’s Runs for filtering. It does not
+        grant coding, Git or repository access. There is no inspectable
         project-link Run.
       </p>
       <div

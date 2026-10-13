@@ -51,8 +51,8 @@ function GpuCards({ gpus }: { gpus: GPU[] }) {
       <div className="gpu-grid">
         <section className="panel" aria-label="GPU detection">
           <Empty title="No GPUs detected">
-            CPU monitoring is available. Check Diagnostics for NVIDIA
-            detection details.
+            CPU monitoring is available. Check Diagnostics for NVIDIA detection
+            details.
           </Empty>
         </section>
       </div>
@@ -306,12 +306,12 @@ export default function Dashboard() {
             Host telemetry · refreshes every 5 seconds
           </span>
         </div>
-      {data ? <GpuCards gpus={data.gpus} /> : null}
-      <MetricCards
-        data={data}
-        active={status.data ? active : null}
-        queued={counts.queued ?? 0}
-      />
+        {data ? <GpuCards gpus={data.gpus} /> : null}
+        <MetricCards
+          data={data}
+          active={status.data ? active : null}
+          queued={counts.queued ?? 0}
+        />
       </section>
       <div className="dashboard-bottom">
         <section className="panel" aria-labelledby="resource-activity-heading">

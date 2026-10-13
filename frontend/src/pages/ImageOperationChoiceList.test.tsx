@@ -31,7 +31,9 @@ it("moves through image operations without queueing a Run", () => {
   render(<Host />);
   const generate = screen.getByLabelText("Operation t2i");
   expect(generate.tabIndex).toBe(0);
-  expect(screen.getByText(/There is no inspectable operation Run/)).toBeTruthy();
+  expect(
+    screen.getByText(/There is no inspectable operation Run/),
+  ).toBeTruthy();
   expect(generate.getAttribute("aria-pressed")).toBe("true");
   const list = generate.closest(".image-operation-choice-list") as HTMLElement;
   fireEvent.keyDown(list, { key: "End" });

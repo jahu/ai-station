@@ -110,9 +110,9 @@ it("keeps saved settings visible when live Git inspection is unavailable", async
   expect(await screen.findByText("No linked agents")).toBeTruthy();
   expect(await screen.findByText("No coding conversations")).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: "View all linked agents" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View all linked agents" })
+      .getAttribute("href"),
   ).toBe("/agents?project_id=saved");
   expect(
     screen

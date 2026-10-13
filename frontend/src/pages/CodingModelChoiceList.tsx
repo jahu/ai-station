@@ -59,11 +59,7 @@ export function CodingModelChoiceList({
           const current = i === index;
           const key = item.id || "auto";
           return (
-            <div
-              key={key}
-              aria-label={`Model ${key}`}
-              {...itemProps(i, key)}
-            >
+            <div key={key} aria-label={`Model ${key}`} {...itemProps(i, key)}>
               <label className="agent-tool">
                 <input
                   type="radio"

@@ -4,7 +4,11 @@ import { useListKeyboard } from "./useListKeyboard";
 const QUALITIES = [
   { key: 256, title: "Draft · 256 px", detail: "Fastest local preview." },
   { key: 384, title: "Balanced · 384 px", detail: "Default EchoMimic area." },
-  { key: 512, title: "Detailed · 512 px", detail: "Largest owned portrait size." },
+  {
+    key: 512,
+    title: "Detailed · 512 px",
+    detail: "Largest owned portrait size.",
+  },
 ] as const;
 
 const CLIPS = [17, 33, 49, 65, 81] as const;

@@ -217,7 +217,8 @@ export function Models() {
   });
   const definitions = useQuery({
     queryKey: ["model-definitions"],
-    queryFn: () => api<{ items: Definition[]; total: number }>(`/models/definitions`),
+    queryFn: () =>
+      api<{ items: Definition[]; total: number }>(`/models/definitions`),
     refetchInterval: 5000,
   });
   const compatibility = useQuery({
@@ -408,7 +409,9 @@ export function ModelDetail() {
     runtimes.data?.instances?.find(
       (item) => item.metadata.model_file_id === id && item.status !== "stopped",
     ) ??
-    runtimes.data?.instances?.find((item) => item.metadata.model_file_id === id);
+    runtimes.data?.instances?.find(
+      (item) => item.metadata.model_file_id === id,
+    );
   const [name, setName] = useState<string | null>(null);
   const [context, setContext] = useState<number | null>(null);
   const [cacheType, setCacheType] = useState<"f16" | "q8_0" | null>(null);
@@ -418,7 +421,10 @@ export function ModelDetail() {
     definition?.preset.gpus ??
     (hardware.data?.gpus ?? []).map((gpu) => Number(gpu.index));
   const selectedName =
-    name ?? definition?.name ?? model.data?.filename.replace(/\.gguf$/i, "") ?? "";
+    name ??
+    definition?.name ??
+    model.data?.filename.replace(/\.gguf$/i, "") ??
+    "";
   const selectedContext = context ?? definition?.preset.context_size ?? 4096;
   const selectedCache = cacheType ?? definition?.preset.cache_type ?? "f16";
   const save = useMutation({

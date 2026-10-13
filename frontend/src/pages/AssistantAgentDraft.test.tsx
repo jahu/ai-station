@@ -144,92 +144,94 @@ function mount(agent = draft) {
                 }
               : url.includes("/agents?") && url.includes("project_id=")
                 ? []
-              : url.includes("/artifacts")
-              ? []
-              : url.includes("/skills")
-                ? [
-                    {
-                      id: "station-briefing",
-                      name: "Station briefing",
-                      version: "1.0.0",
-                      description: "Local status report format",
-                      required_permissions: [],
-                      instructions:
-                        "Always mention GPU memory when it appears.",
-                    },
-                    {
-                      id: "daily-brief",
-                      name: "Daily brief",
-                      version: "1.2.0",
-                      description: "Morning format",
-                      required_permissions: [],
-                      instructions: "Cite only supplied tool results.",
-                    },
-                  ]
-                : url.endsWith("/tools")
-                  ? [
-                      {
-                        name: "system_snapshot",
-                        description:
-                          "Read current host hardware telemetry through the Host Runner.",
-                        operational: true,
-                        required_permissions: ["filesystem_read"],
-                      },
-                      {
-                        name: "web_search",
-                        description:
-                          "Search public pages through the configured search service.",
-                        operational: true,
-                        required_permissions: ["network_read"],
-                      },
-                      {
-                        name: "http_fetch",
-                        description: "GET reviewed public pages.",
-                        operational: true,
-                        required_permissions: ["network_read"],
-                      },
-                      {
-                        name: "remember_report",
-                        description: "Save successful reports as observations.",
-                        operational: true,
-                        required_permissions: ["memory_write"],
-                      },
-                      {
-                        name: "remember_workflow",
-                        description: "Save workflow observations.",
-                        operational: true,
-                        required_permissions: ["memory_write"],
-                      },
-                      {
-                        name: "browser",
-                        description:
-                          "Browser automation is not implemented for agents.",
-                        operational: false,
-                        required_permissions: [],
-                      },
-                    ]
-                  : url.includes("/retry-workflow")
-                    ? {
-                        id: "retry-run",
-                        capability: "agent.workflow",
-                        status: "queued",
-                        retry: {
-                          allowed: false,
-                          retry_of: "fail-run-dddd",
+                : url.includes("/artifacts")
+                  ? []
+                  : url.includes("/skills")
+                    ? [
+                        {
+                          id: "station-briefing",
+                          name: "Station briefing",
+                          version: "1.0.0",
+                          description: "Local status report format",
+                          required_permissions: [],
+                          instructions:
+                            "Always mention GPU memory when it appears.",
                         },
-                      }
-                    : url.endsWith("/cancel") && options?.method === "POST"
-                      ? { id: "run-live-eeee", status: "cancel_requested" }
-                      : url.includes("/approval") && options?.method === "POST"
+                        {
+                          id: "daily-brief",
+                          name: "Daily brief",
+                          version: "1.2.0",
+                          description: "Morning format",
+                          required_permissions: [],
+                          instructions: "Cite only supplied tool results.",
+                        },
+                      ]
+                    : url.endsWith("/tools")
+                      ? [
+                          {
+                            name: "system_snapshot",
+                            description:
+                              "Read current host hardware telemetry through the Host Runner.",
+                            operational: true,
+                            required_permissions: ["filesystem_read"],
+                          },
+                          {
+                            name: "web_search",
+                            description:
+                              "Search public pages through the configured search service.",
+                            operational: true,
+                            required_permissions: ["network_read"],
+                          },
+                          {
+                            name: "http_fetch",
+                            description: "GET reviewed public pages.",
+                            operational: true,
+                            required_permissions: ["network_read"],
+                          },
+                          {
+                            name: "remember_report",
+                            description:
+                              "Save successful reports as observations.",
+                            operational: true,
+                            required_permissions: ["memory_write"],
+                          },
+                          {
+                            name: "remember_workflow",
+                            description: "Save workflow observations.",
+                            operational: true,
+                            required_permissions: ["memory_write"],
+                          },
+                          {
+                            name: "browser",
+                            description:
+                              "Browser automation is not implemented for agents.",
+                            operational: false,
+                            required_permissions: [],
+                          },
+                        ]
+                      : url.includes("/retry-workflow")
                         ? {
-                            id: "wait-run-cccc",
-                            status:
-                              JSON.parse(String(options.body)).resolution ===
-                              "denied"
-                                ? "canceled"
-                                : "queued",
+                            id: "retry-run",
+                            capability: "agent.workflow",
+                            status: "queued",
+                            retry: {
+                              allowed: false,
+                              retry_of: "fail-run-dddd",
+                            },
                           }
-                        : current,
+                        : url.endsWith("/cancel") && options?.method === "POST"
+                          ? { id: "run-live-eeee", status: "cancel_requested" }
+                          : url.includes("/approval") &&
+                              options?.method === "POST"
+                            ? {
+                                id: "wait-run-cccc",
+                                status:
+                                  JSON.parse(String(options.body))
+                                    .resolution === "denied"
+                                    ? "canceled"
+                                    : "queued",
+                              }
+                            : current,
     };
   });
   vi.stubGlobal("fetch", fetch);
@@ -367,11 +369,9 @@ it("shows saved notice policy from the conversation without inventing a Run", as
     },
   });
   expect(
-    (
-      await screen.findByRole("checkbox", {
-        name: /When a workflow or report fails or is interrupted/i,
-      })
-    ) as HTMLInputElement,
+    (await screen.findByRole("checkbox", {
+      name: /When a workflow or report fails or is interrupted/i,
+    })) as HTMLInputElement,
   ).toMatchObject({ checked: true });
   expect(
     (
@@ -418,9 +418,8 @@ it("saves approval, retry, notice and workflow policies from the conversation wi
   fireEvent.click(screen.getByRole("radio", { name: /Manual retry/i }));
   await waitFor(() =>
     expect(
-      (
-        screen.getByRole("radio", { name: /Manual retry/i }) as HTMLInputElement
-      ).checked,
+      (screen.getByRole("radio", { name: /Manual retry/i }) as HTMLInputElement)
+        .checked,
     ).toBe(true),
   );
   fireEvent.click(
@@ -617,14 +616,14 @@ it("lists other agents on the same linked project from conversation without Enab
     }),
   ).toBeNull();
   expect(
-    screen.getByRole("link", { name: "View tagged Runs agenttwo" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View tagged Runs agenttwo" })
+      .getAttribute("href"),
   ).toBe("/runs?project_id=project-1&agent_id=agenttwo");
   expect(
-    screen.getByRole("link", { name: "View all linked agents" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View all linked agents" })
+      .getAttribute("href"),
   ).toBe("/agents?project_id=project-1");
   expect(
     fetch.mock.calls.some(
@@ -683,9 +682,8 @@ it("saves identity from the conversation without Enable or Run now", async () =>
     (screen.getByLabelText("Time limit agent-on") as HTMLInputElement).value,
   ).toBe("600");
   expect(
-    (
-      screen.getByLabelText("Expected outcome agent-on") as HTMLTextAreaElement
-    ).value,
+    (screen.getByLabelText("Expected outcome agent-on") as HTMLTextAreaElement)
+      .value,
   ).toBe("A concise, factual report.");
   fireEvent.change(name, { target: { value: "Idle GPU brief" } });
   fireEvent.change(screen.getByLabelText("Time limit agent-on"), {
@@ -807,7 +805,9 @@ it("shows report and workflow memory notices without Enable or Run now", async (
     screen.getByRole("note", { name: "Workflow memory agent-on" }),
   ).toBeTruthy();
   expect(
-    screen.getByText(/Successful reports will be stored in this agent’s memory/i),
+    screen.getByText(
+      /Successful reports will be stored in this agent’s memory/i,
+    ),
   ).toBeTruthy();
   expect(
     screen.getByText(
@@ -833,9 +833,7 @@ it("inspects the saved definition without queueing Run now", async () => {
   expect(screen.getByLabelText("Tool system_snapshot")).toBeTruthy();
   expect(screen.getByLabelText("Tool web_search")).toBeTruthy();
   expect(
-    (
-      screen.getByLabelText("Goal agent-on") as HTMLTextAreaElement
-    ).value,
+    (screen.getByLabelText("Goal agent-on") as HTMLTextAreaElement).value,
   ).toBe("Summarize GPU telemetry every weekday.");
   expect(
     screen.getByText(
@@ -890,9 +888,7 @@ it("enables a disabled draft from the conversation without inventing a Run", asy
     (screen.getByRole("radio", { name: /Gated/i }) as HTMLInputElement).checked,
   ).toBe(true);
   expect(
-    (
-      screen.getByLabelText("Goal agent-on") as HTMLTextAreaElement
-    ).value,
+    (screen.getByLabelText("Goal agent-on") as HTMLTextAreaElement).value,
   ).toBe("Summarize GPU telemetry every weekday.");
   expect(screen.getByText(/does not invent a conversation Run/)).toBeTruthy();
   expect(
@@ -1156,9 +1152,7 @@ it("attaches an operational registry tool from the conversation without Enable o
     enabled: false,
     expected_updated_at: "2026-10-11T10:00:00Z",
   });
-  expect(
-    await screen.findByLabelText("Reviewed URLs agent-on"),
-  ).toBeTruthy();
+  expect(await screen.findByLabelText("Reviewed URLs agent-on")).toBeTruthy();
   expect(
     (
       screen.getByRole("button", {
@@ -1707,11 +1701,9 @@ it("retries a failed workflow from conversation history without Run now", async 
     ],
   });
   expect(
-    (
-      await screen.findByRole("radio", {
-        name: /Manual retry/i,
-      })
-    ) as HTMLInputElement,
+    (await screen.findByRole("radio", {
+      name: /Manual retry/i,
+    })) as HTMLInputElement,
   ).toMatchObject({ checked: true });
   expect(screen.getByRole("button", { name: "Run now agent-on" })).toBeTruthy();
   fireEvent.click(

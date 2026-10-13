@@ -50,9 +50,8 @@ export function ProjectChoiceList({
     <>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a project while the list is focused. Space or Enter
-        selects it. Inspect project and View tagged Runs stay on that row and
-        do not start a coding Run. There is no inspectable project-selection
-        Run.
+        selects it. Inspect project and View tagged Runs stay on that row and do
+        not start a coding Run. There is no inspectable project-selection Run.
       </p>
       <div
         ref={listRef}

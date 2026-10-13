@@ -35,7 +35,9 @@ it("moves through this-turn mode without sending", () => {
   render(<Host />);
   const auto = screen.getByLabelText("Turn auto");
   expect(auto.tabIndex).toBe(0);
-  expect(screen.getByText(/There is no inspectable turn-mode Run/)).toBeTruthy();
+  expect(
+    screen.getByText(/There is no inspectable turn-mode Run/),
+  ).toBeTruthy();
   expect(
     (
       screen.getByRole("radio", {
@@ -58,9 +60,9 @@ it("moves through this-turn mode without sending", () => {
 
 it("does not change the mode while the list is disabled", () => {
   render(<Host disabled />);
-  const list = screen.getByLabelText("Turn auto").closest(
-    ".turn-choice-list",
-  ) as HTMLElement;
+  const list = screen
+    .getByLabelText("Turn auto")
+    .closest(".turn-choice-list") as HTMLElement;
   fireEvent.keyDown(list, { key: "End" });
   fireEvent.keyDown(list, { key: "Enter" });
   expect(

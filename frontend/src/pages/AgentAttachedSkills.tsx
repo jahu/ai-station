@@ -113,9 +113,7 @@ export function AgentAttachedSkills({
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a skill while the list is focused. Review instructions
         stays on the selected row. Skills do not grant tools.
-        {onRemove
-          ? " Remove stays on a skill missing from the catalog."
-          : ""}
+        {onRemove ? " Remove stays on a skill missing from the catalog." : ""}
         {onAdd
           ? " Add stays on an installed catalog skill. At most four."
           : onRemove

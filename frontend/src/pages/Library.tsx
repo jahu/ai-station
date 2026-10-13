@@ -126,10 +126,7 @@ export function ArtifactCards({
                   <small>{time(a.created_at)}</small>
                 </div>
               </Link>
-              <LibraryActions
-                artifact={a}
-                tabIndex={current ? 0 : -1}
-              />
+              <LibraryActions artifact={a} tabIndex={current ? 0 : -1} />
             </div>
           );
         })}

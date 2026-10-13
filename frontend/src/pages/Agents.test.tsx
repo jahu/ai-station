@@ -805,17 +805,17 @@ it("saves a linked project from the definition without enabling or running", asy
       .length,
   ).toBeGreaterThan(0);
   expect(
-    screen.getByRole("link", { name: "View tagged Runs draft" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View tagged Runs draft" })
+      .getAttribute("href"),
   ).toBe("/runs?agent_id=draft");
   expect(screen.queryByRole("link", { name: /Inspect project/ })).toBeNull();
   fireEvent.click(
     screen.getByRole("radio", { name: "Linked project project-1" }),
   );
-  expect(
-    fetch.mock.calls.every((call) => call[1]?.method !== "PUT"),
-  ).toBe(true);
+  expect(fetch.mock.calls.every((call) => call[1]?.method !== "PUT")).toBe(
+    true,
+  );
   fireEvent.click(screen.getByRole("button", { name: "Save definition" }));
   await vi.waitFor(() =>
     expect(fetch.mock.calls.filter((c) => c[1]?.method === "PUT")).toHaveLength(
@@ -823,7 +823,9 @@ it("saves a linked project from the definition without enabling or running", asy
     ),
   );
   expect(
-    JSON.parse(fetch.mock.calls.find((c) => c[1]?.method === "PUT")![1]!.body as string),
+    JSON.parse(
+      fetch.mock.calls.find((c) => c[1]?.method === "PUT")![1]!.body as string,
+    ),
   ).toMatchObject({
     project_id: "project-1",
     enabled: false,
@@ -1237,9 +1239,9 @@ it("opens a linked project from the agent list without Enable or Run now", async
     ).getAttribute("href"),
   ).toBe("/agents/agentone");
   expect(
-    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "Inspect project project-1" })
+      .getAttribute("href"),
   ).toBe("/projects/project-1");
   expect(
     screen.getByRole("link", { name: "Inspect project project-1" }).textContent,
@@ -1333,9 +1335,12 @@ it("filters the agent list by linked project without inventing a Run", async () 
       name: "Inspect Evening check agenttwo",
     }),
   ).toBeTruthy();
-  fireEvent.change(screen.getByRole("combobox", { name: "Filter linked project" }), {
-    target: { value: "project-1" },
-  });
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Filter linked project" }),
+    {
+      target: { value: "project-1" },
+    },
+  );
   await waitFor(() =>
     expect(fetch).toHaveBeenCalledWith(
       "/api/agents?limit=50&offset=0&project_id=project-1",
@@ -1447,7 +1452,9 @@ it("moves through execution history with arrow keys", async () => {
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
+            : url.includes("/skills") ||
+                url.includes("/projects") ||
+                url.endsWith("tools")
               ? []
               : url.endsWith("/hardware")
                 ? { gpus: [] }
@@ -1541,77 +1548,77 @@ it("moves through skills and tools with arrow keys without inventing a Run", asy
           : url.includes("/projects")
             ? []
             : url.includes("/skills")
-            ? [
-                {
-                  id: "daily-brief",
-                  name: "Daily brief",
-                  version: "1.0.0",
-                  description: "Local status format",
-                  required_permissions: [],
-                  instructions: "Always mention GPU memory.",
-                },
-                {
-                  id: "night-notes",
-                  name: "Night notes",
-                  version: "1.0.0",
-                  description: "Evening recap",
-                  required_permissions: [],
-                  instructions: "Keep the recap short.",
-                },
-              ]
-            : url.endsWith("tools")
               ? [
                   {
-                    name: "memory_search",
-                    description: "Search this agent’s memory",
-                    operational: true,
+                    id: "daily-brief",
+                    name: "Daily brief",
+                    version: "1.0.0",
+                    description: "Local status format",
                     required_permissions: [],
+                    instructions: "Always mention GPU memory.",
                   },
                   {
-                    name: "http_fetch",
-                    description: "GET reviewed public pages",
-                    operational: true,
-                    required_permissions: ["network_read"],
+                    id: "night-notes",
+                    name: "Night notes",
+                    version: "1.0.0",
+                    description: "Evening recap",
+                    required_permissions: [],
+                    instructions: "Keep the recap short.",
                   },
                 ]
-              : url.endsWith("/hardware")
-                ? { gpus: [] }
-                : {
-                    id: "draft",
-                    name: "Morning review",
-                    description: "",
-                    goal: "Summarize",
-                    system_prompt: "",
-                    model: "local",
-                    tools: [],
-                    search_query: "",
-                    fetch_urls: [],
-                    skills: [],
-                    trigger: "manual",
-                    cron_expr: "",
-                    interval_seconds: null,
-                    run_at: null,
-                    maximum_runtime: 600,
-                    output_expectation: "Report",
-                    require_approval: false,
-                    workflow_mode: "sequential",
-                    tool_calling: "none",
-                    retry_policy: { mode: "none" },
-                    notification_policy: {
-                      on_success: false,
-                      on_failure: false,
-                      on_approval: false,
+              : url.endsWith("tools")
+                ? [
+                    {
+                      name: "memory_search",
+                      description: "Search this agent’s memory",
+                      operational: true,
+                      required_permissions: [],
                     },
-                    project_id: null,
-                    enabled: false,
-                    updated_at: "2026-10-09T12:00:00Z",
-                    next_run_at: null,
-                    last_run_at: null,
-                    last_status: "",
-                    failure_count: 0,
-                    effective_permissions: [],
-                    runs: [],
-                  },
+                    {
+                      name: "http_fetch",
+                      description: "GET reviewed public pages",
+                      operational: true,
+                      required_permissions: ["network_read"],
+                    },
+                  ]
+                : url.endsWith("/hardware")
+                  ? { gpus: [] }
+                  : {
+                      id: "draft",
+                      name: "Morning review",
+                      description: "",
+                      goal: "Summarize",
+                      system_prompt: "",
+                      model: "local",
+                      tools: [],
+                      search_query: "",
+                      fetch_urls: [],
+                      skills: [],
+                      trigger: "manual",
+                      cron_expr: "",
+                      interval_seconds: null,
+                      run_at: null,
+                      maximum_runtime: 600,
+                      output_expectation: "Report",
+                      require_approval: false,
+                      workflow_mode: "sequential",
+                      tool_calling: "none",
+                      retry_policy: { mode: "none" },
+                      notification_policy: {
+                        on_success: false,
+                        on_failure: false,
+                        on_approval: false,
+                      },
+                      project_id: null,
+                      enabled: false,
+                      updated_at: "2026-10-09T12:00:00Z",
+                      next_run_at: null,
+                      last_run_at: null,
+                      last_status: "",
+                      failure_count: 0,
+                      effective_permissions: [],
+                      runs: [],
+                    },
   }));
   vi.stubGlobal("fetch", fetch);
   mount(true);
@@ -1671,7 +1678,9 @@ it("moves through approval, retry and notice policies without inventing a Run", 
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
+          : url.includes("/skills") ||
+              url.includes("/projects") ||
+              url.endsWith("tools")
             ? []
             : url.endsWith("/hardware")
               ? { gpus: [] }
@@ -1779,7 +1788,9 @@ it("moves through workflow mode and tool calling without inventing a Run", async
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
+          : url.includes("/skills") ||
+              url.includes("/projects") ||
+              url.endsWith("tools")
             ? []
             : url.endsWith("/hardware")
               ? { gpus: [] }
@@ -1870,7 +1881,9 @@ it("retries a failed workflow from Agents history without Run now", async () => 
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
+          : url.includes("/skills") ||
+              url.includes("/projects") ||
+              url.endsWith("tools")
             ? []
             : url.endsWith("/hardware")
               ? { gpus: [] }
@@ -1956,7 +1969,9 @@ it("stops an in-progress Run from Agents history without Run now", async () => {
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
+          : url.includes("/skills") ||
+              url.includes("/projects") ||
+              url.endsWith("tools")
             ? []
             : url.endsWith("/hardware")
               ? { gpus: [] }
@@ -2032,7 +2047,9 @@ it("approves a waiting Run from Agents without Run now or the inspector", async 
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
+          : url.includes("/skills") ||
+              url.includes("/projects") ||
+              url.endsWith("tools")
             ? []
             : url.endsWith("/hardware")
               ? { gpus: [] }
@@ -2179,7 +2196,9 @@ it("shows the latest agent report from Agents without Run now", async () => {
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
+            : url.includes("/skills") ||
+                url.includes("/projects") ||
+                url.endsWith("tools")
               ? []
               : url.endsWith("/hardware")
                 ? { gpus: [] }
@@ -2287,7 +2306,9 @@ it("shows recorded search sources next to the latest report from Agents without 
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
+            : url.includes("/skills") ||
+                url.includes("/projects") ||
+                url.endsWith("tools")
               ? []
               : url.endsWith("/hardware")
                 ? { gpus: [] }
@@ -2397,7 +2418,9 @@ it("shows recorded fetched pages next to the latest report from Agents without R
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
+            : url.includes("/skills") ||
+                url.includes("/projects") ||
+                url.endsWith("tools")
               ? []
               : url.endsWith("/hardware")
                 ? { gpus: [] }
@@ -2505,7 +2528,9 @@ it("shows recorded registry tool calls next to the latest report from Agents wit
           ? { models: [], instances: [] }
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
-            : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
+            : url.includes("/skills") ||
+                url.includes("/projects") ||
+                url.endsWith("tools")
               ? []
               : url.endsWith("/hardware")
                 ? { gpus: [] }
@@ -2623,7 +2648,9 @@ it("shows last-parent workflow steps next to history from Agents without Run now
         ? { models: [], instances: [] }
         : url.endsWith("/chat/provider")
           ? { models: ["local"], default_model: "local" }
-          : url.includes("/skills") || url.includes("/projects") || url.endsWith("tools")
+          : url.includes("/skills") ||
+              url.includes("/projects") ||
+              url.endsWith("tools")
             ? []
             : url.endsWith("/hardware")
               ? { gpus: [] }

@@ -73,9 +73,7 @@ export function GpuChoiceList({
                     onChange(
                       event.target.checked
                         ? [...selected, Number(gpu.index)]
-                        : selected.filter(
-                            (item) => item !== Number(gpu.index),
-                          ),
+                        : selected.filter((item) => item !== Number(gpu.index)),
                     )
                   }
                 />

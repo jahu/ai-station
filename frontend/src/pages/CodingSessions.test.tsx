@@ -1,5 +1,11 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import CodingSession, { CodingHistory, CodingNav } from "./CodingSessions";
@@ -133,7 +139,9 @@ it("moves through follow-up consent without starting a Run", async () => {
   });
   expect(
     (
-      screen.getByRole("checkbox", { name: /Share this turn/ }) as HTMLInputElement
+      screen.getByRole("checkbox", {
+        name: /Share this turn/,
+      }) as HTMLInputElement
     ).checked,
   ).toBe(true);
   expect(
@@ -247,7 +255,9 @@ it("opens tagged Runs from the open coding conversation without starting a Run",
   expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
   expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
   expect(
-    fetch.mock.calls.every((call) => !String(call[0]).includes("/coding/cursor")),
+    fetch.mock.calls.every(
+      (call) => !String(call[0]).includes("/coding/cursor"),
+    ),
   ).toBe(true);
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).includes("/messages")),
@@ -303,7 +313,9 @@ it("opens the project from a coding conversation without starting a Run", async 
       .getAttribute("href"),
   ).toBe("/coding/sess-one");
   expect(
-    fetch.mock.calls.every((call) => !String(call[0]).includes("/coding/cursor")),
+    fetch.mock.calls.every(
+      (call) => !String(call[0]).includes("/coding/cursor"),
+    ),
   ).toBe(true);
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).includes("/messages")),
@@ -387,7 +399,9 @@ it("filters coding conversations by project without starting a Run", async () =>
     screen.queryByRole("link", { name: "Inspect Fix the form sess-two" }),
   ).toBeNull();
   expect(
-    fetch.mock.calls.every((call) => !String(call[0]).includes("/coding/cursor")),
+    fetch.mock.calls.every(
+      (call) => !String(call[0]).includes("/coding/cursor"),
+    ),
   ).toBe(true);
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).includes("/messages")),

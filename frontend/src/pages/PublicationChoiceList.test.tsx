@@ -35,22 +35,31 @@ it("moves through publication approval without publishing", () => {
     screen.getByText(/There is no inspectable publication-approval Run/),
   ).toBeTruthy();
   expect(
-    (screen.getByRole("checkbox", { name: /I approve publishing/ }) as HTMLInputElement)
-      .checked,
+    (
+      screen.getByRole("checkbox", {
+        name: /I approve publishing/,
+      }) as HTMLInputElement
+    ).checked,
   ).toBe(false);
   fireEvent.keyDown(option.closest(".publication-choice-list") as HTMLElement, {
     key: "Enter",
   });
   expect(
-    (screen.getByRole("checkbox", { name: /I approve publishing/ }) as HTMLInputElement)
-      .checked,
+    (
+      screen.getByRole("checkbox", {
+        name: /I approve publishing/,
+      }) as HTMLInputElement
+    ).checked,
   ).toBe(true);
   fireEvent.keyDown(option.closest(".publication-choice-list") as HTMLElement, {
     key: " ",
   });
   expect(
-    (screen.getByRole("checkbox", { name: /I approve publishing/ }) as HTMLInputElement)
-      .checked,
+    (
+      screen.getByRole("checkbox", {
+        name: /I approve publishing/,
+      }) as HTMLInputElement
+    ).checked,
   ).toBe(false);
 });
 
@@ -61,7 +70,10 @@ it("does not approve publication while the toggle is disabled", () => {
     key: "Enter",
   });
   expect(
-    (screen.getByRole("checkbox", { name: /I approve publishing/ }) as HTMLInputElement)
-      .checked,
+    (
+      screen.getByRole("checkbox", {
+        name: /I approve publishing/,
+      }) as HTMLInputElement
+    ).checked,
   ).toBe(false);
 });

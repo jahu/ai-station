@@ -1,6 +1,11 @@
 import { useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import { api, type Run } from "../api";
 import { Empty, ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
@@ -15,10 +20,7 @@ import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import { useListKeyboard } from "./useListKeyboard";
 import { activationBlock } from "./agentActivation";
 import { agentSettingsPayload } from "./agentSettings";
-import {
-  AgentLinkedProjectLinks,
-  AgentProjectList,
-} from "./AgentProjectList";
+import { AgentLinkedProjectLinks, AgentProjectList } from "./AgentProjectList";
 import ProjectAgents from "./ProjectAgents";
 import {
   ApprovalChoiceList,
@@ -300,9 +302,9 @@ function AgentCards({
       <p id={labelId} className="dashboard-note">
         Arrow keys choose an agent while the list is focused. Enter inspects it.
         Inspect project and View tagged Runs stay on a saved link. View tagged
-        Runs stays on a saved agent even without a project. Linking does
-        not grant coding, Git or repository access. This list does not Enable or
-        Run now.
+        Runs stays on a saved agent even without a project. Linking does not
+        grant coding, Git or repository access. This list does not Enable or Run
+        now.
       </p>
       <div
         ref={listRef}
@@ -459,7 +461,8 @@ export function Agents() {
             value={projectId}
             onChange={(event) => {
               const next = new URLSearchParams(params);
-              if (event.target.value) next.set("project_id", event.target.value);
+              if (event.target.value)
+                next.set("project_id", event.target.value);
               else next.delete("project_id");
               setParams(next, { replace: true });
               setOffset(0);

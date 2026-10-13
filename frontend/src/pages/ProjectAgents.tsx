@@ -129,8 +129,8 @@ export default function ProjectAgents({
       </div>
       <p className="muted">
         Definitions that tag their Runs with this project. Linking does not
-        grant coding, Git or repository access. This list does not Enable or
-        Run now.
+        grant coding, Git or repository access. This list does not Enable or Run
+        now.
       </p>
       <ErrorNotice error={agents.error} />
       {agents.isPending ? (
@@ -139,9 +139,7 @@ export default function ProjectAgents({
         <AgentCards agents={rows} projectId={projectId} />
       ) : (
         <Empty
-          title={
-            excludeAgentId ? "No other linked agents" : "No linked agents"
-          }
+          title={excludeAgentId ? "No other linked agents" : "No linked agents"}
         >
           Link a project from Agents to tag those Runs for filtering.
         </Empty>

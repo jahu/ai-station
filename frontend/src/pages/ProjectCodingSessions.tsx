@@ -41,8 +41,8 @@ function SessionCards({
     <>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a conversation while the list is focused. Enter opens
-        it. View tagged Runs stays on the selected row. This list does not
-        start a coding Run.
+        it. View tagged Runs stays on the selected row. This list does not start
+        a coding Run.
       </p>
       <div
         ref={listRef}

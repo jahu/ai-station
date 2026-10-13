@@ -287,7 +287,9 @@ it("moves through nodes with arrow keys", async () => {
   expect(
     screen.getByText(/Authenticated LAN transport stays unpublished/),
   ).toBeTruthy();
-  expect(screen.queryByRole("button", { name: /bind|publish|lan/i })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /bind|publish|lan/i }),
+  ).toBeNull();
   fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
     key: "ArrowDown",
   });

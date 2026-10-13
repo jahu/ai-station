@@ -455,10 +455,7 @@ function AttentionList({
 }) {
   const labelId = useId();
   const { listRef, index, setSelectedKey, onKeyDown, itemProps } =
-    useListKeyboard<AttentionItem, HTMLUListElement>(
-      items,
-      (item) => item.key,
-    );
+    useListKeyboard<AttentionItem, HTMLUListElement>(items, (item) => item.key);
   return (
     <>
       <p id={labelId} className="dashboard-note">
@@ -467,8 +464,8 @@ function AttentionList({
         read, Approve and Deny stay on the selected row. Inspect agent, Inspect
         project and View tagged Runs stay on a notice or agent Run with a saved
         link. View tagged Runs stays on a saved agent even without a project.
-        Inspect project and View tagged Runs stay on a coding or worktree
-        Run with a saved project.
+        Inspect project and View tagged Runs stay on a coding or worktree Run
+        with a saved project.
       </p>
       <ul
         ref={listRef}

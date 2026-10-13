@@ -169,9 +169,9 @@ it("moves through named connectors with arrow keys", async () => {
   expect(second.tabIndex).toBe(0);
   expect(first.tabIndex).toBe(-1);
   expect(document.activeElement).toBe(
-    screen.getByRole("link", { name: "Inspect Docs feed http-two" }).closest(
-      "[data-list-index]",
-    ),
+    screen
+      .getByRole("link", { name: "Inspect Docs feed http-two" })
+      .closest("[data-list-index]"),
   );
   fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
     key: "Home",
@@ -220,9 +220,7 @@ it("moves through unpublished adapters with arrow keys", async () => {
   expect(
     screen.getByRole("region", { name: "Unavailable adapters" }),
   ).toBeTruthy();
-  expect(
-    screen.getByText(/These kinds stay unavailable/),
-  ).toBeTruthy();
+  expect(screen.getByText(/These kinds stay unavailable/)).toBeTruthy();
   expect(screen.queryByRole("button", { name: /enable|publish/i })).toBeNull();
   fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
     key: "ArrowDown",

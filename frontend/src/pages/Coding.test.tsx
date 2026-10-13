@@ -13,9 +13,9 @@ import Coding from "./Coding";
 function chooseExecutor(name: string) {
   const key = name === "Local AI" ? "local" : name.toLowerCase();
   fireEvent.click(
-    screen.getByLabelText(`Executor ${key}`).querySelector(
-      "input",
-    ) as HTMLElement,
+    screen
+      .getByLabelText(`Executor ${key}`)
+      .querySelector("input") as HTMLElement,
   );
 }
 
@@ -100,9 +100,9 @@ it.each(["Cursor", "Codex", "Local AI"])(
       await screen.findByLabelText("Model available-model");
       expect(
         (
-          screen.getByLabelText("Model auto").querySelector(
-            "input",
-          ) as HTMLInputElement
+          screen
+            .getByLabelText("Model auto")
+            .querySelector("input") as HTMLInputElement
         ).checked,
       ).toBe(true);
       const button = screen.getByRole("button", { name: "Start coding" });
@@ -143,9 +143,9 @@ it.each(["Cursor", "Codex", "Local AI"])(
       ).toBe(false);
       chooseExecutor(executor);
       fireEvent.click(
-        screen.getByLabelText("Model available-model").querySelector(
-          "input",
-        ) as HTMLElement,
+        screen
+          .getByLabelText("Model available-model")
+          .querySelector("input") as HTMLElement,
       );
       fireEvent.click(
         screen.getByRole("checkbox", { name: /Allow .* to receive/ }),
@@ -186,7 +186,9 @@ it.each(["Cursor", "Codex", "Local AI"])(
       ...(executor === "Local AI" ? { max_repair_attempts: 0 } : {}),
     });
     if (executor !== "Local AI") {
-      expect(JSON.parse(call[1]!.body as string).max_repair_attempts).toBeUndefined();
+      expect(
+        JSON.parse(call[1]!.body as string).max_repair_attempts,
+      ).toBeUndefined();
     }
   },
 );
