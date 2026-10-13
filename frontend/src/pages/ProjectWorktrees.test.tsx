@@ -106,6 +106,9 @@ it("requires confirmation before queueing owned worktree removal", async () => {
   expect(
     fetch.mock.calls.filter(([, options]) => options?.method === "POST"),
   ).toHaveLength(0);
+  expect(screen.getByRole("alert").textContent).toContain(
+    "Uncommitted files and unmerged commits will be lost",
+  );
   fireEvent.click(
     screen.getByRole("button", { name: /Permanently remove worktree/ }),
   );
@@ -119,7 +122,7 @@ it("requires confirmation before queueing owned worktree removal", async () => {
   );
 });
 
-it("pins a scheduled worktree so automatic expiry stops", async () => {
+it("clears a legacy expiry deadline", async () => {
   let pinned = false;
   const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
     ok: true,

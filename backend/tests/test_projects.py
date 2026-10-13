@@ -262,7 +262,7 @@ def test_owned_worktree_run_preserves_checkout_and_registers_report(repository, 
         assert "git.worktree.created" in client.get(f"/api/runs/{run['id']}/stream").text
         reset_engine()
         assert client.get(f"/api/projects/{project['id']}/worktrees").json()[0] == worktree
-        assert worktree["expires_at"]
+        assert worktree["expires_at"] is None
         keep = client.post(
             f"/api/projects/{project['id']}/worktrees/{worktree['id']}/keep",
             json={"expected_updated_at": project["updated_at"]},
@@ -271,44 +271,64 @@ def test_owned_worktree_run_preserves_checkout_and_registers_report(repository, 
         assert keep.json()["expires_at"] is None
 
 
-def test_scheduler_expires_due_owned_worktree_and_skips_pinned_or_busy(repository, owned_runner):
+@pytest.mark.parametrize("legacy_queued", [False, True])
+def test_legacy_expiry_preserves_dirty_untracked_and_unmerged_work(repository, owned_runner, legacy_queued):
     from datetime import timedelta
 
     from app.db import utcnow
-    from app.models import Worktree
+    from app.models import Run, Worktree
     from app.schedule import scheduler_tick
 
     with TestClient(app) as client:
         project, worktree = prepared_validation(client, repository, [["/usr/bin/true"]])
-        assert worktree["expires_at"]
-        with session_factory()() as session:
-            assert scheduler_tick(session) == []
-            session.commit()
-        keep = client.post(
-            f"/api/projects/{project['id']}/worktrees/{worktree['id']}/keep",
-            json={"expected_updated_at": project["updated_at"]},
+        assert worktree["expires_at"] is None
+        destination = owned_runner.data_dir / worktree["relative_path"]
+        (destination / "committed.txt").write_text("Unmerged work")
+        subprocess.run(["git", "-C", str(destination), "add", "committed.txt"], check=True)
+        subprocess.run(
+            [
+                "git",
+                "-c",
+                "user.name=Test",
+                "-c",
+                "user.email=test@example.invalid",
+                "-C",
+                str(destination),
+                "commit",
+                "-m",
+                "Keep this work",
+            ],
+            check=True,
+            capture_output=True,
         )
-        assert keep.json()["expires_at"] is None
+        (destination / "README.md").write_text("Uncommitted work")
+        (destination / "untracked.txt").write_text("Untracked work")
+        head = subprocess.check_output(["git", "-C", str(destination), "rev-parse", "HEAD"])
+        original_index = (repository / ".git/index").read_bytes()
+        if legacy_queued:
+            queued = enqueue_remove(client, project, worktree).json()
+            with session_factory()() as session:
+                session.get(Run, queued["id"]).triggered_by = "scheduler"
+                session.commit()
         with session_factory()() as session:
-            assert scheduler_tick(session) == []
             session.get(Worktree, worktree["id"]).expires_at = utcnow() - timedelta(days=1)
             session.commit()
-        with session_factory()() as session:
-            queued = scheduler_tick(session)
-            session.commit()
-        assert len(queued) == 1
-        expiry = client.get(f"/api/runs/{queued[0]}").json()
-        assert expiry["executor_type"] == "worktree_remove"
-        assert expiry["triggered_by"] == "scheduler"
-        assert expiry["parent_run_id"] == worktree["run_id"]
-        with session_factory()() as session:
             assert scheduler_tick(session) == []
             session.commit()
-        with session_factory()() as session:
-            tick(session, "expire-worktree")
+            tick(session, "legacy-expiry-test")
+        if legacy_queued:
+            result = client.get(f"/api/runs/{queued['id']}").json()
+            assert result["status"] == "failed"
+            assert "explicit user request" in result["error_message"]
+            assert result["pid"] is None
         listed = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
-        assert listed["removed_at"]
+        assert listed["removed_at"] is None
         assert listed["expires_at"] is None
+        assert (destination / "committed.txt").read_text() == "Unmerged work"
+        assert (destination / "README.md").read_text() == "Uncommitted work"
+        assert (destination / "untracked.txt").read_text() == "Untracked work"
+        assert subprocess.check_output(["git", "-C", str(destination), "rev-parse", "HEAD"]) == head
+        assert (repository / ".git/index").read_bytes() == original_index
 
 
 def test_preparation_does_not_run_checkout_hooks_or_filters(repository, owned_runner):

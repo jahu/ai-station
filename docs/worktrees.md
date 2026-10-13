@@ -14,6 +14,8 @@ Preparation grants only filesystem read, workspace write, Git read, and Git writ
 
 Removal holds the worktree and validation locks so an in-use checkout cannot disappear under coding, validation or dependency installation. A symlink at the owned path fails closed for inspection. Interrupted or canceled removal leaves remaining files for inspection; recovery never blindly repeats a delete. A later explicit request can finish an already-gone directory and missing branch. The registry keeps a tombstone (`removed_at`). Validation, coding follow-ups, dependency install and repair then fail closed.
 
-## Automatic expiry
+## Preservation policy
 
-A successful preparation schedules removal seven days later. Coding, validation and dependency Runs refresh that deadline while `expires_at` is set. **Don't auto-remove** clears the deadline so only an explicit removal Run deletes the checkout. Worktrees recorded before this column existed keep `expires_at` empty and are never auto-deleted. The scheduler queues the same owned-process removal used by the Projects button: at most one due worktree per tick, never while the project has an active Run, never for unowned or already-removed checkouts. Recovery never deletes without that Run.
+Worktrees are kept until explicitly removed by the user. There is no automatic deletion after inactivity: dirty files, untracked files and commits that have not been merged may contain valuable work. The scheduler clears legacy expiry dates without creating deletion Runs. The worker rejects previously queued automatic removal Runs before dispatch to the Host Runner. The old keep endpoint remains compatible and clears a legacy deadline.
+
+Explicit removal remains destructive and requires confirmation in the UI, which warns that uncommitted files and unmerged commits will be lost. Existing records and the expires_at column are retained for compatibility; no schema migration is needed.

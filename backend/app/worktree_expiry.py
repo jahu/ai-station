@@ -1,22 +1,17 @@
-"""Unused owned worktrees expire through the existing removal Run."""
+"""Keep owned worktrees until the user explicitly requests removal."""
 
-from datetime import timedelta
-
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from app.db import utcnow
 from app.models import Project, Run, Worktree
 from app.runs import create_run, create_task
 from app.state import TERMINAL
-
-TTL = timedelta(days=7)
 
 
 def schedule_expiry(worktree: Worktree) -> None:
     if worktree.removed_at is not None or not worktree.owned:
         return
-    worktree.expires_at = utcnow() + TTL
+    worktree.expires_at = None
 
 
 def pin_expiry(worktree: Worktree) -> None:
@@ -40,6 +35,10 @@ def refresh_expiry(session: Session, *, worktree_id=None, worktree_run_id=None) 
 def queue_worktree_removal(
     session: Session, project: Project, worktree: Worktree, *, triggered_by: str
 ) -> Run:
+    if triggered_by != "user":
+        raise ValueError("Worktree removal requires an explicit user request")
+    if not worktree.owned:
+        raise ValueError("Only an owned worktree can be removed")
     expected = f"worktrees/{project.id}/{worktree.run_id}"
     if worktree.removed_at is not None:
         raise ValueError("This worktree was already removed")
@@ -49,14 +48,9 @@ def queue_worktree_removal(
         select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
     ):
         raise ValueError("This project already has an active Run")
-    title = (
-        f"Expire unused worktree for {project.name}"
-        if triggered_by == "scheduler"
-        else f"Remove worktree for {project.name}"
-    )
     task = create_task(
         session,
-        title=title,
+        title=f"Remove worktree for {project.name}",
         prompt="Remove an owned local Git worktree",
         capability="coding.worktree.remove",
         project_id=project.id,
@@ -83,32 +77,15 @@ def queue_worktree_removal(
     return run
 
 
-def expire_due_worktrees(session: Session, *, limit: int = 1) -> list[str]:
-    created = []
-    now = utcnow()
-    rows = list(
-        session.scalars(
-            select(Worktree)
-            .where(
-                Worktree.owned.is_(True),
-                Worktree.removed_at.is_(None),
-                Worktree.expires_at.is_not(None),
-                Worktree.expires_at <= now,
-            )
-            .order_by(Worktree.expires_at, Worktree.id)
-            .limit(20)
-        )
+def expire_due_worktrees(session: Session) -> list[str]:
+    """Disarm legacy deadlines without queuing any destructive work.
+
+    Inactivity does not establish that changes are committed, merged or disposable.
+    Keep this scheduler hook so upgrades also clear deadlines saved by older versions.
+    """
+    session.execute(
+        update(Worktree)
+        .where(Worktree.owned.is_(True), Worktree.removed_at.is_(None), Worktree.expires_at.is_not(None))
+        .values(expires_at=None)
     )
-    for worktree in rows:
-        if len(created) >= limit:
-            break
-        project = session.get(Project, worktree.project_id)
-        if project is None:
-            continue
-        try:
-            with session.begin_nested():
-                run = queue_worktree_removal(session, project, worktree, triggered_by="scheduler")
-            created.append(run.id)
-        except ValueError:
-            continue
-    return created
+    return []

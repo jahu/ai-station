@@ -75,8 +75,8 @@ function WorktreeCards({
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a worktree while the list is focused. Enter inspects
         its preparation Run. View tagged Runs stays on the selected row.
-        Install, validate, keep and remove stay on the selected row. Those
-        links do not Enable or Run now or start a coding Run.
+        Install, validate, keep and remove stay on the selected row. Those links
+        do not Enable or Run now or start a coding Run.
       </p>
       <div
         ref={listRef}
@@ -152,6 +152,9 @@ function WorktreeCards({
               {!worktree.removed_at &&
                 (confirmId === worktree.id ? (
                   <div className="row">
+                    <p role="alert">
+                      Uncommitted files and unmerged commits will be lost.
+                    </p>
                     <Button
                       tabIndex={current ? 0 : -1}
                       disabled={busy}
@@ -189,7 +192,7 @@ function WorktreeCards({
                   ? "Removed. The local task branch and owned checkout are gone; GitHub remotes were not changed."
                   : worktree.owned
                     ? worktree.expires_at
-                      ? `Prepared and recorded. Unused, it is removed automatically after ${new Date(worktree.expires_at).toLocaleString()}.`
+                      ? "Prepared and recorded. Legacy expiry is disabled; kept until you remove it."
                       : "Prepared and recorded. Kept until you remove it."
                     : terminal.has(worktree.run_status)
                       ? "Preparation was not confirmed. Inspect the Run and any partial data before removing."
@@ -308,16 +311,14 @@ export default function ProjectWorktrees({
         Logs and the result report appear in the validation Run.
       </p>
       <p className="muted">
-        Unused owned worktrees are removed automatically after seven days of
-        inactivity, using the same removal Run as the explicit button. Coding,
-        validation and dependency Runs refresh that deadline.{" "}
-        <strong>Don&apos;t auto-remove</strong> keeps the checkout until you
-        delete it. Worktrees prepared before expiry existed are kept.
+        Worktrees are kept until you explicitly remove them. Inactivity never
+        deletes your code, uncommitted changes or task branch.
       </p>
       <p className="muted">
-        Remove deletes only this owned checkout and its local task branch. It
-        does not change your current repository, push, or delete GitHub
-        branches. Coding conversations that used the worktree cannot continue.
+        Remove permanently discards this checkout, including uncommitted files
+        and unmerged commits on its local task branch. It does not change your
+        current repository, push, or delete GitHub branches. Coding
+        conversations that used the worktree cannot continue.
       </p>
       <ErrorNotice
         error={

@@ -21,6 +21,10 @@ class WorktreeRemoveExecutor(NativeJobExecutor):
     error_type = "WorktreeRemovalFailed"
 
     def payload(self, run):
+        # Old versions could leave automatic deletions in the durable queue.
+        # Reject them before contacting the runner, including after an upgrade.
+        if run.triggered_by != "user":
+            raise ValueError("Worktree removal requires an explicit user request")
         return {
             "run_id": run.id,
             "project_id": run.project_id,
