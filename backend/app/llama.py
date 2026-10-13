@@ -19,7 +19,7 @@ from app.events import append_event
 from app.models import ModelFile, ResourceLock, Run, RuntimeInstance, Task
 from app.permissions import require
 from app.resources import active_locks, release_run_locks
-from app.runner_client import RunnerClient, RunnerError
+from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, mark_failed, run_dict, transition
 from app.serialize import runtime_dict
 from app.state import TERMINAL, RunStatus
@@ -61,9 +61,12 @@ def fit_coding_context(
     ceiling: int = CODING_CONTEXT_CEILING,
     failed_sizes: list[int] | tuple[int, ...] = (),
     proven_success: int | None = None,
+    context_profile: dict | None = None,
 ) -> int:
     """Largest GPU-resident Q8 context. 131072 is a ceiling, never a default load size."""
     limit = min(CODING_CONTEXT_CEILING, max(CODING_CONTEXT_FLOOR, (int(ceiling) // 256) * 256))
+    if context_profile:
+        limit = min(limit, context_profile["trained_context"] // 256 * 256)
     failed = {max(CODING_CONTEXT_FLOOR, (int(size) // 256) * 256) for size in failed_sizes if size}
     if not gpus:
         return min(limit, CODING_CONTEXT_FLOOR)
@@ -79,14 +82,21 @@ def fit_coding_context(
             _VRAM_USABLE_FRACTION * sum(float(value) for value in gpu_memory_mib)
             - size_bytes / (1024 * 1024)
             - _CUDA_OVERHEAD_MIB_PER_GPU * len(gpus)
+            - (context_profile or {}).get("state_reserve_mib", 0)
         )
         if kv_mib <= 0:
             computed = CODING_CONTEXT_FLOOR
         else:
-            computed = int((kv_mib * 1024 * 1024) / q8_kv_bytes_per_token(size_bytes))
+            per_token = (context_profile or {}).get("q8_kv_bytes_per_token") or q8_kv_bytes_per_token(
+                size_bytes
+            )
+            computed = int((kv_mib * 1024 * 1024) / per_token)
         if proven_success:
             computed = max(computed, proven_success)
     computed = min(limit, max(CODING_CONTEXT_FLOOR, (int(computed) // 256) * 256))
+    if failed:
+        # A changed estimate must not jump above an already-failed allocation.
+        computed = min(computed, max(CODING_CONTEXT_FLOOR, min(failed) // 2 // 256 * 256))
     while computed in failed and computed > CODING_CONTEXT_FLOOR:
         halved = (computed // 2 // 256) * 256
         computed = CODING_CONTEXT_FLOOR if halved < CODING_CONTEXT_FLOOR else halved
@@ -162,6 +172,16 @@ def proven_context_size(session, model_file_id, gpus) -> int | None:
 
 
 def coding_context_target(session, model, gpus, *, ceiling=CODING_CONTEXT_CEILING) -> int:
+    profile = next(
+        (
+            item.metadata_json["context_profile"]
+            for item in _q8_history(session, model.id, gpus)
+            if item.metadata_json.get("context_profile")
+            and item.metadata_json.get("model_size_bytes") == model.size_bytes
+            and item.metadata_json.get("model_mtime") == model.mtime
+        ),
+        None,
+    )
     return fit_coding_context(
         gpus=gpus,
         size_bytes=model.size_bytes,
@@ -169,6 +189,7 @@ def coding_context_target(session, model, gpus, *, ceiling=CODING_CONTEXT_CEILIN
         ceiling=ceiling,
         failed_sizes=failed_context_sizes(session, model.id, gpus),
         proven_success=proven_context_size(session, model.id, gpus),
+        context_profile=profile,
     )
 
 
@@ -284,6 +305,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False):
             "gpus": body.gpus,
             "context_size": body.context_size,
             "cache_type": body.cache_type,
+            "requested_context_size": requested_context,
         },
     )
     instance.endpoint = "llamacpp:" + instance.id
@@ -481,6 +503,53 @@ class LlamaExecutor:
         self.operation = operation
         self.name = "llama_" + operation
 
+    def fit_context(self, session, run, instance, runner, hardware):
+        require(run.effective_permissions, "filesystem_read")
+        try:
+            report = runner.verify_model(
+                {
+                    "run_id": run.id,
+                    "host_path": run.parameters["model_path"],
+                    "size_bytes": run.parameters["size_bytes"],
+                    "mtime": run.parameters["mtime"],
+                    "check_context": True,
+                    "permissions": run.effective_permissions,
+                }
+            )
+        except (RunnerError, RunnerUnavailable):
+            append_event(session, run.id, "runtime.context_estimated", {"source": "size_fallback"})
+            return
+        if not report.get("present") or not report.get("matches_observation"):
+            instance.status = "failed"
+            run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
+            mark_failed(session, run, "ModelChanged", "Model changed since discovery; scan it again")
+            return False
+        profile = report.get("context_profile")
+        if not profile:
+            append_event(session, run.id, "runtime.context_estimated", {"source": "size_fallback"})
+            return
+        gpus = run.parameters["gpus"]
+        totals = {int(item["index"]): item.get("memory_total_mib") for item in hardware.get("gpus", [])}
+        memory = [totals.get(index) for index in gpus]
+        fitted = fit_coding_context(
+            gpus=gpus,
+            size_bytes=run.parameters["size_bytes"],
+            gpu_memory_mib=memory,
+            ceiling=run.parameters.get("requested_context_size", run.parameters["context_size"]),
+            failed_sizes=failed_context_sizes(session, instance.metadata_json["model_file_id"], gpus),
+            proven_success=proven_context_size(session, instance.metadata_json["model_file_id"], gpus),
+            context_profile=profile,
+        )
+        run.parameters = {**run.parameters, "context_size": fitted}
+        instance.metadata_json = {
+            **instance.metadata_json,
+            "context_size": fitted,
+            "context_profile": profile,
+            "model_size_bytes": run.parameters["size_bytes"],
+            "model_mtime": run.parameters["mtime"],
+        }
+        append_event(session, run.id, "runtime.context_estimated", {**profile, "context_size": fitted})
+
     def execute(self, session, run):
         require(run.effective_permissions, "manage_models")
         instance = session.get(RuntimeInstance, run.parameters["instance_id"])
@@ -498,7 +567,11 @@ class LlamaExecutor:
         session.commit()
         runner = RunnerClient()
         if self.operation == "load" and run.status != "cancel_requested":
-            indexes = [int(g["index"]) for g in runner.hardware().get("gpus", [])]
+            hardware = runner.hardware()
+            indexes = [int(g["index"]) for g in hardware.get("gpus", [])]
+            if run.parameters.get("cache_type") == "q8_0" and not run.metadata_json.get("dispatch_attempted"):
+                if self.fit_context(session, run, instance, runner, hardware) is False:
+                    return "done"
             session.refresh(run)
             if run.status == "cancel_requested":
                 if not run.metadata_json.get("dispatch_attempted"):

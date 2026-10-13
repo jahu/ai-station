@@ -13,6 +13,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 from ai_station_runner import llama_runtime
 from ai_station_runner.config import _split, get_settings
+from ai_station_runner.gguf_context import inspect_context
 from ai_station_runner.security import PathBoundaryError, ensure_within
 
 _IMAGE_ID = re.compile(r"^sha256:[0-9a-f]{64}$")
@@ -25,6 +26,7 @@ class VerifyModel(BaseModel):
     size_bytes: int = Field(ge=0)
     mtime: float = Field(allow_inf_nan=False)
     check_image: StrictBool = False
+    check_context: StrictBool = False
     permissions: list[Literal["filesystem_read", "manage_models"]] = Field(max_length=2)
 
 
@@ -73,6 +75,12 @@ def verify_model(body: VerifyModel) -> dict:
         "image": None,
         "error": "" if matches else "Model file changed since discovery; scan it again",
     }
+    if body.check_context and matches:
+        try:
+            result["context_profile"] = inspect_context(path, stat.st_size, stat.st_mtime)
+        except (OSError, ValueError):
+            result["context_profile"] = None
+            result["context_notice"] = "Header estimate unavailable; use conservative fallback"
     if not body.check_image:
         return result
     image_name = settings.llama_image

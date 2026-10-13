@@ -21,6 +21,9 @@ from sqlalchemy import select
 @pytest.fixture
 def managed(monkeypatch):
     records = {}
+    monkeypatch.setattr(
+        RunnerClient, "verify_model", lambda _, body: {"present": True, "matches_observation": True}
+    )
     monkeypatch.setattr(RunnerClient, "hardware", lambda _: {"gpus": [{"index": 2}, {"index": 7}]})
 
     def load(_, body):
@@ -497,7 +500,7 @@ def test_q8_load_fits_instead_of_forcing_128k(coding_fit):
             instance = session.get(RuntimeInstance, run.parameters["instance_id"])
             assert run.parameters["context_size"] == two_12gb()
             assert run.parameters["cache_type"] == "q8_0"
-            assert "requested_context_size" not in run.parameters
+            assert run.parameters["requested_context_size"] == 131072
             assert instance.metadata_json["requested_context_size"] == 131072
 
 
@@ -825,3 +828,136 @@ def test_restart_stops_then_reloads_saved_preset_and_rejects_busy_or_external(ma
         conv = client.post("/api/chat/conversations", json={"model": "llamacpp:" + model_id}).json()
         client.post(f"/api/chat/conversations/{conv['id']}/messages", json={"content": "Hello"})
         assert client.post(f"/api/llama/{ready['id']}/restart", json={}).status_code == 409
+
+
+def hybrid_profile():
+    return {
+        "source": "gguf_header",
+        "architecture": "qwen35",
+        "trained_context": 262144,
+        "attention_layers": 16,
+        "q8_kv_bytes_per_token": 34816,
+        "state_reserve_mib": 512,
+    }
+
+
+def test_architecture_estimate_is_independent_of_weight_quantization():
+    from app.llama import fit_coding_context
+
+    common = dict(gpus=[2, 7], gpu_memory_mib=[12288, 12288], context_profile=hybrid_profile())
+    assert fit_coding_context(size_bytes=9090591264, **common) == 131072
+    fitted = fit_coding_context(size_bytes=16547400224, **common)
+    assert 81920 <= fitted < 131072
+    limited = fit_coding_context(
+        size_bytes=9090591264, **{**common, "context_profile": {**hybrid_profile(), "trained_context": 32768}}
+    )
+    assert limited == 32768
+    assert (
+        fit_coding_context(
+            size_bytes=9090591264,
+            **{**common, "context_profile": {**hybrid_profile(), "trained_context": 2048}},
+        )
+        == 2048
+    )
+
+
+def test_worker_inspects_before_loading_and_records_immutable_profile(coding_fit, monkeypatch):
+    model_id, records = coding_fit
+    monkeypatch.setattr(
+        RunnerClient,
+        "hardware",
+        lambda _: {
+            "gpus": [{"index": 2, "memory_total_mib": 12288}, {"index": 7, "memory_total_mib": 12288}]
+        },
+    )
+    inspected = []
+    dispatched = []
+
+    def verify(_, body):
+        inspected.append(body)
+        return {"present": True, "matches_observation": True, "context_profile": hybrid_profile()}
+
+    monkeypatch.setattr(RunnerClient, "verify_model", verify)
+    original = RunnerClient.load_llama
+
+    def load_record(client, body):
+        dispatched.append(body)
+        return original(client, body)
+
+    monkeypatch.setattr(RunnerClient, "load_llama", load_record)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/llama/load",
+            json={"model_file_id": model_id, "gpus": [2, 7], "context_size": 131072, "cache_type": "q8_0"},
+        )
+        assert response.status_code == 202
+        assert inspected == [] and dispatched == []
+        queued = response.json()
+        tick_once()
+        assert len(inspected) == len(dispatched) == 1
+        assert inspected[0]["run_id"] == queued["id"]
+        assert dispatched[0]["context_size"] > queued["parameters"]["context_size"]
+        with session_factory()() as session:
+            run = session.get(Run, queued["id"])
+            runtime = instances(session)[0]
+            assert run.status == "succeeded"
+            assert run.parameters["requested_context_size"] == 131072
+            assert runtime.metadata_json["context_profile"] == hybrid_profile()
+            from app.llama import coding_context_target
+
+            assert (
+                coding_context_target(session, session.get(ModelFile, model_id), [2, 7])
+                == dispatched[0]["context_size"]
+            )
+
+
+def test_cancellation_during_header_inspection_never_dispatches(coding_fit, monkeypatch):
+    model_id, records = coding_fit
+
+    def verify(_, body):
+        with session_factory()() as session:
+            request_cancel(session, session.get(Run, body["run_id"]))
+            session.commit()
+        return {"present": True, "matches_observation": True, "context_profile": hybrid_profile()}
+
+    monkeypatch.setattr(RunnerClient, "verify_model", verify)
+    with TestClient(app) as client:
+        queued = client.post(
+            "/api/llama/load",
+            json={"model_file_id": model_id, "gpus": [2, 7], "context_size": 131072, "cache_type": "q8_0"},
+        ).json()
+        tick_once()
+        with session_factory()() as session:
+            assert session.get(Run, queued["id"]).status == "canceled"
+            assert not active_locks(session)
+        assert records == {}
+
+
+def test_changed_file_fails_before_dispatch_and_does_not_block_future_loads(coding_fit, monkeypatch):
+    model_id, records = coding_fit
+    monkeypatch.setattr(
+        RunnerClient, "verify_model", lambda _, body: {"present": True, "matches_observation": False}
+    )
+    with TestClient(app) as client:
+        body = {"model_file_id": model_id, "gpus": [2, 7], "context_size": 131072, "cache_type": "q8_0"}
+        queued = client.post("/api/llama/load", json=body).json()
+        tick_once()
+        with session_factory()() as session:
+            assert session.get(Run, queued["id"]).status == "failed"
+            assert instances(session)[0].status == "failed"
+            assert not active_locks(session)
+        assert records == {}
+        assert client.post("/api/llama/load", json=body).status_code == 202
+
+
+def test_new_header_estimate_cannot_exceed_a_previously_failed_allocation():
+    from app.llama import fit_coding_context
+
+    fitted = fit_coding_context(
+        gpus=[0, 1],
+        size_bytes=9090591264,
+        gpu_memory_mib=[12288, 12288],
+        context_profile=hybrid_profile(),
+        failed_sizes=[65536],
+    )
+    assert fitted <= 32768
