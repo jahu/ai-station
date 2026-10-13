@@ -52,7 +52,7 @@ export function WorkflowStepCards({
       <h2 id={headingId}>Workflow steps</h2>
       <p className="muted">
         {workflow.mode === "gated"
-          ? "Gated: the report waits for approval after context tools."
+          ? "Gated: the requested work requires approval before execution."
           : "Sequential: each step waits for the previous one to succeed."}{" "}
         {workflow.tool_calling === "bounded"
           ? "The report may request selected registry tools; invented tools fail closed. "

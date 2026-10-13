@@ -25,6 +25,8 @@ STEP_KEYS = CONTEXT_STEPS | {"report"}
 
 
 def planned_steps(definition: AgentSettings) -> list[dict]:
+    if "coding_local" in definition.tools:
+        return [{"key": "coding_local", "gate": "none"}]
     steps = []
     for name in definition.tools:
         if name in RETENTION_TOOLS:
@@ -41,10 +43,19 @@ def planned_steps(definition: AgentSettings) -> list[dict]:
     return steps
 
 
+def workflow_parent(session, run):
+    visited = set()
+    while run is not None and run.id not in visited and len(visited) < 100:
+        if run.executor_type == "agent_workflow":
+            return run
+        visited.add(run.id)
+        run = session.get(Run, run.parent_run_id) if run.parent_run_id else None
+    return None
+
+
 def workflow_view(session, run: Run) -> dict | None:
-    parent_id = run.id if run.executor_type == "agent_workflow" else run.parent_run_id
-    parent = session.get(Run, parent_id) if parent_id else None
-    if parent is None or parent.executor_type != "agent_workflow":
+    parent = workflow_parent(session, run)
+    if parent is None:
         return None
     children = [
         child
@@ -54,6 +65,14 @@ def workflow_view(session, run: Run) -> dict | None:
         if child.executor_type in {"agent_tool", "agent"}
     ]
     definition = parent.parameters.get("definition") or {}
+    if "coding_local" in definition.get("tools", []):
+        children = list(
+            session.scalars(
+                select(Run)
+                .where(Run.task_id == parent.task_id, Run.id != parent.id)
+                .order_by(Run.created_at, Run.id)
+            )
+        )
     return {
         "parent_run_id": parent.id,
         "mode": definition.get("workflow_mode", "sequential"),
@@ -61,7 +80,9 @@ def workflow_view(session, run: Run) -> dict | None:
         "steps": [
             {
                 "run_id": child.id,
-                "key": child.parameters.get("tool") or "report",
+                "key": child.capability
+                if "coding_local" in definition.get("tools", [])
+                else child.parameters.get("tool") or "report",
                 "gate": child.parameters.get("gate", "none"),
                 "status": child.status,
                 "capability": child.capability,
@@ -75,16 +96,20 @@ def workflow_view(session, run: Run) -> dict | None:
 
 
 def active_workflow_child(session, run: Run) -> Run | None:
-    parent = run
-    if run.executor_type != "agent_workflow":
-        parent = session.get(Run, run.parent_run_id) if run.parent_run_id else None
-        if parent is None or parent.executor_type != "agent_workflow":
-            return None
+    parent = workflow_parent(session, run)
+    if parent is None:
+        return None
     children = [
         child
         for child in session.scalars(select(Run).where(Run.parent_run_id == parent.id))
         if child.status in ACTIVE
     ]
+    if "coding_local" in parent.parameters.get("definition", {}).get("tools", []):
+        children = list(
+            session.scalars(
+                select(Run).where(Run.task_id == parent.task_id, Run.id != parent.id, Run.status.in_(ACTIVE))
+            )
+        )
     rank = {
         RunStatus.RUNNING.value: 0,
         RunStatus.CLAIMED.value: 1,
@@ -163,6 +188,10 @@ class AgentWorkflowExecutor:
 
 def publish_steps(session, parent: Run) -> list[Run]:
     definition = AgentSettings.model_validate(parent.parameters["definition"])
+    if "coding_local" in definition.tools:
+        from app.agent_coding import publish_coding
+
+        return [publish_coding(session, parent, definition)]
     steps = parent.parameters.get("steps")
     if not isinstance(steps, list) or not steps:
         steps = planned_steps(definition)

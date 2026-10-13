@@ -166,3 +166,7 @@ Owned Q8 llama.cpp load Runs inspect a bounded GGUF header through the typed Run
 ## Local pixel vision
 
 The assistant dispatches image inspection through ordinary owned runtime-load and Chat Runs. Its worker prepares explicit artifact images as bounded inline inputs, and the private Runner rejects remote image URLs. A paired projector is mounted read-only beside the selected model. Descriptions persist as Markdown artifacts with source lineage. See [Chat vision](chat-vision.md).
+
+## Coding agents
+
+Agents may explicitly select the Local coding tool and a Project. They publish the same fresh-worktree/exploration/proposal/validation Runs as manual Coding. The child chain stays inspectable in agent history and Coding; no commit or publication is implied. See [coding agents](agent-coding.md).

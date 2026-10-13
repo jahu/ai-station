@@ -2690,3 +2690,64 @@ it("shows last-parent workflow steps next to history from Agents without Run now
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
 });
+
+it("shows the coding workflow and hides report-only controls for a coding agent", async () => {
+  const agent = {
+    id: "draft",
+    name: "Builder",
+    description: "",
+    goal: "Build a calculator",
+    system_prompt: "",
+    model: "local",
+    tools: ["coding_local"],
+    skills: [],
+    project_id: "project",
+    maximum_runtime: 600,
+    output_expectation: "",
+    enabled: false,
+    updated_at: "2026-10-13T00:00:00Z",
+    trigger: "manual",
+    cron_expr: "",
+    interval_seconds: null,
+    run_at: null,
+    workflow_mode: "sequential",
+    tool_calling: "none",
+    retry_policy: { mode: "none" },
+    notification_policy: {},
+    effective_permissions: ["workspace_write"],
+    runs: [],
+  };
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.endsWith("/agents/draft")
+        ? agent
+        : url.endsWith("/chat/provider")
+          ? { models: ["local"], default_model: "local" }
+          : url.endsWith("/llama")
+            ? { models: [], instances: [] }
+            : url.endsWith("/agents/tools")
+              ? [
+                  {
+                    name: "coding_local",
+                    description: "Build in an isolated worktree",
+                    operational: true,
+                    required_permissions: ["workspace_write"],
+                  },
+                ]
+              : url.includes("/projects?")
+                ? [{ id: "project", name: "Example project" }]
+                : [],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  await screen.findByRole("heading", { name: "Builder" });
+  expect(screen.getByLabelText("Goal").getAttribute("maxlength")).toBe("10000");
+  expect(screen.queryByLabelText("Expected output")).toBeNull();
+  expect(
+    screen.getByText(/Local coding uses the goal as its task/),
+  ).toBeTruthy();
+  expect(fetch.mock.calls.every((call) => typeof call[0] === "string")).toBe(
+    true,
+  );
+});

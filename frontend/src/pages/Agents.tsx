@@ -97,13 +97,15 @@ const schedule = (agent: Agent) =>
         : "Manual";
 
 function toolTitle(tool: Tool) {
-  return tool.name === "remember_report"
-    ? "Remember reports"
-    : tool.name === "remember_workflow"
-      ? "Remember workflow observations"
-      : tool.name === "http_fetch"
-        ? "HTTP fetch"
-        : tool.name;
+  return tool.name === "coding_local"
+    ? "Local coding"
+    : tool.name === "remember_report"
+      ? "Remember reports"
+      : tool.name === "remember_workflow"
+        ? "Remember workflow observations"
+        : tool.name === "http_fetch"
+          ? "HTTP fetch"
+          : tool.name;
 }
 
 function toggleValue(selected: string[], value: string, enabled: boolean) {
@@ -619,9 +621,11 @@ export function AgentDetail() {
           {agent.require_approval
             ? " Each workflow waits for an explicit approval before any step is published. Approve and queue or Deny stays here and does not call Run now."
             : ""}
-          {agent.workflow_mode === "gated"
-            ? " Gated mode parks the report after context tools so you can inspect those artifacts first."
-            : " Sequential mode runs saved context tools then the report, each as its own Run."}
+          {agent.tools.includes("coding_local")
+            ? " Local coding explores the linked project in a fresh worktree, prepares changes and runs configured checks. Results stay in Coding for review; it never commits or publishes."
+            : agent.workflow_mode === "gated"
+              ? " Gated mode parks the report after context tools so you can inspect those artifacts first."
+              : " Sequential mode runs saved context tools then the report, each as its own Run."}
           {agent.tool_calling === "bounded"
             ? " Bounded tool calling lets the report request selected registry tools; invented tools, URLs and commands fail closed."
             : ""}
@@ -678,7 +682,17 @@ export function AgentDetail() {
       <AgentEditor key={agent.id} agent={agent} active={active} />
       {agent.runs?.length ? (
         <>
-          <AgentLatestReport runs={agent.runs} />
+          {!agent.tools.includes("coding_local") && (
+            <AgentLatestReport runs={agent.runs} />
+          )}
+          {agent.tools.includes("coding_local") && agent.runs?.[0]?.task_id && (
+            <Link
+              className="button secondary"
+              to={`/coding/${agent.runs[0].task_id}`}
+            >
+              Open coding task
+            </Link>
+          )}
           <AgentLastWorkflowSteps runs={agent.runs} />
           <AgentExecutionHistory runs={agent.runs} />
         </>
@@ -688,7 +702,7 @@ export function AgentDetail() {
           <p className="muted">No executions yet.</p>
           <p className="muted">
             Latest 100 Runs. Open a Run to inspect events, parameters, errors,
-            and report artifacts.
+            and artifacts. Coding results retain their worktree for review.
           </p>
         </section>
       )}
@@ -813,7 +827,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           Goal
           <textarea
             required
-            maxLength={16000}
+            maxLength={values.tools.includes("coding_local") ? 10000 : 16000}
             rows={3}
             value={values.goal}
             onChange={(e) => update("goal", e.target.value)}
@@ -893,15 +907,17 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             onChange={(e) => update("maximum_runtime", Number(e.target.value))}
           />
         </label>
-        <label className="agent-wide">
-          Expected output
-          <textarea
-            maxLength={4000}
-            rows={2}
-            value={values.output_expectation}
-            onChange={(e) => update("output_expectation", e.target.value)}
-          />
-        </label>
+        {!values.tools.includes("coding_local") && (
+          <label className="agent-wide">
+            Expected output
+            <textarea
+              maxLength={4000}
+              rows={2}
+              value={values.output_expectation}
+              onChange={(e) => update("output_expectation", e.target.value)}
+            />
+          </label>
+        )}
         <div className="agent-wide">
           <ApprovalChoiceList
             checked={values.require_approval ?? false}
@@ -917,10 +933,12 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             only after a successful report. Bounded tool calling is extra
             registry calls during the report, not a shell or browser.
           </p>
-          <ToolCallingChoiceList
-            mode={values.tool_calling ?? "none"}
-            onChange={(mode) => update("tool_calling", mode)}
-          />
+          {!values.tools.includes("coding_local") && (
+            <ToolCallingChoiceList
+              mode={values.tool_calling ?? "none"}
+              onChange={(mode) => update("tool_calling", mode)}
+            />
+          )}
           <WorkflowModeChoiceList
             mode={values.workflow_mode ?? "sequential"}
             onChange={(mode) => update("workflow_mode", mode)}
@@ -1036,6 +1054,14 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         </div>
         <div className="agent-wide">
           <h3>Tools</h3>
+          {values.tools.includes("coding_local") && (
+            <p className="notice">
+              Local coding uses the goal as its task and the selected local
+              model. Each execution has an isolated branch, diff and validation
+              results. Gated mode asks before starting. No automatic commit or
+              publication.
+            </p>
+          )}
           <p className="muted">
             Context tools become inspectable workflow steps before the report.
             Remember reports and remember workflow observations run after those
@@ -1045,7 +1071,18 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             <ToolChoiceList
               tools={tools.data}
               selected={values.tools}
-              onChange={(names) => update("tools", names)}
+              onChange={(names) => {
+                const addedCoding =
+                  names.includes("coding_local") &&
+                  !values.tools.includes("coding_local");
+                const selected =
+                  addedCoding ||
+                  (names.length === 1 && names[0] === "coding_local")
+                    ? ["coding_local"]
+                    : names.filter((name) => name !== "coding_local");
+                update("tools", selected);
+                if (addedCoding) update("tool_calling", "none");
+              }}
             />
           )}
         </div>

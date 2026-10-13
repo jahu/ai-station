@@ -174,6 +174,14 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
     fetch_urls = prompt_public_urls(text)
     if fetch_urls or any(word in lowered for word in ("fetch", "pobierz stron")):
         tools.append("http_fetch")
+    if (
+        re.search(
+            r"\b(coding agent|write code|build a website|implement features|agent koduj[aą]cy|pisz kod|tw[oó]rz stron[eę]|buduj stron[eę])\b",
+            lowered,
+        )
+        and not tools
+    ):
+        tools = ["coding_local"]
     notices = {
         "on_success": _has(lowered, ("notify on success", "powiadom o sukcesie")),
         "on_failure": _has(

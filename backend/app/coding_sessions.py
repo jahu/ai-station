@@ -147,7 +147,12 @@ def followup(task_id: UUID, body: Followup, session: DB):
         "cumulative": True,
         "repair_attempt": 0,
     }
-    for key in ("repair_source_run_id", "repair_validation_run_id", "original_prompt"):
+    for key in (
+        "repair_source_run_id",
+        "repair_validation_run_id",
+        "original_prompt",
+        "agent_coding_deadline",
+    ):
         parameters.pop(key, None)
     run = create_run(
         session,

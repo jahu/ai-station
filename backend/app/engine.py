@@ -11,7 +11,7 @@ from app.dependencies import failed_prerequisites
 from app.events import append_event
 from app.executor import Executor
 from app.executors import EXECUTORS
-from app.heartbeat import keep_lease
+from app.heartbeat import cancel_expired_coding, keep_lease
 from app.models import WorkerRow
 from app.recovery import recover_stale
 from app.resources import release_run_locks
@@ -50,6 +50,9 @@ def tick(
         )
         session.commit()
         return run.id
+    cancel_expired_coding(session, run.id)
+    session.commit()
+    session.refresh(run)
     executor = executors.get(run.executor_type)
     if executor is None:
         mark_failed(session, run, "ExecutorMissing", f"No executor named {run.executor_type}")

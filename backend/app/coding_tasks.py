@@ -40,16 +40,40 @@ class CodingTask(BaseModel):
         return value.strip()
 
 
-def enqueue_coding_task(session, body, *, provider="cursor", task=None, parent_run_id=None):
+def enqueue_coding_task(
+    session, body, *, provider="cursor", task=None, parent_run_id=None, workflow_parent=None
+):
     local = provider == "local"
     if provider not in {"cursor", "codex", "local"}:
         raise ValueError("Unsupported coding provider")
     project = get_project(session, body.project_id)
     if project.updated_at != body.expected_updated_at:
         raise HTTPException(409, "Project settings changed. Reload before starting a coding task.")
-    if session.scalar(
-        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
-    ):
+    active = select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL))
+    if workflow_parent is not None:
+        from app.permissions import require
+
+        if (
+            provider != "local"
+            or task is None
+            or workflow_parent.task_id != task.id
+            or workflow_parent.id != parent_run_id
+            or workflow_parent.executor_type != "agent_workflow"
+            or workflow_parent.project_id != project.id
+            or "coding_local" not in workflow_parent.parameters.get("definition", {}).get("tools", [])
+        ):
+            raise ValueError("Coding requires the exact authorized agent workflow")
+        for permission in (
+            "filesystem_read",
+            "workspace_write",
+            "git_read",
+            "git_write",
+            "network_read",
+            "shell_project_commands",
+        ):
+            require(workflow_parent.effective_permissions, permission)
+        active = active.where(Run.id != workflow_parent.id)
+    if session.scalar(active.limit(1)):
         raise HTTPException(409, "This project already has an active Run")
     task = task or create_task(
         session,
@@ -175,6 +199,11 @@ def queue_validation(session, coding_run):
             "worktree_id": coding_run.parameters["worktree_id"],
             "worktree_run_id": coding_run.parameters["worktree_run_id"],
             "commands": commands,
+            **(
+                {"agent_coding_deadline": coding_run.parameters["agent_coding_deadline"]}
+                if coding_run.parameters.get("agent_coding_deadline")
+                else {}
+            ),
         },
     )
     run.parent_run_id = coding_run.id
