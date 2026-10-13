@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends chromium fonts-
     && pip install --no-cache-dir playwright==1.63.0
 COPY host-runner/ai_station_runner/browser_renderer.py /opt/ai-station/browser_renderer.py
 ENV HOME=/tmp PYTHONUNBUFFERED=1
+LABEL ai-station.browser.protocol="1"
 USER 1000:1000
 WORKDIR /tmp
 ENTRYPOINT ["python", "-u", "/opt/ai-station/browser_renderer.py"]

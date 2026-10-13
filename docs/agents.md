@@ -47,3 +47,15 @@ Run details link directly to the saved entry. Memory supports editing, disabling
 ## Remembering workflow observations
 
 Select **Remember workflow observations** to store successful telemetry, public search and HTTP fetch child Runs as own-scope observations tagged `agent-workflow` with source Run provenance. `memory_search` is not copied. This is independent of **Remember reports**; existing agents stay off. Failures, cancellation and missing `memory_write` create no memory. Oversized observations keep a labeled 12,000-character excerpt; the JSON artifact remains on the step Run. Retention and successful step state share one transaction. The report cannot choose the scope. See [memory contracts](memory.md).
+
+
+## Browse public pages
+
+Attach **Browse public pages** after installing the optional [browser image](browser.md).
+Save up to three reviewed public URLs before enabling. The worker executes a native
+browser child Run before the report; screenshots and captured text stay beside the
+report in history. `browser` and `network_read` are explicit permissions. Public
+resources may be blocked and are reported as incomplete. Stop uses the existing
+workflow cancellation; no browser profile, login, arbitrary scripts or filesystem
+access are granted. `remember_workflow` can retain a bounded observation in the
+agent's own memory with source Run provenance.

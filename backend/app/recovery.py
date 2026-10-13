@@ -129,6 +129,11 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
                     pass  # Remains pending until inspection confirms termination.
             touched.append(run.id)
             continue
+        if info.get("cleanup_confirmed") is False:
+            run.metadata_json = {**run.metadata_json, "cleanup_requires_inspection": True}
+            _interrupt(session, run, "Owned container cleanup could not be confirmed")
+            touched.append(run.id)
+            continue
         if run.status == RunStatus.CANCEL_REQUESTED.value:
             transition(
                 session, run, RunStatus.CANCELED, event_type="run.canceled", payload={"recovery": True}

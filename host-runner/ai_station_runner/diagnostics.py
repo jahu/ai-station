@@ -110,6 +110,16 @@ def collect_diagnostics(settings) -> dict:
             checks.append(check("NVIDIA GPU detection", "available", f"{len(gpus)} GPU(s)"))
         else:
             checks.append(check("NVIDIA GPU detection", "unavailable", "nvidia-smi returned no GPUs"))
+    from ai_station_runner.browser_runs import capabilities as browser_capabilities
+
+    browser = browser_capabilities()
+    checks.append(
+        check(
+            "browser renderer",
+            "available" if browser["available"] else "unavailable",
+            browser.get("image_id") or browser["reason"],
+        )
+    )
     return {"checks": checks, "gpus": gpus}
 
 

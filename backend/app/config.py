@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     llm_model: str = ""
     web_search_url: str = ""
+    browser_enabled: bool = False
     photo_python: str = ""
     photo_script: str = ""
     sd_cli: str = ""

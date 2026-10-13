@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     echomimic_python: str = ""
     echomimic_dir: str = ""
     echomimic_models: str = ""
+    browser_image: str = ""
     llama_image: str = "ghcr.io/ggml-org/llama.cpp:server-cuda"
     model_roots: str = ""
     allowed_roots: str = ""

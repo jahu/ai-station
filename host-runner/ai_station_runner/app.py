@@ -17,6 +17,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 from ai_station_runner import __version__
 from ai_station_runner.audio import AudioRequest, start_audio
 from ai_station_runner.avatars import AvatarRequest, start_avatar
+from ai_station_runner.browser_runs import BrowserRequest
 from ai_station_runner.codex_runs import CodexRequest, codex_report, start_codex
 from ai_station_runner.coding import CodingUnavailable, build_argv
 from ai_station_runner.coding_models import coding_models
@@ -793,4 +794,33 @@ def worktree_remove_report(run_id: UUID):
     try:
         return remove_report(manager(), str(run_id))
     except (GitError, ProcessNotOwned, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/browser/capabilities")
+def browser_capabilities():
+    from ai_station_runner.browser_runs import capabilities
+
+    return capabilities()
+
+
+@app.post("/v1/runs/browser")
+def browser_run(body: BrowserRequest):
+    from ai_station_runner.browser_runs import start_browser
+
+    try:
+        return {**start_browser(manager(), body), "runner_id": get_settings().runner_id}
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, RuntimeError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/runs/browser/{run_id}/report")
+def browser_report_endpoint(run_id: UUID):
+    from ai_station_runner.browser_runs import browser_report
+
+    try:
+        return browser_report(manager(), str(run_id))
+    except (ValueError, RuntimeError, ProcessNotOwned, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc

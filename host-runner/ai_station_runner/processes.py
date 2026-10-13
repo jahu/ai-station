@@ -143,6 +143,16 @@ class ProcessManager:
                     else "interrupted"
                 )
                 self._dump(records)
+            if record["executor"] == "browser" and not alive and not completion_pending:
+                from ai_station_runner.browser_runs import stop_containers
+
+                try:
+                    confirmed = stop_containers(run_id)
+                except (OSError, RuntimeError, ValueError):
+                    confirmed = False
+                if not confirmed:
+                    record["status"] = "interrupted"
+                    self._dump(records)
             result = {
                 **record,
                 "alive": alive,
@@ -150,6 +160,8 @@ class ProcessManager:
                 "stdout": _read(resolve_child(self.data_dir, record["stdout_log"])),
                 "stderr_tail": _read(resolve_child(self.data_dir, record["stderr_log"]), 4000),
             }
+            if record["executor"] == "browser" and not alive and not completion_pending:
+                result["cleanup_confirmed"] = confirmed
             for stream, offset in (("stdout", stdout_offset), ("stderr", stderr_offset)):
                 if offset is not None:
                     path = resolve_child(self.data_dir, record[f"{stream}_log"])
@@ -170,6 +182,10 @@ class ProcessManager:
     def cancel(self, run_id: str) -> dict:
         with self._lock:
             record = self.inspect(run_id)
+            if record["executor"] == "browser":
+                from ai_station_runner.browser_runs import cancel_browser
+
+                cancel_browser(run_id)
             if not record["alive"]:
                 return record
             records = self._load()

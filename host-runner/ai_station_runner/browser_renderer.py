@@ -81,9 +81,10 @@ async def render(url):
 
     lock = asyncio.Lock()
     count = 0
+    blocked = 0
 
     async def route_request(event):
-        nonlocal count
+        nonlocal count, blocked
         request = event["request"]
         request_id = event["requestId"]
         # CDP pauses each redirect too. Playwright route fulfillment otherwise
@@ -93,6 +94,7 @@ async def render(url):
             or len(request["url"]) > 2000
             or urlsplit(request["url"]).scheme not in {"http", "https"}
         ):
+            blocked += 1
             await cdp.send("Fetch.failRequest", {"requestId": request_id, "errorReason": "BlockedByClient"})
             return
         async with lock:
@@ -165,6 +167,7 @@ async def render(url):
                     "width": VIEWPORT["width"],
                     "height": VIEWPORT["height"],
                     "requests": min(count, MAX_REQUESTS),
+                    "blocked_request_count": blocked,
                 }
             )
         finally:

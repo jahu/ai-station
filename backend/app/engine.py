@@ -61,8 +61,14 @@ def tick(
         return run.id
     try:
         with keep_lease(run.id, worker_id):
-            executor.execute(session, run)
-        session.commit()
+            # Release the write transaction before joining the heartbeat thread.
+            # Otherwise a renewal waiting on SQLite blocks our own final commit.
+            try:
+                executor.execute(session, run)
+                session.commit()
+            except Exception:
+                session.rollback()
+                raise
     except Exception as exc:
         session.rollback()
         failed = session.get(type(run), run.id)

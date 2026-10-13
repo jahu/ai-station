@@ -6,7 +6,7 @@ from app.tools import TOOLS, ToolSpec, get_tool
 
 CALLABLE_TOOLS = frozenset({"system_snapshot", "memory_search", "web_search", "http_fetch"})
 RETENTION_TOOLS = frozenset({"remember_report", "remember_workflow"})
-WORKFLOW_MEMORY_TOOLS = frozenset({"system_snapshot", "web_search", "http_fetch"})
+WORKFLOW_MEMORY_TOOLS = frozenset({"system_snapshot", "web_search", "http_fetch", "browser"})
 MAX_TOOL_ROUNDS = 4
 MAX_CALLS_PER_ROUND = 3
 
@@ -56,7 +56,7 @@ AGENT_TOOLS = {
     ),
     "remember_workflow": ToolSpec(
         name="remember_workflow",
-        description="Save successful workflow step observations (telemetry, public search, HTTP fetch) in this agent's own memory, with source Run provenance. memory_search is not copied. Nothing is saved on failure or cancellation.",
+        description="Save successful workflow step observations (telemetry, public search, HTTP fetch, rendered pages) in this agent's own memory, with source Run provenance. memory_search is not copied. Nothing is saved on failure or cancellation.",
         risk_level="low",
         required_permissions=("memory_write",),
         timeout=5,
@@ -81,7 +81,6 @@ AGENT_TOOLS = {
     ),
 }
 for key, label in [
-    ("browser", "Browser automation"),
     ("read_file", "Host file reading"),
 ]:
     AGENT_TOOLS[key] = ToolSpec(
@@ -103,10 +102,11 @@ def effective_permissions(tools):
 
 AGENT_TOOLS["web_search"] = TOOLS["web_search"]
 AGENT_TOOLS["http_fetch"] = TOOLS["http_fetch"]
+AGENT_TOOLS["browser"] = TOOLS["browser"]
 
 
 def agent_tool(name):
-    return get_tool(name) if name in {"web_search", "http_fetch"} else AGENT_TOOLS[name]
+    return get_tool(name) if name in {"web_search", "http_fetch", "browser"} else AGENT_TOOLS[name]
 
 
 def calling_tools(definition) -> list[dict]:

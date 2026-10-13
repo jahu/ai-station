@@ -122,8 +122,8 @@ class AgentSettings(BaseModel):
         if self.enabled:
             if "web_search" in self.tools and not self.search_query:
                 raise ValueError("web_search requires an explicit public search query before activation")
-            if "http_fetch" in self.tools and not self.fetch_urls:
-                raise ValueError("http_fetch requires 1 to 3 explicit public URLs before activation")
+            if {"http_fetch", "browser"}.intersection(self.tools) and not self.fetch_urls:
+                raise ValueError("Page tools require 1 to 3 explicit public URLs before activation")
             if not self.model:
                 raise ValueError("Select a local model before enabling the agent")
             unavailable = [name for name in self.tools if not agent_tool(name).operational]

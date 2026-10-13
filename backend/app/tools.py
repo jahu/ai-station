@@ -148,13 +148,16 @@ TOOLS: dict[str, ToolSpec] = {
     ),
     "browser": ToolSpec(
         name="browser",
-        description="Browser automation. Not implemented.",
+        description="Inspect reviewed public pages with JavaScript and save rendered text and screenshots. No login, clicks, writes or private network access.",
         risk_level="high",
-        required_permissions=("browser",),
-        timeout=60,
+        required_permissions=("browser", "network_read"),
+        timeout=165,
         execution_target="host",
         operational=False,
-        input_schema=_schema({"url": {"type": "string"}}, ["url"]),
+        input_schema=_schema(
+            {"urls": {"type": "array", "items": {"type": "string"}, "minItems": 1, "maxItems": 3}},
+            ["urls"],
+        ),
         output_schema=_schema({}, []),
     ),
 }
@@ -167,6 +170,10 @@ def list_tools() -> list[ToolSpec]:
 def configured(tool: ToolSpec) -> ToolSpec:
     from app.config import get_settings
 
+    if tool.name == "browser":
+        from app.browser import available
+
+        return replace(tool, operational=available()["available"])
     return (
         replace(tool, operational=bool(get_settings().web_search_url)) if tool.name == "web_search" else tool
     )
