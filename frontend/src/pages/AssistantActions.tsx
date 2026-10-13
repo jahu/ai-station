@@ -571,6 +571,7 @@ export default function AssistantActions({
         "coding.publish",
         "runtime.load",
         "runtime.stop",
+        "system.inspect",
       ].includes(action)
     ) {
       onChange({
@@ -720,7 +721,8 @@ export default function AssistantActions({
         />
       </div>
       {!value.action.startsWith("coding.") &&
-        !value.action.startsWith("runtime.") && (
+        !value.action.startsWith("runtime.") &&
+        value.action !== "system.inspect" && (
           <div className="assistant-attachment-toolbar">
             <Button
               type="button"

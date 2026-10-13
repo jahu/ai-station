@@ -778,13 +778,15 @@ function ConversationView({
     (options.action === "coding.commit" && !!options.commit) ||
     (options.action === "coding.publish" && !!options.publish);
   const canSend =
-    assistantTurn && options.action.startsWith("runtime.")
-      ? runtimeReady
-      : assistantTurn &&
-          (options.action === "coding.commit" ||
-            options.action === "coding.publish")
-        ? gitReady
-        : !!draft.trim();
+    assistantTurn && options.action === "system.inspect"
+      ? true
+      : assistantTurn && options.action.startsWith("runtime.")
+        ? runtimeReady
+        : assistantTurn &&
+            (options.action === "coding.commit" ||
+              options.action === "coding.publish")
+          ? gitReady
+          : !!draft.trim();
   const send = useMutation({
     mutationFn: () =>
       api<Run>(`/chat/conversations/${conversation.id}/messages`, {
@@ -797,7 +799,9 @@ function ConversationView({
               ? "Load the selected local GGUF"
               : options.action === "runtime.stop"
                 ? "Unload the selected owned llama.cpp instance"
-                : ""),
+                : options.action === "system.inspect"
+                  ? "Inspect current workstation telemetry and activity"
+                  : ""),
           attachments,
           execution_mode: turnMode,
           ...(assistantTurn ? options : {}),
@@ -1010,7 +1014,8 @@ function ConversationView({
           {(!assistantTurn ||
             !(
               options.action.startsWith("coding.") ||
-              options.action.startsWith("runtime.")
+              options.action.startsWith("runtime.") ||
+              options.action === "system.inspect"
             ) ||
             attachments.length > 0) && (
             <TextAttachments
