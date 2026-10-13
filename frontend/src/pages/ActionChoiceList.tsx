@@ -43,6 +43,12 @@ const ACTIONS = [
     detail: "Queues local Chatterbox speech. Not transcription or music.",
   },
   {
+    key: "video.generate",
+    title: "Generate video",
+    detail:
+      "Create a silent local scene. Optionally attach one first-frame image.",
+  },
+  {
     key: "avatar.animate",
     title: "Animate portrait with speech",
     detail: "Queues local EchoMimic. Needs a portrait and WAV.",

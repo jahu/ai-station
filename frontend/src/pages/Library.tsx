@@ -435,6 +435,9 @@ export function ArtifactDetail() {
                     </Button>
                   ))}
                   <Button asChild variant="secondary">
+                    <Link to={`/video?input=${a.id}`}>Animate image</Link>
+                  </Button>
+                  <Button asChild variant="secondary">
                     <Link
                       to={`/avatars?image=${a.id}`}
                       aria-label={`Use as portrait ${a.id.slice(0, 8)}`}

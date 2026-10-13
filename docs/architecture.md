@@ -184,3 +184,11 @@ Public-page browsing is available as an optional isolated agent workflow tool,
 with JavaScript, Library screenshots, bounded text, exact container ownership and
 cancellation/recovery. It requires an explicitly built local executor image and
 configuration; missing setup remains unavailable. See [browser setup and security](browser.md).
+
+
+## General video
+
+[Wan video](video.md) reuses HostMediaExecutor and native process ownership. A fixed
+worker invokes required built-in ComfyUI components; no ComfyUI server or raw
+workflow graph is exposed. Inputs/output/cache and transient configured-model aliases
+belong to the Run directory/data root; installed models and runtimes are unchanged.

@@ -61,6 +61,7 @@ from app.runtime_registry import router as runtime_router
 from app.skills import router as skill_router
 from app.state import TERMINAL, InvalidTransition, RunStatus
 from app.telemetry_store import history
+from app.video import router as video_router
 
 DB = Annotated[Session, Depends(session_scope)]
 
@@ -333,6 +334,7 @@ app.include_router(chat_provider_router)
 app.include_router(connector_router)
 app.include_router(audio_router)
 app.include_router(avatar_router)
+app.include_router(video_router)
 app.include_router(commit_router)
 app.include_router(codex_router)
 app.include_router(coding_sessions_router)

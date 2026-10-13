@@ -45,6 +45,7 @@ from app.station_snapshot import StationSnapshotExecutor
 from app.summary_executor import SummaryExecutor
 from app.tools import get_tool
 from app.validation_executor import ProjectValidationExecutor
+from app.video import VideoExecutor
 from app.worktree_executor import WorktreeExecutor
 from app.worktree_remove import WorktreeRemoveExecutor
 
@@ -296,6 +297,7 @@ EXECUTORS = {
     "photo_pipe": PhotoPipeExecutor(),
     "chatterbox": AudioExecutor(),
     "echomimic": AvatarExecutor(),
+    "wan_video": VideoExecutor(),
     "reviewed_commit": ReviewedCommitExecutor(),
     "github_publication": GithubPublicationExecutor(),
     "publication_reconcile": PublicationReconcileExecutor(),
