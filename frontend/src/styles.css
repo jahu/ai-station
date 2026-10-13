@@ -2072,6 +2072,30 @@ section:has(> .memory-grid) > .dashboard-note {
   padding: 0;
   margin: 12px 0;
 }
+.assistant-action-select {
+  max-width: 460px;
+}
+.assistant-action-select label {
+  margin-bottom: 6px;
+}
+.assistant-action-select .muted {
+  margin: 6px 0 0;
+}
+.chat-advanced-settings,
+.chat-turn-options {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+}
+.chat-advanced-settings summary,
+.chat-turn-options summary {
+  cursor: pointer;
+  color: inherit;
+}
+.chat-advanced-settings[open] summary,
+.chat-turn-options[open] summary {
+  margin-bottom: 12px;
+}
 .assistant-actions label {
   display: grid;
   gap: 8px;

@@ -256,10 +256,8 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
             <div className="content-panel">
               <h2>Start a conversation</h2>
               <p className="muted">
-                Choose a chat provider, then Platform assistant to let this
-                conversation use AI Station capabilities, or Conversation only
-                to talk with the model. Secrets are never shown here; manage
-                them in <Link to="/settings">Settings</Link>.
+                Pick a model and start talking. You can adjust how this
+                conversation works in Advanced settings.
               </p>
               {provider.data && (
                 <>
@@ -368,35 +366,6 @@ function SettingsForm({
       }}
     >
       <fieldset disabled={pending}>
-        <div>
-          <span>Mode</span>
-          <ConversationModeChoiceList
-            value={mode}
-            disabled={pending}
-            onChange={setMode}
-          />
-        </div>
-        <label>
-          Conversation title
-          <input
-            name="title"
-            required
-            maxLength={300}
-            defaultValue={defaults.title}
-          />
-        </label>
-        <div>
-          <span>Provider</span>
-          <ConversationProviderChoiceList
-            value={defaults.provider}
-            providers={providers}
-            disabled={pending}
-            onChange={(key) => {
-              onProviderChange(key);
-              setModel("");
-            }}
-          />
-        </div>
         {localBuiltin ? (
           <LlamaModels
             value={model}
@@ -424,38 +393,70 @@ function SettingsForm({
             </datalist>
           </label>
         )}
-        <label>
-          System prompt
-          <textarea
-            name="system_prompt"
-            rows={3}
-            maxLength={8000}
-            defaultValue={defaults.system_prompt}
-          />
-        </label>
-        <div className="field-pair">
+        <details className="chat-advanced-settings">
+          <summary>Advanced settings</summary>
+          <div>
+            <span>Mode</span>
+            <ConversationModeChoiceList
+              value={mode}
+              disabled={pending}
+              onChange={setMode}
+            />
+          </div>
           <label>
-            Temperature
+            Conversation title
             <input
-              name="temperature"
-              type="number"
-              min={0}
-              max={2}
-              step={0.1}
-              defaultValue={defaults.temperature}
+              name="title"
+              required
+              maxLength={300}
+              defaultValue={defaults.title}
             />
           </label>
+          <div>
+            <span>Provider</span>
+            <ConversationProviderChoiceList
+              value={defaults.provider}
+              providers={providers}
+              disabled={pending}
+              onChange={(key) => {
+                onProviderChange(key);
+                setModel("");
+              }}
+            />
+          </div>
           <label>
-            Maximum tokens
-            <input
-              name="max_tokens"
-              type="number"
-              min={1}
-              max={8192}
-              defaultValue={defaults.max_tokens}
+            System prompt
+            <textarea
+              name="system_prompt"
+              rows={3}
+              maxLength={8000}
+              defaultValue={defaults.system_prompt}
             />
           </label>
-        </div>
+          <div className="field-pair">
+            <label>
+              Temperature
+              <input
+                name="temperature"
+                type="number"
+                min={0}
+                max={2}
+                step={0.1}
+                defaultValue={defaults.temperature}
+              />
+            </label>
+            <label>
+              Maximum tokens
+              <input
+                name="max_tokens"
+                type="number"
+                min={1}
+                max={8192}
+                defaultValue={defaults.max_tokens}
+              />
+            </label>
+          </div>
+        </details>
         <Button type="submit" disabled={modelPending || !model}>
           {pending ? "Saving…" : label}
         </Button>
@@ -963,8 +964,15 @@ function ConversationView({
               }
             }}
           />
-          <div>
-            <span>This turn</span>
+          <details className="chat-turn-options">
+            <summary>
+              This turn ·{" "}
+              {turnMode === "auto"
+                ? "Conversation default"
+                : turnMode === "local"
+                  ? "Conversation only"
+                  : "Platform assistant"}
+            </summary>
             <TurnModeChoiceList
               value={turnMode}
               orchestrator={orchestrator}
@@ -976,7 +984,7 @@ function ConversationView({
                 }
               }}
             />
-          </div>
+          </details>
           {assistantTurn && (
             <AssistantActions
               value={options}

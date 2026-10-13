@@ -8,7 +8,8 @@ const MODES = [
   {
     key: "orchestrator" as const,
     title: "Platform assistant",
-    detail: "Saved for later turns. This conversation can route to owned actions.",
+    detail:
+      "Saved for later turns. This conversation can route to owned actions.",
   },
   {
     key: "local" as const,
@@ -53,9 +54,8 @@ export function ConversationModeChoiceList({
   return (
     <>
       <p id={labelId} className="dashboard-note">
-        Arrow keys choose the saved conversation mode while the list is
-        focused. Space or Enter selects it. Enter does not create, save or
-        send. There is no inspectable conversation-mode Run.
+        Let the assistant operate AI Station, or keep this conversation for
+        answers.
       </p>
       <div
         ref={listRef}
@@ -129,9 +129,8 @@ export function ConversationProviderChoiceList({
   return (
     <>
       <p id={labelId} className="dashboard-note">
-        Arrow keys choose a saved chat provider while the list is focused.
-        Space or Enter selects it. Enter does not create, save or send. There
-        is no inspectable provider-selection Run.
+        Choose where this conversation runs. External providers send messages
+        outside your workstation.
       </p>
       <div
         ref={listRef}

@@ -57,9 +57,16 @@ it("creates a conversation with explicit local model settings", async () => {
     </QueryClientProvider>,
   );
   await screen.findByLabelText("Model");
+  const advanced = screen
+    .getByText("Advanced settings")
+    .closest("details") as HTMLDetailsElement;
+  expect(advanced.open).toBe(false);
+  fireEvent.click(screen.getByText("Advanced settings"));
   expect(screen.getByLabelText("Mode local")).toBeTruthy();
   expect(screen.getByLabelText("Conversation title")).toBeTruthy();
-  expect(screen.getByLabelText("Provider local-openai-compatible")).toBeTruthy();
+  expect(
+    screen.getByLabelText("Provider local-openai-compatible"),
+  ).toBeTruthy();
   expect(screen.getByLabelText("Temperature")).toBeTruthy();
   expect(screen.getByLabelText("Maximum tokens")).toBeTruthy();
   fireEvent.change(screen.getByLabelText("System prompt"), {
@@ -425,16 +432,16 @@ it("overrides this turn without sending or rewriting conversation settings", asy
     </QueryClientProvider>,
   );
   const auto = await screen.findByLabelText("Turn auto");
-  expect(screen.queryByLabelText("Action auto")).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "Action" })).toBeNull();
   const list = auto.closest(".turn-choice-list") as HTMLElement;
   fireEvent.keyDown(list, { key: "End" });
   fireEvent.keyDown(list, { key: "Enter" });
   expect(
     (
-      screen.getByLabelText("Turn orchestrator").querySelector(
-        "input",
-      ) as HTMLInputElement
+      screen
+        .getByLabelText("Turn orchestrator")
+        .querySelector("input") as HTMLInputElement
     ).checked,
   ).toBe(true);
-  expect(await screen.findByLabelText("Action auto")).toBeTruthy();
+  expect(await screen.findByRole("combobox", { name: "Action" })).toBeTruthy();
 });
