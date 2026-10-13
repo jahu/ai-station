@@ -836,3 +836,21 @@ Avatars/Video can synthesize typed Polish speech from a WAV voice reference befo
 A separately opted-in private Runner/API/worker smoke used already-stored portrait/voice artifacts and the installed offline Chatterbox/EchoMimic runtimes. Both Runs succeeded in 121.9 seconds. Chromium decoded and played the real 256×256 MP4 (17-frame smoke clip, 0.68 seconds), reopened it from the initial speech Run URL, and passed desktop/mobile layout checks without JS errors. Both WAV and MP4 retain source lineage and GPU reservations were released. This verifies execution and playback, not subjective voice/animation quality or long-script coverage. Evidence: `data/acceptance/speaking-avatar-20261013/`. Reusable opt-in smoke: `AI_STATION_REAL_GPU_TESTS=1 .venv/bin/python scripts/real_speaking_avatar_smoke.py --portrait /path/to/portrait.png --voice /path/to/reference.wav`.
 
 Final review closed the completed-first-step Stop race for media workflows; 152 Run/image/avatar tests passed after that change, and the reviewed Docker image was rebuilt. No prior passing checks were waived.
+
+
+## Public GET connection identity — 2026-10-13
+
+Full Python validation passed 816 tests with five opt-in skips. Review then added
+IPv6 transition/multicast guards and fallback to another already-checked address;
+all 84 final HTTP/control-plane connector/native GET tests passed after those
+changes. They cover actual HTTPX/HTTPCore request serialization, numeric socket
+target, verified TLS context and domain SNI, DNS rebinding, redirects, secret
+stripping, IPv6, mixed unsafe DNS records and connection fallback without a new
+lookup. Ruff lint/format, both Compose configurations and the final Docker image
+build passed. Frontend source and deployment configuration are unchanged.
+
+A separate manual public HTTPS check successfully fetched Example Domain through
+both final adapters with normal certificate verification and preserved public
+URLs. No model inference or private credentials were involved. Local evidence:
+`data/acceptance/public-network-20261013/`. Browser rendering is a subsequent
+feature and is not enabled by this fix.
