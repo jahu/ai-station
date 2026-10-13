@@ -10,7 +10,10 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { useState } from "react";
-import AssistantActions, { AssistantResults } from "./AssistantActions";
+import AssistantActions, {
+  AssistantResults,
+  type AssistantOptions,
+} from "./AssistantActions";
 
 function chooseAction(key: string) {
   fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
@@ -1105,4 +1108,44 @@ it("moves through image references with arrow keys without inventing a Run", asy
     { key: "Home" },
   );
   expect(first.tabIndex).toBe(0);
+});
+
+it("clears media scope and hides irrelevant upload controls for workstation inspection", () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, json: async () => [] })),
+  );
+  function Composer() {
+    const [value, setValue] = useState<AssistantOptions>({
+      ...emptyOptions,
+      image_artifact_ids: ["portrait"],
+      audio_artifact_id: "voice",
+    });
+    return (
+      <>
+        <AssistantActions
+          value={value}
+          onChange={setValue}
+          busy={false}
+          onUploading={() => {}}
+        />
+        <output>{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  chooseAction("system.inspect");
+  expect(screen.queryByRole("button", { name: "Add images" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /Add voice|Replace voice/ }),
+  ).toBeNull();
+  expect(screen.queryByAltText("Reference 1")).toBeNull();
+  const options = JSON.parse(screen.getByRole("status").textContent ?? "{}");
+  expect(options.image_artifact_ids).toEqual([]);
+  expect(options.audio_artifact_id).toBeNull();
+  expect(options.coding).toBeNull();
 });
