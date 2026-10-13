@@ -198,6 +198,19 @@ def request_cancel(session: Session, run: Run) -> Run:
         child = active_workflow_child(session, run)
         if child is not None:
             return request_cancel(session, child)
+    if run.status in TERMINAL and (
+        run.executor_type == "photo_pipe"
+        and run.parameters.get("upscale_result")
+        or run.executor_type == "chatterbox"
+        and run.parameters.get("avatar_after_speech")
+    ):
+        from app.media_workflow import workflow_steps
+
+        executors = {"photo_pipe"} if run.executor_type == "photo_pipe" else {"chatterbox", "echomimic"}
+        steps = workflow_steps(session, run.id, executors)["steps"]
+        child = session.get(Run, steps[-1]["id"])
+        if child.id != run.id and child.status not in TERMINAL:
+            return request_cancel(session, child)
     run.cancellation_requested_at = utcnow()
     if (
         run.status == RunStatus.QUEUED

@@ -17,3 +17,5 @@ Real application acceptance: isolated API upload → queued Run `93a9893f-b8ca-4
 Real browser acceptance (2026-09-28): Audio upload and generation, decoded WAV playback in Library, and an assistant speech child Run with inline playback all passed without browser JavaScript errors. These checks establish playable output, not a subjective pronunciation assessment.
 
 The Audio workspace keeps composition and output side by side. Voice references support drag/drop, file selection and Library reuse. The inline Library list is one keyboard sequence (arrows, Home, End, Enter attaches) with unique Choose names. Generation shows its live state, stop action and playable result in place; the Run inspector remains available for logs. The result's Run ID is preserved in the URL for reopening after navigation or refresh. GPU selection lives in Advanced settings.
+
+Portraits can now use a voice reference and typed Polish speech through a sequential Chatterbox → EchoMimic workflow, retaining both outputs and following the active stage after refresh. See [speaking avatars](speaking-avatars.md).

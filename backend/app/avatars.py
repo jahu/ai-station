@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/avatars")
 
 class AvatarRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    speech_text: str | None = Field(default=None, min_length=1, max_length=1000)
     image_artifact_id: UUID
     audio_artifact_id: UUID
     prompt: str = Field(default="A person speaking naturally, static camera.", min_length=1, max_length=2000)
@@ -37,6 +38,20 @@ def create_avatar_run(session, body, *, task=None, parent_run_id=None):
     task = task or create_task(
         session, title=body.prompt[:80], prompt=body.prompt, capability="avatar.animate"
     )
+    if body.speech_text is not None:
+        from app.audio import SpeechRequest, create_audio_run
+
+        speech = create_audio_run(
+            session,
+            SpeechRequest(text=body.speech_text, reference_artifact_id=body.audio_artifact_id, gpu=body.gpu),
+            task=task,
+            parent_run_id=parent_run_id,
+        )
+        speech.parameters = {
+            **speech.parameters,
+            "avatar_after_speech": body.model_dump(mode="json", exclude={"speech_text", "audio_artifact_id"}),
+        }
+        return speech
     return create_run(
         session,
         task,
@@ -48,13 +63,22 @@ def create_avatar_run(session, body, *, task=None, parent_run_id=None):
         retry_class="inspect",
         parent_run_id=parent_run_id,
         parameters={
-            **body.model_dump(mode="json", exclude={"image_artifact_id", "audio_artifact_id", "gpu"}),
+            **body.model_dump(
+                mode="json", exclude={"image_artifact_id", "audio_artifact_id", "gpu", "speech_text"}
+            ),
             "image_relative": image.relative_path,
             "audio_relative": audio.relative_path,
             "parent_artifact_ids": [image.id, audio.id],
             "backend": "echomimic-v3",
         },
     )
+
+
+@router.get("/runs/{run_id}/workflow")
+def workflow(run_id: UUID, session: Annotated[Session, Depends(session_scope)]):
+    from app.media_workflow import workflow_steps
+
+    return workflow_steps(session, run_id, {"chatterbox", "echomimic"})
 
 
 @router.post("/runs", status_code=202)

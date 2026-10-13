@@ -69,3 +69,5 @@ Starting a conversation requires only choosing a model and clicking Create conve
 The assistant can inspect real workstation telemetry and saved activity through an ordinary child Run, without inference or model loading. Recent conversation excerpts are snapshotted for follow-up routing, with strict bounds and no inherited grants. See [station inspection](station-inspection.md) for execution, cancellation and context contracts.
 
 Image generation and edits can now queue a dependent 4× Upscale with the existing photo executor. The result/completion and child publication are atomic, and Images follows the active stage after refresh. See [image workflows](image-workflows.md).
+
+Portraits can now use a voice reference and typed Polish speech through a sequential Chatterbox → EchoMimic workflow, retaining both outputs and following the active stage after refresh. See [speaking avatars](speaking-avatars.md).

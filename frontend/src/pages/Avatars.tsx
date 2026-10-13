@@ -7,7 +7,11 @@ import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import MediaInput from "../components/media/MediaInput";
 import MediaResult from "../components/media/MediaResult";
-import { mediaBusy, useMediaRun } from "../components/media/media-run";
+import {
+  mediaBusy,
+  useMediaRun,
+  useAvatarWorkflow,
+} from "../components/media/media-run";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import {
   AvatarClipChoiceList,
@@ -41,6 +45,8 @@ function AvatarForm({
   const cache = useQueryClient();
   const [image, setImage] = useState(initialImage ?? "");
   const [audio, setAudio] = useState(initialAudio ?? "");
+  const [voiceMode, setVoiceMode] = useState<"recording" | "text">("recording");
+  const [speechText, setSpeechText] = useState("");
   const [uploading, setUploading] = useState(false);
   const [prompt, setPrompt] = useState(
     "A person speaking naturally, static camera.",
@@ -53,6 +59,8 @@ function AvatarForm({
   const hardware = useHardware();
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
+  const workflow = useAvatarWorkflow(run.data);
+  const activeRun = workflow.data?.steps.at(-1) ?? run.data;
   const generate = useMutation({
     mutationFn: () =>
       api<Run>("/avatars/runs", {
@@ -67,6 +75,7 @@ function AvatarForm({
           steps,
           seed,
           gpu,
+          ...(voiceMode === "text" ? { speech_text: speechText } : {}),
         }),
       }),
     onSuccess: (result) => {
@@ -78,7 +87,10 @@ function AvatarForm({
       });
     },
   });
-  const busy = generate.isPending || mediaBusy(run.data);
+  const busy =
+    generate.isPending ||
+    mediaBusy(activeRun) ||
+    (!!run.data?.parameters?.avatar_after_speech && workflow.isPending);
   return (
     <>
       <PageTitle
@@ -108,6 +120,29 @@ function AvatarForm({
             <span>01 / Portrait & voice</span>
           </div>
           <fieldset disabled={busy || uploading}>
+            <fieldset className="avatar-voice-mode">
+              <legend>Speech source</legend>
+              <label>
+                <input
+                  type="radio"
+                  name="voice-mode"
+                  value="recording"
+                  checked={voiceMode === "recording"}
+                  onChange={() => setVoiceMode("recording")}
+                />
+                Use a recording
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="voice-mode"
+                  value="text"
+                  checked={voiceMode === "text"}
+                  onChange={() => setVoiceMode("text")}
+                />
+                Type what to say
+              </label>
+            </fieldset>
             <div className="media-source-grid">
               <MediaInput
                 kind="image"
@@ -120,14 +155,40 @@ function AvatarForm({
               />
               <MediaInput
                 kind="audio"
-                label="Speech recording"
-                hint="WAV · 0.68–60 sec · up to 20 MB"
+                label={
+                  voiceMode === "text" ? "Voice reference" : "Speech recording"
+                }
+                hint={
+                  voiceMode === "text"
+                    ? "A short WAV sample of the voice to use"
+                    : "WAV · 0.68–60 sec · up to 20 MB"
+                }
                 value={audio}
                 onChange={setAudio}
                 disabled={busy || uploading}
                 onBusy={setUploading}
               />
             </div>
+            {voiceMode === "text" && (
+              <label className="media-text-label">
+                <span>
+                  Words to say <small>Local Polish speech</small>
+                </span>
+                <textarea
+                  aria-label="Words to say"
+                  required
+                  maxLength={1000}
+                  rows={3}
+                  value={speechText}
+                  onChange={(event) => setSpeechText(event.target.value)}
+                  placeholder="Write a short sentence for your avatar…"
+                />
+                <small>
+                  The voice sample sets the voice. AI Station generates these
+                  words, then animates the portrait.
+                </small>
+              </label>
+            )}
             <Link className="media-help-link" to="/audio">
               Need a voice recording? Create speech in Audio{" "}
               <ArrowUpRight size={13} />
@@ -206,21 +267,31 @@ function AvatarForm({
             <Button
               type="submit"
               className="media-generate"
-              disabled={!image || !audio || !prompt.trim() || uploading || busy}
+              disabled={
+                !image ||
+                !audio ||
+                !prompt.trim() ||
+                (voiceMode === "text" && !speechText.trim()) ||
+                uploading ||
+                busy
+              }
             >
               <Sparkles size={17} />
               {busy ? "Creating your avatar…" : "Generate avatar video"}
             </Button>
             <p className="media-privacy">
-              Uses the start of your recording · preserves portrait proportions.
+              {voiceMode === "text"
+                ? "Speech is generated first · clip length controls how much is animated."
+                : "Uses the start of your recording · preserves portrait proportions."}
             </p>
           </fieldset>
         </form>
         <MediaResult
           kind="video"
-          runId={runId}
-          run={run.data}
-          error={run.error}
+          runId={activeRun?.id ?? runId}
+          run={activeRun}
+          steps={workflow.data?.steps}
+          error={run.error ?? workflow.error}
         />
       </div>
     </>

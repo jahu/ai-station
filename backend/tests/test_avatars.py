@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 from ai_station_runner import app as host_app
+from ai_station_runner import audio as host_audio
 from ai_station_runner import avatars as host_avatar
 from ai_station_runner.config import clear_settings_cache
 from app.api import app
@@ -54,9 +55,23 @@ def avatar_bridge(tmp_path, monkeypatch):
     monkeypatch.setenv("AI_STATION_ECHOMIMIC_PYTHON", str(python))
     monkeypatch.setenv("AI_STATION_ECHOMIMIC_DIR", str(tmp_path))
     monkeypatch.setenv("AI_STATION_ECHOMIMIC_MODELS", str(tmp_path))
+    speech_script = tmp_path / "fake_speech.py"
+    speech_script.write_text("""import sys,time,wave
+args=sys.argv
+text=args[args.index('--text')+1]
+if text == 'fail': sys.exit(3)
+if text == 'wait': time.sleep(30)
+with wave.open(args[args.index('--out')+1], 'wb') as wav:
+    wav.setnchannels(1); wav.setsampwidth(2); wav.setframerate(16000)
+    wav.writeframes(b'\\0\\0' * 16000)
+""")
+    monkeypatch.setenv("AI_STATION_CHATTERBOX_PYTHON", str(python))
+    monkeypatch.setenv("AI_STATION_CHATTERBOX_SCRIPT", str(speech_script))
+    monkeypatch.setenv("AI_STATION_CHATTERBOX_CACHE", str(tmp_path))
     monkeypatch.delenv("AI_STATION_DATA_HOST_PATH", raising=False)
     clear_settings_cache()
     host_app.reset_manager()
+    monkeypatch.setattr(host_audio, "collect", lambda _: {"gpus": [{"index": 7}]})
     monkeypatch.setattr(host_avatar, "collect", lambda _: {"gpus": [{"index": 7}]})
     monkeypatch.setattr(host_app, "collect", lambda _: {"gpus": [{"index": 7}]})
     original = host_app.manager().start
@@ -67,6 +82,8 @@ def avatar_bridge(tmp_path, monkeypatch):
         assert kwargs["argv"][0] == str(python)
         assert kwargs["env"]["CUDA_VISIBLE_DEVICES"] == "7"
         assert kwargs["env"]["HF_HUB_OFFLINE"] == "1"
+        if kwargs["executor"] == "chatterbox":
+            return original(**kwargs)
         output = kwargs["argv"][kwargs["argv"].index("--output-path") + 1]
         delay = "import time; time.sleep(30); " if "wait" in kwargs["argv"] else ""
         kwargs["argv"] = [
@@ -195,3 +212,173 @@ def test_avatar_cancellation_terminates_only_owned_work(avatar_bridge, monkeypat
             assert not active_locks(session)
         assert not host_app.manager().inspect(run_id)["alive"]
         assert client.get("/api/artifacts", params={"run_id": run_id}).json() == []
+
+
+def test_spoken_avatar_chain_keeps_both_artifacts_after_restart(avatar_bridge):
+    from app.db import reset_engine
+
+    with TestClient(app) as client:
+        portrait, voice = inputs(client)
+        result = client.post(
+            "/api/avatars/runs",
+            json={
+                "image_artifact_id": portrait["id"],
+                "audio_artifact_id": voice["id"],
+                "speech_text": "Cześć!",
+                "gpu": "7",
+                "size": 256,
+                "frames": 17,
+            },
+        )
+        assert result.status_code == 202, result.text
+        first = result.json()
+        assert first["executor_type"] == "chatterbox"
+        assert first["parameters"]["text"] == "Cześć!"
+        with session_factory()() as session:
+            assert tick(session, "avatar-workflow") == first["id"]
+            assert not active_locks(session)
+        chain = client.get(f"/api/avatars/runs/{first['id']}/workflow").json()["steps"]
+        assert [r["status"] for r in chain] == ["succeeded", "queued"]
+        child = chain[1]
+        audio = client.get(f"/api/artifacts?run_id={first['id']}").json()[0]
+        assert child["parameters"]["parent_artifact_ids"] == [portrait["id"], audio["id"]]
+        assert child["parameters"]["audio_relative"] == audio["relative_path"]
+        assert child["requested_gpu"] == first["requested_gpu"]
+        assert child["effective_permissions"] == first["effective_permissions"]
+        assert child["task_id"] == first["task_id"] and child["parent_run_id"] == first["id"]
+        assert child["parameters"]["size"] == 256 and child["parameters"]["frames"] == 17
+        reset_engine()
+        with session_factory()() as session:
+            assert tick(session, "avatar-restart") == child["id"]
+            assert tick(session, "avatar-restart") is None
+            assert not active_locks(session)
+        final = client.get(f"/api/artifacts?run_id={child['id']}").json()[0]
+        assert final["parent_artifact_ids"] == [portrait["id"], audio["id"]]
+        assert audio["parent_artifact_ids"] == [voice["id"]]
+        assert [
+            r["status"] for r in client.get(f"/api/avatars/runs/{first['id']}/workflow").json()["steps"]
+        ] == ["succeeded", "succeeded"]
+
+
+@pytest.mark.parametrize("case", ["failed", "cancel", "unknown"])
+def test_unsuccessful_speech_does_not_publish_avatar(avatar_bridge, monkeypatch, case):
+    with TestClient(app) as client:
+        portrait, voice = inputs(client)
+        first = client.post(
+            "/api/avatars/runs",
+            json={
+                "image_artifact_id": portrait["id"],
+                "audio_artifact_id": voice["id"],
+                "speech_text": "fail" if case == "failed" else "Cześć!",
+            },
+        ).json()
+        if case == "cancel":
+            client.post(f"/api/runs/{first['id']}/cancel").raise_for_status()
+        if case == "unknown":
+            original = RunnerClient.inspect_process
+
+            def unknown(self, run_id, **offsets):
+                info = original(self, run_id, **offsets)
+                if not info["alive"]:
+                    info.update(status="interrupted", exit_code=None)
+                return info
+
+            monkeypatch.setattr(RunnerClient, "inspect_process", unknown)
+        with session_factory()() as session:
+            tick(session, "avatar-workflow")
+            assert not active_locks(session)
+        chain = client.get(f"/api/avatars/runs/{first['id']}/workflow").json()["steps"]
+        assert len(chain) == 1 and chain[0]["status"] in {"failed", "canceled", "interrupted"}
+        assert not client.get(f"/api/artifacts?run_id={first['id']}").json()
+
+
+def test_cancel_queued_avatar_preserves_generated_speech(avatar_bridge):
+    with TestClient(app) as client:
+        portrait, voice = inputs(client)
+        first = client.post(
+            "/api/avatars/runs",
+            json={
+                "image_artifact_id": portrait["id"],
+                "audio_artifact_id": voice["id"],
+                "speech_text": "Cześć!",
+            },
+        ).json()
+        with session_factory()() as session:
+            tick(session, "avatar-workflow")
+        child = client.get(f"/api/avatars/runs/{first['id']}/workflow").json()["steps"][1]
+        canceled = client.post(f"/api/runs/{first['id']}/cancel")
+        canceled.raise_for_status()
+        assert canceled.json()["id"] == child["id"]
+        with session_factory()() as session:
+            assert tick(session, "avatar-workflow") is None
+        assert client.get(f"/api/artifacts?run_id={first['id']}").json()[0]["type"] == "audio"
+        assert not client.get(f"/api/artifacts?run_id={child['id']}").json()
+
+
+def test_assistant_spoken_avatar_projects_three_runs(avatar_bridge):
+    with TestClient(app) as client:
+        portrait, voice = inputs(client)
+        conversation = client.post(
+            "/api/chat/conversations", json={"model": "test", "execution_mode": "orchestrator"}
+        ).json()
+        route = f"/api/chat/conversations/{conversation['id']}"
+        response = client.post(
+            route + "/messages",
+            json={
+                "content": "Animate this portrait",
+                "image_artifact_ids": [portrait["id"]],
+                "audio_artifact_id": voice["id"],
+                "speech_text": "Cześć!",
+            },
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            for _ in range(3):
+                tick(session, "avatar-workflow")
+        detail = client.get(route).json()
+        assert detail["active_run"] is None
+        result = detail["messages"][-1]
+        assert result["task_status"] == "succeeded"
+        assert [s["capability"] for s in result["steps"]] == [
+            "assistant.orchestrate",
+            "audio.speech",
+            "avatar.animate",
+        ]
+        assert [a["type"] for a in result["artifacts"]] == ["audio", "video"]
+        assert (
+            client.post(
+                route + "/messages", json={"content": "Hello", "speech_text": "Hello", "action": "chat"}
+            ).status_code
+            == 422
+        )
+
+
+@pytest.mark.parametrize(
+    "content,text",
+    [
+        ("Zrób awatar, który powie: Cześć!", "Cześć!"),
+        ('Animate this portrait saying "Hello there".', "Hello there"),
+        ("Animate this portrait naturally", None),
+    ],
+)
+def test_current_spoken_words_route_without_inventing_text(avatar_bridge, content, text):
+    with TestClient(app) as client:
+        portrait, voice = inputs(client)
+        conversation = client.post(
+            "/api/chat/conversations", json={"model": "test", "execution_mode": "orchestrator"}
+        ).json()
+        route = f"/api/chat/conversations/{conversation['id']}"
+        client.post(
+            route + "/messages",
+            json={
+                "content": content,
+                "image_artifact_ids": [portrait["id"]],
+                "audio_artifact_id": voice["id"],
+            },
+        ).raise_for_status()
+        with session_factory()() as session:
+            tick(session, "avatar-natural")
+        run = client.get(route).json()["active_run"]
+        assert run["executor_type"] == ("chatterbox" if text else "echomimic")
+        if text:
+            assert run["parameters"]["text"] == text

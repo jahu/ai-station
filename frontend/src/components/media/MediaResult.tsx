@@ -71,7 +71,8 @@ export default function MediaResult({
     mutationFn: () => api(`/runs/${runId}/cancel`, { method: "POST" }),
     onSuccess: () => {
       void cache.invalidateQueries({ queryKey: ["run", runId] });
-      return cache.invalidateQueries({ queryKey: ["image-workflow"] });
+      void cache.invalidateQueries({ queryKey: ["image-workflow"] });
+      return cache.invalidateQueries({ queryKey: ["avatar-workflow"] });
     },
   });
   const retry = useMutation({
@@ -113,7 +114,10 @@ export default function MediaResult({
         error={error ?? artifacts.error ?? cancel.error ?? retry.error}
       />
       {steps && (
-        <ol aria-label="Image workflow" className="media-workflow">
+        <ol
+          aria-label={kind === "video" ? "Avatar workflow" : "Image workflow"}
+          className="media-workflow"
+        >
           {steps.map((step, index) => (
             <li key={step.id}>
               <Link to={`/runs/${step.id}`}>
@@ -124,7 +128,11 @@ export default function MediaResult({
                     ? "Edit"
                     : step.capability === "image.recompose"
                       ? "Recompose"
-                      : "Generate"}
+                      : step.capability === "audio.speech"
+                        ? "Speech"
+                        : step.capability === "avatar.animate"
+                          ? "Animate portrait"
+                          : "Generate"}
               </Link>
               <Badge status={step.status} />
             </li>

@@ -71,6 +71,7 @@ export type AssistantOptions = {
   load: LoadScope | null;
   stop: StopScope | null;
   upscale_result?: boolean;
+  speech_text?: string | null;
 };
 type Project = { id: string; name: string; updated_at: string };
 type TaskStep = {
@@ -572,6 +573,7 @@ export default function AssistantActions({
         ...value,
         action,
         upscale_result: false,
+        speech_text: null,
         audio_artifact_id: null,
         coding: null,
         commit: null,
@@ -737,6 +739,27 @@ export default function AssistantActions({
           onChange={resetAction}
         />
       </div>
+      {value.audio_artifact_id &&
+        value.image_artifact_ids.length === 1 &&
+        ["auto", "avatar.animate"].includes(value.action) && (
+          <label>
+            Words to say (optional)
+            <textarea
+              value={value.speech_text ?? ""}
+              maxLength={1000}
+              rows={3}
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  speech_text: event.target.value.trim()
+                    ? event.target.value
+                    : null,
+                })
+              }
+              placeholder="Leave empty to animate the recording, or type Polish text using its voice."
+            />
+          </label>
+        )}
       {!value.audio_artifact_id &&
         !value.coding &&
         ["auto", "image.generate", "image.edit", "image.recompose"].includes(
@@ -857,7 +880,9 @@ export default function AssistantActions({
             type="button"
             className="icon-button"
             aria-label="Remove voice reference"
-            onClick={() => onChange({ ...value, audio_artifact_id: null })}
+            onClick={() =>
+              onChange({ ...value, audio_artifact_id: null, speech_text: null })
+            }
           >
             <X size={16} />
           </button>
@@ -895,7 +920,12 @@ export default function AssistantActions({
             ids={value.image_artifact_ids}
             busy={busy}
             onChange={(image_artifact_ids) =>
-              onChange({ ...value, image_artifact_ids })
+              onChange({
+                ...value,
+                image_artifact_ids,
+                speech_text:
+                  image_artifact_ids.length === 1 ? value.speech_text : null,
+              })
             }
           />
         </div>
