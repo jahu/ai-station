@@ -220,3 +220,5 @@ The platform assistant can answer **Pokaż użycie GPU i RAM** with an actual wo
 Local coding context is fitted from supported GGUF attention metadata during owned load Runs. See [model-context.md](docs/model-context.md) for the allocation policy and hardware acceptance.
 
 The default Platform assistant now reads image pixels locally: **Add images**, then ask “Describe this image” or choose **Inspect images**. It selects an installed vision GGUF/projector pair, loads an owned runtime when needed and saves a description linked to the source images. See [Chat vision](docs/chat-vision.md).
+
+Persistent agents can also select **Local coding** with a Project and local model. Each execution creates a fresh isolated coding task with diff and configured checks, accessible from agent history. Save and enable explicitly; results still need review. See [coding agents](docs/agent-coding.md).

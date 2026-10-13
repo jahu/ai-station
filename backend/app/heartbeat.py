@@ -3,7 +3,7 @@
 import logging
 import threading
 from contextlib import contextmanager
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from sqlalchemy import update
 
@@ -11,6 +11,20 @@ from app.config import get_settings
 from app.db import session_factory, utcnow
 from app.models import Run, WorkerRow
 from app.state import TERMINAL
+
+
+def cancel_expired_coding(session, run_id):
+    run = session.get(Run, run_id)
+    if run is None or run.status in TERMINAL:
+        return
+    raw = run.parameters.get("agent_coding_deadline")
+    if raw and datetime.fromisoformat(raw) <= utcnow():
+        from app.events import append_event
+        from app.runs import request_cancel
+
+        if run.status != "cancel_requested":
+            append_event(session, run.id, "agent.runtime_limit", {})
+            request_cancel(session, run)
 
 
 @contextmanager
@@ -32,6 +46,7 @@ def keep_lease(run_id: str, worker_id: str):
                         .where(Run.id == run_id, Run.worker_id == worker_id, Run.status.not_in(TERMINAL))
                         .values(lease_expires_at=now + timedelta(seconds=settings.lease_seconds))
                     )
+                    cancel_expired_coding(session, run_id)
                     session.commit()
             except Exception:
                 logging.exception("Could not renew worker lease")

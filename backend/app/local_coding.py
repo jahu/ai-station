@@ -50,6 +50,7 @@ def create_local_task(body: LocalCodingTask, session: Annotated[Session, Depends
 @router.post("/runs/{source_id}/repair", status_code=202)
 def repair_local_task(source_id: UUID, session: Annotated[Session, Depends(session_scope)]):
     run = enqueue_local_repair(session, source_id)
+    run.parameters = {key: value for key, value in run.parameters.items() if key != "agent_coding_deadline"}
     session.commit()
     return run_dict(run)
 

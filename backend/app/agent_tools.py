@@ -11,6 +11,24 @@ MAX_TOOL_ROUNDS = 4
 MAX_CALLS_PER_ROUND = 3
 
 AGENT_TOOLS = {
+    "coding_local": ToolSpec(
+        name="coding_local",
+        description="Build or change the linked project with the selected Local AI model in a fresh owned worktree. Runs repository exploration, proposal and configured validation; preserves the diff for review. Never commits, publishes or edits the original checkout. Select this tool alone.",
+        risk_level="medium",
+        required_permissions=(
+            "filesystem_read",
+            "workspace_write",
+            "git_read",
+            "git_write",
+            "network_read",
+            "shell_project_commands",
+        ),
+        timeout=3600,
+        execution_target="host",
+        operational=True,
+        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        output_schema={"type": "object"},
+    ),
     "system_snapshot": ToolSpec(
         name="system_snapshot",
         description="Read current host hardware telemetry through the Host Runner.",

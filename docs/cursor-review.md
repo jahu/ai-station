@@ -38,3 +38,7 @@ Further model review found that the context heuristic inferred KV storage from w
 ## Local image understanding follow-up — 2026-10-13
 
 The default assistant now reads actual attached image pixels using an installed local vision GGUF/projector pair. Runtime selection, owned model loading, streaming and source-linked description artifacts use ordinary Runs. A real isolated Qwen 9B smoke correctly recognized two colored shapes. This closes the earlier filename-only image inspection gap; practical editing and broader media acceptance remain in the ledger.
+
+## Coding agent follow-up — 2026-10-13
+
+Persistent agents now have an explicit Local coding tool bound to a reviewed project and local model. It delegates to the existing owned worktree, exploration, proposal and validation workflow. Child cancellation, deadlines, notices and manual retry preserve that chain; an opted-in real 9B task passed configured unittest validation. Results remain available for review and continued Coding prompts, with no automatic commit/publication.

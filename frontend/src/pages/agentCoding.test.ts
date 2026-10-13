@@ -1,0 +1,30 @@
+import { expect, it } from "vitest";
+import { activationBlock } from "./agentActivation";
+const tools = [
+  {
+    name: "coding_local",
+    description: "Build in an isolated worktree",
+    operational: true,
+    required_permissions: ["workspace_write"],
+  },
+];
+it("blocks coding activation until its project is explicitly selected", () => {
+  const agent = { enabled: false, model: "local", tools: ["coding_local"] };
+  expect(activationBlock(agent, tools).reason).toMatch(/choose the project/i);
+  expect(
+    activationBlock({ ...agent, project_id: "project" }, tools).blocked,
+  ).toBe(false);
+});
+it("does not silently combine coding writes with report tools", () => {
+  expect(
+    activationBlock(
+      {
+        enabled: false,
+        model: "local",
+        project_id: "project",
+        tools: ["coding_local", "web_search"],
+      },
+      tools,
+    ).reason,
+  ).toMatch(/select Local coding alone/i);
+});

@@ -79,6 +79,15 @@ class AgentSettings(BaseModel):
         self.tools = list(dict.fromkeys(self.tools))
         if any(tool not in AGENT_TOOLS for tool in self.tools):
             raise ValueError("Unknown agent tool")
+        if "coding_local" in self.tools:
+            if self.tools != ["coding_local"] or self.tool_calling != "none":
+                raise ValueError(
+                    "Local coding is a project workflow; select it alone without report tool calling"
+                )
+            if len(self.goal) > 10000:
+                raise ValueError("Local coding goals must be at most 10000 characters")
+            if self.enabled and not self.project_id:
+                raise ValueError("Choose the project this coding agent may modify before enabling it")
         self.skills = list(dict.fromkeys(self.skills))
         if self.skills:
             from app.agent_tools import effective_permissions

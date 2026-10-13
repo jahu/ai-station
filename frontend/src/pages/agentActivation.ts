@@ -32,6 +32,7 @@ export function isAgentSkillList(value: unknown): value is { id: string }[] {
 export function activationBlock(
   agent: {
     enabled: boolean;
+    project_id?: string | null;
     model?: string | null;
     tools?: string[];
     skills?: string[];
@@ -49,6 +50,20 @@ export function activationBlock(
     };
   }
   const names = agent.tools ?? [];
+  if (names.includes("coding_local") && !agent.project_id) {
+    return {
+      blocked: true,
+      reason:
+        "Choose the project this coding agent may modify before enabling.",
+    };
+  }
+  if (names.includes("coding_local") && names.length !== 1) {
+    return {
+      blocked: true,
+      reason:
+        "Select Local coding alone; reporting tools belong to a separate agent.",
+    };
+  }
   if (names.includes("web_search") && !(agent.search_query ?? "").trim()) {
     return {
       blocked: true,

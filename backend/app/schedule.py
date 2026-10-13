@@ -86,7 +86,11 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
     )
     now = utcnow()
     agent.last_run_at = now
-    if definition.require_approval:
+    if (
+        definition.require_approval
+        or "coding_local" in definition.tools
+        and definition.workflow_mode == "gated"
+    ):
         from app.approvals import request_run_approval
 
         request_run_approval(
@@ -125,18 +129,18 @@ def workflow_retryable(session: Session, source: Run) -> bool:
         return True
     if source.status != RunStatus.SUCCEEDED.value:
         return False
-    children = session.scalars(select(Run).where(Run.parent_run_id == source.id))
+    children = (
+        session.scalars(select(Run).where(Run.task_id == source.task_id, Run.id != source.id))
+        if "coding_local" in source.parameters.get("definition", {}).get("tools", [])
+        else session.scalars(select(Run).where(Run.parent_run_id == source.id))
+    )
     return any(child.status in {RunStatus.FAILED.value, RunStatus.INTERRUPTED.value} for child in children)
 
 
 def workflow_source(session: Session, run: Run) -> Run:
-    if run.executor_type == "agent_workflow":
-        return run
-    if run.parent_run_id:
-        parent = session.get(Run, run.parent_run_id)
-        if parent is not None and parent.executor_type == "agent_workflow":
-            return parent
-    return run
+    from app.agent_workflow import workflow_parent
+
+    return workflow_parent(session, run) or run
 
 
 def retry_view(session: Session, run: Run) -> dict:

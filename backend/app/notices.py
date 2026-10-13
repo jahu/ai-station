@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.agent_schema import NotificationPolicy, RetryPolicy
 from app.db import session_scope, utcnow
 from app.events import append_event
-from app.models import Agent, Notice, Run
+from app.models import Agent, Notice, Run, Task
 from app.serialize import iso
 
 router = APIRouter(prefix="/api/notices", tags=["notices"])
@@ -67,16 +67,29 @@ def notice_dict(row: Notice, session: Session | None = None) -> dict:
 
 
 def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
+    task = session.get(Task, run.task_id) if run.agent_id else None
+    coding = task.metadata_json.get("agent_coding_definition") if task else None
+    if coding and run.executor_type != "agent_workflow":
+        if status not in {"failed", "interrupted", "succeeded"}:
+            return None
+        if status == "succeeded" and (
+            run.executor_type not in {"local_proposal", "project_validation"}
+            or run.executor_type == "local_proposal"
+            and run.parameters.get("commands")
+        ):
+            return None
     if run.executor_type == "agent_tool":
         return None
     if run.executor_type == "agent_workflow" and status == "succeeded":
         return None
-    if run.executor_type not in {"agent", "agent_workflow"} or not run.agent_id:
+    if (not coding and run.executor_type not in {"agent", "agent_workflow"}) or not run.agent_id:
         return None
     field = KIND_POLICY.get(status)
     if field is None:
         return None
-    policy = notification_policy((run.parameters.get("definition") or {}).get("notification_policy"))
+    policy = notification_policy(
+        (coding or run.parameters.get("definition") or {}).get("notification_policy")
+    )
     if not getattr(policy, field):
         return None
     existing = session.scalar(
@@ -90,6 +103,10 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
         "interrupted": "Agent workflow interrupted",
         "waiting_for_approval": "Agent workflow needs approval",
     }
+    if coding:
+        titles["succeeded"] = "Coding agent result ready for review"
+        titles["failed"] = "Coding agent workflow failed"
+        titles["interrupted"] = "Coding agent workflow interrupted"
     notice = Notice(
         agent_id=run.agent_id,
         run_id=run.id,
