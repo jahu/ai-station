@@ -328,3 +328,121 @@ it("reuses the finished image as an Edit source without queueing a Run", async (
   expect(screen.getByAltText("Generated image")).toBeTruthy();
   expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
 });
+
+it("queues the optional upscale without replacing the selected image operation", async () => {
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path.endsWith("/hardware")
+        ? { gpus: [] }
+        : { id: "queued", status: "queued" },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  fireEvent.change(screen.getByLabelText("Prompt"), {
+    target: { value: "A forest" },
+  });
+  fireEvent.click(screen.getByLabelText(/Upscale result 4×/));
+  fireEvent.click(screen.getByRole("button", { name: "Queue generate" }));
+  await screen.findByText("Waiting for an available GPU");
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/images/runs",
+    expect.objectContaining({
+      body: expect.stringContaining('"upscale_result":true'),
+    }),
+  );
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/images/runs",
+    expect.objectContaining({ body: expect.stringContaining('"mode":"t2i"') }),
+  );
+});
+
+it("restores the two-step workflow and stops the active upscale instead of the completed generation", async () => {
+  const first = {
+    id: "base",
+    capability: "image.generate",
+    status: "succeeded",
+    parameters: { upscale_result: true },
+  };
+  const second = {
+    id: "enlarge",
+    capability: "image.upscale",
+    status: "queued",
+    parameters: {},
+  };
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () => {
+      if (path.endsWith("/hardware")) return { gpus: [] };
+      if (path.includes("/artifacts?")) return [];
+      if (path.endsWith("/workflow")) return { steps: [first, second] };
+      if (path.endsWith("/cancel") && options?.method === "POST") return second;
+      return first;
+    },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("/images?run=base");
+  await screen.findByRole("list", { name: "Image workflow" });
+  expect(
+    screen.getByRole("link", { name: "1. Generate" }).getAttribute("href"),
+  ).toBe("/runs/base");
+  expect(
+    screen.getByRole("link", { name: "2. Upscale 4×" }).getAttribute("href"),
+  ).toBe("/runs/enlarge");
+  expect(
+    screen
+      .getByRole("button", { name: "Generating…" })
+      .hasAttribute("disabled"),
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Stop generation" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/runs/enlarge/cancel",
+      expect.objectContaining({ method: "POST" }),
+    ),
+  );
+  expect(
+    fetch.mock.calls.some(([url]) => url === "/api/runs/base/cancel"),
+  ).toBe(false);
+});
+
+it("shows the final upscaled artifact after reopening the original workflow URL", async () => {
+  const first = {
+    id: "base",
+    capability: "image.generate",
+    status: "succeeded",
+    parameters: { upscale_result: true },
+  };
+  const second = {
+    id: "enlarge",
+    capability: "image.upscale",
+    status: "succeeded",
+    parameters: {},
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () => {
+        if (path.endsWith("/hardware")) return { gpus: [] };
+        if (path.endsWith("/workflow")) return { steps: [first, second] };
+        if (path.includes("/artifacts?run_id=enlarge"))
+          return [{ id: "final", type: "image" }];
+        if (path.includes("/artifacts?"))
+          return [{ id: "original", type: "image" }];
+        if (path.endsWith("/lineage"))
+          return { id: "final", sources: [], derived: [] };
+        return first;
+      },
+    })),
+  );
+  mount("/images?run=base");
+  await waitFor(() =>
+    expect(screen.getByAltText("Generated image").getAttribute("src")).toBe(
+      "/api/artifacts/final/file",
+    ),
+  );
+  expect(
+    screen.getByRole("link", { name: "View run & logs" }).getAttribute("href"),
+  ).toBe("/runs/enlarge");
+});

@@ -222,3 +222,5 @@ Local coding context is fitted from supported GGUF attention metadata during own
 The default Platform assistant now reads image pixels locally: **Add images**, then ask “Describe this image” or choose **Inspect images**. It selects an installed vision GGUF/projector pair, loads an owned runtime when needed and saves a description linked to the source images. See [Chat vision](docs/chat-vision.md).
 
 Persistent agents can also select **Local coding** with a Project and local model. Each execution creates a fresh isolated coding task with diff and configured checks, accessible from agent history. Save and enable explicitly; results still need review. See [coding agents](docs/agent-coding.md).
+
+Image generation and edits can now queue a dependent 4× Upscale with the existing photo executor. The result/completion and child publication are atomic, and Images follows the active stage after refresh. See [image workflows](docs/image-workflows.md).

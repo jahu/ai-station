@@ -7,7 +7,11 @@ import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import LibraryPicker from "../components/media/LibraryPicker";
 import MediaResult from "../components/media/MediaResult";
-import { mediaBusy, useMediaRun } from "../components/media/media-run";
+import {
+  mediaBusy,
+  useMediaRun,
+  useImageWorkflow,
+} from "../components/media/media-run";
 import { useListKeyboard } from "./useListKeyboard";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import {
@@ -122,6 +126,7 @@ function ImageForm({
   const [seed, setSeed] = useState(42);
   const [maxSide, setMaxSide] = useState(1216);
   const [gpu, setGpu] = useState("auto");
+  const [upscaleResult, setUpscaleResult] = useState(false);
   const [ids, setIds] = useState<string[]>(initialInput ? [initialInput] : []);
   const [localError, setLocalError] = useState<Error | null>(null);
   const hardware = useHardware();
@@ -129,6 +134,8 @@ function ImageForm({
   const cache = useQueryClient();
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
+  const workflow = useImageWorkflow(run.data);
+  const activeRun = workflow.data?.steps.at(-1) ?? run.data;
   const sources = useQueries({
     queries: ids.map((id) => ({
       queryKey: ["artifact", id],
@@ -181,6 +188,7 @@ function ImageForm({
         gpu,
         backend: mode === "t2i" ? backend : "qwen",
         input_artifact_ids: mode === "t2i" ? [] : ids,
+        upscale_result: mode !== "upscale" && upscaleResult,
       };
       if (mode === "t2i" || mode === "recompose")
         Object.assign(parameters, { prompt, width, height, steps, cfg });
@@ -209,7 +217,10 @@ function ImageForm({
     },
   });
   const source = sources[0]?.data;
-  const busy = create.isPending || mediaBusy(run.data);
+  const busy =
+    create.isPending ||
+    mediaBusy(activeRun) ||
+    (!!run.data?.parameters?.upscale_result && workflow.isPending);
   const oversized =
     mode === "upscale" && source?.metadata.width && source.metadata.height
       ? source.metadata.width * source.metadata.height * 16 > 64 * 1024 * 1024
@@ -366,6 +377,22 @@ function ImageForm({
                   />
                 </label>
               )}
+              {mode !== "upscale" && (
+                <label className="image-workflow-option">
+                  <input
+                    type="checkbox"
+                    checked={upscaleResult}
+                    onChange={(event) => setUpscaleResult(event.target.checked)}
+                  />
+                  <span>
+                    Upscale result 4×
+                    <small>
+                      Generate or edit first, then enlarge automatically. Both
+                      images stay in Library.
+                    </small>
+                  </span>
+                </label>
+              )}
               {mode === "upscale" && source?.metadata.width && (
                 <p className={oversized ? "notice" : "muted"}>
                   Expected output: {source.metadata.width * 4} ×{" "}
@@ -511,9 +538,10 @@ function ImageForm({
         </form>
         <MediaResult
           kind="image"
-          runId={runId}
-          run={run.data}
-          error={run.error}
+          runId={activeRun?.id ?? runId}
+          run={activeRun}
+          steps={workflow.data?.steps}
+          error={run.error ?? workflow.error}
         />
       </div>
     </>

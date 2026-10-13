@@ -52,11 +52,13 @@ export default function MediaResult({
   runId,
   run,
   error,
+  steps,
 }: {
   kind: "audio" | "video" | "image";
   runId: string;
   run: Run | undefined;
   error: Error | null;
+  steps?: Run[];
 }) {
   const cache = useQueryClient();
   const [, setSearch] = useSearchParams();
@@ -67,7 +69,10 @@ export default function MediaResult({
   });
   const cancel = useMutation({
     mutationFn: () => api(`/runs/${runId}/cancel`, { method: "POST" }),
-    onSuccess: () => cache.invalidateQueries({ queryKey: ["run", runId] }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["run", runId] });
+      return cache.invalidateQueries({ queryKey: ["image-workflow"] });
+    },
   });
   const retry = useMutation({
     mutationFn: () =>
@@ -107,6 +112,25 @@ export default function MediaResult({
       <ErrorNotice
         error={error ?? artifacts.error ?? cancel.error ?? retry.error}
       />
+      {steps && (
+        <ol aria-label="Image workflow" className="media-workflow">
+          {steps.map((step, index) => (
+            <li key={step.id}>
+              <Link to={`/runs/${step.id}`}>
+                {index + 1}.{" "}
+                {step.capability === "image.upscale"
+                  ? "Upscale 4×"
+                  : step.capability === "image.edit"
+                    ? "Edit"
+                    : step.capability === "image.recompose"
+                      ? "Recompose"
+                      : "Generate"}
+              </Link>
+              <Badge status={step.status} />
+            </li>
+          ))}
+        </ol>
+      )}
       {result ? (
         <div className="media-finished">
           {kind === "video" ? (

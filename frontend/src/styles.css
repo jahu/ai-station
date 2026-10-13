@@ -4329,3 +4329,40 @@ section:has(> .memory-grid) > .dashboard-note {
   gap: 8px;
   min-width: 0;
 }
+
+.image-form label.image-workflow-option {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.7rem;
+}
+.image-workflow-option input[type="checkbox"] {
+  width: 1rem;
+  margin-top: 0.15rem;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+.image-workflow-option small {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.media-workflow {
+  list-style: none;
+  padding: 0;
+  margin: 0 20px 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+.media-workflow li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}

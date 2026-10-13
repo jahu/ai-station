@@ -882,3 +882,53 @@ def test_planner_context_bounds_large_history_and_omits_metadata():
         assert all(len(item["content"]) <= 1000 and set(item) == {"role", "content"} for item in context)
         user.content = "x" * 32000
         assert planner_context(session, row, user) == []
+
+
+@pytest.mark.parametrize(
+    "content,explicit,expected_prompt",
+    [
+        ("Generate an image of a forest, then upscale it.", False, "Generate an image of a forest"),
+        ("Zmień kolor, a następnie powiększ wynik.", False, "Zmień kolor"),
+        ("Generate an image of a forest", True, "Generate an image of a forest"),
+    ],
+)
+def test_assistant_image_workflow_uses_current_instruction(content, explicit, expected_prompt):
+    with TestClient(app) as client:
+        cid = create(client)
+        images = [image(client)] if content.startswith("Zmień") else []
+        result = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={"content": content, "image_artifact_ids": images, "upscale_result": explicit},
+        )
+        assert result.status_code == 202, result.text
+        step()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        child = detail["active_run"]
+        assert child["parameters"]["upscale_result"] is True
+        assert child["parameters"]["edit_prompt" if images else "prompt"] == expected_prompt
+        assert child["conversation_id"] == cid
+
+
+def test_upscale_word_in_scene_does_not_add_a_followup():
+    with TestClient(app) as client:
+        cid = create(client)
+        client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={"content": "Generate an image of a sign reading upscale"},
+        ).raise_for_status()
+        step()
+        assert (
+            client.get(f"/api/chat/conversations/{cid}").json()["active_run"]["parameters"]["upscale_result"]
+            is False
+        )
+
+
+def test_image_workflow_option_cannot_authorize_other_actions():
+    with TestClient(app) as client:
+        cid = create(client)
+        result = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={"content": "show GPU usage", "action": "system.inspect", "upscale_result": True},
+        )
+        assert result.status_code == 422
+        assert client.get("/api/runs").json() == []

@@ -86,6 +86,9 @@ class HostMediaExecutor:
     def output_metadata(self, output):
         return {}
 
+    def on_success(self, session, run, artifact):
+        """Publish dependent work in the output/completion transaction, without I/O."""
+
     @staticmethod
     def _cancel_before_dispatch(session, run):
         if run.status in {"canceled", "cancel_requested"}:
@@ -138,7 +141,7 @@ class HostMediaExecutor:
         elif info["exit_code"] != 0:
             mark_failed(session, run, "ExitCode", info.get("stderr_tail") or f"Exit {info['exit_code']}")
         else:
-            adopt_existing(
+            artifact = adopt_existing(
                 session,
                 relative_path=output,
                 artifact_type=self.artifact_type,
@@ -148,4 +151,5 @@ class HostMediaExecutor:
                 metadata={"capability": run.capability, **run.parameters, **self.output_metadata(output)},
                 parent_artifact_ids=run.parameters.get("parent_artifact_ids", []),
             )
+            self.on_success(session, run, artifact)
             transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})

@@ -10,7 +10,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from PIL import Image, UnidentifiedImageError
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.artifacts import register_file
@@ -19,6 +20,7 @@ from app.db import session_scope
 from app.models import Artifact, Run, Task
 from app.paths import PathBoundaryError, safe_join
 from app.permissions import permissions_for
+from app.redact import redact_obj
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, run_dict
 from app.serialize import artifact_dict
@@ -28,6 +30,34 @@ DB = Annotated[Session, Depends(session_scope)]
 MAX_UPLOAD = 20 * 1024 * 1024
 MAX_PIXELS = 64 * 1024 * 1024
 FORMATS = {"PNG": (".png", "image/png"), "JPEG": (".jpg", "image/jpeg"), "WEBP": (".webp", "image/webp")}
+
+
+@router.get("/images/runs/{run_id}/workflow")
+def image_workflow(run_id: UUID, session: DB):
+    current = session.get(Run, str(run_id))
+    if current is None or current.executor_type != "photo_pipe":
+        raise HTTPException(404, "Image Run not found")
+    task_id = current.task_id
+    steps = []
+    seen = set()
+    while current is not None:
+        if current.id in seen or len(steps) >= 40:
+            raise HTTPException(409, "Image workflow needs inspection")
+        seen.add(current.id)
+        steps.append(run_dict(current))
+        next_id = current.metadata_json.get("upscale_run_id") or current.metadata_json.get("retry_run_id")
+        if not next_id:
+            break
+        child = session.get(Run, next_id)
+        if (
+            child is None
+            or child.parent_run_id != current.id
+            or child.task_id != task_id
+            or child.executor_type != "photo_pipe"
+        ):
+            raise HTTPException(409, "Image workflow needs inspection")
+        current = child
+    return redact_obj({"steps": steps})
 
 
 @router.post("/images/runs/{run_id}/retry", status_code=202)
@@ -48,8 +78,6 @@ def retry_image(run_id: UUID, session: DB):
         if exc.status_code != 404:
             raise HTTPException(409, "Cannot confirm original process has stopped") from exc
     session.refresh(original)
-    from sqlalchemy import select
-
     child = session.scalar(select(Run).where(Run.parent_run_id == original.id))
     if child is not None:
         raise HTTPException(409, "This run already has a retry; inspect that run instead")
@@ -71,6 +99,7 @@ def retry_image(run_id: UUID, session: DB):
         retry_class="safe",
         parent_run_id=original.id,
     )
+    original.metadata_json = {**original.metadata_json, "retry_run_id": retry.id}
     session.commit()
     return run_dict(retry)
 
@@ -91,6 +120,7 @@ class ImageRequest(BaseModel):
     max_side: int | None = Field(default=None, ge=256, le=4096, multiple_of=32)
     gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]+)$", max_length=12)
     input_artifact_ids: list[UUID] = Field(default_factory=list, max_length=8)
+    upscale_result: StrictBool = False
 
     @field_validator("gpu")
     @classmethod
@@ -99,6 +129,8 @@ class ImageRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_mode(self) -> Self:
+        if self.mode == "upscale" and self.upscale_result:
+            raise ValueError("Upscale already enlarges its source; choose it only once")
         count = len(self.input_artifact_ids)
         if self.mode == "t2i" and count:
             raise ValueError("Generate does not accept source images")
@@ -123,6 +155,8 @@ class ImageRequest(BaseModel):
         if self.mode == "img2img":
             self.max_side = self.max_side or 1216
             self.steps = self.steps or 30
+            if self.upscale_result and self.max_side > 2048:
+                raise ValueError("Edit then Upscale requires a maximum side of at most 2048")
         if self.mode == "t2i" and self.backend == "juggernaut" and self.seed is None:
             self.seed = 42
         return self

@@ -70,6 +70,7 @@ export type AssistantOptions = {
   publish: PublishScope | null;
   load: LoadScope | null;
   stop: StopScope | null;
+  upscale_result?: boolean;
 };
 type Project = { id: string; name: string; updated_at: string };
 type TaskStep = {
@@ -570,6 +571,7 @@ export default function AssistantActions({
       onChange({
         ...value,
         action,
+        upscale_result: false,
         audio_artifact_id: null,
         coding: null,
         commit: null,
@@ -735,6 +737,25 @@ export default function AssistantActions({
           onChange={resetAction}
         />
       </div>
+      {!value.audio_artifact_id &&
+        !value.coding &&
+        ["auto", "image.generate", "image.edit", "image.recompose"].includes(
+          value.action,
+        ) && (
+          <label className="image-workflow-option">
+            <input
+              type="checkbox"
+              checked={value.upscale_result ?? false}
+              onChange={(event) =>
+                onChange({ ...value, upscale_result: event.target.checked })
+              }
+            />
+            <span>
+              Upscale image result 4×
+              <small>After generation or editing; keeps both images.</small>
+            </span>
+          </label>
+        )}
       {!value.action.startsWith("coding.") &&
         !value.action.startsWith("runtime.") &&
         value.action !== "system.inspect" && (
@@ -781,7 +802,11 @@ export default function AssistantActions({
               limit={1}
               busy={busy}
               onSelect={(items) =>
-                onChange({ ...value, audio_artifact_id: items[0].id })
+                onChange({
+                  ...value,
+                  audio_artifact_id: items[0].id,
+                  upscale_result: false,
+                })
               }
             />
           </div>
@@ -805,7 +830,11 @@ export default function AssistantActions({
               method: "POST",
               body,
             });
-            onChange({ ...value, audio_artifact_id: artifact.id });
+            onChange({
+              ...value,
+              audio_artifact_id: artifact.id,
+              upscale_result: false,
+            });
           } catch (error) {
             setError(error as Error);
           } finally {
