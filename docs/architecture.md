@@ -172,3 +172,5 @@ The assistant dispatches image inspection through ordinary owned runtime-load an
 Agents may explicitly select the Local coding tool and a Project. They publish the same fresh-worktree/exploration/proposal/validation Runs as manual Coding. The child chain stays inspectable in agent history and Coding; no commit or publication is implied. See [coding agents](agent-coding.md).
 
 Image generation and edits can now queue a dependent 4× Upscale with the existing photo executor. The result/completion and child publication are atomic, and Images follows the active stage after refresh. See [image workflows](image-workflows.md).
+
+Portraits can now use a voice reference and typed Polish speech through a sequential Chatterbox → EchoMimic workflow, retaining both outputs and following the active stage after refresh. See [speaking avatars](speaking-avatars.md).

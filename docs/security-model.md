@@ -136,3 +136,5 @@ Image inspection reads explicit app-owned artifact IDs and uses local owned runt
 Local coding agents require the exclusive reviewed coding tool and an explicit project. Its write/Git/validation permissions are visible before activation; the model cannot choose another project or generated command. Gated execution waits before worktree creation. Deadlines request cancellation only for the associated coding Runs, and human continuations drop the old deadline. See [coding agents](agent-coding.md).
 
 Image generation and edits can now queue a dependent 4× Upscale with the existing photo executor. The result/completion and child publication are atomic, and Images follows the active stage after refresh. See [image workflows](image-workflows.md).
+
+Portraits can now use a voice reference and typed Polish speech through a sequential Chatterbox → EchoMimic workflow, retaining both outputs and following the active stage after refresh. See [speaking avatars](speaking-avatars.md).

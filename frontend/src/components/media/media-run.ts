@@ -15,15 +15,27 @@ export function mediaBusy(run: Run | undefined) {
   return !!run && !terminal.has(run.status);
 }
 
-export function useImageWorkflow(run: Run | undefined) {
-  const enabled = !!run?.parameters?.upscale_result;
+function useWorkflow(
+  run: Run | undefined,
+  scope: "images" | "avatars",
+  enabled: boolean,
+) {
   return useQuery({
-    queryKey: ["image-workflow", run?.id],
-    queryFn: () => api<{ steps: Run[] }>(`/images/runs/${run!.id}/workflow`),
+    queryKey: [
+      scope === "images" ? "image-workflow" : "avatar-workflow",
+      run?.id,
+    ],
+    queryFn: () => api<{ steps: Run[] }>(`/${scope}/runs/${run!.id}/workflow`),
     enabled,
     refetchInterval: (query) => {
       const last = query.state.data?.steps.at(-1);
       return last && terminal.has(last.status) ? false : 1500;
     },
   });
+}
+export function useImageWorkflow(run: Run | undefined) {
+  return useWorkflow(run, "images", !!run?.parameters?.upscale_result);
+}
+export function useAvatarWorkflow(run: Run | undefined) {
+  return useWorkflow(run, "avatars", !!run?.parameters?.avatar_after_speech);
 }

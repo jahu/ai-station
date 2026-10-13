@@ -123,6 +123,7 @@ class AssistantInputs(BaseModel):
     stop: StopScope | None = None
     web_search: SearchOptions = Field(default_factory=SearchOptions)
     upscale_result: StrictBool = False
+    speech_text: str | None = Field(default=None, min_length=1, max_length=1000)
 
 
 class Plan(BaseModel):
@@ -168,6 +169,20 @@ def planner_context(session, conversation, user):
 
 
 def enqueue_assistant(session, conversation, user, body):
+    if body.speech_text is not None and (
+        body.action not in {"auto", "avatar.animate"}
+        or len(body.image_artifact_ids) != 1
+        or not body.audio_artifact_id
+        or body.coding
+        or body.commit
+        or body.publish
+        or body.load
+        or body.stop
+        or body.attachments
+        or body.web_search.enabled
+        or body.upscale_result
+    ):
+        raise HTTPException(422, "Spoken avatar text needs one portrait and one WAV voice reference")
     if body.upscale_result and (
         body.action not in {"auto", "image.generate", "image.edit", "image.recompose"}
         or body.audio_artifact_id
@@ -407,6 +422,16 @@ def image_followup(prompt):
     return (prompt[: match.start()].rstrip(" ,;"), True) if match else (prompt, False)
 
 
+def avatar_speech_text(content):
+    """Current explicit spoken words only; normal animation never implies synthesis."""
+    match = re.search(r"\b(?:say(?:s|ing)?|powie|powiedz|m[oó]wi)\s*:\s*(.+)$", content, re.I | re.S)
+    if not match:
+        match = re.search(
+            r'\b(?:say(?:s|ing)?|powie|powiedz|m[oó]wi)\s+["„“](.+?)["”][.!]?\s*$', content, re.I | re.S
+        )
+    return match.group(1).strip() if match else None
+
+
 PLANNER_SYSTEM = """Route the user's request within AI Station. Return ONLY a JSON object with keys
 "action" and "reason" (short explanation in the user's language). Allowed actions:
 chat: questions, explanations and discussion (no tools executed);
@@ -480,13 +505,22 @@ class AssistantExecutor:
             if len(images) != 1 or not params.get("audio_artifact_id"):
                 message.content = "Attach exactly one portrait and one speech WAV to animate an avatar."
             else:
-                request = AvatarRequest(
-                    image_artifact_id=images[0],
-                    audio_artifact_id=params["audio_artifact_id"],
-                    prompt=params["content"][:2000],
-                )
-                child = create_avatar_run(session, request, task=run.task, parent_run_id=run.id)
-                run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                try:
+                    request = AvatarRequest(
+                        image_artifact_id=images[0],
+                        audio_artifact_id=params["audio_artifact_id"],
+                        prompt=params["content"][:2000],
+                        speech_text=params.get("speech_text") or avatar_speech_text(params["content"]),
+                    )
+                except ValidationError:
+                    message.content = (
+                        "Use spoken text of 1–1000 characters with a portrait and WAV voice reference."
+                    )
+                else:
+                    child = create_avatar_run(session, request, task=run.task, parent_run_id=run.id)
+                    run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                    if request.speech_text:
+                        message.content = "Generating Polish speech from your text, then animating the portrait. Both results stay in Library."
         elif params.get("audio_artifact_id") and plan.action != "audio.speech":
             message.content = "Choose Speech to read your message with this voice reference. Audio transcription is not enabled."
         elif plan.action == "audio.speech":

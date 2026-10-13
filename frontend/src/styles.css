@@ -4366,3 +4366,24 @@ section:has(> .memory-grid) > .dashboard-note {
   gap: 0.75rem;
   font-size: 0.85rem;
 }
+
+.avatar-voice-mode {
+  border: 0;
+  padding: 0 0 1.1rem;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+}
+.avatar-voice-mode legend {
+  margin-bottom: 0.6rem;
+  color: var(--muted);
+}
+.avatar-voice-mode label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.avatar-voice-mode input {
+  accent-color: var(--accent);
+}

@@ -115,6 +115,28 @@ class AudioExecutor(HostMediaExecutor):
     artifact_type = "audio"
     mime_type = "audio/wav"
 
+    def on_success(self, session, run, artifact):
+        definition = run.parameters.get("avatar_after_speech")
+        if not definition:
+            return
+        from app.avatars import AvatarRequest, create_avatar_run
+        from app.events import append_event
+
+        if run.metadata_json.get("avatar_run_id"):
+            raise ValueError("Avatar workflow already published its child")
+        child = create_avatar_run(
+            session,
+            AvatarRequest(**definition, audio_artifact_id=artifact.id),
+            task=run.task,
+            parent_run_id=run.id,
+        )
+        child.effective_permissions = list(run.effective_permissions)
+        child.triggered_by = run.triggered_by
+        run.metadata_json = {**run.metadata_json, "avatar_run_id": child.id}
+        append_event(
+            session, run.id, "workflow.step.queued", {"run_id": child.id, "capability": child.capability}
+        )
+
     def _start(self, runner, run, allocated, output):
         return runner.request(
             "POST",
