@@ -216,3 +216,5 @@ Local coding and the Assistant offer an optional **Automatic repair** budget of 
 Reviewed commits can now be published from their Run details as a task branch and draft GitHub PR, after project policy and exact-scope user approval. Arrow keys choose that approval; Space or Enter selects it with a unique Publication name and does not publish. There is no inspectable publication-approval Run. Existing host `gh` authentication is reused. If a publication Run stops after GitHub may already have the branch or PR, **Reconcile with GitHub** inspects the remote and can record or open the approved draft PR without pushing again. See [publication requirements and recovery](docs/github-publication.md).
 
 The platform assistant can answer **Pokaż użycie GPU i RAM** with an actual workstation snapshot, without loading a model. **Inspect workstation** also selects it explicitly. Reports stay in the conversation, Runs and Library; see [station inspection](docs/station-inspection.md).
+
+Local coding context is fitted from supported GGUF attention metadata during owned load Runs. See [model-context.md](docs/model-context.md) for the allocation policy and hardware acceptance.

@@ -158,3 +158,7 @@ Coding workspaces make Task the durable user-facing coding conversation. Managed
 ## Conversation workstation inspection
 
 `system.inspect` is a read-only child Run. The worker invokes the existing typed Runner hardware endpoint, then atomically publishes observed artifacts and an inline conversation report. It needs no LLM or GPU reservation. The planner also receives bounded, immutable same-conversation excerpts without previous permissions or attachment IDs. See [station inspection](station-inspection.md).
+
+## Architecture-aware model context
+
+Owned Q8 llama.cpp load Runs inspect a bounded GGUF header through the typed Runner model-verification operation. The worker records the architecture-derived KV estimate and fitted context before dispatch; handlers do not open external model files. Saved observations are bound to file size and modification time. See [local coding context](model-context.md).

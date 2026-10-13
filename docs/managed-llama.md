@@ -29,3 +29,7 @@ The chat model catalog excludes files named as `mmproj` companions (case-insensi
 Chat presents one searchable model picker, grouped into on-disk llama.cpp GGUFs and the configured local server. Arrow keys move through that list; Enter marks a model and **Use model** applies it. GPU/context settings are optional advanced controls for a first load. Choosing **Use model** starts that first load as a normal Run; existing saved models reload on demand. The conversation header offers the same picker and preserves other conversation preferences when switching. Busy conversations cannot change models. Failed load requests keep the previous choice, and unknown runtime ownership requires inspection.
 
 The Platform assistant can queue the same load and stop Runs as typed conversation actions after the user selects a discovered GGUF or an owned instance. A model-generated plan cannot grant `manage_models` or stop an external runtime.
+
+## Architecture-aware context fitting
+
+The load worker now inspects supported GGUF attention metadata before dispatch. Dense and hybrid models of equal weight-file size can require very different KV caches; quantizing weights does not shrink their attention dimensions. The requested ceiling and final estimate remain inspectable, with a provenance-bound profile saved for later coding requests. See [context fitting and acceptance](model-context.md).

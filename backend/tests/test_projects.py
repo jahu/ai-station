@@ -1749,7 +1749,7 @@ def test_local_coding_followup_after_undispatched_load_failure(repository, owned
             expected = fit_coding_context(gpus=[2, 7], size_bytes=weights, gpu_memory_mib=[12288.0, 12288.0])
             assert retry_load.parameters["context_size"] == expected
             assert retry_load.parameters["cache_type"] == "q8_0"
-            assert "requested_context_size" not in retry_load.parameters
+            assert retry_load.parameters["requested_context_size"] == 131072
 
 
 def test_local_exploration_selects_files_and_preserves_checkout(
