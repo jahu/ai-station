@@ -4387,3 +4387,41 @@ section:has(> .memory-grid) > .dashboard-note {
 .avatar-voice-mode input {
   accent-color: var(--accent);
 }
+
+/* Video keeps its common choices compact beside the output preview. */
+.media-composer .video-source-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+.media-composer .video-source-mode > label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.media-composer .video-source-mode > label:has(input:checked) {
+  background: #b9f48a0d;
+  border-color: var(--accent);
+}
+.media-composer .video-source-mode input[type="radio"] {
+  accent-color: var(--accent);
+  width: 1rem;
+  min-height: 0;
+  margin: 0;
+}
+.video-output-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+@media (max-width: 560px) {
+  .media-composer .video-source-mode,
+  .video-output-options {
+    grid-template-columns: 1fr;
+  }
+}

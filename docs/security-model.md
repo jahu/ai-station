@@ -178,3 +178,10 @@ separate `project_memory_read` permission. A link alone grants no access. Reads
 remain within that snapshotted project, save exact context and provenance in an
 ordinary child Run and never promote entries into another scope. Model arguments
 cannot change the target. See [retrieval bounds and retention](memory.md#explicit-project-memory).
+
+
+Wan scene-video requests select no commands or graphs. The fixed native job
+uses administrator-configured existing safetensors, app-owned validated image inputs
+and UUID-derived outputs, an allowlisted environment with private Run caches and
+offline model flags. It starts no ComfyUI server or custom nodes. Cancellation
+and inspection use the shared owned-process group journal. See [video](video.md).

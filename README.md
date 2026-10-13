@@ -239,3 +239,9 @@ saved linked project. This adds a separate read permission; a project link alone
 does not grant access. Retrieved entries, versions and provenance are saved in the
 child Run and report context. Other projects and global/disabled memories are
 excluded. See [memory](docs/memory.md#explicit-project-memory).
+
+
+General local video is available in **Video**: generate a scene from text or animate
+a Library/uploaded image with an installed Wan 2.2 TI2V 5B profile. The Assistant
+uses the same queued execution and returns the video inline. Talking avatars stay
+a separate mode. See [video configuration and verification](docs/video.md).

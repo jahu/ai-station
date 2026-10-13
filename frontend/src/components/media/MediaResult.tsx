@@ -53,12 +53,14 @@ export default function MediaResult({
   run,
   error,
   steps,
+  videoMode = "avatar",
 }: {
   kind: "audio" | "video" | "image";
   runId: string;
   run: Run | undefined;
   error: Error | null;
   steps?: Run[];
+  videoMode?: "scene" | "avatar";
 }) {
   const cache = useQueryClient();
   const [, setSearch] = useSearchParams();
@@ -93,7 +95,17 @@ export default function MediaResult({
     kind === "audio" ? AudioLines : kind === "video" ? Film : ImageIcon;
   const result = artifacts.data?.find((a) => a.type === kind);
   const busy = mediaBusy(run);
-  const text = copy[kind];
+  const text =
+    kind === "video" && videoMode === "scene"
+      ? {
+          ...copy.video,
+          title: "Your scene in motion",
+          label: "Generated scene video",
+          idleTitle: "Imagine it. Watch it move.",
+          idleBody:
+            "Describe a scene or choose a first frame. Your video will appear here.",
+        }
+      : copy[kind];
   const statusText =
     run?.status === "queued"
       ? "Waiting for an available GPU"

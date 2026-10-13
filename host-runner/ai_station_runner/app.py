@@ -58,6 +58,8 @@ from ai_station_runner.security import PathBoundaryError, ensure_within, resolve
 from ai_station_runner.station_image import inspect_station_image
 from ai_station_runner.telemetry import collect
 from ai_station_runner.validation import ValidationRequest, start_validation, validation_report
+from ai_station_runner.video import VideoRequest, start_video
+from ai_station_runner.video import capabilities as video_capabilities
 from ai_station_runner.worktree_remove import RemoveWorktreeRequest, remove_report, start_remove
 from ai_station_runner.worktrees import inspect_worktree, reserve_and_start
 
@@ -824,3 +826,16 @@ def browser_report_endpoint(run_id: UUID):
         return browser_report(manager(), str(run_id))
     except (ValueError, RuntimeError, ProcessNotOwned, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/video/capabilities")
+def video_available():
+    return video_capabilities()
+
+
+@app.post("/v1/runs/video")
+def video_run(body: VideoRequest):
+    try:
+        return {**start_video(manager(), body), "runner_id": get_settings().runner_id}
+    except PathBoundaryError as exc:
+        raise HTTPException(403, str(exc)) from exc
