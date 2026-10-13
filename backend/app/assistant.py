@@ -122,6 +122,7 @@ class AssistantInputs(BaseModel):
     load: LoadModel | None = None
     stop: StopScope | None = None
     web_search: SearchOptions = Field(default_factory=SearchOptions)
+    upscale_result: StrictBool = False
 
 
 class Plan(BaseModel):
@@ -167,6 +168,18 @@ def planner_context(session, conversation, user):
 
 
 def enqueue_assistant(session, conversation, user, body):
+    if body.upscale_result and (
+        body.action not in {"auto", "image.generate", "image.edit", "image.recompose"}
+        or body.audio_artifact_id
+        or body.coding
+        or body.commit
+        or body.publish
+        or body.load
+        or body.stop
+        or body.attachments
+        or body.web_search.enabled
+    ):
+        raise HTTPException(422, "Upscale result applies only to image generation or editing")
     if body.action == "image.describe" and (
         not 1 <= len(body.image_artifact_ids) <= 4
         or body.audio_artifact_id
@@ -383,6 +396,17 @@ def workstation_request(prompt: str) -> bool:
     )
 
 
+def image_followup(prompt):
+    """Only an explicit final instruction authorizes the extra image operation."""
+    match = re.search(
+        r"(?:[,;]\s*|\s+)(?:and then|then|a następnie|następnie|potem)\s+"
+        r"(?:upscale|powiększ)(?:\s+(?:it|the result|the image|wynik|obraz|go))?[.!]?\s*$",
+        prompt,
+        re.I,
+    )
+    return (prompt[: match.start()].rstrip(" ,;"), True) if match else (prompt, False)
+
+
 PLANNER_SYSTEM = """Route the user's request within AI Station. Return ONLY a JSON object with keys
 "action" and "reason" (short explanation in the user's language). Allowed actions:
 chat: questions, explanations and discussion (no tools executed);
@@ -432,6 +456,14 @@ class AssistantExecutor:
         if run.status == "cancel_requested" or plan is None:
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
             return "done"
+        if run.parameters.get("upscale_result") and plan.action not in {
+            "image.generate",
+            "image.edit",
+            "image.recompose",
+        }:
+            plan = Plan(
+                action="clarify", reason="Upscale result needs an image generation or edit instruction."
+            )
         message = session.scalar(select(Message).where(Message.run_id == run.id, Message.role == "assistant"))
         if message is None:
             raise ValueError("Assistant run has no response message")
@@ -513,16 +545,20 @@ class AssistantExecutor:
                 "image.upscale": "upscale",
             }[plan.action]
             try:
+                prompt, followup = image_followup(params["content"])
                 request = ImageRequest(
                     mode=mode,
                     input_artifact_ids=images,
-                    **{"edit_prompt" if mode == "img2img" else "prompt": params["content"]},
+                    upscale_result=mode != "upscale" and (params.get("upscale_result", False) or followup),
+                    **{"edit_prompt" if mode == "img2img" else "prompt": prompt},
                 )
             except ValidationError:
                 message.content = "Generate needs no references; Edit/Upscale need one; Recompose needs at least one. Attach the images and send the instruction (up to 10,000 characters) again."
             else:
                 child = create_image_run(session, request, task=run.task, parent_run_id=run.id)
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                if request.upscale_result:
+                    message.content += " The result will then be upscaled 4×; both images stay in Library."
         elif plan.action == "agent.create":
             from app.factory import draft_agent
 
@@ -813,6 +849,15 @@ def task_results(session, message, run):
     by_id = {step.id: step for step in steps}
     superseded = set()
     for step in steps:
+        retry = by_id.get(step.metadata_json.get("retry_run_id"))
+        if (
+            step.executor_type == "photo_pipe"
+            and retry
+            and retry.executor_type == "photo_pipe"
+            and retry.parent_run_id == step.id
+            and retry.task_id == step.task_id
+        ):
+            superseded.add(step.id)
         replacement = by_id.get(step.metadata_json.get("repair_run_id"))
         if (
             step.executor_type == "project_validation"

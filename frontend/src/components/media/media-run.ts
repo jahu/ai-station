@@ -14,3 +14,16 @@ export function useMediaRun(id: string) {
 export function mediaBusy(run: Run | undefined) {
   return !!run && !terminal.has(run.status);
 }
+
+export function useImageWorkflow(run: Run | undefined) {
+  const enabled = !!run?.parameters?.upscale_result;
+  return useQuery({
+    queryKey: ["image-workflow", run?.id],
+    queryFn: () => api<{ steps: Run[] }>(`/images/runs/${run!.id}/workflow`),
+    enabled,
+    refetchInterval: (query) => {
+      const last = query.state.data?.steps.at(-1);
+      return last && terminal.has(last.status) ? false : 1500;
+    },
+  });
+}

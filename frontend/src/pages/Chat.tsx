@@ -1003,7 +1003,8 @@ function ConversationView({
                   next.commit ||
                   next.publish ||
                   next.load ||
-                  next.stop
+                  next.stop ||
+                  next.upscale_result
                 )
                   setWebEnabled(false);
               }}
@@ -1029,7 +1030,8 @@ function ConversationView({
             (["auto", "chat"].includes(options.action) &&
               !options.image_artifact_ids.length &&
               !options.audio_artifact_id &&
-              !options.coding)) && (
+              !options.coding &&
+              !options.upscale_result)) && (
             <WebSearchControl
               enabled={webEnabled}
               query={webQuery}

@@ -25,6 +25,9 @@ def main():
     parser.add_argument("--timeout", type=int, default=900)
     parser.add_argument("--gpu", default="auto")
     parser.add_argument("--modes", default="qwen,juggernaut,edit,recompose-one,recompose-many,upscale")
+    parser.add_argument(
+        "--upscale-result", action="store_true", help="Verify generation/edit followed by Upscale"
+    )
     args = parser.parse_args()
     requested = args.modes.split(",")
     if set(requested) - {"qwen", "juggernaut", "edit", "recompose-one", "recompose-many", "upscale"}:
@@ -130,6 +133,8 @@ def main():
                     )
                 elif mode == "upscale":
                     body = {"mode": "upscale", "input_artifact_ids": sources[:1], "gpu": gpu}
+                if args.upscale_result and mode != "upscale":
+                    body["upscale_result"] = True
                 response = api.post("/api/images/runs", json=body)
                 response.raise_for_status()
                 run_id = response.json()["id"]
@@ -137,18 +142,29 @@ def main():
                 started = time.monotonic()
 
                 def execute():
-                    with session_factory()() as session:
-                        tick(session, "real-image-acceptance")
+                    while True:
+                        with session_factory()() as session:
+                            tick(session, "real-image-acceptance")
+                        if not args.upscale_result:
+                            return
+                        chain = api.get(f"/api/images/runs/{run_id}/workflow").json()["steps"]
+                        if chain[-1]["status"] in {"succeeded", "failed", "canceled", "interrupted"}:
+                            return
+                        time.sleep(0.2)
 
                 with concurrent.futures.ThreadPoolExecutor(1) as pool:
                     future = pool.submit(execute)
                     try:
                         future.result(timeout=args.timeout)
                     except concurrent.futures.TimeoutError:
-                        api.post(f"/api/runs/{run_id}/cancel").raise_for_status()
+                        chain = api.get(f"/api/images/runs/{run_id}/workflow").json()["steps"]
+                        for pending in chain:
+                            if pending["status"] not in {"succeeded", "failed", "canceled", "interrupted"}:
+                                api.post(f"/api/runs/{pending['id']}/cancel").raise_for_status()
                         future.result(timeout=30)
-                run = api.get(f"/api/runs/{run_id}").json()
-                artifacts = api.get("/api/artifacts", params={"run_id": run_id}).json()
+                chain = api.get(f"/api/images/runs/{run_id}/workflow").json()["steps"]
+                run = chain[-1]
+                artifacts = api.get("/api/artifacts", params={"run_id": run["id"]}).json()
                 result = {
                     "mode": mode,
                     "run_id": run_id,
@@ -156,12 +172,19 @@ def main():
                     "seconds": round(time.monotonic() - started, 1),
                     "error": run["error_message"],
                     "artifacts": artifacts,
+                    "steps": chain,
                 }
                 results.append(result)
                 (root / "results.json").write_text(json.dumps(results, indent=2))
                 print("RESULT", mode, run["status"], result["seconds"], run["error_message"], flush=True)
                 if run["status"] == "succeeded":
                     assert len(artifacts) == 1 and artifacts[0]["type"] == "image"
+                    if body.get("upscale_result"):
+                        assert len(chain) == 2 and all(step["status"] == "succeeded" for step in chain)
+                        original = api.get("/api/artifacts", params={"run_id": run_id}).json()[0]
+                        assert artifacts[0]["parent_artifact_ids"] == [original["id"]]
+                        assert artifacts[0]["metadata"]["width"] == original["metadata"]["width"] * 4
+                        assert artifacts[0]["metadata"]["height"] == original["metadata"]["height"] * 4
                     with Image.open(root / "data" / artifacts[0]["relative_path"]) as output:
                         output.verify()
                 else:

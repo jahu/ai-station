@@ -309,3 +309,145 @@ def test_photo_worker_unloads_idle_model_before_dispatch(bridge, monkeypatch):
             assert session.get(Run, image["id"]).status == "succeeded"
             assert not active_locks(session)
         assert len(client.get(f"/api/artifacts?run_id={image['id']}").json()) == 1
+
+
+def test_generate_upscale_workflow_survives_restart_and_reuses_output(bridge):
+    from app.db import reset_engine
+
+    with TestClient(app) as client:
+        first = client.post(
+            "/api/images/runs", json={"mode": "t2i", "prompt": "forest", "gpu": "7", "upscale_result": True}
+        ).json()
+        assert client.get(f"/api/images/runs/{first['id']}/workflow").json()["steps"][0]["status"] == "queued"
+        with session_factory()() as session:
+            assert tick(session, "image-test") == first["id"]
+            assert not active_locks(session)
+        chain = client.get(f"/api/images/runs/{first['id']}/workflow").json()["steps"]
+        assert [r["status"] for r in chain] == ["succeeded", "queued"]
+        child = chain[1]
+        source = client.get(f"/api/artifacts?run_id={first['id']}").json()[0]
+        assert child["parameters"]["parent_artifact_ids"] == [source["id"]]
+        assert child["parameters"]["inputs"] == [source["relative_path"]]
+        assert child["parameters"]["upscale_result"] is False
+        assert child["parent_run_id"] == first["id"]
+        assert child["task_id"] == first["task_id"]
+        assert child["requested_gpu"] == first["requested_gpu"]
+        assert child["effective_permissions"] == first["effective_permissions"]
+        reset_engine()
+        with session_factory()() as session:
+            assert tick(session, "restarted-image-worker") == child["id"]
+            assert tick(session, "restarted-image-worker") is None
+            assert not active_locks(session)
+        assert [
+            r["status"] for r in client.get(f"/api/images/runs/{first['id']}/workflow").json()["steps"]
+        ] == ["succeeded", "succeeded"]
+        final = client.get(f"/api/artifacts?run_id={child['id']}").json()[0]
+        assert final["parent_artifact_ids"] == [source["id"]]
+        assert client.get(f"/api/artifacts/{source['id']}/file").status_code == 200
+
+
+@pytest.mark.parametrize("failure", ["exit", "cancel", "unknown"])
+def test_unsuccessful_generation_never_publishes_upscale(bridge, monkeypatch, failure):
+    with TestClient(app) as client:
+        body = {"mode": "t2i", "prompt": "fail" if failure == "exit" else "forest", "upscale_result": True}
+        first = client.post("/api/images/runs", json=body).json()
+        if failure == "cancel":
+            client.post(f"/api/runs/{first['id']}/cancel").raise_for_status()
+        if failure == "unknown":
+            original = RunnerClient.inspect_process
+
+            def unknown(self, run_id, **offsets):
+                info = original(self, run_id, **offsets)
+                if not info["alive"]:
+                    info.update(status="interrupted", exit_code=None)
+                return info
+
+            monkeypatch.setattr(RunnerClient, "inspect_process", unknown)
+        with session_factory()() as session:
+            tick(session, "image-test")
+            assert not active_locks(session)
+        chain = client.get(f"/api/images/runs/{first['id']}/workflow").json()["steps"]
+        assert len(chain) == 1
+        assert chain[0]["status"] in {"failed", "canceled", "interrupted"}
+
+
+def test_cancel_upscale_preserves_source_and_retry_only_enlarges(bridge):
+    with TestClient(app) as client:
+        first = client.post(
+            "/api/images/runs", json={"mode": "t2i", "prompt": "forest", "upscale_result": True}
+        ).json()
+        with session_factory()() as session:
+            tick(session, "image-test")
+        second = client.get(f"/api/images/runs/{first['id']}/workflow").json()["steps"][1]
+        client.post(f"/api/runs/{second['id']}/cancel").raise_for_status()
+        retry = client.post(f"/api/images/runs/{second['id']}/retry")
+        assert retry.status_code == 202, retry.text
+        assert retry.json()["parameters"]["mode"] == "upscale"
+        with session_factory()() as session:
+            assert tick(session, "image-test") == retry.json()["id"]
+        chain = client.get(f"/api/images/runs/{first['id']}/workflow").json()["steps"]
+        assert [r["status"] for r in chain] == ["succeeded", "canceled", "succeeded"]
+        assert len(client.get(f"/api/artifacts?run_id={first['id']}").json()) == 1
+
+
+def test_rejected_followup_rolls_back_artifact_and_queued_child(bridge, monkeypatch):
+    import app.images as module
+    from app.images import create_image_run
+
+    def rejected(session, body, **kwargs):
+        create_image_run(session, body, **kwargs)
+        raise ValueError("simulated transaction failure after child creation")
+
+    with TestClient(app) as client:
+        first = client.post(
+            "/api/images/runs", json={"mode": "t2i", "prompt": "forest", "upscale_result": True}
+        ).json()
+        monkeypatch.setattr(module, "create_image_run", rejected)
+        with session_factory()() as session:
+            tick(session, "image-test")
+        chain = client.get(f"/api/images/runs/{first['id']}/workflow").json()["steps"]
+        assert len(chain) == 1 and chain[0]["status"] == "failed"
+        assert client.get("/api/artifacts").json() == []
+        with session_factory()() as session:
+            assert tick(session, "image-test") is None
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"mode": "t2i", "prompt": "x", "upscale_result": "true"},
+        {"mode": "img2img", "edit_prompt": "x", "max_side": 4096, "upscale_result": True},
+        {"mode": "upscale", "upscale_result": True},
+    ],
+)
+def test_image_workflow_rejects_invalid_or_unbounded_followup(body):
+    with TestClient(app) as client:
+        if body["mode"] == "img2img":
+            body = {**body, "input_artifact_ids": [upload(client)["id"]]}
+        assert client.post("/api/images/runs", json=body).status_code == 422
+        assert client.get("/api/runs").json() == []
+
+
+def test_assistant_projects_all_image_stages_and_successful_upscale_retry(bridge):
+    with TestClient(app) as client:
+        conversation = client.post(
+            "/api/chat/conversations", json={"model": "test", "execution_mode": "orchestrator"}
+        ).json()
+        route = f"/api/chat/conversations/{conversation['id']}"
+        orchestration = client.post(
+            route + "/messages", json={"content": "Generate an image of a forest, then upscale it."}
+        ).json()
+        with session_factory()() as session:
+            assert tick(session, "image-test") == orchestration["id"]
+            first_id = tick(session, "image-test")
+        detail = client.get(route).json()
+        second = detail["active_run"]
+        assert second["capability"] == "image.upscale"
+        client.post(f"/api/runs/{second['id']}/cancel").raise_for_status()
+        retry = client.post(f"/api/images/runs/{second['id']}/retry").json()
+        with session_factory()() as session:
+            assert tick(session, "image-test") == retry["id"]
+        detail = client.get(route).json()
+        assert detail["active_run"] is None
+        assert detail["messages"][-1]["task_status"] == "succeeded"
+        assert [a["run_id"] for a in detail["messages"][-1]["artifacts"]] == [first_id, retry["id"]]
