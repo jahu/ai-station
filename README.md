@@ -218,3 +218,5 @@ Reviewed commits can now be published from their Run details as a task branch an
 The platform assistant can answer **Pokaż użycie GPU i RAM** with an actual workstation snapshot, without loading a model. **Inspect workstation** also selects it explicitly. Reports stay in the conversation, Runs and Library; see [station inspection](docs/station-inspection.md).
 
 Local coding context is fitted from supported GGUF attention metadata during owned load Runs. See [model-context.md](docs/model-context.md) for the allocation policy and hardware acceptance.
+
+The default Platform assistant now reads image pixels locally: **Add images**, then ask “Describe this image” or choose **Inspect images**. It selects an installed vision GGUF/projector pair, loads an owned runtime when needed and saves a description linked to the source images. See [Chat vision](docs/chat-vision.md).

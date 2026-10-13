@@ -247,7 +247,8 @@ export function AssistantResults({
                     inputs?.image_artifact_ids.includes(artifact.id) ||
                     inputs?.audio_artifact_id === artifact.id ||
                     (artifact.type === "image" &&
-                      (inputs?.image_artifact_ids.length ?? 0) >= 8)
+                      (inputs?.image_artifact_ids.length ?? 0) >=
+                        (inputs?.action === "image.describe" ? 4 : 8))
                   }
                   onClick={() => onUse(artifact)}
                 >
@@ -565,6 +566,19 @@ export default function AssistantActions({
     setPublishApproved(false);
     setCommitSourceId("");
     setPublishSourceId("");
+    if (action === "image.describe") {
+      onChange({
+        ...value,
+        action,
+        audio_artifact_id: null,
+        coding: null,
+        commit: null,
+        publish: null,
+        load: null,
+        stop: null,
+      });
+      return;
+    }
     if (
       [
         "coding.commit",
@@ -686,8 +700,9 @@ export default function AssistantActions({
   async function upload(files: File[]) {
     if (busy) return;
     setError(null);
-    if (files.length + value.image_artifact_ids.length > 8) {
-      setError(new Error("Attach up to eight images."));
+    const imageLimit = value.action === "image.describe" ? 4 : 8;
+    if (files.length + value.image_artifact_ids.length > imageLimit) {
+      setError(new Error(`Attach up to ${imageLimit} images.`));
       return;
     }
     onUploading(true);
@@ -728,7 +743,10 @@ export default function AssistantActions({
               type="button"
               variant="secondary"
               onClick={() => imageInput.current?.click()}
-              disabled={value.image_artifact_ids.length >= 8}
+              disabled={
+                value.image_artifact_ids.length >=
+                (value.action === "image.describe" ? 4 : 8)
+              }
             >
               <ImagePlus size={15} /> Add images
             </Button>

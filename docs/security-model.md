@@ -128,3 +128,7 @@ Workstation inspection from Chat uses an ordinary read-only worker Run and the e
 ## Model context inspection
 
 The existing private model-verification operation can optionally inspect GGUF metadata with filesystem-read and model-management permissions. It enforces configured model roots, the discovery observation, a regular read-only file descriptor, a 32 MiB header budget and bounded entries/arrays. It skips tokenizer strings and never opens tensor data. Unsupported headers retain an explicitly recorded fallback estimate. Cancellation before dispatch does not start or stop another process. See [context estimation](model-context.md).
+
+## Vision input boundary
+
+Image inspection reads explicit app-owned artifact IDs and uses local owned runtimes. The worker bounds source files and decoded pixels, normalizes orientation/transparency and creates transient inline data. The Runner validates inline raster format/size/pixels and rejects URLs or paths. Validation responses omit original request values. Projector mounts follow configured model roots and discovery observations; runtime recovery preserves their immutable identity. Model-operation children roll back on rejected inspection. See [local vision](chat-vision.md).

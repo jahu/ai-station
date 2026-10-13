@@ -10,6 +10,8 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from ai_station_runner import __version__
@@ -59,6 +61,26 @@ from ai_station_runner.worktree_remove import RemoveWorktreeRequest, remove_repo
 from ai_station_runner.worktrees import inspect_worktree, reserve_and_start
 
 app = FastAPI(title="AI Station Host Runner", version=__version__)
+
+
+@app.exception_handler(RequestValidationError)
+async def invalid_request(_request, error):
+    # Validation input can contain entire private image payloads.
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": [
+                {
+                    "loc": list(item["loc"]),
+                    "type": item["type"],
+                    "msg": "Invalid model message" if "messages" in item["loc"] else item["msg"],
+                }
+                for item in error.errors()
+            ]
+        },
+    )
+
+
 _manager: ProcessManager | None = None
 _manager_lock = threading.Lock()
 

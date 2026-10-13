@@ -26,7 +26,7 @@ it("offers every action in a compact control and explains the selected action", 
     name: "Action",
   }) as HTMLSelectElement;
   expect(action.value).toBe("auto");
-  expect(screen.getAllByRole("option")).toHaveLength(17);
+  expect(screen.getAllByRole("option")).toHaveLength(18);
   expect(screen.queryByRole("radio")).toBeNull();
   fireEvent.change(action, { target: { value: "image.edit" } });
   expect(action.value).toBe("image.edit");
@@ -51,4 +51,12 @@ it("does not send a task when Enter is pressed in the action picker", () => {
     false,
   );
   expect(submit).not.toHaveBeenCalled();
+});
+
+it("explains local automatic vision loading when images are inspected", () => {
+  render(<Host />);
+  fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
+    target: { value: "image.describe" },
+  });
+  expect(screen.getByText(/reads their contents locally/)).toBeTruthy();
 });
