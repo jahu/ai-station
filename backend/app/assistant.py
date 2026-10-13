@@ -27,6 +27,7 @@ from app.web_search import SearchOptions
 
 Action = Literal[
     "chat",
+    "image.describe",
     "image.generate",
     "image.edit",
     "image.recompose",
@@ -97,6 +98,7 @@ class AssistantInputs(BaseModel):
     action: Literal[
         "auto",
         "chat",
+        "image.describe",
         "image.generate",
         "image.edit",
         "image.recompose",
@@ -130,7 +132,7 @@ class Plan(BaseModel):
 
 def assistant_needs_provider(body):
     plan = explicit_plan(body.model_dump(mode="json", exclude={"attachments"}))
-    return not plan or plan.action not in {"runtime.load", "runtime.stop", "system.inspect"}
+    return not plan or plan.action not in {"runtime.load", "runtime.stop", "system.inspect", "image.describe"}
 
 
 def planner_context(session, conversation, user):
@@ -165,6 +167,18 @@ def planner_context(session, conversation, user):
 
 
 def enqueue_assistant(session, conversation, user, body):
+    if body.action == "image.describe" and (
+        not 1 <= len(body.image_artifact_ids) <= 4
+        or body.audio_artifact_id
+        or body.coding
+        or body.commit
+        or body.publish
+        or body.load
+        or body.stop
+        or body.attachments
+        or body.web_search.enabled
+    ):
+        raise HTTPException(422, "Attach one to four images without other execution scope to inspect locally")
     if body.action == "system.inspect" and (
         body.image_artifact_ids
         or body.audio_artifact_id
@@ -266,7 +280,9 @@ def enqueue_assistant(session, conversation, user, body):
         },
         permissions=chat_permissions(
             snapshot,
-            ["manage_agents"] + (["external_ai"] if body.coding and body.coding.external_ai else []),
+            ["manage_agents"]
+            + (["filesystem_read", "manage_models"] if images else [])
+            + (["external_ai"] if body.coding and body.coding.external_ai else []),
         ),
     )
     from app.llama import prepare_consumer
@@ -339,6 +355,13 @@ def explicit_plan(params):
     ):
         return Plan(action="image.generate", reason="Generate an image from your instruction.")
     if params["image_artifact_ids"] and re.match(
+        r"^(describe|inspect|explain|what|opisz|obejrzyj|co (jest|widzisz)|por[oó]wnaj|compare)\b", prompt
+    ):
+        return Plan(
+            action="image.describe",
+            reason="Inspect the attached image pixels with an installed local vision model.",
+        )
+    if params["image_artifact_ids"] and re.match(
         r"^(change|edit|replace|zmie[nń]|edytuj|zamie[nń])\b", prompt
     ):
         action = "image.recompose" if len(params["image_artifact_ids"]) > 1 else "image.edit"
@@ -365,6 +388,7 @@ PLANNER_SYSTEM = """Route the user's request within AI Station. Return ONLY a JS
 chat: questions, explanations and discussion (no tools executed);
 system.inspect: read actual current workstation GPU/CPU/RAM/disk telemetry, active Runs and observed runtimes;
 this read-only action does not control processes or identify arbitrary GPU processes;
+image.describe: describe, inspect or compare attached images using a local vision model;
 image.generate: explicitly requested new image, with no reference images;
 image.edit: modify one attached image;
 image.recompose: compose an image using one or more attached references (including person + clothing);
@@ -447,10 +471,20 @@ class AssistantExecutor:
             else:
                 child = create_audio_run(session, request, task=run.task, parent_run_id=run.id)
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
-        elif plan.action == "chat" and images:
-            message.content = (
-                "Choose Edit, Recompose or Upscale for these images, or describe the image operation."
-            )
+        elif plan.action == "image.describe" or plan.action == "chat" and images:
+            from app.vision import enqueue_inspection
+
+            try:
+                child = enqueue_inspection(session, run)
+            except HTTPException as exc:
+                message.content = exc.detail
+            else:
+                run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                message.content = (
+                    "Reading image pixels locally with "
+                    + child.parameters["vision_model_name"]
+                    + ". An owned vision runtime may load automatically."
+                )
         elif plan.action == "system.inspect":
             if images or params.get("attachments") or params.get("coding"):
                 message.content = "Workstation inspection reads live telemetry. Send it without attachments or coding scope."

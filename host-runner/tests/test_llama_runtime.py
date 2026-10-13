@@ -302,3 +302,36 @@ def test_failed_start_is_inspectable_and_not_restarted_on_replay(runtime, monkey
     assert "CUDA" in result["error"]
     assert llama.load(body)["status"] == "failed"
     assert sum(args[0] == "start" for args in state["calls"]) == 1
+
+
+def test_projector_is_readonly_and_part_of_immutable_runtime_identity(runtime):
+    root, body, state = runtime
+    projector = root / "models/mmproj.gguf"
+    projector.write_bytes(b"GGUFprojector")
+    selected = llama.Projector(
+        path=str(projector), size_bytes=projector.stat().st_size, mtime=projector.stat().st_mtime
+    )
+    request = body.model_copy(update={"projector": selected})
+    llama.load(request)
+    created = next(call for call in state["calls"] if call[0] == "create")
+    assert f"type=bind,src={projector},dst=/models/projector.gguf,readonly" in created
+    assert "--mmproj" in created and "/models/projector.gguf" in created
+    assert "--network" in created and "none" in created
+    llama.load(request)
+    assert len([call for call in state["calls"] if call[0] == "create"]) == 1
+    with pytest.raises(HTTPException) as changed:
+        llama.load(body)
+    assert changed.value.status_code == 409
+    assert projector.read_bytes() == b"GGUFprojector"
+
+
+def test_projector_outside_roots_or_changed_observation_is_rejected(runtime, tmp_path):
+    root, body, state = runtime
+    outside = tmp_path / "outside.gguf"
+    outside.write_bytes(b"GGUFoutside")
+    for source, size in [(outside, outside.stat().st_size), (root / "models/model.gguf", 999)]:
+        selected = llama.Projector(path=str(source), size_bytes=size, mtime=source.stat().st_mtime)
+        with pytest.raises(HTTPException) as denied:
+            llama.load(body.model_copy(update={"projector": selected}))
+        assert denied.value.status_code == 422
+    assert not any(call[0] == "create" for call in state["calls"])

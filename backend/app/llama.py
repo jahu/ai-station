@@ -41,6 +41,7 @@ class LoadModel(BaseModel):
     gpus: list[Annotated[int, Field(ge=0)]] = Field(max_length=16)
     context_size: int = Field(default=4096, ge=512, le=262144, multiple_of=256)
     cache_type: Literal["f16", "q8_0"] = "f16"
+    projector_file_id: UUID | None = None
 
 
 class EmptyBody(BaseModel):
@@ -213,8 +214,38 @@ def loadable_model(row):
     )
 
 
+def vision_projector(session, model, companions=None):
+    """Only an unambiguous installed companion in the same discovered folder."""
+    matches = [
+        row
+        for row in (
+            companions
+            if companions is not None
+            else session.scalars(
+                select(ModelFile).where(
+                    ModelFile.format == "gguf",
+                    ModelFile.availability == "present",
+                    ModelFile.filename.ilike("mmproj%"),
+                )
+            )
+        )
+        if row.filename.lower().startswith("mmproj")
+        and PurePosixPath(row.host_path).parent == PurePosixPath(model.host_path).parent
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
 @router.get("")
 def catalog(session: DB):
+    companions = list(
+        session.scalars(
+            select(ModelFile).where(
+                ModelFile.format == "gguf",
+                ModelFile.availability == "present",
+                ModelFile.filename.ilike("mmproj%"),
+            )
+        )
+    )
     return {
         "models": [
             {
@@ -222,6 +253,7 @@ def catalog(session: DB):
                 "name": f"{PurePosixPath(row.host_path).parent.name} · {row.filename}",
                 "size_bytes": row.size_bytes,
                 "model_key": "llamacpp:" + row.id,
+                "vision_available": vision_projector(session, row, companions) is not None,
             }
             for row in session.scalars(
                 select(ModelFile)
@@ -253,6 +285,16 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False):
     if len(set(body.gpus)) != len(body.gpus):
         raise HTTPException(422, "Choose distinct GPUs")
     requested_context = body.context_size
+    projector = None
+    if body.projector_file_id is not None:
+        companion = vision_projector(session, model)
+        if companion is None or companion.id != str(body.projector_file_id):
+            raise HTTPException(422, "Choose this model's unique installed vision companion")
+        projector = {
+            "path": companion.host_path,
+            "size_bytes": companion.size_bytes,
+            "mtime": companion.mtime,
+        }
     if body.cache_type == "q8_0":
         body = body.model_copy(
             update={
@@ -277,6 +319,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False):
             "context_size": body.context_size,
             "cache_type": body.cache_type,
             "requested_context_size": requested_context,
+            "projector_file_id": str(body.projector_file_id) if body.projector_file_id else None,
         },
     )
     session.add(instance)
@@ -306,6 +349,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False):
             "context_size": body.context_size,
             "cache_type": body.cache_type,
             "requested_context_size": requested_context,
+            "projector": projector,
         },
     )
     instance.endpoint = "llamacpp:" + instance.id
@@ -533,7 +577,8 @@ class LlamaExecutor:
         memory = [totals.get(index) for index in gpus]
         fitted = fit_coding_context(
             gpus=gpus,
-            size_bytes=run.parameters["size_bytes"],
+            size_bytes=run.parameters["size_bytes"]
+            + (run.parameters.get("projector") or {}).get("size_bytes", 0),
             gpu_memory_mib=memory,
             ceiling=run.parameters.get("requested_context_size", run.parameters["context_size"]),
             failed_sizes=failed_context_sizes(session, instance.metadata_json["model_file_id"], gpus),
@@ -604,6 +649,7 @@ class LlamaExecutor:
                 "gpus",
                 "context_size",
                 "cache_type",
+                "projector",
             )
             if key in run.parameters
         }

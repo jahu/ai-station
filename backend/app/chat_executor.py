@@ -58,6 +58,10 @@ class ChatExecutor:
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
             session.commit()
             return
+        if run.parameters.get("vision_artifact_ids"):
+            from app.vision import image_context
+
+            messages = image_context(session, run, messages)
         params = {**run.parameters, "messages": messages}
         stream = completion_stream(session, params)
         pending = None
@@ -92,6 +96,10 @@ class ChatExecutor:
                 return
             if not message.content:
                 raise ProviderError("Provider returned no text")
+            if run.parameters.get("vision_artifact_ids"):
+                from app.vision import save_description
+
+                save_description(session, run, message)
             message.metadata_json = {**message.metadata_json, "partial": False}
             conversation = session.get(Conversation, run.conversation_id)
             conversation.updated_at = utcnow()

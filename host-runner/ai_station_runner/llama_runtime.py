@@ -16,11 +16,19 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from ai_station_runner.config import _split, get_settings
-from ai_station_runner.local_model import Completion, forward_completion
+from ai_station_runner.local_model import forward_completion
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.telemetry import collect
+from ai_station_runner.vision_messages import VisionCompletion
 
 router = APIRouter(prefix="/v1/llama")
+
+
+class Projector(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    path: str = Field(min_length=1, max_length=1200)
+    size_bytes: int = Field(ge=1)
+    mtime: float = Field(allow_inf_nan=False)
 
 
 class Load(BaseModel):
@@ -33,6 +41,7 @@ class Load(BaseModel):
     gpus: list[int] = Field(max_length=16)
     context_size: int = Field(default=4096, ge=512, le=262144, multiple_of=256)
     cache_type: Literal["f16", "q8_0"] = "f16"
+    projector: Projector | None = None
     permissions: list[str]
 
 
@@ -230,7 +239,7 @@ def load(body: Load):
             saved = record.get("request")
             if (
                 saved is None
-                or {"cache_type": "f16", **saved} != request
+                or {"cache_type": "f16", "projector": None, **saved} != request
                 or record.get("desired") == "stopped"
             ):
                 raise HTTPException(409, "Runtime identity is immutable")
@@ -245,6 +254,20 @@ def load(body: Load):
             stat = model.stat()
             if stat.st_size != body.size_bytes or abs(stat.st_mtime - body.mtime) > 0.001:
                 raise HTTPException(422, "Model file changed since discovery; scan it again")
+            projector = None
+            if body.projector is not None:
+                try:
+                    projector = ensure_within(Path(body.projector.path), _split(settings.model_roots))
+                except (PathBoundaryError, OSError) as exc:
+                    raise HTTPException(422, "Projector is outside configured model roots") from exc
+                if projector.suffix.lower() != ".gguf" or not projector.is_file() or "," in str(projector):
+                    raise HTTPException(422, "Choose an installed GGUF projector")
+                observed = projector.stat()
+                if (
+                    observed.st_size != body.projector.size_bytes
+                    or abs(observed.st_mtime - body.projector.mtime) > 0.001
+                ):
+                    raise HTTPException(422, "Projector changed since discovery; scan it again")
             if len(set(body.gpus)) != len(body.gpus) or any(g < 0 for g in body.gpus):
                 raise HTTPException(422, "Select distinct GPU indexes")
             hardware = collect(settings.host_data_dir())
@@ -265,6 +288,7 @@ def load(body: Load):
                 "digest": hashlib.sha256(json.dumps(request, sort_keys=True).encode()).hexdigest(),
                 "image": image,
                 "model": str(model),
+                "projector": str(projector) if projector else None,
                 "devices": [devices[g] for g in body.gpus],
                 "desired": "running",
             }
@@ -303,6 +327,11 @@ def load(body: Load):
             ]
             if record["devices"]:
                 args += ["--gpus", '"device=' + ",".join(record["devices"]) + '"']
+            if record.get("projector"):
+                args += [
+                    "--mount",
+                    f"type=bind,src={record['projector']},dst=/models/projector.gguf,readonly",
+                ]
             args += [
                 record["image"],
                 "--model",
@@ -335,6 +364,8 @@ def load(body: Load):
                     "--fit",
                     "off",
                 ]
+            if record.get("projector"):
+                args += ["--mmproj", "/models/projector.gguf"]
             if len(body.gpus) > 1:
                 args += ["--split-mode", "layer", "--tensor-split", ",".join("1" for _ in body.gpus)]
             cid = docker(*args)
@@ -394,10 +425,12 @@ def stop(instance_id: UUID, body: Stop):
 
 
 @router.post("/{instance_id}/chat/completions")
-async def completion(instance_id: UUID, body: Completion, incoming: Request):
+async def completion(instance_id: UUID, body: VisionCompletion, incoming: Request):
     record = manifest(instance_id)
     if record.get("desired") != "running" or body.model != str(instance_id):
         raise HTTPException(409, "Runtime/model identity does not match")
+    if any(isinstance(item.content, list) for item in body.messages) and not record.get("projector"):
+        raise HTTPException(409, "Load this model with its vision projector before sending images")
     client = httpx.AsyncClient(
         transport=httpx.AsyncHTTPTransport(uds=str(socket_path(instance_id))),
         timeout=httpx.Timeout(300, connect=10),

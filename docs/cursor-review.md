@@ -34,3 +34,7 @@ Local preview: http://127.0.0.1:8765/ . Evidence and preserved database copies a
 PR #247 repaired the conversation start screen and compact assistant action selection. PR #249 fixed the frontend formatting debt without changing TypeScript/JSX behavior. PR #248 added a real, read-only workstation inspection action and immutable bounded follow-up context; both GPU cards appear in the saved Chat report. These changes are deployed under the local preview URL above.
 
 Further model review found that the context heuristic inferred KV storage from weight-file size. The current repair uses bounded GGUF attention metadata in the load worker. Real acceptance now confirms a local 27B model with 131072 context, a completed 110029-token input and an isolated local Coding proposal with passing unittest validation. This follow-up changes the inference verification status; the earlier reboot check itself did not run inference. The full product acceptance ledger remains open.
+
+## Local image understanding follow-up — 2026-10-13
+
+The default assistant now reads actual attached image pixels using an installed local vision GGUF/projector pair. Runtime selection, owned model loading, streaming and source-linked description artifacts use ordinary Runs. A real isolated Qwen 9B smoke correctly recognized two colored shapes. This closes the earlier filename-only image inspection gap; practical editing and broader media acceptance remain in the ledger.

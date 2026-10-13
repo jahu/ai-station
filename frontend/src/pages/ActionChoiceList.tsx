@@ -12,6 +12,12 @@ const ACTIONS = [
     detail: "Stay in chat without routing to a station action.",
   },
   {
+    key: "image.describe",
+    title: "Inspect images",
+    detail:
+      "Attach up to four images. AI Station reads their contents locally and may load an installed vision model on your GPUs.",
+  },
+  {
     key: "image.generate",
     title: "Generate image",
     detail: "Create an image from your description.",
