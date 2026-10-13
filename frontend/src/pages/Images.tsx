@@ -220,7 +220,10 @@ function ImageForm({
   const busy =
     create.isPending ||
     mediaBusy(activeRun) ||
-    (!!run.data?.parameters?.upscale_result && workflow.isPending);
+    (!!(
+      run.data?.parameters?.upscale_result || run.data?.parameters?.video_prompt
+    ) &&
+      workflow.isPending);
   const oversized =
     mode === "upscale" && source?.metadata.width && source.metadata.height
       ? source.metadata.width * source.metadata.height * 16 > 64 * 1024 * 1024
@@ -537,7 +540,8 @@ function ImageForm({
           </fieldset>
         </form>
         <MediaResult
-          kind="image"
+          kind={activeRun?.capability === "video.generate" ? "video" : "image"}
+          videoMode="scene"
           runId={activeRun?.id ?? runId}
           run={activeRun}
           steps={workflow.data?.steps}

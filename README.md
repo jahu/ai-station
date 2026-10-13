@@ -245,3 +245,8 @@ General local video is available in **Video**: generate a scene from text or ani
 a Library/uploaded image with an installed Wan 2.2 TI2V 5B profile. The Assistant
 uses the same queued execution and returns the video inline. Talking avatars stay
 a separate mode. See [video configuration and verification](docs/video.md).
+
+
+The Assistant's **Image → video** action generates a first frame and then animates
+it with Wan, keeping both outputs in Library. For example: “Generate an image of
+a forest, then animate it: mist drifts between the trees”. See [image workflows](docs/image-workflows.md).

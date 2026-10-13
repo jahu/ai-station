@@ -12,6 +12,9 @@ class PhotoPipeExecutor(HostMediaExecutor):
     mime_type = "image/png"
 
     def on_success(self, session, run, artifact):
+        if run.parameters.get("video_prompt"):
+            self.queue_video(session, run, artifact)
+            return
         if not run.parameters.get("upscale_result"):
             return
         from app.images import ImageRequest, create_image_run
@@ -29,6 +32,37 @@ class PhotoPipeExecutor(HostMediaExecutor):
         child.effective_permissions = list(run.effective_permissions)
         child.triggered_by = run.triggered_by
         run.metadata_json = {**run.metadata_json, "upscale_run_id": child.id}
+        append_event(
+            session, run.id, "workflow.step.queued", {"run_id": child.id, "capability": child.capability}
+        )
+
+    def queue_video(self, session, run, artifact):
+        from app.video import VideoRequest, create_video_run
+
+        require(run.effective_permissions, "filesystem_read")
+        require(run.effective_permissions, "workspace_write")
+        if (
+            run.parameters.get("upscale_result")
+            or run.parameters.get("mode") == "upscale"
+            or run.metadata_json.get("video_run_id")
+        ):
+            raise ValueError("Invalid repeated image-to-video workflow dispatch")
+        width, height = artifact.metadata_json["width"], artifact.metadata_json["height"]
+        dimensions = (704, 1280) if height > width else (768, 768) if height == width else (1280, 704)
+        child = create_video_run(
+            session,
+            VideoRequest(
+                prompt=run.parameters["video_prompt"],
+                image_artifact_id=artifact.id,
+                width=dimensions[0],
+                height=dimensions[1],
+                gpu=run.requested_gpu,
+            ),
+            task=run.task,
+            parent_run_id=run.id,
+        )
+        child.triggered_by = run.triggered_by
+        run.metadata_json = {**run.metadata_json, "video_run_id": child.id}
         append_event(
             session, run.id, "workflow.step.queued", {"run_id": child.id, "capability": child.capability}
         )

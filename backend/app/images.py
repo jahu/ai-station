@@ -35,7 +35,7 @@ FORMATS = {"PNG": (".png", "image/png"), "JPEG": (".jpg", "image/jpeg"), "WEBP":
 def image_workflow(run_id: UUID, session: DB):
     from app.media_workflow import workflow_steps
 
-    return workflow_steps(session, run_id, {"photo_pipe"})
+    return workflow_steps(session, run_id, {"photo_pipe", "wan_video"})
 
 
 @router.post("/images/runs/{run_id}/retry", status_code=202)
@@ -99,6 +99,7 @@ class ImageRequest(BaseModel):
     gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]+)$", max_length=12)
     input_artifact_ids: list[UUID] = Field(default_factory=list, max_length=8)
     upscale_result: StrictBool = False
+    video_prompt: str | None = Field(default=None, min_length=1, max_length=2000)
 
     @field_validator("gpu")
     @classmethod
@@ -109,6 +110,8 @@ class ImageRequest(BaseModel):
     def validate_mode(self) -> Self:
         if self.mode == "upscale" and self.upscale_result:
             raise ValueError("Upscale already enlarges its source; choose it only once")
+        if self.video_prompt and (self.upscale_result or self.mode == "upscale"):
+            raise ValueError("Choose one follow-up: Upscale or animation after generation/editing")
         count = len(self.input_artifact_ids)
         if self.mode == "t2i" and count:
             raise ValueError("Generate does not accept source images")
@@ -133,8 +136,8 @@ class ImageRequest(BaseModel):
         if self.mode == "img2img":
             self.max_side = self.max_side or 1216
             self.steps = self.steps or 30
-            if self.upscale_result and self.max_side > 2048:
-                raise ValueError("Edit then Upscale requires a maximum side of at most 2048")
+            if (self.upscale_result or self.video_prompt) and self.max_side > 2048:
+                raise ValueError("Edit follow-up requires a maximum side of at most 2048")
         if self.mode == "t2i" and self.backend == "juggernaut" and self.seed is None:
             self.seed = 42
         return self
@@ -149,6 +152,11 @@ def get_artifact(session: Session, artifact_id: UUID) -> Artifact:
 
 @router.post("/images/runs", status_code=202)
 def enqueue_image(body: ImageRequest, session: DB):
+    if body.video_prompt:
+        from app.video import capabilities
+
+        if not capabilities()["available"]:
+            raise HTTPException(409, "Local video needs setup before queuing an animated result")
     run = create_image_run(session, body)
     session.commit()
     return run_dict(run)

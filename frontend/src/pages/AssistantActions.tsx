@@ -590,6 +590,7 @@ export default function AssistantActions({
         "runtime.load",
         "runtime.stop",
         "system.inspect",
+        "image.generate_video",
       ].includes(action)
     ) {
       onChange({
@@ -781,7 +782,8 @@ export default function AssistantActions({
         )}
       {!value.action.startsWith("coding.") &&
         !value.action.startsWith("runtime.") &&
-        value.action !== "system.inspect" && (
+        value.action !== "system.inspect" &&
+        value.action !== "image.generate_video" && (
           <div className="assistant-attachment-toolbar">
             <Button
               type="button"
@@ -889,7 +891,8 @@ export default function AssistantActions({
         </div>
       )}
       {((!value.action.startsWith("coding.") &&
-        !value.action.startsWith("runtime.")) ||
+        !value.action.startsWith("runtime.") &&
+        value.action !== "image.generate_video") ||
         value.image_artifact_ids.length > 0) && (
         <div
           className="assistant-reference-area"

@@ -32,6 +32,7 @@ Action = Literal[
     "image.edit",
     "image.recompose",
     "image.upscale",
+    "image.generate_video",
     "audio.speech",
     "avatar.animate",
     "video.generate",
@@ -104,6 +105,7 @@ class AssistantInputs(BaseModel):
         "image.edit",
         "image.recompose",
         "image.upscale",
+        "image.generate_video",
         "audio.speech",
         "avatar.animate",
         "video.generate",
@@ -171,6 +173,22 @@ def planner_context(session, conversation, user):
 
 
 def enqueue_assistant(session, conversation, user, body):
+    if body.action == "image.generate_video" and (
+        body.image_artifact_ids
+        or body.audio_artifact_id
+        or body.attachments
+        or body.coding
+        or body.commit
+        or body.publish
+        or body.load
+        or body.stop
+        or body.web_search.enabled
+        or body.speech_text
+        or body.upscale_result
+    ):
+        raise HTTPException(
+            422, "Image-to-video starts with a scene prompt without references or other actions"
+        )
     if body.action == "video.generate" and (
         len(body.image_artifact_ids) > 1
         or body.audio_artifact_id
@@ -394,6 +412,20 @@ def explicit_plan(params):
     # Agent intent precedes media words inside the requested agent's goal.
     if re.match(r"^(create|make|stw[oó]rz|utw[oó]rz|zbuduj)\b.{0,30}\bagent", prompt):
         return Plan(action="agent.create", reason="Create an agent definition for review and activation.")
+    image_prompt, motion = image_video_followup(params["content"])
+    if (
+        motion
+        and not params["image_artifact_ids"]
+        and not params.get("audio_artifact_id")
+        and re.match(
+            r"^(generate|draw|create|make|wygeneruj|narysuj|stw[oó]rz|utw[oó]rz)\b.{0,30}\b(image|picture|photo|obraz|zdję|fotograf)",
+            image_prompt.strip().lower(),
+        )
+    ):
+        return Plan(
+            action="image.generate_video",
+            reason="Create an image, then animate it locally. Both results stay in Library.",
+        )
     if not params.get("audio_artifact_id") and re.match(
         r"^(generate|create|make|wygeneruj|stw[oó]rz|utw[oó]rz|animate|animuj|ożyw)\b.{0,40}\b(video|film|wideo|animation|animacj)",
         prompt,
@@ -446,6 +478,24 @@ def image_followup(prompt):
     return (prompt[: match.start()].rstrip(" ,;"), True) if match else (prompt, False)
 
 
+def image_video_followup(prompt):
+    match = re.search(
+        r"(?:[,;]\s*|\s+)(?:and then|then|a następnie|następnie|potem)\s+"
+        r"(?:go\s+)?(?:animate|animuj|ożyw)(?:\s+(?:it|the result|the image|wynik|obraz|go))?"
+        r"(?:\s+(?:into a video|w wideo|w film))?[.!]?(?:\s*:\s*(.+))?\s*$",
+        prompt,
+        re.I | re.S,
+    )
+    return (
+        (
+            prompt[: match.start()].rstrip(" ,;"),
+            match.group(1) or "Subtle natural motion. Preserve the subject and composition.",
+        )
+        if match
+        else (prompt, None)
+    )
+
+
 def avatar_speech_text(content):
     """Current explicit spoken words only; normal animation never implies synthesis."""
     match = re.search(r"\b(?:say(?:s|ing)?|powie|powiedz|m[oó]wi)\s*:\s*(.+)$", content, re.I | re.S)
@@ -463,6 +513,7 @@ system.inspect: read actual current workstation GPU/CPU/RAM/disk telemetry, acti
 this read-only action does not control processes or identify arbitrary GPU processes;
 image.describe: describe, inspect or compare attached images using a local vision model;
 image.generate: explicitly requested new image, with no reference images;
+image.generate_video: explicitly create a new image and then animate that result, with no references;
 image.edit: modify one attached image;
 image.recompose: compose an image using one or more attached references (including person + clothing);
 image.upscale: enlarge one attached image;
@@ -502,7 +553,7 @@ class AssistantExecutor:
         plan = explicit_plan(run.parameters)
         if plan is None:
             plan = asyncio.run(self.plan(session, run))
-        if plan and plan.action == "video.generate":
+        if plan and plan.action in {"video.generate", "image.generate_video"}:
             from app.video import capabilities
 
             if not capabilities()["available"]:
@@ -621,14 +672,24 @@ class AssistantExecutor:
 
             mode = {
                 "image.generate": "t2i",
+                "image.generate_video": "t2i",
                 "image.edit": "img2img",
                 "image.recompose": "recompose",
                 "image.upscale": "upscale",
             }[plan.action]
             try:
                 prompt, followup = image_followup(params["content"])
+                animation = {}
+                if plan.action == "image.generate_video":
+                    prompt, motion = image_video_followup(params["content"])
+                    animation = {
+                        "video_prompt": motion or prompt[:2000],
+                        "width": 1280,
+                        "height": 704,
+                    }
                 request = ImageRequest(
                     mode=mode,
+                    **animation,
                     input_artifact_ids=images,
                     upscale_result=mode != "upscale" and (params.get("upscale_result", False) or followup),
                     **{"edit_prompt" if mode == "img2img" else "prompt": prompt},
@@ -638,6 +699,8 @@ class AssistantExecutor:
             else:
                 child = create_image_run(session, request, task=run.task, parent_run_id=run.id)
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                if request.video_prompt:
+                    message.content += " The generated image becomes the first frame of a local video. Both outputs appear here and in Library."
                 if request.upscale_result:
                     message.content += " The result will then be upscaled 4×; both images stay in Library."
         elif plan.action == "agent.create":

@@ -451,3 +451,169 @@ def test_assistant_projects_all_image_stages_and_successful_upscale_retry(bridge
         assert detail["active_run"] is None
         assert detail["messages"][-1]["task_status"] == "succeeded"
         assert [a["run_id"] for a in detail["messages"][-1]["artifacts"]] == [first_id, retry["id"]]
+
+
+@pytest.fixture
+def video_bridge(bridge, tmp_path, monkeypatch):
+    from ai_station_runner import video as native_video
+
+    python = tmp_path / "video-python"
+    python.write_text(f"""#!{sys.executable}
+import json, pathlib, sys
+config = json.loads(pathlib.Path(sys.argv[-1]).read_text())
+assert pathlib.Path(config['image']).is_file()
+if config['request']['prompt'] == 'fail-video': sys.exit(3)
+pathlib.Path(config['output']).write_bytes(b'fake-wan-video')
+""")
+    python.chmod(0o700)
+    (tmp_path / "nodes.py").touch()
+    for key in ("model", "text", "vae"):
+        (tmp_path / (key + ".safetensors")).touch()
+    for key, value in {
+        "VIDEO_PYTHON": python,
+        "COMFY_DIR": tmp_path,
+        "WAN_MODEL": tmp_path / "model.safetensors",
+        "WAN_TEXT_ENCODER": tmp_path / "text.safetensors",
+        "WAN_VAE": tmp_path / "vae.safetensors",
+    }.items():
+        monkeypatch.setenv("AI_STATION_" + key, str(value))
+    monkeypatch.setattr(native_video, "collect", lambda _: {"gpus": [{"index": 7}]})
+    clear_runner()
+
+
+def test_image_video_workflow_persists_source_and_restart(video_bridge):
+    from app.db import reset_engine
+
+    api = TestClient(app)
+    first = api.post(
+        "/api/images/runs",
+        json={"mode": "t2i", "prompt": "Forest", "video_prompt": "Mist drifts", "gpu": "7"},
+    ).json()
+    with session_factory()() as s:
+        tick(s, "image-video")
+        assert not active_locks(s)
+    steps = api.get(f"/api/images/runs/{first['id']}/workflow").json()["steps"]
+    assert [r["status"] for r in steps] == ["succeeded", "queued"]
+    child = steps[1]
+    assert child["capability"] == "video.generate" and child["task_id"] == first["task_id"]
+    source = api.get(f"/api/artifacts?run_id={first['id']}").json()[0]
+    assert child["parameters"]["parent_artifact_ids"] == [source["id"]]
+    assert child["parameters"]["image_relative"] == source["relative_path"]
+    assert child["parameters"]["prompt"] == "Mist drifts" and child["requested_gpu"] == "7"
+    reset_engine()
+    with session_factory()() as s:
+        assert tick(s, "restarted-video") == child["id"]
+        assert tick(s, "restarted-video") is None
+        assert not active_locks(s)
+    result = api.get(f"/api/artifacts?run_id={child['id']}").json()[0]
+    assert result["type"] == "video" and result["parent_artifact_ids"] == [source["id"]]
+    assert api.get(f"/api/artifacts/{source['id']}/file").content == png()
+    assert api.get(f"/api/artifacts/{result['id']}/file").content == b"fake-wan-video"
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+def test_unsuccessful_image_does_not_queue_video(video_bridge, cancel):
+    api = TestClient(app)
+    r = api.post("/api/images/runs", json={"mode": "t2i", "prompt": "fail", "video_prompt": "Mist"}).json()
+    if cancel:
+        assert api.post(f"/api/runs/{r['id']}/cancel").status_code == 200
+    with session_factory()() as s:
+        tick(s, "image-video-failure")
+        assert s.query(Run).count() == 1 and not active_locks(s)
+    assert api.get(f"/api/artifacts?run_id={r['id']}").json() == []
+
+
+def test_failed_video_keeps_successful_source(video_bridge):
+    api = TestClient(app)
+    r = api.post(
+        "/api/images/runs", json={"mode": "t2i", "prompt": "Forest", "video_prompt": "fail-video"}
+    ).json()
+    with session_factory()() as s:
+        tick(s, "source")
+        tick(s, "failed-video")
+        assert not active_locks(s)
+    steps = api.get(f"/api/images/runs/{r['id']}/workflow").json()["steps"]
+    assert [a["status"] for a in steps] == ["succeeded", "failed"]
+    assert len(api.get(f"/api/artifacts?run_id={r['id']}").json()) == 1
+    assert api.get(f"/api/artifacts?run_id={steps[1]['id']}").json() == []
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "Generate an image of a forest, then animate it: mist drifts",
+        "Wygeneruj obraz lasu, potem go animuj: mgła płynie\ni drzewa kołyszą się",
+    ],
+)
+def test_assistant_image_video_returns_both_outputs(video_bridge, content):
+    api = TestClient(app)
+    cid = api.post(
+        "/api/chat/conversations", json={"model": "test", "execution_mode": "orchestrator"}
+    ).json()["id"]
+    r = api.post(f"/api/chat/conversations/{cid}/messages", json={"content": content})
+    assert r.status_code == 202, r.text
+    with session_factory()() as s:
+        for _ in range(3):
+            tick(s, "assistant-image-video")
+    message = api.get(f"/api/chat/conversations/{cid}").json()["messages"][-1]
+    assert [a["capability"] for a in message["steps"]] == [
+        "assistant.orchestrate",
+        "image.generate",
+        "video.generate",
+    ]
+    assert {a["type"] for a in message["artifacts"]} == {"image", "video"}
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [{"video_prompt": ""}, {"video_prompt": "motion", "upscale_result": True}, {"video_prompt": "x" * 2001}],
+)
+def test_image_video_rejects_unbounded_or_conflicting_followup(fields):
+    api = TestClient(app)
+    assert api.post("/api/images/runs", json={"mode": "t2i", "prompt": "Forest", **fields}).status_code == 422
+    with session_factory()() as s:
+        assert not s.query(Run).count()
+
+
+def test_video_followup_setup_failure_does_not_queue_image(monkeypatch):
+    monkeypatch.setattr(RunnerClient, "request", lambda *a, **k: {"available": False})
+    api = TestClient(app)
+    assert (
+        api.post(
+            "/api/images/runs", json={"mode": "t2i", "prompt": "Forest", "video_prompt": "Mist"}
+        ).status_code
+        == 409
+    )
+    with session_factory()() as s:
+        assert not s.query(Run).count()
+
+
+def test_explicit_image_video_uses_scene_as_motion_and_rejects_refs(video_bridge):
+    api = TestClient(app)
+    cid = api.post(
+        "/api/chat/conversations", json={"model": "test", "execution_mode": "orchestrator"}
+    ).json()["id"]
+    path = f"/api/chat/conversations/{cid}/messages"
+    assert (
+        api.post(
+            path, json={"content": "A cat blinks", "action": "image.generate_video", "upscale_result": True}
+        ).status_code
+        == 422
+    )
+    r = api.post(path, json={"content": "A cat blinks", "action": "image.generate_video"})
+    assert r.status_code == 202
+    with session_factory()() as s:
+        tick(s, "explicit-image-video")
+        photo = next(a for a in s.query(Run).all() if a.executor_type == "photo_pipe")
+        assert (
+            photo.parameters["prompt"] == "A cat blinks"
+            and photo.parameters["video_prompt"] == "A cat blinks"
+        )
+        assert photo.parameters["width"] == 1280 and photo.parameters["height"] == 704
+
+
+def test_animation_mention_inside_scene_does_not_add_followup():
+    from app.assistant import image_video_followup
+
+    prompt = 'Generate an image of a book titled "then animate it" on a table'
+    assert image_video_followup(prompt) == (prompt, None)

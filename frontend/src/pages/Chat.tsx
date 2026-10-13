@@ -954,7 +954,9 @@ function ConversationView({
             id="chat-draft"
             placeholder={
               assistantTurn
-                ? "Describe your task — or drop reference images below…"
+                ? options.action === "image.generate_video"
+                  ? "Describe the scene and motion. Example: a forest at dawn, then animate it: mist drifts."
+                  : "Describe your task — or drop reference images below…"
                 : "Ask your local model…"
             }
             rows={3}
@@ -1016,7 +1018,8 @@ function ConversationView({
             !(
               options.action.startsWith("coding.") ||
               options.action.startsWith("runtime.") ||
-              options.action === "system.inspect"
+              options.action === "system.inspect" ||
+              options.action === "image.generate_video"
             ) ||
             attachments.length > 0) && (
             <TextAttachments

@@ -10,4 +10,27 @@ Failure, cancellation, uncertain process completion and output-registration fail
 
 Fourfold Upscale retains the existing 64-megapixel bound. Generate/Recompose sizes already fit that bound; Edit with the option requires a maximum side of at most 2048. Standalone Upscale cannot request another automatic Upscale. The option is strictly boolean and off by default.
 
-This is an operational sequential image workflow. Arbitrary generated multi-step plans and general video/music creation remain separate work.
+This is an operational sequential image workflow. Arbitrary generated multi-step plans and music creation remain separate work.
+
+
+## Image → video
+
+The platform Assistant offers Image → video and recognizes an explicit instruction
+such as “Generate an image of a forest, then animate it: mist drifts between the trees”.
+The image instruction and motion instruction stay separate in persisted parameters.
+After confirmed image success, the same completion transaction queues one Wan
+video Run whose first frame is the newly registered artifact. No child is published
+on failure, cancellation or uncertain process completion. Both outputs retain Task,
+conversation and source lineage; each stage acquires/releases its own GPU lock.
+
+This bounded workflow starts without reference images. General image editing and
+recomposition can use the typed image API's optional bounded video_prompt; it is
+exclusive with automatic Upscale and is unavailable for standalone Upscale.
+Missing video setup is checked before starting the workflow. Follow-up publication
+is pure metadata work: runtime I/O remains outside that transaction.
+
+Images follows validated photo/Wan child pointers after refresh and shows the
+active stage's image or video result; Stop targets that stage. The Assistant shows
+both outputs inline through its existing Task projection. The Wan child chooses
+the matching native landscape, portrait or square format from observed image
+dimensions. Advanced Edit follow-ups remain bounded to a 2048 maximum side.

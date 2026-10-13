@@ -22,7 +22,7 @@ def workflow_steps(session, run_id, executors):
         next_id = next(
             (
                 current.metadata_json.get(key)
-                for key in ("upscale_run_id", "avatar_run_id", "retry_run_id")
+                for key in ("upscale_run_id", "video_run_id", "avatar_run_id", "retry_run_id")
                 if current.metadata_json.get(key)
             ),
             None,
