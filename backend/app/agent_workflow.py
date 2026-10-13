@@ -20,7 +20,7 @@ from app.models import Artifact, Run
 from app.runs import create_run, mark_failed, transition
 from app.state import ACTIVE, RunStatus
 
-CONTEXT_STEPS = frozenset({"system_snapshot", "memory_search", "web_search", "http_fetch"})
+CONTEXT_STEPS = frozenset({"system_snapshot", "memory_search", "web_search", "http_fetch", "browser"})
 STEP_KEYS = CONTEXT_STEPS | {"report"}
 
 
@@ -216,8 +216,8 @@ def publish_steps(session, parent: Run) -> list[Run]:
             parent.task,
             run_type="agent",
             capability="agent.execute" if key == "report" else "agent.step",
-            executor_type="agent" if key == "report" else "agent_tool",
-            execution_target="container",
+            executor_type="agent" if key == "report" else "browser" if key == "browser" else "agent_tool",
+            execution_target="host" if key == "browser" else "container",
             parameters={
                 "definition": parent.parameters["definition"],
                 "endpoint": parent.parameters.get("endpoint"),

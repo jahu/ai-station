@@ -854,3 +854,27 @@ both final adapters with normal certificate verification and preserved public
 URLs. No model inference or private credentials were involved. Local evidence:
 `data/acceptance/public-network-20261013/`. Browser rendering is a subsequent
 feature and is not enabled by this fix.
+
+
+## Isolated public-page Browser — 2026-10-13
+
+Backend/Host Runner checks passed: Ruff and 881 tests, with five opt-in integrations
+skipped. Frontend formatting, lint, TypeScript, 351 tests and production build
+passed. Both Compose configurations and the control-plane/browser image builds
+passed. An additional 20 Browser/tool-calling tests verified the final registry
+schema. The reviewed diff includes no database migration or external runtime/model
+changes. Hosted Actions remain manual under repository policy.
+
+Actual Chromium rendered a redirected synthetic page with JavaScript/JSON GET,
+blocked POST/WebSocket and decoded a PNG in the isolated executor. A real private
+Runner plus worker executed public HTTPS browsing and adopted screenshot/JSON
+artifacts. Cancellation and SIGKILL of the owned wrapper cleaned up the owned
+container; unsuccessful Runs adopted no artifacts. Final native acceptance had no
+worker lease-renewal error after the SQLite commit-order fix. Normal tests verify
+uncertain cleanup overrides cancellation and stale recovery without replay.
+
+Desktop/mobile browser previews passed with no JavaScript errors, overflow or
+mutations, using the real saved screenshot and a mocked agent/history API. Manual
+and scheduled agent report/memory integration uses fake inference; no real LLM
+browser-report success is claimed. Local evidence:
+`data/acceptance/browser-pages-20261013/`. Setup and security: [Browser](browser.md).

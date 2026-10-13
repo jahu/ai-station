@@ -105,7 +105,9 @@ function toolTitle(tool: Tool) {
         ? "Remember workflow observations"
         : tool.name === "http_fetch"
           ? "HTTP fetch"
-          : tool.name;
+          : tool.name === "browser"
+            ? "Browse public pages"
+            : tool.name;
 }
 
 function toggleValue(selected: string[], value: string, enabled: boolean) {
@@ -993,11 +995,14 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             <span className="chip">Network permission · search only</span>
           </section>
         )}
-        {values.tools.includes("http_fetch") && (
+        {(values.tools.includes("http_fetch") ||
+          values.tools.includes("browser")) && (
           <section className="agent-wide agent-search-settings">
             <h3>Public pages</h3>
             <label>
-              Public URLs to fetch
+              {values.tools.includes("browser")
+                ? "Public URLs to browse"
+                : "Public URLs to fetch"}
               <textarea
                 required
                 rows={3}
@@ -1006,13 +1011,26 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                 placeholder="https://www.example.com/"
               />
             </label>
-            <p className="muted">
-              Each execution GETs these exact public http(s) pages (at most
-              three). Private, loopback and link-local addresses are blocked
-              after DNS. JavaScript is not executed. Your goal, memory and other
-              context stay with the local model.
-            </p>
-            <span className="chip">Network permission · GET public pages</span>
+            {values.tools.includes("browser") ? (
+              <p className="muted">
+                Opens these reviewed public pages in an isolated browser,
+                executes JavaScript and saves screenshots and visible text. At
+                most three URLs; private addresses and writes are blocked. Your
+                goal and memory stay with the local model.
+              </p>
+            ) : (
+              <p className="muted">
+                Each execution GETs these exact public http(s) pages (at most
+                three). Private, loopback and link-local addresses are blocked
+                after DNS. JavaScript is not executed. Your goal, memory and
+                other context stay with the local model.
+              </p>
+            )}
+            <span className="chip">
+              {values.tools.includes("browser")
+                ? "Browser + public network permission"
+                : "Network permission · GET public pages"}
+            </span>
           </section>
         )}
         {values.tools.includes("remember_report") && (

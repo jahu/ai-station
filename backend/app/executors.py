@@ -15,6 +15,7 @@ from app.artifacts import adopt_existing
 from app.assistant import AssistantExecutor
 from app.audio import AudioExecutor
 from app.avatars import AvatarExecutor
+from app.browser import BrowserExecutor
 from app.chat_executor import ChatExecutor
 from app.codex_coding import CodexProposalExecutor
 from app.commit_executor import ReviewedCommitExecutor
@@ -284,6 +285,7 @@ class FakeExecutor:
 
 # Activate adapters only after their vertical slice is verified end to end.
 EXECUTORS = {
+    "browser": BrowserExecutor(),
     "project_setup": ProjectSetupExecutor(),
     "fake": FakeExecutor(),
     "orchestrator": AssistantExecutor(),

@@ -67,6 +67,16 @@ class NativeJobExecutor:
                 time.sleep(0.2)
         session.refresh(run)
         run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
+        if process.get("cleanup_confirmed") is False:
+            run.metadata_json = {**run.metadata_json, "cleanup_requires_inspection": True}
+            transition(
+                session,
+                run,
+                RunStatus.INTERRUPTED,
+                event_type="run.interrupted",
+                payload={"reason": "Owned container cleanup could not be confirmed; inspect before retrying"},
+            )
+            return "done"
         if run.status == "cancel_requested" or process["status"] == "canceled":
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
             return "done"

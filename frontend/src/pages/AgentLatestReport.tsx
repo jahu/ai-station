@@ -6,6 +6,9 @@ import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import { RegistryToolCalls, type RegistryToolCall } from "./AgentToolCalls";
 import { SearchSources, type WebSources } from "./ChatWebSearch";
 
+import { BrowserPages } from "./BrowserPages";
+import { isBrowserResult } from "./browserResult";
+
 const TERMINAL = new Set(["succeeded", "failed", "canceled", "interrupted"]);
 
 function latestAgentReportRun(runs: Run[]) {
@@ -50,7 +53,7 @@ function latestToolMetadata<T>(
   runs: Run[],
   reportRun: Run,
   tool: string,
-  key: "web_search" | "http_fetch",
+  key: "web_search" | "http_fetch" | "browser",
   guard: (value: unknown) => value is T,
 ): T | null {
   const fromReport = reportRun.metadata?.[key];
@@ -91,6 +94,13 @@ export function AgentLatestReport({ runs }: { runs: Run[] }) {
     "http_fetch",
     isFetchResult,
   );
+  const browser = latestToolMetadata(
+    runs,
+    reportRun,
+    "browser",
+    "browser",
+    isBrowserResult,
+  );
   const recordedCalls = reportRun.metadata?.tool_calls;
   const calls = isRegistryToolCalls(recordedCalls) ? recordedCalls : [];
   return (
@@ -109,6 +119,7 @@ export function AgentLatestReport({ runs }: { runs: Run[] }) {
       ) : null}
       {search ? <SearchSources result={search} /> : null}
       {pages ? <FetchedPages result={pages} /> : null}
+      {browser ? <BrowserPages result={browser} /> : null}
       {calls.length ? <RegistryToolCalls calls={calls} /> : null}
     </>
   );

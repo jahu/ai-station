@@ -22,6 +22,7 @@ from app.agents_api import router as agent_router
 from app.approvals import resolve_run_approval, run_public
 from app.audio import router as audio_router
 from app.avatars import router as avatar_router
+from app.browser import router as browser_router
 from app.chat import router as chat_router
 from app.chat_providers import router as chat_provider_router
 from app.codex_coding import router as codex_router
@@ -351,6 +352,7 @@ app.include_router(notice_router)
 app.include_router(skill_router)
 app.include_router(runtime_router)
 app.include_router(llama_router)
+app.include_router(browser_router)
 
 dist = get_settings().frontend_dist
 if dist and Path(dist).is_dir():

@@ -172,7 +172,12 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
     ):
         tools.append("web_search")
     fetch_urls = prompt_public_urls(text)
-    if fetch_urls or any(word in lowered for word in ("fetch", "pobierz stron")):
+    if any(
+        word in lowered
+        for word in ("browse", "browser", "javascript", "przeglądaj", "przegladaj", "zrzut stron")
+    ):
+        tools.append("browser")
+    elif fetch_urls or any(word in lowered for word in ("fetch", "pobierz stron")):
         tools.append("http_fetch")
     if (
         re.search(

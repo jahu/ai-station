@@ -894,7 +894,8 @@ export function AssistantAgentDraft({
                 </dd>
               </div>
             ) : null}
-            {agent.tools?.includes("http_fetch") ? (
+            {agent.tools?.includes("http_fetch") ||
+            agent.tools?.includes("browser") ? (
               <div>
                 <dt>Reviewed URLs</dt>
                 <dd>

@@ -107,7 +107,15 @@ export function activationBlock(
     const tool = byName.get(name);
     return !tool || !tool.operational;
   });
-  if (!blocked.length) return { blocked: false, reason: null };
+  if (!blocked.length) {
+    if (names.includes("browser") && !agent.fetch_urls?.length) {
+      return {
+        blocked: true,
+        reason: "Browser needs reviewed public URLs before activation.",
+      };
+    }
+    return { blocked: false, reason: null };
+  }
   return {
     blocked: true,
     reason: `Unavailable tools prevent activation: ${blocked.join(", ")}.`,
