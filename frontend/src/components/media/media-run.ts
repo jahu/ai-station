@@ -34,7 +34,11 @@ function useWorkflow(
   });
 }
 export function useImageWorkflow(run: Run | undefined) {
-  return useWorkflow(run, "images", !!run?.parameters?.upscale_result);
+  return useWorkflow(
+    run,
+    "images",
+    !!(run?.parameters?.upscale_result || run?.parameters?.video_prompt),
+  );
 }
 export function useAvatarWorkflow(run: Run | undefined) {
   return useWorkflow(run, "avatars", !!run?.parameters?.avatar_after_speech);

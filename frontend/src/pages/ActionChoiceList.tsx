@@ -43,6 +43,11 @@ const ACTIONS = [
     detail: "Queues local Chatterbox speech. Not transcription or music.",
   },
   {
+    key: "image.generate_video",
+    title: "Image → video",
+    detail: "Generate an image, then animate it locally. Keeps both results.",
+  },
+  {
     key: "video.generate",
     title: "Generate video",
     detail:

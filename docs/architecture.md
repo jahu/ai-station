@@ -192,3 +192,9 @@ configuration; missing setup remains unavailable. See [browser setup and securit
 worker invokes required built-in ComfyUI components; no ComfyUI server or raw
 workflow graph is exposed. Inputs/output/cache and transient configured-model aliases
 belong to the Run directory/data root; installed models and runtimes are unchanged.
+
+
+The Assistant's bounded Image → video workflow composes the existing photo and
+Wan executors. Successful image registration, child publication and completion
+commit atomically; the child consumes only that registered artifact and uses a
+new normal GPU reservation. See [media workflow](image-workflows.md).

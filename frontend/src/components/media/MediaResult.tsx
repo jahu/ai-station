@@ -127,7 +127,11 @@ export default function MediaResult({
       />
       {steps && (
         <ol
-          aria-label={kind === "video" ? "Avatar workflow" : "Image workflow"}
+          aria-label={
+            kind === "video" && videoMode === "avatar"
+              ? "Avatar workflow"
+              : "Image workflow"
+          }
           className="media-workflow"
         >
           {steps.map((step, index) => (
@@ -142,9 +146,11 @@ export default function MediaResult({
                       ? "Recompose"
                       : step.capability === "audio.speech"
                         ? "Speech"
-                        : step.capability === "avatar.animate"
-                          ? "Animate portrait"
-                          : "Generate"}
+                        : step.capability === "video.generate"
+                          ? "Animate scene"
+                          : step.capability === "avatar.animate"
+                            ? "Animate portrait"
+                            : "Generate"}
               </Link>
               <Badge status={step.status} />
             </li>

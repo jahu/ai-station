@@ -446,3 +446,44 @@ it("shows the final upscaled artifact after reopening the original workflow URL"
     screen.getByRole("link", { name: "View run & logs" }).getAttribute("href"),
   ).toBe("/runs/enlarge");
 });
+
+it("follows image-to-video after refresh and stops the active video stage", async () => {
+  const original = {
+    id: "source-run",
+    status: "succeeded",
+    capability: "image.generate",
+    parameters: { video_prompt: "Mist drifts" },
+  };
+  const child = {
+    id: "video-run",
+    status: "running",
+    capability: "video.generate",
+    parameters: {},
+  };
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path.endsWith("/hardware")
+        ? { gpus: [] }
+        : path.endsWith("/workflow")
+          ? { steps: [original, child] }
+          : path.includes("/runs/source-run")
+            ? original
+            : [],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("/images?run=source-run");
+  await screen.findByRole("heading", { name: "Your scene in motion" });
+  expect(screen.getByRole("link", { name: /Animate scene/ })).toBeTruthy();
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Stop generation" }),
+  );
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(([path]) => path === "/api/runs/video-run/cancel"),
+    ).toBe(true),
+  );
+  expect(fetch.mock.calls.some(([path]) => path === "/api/images/runs")).toBe(
+    false,
+  );
+});
