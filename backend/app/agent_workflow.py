@@ -20,7 +20,9 @@ from app.models import Artifact, Run
 from app.runs import create_run, mark_failed, transition
 from app.state import ACTIVE, RunStatus
 
-CONTEXT_STEPS = frozenset({"system_snapshot", "memory_search", "web_search", "http_fetch", "browser"})
+CONTEXT_STEPS = frozenset(
+    {"system_snapshot", "memory_search", "project_memory", "web_search", "http_fetch", "browser"}
+)
 STEP_KEYS = CONTEXT_STEPS | {"report"}
 
 
@@ -62,7 +64,7 @@ def workflow_view(session, run: Run) -> dict | None:
         for child in session.scalars(
             select(Run).where(Run.parent_run_id == parent.id).order_by(Run.created_at, Run.id)
         )
-        if child.executor_type in {"agent_tool", "agent"}
+        if child.executor_type in {"agent_tool", "agent", "browser"}
     ]
     definition = parent.parameters.get("definition") or {}
     if "coding_local" in definition.get("tools", []):

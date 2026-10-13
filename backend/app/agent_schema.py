@@ -120,6 +120,8 @@ class AgentSettings(BaseModel):
         except ValueError as exc:
             raise ValueError(str(exc)) from exc
         if self.enabled:
+            if "project_memory" in self.tools and not self.project_id:
+                raise ValueError("Project memory requires an explicitly linked project before activation")
             if "web_search" in self.tools and not self.search_query:
                 raise ValueError("web_search requires an explicit public search query before activation")
             if {"http_fetch", "browser"}.intersection(self.tools) and not self.fetch_urls:

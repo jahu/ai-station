@@ -19,6 +19,7 @@ from app.artifacts import register_file
 from app.events import append_event
 from app.local_provider import LocalChatProvider
 from app.memory import search_memory, upsert_memory
+from app.models import Project
 from app.permissions import require
 from app.providers import ProviderError
 from app.runner_client import RunnerClient
@@ -28,7 +29,10 @@ from app.state import RunStatus
 
 def execute_context_tool(session, run, definition, name, deadline, arguments=None):
     spec = agent_tool(name)
-    if name not in {"system_snapshot", "memory_search", "web_search", "http_fetch"} or not spec.operational:
+    if (
+        name not in {"system_snapshot", "memory_search", "project_memory", "web_search", "http_fetch"}
+        or not spec.operational
+    ):
         raise ValueError(f"Refusing an invented or unavailable agent step: {name}")
     arguments = arguments or {}
     for permission in spec.required_permissions:
@@ -48,8 +52,15 @@ def execute_context_tool(session, run, definition, name, deadline, arguments=Non
         if name == "system_snapshot":
             result = RunnerClient(timeout=spec.timeout).hardware()
         else:
-            entries = search_memory(session, "", scope="agent", scope_id=run.agent_id, limit=20)
-            result = {"scope": "agent", "scope_id": run.agent_id, "entries": []}
+            scope, scope_id = "agent", run.agent_id
+            if name == "project_memory":
+                scope, scope_id = "project", str(definition.project_id) if definition.project_id else None
+                if not scope_id or run.project_id != scope_id or session.get(Project, scope_id) is None:
+                    raise ValueError("Project memory target does not match the reviewed Run snapshot")
+                if arguments:
+                    raise ValueError("The model cannot choose a project memory target")
+            entries = search_memory(session, "", scope=scope, scope_id=scope_id, limit=20)
+            result = {"scope": scope, "scope_id": scope_id, "entries": []}
             budget = 12000
             for entry in entries:
                 if len(entry.content) <= budget:
@@ -58,6 +69,16 @@ def execute_context_tool(session, run, definition, name, deadline, arguments=Non
                             "id": entry.id,
                             "content": entry.content,
                             "updated_at": entry.updated_at.isoformat(),
+                            **(
+                                {
+                                    "source_run_id": entry.source_run_id,
+                                    "source_conversation_id": entry.source_conversation_id,
+                                    "source_message_id": entry.source_message_id,
+                                    "untrusted": True,
+                                }
+                                if name == "project_memory"
+                                else {}
+                            ),
                         }
                     )
                     budget -= len(entry.content)

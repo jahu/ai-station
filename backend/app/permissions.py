@@ -44,6 +44,7 @@ ALL_PERMISSIONS = sorted(
         "manage_models",
         "manage_station",
         "memory_write",
+        "project_memory_read",
     }
 )
 

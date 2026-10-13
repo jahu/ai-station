@@ -15,9 +15,11 @@ function toolTitle(tool: Pick<Tool, "name">) {
       ? "Remember workflow observations"
       : tool.name === "http_fetch"
         ? "HTTP fetch"
-        : tool.name === "browser"
-          ? "Browse public pages"
-          : tool.name;
+        : tool.name === "project_memory"
+          ? "Project memory"
+          : tool.name === "browser"
+            ? "Browse public pages"
+            : tool.name;
 }
 
 function placeholderTool(name: string): Tool {

@@ -15,3 +15,28 @@ Validation uses temporary SQLite databases and fake API requests. It covers FTS 
 Agents can explicitly opt into **Remember reports** (`memory_write`). Successful reports create own-scope observations tagged `agent-report` with immutable source Run provenance; no model chooses the scope or permissions. Failures and cancellation do not populate memory. Retention is independent of `memory_search`; disabling/deleting an entry removes it from future retrieval without changing historical Run context. See [agent retention](agents.md#remembering-reports).
 
 **Remember workflow observations** stores successful telemetry, public search and HTTP fetch child Runs as own-scope observations tagged `agent-workflow`. `memory_search` results are not copied. The option is independent of report retention and remains off for existing agents. See [workflow memory](agents.md#remembering-workflow-observations).
+
+
+## Explicit project memory
+
+The optional **Project memory** agent tool requires a saved linked project and
+`project_memory_read`. Linking a project alone still only tags Runs. Retrieval
+is restricted to enabled memories in that snapshotted project, at most twenty
+entries and 12,000 content characters, with saved IDs, versions and provenance.
+Neither the model nor a tool-call argument can choose another scope/project.
+Changing the agent's project affects future workflows only. Read observations
+become ordinary child Runs with JSON artifacts; report context remains auditable.
+This read tool never writes/promotes memory, copies entries into the agent's own scope,
+grants Git/filesystem access or sends it to an external provider. Separate report
+retention still requires the explicitly selected Remember reports tool. It is also an
+allowed bounded report tool only when explicitly selected. Cancellation, deadlines,
+permissions and workflow approvals use the existing shared contracts.
+
+Verification (2026-10-13): full Python checks passed (887 tests; five explicitly
+opt-in integrations skipped), frontend format/lint/TypeScript/build and 353 tests
+passed, both Compose configurations validated and the application image built.
+New temporary-database/fake-provider tests exercise manual and scheduled reads,
+scope exclusion, revoked grants, target mismatch, immutable observed context,
+restart persistence, provenance and model-argument rejection. Desktop/mobile
+production-frontend previews used mocked APIs and made no writes. No real model
+inference is claimed for this feature.
