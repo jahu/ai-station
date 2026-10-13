@@ -98,9 +98,7 @@ function imageRetryable(step: TaskStep, steps: TaskStep[]) {
   if (!IMAGE_STEPS.has(step.capability) || !RETRYABLE.has(step.status))
     return false;
   const index = steps.findIndex((row) => row.id === step.id);
-  return !steps
-    .slice(index + 1)
-    .some((row) => IMAGE_STEPS.has(row.capability));
+  return !steps.slice(index + 1).some((row) => IMAGE_STEPS.has(row.capability));
 }
 
 function ImageStepRetry({
@@ -127,8 +125,8 @@ function ImageStepRetry({
     <div className="assistant-step-retry">
       <p className="muted">
         A retry creates a new run with the same parameters and source images.
-        Inspect logs and any partial output before repeating an interrupted
-        run. The conversation stays here.
+        Inspect logs and any partial output before repeating an interrupted run.
+        The conversation stays here.
       </p>
       <ErrorNotice error={retry.error} />
       <Button
@@ -715,7 +713,6 @@ export default function AssistantActions({
   return (
     <fieldset disabled={busy} className="assistant-actions image-form">
       <div>
-        <span>Action</span>
         <ActionChoiceList
           value={value.action}
           disabled={busy}

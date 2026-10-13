@@ -1,17 +1,17 @@
 import { useState } from "react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { ActionChoiceList } from "./ActionChoiceList";
 
 afterEach(cleanup);
 
-function Host({ disabled = false }: { disabled?: boolean }) {
+function Host({ disabled = false, submit = vi.fn() }) {
   const [value, setValue] = useState("auto");
   return (
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        throw new Error("form submitted");
+        submit();
       }}
     >
       <ActionChoiceList value={value} disabled={disabled} onChange={setValue} />
@@ -20,62 +20,35 @@ function Host({ disabled = false }: { disabled?: boolean }) {
   );
 }
 
-it("moves through assistant actions without sending", () => {
+it("offers every action in a compact control and explains the selected action", () => {
   render(<Host />);
-  const auto = screen.getByLabelText("Action auto");
-  expect(auto.tabIndex).toBe(0);
+  const action = screen.getByRole("combobox", {
+    name: "Action",
+  }) as HTMLSelectElement;
+  expect(action.value).toBe("auto");
+  expect(screen.getAllByRole("option")).toHaveLength(16);
+  expect(screen.queryByRole("radio")).toBeNull();
+  fireEvent.change(action, { target: { value: "image.edit" } });
+  expect(action.value).toBe("image.edit");
   expect(
-    screen.getByText(/There is no inspectable action-selection Run/),
+    screen.getByText("Modify one image while preserving the original."),
   ).toBeTruthy();
-  expect(
-    (
-      screen.getByRole("radio", {
-        name: /Auto — let AI Station route this task/,
-      }) as HTMLInputElement
-    ).checked,
-  ).toBe(true);
-  const list = auto.closest(".assistant-action-choice-list") as HTMLElement;
-  fireEvent.keyDown(list, { key: "End" });
-  fireEvent.keyDown(list, { key: "Enter" });
-  expect(
-    (
-      screen.getByRole("radio", {
-        name: /Unload owned llama.cpp/,
-      }) as HTMLInputElement
-    ).checked,
-  ).toBe(true);
-  expect(screen.getByLabelText("Action runtime.stop").tabIndex).toBe(0);
 });
 
-it("does not change the action while the list is disabled", () => {
+it("disables action selection during execution", () => {
   render(<Host disabled />);
-  const list = screen
-    .getByLabelText("Action auto")
-    .closest(".assistant-action-choice-list") as HTMLElement;
-  fireEvent.keyDown(list, { key: "End" });
-  fireEvent.keyDown(list, { key: "Enter" });
   expect(
-    (
-      screen.getByRole("radio", {
-        name: /Auto — let AI Station route this task/,
-      }) as HTMLInputElement
-    ).checked,
+    (screen.getByRole("combobox", { name: "Action" }) as HTMLSelectElement)
+      .disabled,
   ).toBe(true);
 });
 
-it("does not submit the form when Enter selects a focused action", () => {
-  render(<Host />);
-  fireEvent.keyDown(
-    screen.getByRole("radio", {
-      name: /Auto — let AI Station route this task/,
-    }),
-    { key: "Enter" },
+it("does not send a task when Enter is pressed in the action picker", () => {
+  const submit = vi.fn();
+  render(<Host submit={submit} />);
+  const action = screen.getByRole("combobox", { name: "Action" });
+  expect(fireEvent.keyDown(action, { key: "Enter", cancelable: true })).toBe(
+    false,
   );
-  expect(
-    (
-      screen.getByRole("radio", {
-        name: /Auto — let AI Station route this task/,
-      }) as HTMLInputElement
-    ).checked,
-  ).toBe(true);
+  expect(submit).not.toHaveBeenCalled();
 });

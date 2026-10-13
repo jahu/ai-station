@@ -82,12 +82,12 @@ it("moves through saved conversation mode without creating a conversation", () =
   render(<ModeHost />);
   const localMode = screen.getByLabelText("Mode local");
   expect(localMode.tabIndex).toBe(0);
-  expect(
-    screen.getByText(/There is no inspectable conversation-mode Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Let the assistant operate AI Station/)).toBeTruthy();
   expect(
     (
-      screen.getByRole("radio", { name: /Conversation only/ }) as HTMLInputElement
+      screen.getByRole("radio", {
+        name: /Conversation only/,
+      }) as HTMLInputElement
     ).checked,
   ).toBe(true);
   const list = localMode.closest(
@@ -114,7 +114,9 @@ it("does not change saved mode while the list is disabled", () => {
   fireEvent.keyDown(list, { key: "Enter" });
   expect(
     (
-      screen.getByRole("radio", { name: /Conversation only/ }) as HTMLInputElement
+      screen.getByRole("radio", {
+        name: /Conversation only/,
+      }) as HTMLInputElement
     ).checked,
   ).toBe(true);
 });
@@ -123,9 +125,7 @@ it("moves through saved providers without saving", () => {
   render(<ProviderHost />);
   const builtin = screen.getByLabelText("Provider local-openai-compatible");
   expect(builtin.tabIndex).toBe(0);
-  expect(
-    screen.getByText(/There is no inspectable provider-selection Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Choose where this conversation runs/)).toBeTruthy();
   const list = builtin.closest(
     ".conversation-provider-choice-list",
   ) as HTMLElement;
@@ -145,7 +145,9 @@ it("does not submit the form when Enter selects a focused mode", () => {
   });
   expect(
     (
-      screen.getByRole("radio", { name: /Conversation only/ }) as HTMLInputElement
+      screen.getByRole("radio", {
+        name: /Conversation only/,
+      }) as HTMLInputElement
     ).checked,
   ).toBe(true);
 });

@@ -13,11 +13,9 @@ import { useState } from "react";
 import AssistantActions, { AssistantResults } from "./AssistantActions";
 
 function chooseAction(key: string) {
-  fireEvent.click(
-    screen
-      .getByLabelText(`Action ${key}`)
-      .querySelector("input") as HTMLElement,
-  );
+  fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
+    target: { value: key },
+  });
 }
 
 afterEach(() => {
@@ -863,9 +861,9 @@ it("renders review and commit controls from conversation coding runs", () => {
     screen.getByRole("button", { name: "Commit reviewed changes" }),
   ).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "Inspect project project-1" })
+      .getAttribute("href"),
   ).toBe("/projects/project-1");
   expect(
     screen
@@ -918,9 +916,9 @@ it("opens tagged Runs from conversation coding results without starting a Run", 
     </QueryClientProvider>,
   );
   expect(
-    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "Inspect project project-1" })
+      .getAttribute("href"),
   ).toBe("/projects/project-1");
   expect(
     screen
@@ -930,7 +928,9 @@ it("opens tagged Runs from conversation coding results without starting a Run", 
   expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
   expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
   expect(
-    fetch.mock.calls.every((call) => !String(call[0]).includes("/coding/cursor")),
+    fetch.mock.calls.every(
+      (call) => !String(call[0]).includes("/coding/cursor"),
+    ),
   ).toBe(true);
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).includes("/messages")),
