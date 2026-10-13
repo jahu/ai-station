@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
+from starlette.concurrency import run_in_threadpool
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.agents_api import router as agent_router
@@ -89,7 +90,9 @@ async def local_requests(request: Request, call_next):
             return JSONResponse({"detail": "Cross-origin writes are not allowed"}, status_code=403)
         if request.headers.get("sec-fetch-site") == "cross-site":
             return JSONResponse({"detail": "Cross-site writes are not allowed"}, status_code=403)
-    gated = require_operator_session(request)
+    # SQLite may wait on another writer. Keep that wait off the event loop
+    # so in-flight responses can finish and release their database sessions.
+    gated = await run_in_threadpool(require_operator_session, request)
     if gated is not None:
         return gated
     response = await call_next(request)
