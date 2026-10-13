@@ -1,6 +1,11 @@
+import asyncio
+import time
 from datetime import timedelta
 from pathlib import Path
+from threading import Event, Thread
 
+import httpx
+import pytest
 from app.api import app
 from app.config import clear_settings_cache
 from app.db import session_factory, utcnow
@@ -243,3 +248,49 @@ def test_compose_publish_addresses_stay_on_loopback():
     assert '"127.0.0.1:${AI_STATION_PORT:-8765}:8765"' in compose
     assert "0.0.0.0:" not in compose and "0.0.0.0:" not in dev
     assert "127.0.0.1:5173:5173" in dev
+
+
+@pytest.mark.asyncio
+async def test_waiting_for_auth_database_does_not_block_other_http_requests(monkeypatch):
+    import app.api as api_module
+
+    locked, release, auth_started = Event(), Event(), Event()
+
+    def hold_database():
+        with session_factory()() as session:
+            session.get(Setting, SETUP_KEY)
+            locked.set()
+            # Bound the negative case so a regression cannot hang the suite.
+            release.wait(2)
+
+    holder = Thread(target=hold_database)
+    holder.start()
+    assert locked.wait(1)
+    original = api_module.require_operator_session
+
+    def observe_auth(request):
+        if request.url.path == "/api/runs":
+            auth_started.set()
+        return original(request)
+
+    monkeypatch.setattr(api_module, "require_operator_session", observe_auth)
+    pending = None
+    try:
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app), base_url="http://localhost"
+        ) as client:
+            started = time.monotonic()
+            pending = asyncio.create_task(client.get("/api/runs"))
+            assert await asyncio.to_thread(auth_started.wait, 1)
+            # This request needs no database. It must finish while the auth
+            # query waits on the other thread's real SQLite transaction.
+            response = await client.get("/missing-frontend-page")
+            assert response.status_code == 404
+            assert time.monotonic() - started < 1
+            release.set()
+            assert (await pending).status_code == 200
+    finally:
+        release.set()
+        if pending is not None:
+            await asyncio.gather(pending, return_exceptions=True)
+        holder.join(timeout=3)
