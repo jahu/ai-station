@@ -10,5 +10,5 @@ export default defineConfig({
       "/api": { target: "http://ai-station:8765", changeOrigin: false },
     },
   },
-  test: { environment: "jsdom" },
+  test: { environment: "jsdom", maxWorkers: 4 },
 });

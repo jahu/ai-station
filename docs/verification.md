@@ -796,3 +796,9 @@ On this workstation, reboot aligned the loaded NVIDIA driver and NVML to 595.99.
 ## Chat UX repair — 2026-10-13
 
 Frontend: 339 tests passed, ESLint and TypeScript passed, production build passed. Changed frontend files pass Prettier. The baseline has remaining pre-existing formatting failures, tracked in the Cursor review. Backend/Runner source is unchanged from the 696-pass verified release. Browser inspection of the new conversation and an existing conversation passed with no page errors and no mutations; the action picker accepts arrow-key selection without sending. Local evidence: `data/acceptance/assistant-ux-20261013/`. No AI generation was launched.
+
+## Assistant workstation inspection and follow-up routing — 2026-10-13
+
+`./scripts/check.sh` with explicit worktree `PYTHONPATH`: 713 passed, 5 opt-in integrations skipped; Ruff lint/format passed. Frontend: 339 tests passed with four workers, lint/typecheck and production build passed. The initial unconstrained frontend run timed out in three unrelated asynchronous DOM assertions under concurrent builds; bounding test worker concurrency resolved the complete suite without weakening assertions. The reviewed Docker image built successfully.
+
+A real private-Runner smoke test used an isolated temporary control-plane database: an API request enqueued an orchestration Run, the worker dispatched/ran the observation, and the persisted report/JSON artifact contained both actual 12 GiB RTX 3060 GPUs. No inference, model loading, coding or media generation ran. Evidence: local `data/acceptance/station-inspection-20261013/`. Unit coverage verifies handler enqueue only, offline-model independence, unsupported sensors, permission denial, Runner failure, cancellation without artifacts, safe-claim recovery and immutable bounded same-conversation planner context without inherited scope.

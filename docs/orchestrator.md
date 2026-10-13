@@ -63,3 +63,7 @@ Inline image and WAV results also offer **Use as image/voice reference** for the
 ## Conversation UX repair (2026-10-13)
 
 Starting a conversation requires only choosing a model and clicking Create conversation. Title, mode, provider, system prompt and generation settings remain under Advanced settings. This-turn overrides are collapsed by default; all sixteen existing actions remain available in a labelled native select rather than a permanently expanded radio list. Provider location remains visible and coding/publication consents are unchanged. Browser checks use real persisted conversations without sending messages or modifying records.
+
+## Workstation observation and planner context
+
+The assistant can inspect real workstation telemetry and saved activity through an ordinary child Run, without inference or model loading. Recent conversation excerpts are snapshotted for follow-up routing, with strict bounds and no inherited grants. See [station inspection](station-inspection.md) for execution, cancellation and context contracts.

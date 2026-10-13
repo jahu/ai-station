@@ -154,3 +154,7 @@ Automatic conversation memory is a saved opt-in policy, default off. A successfu
 The Codex proposal adapter reuses selected-file snapshot application, native process ownership, validation and reviewed Git progression. It isolates the provider workspace and permission profile from the task worktree; explicit external consent remains required. See [adapter contract](coding-codex.md).
 
 Coding workspaces make Task the durable user-facing coding conversation. Managed project setup and subsequent turns remain ordinary Runs; the Host Runner owns repository creation and isolated worktrees. See [coding workspace design](coding-workspaces.md).
+
+## Conversation workstation inspection
+
+`system.inspect` is a read-only child Run. The worker invokes the existing typed Runner hardware endpoint, then atomically publishes observed artifacts and an inline conversation report. It needs no LLM or GPU reservation. The planner also receives bounded, immutable same-conversation excerpts without previous permissions or attachment IDs. See [station inspection](station-inspection.md).

@@ -42,6 +42,11 @@ const ACTIONS = [
     detail: "Queues local EchoMimic. Needs a portrait and WAV.",
   },
   {
+    key: "system.inspect",
+    title: "Inspect workstation",
+    detail: "Read current GPU, CPU, RAM, storage and station activity.",
+  },
+  {
     key: "agent.create",
     title: "Create agent",
     detail: "Saves a disabled definition. Activation stays explicit.",

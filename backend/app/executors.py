@@ -40,6 +40,7 @@ from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import mark_failed, touch_lease, transition
 from app.runtime_registry import RuntimeObservationExecutor
 from app.state import RunStatus
+from app.station_snapshot import StationSnapshotExecutor
 from app.summary_executor import SummaryExecutor
 from app.tools import get_tool
 from app.validation_executor import ProjectValidationExecutor
@@ -286,6 +287,7 @@ EXECUTORS = {
     "project_setup": ProjectSetupExecutor(),
     "fake": FakeExecutor(),
     "orchestrator": AssistantExecutor(),
+    "station_snapshot": StationSnapshotExecutor(),
     "llama_load": LlamaExecutor("load"),
     "llama_stop": LlamaExecutor("stop"),
     "llama_health": LlamaHealthExecutor(),

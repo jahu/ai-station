@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.assistant import AssistantInputs, enqueue_assistant, task_results
+from app.assistant import AssistantInputs, assistant_needs_provider, enqueue_assistant, task_results
 from app.chat_attachments import TextAttachment, link_attachments, message_content, save_attachments
 from app.chat_providers import BUILTIN_KEY, chat_permissions, snapshot_provider
 from app.conversation_summary import (
@@ -48,6 +48,8 @@ class MessageBody(AssistantInputs):
 
     @model_validator(mode="after")
     def validate_context(self):
+        if self.action == "system.inspect" and self.attachments:
+            raise ValueError("Workstation inspection does not use attachments")
         message_content(self.content, self.attachments)
         return self
 
@@ -331,7 +333,9 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
 def send(conversation_id: UUID, body: MessageBody, session: DB):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
-    snapshot_provider(session, row)  # Validate the selected provider before attachments.
+    # Deterministic host inspection/runtime control does not contact an LLM.
+    if turn_execution_mode(row, body) != "orchestrator" or assistant_needs_provider(body):
+        snapshot_provider(session, row)  # Validate the selected provider before attachments.
     user = Message(
         conversation_id=row.id,
         role="user",

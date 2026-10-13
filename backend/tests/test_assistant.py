@@ -782,3 +782,103 @@ def test_model_cannot_grant_runtime_load_or_stop(monkeypatch):
             ).status_code
             == 422
         )
+
+
+def test_planner_uses_immutable_conversation_context_without_replaying_scope(monkeypatch):
+    from app.models import Conversation, Message
+
+    observed = []
+
+    async def stream(self, **params):
+        payload = json.loads(params["messages"][-1]["content"])
+        observed.append(payload)
+        assert payload["recent_context"] == [
+            {"role": "user", "content": "Explain the previous agent definition."},
+            {"role": "assistant", "content": "Its goal is checking model releases."},
+        ]
+        assert payload["coding_scope_selected"] is False
+        assert payload["github_publication_approved"] is False
+        yield json.dumps({"action": "chat", "reason": "Discuss the definition"})
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        cid = create(client)
+        with session_factory()() as session:
+            other = Conversation(model="test")
+            session.add(other)
+            session.flush()
+            session.add(Message(conversation_id=other.id, role="user", content="OTHER PRIVATE CONTEXT"))
+            session.add(
+                Message(conversation_id=cid, role="user", content="Explain the previous agent definition.")
+            )
+            session.add(
+                Message(conversation_id=cid, role="assistant", content="Its goal is checking model releases.")
+            )
+            session.add(
+                Message(
+                    conversation_id=cid,
+                    role="assistant",
+                    content="ROUTING ANNOTATION",
+                    metadata_json={"routing_only": True},
+                )
+            )
+            session.add(
+                Message(
+                    conversation_id=cid,
+                    role="assistant",
+                    content="PARTIAL RESPONSE",
+                    metadata_json={"partial": True},
+                )
+            )
+            session.commit()
+        result = client.post(
+            f"/api/chat/conversations/{cid}/messages", json={"content": "What schedule would fit it?"}
+        )
+        assert result.status_code == 202
+        reset_engine()
+        # Editing history after enqueue cannot change the request seen by planning.
+        with session_factory()() as session:
+            message = session.scalar(
+                select(Message).where(Message.content == "Its goal is checking model releases.")
+            )
+            message.content = "MODIFIED AFTER ENQUEUE"
+            session.commit()
+        step()
+        assert len(observed) == 1
+        with session_factory()() as session:
+            children = list(session.scalars(select(Run).where(Run.parent_run_id == result.json()["id"])))
+            assert len(children) == 1 and children[0].executor_type == "chat"
+            assert not list(session.scalars(select(Agent)))
+
+
+def test_planner_context_bounds_large_history_and_omits_metadata():
+    from datetime import timedelta
+
+    from app.assistant import planner_context
+    from app.db import utcnow
+    from app.models import Conversation, Message
+
+    with session_factory()() as session:
+        row = Conversation(model="test")
+        session.add(row)
+        session.flush()
+        now = utcnow()
+        for index in range(20):
+            session.add(
+                Message(
+                    conversation_id=row.id,
+                    role="user",
+                    content="x" * 32000,
+                    created_at=now - timedelta(seconds=21 - index),
+                    metadata_json={"external_ai": True, "image_artifact_ids": ["not-authority"]},
+                )
+            )
+        user = Message(conversation_id=row.id, role="user", content="Continue the discussion", created_at=now)
+        session.add(user)
+        session.flush()
+        context = planner_context(session, row, user)
+        assert 1 <= len(context) <= 8
+        assert sum(len(item["content"]) for item in context) + len(user.content) <= 4000
+        assert all(len(item["content"]) <= 1000 and set(item) == {"role", "content"} for item in context)
+        user.content = "x" * 32000
+        assert planner_context(session, row, user) == []
