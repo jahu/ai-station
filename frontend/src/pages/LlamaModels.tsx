@@ -194,7 +194,10 @@ export default function LlamaModels({
     name.toLowerCase().includes(search.toLowerCase());
   const available = catalog.data?.models?.filter((m) => matches(m.name)) ?? [];
   const providers = localModels.filter(matches);
-  const pickerKeys = [...available.map((model) => model.model_key), ...providers];
+  const pickerKeys = [
+    ...available.map((model) => model.model_key),
+    ...providers,
+  ];
   const headingId = useId();
   const labelId = useId();
   const { listRef, onKeyDown, itemProps } = useListKeyboard(
@@ -230,9 +233,7 @@ export default function LlamaModels({
             className="model-picker-trigger"
             disabled={pending}
             tabIndex={tabIndex}
-            aria-label={
-              triggerLabel ?? (compact ? "Change model" : "Model")
-            }
+            aria-label={triggerLabel ?? (compact ? "Change model" : "Model")}
           >
             <Cpu size={18} />
             <span>
@@ -306,83 +307,83 @@ export default function LlamaModels({
                 aria-labelledby={labelId}
                 onKeyDown={onKeyDown}
               >
-              <div className="model-group-label">
-                <Cpu size={13} /> llama.cpp <span>FROM YOUR DISK</span>
-              </div>
-              {catalog.isPending && <Loading />}
-              {available.map((model, i) => {
-                const runtime = instanceFor(model);
-                return (
+                <div className="model-group-label">
+                  <Cpu size={13} /> llama.cpp <span>FROM YOUR DISK</span>
+                </div>
+                {catalog.isPending && <Loading />}
+                {available.map((model, i) => {
+                  const runtime = instanceFor(model);
+                  return (
+                    <button
+                      type="button"
+                      key={model.id}
+                      className="model-option"
+                      aria-label={`${modelName(model.name)}, llama.cpp, ${stateLabel(runtime)}`}
+                      aria-pressed={draft === model.model_key}
+                      disabled={pending}
+                      {...itemProps(i, model.model_key)}
+                      onClick={() => setDraft(model.model_key)}
+                    >
+                      <span className="model-option-icon">
+                        <Cpu size={20} />
+                      </span>
+                      <span className="model-option-content">
+                        <strong>{modelName(model.name)}</strong>
+                        <small>
+                          {(model.size_bytes / 1024 ** 3).toFixed(1)} GiB{" "}
+                          <span>·</span> {stateLabel(runtime)}
+                        </small>
+                      </span>
+                      <span className="model-option-check">
+                        {draft === model.model_key && <Check size={18} />}
+                      </span>
+                    </button>
+                  );
+                })}
+                {!catalog.isPending && !available.length && (
+                  <p className="model-empty">
+                    {search ? (
+                      "No matching GGUF models."
+                    ) : (
+                      <>
+                        No language models discovered yet.{" "}
+                        <Link to="/models" onClick={() => setOpen(false)}>
+                          Scan model folders →
+                        </Link>
+                      </>
+                    )}
+                  </p>
+                )}
+                <div className="model-group-label">
+                  <Server size={13} /> Local server{" "}
+                  <span>OLLAMA / COMPATIBLE</span>
+                </div>
+                {providers.map((model, i) => (
                   <button
                     type="button"
-                    key={model.id}
+                    key={model}
                     className="model-option"
-                    aria-label={`${modelName(model.name)}, llama.cpp, ${stateLabel(runtime)}`}
-                    aria-pressed={draft === model.model_key}
+                    aria-label={`${model}, local server`}
+                    aria-pressed={draft === model}
                     disabled={pending}
-                    {...itemProps(i, model.model_key)}
-                    onClick={() => setDraft(model.model_key)}
+                    {...itemProps(available.length + i, model)}
+                    onClick={() => setDraft(model)}
                   >
                     <span className="model-option-icon">
-                      <Cpu size={20} />
+                      <Server size={20} />
                     </span>
                     <span className="model-option-content">
-                      <strong>{modelName(model.name)}</strong>
-                      <small>
-                        {(model.size_bytes / 1024 ** 3).toFixed(1)} GiB{" "}
-                        <span>·</span> {stateLabel(runtime)}
-                      </small>
+                      <strong>{model}</strong>
+                      <small>Uses the configured endpoint</small>
                     </span>
                     <span className="model-option-check">
-                      {draft === model.model_key && <Check size={18} />}
+                      {draft === model && <Check size={18} />}
                     </span>
                   </button>
-                );
-              })}
-              {!catalog.isPending && !available.length && (
-                <p className="model-empty">
-                  {search ? (
-                    "No matching GGUF models."
-                  ) : (
-                    <>
-                      No language models discovered yet.{" "}
-                      <Link to="/models" onClick={() => setOpen(false)}>
-                        Scan model folders →
-                      </Link>
-                    </>
-                  )}
-                </p>
-              )}
-              <div className="model-group-label">
-                <Server size={13} /> Local server{" "}
-                <span>OLLAMA / COMPATIBLE</span>
-              </div>
-              {providers.map((model, i) => (
-                <button
-                  type="button"
-                  key={model}
-                  className="model-option"
-                  aria-label={`${model}, local server`}
-                  aria-pressed={draft === model}
-                  disabled={pending}
-                  {...itemProps(available.length + i, model)}
-                  onClick={() => setDraft(model)}
-                >
-                  <span className="model-option-icon">
-                    <Server size={20} />
-                  </span>
-                  <span className="model-option-content">
-                    <strong>{model}</strong>
-                    <small>Uses the configured endpoint</small>
-                  </span>
-                  <span className="model-option-check">
-                    {draft === model && <Check size={18} />}
-                  </span>
-                </button>
-              ))}
-              {!providers.length && (
-                <p className="model-empty">No matching server models.</p>
-              )}
+                ))}
+                {!providers.length && (
+                  <p className="model-empty">No matching server models.</p>
+                )}
               </div>
             </section>
             <details className="model-advanced">
@@ -407,9 +408,9 @@ export default function LlamaModels({
                     <legend>GPU allocation</legend>
                     <GpuChoiceList
                       gpus={hardware.data?.gpus ?? []}
-                      selected={(
-                        instance?.metadata.gpus ?? selectedGpus
-                      ).map(Number)}
+                      selected={(instance?.metadata.gpus ?? selectedGpus).map(
+                        Number,
+                      )}
                       disabled={
                         pending ||
                         !!instance ||
@@ -450,7 +451,9 @@ export default function LlamaModels({
                   {instance?.metadata.health && (
                     <p>
                       Last health: {instance.metadata.health.status}
-                      {instance.metadata.health.alive ? " · process alive" : " · not running"}
+                      {instance.metadata.health.alive
+                        ? " · process alive"
+                        : " · not running"}
                       {instance.metadata.health.n_ctx
                         ? ` · n_ctx ${instance.metadata.health.n_ctx}`
                         : ""}

@@ -22,10 +22,7 @@ import {
   ToolCallingChoiceList,
   WorkflowModeChoiceList,
 } from "./AgentPolicyLists";
-import {
-  AgentLinkedProjectLinks,
-  AgentProjectList,
-} from "./AgentProjectList";
+import { AgentLinkedProjectLinks, AgentProjectList } from "./AgentProjectList";
 import LlamaModels from "./LlamaModels";
 import ProjectAgents from "./ProjectAgents";
 
@@ -125,7 +122,8 @@ function AgentSchedule({
   const unchanged =
     nextTrigger === saved &&
     (nextTrigger !== "cron" || cron.trim() === cronExpr) &&
-    (nextTrigger !== "interval" || intervalValue === (intervalSeconds ?? 3600)) &&
+    (nextTrigger !== "interval" ||
+      intervalValue === (intervalSeconds ?? 3600)) &&
     (nextTrigger !== "datetime" || nextRunAt === runAt);
   return (
     <form
@@ -845,10 +843,10 @@ export function AssistantAgentDraft({
                     aria-label={`Workflow memory ${shortId}`}
                   >
                     Successful telemetry, public search and HTTP fetch steps
-                    will be stored in this agent’s memory with their source
-                    Run. memory_search results are not copied. Failures and
-                    cancellation write nothing. Select memory_search to use
-                    them on future runs.
+                    will be stored in this agent’s memory with their source Run.
+                    memory_search results are not copied. Failures and
+                    cancellation write nothing. Select memory_search to use them
+                    on future runs.
                   </p>
                 ) : null}
               </dd>
@@ -931,7 +929,9 @@ export function AssistantAgentDraft({
               <dt>Workflow</dt>
               <dd>
                 <WorkflowModeChoiceList
-                  mode={agent.workflow_mode === "gated" ? "gated" : "sequential"}
+                  mode={
+                    agent.workflow_mode === "gated" ? "gated" : "sequential"
+                  }
                   name={`workflow_mode_${shortId}`}
                   tabIndex={tabIndex}
                   disabled={busy || active}
@@ -1079,26 +1079,26 @@ export function AssistantAgentDraft({
             call Enable. Removing an unavailable tool or a missing skill stores
             the remaining list on the definition and does not call Enable.
             Adding an operational registry tool stores it on the definition and
-            does not call Enable. Unpublished adapters cannot be added.
-            Attached remember-reports or remember-workflow tools show how
-            observations are stored and do not invent a Run. Adding
-            an installed skill stores it on the definition and does not call
-            Enable. At most four skills. Enable stays off until the saved
-            definition can activate. Duplicate as draft stays disabled. Run now
-            queues a new workflow from that saved definition and stays on this
-            transcript. A waiting Run can Approve and queue or Deny here
-            without opening the inspector. Stop stays on an in-progress history
-            Run. Manual retry queues a new workflow from a failed snapshot.
-            Saving a schedule stores it on the definition and does not call
-            Enable. Saving approval, retry, notice, workflow or bounded tool
-            calling policies stores them on the definition and does not call
-            Enable. Saving instructions stores the goal and system prompt on
-            the definition and does not call Enable. Saving identity stores
-            the name, time limit and expected outcome on the definition and
-            does not call Enable. Saving description stores that text on the
-            definition and does not call Enable. Saving a linked project stores
-            it on the definition and does not call Enable. Other agents on that
-            same project stay next to that link and do not Enable or Run now.
+            does not call Enable. Unpublished adapters cannot be added. Attached
+            remember-reports or remember-workflow tools show how observations
+            are stored and do not invent a Run. Adding an installed skill stores
+            it on the definition and does not call Enable. At most four skills.
+            Enable stays off until the saved definition can activate. Duplicate
+            as draft stays disabled. Run now queues a new workflow from that
+            saved definition and stays on this transcript. A waiting Run can
+            Approve and queue or Deny here without opening the inspector. Stop
+            stays on an in-progress history Run. Manual retry queues a new
+            workflow from a failed snapshot. Saving a schedule stores it on the
+            definition and does not call Enable. Saving approval, retry, notice,
+            workflow or bounded tool calling policies stores them on the
+            definition and does not call Enable. Saving instructions stores the
+            goal and system prompt on the definition and does not call Enable.
+            Saving identity stores the name, time limit and expected outcome on
+            the definition and does not call Enable. Saving description stores
+            that text on the definition and does not call Enable. Saving a
+            linked project stores it on the definition and does not call Enable.
+            Other agents on that same project stay next to that link and do not
+            Enable or Run now.
           </p>
           {copy ? (
             <p>

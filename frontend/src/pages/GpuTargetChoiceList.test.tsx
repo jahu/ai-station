@@ -29,7 +29,9 @@ it("moves through media GPU targets without queueing a Run", () => {
   render(<Host />);
   const auto = screen.getByLabelText("Target GPU auto");
   expect(auto.tabIndex).toBe(0);
-  expect(screen.getByText(/There is no inspectable GPU-target Run/)).toBeTruthy();
+  expect(
+    screen.getByText(/There is no inspectable GPU-target Run/),
+  ).toBeTruthy();
   expect(
     (
       screen.getByRole("radio", {
@@ -42,7 +44,9 @@ it("moves through media GPU targets without queueing a Run", () => {
   fireEvent.keyDown(list, { key: "Enter" });
   expect(
     (
-      screen.getByRole("radio", { name: /GPU 7 · Test GPU/ }) as HTMLInputElement
+      screen.getByRole("radio", {
+        name: /GPU 7 · Test GPU/,
+      }) as HTMLInputElement
     ).checked,
   ).toBe(true);
   expect(screen.getByLabelText("Target GPU 7").tabIndex).toBe(0);
@@ -50,9 +54,9 @@ it("moves through media GPU targets without queueing a Run", () => {
 
 it("does not change the target while the list is disabled", () => {
   render(<Host disabled />);
-  const list = screen.getByLabelText("Target GPU auto").closest(
-    ".gpu-target-choice-list",
-  ) as HTMLElement;
+  const list = screen
+    .getByLabelText("Target GPU auto")
+    .closest(".gpu-target-choice-list") as HTMLElement;
   fireEvent.keyDown(list, { key: "End" });
   fireEvent.keyDown(list, { key: "Enter" });
   expect(

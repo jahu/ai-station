@@ -30,7 +30,9 @@ it("moves through commit review without queueing a commit", () => {
   render(<Host />);
   const option = screen.getByLabelText("Review commit");
   expect(option.tabIndex).toBe(0);
-  expect(screen.getByText(/There is no inspectable review-ack Run/)).toBeTruthy();
+  expect(
+    screen.getByText(/There is no inspectable review-ack Run/),
+  ).toBeTruthy();
   expect(
     (
       screen.getByRole("checkbox", {

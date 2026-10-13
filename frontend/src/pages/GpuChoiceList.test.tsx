@@ -34,15 +34,21 @@ it("moves through GPU allocation checkboxes without inventing a Run", () => {
   expect(second.tabIndex).toBe(0);
   expect(document.activeElement).toBe(second);
   expect(
-    (screen.getByRole("checkbox", { name: /GPU 1 · GPU B/ }) as HTMLInputElement)
-      .checked,
+    (
+      screen.getByRole("checkbox", {
+        name: /GPU 1 · GPU B/,
+      }) as HTMLInputElement
+    ).checked,
   ).toBe(false);
   fireEvent.keyDown(second.closest(".gpu-choice-list") as HTMLElement, {
     key: "Enter",
   });
   expect(
-    (screen.getByRole("checkbox", { name: /GPU 1 · GPU B/ }) as HTMLInputElement)
-      .checked,
+    (
+      screen.getByRole("checkbox", {
+        name: /GPU 1 · GPU B/,
+      }) as HTMLInputElement
+    ).checked,
   ).toBe(true);
   fireEvent.keyDown(second.closest(".gpu-choice-list") as HTMLElement, {
     key: "Home",

@@ -83,9 +83,7 @@ function RuntimeCards({ runtimes }: { runtimes: RuntimeInstance[] }) {
                     : "Endpoint status checks model discovery, not generation."}
                 </p>
                 {runtime.metadata.models?.length ? (
-                  <p>
-                    Advertised models: {runtime.metadata.models.join(", ")}
-                  </p>
+                  <p>Advertised models: {runtime.metadata.models.join(", ")}</p>
                 ) : null}
                 {runtime.metadata.error && <p>{runtime.metadata.error}</p>}
                 <small className="muted">

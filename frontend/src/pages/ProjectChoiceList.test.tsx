@@ -42,8 +42,7 @@ it("moves through coding projects without starting a Run", () => {
   ).toBeTruthy();
   expect(screen.getByText("Preferred executor: Cursor")).toBeTruthy();
   expect(
-    (screen.getByRole("radio", { name: /^Alpha/ }) as HTMLInputElement)
-      .checked,
+    (screen.getByRole("radio", { name: /^Alpha/ }) as HTMLInputElement).checked,
   ).toBe(false);
   const list = first.closest(".project-choice-list") as HTMLElement;
   fireEvent.keyDown(list, { key: "End" });
@@ -62,8 +61,7 @@ it("does not change the project while the list is disabled", () => {
   fireEvent.keyDown(list, { key: "End" });
   fireEvent.keyDown(list, { key: "Enter" });
   expect(
-    (screen.getByRole("radio", { name: /^Alpha/ }) as HTMLInputElement)
-      .checked,
+    (screen.getByRole("radio", { name: /^Alpha/ }) as HTMLInputElement).checked,
   ).toBe(false);
   expect(
     (screen.getByRole("radio", { name: /^Beta/ }) as HTMLInputElement).checked,
@@ -76,37 +74,35 @@ it("does not submit the form when Enter selects a focused project", () => {
     key: "Enter",
   });
   expect(
-    (screen.getByRole("radio", { name: /^Alpha/ }) as HTMLInputElement)
-      .checked,
+    (screen.getByRole("radio", { name: /^Alpha/ }) as HTMLInputElement).checked,
   ).toBe(true);
 });
 
 it("opens tagged Runs from a coding project choice without starting a Run", () => {
   render(<Host />);
   expect(
-    screen.getByRole("link", { name: "Inspect project alpha" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "Inspect project alpha" })
+      .getAttribute("href"),
   ).toBe("/projects/alpha");
   expect(
-    screen.getByRole("link", { name: "View tagged Runs alpha" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View tagged Runs alpha" })
+      .getAttribute("href"),
   ).toBe("/runs?project_id=alpha");
   expect(
-    screen.getByRole("link", { name: "Inspect project beta" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "Inspect project beta" })
+      .getAttribute("href"),
   ).toBe("/projects/beta");
   expect(
-    screen.getByRole("link", { name: "View tagged Runs beta" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View tagged Runs beta" })
+      .getAttribute("href"),
   ).toBe("/runs?project_id=beta");
   fireEvent.click(screen.getByRole("link", { name: "View tagged Runs alpha" }));
   expect(
-    (screen.getByRole("radio", { name: /^Alpha/ }) as HTMLInputElement)
-      .checked,
+    (screen.getByRole("radio", { name: /^Alpha/ }) as HTMLInputElement).checked,
   ).toBe(false);
   expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
   expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();

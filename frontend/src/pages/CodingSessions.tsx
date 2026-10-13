@@ -1,6 +1,12 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  NavLink,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router-dom";
 import {
   ChevronDown,
   Code2,
@@ -164,7 +170,8 @@ export function CodingHistory() {
             value={projectId}
             onChange={(event) => {
               const next = new URLSearchParams(params);
-              if (event.target.value) next.set("project_id", event.target.value);
+              if (event.target.value)
+                next.set("project_id", event.target.value);
               else next.delete("project_id");
               setParams(next, { replace: true });
               setOffset(0);
@@ -189,7 +196,11 @@ export function CodingHistory() {
       ) : q.data?.length ? (
         <SessionCards sessions={q.data} />
       ) : (
-        <Empty title={projectId ? "No conversations for this project" : "A fresh start"}>
+        <Empty
+          title={
+            projectId ? "No conversations for this project" : "A fresh start"
+          }
+        >
           {projectId
             ? "Coding conversations for this project will appear here."
             : "Your tasks and follow-up conversations will appear here."}

@@ -165,9 +165,7 @@ it("offers Add on operational catalog tools without inventing a Run", async () =
   ).toBeNull();
   expect(screen.getByLabelText("Tool browser")).toBeTruthy();
   expect(screen.getByText(/— Unavailable/)).toBeTruthy();
-  expect(
-    screen.getByText(/Unpublished adapters cannot be added/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Unpublished adapters cannot be added/)).toBeTruthy();
   fireEvent.click(
     screen.getByRole("button", { name: "Add tool http_fetch agent-on" }),
   );

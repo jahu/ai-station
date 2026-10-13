@@ -70,7 +70,8 @@ export default function MediaResult({
     onSuccess: () => cache.invalidateQueries({ queryKey: ["run", runId] }),
   });
   const retry = useMutation({
-    mutationFn: () => api<Run>(`/images/runs/${runId}/retry`, { method: "POST" }),
+    mutationFn: () =>
+      api<Run>(`/images/runs/${runId}/retry`, { method: "POST" }),
     onSuccess: (next) => {
       cache.setQueryData(["run", next.id], next);
       void cache.invalidateQueries({ queryKey: ["runs"] });

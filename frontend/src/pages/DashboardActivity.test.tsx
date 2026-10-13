@@ -134,7 +134,9 @@ it("unifies attention with inspect and stop actions", async () => {
     screen.getByRole("link", { name: "View all runs" }).getAttribute("href"),
   ).toBe("/runs");
   expect(
-    screen.getByRole("link", { name: "View all conversations" }).getAttribute("href"),
+    screen
+      .getByRole("link", { name: "View all conversations" })
+      .getAttribute("href"),
   ).toBe("/chat");
   expect(
     screen
@@ -264,7 +266,10 @@ it("retries an interrupted image from Home without opening the inspector", async
       path === "/api/images/runs/interrupted-run/retry" &&
       options?.method === "POST"
     ) {
-      return { ok: true, json: async () => ({ id: "retry-id", status: "queued" }) };
+      return {
+        ok: true,
+        json: async () => ({ id: "retry-id", status: "queued" }),
+      };
     }
     return { ok: true, json: async () => overview() };
   });
@@ -502,9 +507,9 @@ it("moves through Home activity lists with unique inspect names", async () => {
   expect(second.tabIndex).toBe(0);
   expect(document.activeElement).toBe(second);
   expect(
-    screen.getByRole("link", { name: "Inspect Morning review agent" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "Inspect Morning review agent" })
+      .getAttribute("href"),
   ).toBe("/agents/agent");
   expect(
     screen
@@ -594,9 +599,9 @@ it("opens the tagged agent from in-progress and waiting Home Runs without Enable
   expect(inspectAgent).toHaveLength(2);
   expect(inspectAgent[0].getAttribute("href")).toBe("/agents/agent");
   expect(
-    screen.getAllByRole("link", { name: "Inspect project project-1" })[0].getAttribute(
-      "href",
-    ),
+    screen
+      .getAllByRole("link", { name: "Inspect project project-1" })[0]
+      .getAttribute("href"),
   ).toBe("/projects/project-1");
   expect(
     screen
@@ -682,9 +687,7 @@ it("opens tagged Runs from in-progress coding and worktree Home Runs without Ena
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
   expect(
-    fetch.mock.calls.every(
-      (call) => !String(call[0]).includes("/api/coding"),
-    ),
+    fetch.mock.calls.every((call) => !String(call[0]).includes("/api/coding")),
   ).toBe(true);
 });
 
@@ -700,12 +703,14 @@ it("opens tagged Runs from Home when no project is linked", async () => {
   });
   expect(tagged.length).toBeGreaterThan(0);
   expect(
-    tagged.every((link) => link.getAttribute("href") === "/runs?agent_id=agent"),
+    tagged.every(
+      (link) => link.getAttribute("href") === "/runs?agent_id=agent",
+    ),
   ).toBe(true);
   expect(
-    screen.getByRole("link", { name: "Inspect agent agent" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "Inspect agent agent" })
+      .getAttribute("href"),
   ).toBe("/agents/agent");
   expect(screen.queryByRole("link", { name: /Inspect project/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
@@ -747,9 +752,9 @@ it("opens the tagged agent from a Home notice without Enable or Run now", async 
     ).getAttribute("href"),
   ).toBe("/agents/agent");
   expect(
-    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "Inspect project project-1" })
+      .getAttribute("href"),
   ).toBe("/projects/project-1");
   expect(
     screen

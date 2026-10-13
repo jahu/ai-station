@@ -202,14 +202,14 @@ it("opens the tagged agent and project from the Runs filter without Enable or Ru
     ).getAttribute("href"),
   ).toBe("/agents/agentone");
   expect(
-    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "Inspect project project-1" })
+      .getAttribute("href"),
   ).toBe("/projects/project-1");
   expect(
-    screen.getByRole("link", { name: "View all linked agents" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View all linked agents" })
+      .getAttribute("href"),
   ).toBe("/agents?project_id=project-1");
   expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
   expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
@@ -275,14 +275,14 @@ it("opens the tagged agent from the Run inspector without Enable or Run now", as
     ).getAttribute("href"),
   ).toBe("/agents/agentone");
   expect(
-    screen.getByRole("link", { name: "View tagged Runs agentone" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View tagged Runs agentone" })
+      .getAttribute("href"),
   ).toBe("/runs?project_id=project-1&agent_id=agentone");
   expect(
-    screen.getByRole("link", { name: "Inspect project project-1" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "Inspect project project-1" })
+      .getAttribute("href"),
   ).toBe("/projects/project-1");
   expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
   expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
@@ -348,9 +348,9 @@ it("opens tagged Runs from the inspector when only agent_id is present", async (
     ).getAttribute("href"),
   ).toBe("/agents/agentone");
   expect(
-    screen.getByRole("link", { name: "View tagged Runs agentone" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View tagged Runs agentone" })
+      .getAttribute("href"),
   ).toBe("/runs?agent_id=agentone");
   expect(screen.queryByRole("link", { name: /Inspect project/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
@@ -417,9 +417,9 @@ it("opens tagged Runs from the inspector when only project_id is present", async
     ).getAttribute("href"),
   ).toBe("/projects/project-1");
   expect(
-    screen.getByRole("link", { name: "View tagged Runs project-1" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View tagged Runs project-1" })
+      .getAttribute("href"),
   ).toBe("/runs?project_id=project-1");
   expect(screen.queryByRole("link", { name: /Inspect agent/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();

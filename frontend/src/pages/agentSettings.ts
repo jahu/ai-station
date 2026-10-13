@@ -51,8 +51,7 @@ export function agentSettingsPayload(
       trigger === "interval" ? (next.interval_seconds ?? 3600) : null,
     run_at: trigger === "datetime" ? (next.run_at ?? null) : null,
     maximum_runtime: next.maximum_runtime ?? 600,
-    output_expectation:
-      next.output_expectation ?? "A concise, factual report.",
+    output_expectation: next.output_expectation ?? "A concise, factual report.",
     require_approval: next.require_approval ?? false,
     workflow_mode: next.workflow_mode === "gated" ? "gated" : "sequential",
     tool_calling:

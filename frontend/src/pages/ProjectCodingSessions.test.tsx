@@ -76,7 +76,9 @@ it("lists coding conversations from GET /api/coding/sessions?project_id= without
       .getAttribute("href"),
   ).toBe("/runs?project_id=project-1");
   expect(
-    fetch.mock.calls.every((call) => !String(call[0]).includes("/coding/cursor")),
+    fetch.mock.calls.every(
+      (call) => !String(call[0]).includes("/coding/cursor"),
+    ),
   ).toBe(true);
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).includes("/messages")),
@@ -116,7 +118,9 @@ it("opens tagged project Runs from a coding conversation row without starting a 
   );
   await screen.findByRole("heading", { name: "Tagged Runs" });
   expect(
-    fetch.mock.calls.every((call) => !String(call[0]).includes("/coding/cursor")),
+    fetch.mock.calls.every(
+      (call) => !String(call[0]).includes("/coding/cursor"),
+    ),
   ).toBe(true);
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).includes("/messages")),
@@ -186,7 +190,8 @@ it("moves through project coding conversations with arrow keys", async () => {
 it("shows an empty state when no coding conversations tag this project", async () => {
   const fetch = vi.fn(async (url: string) => ({
     ok: true,
-    json: async () => (url.includes("project_id=project-1") ? [] : [{ ...row, id: "other" }]),
+    json: async () =>
+      url.includes("project_id=project-1") ? [] : [{ ...row, id: "other" }],
   }));
   vi.stubGlobal("fetch", fetch);
   mount();
@@ -199,7 +204,9 @@ it("shows an empty state when no coding conversations tag this project", async (
   expect(screen.queryByRole("link", { name: /Inspect / })).toBeNull();
   expect(screen.queryByRole("link", { name: /View tagged Runs/ })).toBeNull();
   expect(
-    fetch.mock.calls.every((call) => !String(call[0]).includes("/coding/cursor")),
+    fetch.mock.calls.every(
+      (call) => !String(call[0]).includes("/coding/cursor"),
+    ),
   ).toBe(true);
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).includes("/messages")),

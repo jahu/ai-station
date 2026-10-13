@@ -70,14 +70,14 @@ it("lists linked agents from GET /api/agents?project_id= without Enable or Run n
     undefined,
   );
   expect(
-    screen.getByRole("link", { name: "View all linked agents" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View all linked agents" })
+      .getAttribute("href"),
   ).toBe("/agents?project_id=project-1");
   expect(
-    screen.getByRole("link", { name: "View tagged Runs agentone" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View tagged Runs agentone" })
+      .getAttribute("href"),
   ).toBe("/runs?project_id=project-1&agent_id=agentone");
   expect(
     screen.getAllByText(/does not grant coding, Git or repository access/)
@@ -181,15 +181,16 @@ it("omits the current agent when listing siblings on a definition", async () => 
 it("shows an empty state when no agents tag this project", async () => {
   const fetch = vi.fn(async (url: string) => ({
     ok: true,
-    json: async () => (url.includes("project_id=project-1") ? [] : [{ ...row, id: "other" }]),
+    json: async () =>
+      url.includes("project_id=project-1") ? [] : [{ ...row, id: "other" }],
   }));
   vi.stubGlobal("fetch", fetch);
   mount();
   expect(await screen.findByText("No linked agents")).toBeTruthy();
   expect(
-    screen.getByRole("link", { name: "View all linked agents" }).getAttribute(
-      "href",
-    ),
+    screen
+      .getByRole("link", { name: "View all linked agents" })
+      .getAttribute("href"),
   ).toBe("/agents?project_id=project-1");
   expect(screen.queryByRole("link", { name: /Inspect agent/ })).toBeNull();
   expect(

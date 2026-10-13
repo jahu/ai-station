@@ -124,12 +124,15 @@ it("moves through publication approval without publishing", async () => {
     key: "Enter",
   });
   expect(
-    (screen.getByRole("checkbox", { name: /I approve publishing/ }) as HTMLInputElement)
-      .checked,
+    (
+      screen.getByRole("checkbox", {
+        name: /I approve publishing/,
+      }) as HTMLInputElement
+    ).checked,
   ).toBe(true);
-  expect(fetch.mock.calls.filter((call) => call[1]?.method === "POST")).toHaveLength(
-    0,
-  );
+  expect(
+    fetch.mock.calls.filter((call) => call[1]?.method === "POST"),
+  ).toHaveLength(0);
 });
 
 it("keeps partial failures inspectable without claiming a PR exists", () => {

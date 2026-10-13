@@ -113,9 +113,9 @@ it("moves through runtime observations with arrow keys", async () => {
   expect(second.tabIndex).toBe(0);
   expect(first.tabIndex).toBe(-1);
   expect(document.activeElement).toBe(
-    screen.getByRole("link", { name: "Inspect llama-server rt-two2" }).closest(
-      "[data-list-index]",
-    ),
+    screen
+      .getByRole("link", { name: "Inspect llama-server rt-two2" })
+      .closest("[data-list-index]"),
   );
   fireEvent.keyDown(second.closest(".diagnostic-list") as HTMLElement, {
     key: "Home",

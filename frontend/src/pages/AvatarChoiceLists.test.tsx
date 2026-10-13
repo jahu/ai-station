@@ -53,7 +53,9 @@ it("moves through Quality without queueing a Run", () => {
   expect(screen.getByText(/There is no inspectable quality Run/)).toBeTruthy();
   expect(
     (
-      screen.getByRole("radio", { name: /Balanced · 384 px/ }) as HTMLInputElement
+      screen.getByRole("radio", {
+        name: /Balanced · 384 px/,
+      }) as HTMLInputElement
     ).checked,
   ).toBe(true);
   const list = balanced.closest(".avatar-quality-choice-list") as HTMLElement;
@@ -75,7 +77,9 @@ it("does not change Quality while the list is disabled", () => {
   fireEvent.keyDown(list, { key: "Enter" });
   expect(
     (
-      screen.getByRole("radio", { name: /Balanced · 384 px/ }) as HTMLInputElement
+      screen.getByRole("radio", {
+        name: /Balanced · 384 px/,
+      }) as HTMLInputElement
     ).checked,
   ).toBe(true);
 });
@@ -92,7 +96,9 @@ it("moves through Clip length without queueing a Run", () => {
   fireEvent.keyDown(list, { key: "Enter" });
   expect(
     (
-      screen.getByRole("radio", { name: /Up to 0.68 seconds/ }) as HTMLInputElement
+      screen.getByRole("radio", {
+        name: /Up to 0.68 seconds/,
+      }) as HTMLInputElement
     ).checked,
   ).toBe(true);
   expect(screen.getByLabelText("Clip 17").tabIndex).toBe(0);
@@ -105,7 +111,9 @@ it("does not submit the form when Enter selects a focused Quality", () => {
   });
   expect(
     (
-      screen.getByRole("radio", { name: /Balanced · 384 px/ }) as HTMLInputElement
+      screen.getByRole("radio", {
+        name: /Balanced · 384 px/,
+      }) as HTMLInputElement
     ).checked,
   ).toBe(true);
 });

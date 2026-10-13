@@ -45,10 +45,7 @@ export function ConsentChoiceList({
         aria-labelledby={labelId}
         onKeyDown={handleKey}
       >
-        <div
-          aria-label="Consent external_ai"
-          {...itemProps(0, "external_ai")}
-        >
+        <div aria-label="Consent external_ai" {...itemProps(0, "external_ai")}>
           <label className={labelClassName}>
             <input
               type="checkbox"

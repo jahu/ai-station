@@ -62,7 +62,8 @@ export default function MediaInput({
     library.data?.filter(
       (a) =>
         a.type === kind &&
-        (kind !== "image" || ["image/png", "image/jpeg"].includes(a.mime_type)) &&
+        (kind !== "image" ||
+          ["image/png", "image/jpeg"].includes(a.mime_type)) &&
         (kind !== "audio" || a.mime_type === "audio/wav") &&
         `${a.title ?? ""} ${a.original_filename}`
           .toLowerCase()

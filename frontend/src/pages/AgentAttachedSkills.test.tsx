@@ -141,7 +141,9 @@ it("offers Add on installed catalog skills without inventing a Run", async () =>
       name: "Add skill station-briefing agent-on",
     }),
   ).toBeNull();
-  expect(screen.getByText(/Add stays on an installed catalog skill/)).toBeTruthy();
+  expect(
+    screen.getByText(/Add stays on an installed catalog skill/),
+  ).toBeTruthy();
   fireEvent.click(
     screen.getByRole("button", { name: "Add skill daily-brief agent-on" }),
   );
@@ -159,7 +161,9 @@ it("offers Add on installed catalog skills without inventing a Run", async () =>
 it("adds an installed catalog skill with Space without inventing a Run", async () => {
   const onAdd = vi.fn();
   const fetch = mount(["station-briefing"], skills, undefined, onAdd);
-  expect(await screen.findByLabelText("Skill Daily brief daily-brief")).toBeTruthy();
+  expect(
+    await screen.findByLabelText("Skill Daily brief daily-brief"),
+  ).toBeTruthy();
   const attached = screen.getByLabelText(
     "Skill Station briefing station-briefing",
   );
@@ -218,15 +222,15 @@ it("does not offer Add when four skills are already attached", async () => {
     screen.queryByRole("button", { name: "Add skill fifth-skill agent-on" }),
   ).toBeNull();
   fireEvent.keyDown(
-    screen.getByLabelText("Skill Fifth fifth-skill").closest(
-      ".agent-choice-list",
-    ) as HTMLElement,
+    screen
+      .getByLabelText("Skill Fifth fifth-skill")
+      .closest(".agent-choice-list") as HTMLElement,
     { key: "End" },
   );
   fireEvent.keyDown(
-    screen.getByLabelText("Skill Fifth fifth-skill").closest(
-      ".agent-choice-list",
-    ) as HTMLElement,
+    screen
+      .getByLabelText("Skill Fifth fifth-skill")
+      .closest(".agent-choice-list") as HTMLElement,
     { key: " " },
   );
   expect(onAdd).not.toHaveBeenCalled();
