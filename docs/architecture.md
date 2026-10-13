@@ -174,3 +174,5 @@ Agents may explicitly select the Local coding tool and a Project. They publish t
 Image generation and edits can now queue a dependent 4× Upscale with the existing photo executor. The result/completion and child publication are atomic, and Images follows the active stage after refresh. See [image workflows](image-workflows.md).
 
 Portraits can now use a voice reference and typed Polish speech through a sequential Chatterbox → EchoMimic workflow, retaining both outputs and following the active stage after refresh. See [speaking avatars](speaking-avatars.md).
+
+Public GET adapters pin connections to checked DNS addresses, preserve original HTTP/TLS identity and isolate each redirect connection. Origin changes drop connector credentials. See [network boundaries](security-model.md#public-connection-identity).

@@ -32,6 +32,19 @@ BINARY_TYPES = {
 }
 
 
+def _public_address(address):
+    if not address.is_global or address.is_multicast:
+        return False
+    if isinstance(address, ipaddress.IPv6Address):
+        # Transition routing can embed private IPv4 destinations in a global IPv6
+        # address. Do not grant unreviewed 6to4/Teredo/NAT64 routing to GET tools.
+        if address.sixtofour or address.teredo or address in ipaddress.ip_network("64:ff9b::/96"):
+            return False
+        if address.ipv4_mapped:
+            return _public_address(address.ipv4_mapped)
+    return True
+
+
 def public_url(value):
     if not isinstance(value, str) or not 1 <= len(value) <= MAX_URL or re.search(r"[\s\\\x00-\x1f]", value):
         return None
@@ -56,7 +69,7 @@ def public_url(value):
             ):
                 return None
         else:
-            if not address.is_global:
+            if not _public_address(address):
                 return None
     except ValueError:
         return None
@@ -124,12 +137,26 @@ def public_addresses(host):
     addresses = []
     for row in rows:
         address = ipaddress.ip_address(row[4][0])
-        if not address.is_global:
+        if not _public_address(address):
             raise ValueError("Refusing a non-public network address")
         addresses.append(str(address))
     if not addresses:
         raise ValueError("URL host could not be resolved")
     return addresses
+
+
+def pinned_request(url, address):
+    """Connect to the checked IP, preserving HTTP authority and TLS verification.
+
+    Each hop uses a new client: pool keys otherwise use the IP and could reuse a
+    TLS connection verified for another hostname hosted at the same address.
+    """
+    original = httpx.URL(url)
+    return (
+        original.copy_with(host=address),
+        {"Host": original.netloc.decode("ascii")},
+        {"sni_hostname": original.raw_host.decode("ascii")},
+    )
 
 
 def configured_search_url():
@@ -151,38 +178,48 @@ def fetch_public(url):
         "Accept": "text/html,application/xhtml+xml,text/plain,application/json,text/markdown;q=0.9,*/*;q=0.1",
     }
     try:
-        with httpx.Client(
-            timeout=TIMEOUT, trust_env=False, follow_redirects=False, headers=headers
-        ) as client:
-            for _ in range(MAX_REDIRECTS + 1):
-                host = urlsplit(current).hostname
-                if not host:
-                    raise ValueError("fetch_url requires a public http(s) URL")
-                public_addresses(host)
-                with client.stream("GET", current) as response:
-                    if response.status_code in REDIRECTS:
-                        location = response.headers.get("location")
-                        nxt = public_url(urljoin(current, location)) if location else None
-                        if not nxt:
-                            raise ValueError("Redirect targeted a non-public URL")
-                        current = nxt
-                        continue
-                    content_type = response.headers.get("content-type", "")
-                    body = bytearray()
-                    truncated = False
-                    for chunk in response.iter_bytes():
-                        body.extend(chunk)
-                        if len(body) > MAX_BODY:
-                            del body[MAX_BODY:]
-                            truncated = True
-                            break
-                    return _excerpt(current, response.status_code, content_type, bytes(body), truncated)
-            return {
-                "url": current,
-                "error": "Too many redirects",
-                "untrusted": True,
-                "bounded": True,
-            }
+        for _ in range(MAX_REDIRECTS + 1):
+            host = urlsplit(current).hostname
+            if not host:
+                raise ValueError("fetch_url requires a public http(s) URL")
+            addresses = public_addresses(host)
+            for index, address in enumerate(addresses):
+                try:
+                    target, authority, extensions = pinned_request(current, address)
+                    with httpx.Client(
+                        timeout=TIMEOUT, trust_env=False, follow_redirects=False, headers=headers
+                    ) as client:
+                        with client.stream(
+                            "GET", target, headers=authority, extensions=extensions
+                        ) as response:
+                            if response.status_code in REDIRECTS:
+                                location = response.headers.get("location")
+                                nxt = public_url(urljoin(current, location)) if location else None
+                                if not nxt:
+                                    raise ValueError("Redirect targeted a non-public URL")
+                                current = nxt
+                                break
+                            content_type = response.headers.get("content-type", "")
+                            body = bytearray()
+                            truncated = False
+                            for chunk in response.iter_bytes():
+                                body.extend(chunk)
+                                if len(body) > MAX_BODY:
+                                    del body[MAX_BODY:]
+                                    truncated = True
+                                    break
+                            return _excerpt(
+                                current, response.status_code, content_type, bytes(body), truncated
+                            )
+                except (httpx.ConnectError, httpx.ConnectTimeout):
+                    if index == len(addresses) - 1:
+                        raise
+        return {
+            "url": current,
+            "error": "Too many redirects",
+            "untrusted": True,
+            "bounded": True,
+        }
     except ValueError:
         raise
     except (httpx.HTTPError, TimeoutError, OSError):

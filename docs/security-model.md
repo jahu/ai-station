@@ -138,3 +138,28 @@ Local coding agents require the exclusive reviewed coding tool and an explicit p
 Image generation and edits can now queue a dependent 4× Upscale with the existing photo executor. The result/completion and child publication are atomic, and Images follows the active stage after refresh. See [image workflows](image-workflows.md).
 
 Portraits can now use a voice reference and typed Polish speech through a sequential Chatterbox → EchoMimic workflow, retaining both outputs and following the active stage after refresh. See [speaking avatars](speaking-avatars.md).
+
+## Public connection identity
+
+Public GET tools in both the control plane (agent pages and HTTP connectors) and
+Host Runner (Local Coding references) connect to a numeric IP from the checked
+DNS result. Every returned address must be public and non-multicast; 6to4, Teredo
+and the well-known NAT64 prefix are denied to prevent embedded private IPv4
+routing. A subsequent DNS change cannot redirect that request into the workstation network. Redirects
+repeat URL and DNS validation before connecting, within the existing hop/body/time
+limits.
+
+The original authority stays in `Host`, TLS SNI and certificate hostname
+verification; returned page URLs and relative links keep their public URL. Each
+hop gets a fresh client so hosts sharing an IP cannot reuse a TLS connection
+verified for another domain. HTTP connectors retain explicitly configured headers
+only while the origin (scheme, host and port) stays the same. An origin-changing
+redirect drops all extra headers, including Bearer tokens, API keys and cookies;
+response cookies are never carried between hops. There is no credential downgrade
+or ambient session import.
+
+This uses the documented [HTTPCore SNI extension](https://www.encode.io/httpcore/extensions/#sni_hostname).
+Normal tests exercise actual HTTPX/HTTPCore transports with fake socket streams,
+assert checked connection IP, verified TLS configuration and original Host/SNI,
+and cover rebinding answers, IPv6, multicast, private redirect DNS and secret
+stripping. They never fetch the public internet.

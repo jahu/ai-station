@@ -91,7 +91,7 @@ def test_http_connector_stores_secret_reference_and_checks_public_get(monkeypatc
     artifacts = api.get("/api/artifacts?run_id=" + run["id"]).json()
     assert artifacts and artifacts[0]["type"] == "json"
     assert seen["authorization"] == "Bearer sk-connector-secret"
-    assert seen["url"] == "https://www.example.com/status"
+    assert seen["url"] == "https://93.184.216.34/status"
 
 
 def test_missing_secret_fails_closed_and_unavailable_kinds_stay_disabled(monkeypatch):

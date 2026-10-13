@@ -9,3 +9,5 @@ An HTTP connector stores a unique key, display name, public `http`/`https` URL o
 Agents do not receive model-selected connectors in this increment. Unpublished SearXNG stays unpublished; Chat/agent search is unchanged.
 
 Normal tests mock HTTP and never call the public internet.
+
+Public connections are pinned to checked IPs. A redirect to another origin drops all configured secret headers; cookies from responses are not replayed. See [connection identity](security-model.md#public-connection-identity).
