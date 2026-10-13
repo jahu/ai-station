@@ -10,7 +10,10 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { useState } from "react";
-import AssistantActions, { AssistantResults } from "./AssistantActions";
+import AssistantActions, {
+  AssistantResults,
+  type AssistantOptions,
+} from "./AssistantActions";
 
 function chooseAction(key: string) {
   fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
@@ -1113,7 +1116,7 @@ it("clears media scope and hides irrelevant upload controls for workstation insp
     vi.fn(async () => ({ ok: true, json: async () => [] })),
   );
   function Composer() {
-    const [value, setValue] = useState({
+    const [value, setValue] = useState<AssistantOptions>({
       ...emptyOptions,
       image_artifact_ids: ["portrait"],
       audio_artifact_id: "voice",
