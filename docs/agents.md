@@ -59,3 +59,12 @@ resources may be blocked and are reported as incomplete. Stop uses the existing
 workflow cancellation; no browser profile, login, arbitrary scripts or filesystem
 access are granted. `remember_workflow` can retain a bounded observation in the
 agent's own memory with source Run provenance.
+
+
+## Explicit project memory
+
+The optional **Project memory** tool requires a saved linked project and the
+separate `project_memory_read` permission. A link alone grants no access. Reads
+remain within that snapshotted project, save exact context and provenance in an
+ordinary child Run and never promote entries into another scope. Model arguments
+cannot change the target. See [retrieval bounds and retention](memory.md#explicit-project-memory).

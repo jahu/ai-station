@@ -4,7 +4,7 @@ import json
 
 from app.tools import TOOLS, ToolSpec, get_tool
 
-CALLABLE_TOOLS = frozenset({"system_snapshot", "memory_search", "web_search", "http_fetch"})
+CALLABLE_TOOLS = frozenset({"system_snapshot", "memory_search", "project_memory", "web_search", "http_fetch"})
 RETENTION_TOOLS = frozenset({"remember_report", "remember_workflow"})
 WORKFLOW_MEMORY_TOOLS = frozenset({"system_snapshot", "web_search", "http_fetch", "browser"})
 MAX_TOOL_ROUNDS = 4
@@ -67,6 +67,17 @@ AGENT_TOOLS = {
             "type": "object",
             "properties": {"memory_id": {"type": "string"}, "excerpted": {"type": "boolean"}},
         },
+    ),
+    "project_memory": ToolSpec(
+        name="project_memory",
+        description="Read enabled memories from this agent's explicitly linked project, with source provenance. No other projects, global memory, files or Git access. Select a project before enabling.",
+        risk_level="low",
+        required_permissions=("project_memory_read",),
+        timeout=5,
+        execution_target="container",
+        operational=True,
+        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        output_schema={"type": "object"},
     ),
     "memory_search": ToolSpec(
         name="memory_search",
@@ -177,7 +188,7 @@ def parse_tool_call(definition, raw) -> tuple[str, dict, str]:
         arguments = {}
     if not isinstance(arguments, dict):
         raise ValueError("Tool call arguments must be an object")
-    if name in {"system_snapshot", "memory_search"}:
+    if name in {"system_snapshot", "memory_search", "project_memory"}:
         if arguments:
             raise ValueError("This tool does not accept model-selected arguments")
     elif name == "web_search":

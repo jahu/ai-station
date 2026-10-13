@@ -180,6 +180,9 @@ def test_browser_agent_requires_saved_urls_and_publishes_host_step(monkeypatch):
             select(Run).where(Run.parent_run_id == parent.json()["id"], Run.executor_type == "browser")
         )
         assert child and child.execution_target == "host" and child.parameters["tool"] == "browser"
+        session.commit()
+        view = api.get("/api/runs/" + parent.json()["id"]).json()["workflow"]["steps"]
+        assert any(step["run_id"] == child.id and step["key"] == "browser" for step in view)
         assert browser.BrowserExecutor().payload(child)["urls"] == ["https://example.com/"]
         child.parameters = {**child.parameters, "deadline_at": (utcnow() - timedelta(seconds=1)).isoformat()}
         with pytest.raises(ValueError, match="runtime limit"):

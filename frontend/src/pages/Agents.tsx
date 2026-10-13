@@ -105,9 +105,11 @@ function toolTitle(tool: Tool) {
         ? "Remember workflow observations"
         : tool.name === "http_fetch"
           ? "HTTP fetch"
-          : tool.name === "browser"
-            ? "Browse public pages"
-            : tool.name;
+          : tool.name === "project_memory"
+            ? "Project memory"
+            : tool.name === "browser"
+              ? "Browse public pages"
+              : tool.name;
 }
 
 function toggleValue(selected: string[], value: string, enabled: boolean) {

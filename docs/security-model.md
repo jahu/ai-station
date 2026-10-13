@@ -169,3 +169,12 @@ Public-page browsing is available as an optional isolated agent workflow tool,
 with JavaScript, Library screenshots, bounded text, exact container ownership and
 cancellation/recovery. It requires an explicitly built local executor image and
 configuration; missing setup remains unavailable. See [browser setup and security](browser.md).
+
+
+## Explicit project memory
+
+The optional **Project memory** tool requires a saved linked project and the
+separate `project_memory_read` permission. A link alone grants no access. Reads
+remain within that snapshotted project, save exact context and provenance in an
+ordinary child Run and never promote entries into another scope. Model arguments
+cannot change the target. See [retrieval bounds and retention](memory.md#explicit-project-memory).

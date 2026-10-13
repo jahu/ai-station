@@ -50,6 +50,13 @@ export function activationBlock(
     };
   }
   const names = agent.tools ?? [];
+  if (names.includes("project_memory") && !agent.project_id) {
+    return {
+      blocked: true,
+      reason:
+        "Choose the project whose memory this agent may read before enabling.",
+    };
+  }
   if (names.includes("coding_local") && !agent.project_id) {
     return {
       blocked: true,
