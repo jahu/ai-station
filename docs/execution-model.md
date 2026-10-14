@@ -12,6 +12,22 @@ concurrency. These are design requirements, not implemented execution behavior.
 
 ## Path
 
+### Planned segmented media extension
+
+The [long-media design](plans/long-media-execution.md) is not yet operational.
+It composes normal Runs through existing RunDependency: prepare canonical inputs,
+generate bounded segments, compose on CPU, fully decode/verify, adopt a final
+artifact. The planner releases its worker slot after publishing the durable graph.
+Task success waits for the selected attempts' final verified output, not planner
+success. Atomic graph cancellation and resumable stage identities require new
+tested contracts; existing single-Run Stop is not evidence that they exist.
+RAM and GPU admission must be atomic and release only after owned process exit.
+Completed segments are reusable only with authoritative completion and matching
+input/profile hashes. See the [implementation handoff](plans/implementation-handoff.md)
+for delivery order and the distinction between short-clip and long-output acceptance.
+
+### Current execution path
+
 1. The UI or scheduler creates a task and a `queued` run.
 2. The worker heartbeats, recovers stale leases, then claims one queued run in an immediate SQLite transaction.
 3. The worker reserves resources (GPU lock for image runs).

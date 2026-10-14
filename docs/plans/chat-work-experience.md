@@ -1,7 +1,12 @@
 # Chat and Work: UX, policy and implementation contracts
 
-Status: planned, 2026-10-14. Part of the [delivery brief](2026-10-chat-work-media.md).
-All new endpoints, schemas and component names below are proposals, not existing APIs.
+Status: partially delivered, 2026-10-14. Part of the [delivery brief](2026-10-chat-work-media.md).
+The findings below describe the original **806b604** baseline. Immediate first Send,
+mode policy and typed defaults now exist; local model selection is independent of
+loading. Use [first-send contracts](../first-send.md) and
+[model selection](../chat-model-selection.md) for those delivered APIs. Other new
+schemas/components below remain proposals. The [updated handoff](implementation-handoff.md)
+defines the remaining work against **f7387bf**; do not reproduce completed changes.
 
 ## 1. Findings in the current code
 
@@ -206,16 +211,19 @@ switch action; do not silently execute, lose the prompt, or claim implementation
 For ambiguous requests, ask one focused question in the transcript. A webpage,
 attachment, remembered preference or old Work turn cannot promote a Chat turn.
 
-Keep compatibility aliases `local` → Chat and `orchestrator` → Work at the public
-API boundary initially. Since legacy local currently rejects media, this is a
-deliberate versioned policy change, not a raw search-and-replace. Historical Runs
-retain their recorded mode/policy. New canonical UI/API fields can use `chat|work`
-while old clients continue through the same policy resolver. `auto` for an old
-per-turn override means inherit the saved mode, never escalate permissions.
+The delivered canonical UI/API values are `chat|work`. Legacy `local` and
+`orchestrator` remain accepted with their existing behavior; **local is not a raw
+alias for the new media-enabled Chat policy**. Preserve this compatibility rather
+than silently widening old clients' permissions. Historical Runs retain recorded
+mode/policy. `auto` for an old per-turn override means inherit the saved mode,
+never escalate permissions.
 
 ## 5. Durable first-send and conversation settings
 
-Proposed `POST /api/chat/turns` envelope:
+The first-turn endpoint is delivered. Its current field names are shown below;
+reasoning and a unified model reference will be additive future changes, not a
+replacement endpoint. See `TurnBody`, `ConversationBody` and `MessageBody` in
+`backend/app/chat.py` before implementing extensions.
 
 ```json
 {
@@ -223,27 +231,28 @@ Proposed `POST /api/chat/turns` envelope:
   "conversation_id": null,
   "expected_settings_version": null,
   "selection": {
-    "mode": "chat",
+    "execution_mode": "chat",
     "provider": "local-openai-compatible",
-    "model": "existing-model-key",
-    "reasoning": null
+    "model": "existing-model-key"
   },
   "content": "Explain this function",
   "attachments": [],
-  "tools": {"web_search": false}
+  "execution_mode": "chat",
+  "web_search": {"enabled": false, "query": ""}
 }
 ```
 
 Use typed selected artifact IDs/options from current validators, not arbitrary
-tool JSON. Response: conversation ID, user/assistant message IDs, Task/Run IDs and
-resolved selection. A new conversation, immutable user turn and queued work commit
+tool JSON. Current receipt response: `conversation_id`, `user_message_id`,
+`task_id` and serialized `run`. Any additional resolved-selection fields must be
+additive. A new conversation, immutable user turn and queued work commit
 in one short DB transaction. Provider/model metadata validation may precede it;
 inference, model loading, filesystem project work and media processing do not run
 inside the HTTP handler. Reuse refactored enqueue services instead of internally
 calling another HTTP handler or building a second chat pipeline.
 
 Store a unique client request receipt with canonical payload digest and response
-identities. Proposed small Alembic-backed table `chat_turn_requests`: request UUID,
+identities. Alembic **0020** already adds `chat_turn_requests`: request UUID,
 payload hash, conversation/message/task/run references and created_at. Same UUID
 + same body returns the original receipt; same UUID + different body is 409.
 Claim it transactionally before creating domain rows. Two tabs with distinct
@@ -257,8 +266,9 @@ avoid duplicate durable files across idempotent retries. On validation failure
 roll back rows and clean only known unreferenced staging files; never delete a
 Library artifact. Navigation alone creates neither uploads nor conversations.
 
-Proposed conversation fields via migration: `settings_version` and bounded
-`generation_settings` JSON. Existing columns continue to hold provider/model/mode
+Conversation `settings_version` is already delivered in **0020**. Any future
+bounded `generation_settings` field requires a new migration; never edit 0020 to
+add reasoning retroactively. Existing columns continue to hold provider/model/mode
 and normal sampling settings. New global defaults use a typed versioned value in
 existing `Setting`, e.g. `conversation_preferences`; do not add a generic editable
 JSON settings endpoint. Defaults affect future drafts, not historical turns.

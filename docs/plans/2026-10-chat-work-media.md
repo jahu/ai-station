@@ -1,9 +1,12 @@
 # Conversation-first AI Station: implementation brief for GPT-6.1-Sol
 
 Status: **in progress**. Decision date: 2026-10-14.
-The [first-send increment](../first-send.md) implements the immediate entry and
-Chat/Work enforcement. Remaining increments below are planned; long media and
-verified reasoning controls are not yet delivered.
+The [first-send increment](../first-send.md), [System/Settings split](../settings.md)
+and [selection-only local model loading](../chat-model-selection.md) are delivered.
+The complete conversation shell, unified catalog, verified reasoning and long
+media remain unfinished. Read the [updated implementation handoff](implementation-handoff.md)
+before starting: the historical baseline and paused worktrees below are not the
+current release.
 Owner request: a ChatGPT/Claude-like entry experience, visible Chat/Work modes,
 model and supported reasoning controls, distinct System and Settings, and useful
 longer local video/avatar output on the existing workstation. Retain all dedicated
@@ -40,7 +43,7 @@ They do not supersede security, Git, approval, ownership or recovery contracts.
 | Long avatar | Animate the full selected recording/generated speech. Preserve audio timing and identity across windows, rather than truncating to the opening three seconds. |
 | Two GPUs | Use dynamically discovered devices. Parallel independent shots only when both VRAM and system RAM admission pass. Continuous dependencies stay sequential. Two 12 GiB devices are not a transparent 24 GiB allocation. |
 
-## What was actually inspected
+## Original inspection — historical baseline
 
 Baseline is `origin/develop` **806b604** (PR #267), also the deployed UI at
 `http://127.0.0.1:8765/`. Open PR list was empty. Read-only Chromium inspection
@@ -58,6 +61,13 @@ was performed for this planning change. Prior real-media evidence is linked in
 the media plan and must not be relabelled as new long-media acceptance.
 
 ## Delivery order and reviewable increments
+
+As of the planning refresh at **f7387bf**, increment 1 and increment 3 are delivered
+(PRs #269 and #270). Increment 2 has local selection/autoload delivered in #271,
+but its shared shell, unified provider/model catalog and contextual attachment
+flow are still open. Increment 5 has uncommitted work in `.tools/work-project-build`;
+it is not merged or deployed. Increments 4 and 6–9 are planned. Do not repeat
+delivered schema changes or treat an unfinished branch as a released capability.
 
 Each row is a feature/fix PR to `develop`, with a usable end-to-end result. Keep
 schema, contract and UI changes together where splitting would publish a broken
@@ -105,7 +115,11 @@ broader product ledger remains the authority for unrelated unfinished capabiliti
   actual failed checks. AI Station restart permission already exists; back up data
   and deploy the reviewed release when implementing, not during planning.
 
-## Handoff: preserve existing work
+## Original handoff: preserve existing work
+
+This section records the original planning checkpoint. The
+[updated handoff](implementation-handoff.md) overrides its release pointer,
+implementation starting point and WIP status. The preservation rules still apply.
 
 The planning branch is `docs/chat-work-long-media`, in
 `.tools/plan-chat-work-media`, based on **806b604**. It contains documentation only.

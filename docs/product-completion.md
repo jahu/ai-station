@@ -21,6 +21,10 @@ The brief defines nine ordered increments and acceptance gates for GPT-6.1-Sol.
 Remaining increments are planned; no new long-media success is claimed. Existing
 unfinished Memory and create-project-and-code work
 is preserved separately; its integration point is explicit in the handoff.
+The [current implementation handoff](plans/implementation-handoff.md) records
+`develop` f7387bf, the adapted uncommitted Work project-build branch and the
+remaining shell/catalog/reasoning/media gates. Planning does not merge that WIP
+or qualify longer GPU output.
 
 Coding supports checked removal of selected source files, explicit Deleted
 review labels, cumulative follow-up patches and separate reviewed commits.

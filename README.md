@@ -12,6 +12,9 @@ owned load when needed, using saved preferences or discovered devices. See
 entry with Chat/Work, simple model and verified reasoning selection, separate
 System/Settings, and longer local video/avatars. Start with the
 [implementation brief and model handoff](docs/plans/2026-10-chat-work-media.md).
+For the current release, preserved WIP and exact remaining PR sequence, use the
+[updated GPT-6.1-Sol handoff](docs/plans/implementation-handoff.md). This distinguishes
+delivered entry/Settings/local autoload from planned reasoning and longer media.
 
 **Settings** now has General, Providers, Integrations, Access and Maintenance.
 **System** shows workstation observations and execution health, with separate
