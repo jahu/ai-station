@@ -236,3 +236,41 @@ def test_owned_forwarding_maps_only_typed_reasoning_fields(enabled):
     assert recorded[0]["reasoning_budget_tokens"] == (128 if enabled else 0)
     assert recorded[0]["reasoning_format"] == "deepseek" and "reasoning" not in recorded[0]
     assert ("reasoning_effort" in recorded[0]) == (not enabled)
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_json_object_output_is_typed_and_omitted_from_legacy_requests(enabled):
+    captured = []
+
+    class Stream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield b"data: [DONE]\n\n"
+
+    def handler(request):
+        captured.append(json.loads(request.content))
+        return httpx.Response(200, headers={"content-type": "text/event-stream"}, stream=Stream())
+
+    async def exercise():
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        response = await local_model.forward_completion(
+            local_model.Completion(**BODY, json_output=enabled),
+            Request({"type": "http"}),
+            "http://llama/v1",
+            client,
+            {},
+        )
+        async for _ in response.body_iterator:
+            pass
+        assert client.is_closed
+
+    asyncio.run(exercise())
+    expected = {**BODY, **({"response_format": {"type": "json_object"}} if enabled else {})}
+    assert captured == [expected]
+
+
+@pytest.mark.parametrize("flag", ["true", 1, {}, None])
+def test_json_output_rejects_untyped_flags(flag):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        local_model.Completion(**BODY, json_output=flag)

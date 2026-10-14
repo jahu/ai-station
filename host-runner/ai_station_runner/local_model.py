@@ -78,6 +78,7 @@ class Completion(BaseModel):
     max_tokens: int = Field(ge=1, le=8192)
     stream: Literal[True]
     reasoning: ReasoningOptions | None = None
+    json_output: StrictBool = False
 
     @model_validator(mode="after")
     def reasoning_budget(self):
@@ -151,7 +152,9 @@ async def completion(body: Completion, expected: ExpectedEndpoint, incoming: Req
 async def forward_completion(body, incoming, url, client, request_headers):
     response = None
     try:
-        payload = body.model_dump(exclude={"reasoning"})
+        payload = body.model_dump(exclude={"reasoning", "json_output"})
+        if body.json_output:
+            payload["response_format"] = {"type": "json_object"}
         if body.reasoning is not None:
             payload.update(
                 chat_template_kwargs={"enable_thinking": body.reasoning.enabled},
