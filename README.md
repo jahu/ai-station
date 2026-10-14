@@ -334,3 +334,9 @@ See [conversational media](docs/conversational-media.md).
 Conversation Stop cancels the complete active Task, including project preparation
 and later validation. Shared model startup is preserved for other active
 conversations; stopping one conversation never stops their pending inference.
+
+In an existing Work conversation, **Choose coding task** searches saved Coding
+sessions by task/project name. Select one to continue in its preserved worktree
+with the same agent and model. Selection starts nothing; the next Send continues
+that task. **General Work** detaches this choice. Existing Coding history stays
+available, and an external agent still requires explicit sharing consent.

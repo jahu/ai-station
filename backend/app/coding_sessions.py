@@ -53,6 +53,7 @@ def summary(session, task, runs):
 def sessions(
     session: DB,
     project_id: UUID | None = None,
+    q: str = Query("", max_length=200),
     limit: int = Query(30, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
@@ -64,6 +65,13 @@ def sessions(
     )
     if project_id is not None:
         statement = statement.where(Task.project_id == str(project_id))
+    if q.strip():
+        statement = statement.outerjoin(Project, Project.id == Task.project_id).where(
+            or_(
+                Task.title.contains(q.strip(), autoescape=True),
+                Project.name.contains(q.strip(), autoescape=True),
+            )
+        )
     tasks = session.scalars(statement.order_by(Task.updated_at.desc(), Task.id).limit(limit).offset(offset))
     result = []
     for task in tasks:
@@ -97,7 +105,7 @@ def followup(task_id: UUID, body: Followup, session: DB):
     return enqueue_followup(session, task_id, body)
 
 
-def enqueue_followup(session, task_id, body, *, commit=True):
+def enqueue_followup(session, task_id, body, *, commit=True, conversation_id=None):
     task, runs = history(session, task_id)
     from app.task_control import lock_task
 
@@ -174,6 +182,7 @@ def enqueue_followup(session, task_id, body, *, commit=True):
         execution_target="host",
         project_id=task.project_id,
         parent_run_id=source.id,
+        conversation_id=conversation_id,
         permissions=list(source.effective_permissions),
         retry_class="inspect",
         parameters=parameters,

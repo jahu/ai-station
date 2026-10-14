@@ -12,6 +12,7 @@ import {
 import LlamaModels from "./LlamaModels";
 import UnifiedModelPicker from "./UnifiedModelPicker";
 import ChatThinking from "./ChatThinking";
+import ChatWorkPicker from "./ChatWorkPicker";
 import { useThinking } from "./chat-thinking";
 import NewChat from "./NewChat";
 import ConversationComposer from "./ConversationComposer";
@@ -108,6 +109,7 @@ type WorkContext = {
   expected_run_id: string;
   executor: string;
   model: string;
+  model_label?: string;
   external: boolean;
   ready: boolean;
   reason: string | null;
@@ -886,6 +888,7 @@ function ConversationView({
   const [generalTask, setGeneralTask] = useState<string | null>(() =>
     readWorkChoice(generalChoiceKey),
   );
+  const [selectingWork, setSelectingWork] = useState(false);
   const [externalConsentFor, setExternalConsentFor] = useState("");
   const context = conversation.work_context;
   const continuing =
@@ -971,7 +974,7 @@ function ConversationView({
               },
             }
           : {}),
-        ...(thinking.enabled
+        ...(thinking.enabled && !continuing
           ? { reasoning: { enabled: true, budget: 256 } }
           : {}),
         ...(assistantTurn ? options : {}),
@@ -1032,33 +1035,44 @@ function ConversationView({
     send.isPending ||
     regenerate.isPending ||
     readingAttachment ||
-    settings.isPending;
+    settings.isPending ||
+    selectingWork;
   const messages = conversation.messages;
   return (
     <div className="conversation-shell">
       <div className="chat-heading">
         <div>
           <h2>{conversation.title}</h2>
-          <UnifiedModelPicker
-            providerKey={conversation.provider}
-            modelKey={conversation.model}
-            label={conversation.model_label}
-            location={
-              conversation.provider_location as "local" | "external" | undefined
-            }
-            busy={busy}
-            onSelect={(choice) =>
-              settings.mutate({
-                model: choice.model_key,
-                provider: choice.provider_key,
-                execution_mode: conversation.execution_mode,
-                title: conversation.title,
-                system_prompt: conversation.system_prompt,
-                temperature: conversation.temperature,
-                max_tokens: conversation.max_tokens,
-              })
-            }
-          />
+          {continuing && context ? (
+            <p className="muted">
+              Task model:{" "}
+              <strong>
+                {context.model_label || context.model || "Provider default"}
+              </strong>
+            </p>
+          ) : (
+            <UnifiedModelPicker
+              providerKey={conversation.provider}
+              modelKey={conversation.model}
+              label={conversation.model_label}
+              location={
+                conversation.provider_location as
+                  "local" | "external" | undefined
+              }
+              busy={busy}
+              onSelect={(choice) =>
+                settings.mutate({
+                  model: choice.model_key,
+                  provider: choice.provider_key,
+                  execution_mode: conversation.execution_mode,
+                  title: conversation.title,
+                  system_prompt: conversation.system_prompt,
+                  temperature: conversation.temperature,
+                  max_tokens: conversation.max_tokens,
+                })
+              }
+            />
+          )}
         </div>
         {conversation.active_run && (
           <Link to={`/runs/${conversation.active_run.id}`}>
@@ -1068,12 +1082,31 @@ function ConversationView({
           </Link>
         )}
       </div>
-      {thinking.available && (
+      {thinking.available && !continuing && (
         <ChatThinking
           value={thinking.enabled}
           busy={busy}
           blocked={thinking.blocked}
           onChange={thinking.onChange}
+        />
+      )}
+      {turnMode === "work" && (
+        <ChatWorkPicker
+          conversationId={conversation.id}
+          settingsVersion={conversation.settings_version ?? 1}
+          selectedTask={context?.task_id}
+          busy={busy}
+          onBusyChange={setSelectingWork}
+          onSelected={() => {
+            setGeneralTask(null);
+            saveWorkChoice(generalChoiceKey, null);
+            setExternalConsentFor("");
+            setOptions((previous) => ({
+              ...emptyOptions,
+              image_artifact_ids: previous.image_artifact_ids,
+              audio_artifact_id: previous.audio_artifact_id,
+            }));
+          }}
         />
       )}
       {context && turnMode === "work" && (
@@ -1083,7 +1116,7 @@ function ConversationView({
               <strong>{context.project_name}</strong>
               <p className="muted">
                 {context.executor === "local" ? "Local AI" : context.executor} ·{" "}
-                {context.model || "Provider default"} ·{" "}
+                {context.model_label || context.model || "Provider default"} ·{" "}
                 {continuing ? "Continuing this task" : "General Work"}
               </p>
             </div>

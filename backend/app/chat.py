@@ -7,7 +7,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictBool, model_validator
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, or_, select, update
 from sqlalchemy.orm import Session
 
 from app.assistant import (
@@ -30,7 +30,18 @@ from app.conversation_summary import (
     uncovered_text,
 )
 from app.db import session_scope, utcnow
-from app.models import ChatTurnRequest, Conversation, MemoryEntry, Message, ModelFile, Run, Setting, Task
+from app.models import (
+    ChatTurnRequest,
+    ChatWorkContext,
+    Conversation,
+    MemoryEntry,
+    Message,
+    ModelFile,
+    Run,
+    Setting,
+    Task,
+    Worktree,
+)
 from app.runs import create_run, create_task, run_dict
 from app.serialize import conversation_dict, iso, message_dict
 from app.state import TERMINAL
@@ -234,13 +245,82 @@ def detail(conversation_id: UUID, session: DB):
     }
 
 
+class WorkSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    task_id: UUID | None
+    expected_run_id: UUID | None = None
+    expected_settings_version: int = Field(ge=1)
+
+    @model_validator(mode="after")
+    def matching_source(self):
+        if (self.task_id is None) != (self.expected_run_id is None):
+            raise ValueError("Choose a coding task with its current proposal")
+        return self
+
+
+@router.put("/conversations/{conversation_id}/work-context")
+def choose_work_task(conversation_id: UUID, body: WorkSelection, session: DB):
+    from app.coding_sessions import PROPOSALS
+    from app.work_context import context_of
+
+    row = conversation(session, conversation_id)
+    ensure_idle(session, row.id)
+    if body.task_id:
+        task = session.get(Task, str(body.task_id))
+        if task is None:
+            raise HTTPException(404, "Coding task not found")
+        source = session.scalar(
+            select(Run)
+            .where(Run.task_id == task.id, Run.executor_type.in_(PROPOSALS))
+            .order_by(Run.created_at.desc(), Run.id.desc())
+            .limit(1)
+        )
+        if not source or source.id != str(body.expected_run_id):
+            raise HTTPException(409, "Coding task changed; reload before selecting")
+        worktree = session.get(Worktree, source.parameters.get("worktree_id", ""))
+        if (
+            not worktree
+            or not worktree.owned
+            or worktree.removed_at is not None
+            or worktree.project_id != task.project_id
+        ):
+            raise HTTPException(409, "The owned task workspace is unavailable")
+        selected = context_of(session, source)
+    else:
+        selected = None
+    result = session.execute(
+        update(Conversation)
+        .where(Conversation.id == row.id, Conversation.settings_version == body.expected_settings_version)
+        .values(settings_version=Conversation.settings_version + 1, updated_at=utcnow())
+    )
+    if result.rowcount != 1:
+        raise HTTPException(409, "Conversation settings changed; reload before selecting")
+    binding = session.get(ChatWorkContext, row.id)
+    if binding is None:
+        binding = ChatWorkContext(conversation_id=row.id)
+        session.add(binding)
+    binding.task_id = str(body.task_id) if body.task_id else None
+    binding.selected_at = utcnow()
+    session.commit()
+    session.refresh(row)
+    return {"work_context": selected, "settings_version": row.settings_version}
+
+
 @router.post("/conversations/{conversation_id}/tasks/{task_id}/cancel")
 def stop_conversation_task(conversation_id: UUID, task_id: UUID, session: DB):
     from app.task_control import cancel_task
 
     row = conversation(session, conversation_id)
     task = session.get(Task, str(task_id))
-    if task is None or task.conversation_id != row.id:
+    binding = session.get(ChatWorkContext, row.id)
+    if task is None or not (
+        task.conversation_id == row.id
+        or binding is not None
+        and binding.task_id == task.id
+        or session.scalar(
+            select(Run.id).where(Run.task_id == task.id, Run.conversation_id == row.id).limit(1)
+        )
+    ):
         raise HTTPException(404, "Task not found in this conversation")
     result = cancel_task(session, task)
     session.commit()

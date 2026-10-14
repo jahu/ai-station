@@ -165,3 +165,12 @@ already depends on it. The stopped conversation's consumers are canceled while
 the other conversation keeps its model prerequisite. Newly submitted consumers
 cannot attach to a startup already being canceled. Native cancellation and
 process inspection continue through the existing worker/Runner contracts.
+
+Explicit Work task selection persists in `chat_work_contexts` (migration 0022).
+Selection checks the latest proposal and owned workspace, and increments the
+conversation settings version to reject stale sends. General Work stores an
+explicit empty selection. A follow-up is still an ordinary coding Run on that
+Task/worktree, with its initiating conversation recorded on the Run. Sending
+checks the proposal version, project activity and applicable external consent.
+Task Stop accepts a selected Task or a historical Run belonging to the
+conversation, preserving stale-stop scoping after selection changes.
