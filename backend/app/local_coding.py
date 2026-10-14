@@ -161,6 +161,10 @@ def enqueue_local_repair(session, source_id):
 
 
 def queue_automatic_repair(session, validation):
+    from app.task_control import stopped_task
+
+    if stopped_task(session, validation.task):
+        return
     if validation.status != "failed" or validation.error_type != "ValidationFailed":
         return
     source = session.get(Run, validation.parent_run_id) if validation.parent_run_id else None

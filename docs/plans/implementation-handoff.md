@@ -32,7 +32,9 @@ those findings are not proof that delivered APIs/components remain absent.
 
 ## Next implementation
 
-1. **Contextual Work:** show the current project/task clearly, continue an existing
+1. **Contextual Work foundation is delivered:** [same-task continuation](../contextual-work.md)
+   now shows project/executor/model and reuses owned worktrees with task-wide Stop.
+   Next, extend explicit scope selection beyond the current conversation. Show the current project/task clearly, continue an existing
    owned worktree from subsequent prompts, allow explicit scope changes, and retain
    approvals/validation results. Do not infer permissions from conversation mode.
    Replace the known project-build cancellation chain with transactionally bounded

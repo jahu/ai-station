@@ -63,6 +63,15 @@ def create_run(
     parent_run_id: str | None = None,
     metadata: dict | None = None,
 ) -> Run:
+    from app.task_control import lock_task
+
+    lock_task(session, task)
+    if task.metadata_json.get("stop_requested_at"):
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            409, "This Task was stopped. Continue it with a new prompt before creating more work"
+        )
     now = utcnow()
     run = Run(
         task_id=task.id,

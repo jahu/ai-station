@@ -204,6 +204,7 @@ def test_legacy_receipt_replays_after_optional_scope_schema_extension(local):
         legacy = TurnBody.model_validate(body).model_dump(mode="json")
         legacy.pop("expected_provider_version")
         legacy.pop("reasoning")
+        legacy.pop("continuation")
         legacy.pop("new_project")
         with session_factory()() as session:
             receipt = session.get(ChatTurnRequest, body["client_request_id"])

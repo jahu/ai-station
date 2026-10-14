@@ -94,6 +94,14 @@ class Followup(BaseModel):
 
 @router.post("/sessions/{task_id}/messages", status_code=202)
 def followup(task_id: UUID, body: Followup, session: DB):
+    return enqueue_followup(session, task_id, body)
+
+
+def enqueue_followup(session, task_id, body, *, commit=True):
+    task, runs = history(session, task_id)
+    from app.task_control import lock_task
+
+    lock_task(session, task)
     task, runs = history(session, task_id)
     source = next((r for r in reversed(runs) if r.executor_type in PROPOSALS), None)
     if not source or source.id != str(body.expected_run_id):
@@ -121,6 +129,9 @@ def followup(task_id: UUID, body: Followup, session: DB):
         raise HTTPException(
             422, "Confirm sharing this turn and relevant project source with the selected external provider"
         )
+    task.metadata_json = {
+        key: value for key, value in task.metadata_json.items() if key != "stop_requested_at"
+    }
     previous = [
         {
             "instruction": r.parameters.get(
@@ -183,5 +194,16 @@ def followup(task_id: UUID, body: Followup, session: DB):
     }
     task.updated_at = utcnow()
     refresh_expiry(session, worktree_id=worktree.id)
-    session.commit()
+    if commit:
+        session.commit()
     return redact_obj(run_dict(run))
+
+
+@router.post("/sessions/{task_id}/cancel")
+def cancel_session(task_id: UUID, session: DB):
+    from app.task_control import cancel_task
+
+    task, _ = history(session, task_id)
+    result = cancel_task(session, task)
+    session.commit()
+    return result
