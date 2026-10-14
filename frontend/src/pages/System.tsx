@@ -1,11 +1,7 @@
-import ChatProviders from "./ChatProviders";
-import Connectors from "./Connectors";
-import Maintenance from "./Maintenance";
-import OperatorAccess from "./OperatorAccess";
 import RuntimeObservations from "./RuntimeObservations";
 import GpuProcesses from "./GpuProcesses";
 import { useId, type KeyboardEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw, ShieldCheck } from "lucide-react";
 import {
@@ -106,29 +102,18 @@ function CheckCards({ checks }: { checks: Diagnostic[] }) {
 export default function System() {
   const hardware = useHardware();
   const status = useStatus();
-  const diagnostics = useQuery({
-    queryKey: ["diagnostics"],
-    queryFn: () => api<{ checks: Diagnostic[] }>("/system/diagnostics"),
-    staleTime: 60000,
-  });
   return (
     <>
       <PageTitle
-        eyebrow="WORKSTATION / DIAGNOSTICS"
-        title="Know what’s available."
+        eyebrow="WORKSTATION / SYSTEM"
+        title="Workstation status"
         action={
-          <Button
-            variant="secondary"
-            disabled={diagnostics.isFetching}
-            onClick={() => void diagnostics.refetch()}
-          >
-            <RefreshCw size={15} />
-            Refresh checks
+          <Button asChild variant="secondary">
+            <Link to="/system/diagnostics">Integration diagnostics</Link>
           </Button>
         }
       >
-        Read-only checks of your host, execution tools, and configured
-        resources.
+        Live hardware, owned execution and observed runtimes.
       </PageTitle>
       <div className="info-banner">
         <ShieldCheck size={20} />
@@ -140,9 +125,7 @@ export default function System() {
           </p>
         </div>
       </div>
-      <ErrorNotice
-        error={hardware.error ?? diagnostics.error ?? status.error}
-      />
+      <ErrorNotice error={hardware.error ?? status.error} />
       <div className="metrics-grid">
         <section className="panel metric">
           <span>CPU temperature</span>
@@ -168,21 +151,10 @@ export default function System() {
         </section>
       </div>
       <GpuProcesses gpus={hardware.data?.gpus ?? []} />
-      <section className="panel">
-        <div className="panel-heading">
-          <h2>Integration checks</h2>
-          <span className="muted">Actual host state</span>
-        </div>
-        {diagnostics.isPending ? (
-          <Loading />
-        ) : diagnostics.data?.checks.length ? (
-          <CheckCards checks={diagnostics.data.checks} />
-        ) : null}
-      </section>
-      <OperatorAccess />
-      <Maintenance />
-      <ChatProviders />
-      <Connectors />
+      <p className="muted">
+        Configure models, providers and operator access in{" "}
+        <Link to="/settings">Settings</Link>.
+      </p>
       <RuntimeObservations />
       <section className="panel mt">
         <div className="panel-heading">
@@ -195,6 +167,56 @@ export default function System() {
           <p className="muted">No worker has registered yet.</p>
         )}
         <LeaseHealth status={status.data} />
+      </section>
+    </>
+  );
+}
+
+export function SystemRoute() {
+  const location = useLocation();
+  const legacy = new URLSearchParams(location.search).get("focus");
+  if (legacy === "maintenance")
+    return <Navigate replace to="/settings/maintenance" />;
+  return <System />;
+}
+
+export function SystemDiagnostics() {
+  const diagnostics = useQuery({
+    queryKey: ["diagnostics"],
+    queryFn: () => api<{ checks: Diagnostic[] }>("/system/diagnostics"),
+    staleTime: 60000,
+  });
+  return (
+    <>
+      <PageTitle
+        eyebrow="WORKSTATION / DIAGNOSTICS"
+        title="Integration diagnostics"
+        action={
+          <Button
+            variant="secondary"
+            disabled={diagnostics.isFetching}
+            onClick={() => void diagnostics.refetch()}
+          >
+            <RefreshCw size={15} />
+            Refresh checks
+          </Button>
+        }
+      >
+        Actual installation checks.{" "}
+        <Link to="/system">Back to workstation status</Link>
+      </PageTitle>
+      <ErrorNotice error={diagnostics.error} />
+      <section className="panel">
+        <div className="panel-heading">
+          <h2>Integration checks</h2>
+        </div>
+        {diagnostics.isPending ? (
+          <Loading />
+        ) : diagnostics.data?.checks.length ? (
+          <CheckCards checks={diagnostics.data.checks} />
+        ) : (
+          <p className="muted">No checks are available.</p>
+        )}
       </section>
     </>
   );

@@ -48,7 +48,8 @@ import Dashboard from "./pages/Dashboard";
 import { RunDetail, Runs } from "./pages/Runs";
 import ImagesWorkspace from "./pages/Images";
 import { Library, ArtifactDetail } from "./pages/Library";
-import System from "./pages/System";
+import { SystemRoute, SystemDiagnostics } from "./pages/System";
+import Settings from "./pages/Settings";
 import { Projects, NewProject, ProjectDetail } from "./pages/Projects";
 import type { OperatorStatus } from "./pages/OperatorLogin";
 
@@ -95,11 +96,7 @@ const destinations = [
 const actions: [string, string, string][] = [
   ["/home", "Home activity", "Inspect, stop or acknowledge"],
   ["/runs", "Active runs", "Open the queue"],
-  [
-    "/system?focus=maintenance",
-    "Backup and upgrade readiness",
-    "SQLite backup",
-  ],
+  ["/settings/maintenance", "Backup and upgrade readiness", "SQLite backup"],
 ];
 
 function Unavailable() {
@@ -306,8 +303,10 @@ export default function App() {
             <Route path="/images" element={<ImagesWorkspace />} />
             <Route path="/library" element={<Library />} />
             <Route path="/library/:id" element={<ArtifactDetail />} />
-            <Route path="/system" element={<System />} />
-            <Route path="/settings" element={<System />} />
+            <Route path="/system" element={<SystemRoute />} />
+            <Route path="/system/diagnostics" element={<SystemDiagnostics />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/settings/:section" element={<Settings />} />
             <Route path="/models" element={<Models />} />
             <Route path="/models/:id" element={<ModelDetail />} />
             <Route path="/agents" element={<Agents />} />

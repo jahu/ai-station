@@ -717,6 +717,11 @@ function ConversationView({
     queryFn: () => api<Provider>(`/chat/providers/${conversation.provider}`),
     retry: false,
   });
+  const preferences = useQuery({
+    queryKey: ["chat-preferences"],
+    queryFn: () =>
+      api<{ send_key: "enter" | "ctrl-enter" }>("/chat/preferences"),
+  });
   const models = selected.data?.models ?? [];
   const [draft, setDraft] = useState("");
   const [options, setOptions] = useState(emptyOptions);
@@ -977,7 +982,15 @@ function ConversationView({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+              if (
+                e.key === "Enter" &&
+                !e.nativeEvent.isComposing &&
+                !e.shiftKey &&
+                !e.altKey &&
+                (preferences.data?.send_key !== "ctrl-enter" ||
+                  e.ctrlKey ||
+                  e.metaKey)
+              ) {
                 e.preventDefault();
                 if (canSend && !busy) send.mutate();
               }
