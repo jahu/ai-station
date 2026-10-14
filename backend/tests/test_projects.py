@@ -1187,13 +1187,150 @@ def test_cursor_cancellation_never_queues_validation_or_changes_source(
         ).read_text() == "Original repository\n"
 
 
-def prepared_review(client, repository):
+def prepared_review(client, repository, **options):
     project = register(client, repository, test_commands=[["true"]])
-    preparation = client.post("/api/coding/cursor", json=coding_request(project)).json()
+    preparation = client.post("/api/coding/cursor", json=coding_request(project, **options)).json()
     with session_factory()() as session:
         tick(session, "commit-prepare")
         source_id = tick(session, "commit-proposal")
     return project, preparation, client.get(f"/api/runs/{source_id}").json()
+
+
+def set_cursor_deletion(fake_cursor):
+    import json
+
+    binary = fake_cursor.read_text()
+    needle = "result={'summary':'Updated selected source','files':"
+    start = binary.index(needle)
+    end = binary.index("\n", start)
+    deletion = {
+        "summary": "Remove obsolete README",
+        "files": [
+            {"path": "README.md", "delete": True},
+            {"path": "new.py", "content": "print(42)\n"},
+        ],
+    }
+    fake_cursor.write_text(
+        binary[:start] + "result=json.loads(" + repr(json.dumps(deletion)) + ")" + binary[end:]
+    )
+
+
+@pytest.mark.parametrize("change", [None, "reappeared", "symlink"])
+def test_selected_deletion_review_and_commit_preserve_original_checkout(
+    repository,
+    owned_runner,
+    fake_cursor,
+    change,
+):
+    set_cursor_deletion(fake_cursor)
+    original_index = (repository / ".git/index").read_bytes()
+    original_head = subprocess.check_output(
+        ["git", "-C", str(repository), "rev-parse", "HEAD"], text=True
+    ).strip()
+    with TestClient(app) as client:
+        project, preparation, source = prepared_review(client, repository)
+        assert source["status"] == "succeeded", source
+        review = source["metadata"]["coding_review"]
+        removed = next(item for item in review["files"] if item["path"] == "README.md")
+        assert removed["operation"] == "delete" and removed["after_sha256"] is None
+        assert removed["insertions"] == 0 and removed["deletions"] == 1
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        path = owned_runner.data_dir / worktree["relative_path"]
+        assert not (path / "README.md").exists()
+        with session_factory()() as session:
+            tick(session, "deletion-validation")
+        if change == "reappeared":
+            (path / "README.md").write_text("Human replacement\n")
+        elif change == "symlink":
+            (path / "README.md").symlink_to(repository / "README.md")
+        (path / "unreviewed.txt").write_text("Preserve unrelated work\n")
+        response = client.post(
+            f"/api/coding/runs/{source['id']}/commit",
+            json={
+                "message": "Accept reviewed removal",
+                "reviewed": True,
+            },
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "deletion-commit")
+        result = client.get(f"/api/runs/{response.json()['id']}").json()
+        assert result["status"] == ("failed" if change else "succeeded"), result
+        head = subprocess.check_output(["git", "-C", str(path), "rev-parse", "HEAD"], text=True).strip()
+        if change:
+            assert head == original_head
+            assert (path / "README.md").exists()
+        else:
+            assert head == result["metadata"]["git_commit"]["commit"]
+            assert (
+                subprocess.check_output(
+                    ["git", "-C", str(path), "ls-tree", "HEAD", "--", "README.md", "unreviewed.txt"],
+                    text=True,
+                )
+                == ""
+            )
+            assert (
+                subprocess.check_output(["git", "-C", str(path), "show", "HEAD:new.py"], text=True)
+                == "print(42)\n"
+            )
+            assert set(result["metadata"]["git_commit"]["files"]) == {"README.md", "new.py"}
+        assert (repository / "README.md").read_text() == "Original repository\n"
+        assert (repository / ".git/index").read_bytes() == original_index
+        assert (
+            subprocess.check_output(["git", "-C", str(repository), "rev-parse", "HEAD"], text=True).strip()
+            == original_head
+        )
+
+
+def test_coding_followup_keeps_reviewed_deletion_and_executable_mode(repository, owned_runner, fake_cursor):
+    set_cursor_deletion(fake_cursor)
+    (repository / "README.md").chmod(0o755)
+    subprocess.run(["git", "-C", str(repository), "add", "README.md"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repository), "commit", "-m", "Executable source"], check=True, capture_output=True
+    )
+    original_index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project, preparation, source = prepared_review(client, repository, files=[], explore=True)
+        with session_factory()() as session:
+            tick(session, "first-validate")
+        response = client.post(
+            f"/api/coding/sessions/{preparation['task_id']}/messages",
+            json={
+                "prompt": "SECOND_TURN add another file",
+                "expected_run_id": source["id"],
+                "external_ai": True,
+            },
+        )
+        assert response.status_code == 202, response.text
+        second_id = response.json()["id"]
+        with session_factory()() as session:
+            tick(session, "followup")
+            tick(session, "followup-validate")
+        second = client.get(f"/api/runs/{second_id}").json()
+        assert second["status"] == "succeeded", second
+        files = second["metadata"]["coding_review"]["files"]
+        assert {item["path"] for item in files} == {"README.md", "new.py", "more.py"}
+        removed = next(item for item in files if item["path"] == "README.md")
+        assert removed["operation"] == "delete" and removed["after_sha256"] is None
+        assert "deleted file mode 100755" in removed["diff"]
+        accepted = client.post(
+            f"/api/coding/runs/{second_id}/commit", json={"reviewed": True, "message": "Both turns"}
+        )
+        assert accepted.status_code == 202, accepted.text
+        with session_factory()() as session:
+            tick(session, "accept-followup")
+        result = client.get(f"/api/runs/{accepted.json()['id']}").json()
+        assert result["status"] == "succeeded", result
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        path = owned_runner.data_dir / worktree["relative_path"]
+        assert (
+            subprocess.check_output(["git", "-C", str(path), "ls-tree", "HEAD", "--", "README.md"], text=True)
+            == ""
+        )
+        assert (repository / "README.md").read_text() == "Original repository\n"
+        assert (repository / "README.md").stat().st_mode & 0o111
+        assert (repository / ".git/index").read_bytes() == original_index
 
 
 def test_reviewed_commit_preserves_checkout_hooks_and_unreviewed_files(repository, owned_runner, fake_cursor):
@@ -1884,6 +2021,41 @@ def test_local_repair_preserves_scope_revalidates_and_commits_cumulative_diff(
     assert (repository / "README.md").read_text() == "Original repository\n"
     assert not (repository / "new.py").exists()
     assert (repository / ".git/index").read_bytes() == index
+
+
+def test_local_repair_rejects_new_deletions_before_changing_any_source(
+    repository,
+    owned_runner,
+    local_coding_bridge,
+    validation_sandbox,
+):
+    with TestClient(app) as client:
+        project = register(client, repository, test_commands=[["false"]])
+        source_id = prepare_local_coding(client, project)
+        with session_factory()() as session:
+            tick(session, "source-proposal")
+            tick(session, "failed-validation")
+        source = client.get(f"/api/runs/{source_id}").json()
+        assert client.get(f"/api/runs/{source['metadata']['validation_run_id']}").json()["status"] == "failed"
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        path = owned_runner.data_dir / worktree["relative_path"]
+        before = {name: (path / name).read_bytes() for name in ("README.md", "new.py")}
+        local_coding_bridge["proposal"] = {
+            "summary": "Invalid repair",
+            "files": [
+                {"path": "new.py", "content": "changed\n"},
+                {"path": "README.md", "delete": True},
+            ],
+        }
+        response = client.post(f"/api/coding/runs/{source_id}/repair")
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "reject-destructive-repair")
+        result = client.get(f"/api/runs/{response.json()['id']}").json()
+        assert result["status"] == "failed", result
+        assert all((path / name).read_bytes() == data for name, data in before.items())
+        assert "coding_review" not in result["metadata"] and "validation_run_id" not in result["metadata"]
+        assert (repository / "README.md").read_text() == "Original repository\n"
 
 
 @pytest.mark.parametrize("budget,succeed", [(0, False), (1, False), (2, False), (2, True)])

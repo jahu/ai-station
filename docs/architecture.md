@@ -47,6 +47,11 @@ Replacing containers does not drop the database, artifacts, memory, or run histo
 
 ## Execution
 
+Coding providers share the [selected source removal](coding-file-removal.md)
+contract alongside checked writes and snippet replacements. Removed paths retain
+source hashes and reversible diff artifacts; follow-ups and reviewed commits use
+the same task/worktree boundary.
+
 Almost every action is a **Task** that produces one or more **Runs**. A Run is performed by an **Executor** on an **Execution Target** (`host` or `container`; `remote-node` is reserved). The worker is the only component that executes runs. HTTP handlers enqueue work and stream stored events.
 
 The worker container supervises bounded independent process slots (three by

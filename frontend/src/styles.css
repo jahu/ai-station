@@ -4019,6 +4019,20 @@ section:has(> .memory-grid) > .dashboard-note {
   background: rgba(185, 245, 139, 0.08);
   color: var(--text);
 }
+.coding-review-file-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.coding-review-file-name .mono {
+  overflow-wrap: anywhere;
+}
+.coding-review-file-counts {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
 .coding-review-diff {
   max-height: 440px;
   overflow: auto;

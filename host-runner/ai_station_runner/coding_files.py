@@ -81,13 +81,17 @@ def parse_proposal(text: str, selected: list[dict]) -> dict:
             raise ValueError("Coding result targets an unselected or duplicate path")
         seen.add(item["path"])
         files.append({"path": item["path"], "content": resolve_content(allowed[item["path"]], item)})
-    if sum(len(item["content"].encode()) for item in files) > MAX_TOTAL:
+    if sum(len((item["content"] or "").encode()) for item in files) > MAX_TOTAL:
         raise ValueError("Combined replacements exceed 64,000 bytes")
     return {"summary": value["summary"], "files": files}
 
 
-def resolve_content(original: dict, item: dict) -> str:
+def resolve_content(original: dict, item: dict) -> str | None:
     keys = set(item)
+    if keys == {"path", "delete"}:
+        if item["delete"] is not True or original["content"] is None:
+            raise ValueError("Deletion requires an existing selected file and delete=true")
+        return None
     if keys == {"path", "content"}:
         content = item["content"]
         if not isinstance(content, str) or "\0" in content or len(content.encode()) > MAX_FILE:
@@ -133,6 +137,10 @@ def apply_proposal(workspace: Path, selected: list[dict], proposal: dict) -> dic
         if original["content"] == item["content"]:
             continue
         path = selected_path(workspace, item["path"])
+        if item["content"] is None:
+            path.unlink()
+            changes.append(describe_change(original, item))
+            continue
         path.parent.mkdir(parents=True, exist_ok=True)
         descriptor, temporary = tempfile.mkstemp(prefix=".ai-station-edit-", dir=path.parent)
         try:
@@ -164,9 +172,11 @@ def proposal_prompt(*, prompt: str, selected: list[dict], guidance: str, referen
         'with keys "summary" (string, <=4000 characters) and "files" (array of one to ten items). '
         'Each item is either {"path": string, "content": complete new UTF-8 text} or '
         '{"path": string, "replacements": [{"old": unique exact substring, "new": replacement text}]}. '
+        'To remove an existing selected file, use {"path": string, "delete": true}. '
+        "Delete a file only when the task requires it; directories and unselected paths cannot be removed. "
         "Use replacements on existing files when a unique snippet is enough; use complete content for new files or larger rewrites. "
         "Each old string must occur exactly once after earlier replacements in that file. At most twenty replacements per file. "
-        "No markdown, file deletion, commands or additional keys. Unchanged files may be omitted. "
+        "No markdown, commands or additional keys. Unchanged files may be omitted. "
         "Maximum ten files, 32000 bytes each after application, 64000 bytes total. Existing files will be checked for concurrent changes before application. "
         + extra
         + "\n"
@@ -179,13 +189,14 @@ def proposal_prompt(*, prompt: str, selected: list[dict], guidance: str, referen
 
 def describe_change(original: dict, item: dict) -> dict:
     old = (original["content"] or "").splitlines(keepends=True)
-    new = item["content"].splitlines(keepends=True)
+    deleted = item["content"] is None
+    new = (item["content"] or "").splitlines(keepends=True)
     lines = list(
         difflib.unified_diff(
             old,
             new,
             fromfile=json.dumps("a/" + item["path"]) if original["content"] is not None else "/dev/null",
-            tofile=json.dumps("b/" + item["path"]),
+            tofile="/dev/null" if deleted else json.dumps("b/" + item["path"]),
         )
     )
     patch = "".join(
@@ -194,11 +205,14 @@ def describe_change(original: dict, item: dict) -> dict:
     header = f"diff --git {json.dumps('a/' + item['path'])} {json.dumps('b/' + item['path'])}\n"
     if original["content"] is None:
         header += f"new file mode {0o100000 | original['mode']:o}\n"
+    elif deleted:
+        header += f"deleted file mode {0o100000 | original['mode']:o}\n"
     patch = header + patch
     return {
         "path": item["path"],
         "before_sha256": original["sha256"],
-        "after_sha256": hashlib.sha256(item["content"].encode()).hexdigest(),
+        "after_sha256": None if deleted else hashlib.sha256(item["content"].encode()).hexdigest(),
+        **({"operation": "delete"} if deleted else {}),
         "diff": patch,
         "insertions": sum(line.startswith("+") for line in lines[2:]),
         "deletions": sum(line.startswith("-") for line in lines[2:]),
