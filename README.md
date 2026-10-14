@@ -340,3 +340,9 @@ sessions by task/project name. Select one to continue in its preserved worktree
 with the same agent and model. Selection starts nothing; the next Send continues
 that task. **General Work** detaches this choice. Existing Coding history stays
 available, and an external agent still requires explicit sharing consent.
+
+Local Coding requests constrained JSON-object inference for its proposals and
+source exploration. The private bridge accepts only a strict boolean for this
+format; it does not expose arbitrary provider options or schemas. Complete stream
+termination, selected-path checks and source hashes remain required before files
+can change. Malformed output reports that no proposal was applied.

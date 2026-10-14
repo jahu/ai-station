@@ -44,6 +44,7 @@ def collect_completion(body, message, *, max_tokens=2048):
         "temperature": 0.1,
         "max_tokens": max_tokens,
         "stream": True,
+        "json_output": True,
     }
     content, buffer, size = [], b"", 0
     done, finished = False, False

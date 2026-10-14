@@ -174,3 +174,12 @@ Task/worktree, with its initiating conversation recorded on the Run. Sending
 checks the proposal version, project activity and applicable external consent.
 Task Stop accepts a selected Task or a historical Run belonging to the
 conversation, preserving stale-stop scoping after selection changes.
+
+Local coding and source exploration require a complete JSON object, not a prose
+answer. The private inference bridge will expose only a strict `json_output`
+boolean that maps to OpenAI-compatible JSON-object output; it will not accept
+arbitrary schemas or model options. Existing path/content/proposal validation and
+confirmed stream completion remain mandatory before any worktree write. Failed
+proposal decoding must clearly report that no files were applied. This fixes the
+unconstrained-output gap observed by the 2026-10-15 real Work follow-up test.
+Upstream support: [llama.cpp JSON response format](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md#post-v1chatcompletions-openai-compatible-chat-completions-api).
