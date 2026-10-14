@@ -56,7 +56,7 @@ it("moves through the search toggle without sending a message", () => {
   const toggle = screen.getByLabelText("Search web_search");
   expect(toggle.tabIndex).toBe(0);
   expect(
-    screen.getByText(/There is no inspectable search-toggle Run/),
+    screen.getByText(/conversation history and attachments stay private/),
   ).toBeTruthy();
   expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("false");
   fireEvent.keyDown(toggle.closest(".web-search-choice-list") as HTMLElement, {

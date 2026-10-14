@@ -483,12 +483,14 @@ export default function AssistantActions({
   busy,
   onUploading,
   sources = [],
+  allowWork = true,
 }: {
   value: AssistantOptions;
   onChange: (value: AssistantOptions) => void;
   busy: boolean;
   onUploading: (uploading: boolean) => void;
   sources?: Run[];
+  allowWork?: boolean;
 }) {
   const [error, setError] = useState<Error | null>(null);
   const imageInput = useRef<HTMLInputElement>(null);
@@ -777,6 +779,7 @@ export default function AssistantActions({
         <ActionChoiceList
           value={value.action}
           disabled={busy}
+          allowWork={allowWork}
           onChange={resetAction}
         />
       </div>

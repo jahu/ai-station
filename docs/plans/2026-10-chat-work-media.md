@@ -1,6 +1,9 @@
 # Conversation-first AI Station: implementation brief for GPT-6.1-Sol
 
-Status: **planned, not implemented**. Decision date: 2026-10-14.
+Status: **in progress**. Decision date: 2026-10-14.
+The [first-send increment](../first-send.md) implements the immediate entry and
+Chat/Work enforcement. Remaining increments below are planned; long media and
+verified reasoning controls are not yet delivered.
 Owner request: a ChatGPT/Claude-like entry experience, visible Chat/Work modes,
 model and supported reasoning controls, distinct System and Settings, and useful
 longer local video/avatar output on the existing workstation. Retain all dedicated

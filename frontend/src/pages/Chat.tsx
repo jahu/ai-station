@@ -4,6 +4,8 @@ import {
   type WebSources,
 } from "./ChatWebSearch";
 import LlamaModels from "./LlamaModels";
+import NewChat from "./NewChat";
+import ChatModeSwitch from "./ChatModeSwitch";
 import type { ChatProviderInfo } from "./ChatProviders";
 import { emptyOptions } from "./assistant-options";
 import AssistantActions, {
@@ -32,7 +34,6 @@ import {
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
 import { useListKeyboard } from "./useListKeyboard";
-import { TurnModeChoiceList } from "./TurnModeChoiceList";
 import {
   ConversationModeChoiceList,
   ConversationProviderChoiceList,
@@ -41,7 +42,8 @@ import {
 
 type Conversation = {
   id: string;
-  execution_mode?: "local" | "orchestrator";
+  execution_mode?: "local" | "orchestrator" | "chat" | "work";
+  settings_version?: number;
   title: string;
   provider: string;
   provider_name?: string;
@@ -185,7 +187,8 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
   const selectedKey =
     providerKey ||
     providers.data?.find((row) => row.builtin)?.key ||
-    providers.data?.[0]?.key ||
+    providers.data?.find((row) => row.location === "local" && row.enabled)
+      ?.key ||
     "";
   const provider = useQuery({
     queryKey: ["chat-provider", selectedKey],
@@ -214,98 +217,53 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
     });
     return () => source.close();
   }, [active?.id, id, cache]);
-  const create = useMutation({
-    mutationFn: (body: unknown) =>
-      api<Conversation>("/chat/conversations", {
-        method: "POST",
-        ...json(body),
-      }),
-    onSuccess: (row) => {
-      void cache.invalidateQueries({ queryKey: ["conversations"] });
-      navigate(`/chat/${row.id}`);
-    },
-  });
   return (
     <>
-      <PageTitle
-        eyebrow="WORKSPACE / CHAT"
-        title={assistant ? "What shall we create?" : "Think it through."}
-      >
-        {assistant
-          ? "One conversation for your workstation. Create images, prepare agents, code in projects and inspect the results here."
-          : "Persistent conversations with your configured local model. Every response has a Run."}
-      </PageTitle>
+      {id && (
+        <PageTitle
+          eyebrow="WORKSPACE / CHAT"
+          title={assistant ? "What shall we create?" : "Think it through."}
+        >
+          {assistant
+            ? "One conversation for your workstation. Create images, prepare agents, code in projects and inspect the results here."
+            : "Persistent conversations with your configured local model. Every response has a Run."}
+        </PageTitle>
+      )}
       <ErrorNotice
         error={
           conversations.error ??
           providers.error ??
           provider.error ??
-          (id ? detail.error : null) ??
-          create.error
+          (id ? detail.error : null)
         }
       />
-      <div className="chat-layout">
-        <ConversationHistory
-          conversations={conversations.data ?? []}
-          currentId={id}
-          newTo={assistant ? "/" : "/chat"}
-          pending={conversations.isPending}
-        />
+      <div className={`chat-layout ${id ? "" : "chat-entry-layout"}`}>
+        {id ? (
+          <ConversationHistory
+            conversations={conversations.data ?? []}
+            currentId={id}
+            newTo={assistant ? "/" : "/chat"}
+            pending={conversations.isPending}
+          />
+        ) : (
+          <details className="chat-entry-history">
+            <summary>Recent conversations</summary>
+            <ConversationHistory
+              conversations={conversations.data ?? []}
+              currentId={id}
+              newTo={assistant ? "/" : "/chat"}
+              pending={conversations.isPending}
+            />
+          </details>
+        )}
         <section className="chat-main panel">
           {!id ? (
-            <div className="content-panel">
-              <h2>Start a conversation</h2>
-              <p className="muted">
-                Pick a model and start talking. You can adjust how this
-                conversation works in Advanced settings.
-              </p>
-              {provider.data && (
-                <>
-                  <p>
-                    <span className="chip">
-                      {provider.data.location.toUpperCase()}
-                    </span>{" "}
-                    <span className="mono">{provider.data.endpoint}</span>
-                  </p>
-                  {provider.data.error && (
-                    <p className="notice">
-                      {provider.data.error}. A configured model name can still
-                      be saved when the provider is local and has no secret.
-                    </p>
-                  )}
-                  {provider.data.secret_source !== "none" &&
-                    !provider.data.secret_present && (
-                      <p className="notice">
-                        The selected provider secret is missing. Chat will fail
-                        closed until it is configured.
-                      </p>
-                    )}
-                  <SettingsForm
-                    key={`${provider.data.key}-${provider.data.default_model}`}
-                    defaults={{
-                      execution_mode: assistant ? "orchestrator" : "local",
-                      title: "New conversation",
-                      provider: provider.data.key,
-                      model:
-                        provider.data.default_model ||
-                        provider.data.models?.[0] ||
-                        "",
-                      system_prompt: "",
-                      temperature: 0.7,
-                      max_tokens: 2048,
-                    }}
-                    providers={providers.data ?? []}
-                    provider={provider.data}
-                    onProviderChange={setProviderKey}
-                    models={provider.data.models ?? []}
-                    pending={create.isPending}
-                    submit={(body) => create.mutate(body)}
-                    label="Create conversation"
-                  />
-                </>
-              )}
-              {provider.isPending && <Loading />}
-            </div>
+            <NewChat
+              providers={providers.data ?? []}
+              provider={provider.data}
+              onProviderChange={setProviderKey}
+              onAccepted={(value) => navigate(`/chat/${value}`)}
+            />
           ) : detail.isPending ? (
             <Loading />
           ) : (
@@ -344,7 +302,10 @@ function SettingsForm({
   const [model, setModel] = useState(defaults.model);
   const [modelPending, setModelPending] = useState(false);
   const [mode, setMode] = useState<SavedChatMode>(
-    defaults.execution_mode ?? "local",
+    defaults.execution_mode === "work" ||
+      defaults.execution_mode === "orchestrator"
+      ? "orchestrator"
+      : "local",
   );
   const localBuiltin = provider?.builtin && provider.location === "local";
   return (
@@ -762,12 +723,14 @@ function ConversationView({
   const [webEnabled, setWebEnabled] = useState(false);
   const [projectSelectionVersion, setProjectSelectionVersion] = useState(0);
   const [webQuery, setWebQuery] = useState("");
-  const orchestrator = conversation.execution_mode === "orchestrator";
-  const [turnMode, setTurnMode] = useState<"auto" | "local" | "orchestrator">(
-    "auto",
+  const orchestrator = ["work", "orchestrator"].includes(
+    conversation.execution_mode ?? "local",
   );
-  const assistantTurn =
-    turnMode === "orchestrator" || (turnMode === "auto" && orchestrator);
+  const [turnMode, setTurnMode] = useState<"chat" | "work">(
+    orchestrator ? "work" : "chat",
+  );
+  const assistantTurn = true;
+  const pendingRequest = useRef<{ body: string; id: string } | null>(null);
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [readingAttachment, setReadingAttachment] = useState(false);
   const [modelPending, setModelPending] = useState(false);
@@ -796,27 +759,38 @@ function ConversationView({
           ? gitReady
           : !!draft.trim();
   const send = useMutation({
-    mutationFn: () =>
-      api<Run>(`/chat/conversations/${conversation.id}/messages`, {
+    mutationFn: () => {
+      const values = {
+        content:
+          draft.trim() ||
+          gitContent ||
+          (options.action === "runtime.load"
+            ? "Load the selected local GGUF"
+            : options.action === "runtime.stop"
+              ? "Unload the selected owned llama.cpp instance"
+              : options.action === "system.inspect"
+                ? "Inspect current workstation telemetry and activity"
+                : ""),
+        conversation_id: conversation.id,
+        expected_settings_version: conversation.settings_version ?? 1,
+        attachments,
+        execution_mode: turnMode,
+        ...(assistantTurn ? options : {}),
+        web_search: { enabled: webEnabled, query: webQuery },
+      };
+      const body = JSON.stringify(values);
+      if (pendingRequest.current?.body !== body)
+        pendingRequest.current = { body, id: crypto.randomUUID() };
+      return api("/chat/turns", {
         method: "POST",
         ...json({
-          content:
-            draft.trim() ||
-            gitContent ||
-            (options.action === "runtime.load"
-              ? "Load the selected local GGUF"
-              : options.action === "runtime.stop"
-                ? "Unload the selected owned llama.cpp instance"
-                : options.action === "system.inspect"
-                  ? "Inspect current workstation telemetry and activity"
-                  : ""),
-          attachments,
-          execution_mode: turnMode,
-          ...(assistantTurn ? options : {}),
-          web_search: { enabled: webEnabled, query: webQuery },
+          ...values,
+          client_request_id: pendingRequest.current.id,
         }),
-      }),
+      });
+    },
     onSuccess: () => {
+      pendingRequest.current = null;
       setDraft("");
       setWebQuery("");
       setAttachments([]);
@@ -942,7 +916,7 @@ function ConversationView({
           conversation.provider_location !== "external"
             ? (project) => {
                 setProjectSelectionVersion((current) => current + 1);
-                setTurnMode("orchestrator");
+                setTurnMode("work");
                 setWebEnabled(false);
                 void cache.invalidateQueries({ queryKey: ["coding-projects"] });
                 void cache.invalidateQueries({ queryKey: ["projects"] });
@@ -1009,31 +983,19 @@ function ConversationView({
               }
             }}
           />
-          <details className="chat-turn-options">
-            <summary>
-              This turn ·{" "}
-              {turnMode === "auto"
-                ? "Conversation default"
-                : turnMode === "local"
-                  ? "Conversation only"
-                  : "Platform assistant"}
-            </summary>
-            <TurnModeChoiceList
-              value={turnMode}
-              orchestrator={orchestrator}
-              disabled={busy}
-              onChange={(next) => {
-                setTurnMode(next);
-                if (next === "local" || (next === "auto" && !orchestrator)) {
-                  setOptions(emptyOptions);
-                }
-              }}
-            />
-          </details>
+          <ChatModeSwitch
+            value={turnMode}
+            disabled={busy}
+            onChange={(next) => {
+              setTurnMode(next);
+              setOptions(emptyOptions);
+            }}
+          />
           {assistantTurn && (
             <AssistantActions
               key={projectSelectionVersion}
               value={options}
+              allowWork={turnMode === "work"}
               sources={messages.flatMap((message) => message.coding_runs ?? [])}
               onChange={(next) => {
                 setOptions(next);
@@ -1119,15 +1081,18 @@ function ConversationView({
             )}
           </div>
         </form>
-        {!!messages.length && !busy && !assistantTurn && (
-          <Button
-            variant="ghost"
-            disabled={regenerate.isPending}
-            onClick={() => regenerate.mutate()}
-          >
-            Regenerate last response
-          </Button>
-        )}
+        {!!messages.length &&
+          !busy &&
+          !messages.filter((m) => m.role === "assistant").at(-1)?.metadata
+            .orchestration && (
+            <Button
+              variant="ghost"
+              disabled={regenerate.isPending}
+              onClick={() => regenerate.mutate()}
+            >
+              Regenerate last response
+            </Button>
+          )}
       </div>
     </>
   );

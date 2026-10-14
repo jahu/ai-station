@@ -2,6 +2,9 @@
 
 ## Planned conversation and long-media milestone — 2026-10-14
 
+The [first-send increment](first-send.md) now adds transactional turn receipts and
+mode enforcement to existing services, with no additional execution architecture.
+
 The [implementation brief](plans/2026-10-chat-work-media.md) specifies the next
 increment, not current functionality. It adds an atomic first-turn entry and
 server-enforced Chat/Work action sets over the existing conversation/Run services;

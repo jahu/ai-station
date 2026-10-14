@@ -2,7 +2,11 @@
 
 ## Planned Chat/Work and long-media boundaries
 
-The [2026-10-14 plan](plans/2026-10-chat-work-media.md) is not implemented yet.
+[First Send](first-send.md) implements explicit Chat/Work turn policy. Chat rejects
+Work scopes before enqueue and restricts routing before child publication. Only
+typed capability requests are accepted; model suggestions cannot promote Chat.
+
+The remaining [2026-10-14 plan](plans/2026-10-chat-work-media.md) is still in progress.
 Chat will allow selected conversational/media tools; Work additionally permits
 scoped project and agent actions. Both are server-enforced allowlists intersected
 with explicit permissions, never a full-access switch. Existing Git review,

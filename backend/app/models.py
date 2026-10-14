@@ -144,11 +144,24 @@ class Conversation(Base):
     temperature: Mapped[float] = mapped_column(Float, default=0.7)
     max_tokens: Mapped[int] = mapped_column(Integer, default=2048)
     execution_mode: Mapped[str] = mapped_column(String(40), default="local")
+    settings_version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     auto_summary: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
     messages: Mapped[list[Message]] = relationship(back_populates="conversation")
+
+
+class ChatTurnRequest(Base):
+    __tablename__ = "chat_turn_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    payload_hash: Mapped[str] = mapped_column(String(64))
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"))
+    user_message_id: Mapped[str] = mapped_column(ForeignKey("messages.id"))
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"))
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"))
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
 
 class Message(Base):
