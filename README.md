@@ -3,6 +3,9 @@
 **Conversation entry:** type immediately at `/` or `/chat`; the first Send creates
 the conversation. Chat supports replies and media tools; Work adds scoped project,
 coding and agent actions. See [first-send contracts](docs/first-send.md).
+Entry and saved conversations share a compact composer; history/tools/settings
+are collapsible and reading earlier messages preserves scroll during updates.
+See [conversation workspace behavior](docs/conversation-shell.md).
 
 In Work, **Create project & build** accepts a name and goal, creates the owned
 repository/environment and queues its first isolated coding Task. Local AI is the

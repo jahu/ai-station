@@ -8,8 +8,10 @@ treat that historical planning-only instruction as a current implementation stop
 The planning PR itself changed no application code, deployment or installed models.
 
 Current delivery: [Create project & build](../assistant-project-build.md) integrates
-the adapted Work WIP. Shared conversation shell/catalog/reasoning and long media
-remain next work. The WIP inventory below records the historical pre-delivery
+the adapted Work WIP. [Shared conversation shell](../conversation-shell.md) now
+unifies composer presentation, collapsed history/tools and scroll preservation.
+Unified catalog/reasoning, draft persistence, contextual Work and long media remain
+next work. The WIP inventory below records the historical pre-delivery
 checkpoint; preserve original Memory and `.tools/assistant-project-build` changes.
 
 ## 1. Current release and preserved work

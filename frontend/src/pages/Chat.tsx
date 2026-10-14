@@ -5,6 +5,7 @@ import {
 } from "./ChatWebSearch";
 import LlamaModels from "./LlamaModels";
 import NewChat from "./NewChat";
+import ConversationComposer from "./ConversationComposer";
 import ChatModeSwitch from "./ChatModeSwitch";
 import type { ChatProviderInfo } from "./ChatProviders";
 import { emptyOptions } from "./assistant-options";
@@ -22,15 +23,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Copy, MessageSquare, Plus, Send, Square } from "lucide-react";
+import { Copy, MessageSquare, Plus, Square } from "lucide-react";
 import { api, type Run } from "../api";
-import {
-  Badge,
-  Empty,
-  ErrorNotice,
-  Loading,
-  PageTitle,
-} from "../components/common";
+import { Badge, Empty, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
 import { useListKeyboard } from "./useListKeyboard";
@@ -219,16 +214,6 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
   }, [active?.id, id, cache]);
   return (
     <>
-      {id && (
-        <PageTitle
-          eyebrow="WORKSPACE / CHAT"
-          title={assistant ? "What shall we create?" : "Think it through."}
-        >
-          {assistant
-            ? "One conversation for your workstation. Create images, prepare agents, code in projects and inspect the results here."
-            : "Persistent conversations with your configured local model. Every response has a Run."}
-        </PageTitle>
-      )}
       <ErrorNotice
         error={
           conversations.error ??
@@ -237,25 +222,18 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
           (id ? detail.error : null)
         }
       />
-      <div className={`chat-layout ${id ? "" : "chat-entry-layout"}`}>
-        {id ? (
+      <div
+        className={`chat-layout chat-entry-layout ${id ? "chat-conversation-layout" : ""}`}
+      >
+        <details className="chat-entry-history">
+          <summary>Recent conversations</summary>
           <ConversationHistory
             conversations={conversations.data ?? []}
             currentId={id}
             newTo={assistant ? "/" : "/chat"}
             pending={conversations.isPending}
           />
-        ) : (
-          <details className="chat-entry-history">
-            <summary>Recent conversations</summary>
-            <ConversationHistory
-              conversations={conversations.data ?? []}
-              currentId={id}
-              newTo={assistant ? "/" : "/chat"}
-              pending={conversations.isPending}
-            />
-          </details>
-        )}
+        </details>
         <section className="chat-main panel">
           {!id ? (
             <NewChat
@@ -523,6 +501,9 @@ function Transcript({
   const headingId = useId();
   const labelId = useId();
   const end = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLElement>(null);
+  const followLatest = useRef(true);
+  const [readingEarlier, setReadingEarlier] = useState(false);
   const visible = messages.filter((message) => !message.metadata.routing_only);
   const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
     visible,
@@ -530,16 +511,22 @@ function Transcript({
     { initialKey: visible.at(-1)?.id, fallback: "last" },
   );
   const selected = visible[index];
-  const last = messages.at(-1);
   const navigate = useNavigate();
   useEffect(() => {
-    end.current?.scrollIntoView?.({ block: "nearest" });
-  }, [last?.content, messages.length]);
+    if (followLatest.current && viewport.current)
+      viewport.current.scrollTop = viewport.current.scrollHeight;
+  }, [messages]);
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (
+      target.closest(
+        "a, button, textarea, input, select, summary, pre, code, [contenteditable='true']",
+      )
+    )
+      return;
+    if (window.getSelection()?.isCollapsed === false) return;
     onKeyDown(event);
     if (event.key !== "Enter" || event.defaultPrevented) return;
-    const target = event.target as HTMLElement;
-    if (target.closest("a, button, textarea, input")) return;
     if (selected?.run_id) {
       event.preventDefault();
       navigate(`/runs/${selected.run_id}`);
@@ -547,15 +534,21 @@ function Transcript({
   };
   return (
     <section
+      ref={viewport}
       className="chat-transcript"
       aria-labelledby={headingId}
-      aria-live="polite"
+      onScroll={(event) => {
+        const panel = event.currentTarget;
+        followLatest.current =
+          panel.scrollHeight - panel.scrollTop - panel.clientHeight < 80;
+        setReadingEarlier(!followLatest.current);
+      }}
     >
       <h2 id={headingId} className="sr-only">
         Messages
       </h2>
       {visible.length ? (
-        <p id={labelId} className="dashboard-note">
+        <p id={labelId} className="sr-only">
           Arrow keys choose a message while the transcript is focused. Enter
           inspects its Run when one exists.
         </p>
@@ -702,6 +695,20 @@ function Transcript({
         })}
         <div ref={end} />
       </div>
+      {readingEarlier && (
+        <Button
+          className="chat-jump-latest"
+          variant="secondary"
+          onClick={() => {
+            followLatest.current = true;
+            setReadingEarlier(false);
+            if (viewport.current)
+              viewport.current.scrollTop = viewport.current.scrollHeight;
+          }}
+        >
+          Jump to latest
+        </Button>
+      )}
     </section>
   );
 }
@@ -838,7 +845,7 @@ function ConversationView({
     settings.isPending;
   const messages = conversation.messages;
   return (
-    <>
+    <div className="conversation-shell">
       <div className="chat-heading">
         <div>
           <h2>{conversation.title}</h2>
@@ -902,13 +909,16 @@ function ConversationView({
           label="Save settings"
         />
       </details>
-      <ConversationSummary
-        conversationId={conversation.id}
-        summary={conversation.summary}
-        autoSummary={conversation.auto_summary}
-        lastUpdate={conversation.summary_update}
-        busy={busy}
-      />
+      <details className="chat-settings-panel">
+        <summary>Memory &amp; context</summary>
+        <ConversationSummary
+          conversationId={conversation.id}
+          summary={conversation.summary}
+          autoSummary={conversation.auto_summary}
+          lastUpdate={conversation.summary_update}
+          busy={busy}
+        />
+      </details>
       <Transcript
         messages={messages}
         orchestrator={orchestrator}
@@ -965,126 +975,112 @@ function ConversationView({
             clipboardError
           }
         />
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (canSend && !busy) send.mutate();
-          }}
-        >
-          <label className="sr-only" htmlFor="chat-draft">
-            Message
-          </label>
-          <textarea
-            id="chat-draft"
-            placeholder={
-              assistantTurn
-                ? options.action === "image.generate_video"
-                  ? "Describe the scene and motion. Example: a forest at dawn, then animate it: mist drifts."
-                  : options.action === "project.create_code"
-                    ? "Describe what your new project should do…"
-                    : options.action === "project.create"
-                      ? "Name your project — for example Weather Station"
-                      : "Describe your task — or drop reference images below…"
-                : "Ask your local model…"
-            }
-            rows={3}
-            maxLength={32000}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (
-                e.key === "Enter" &&
-                !e.nativeEvent.isComposing &&
-                !e.shiftKey &&
-                !e.altKey &&
-                (preferences.data?.send_key !== "ctrl-enter" ||
-                  e.ctrlKey ||
-                  e.metaKey)
-              ) {
-                e.preventDefault();
-                if (canSend && !busy) send.mutate();
-              }
-            }}
-          />
-          <ChatModeSwitch
-            value={turnMode}
-            disabled={busy}
-            onChange={(next) => {
-              setTurnMode(next);
-              setOptions(emptyOptions);
-            }}
-          />
-          {assistantTurn && (
-            <AssistantActions
-              key={projectSelectionVersion}
-              value={options}
-              allowWork={turnMode === "work"}
-              sources={messages.flatMap((message) => message.coding_runs ?? [])}
-              onChange={(next) => {
-                setOptions(next);
-                if (
-                  ![
-                    "auto",
-                    "chat",
-                    "image.generate",
-                    "image.generate_video",
-                  ].includes(next.action) ||
-                  next.image_artifact_ids.length ||
-                  next.audio_artifact_id ||
-                  next.coding ||
-                  next.commit ||
-                  next.publish ||
-                  next.load ||
-                  next.stop ||
-                  next.upscale_result
-                )
-                  setWebEnabled(false);
-              }}
-              busy={busy || attachments.length > 0}
-              onUploading={setReadingAttachment}
-            />
-          )}
-          {(!assistantTurn ||
-            !(
-              options.action.startsWith("coding.") ||
-              options.action.startsWith("runtime.") ||
-              options.action === "system.inspect" ||
-              options.action === "image.generate_video" ||
-              options.action === "project.create" ||
-              options.action === "project.create_code"
-            ) ||
-            attachments.length > 0) && (
-            <TextAttachments
-              attachments={attachments}
-              onChange={setAttachments}
-              busy={busy || options.image_artifact_ids.length > 0}
-              onReading={setReadingAttachment}
-            />
-          )}
-          {(!assistantTurn ||
-            ([
-              "auto",
-              "chat",
-              "image.generate",
-              "image.generate_video",
-            ].includes(options.action) &&
-              !options.image_artifact_ids.length &&
-              !options.audio_artifact_id &&
-              !options.coding &&
-              !options.upscale_result)) && (
-            <WebSearchControl
-              enabled={webEnabled}
-              query={webQuery}
-              busy={busy}
-              onToggle={setWebEnabled}
-              onQuery={setWebQuery}
-            />
-          )}
-          <div className="row spread">
-            <span className="muted">
-              Ctrl / Cmd + Enter to send · recent context: up to 16 messages
-            </span>
-            {conversation.active_run ? (
+        <ConversationComposer
+          id="chat-draft"
+          value={draft}
+          onChange={setDraft}
+          onSend={() => send.mutate()}
+          canSend={canSend}
+          busy={busy}
+          sendKey={preferences.data?.send_key}
+          placeholder={
+            assistantTurn
+              ? options.action === "image.generate_video"
+                ? "Describe the scene and motion…"
+                : options.action === "project.create_code"
+                  ? "Describe what your new project should do…"
+                  : options.action === "project.create"
+                    ? "Name your project — for example Weather Station"
+                    : "Describe your task — or attach reference images…"
+              : "Ask your local model…"
+          }
+          tools={
+            <>
+              {assistantTurn && (
+                <AssistantActions
+                  key={projectSelectionVersion}
+                  value={options}
+                  allowWork={turnMode === "work"}
+                  sources={messages.flatMap(
+                    (message) => message.coding_runs ?? [],
+                  )}
+                  onChange={(next) => {
+                    setOptions(next);
+                    if (
+                      ![
+                        "auto",
+                        "chat",
+                        "image.generate",
+                        "image.generate_video",
+                      ].includes(next.action) ||
+                      next.image_artifact_ids.length ||
+                      next.audio_artifact_id ||
+                      next.coding ||
+                      next.commit ||
+                      next.publish ||
+                      next.load ||
+                      next.stop ||
+                      next.upscale_result
+                    )
+                      setWebEnabled(false);
+                  }}
+                  busy={busy || attachments.length > 0}
+                  onUploading={setReadingAttachment}
+                />
+              )}
+              {(!assistantTurn ||
+                !(
+                  options.action.startsWith("coding.") ||
+                  options.action.startsWith("runtime.") ||
+                  options.action === "system.inspect" ||
+                  options.action === "image.generate_video" ||
+                  options.action === "project.create" ||
+                  options.action === "project.create_code"
+                ) ||
+                attachments.length > 0) && (
+                <TextAttachments
+                  attachments={attachments}
+                  onChange={setAttachments}
+                  busy={busy || options.image_artifact_ids.length > 0}
+                  onReading={setReadingAttachment}
+                />
+              )}
+            </>
+          }
+          controls={
+            <>
+              <ChatModeSwitch
+                value={turnMode}
+                disabled={busy}
+                onChange={(next) => {
+                  setTurnMode(next);
+                  setOptions(emptyOptions);
+                }}
+              />
+              {(!assistantTurn ||
+                ([
+                  "auto",
+                  "chat",
+                  "image.generate",
+                  "image.generate_video",
+                ].includes(options.action) &&
+                  !options.image_artifact_ids.length &&
+                  !options.audio_artifact_id &&
+                  !options.coding &&
+                  !options.upscale_result)) && (
+                <WebSearchControl
+                  compact
+                  enabled={webEnabled}
+                  query={webQuery}
+                  busy={busy}
+                  onToggle={setWebEnabled}
+                  onQuery={setWebQuery}
+                />
+              )}
+            </>
+          }
+          sendButton={
+            conversation.active_run ? (
               <Button
                 type="button"
                 variant="secondary"
@@ -1094,17 +1090,11 @@ function ConversationView({
                 }
                 onClick={() => stop.mutate()}
               >
-                <Square size={14} />
-                Stop
+                <Square size={14} /> Stop
               </Button>
-            ) : (
-              <Button type="submit" disabled={busy || !canSend}>
-                <Send size={14} />
-                Send
-              </Button>
-            )}
-          </div>
-        </form>
+            ) : undefined
+          }
+        />
         {!!messages.length &&
           !busy &&
           !messages.filter((m) => m.role === "assistant").at(-1)?.metadata
@@ -1118,6 +1108,6 @@ function ConversationView({
             </Button>
           )}
       </div>
-    </>
+    </div>
   );
 }

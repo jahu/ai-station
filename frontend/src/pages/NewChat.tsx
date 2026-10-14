@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowUp, Paperclip } from "lucide-react";
 import { api } from "../api";
-import { Button } from "../components/ui/button";
 import { ErrorNotice } from "../components/common";
 import LlamaModels from "./LlamaModels";
+import ConversationComposer from "./ConversationComposer";
 import AssistantActions from "./AssistantActions";
 import { emptyOptions } from "./assistant-options";
 import TextAttachments, { type TextAttachment } from "./TextAttachments";
@@ -187,96 +186,77 @@ export default function NewChat({
           </label>
         )}
       </div>
-      <form
-        className="new-chat-composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (canSend) send.mutate();
-        }}
-      >
-        <label className="sr-only" htmlFor="new-chat-message">
-          Message
-        </label>
-        <textarea
-          id="new-chat-message"
-          autoFocus
-          rows={4}
-          maxLength={32000}
-          value={draft}
-          placeholder={
-            mode === "chat"
-              ? "Ask a question or describe what to create…"
-              : "What would you like to build or change?"
-          }
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key !== "Enter" || e.nativeEvent.isComposing || e.shiftKey)
-              return;
-            const shortcut = e.ctrlKey || e.metaKey;
-            if (
-              preferences.data?.send_key === "ctrl-enter" ? !shortcut : e.altKey
-            )
-              return;
-            e.preventDefault();
-            if (canSend) send.mutate();
-          }}
-        />
-        <details className="new-chat-tools">
-          <summary>
-            <Paperclip size={15} /> Attach files &amp; choose tools
-          </summary>
-          <AssistantActions
-            value={options}
-            onChange={(value) => {
-              setOptions(value);
-              if (
-                ![
-                  "auto",
-                  "chat",
-                  "image.generate",
-                  "image.generate_video",
-                ].includes(value.action) ||
-                value.image_artifact_ids.length ||
-                value.audio_artifact_id
-              )
-                setWebEnabled(false);
-            }}
-            allowWork={mode === "work"}
-            busy={busy || attachments.length > 0}
-            onUploading={setUploading}
-          />
-          {options.action !== "project.create_code" &&
-            !options.image_artifact_ids.length &&
-            !options.audio_artifact_id && (
-              <TextAttachments
-                attachments={attachments}
-                onChange={setAttachments}
-                busy={send.isPending}
-                onReading={setUploading}
-              />
-            )}
-        </details>
-        <div className="new-chat-footer">
-          {["auto", "chat", "image.generate", "image.generate_video"].includes(
-            options.action,
-          ) &&
-            !options.image_artifact_ids.length &&
-            !options.audio_artifact_id && (
-              <WebSearchControl
-                compact
-                enabled={webEnabled}
-                query={webQuery}
-                busy={busy}
-                onToggle={setWebEnabled}
-                onQuery={setWebQuery}
-              />
-            )}
-          <Button type="submit" aria-label="Send message" disabled={!canSend}>
-            <ArrowUp size={18} />
-            {send.isPending ? "Sending…" : "Send"}
-          </Button>
-        </div>
-      </form>
+      <ConversationComposer
+        id="new-chat-message"
+        value={draft}
+        onChange={setDraft}
+        onSend={() => send.mutate()}
+        canSend={canSend}
+        busy={busy}
+        sendKey={preferences.data?.send_key}
+        sendLabel="Send message"
+        autoFocus
+        placeholder={
+          mode === "chat"
+            ? "Ask a question or describe what to create…"
+            : "What would you like to build or change?"
+        }
+        tools={
+          <>
+            <AssistantActions
+              value={options}
+              onChange={(value) => {
+                setOptions(value);
+                if (
+                  ![
+                    "auto",
+                    "chat",
+                    "image.generate",
+                    "image.generate_video",
+                  ].includes(value.action) ||
+                  value.image_artifact_ids.length ||
+                  value.audio_artifact_id
+                )
+                  setWebEnabled(false);
+              }}
+              allowWork={mode === "work"}
+              busy={busy || attachments.length > 0}
+              onUploading={setUploading}
+            />
+            {options.action !== "project.create_code" &&
+              !options.image_artifact_ids.length &&
+              !options.audio_artifact_id && (
+                <TextAttachments
+                  attachments={attachments}
+                  onChange={setAttachments}
+                  busy={send.isPending}
+                  onReading={setUploading}
+                />
+              )}
+          </>
+        }
+        controls={
+          <>
+            {[
+              "auto",
+              "chat",
+              "image.generate",
+              "image.generate_video",
+            ].includes(options.action) &&
+              !options.image_artifact_ids.length &&
+              !options.audio_artifact_id && (
+                <WebSearchControl
+                  compact
+                  enabled={webEnabled}
+                  query={webQuery}
+                  busy={busy}
+                  onToggle={setWebEnabled}
+                  onQuery={setWebQuery}
+                />
+              )}
+          </>
+        }
+      />
       {provider?.location === "external" && (
         <p className="notice">
           External AI · Your message and selected attachments will be sent to{" "}

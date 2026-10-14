@@ -2,6 +2,10 @@
 
 ## Next priority: conversation-first entry and useful long media
 
+[Conversation shell](conversation-shell.md) now shares entry/follow-up composition,
+collapses history and tools and preserves reading position during updates. Unified
+catalog, reasoning, persistent drafts and contextual Work continuity remain next.
+
 [Create project & build](assistant-project-build.md) now connects a Work name/goal
 to owned project setup and the existing isolated coding flow, with explicit
 external sharing. Shared conversational project context and task-wide graph Stop
