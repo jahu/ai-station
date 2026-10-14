@@ -6,15 +6,21 @@ from app.providers import ProviderError
 
 
 def prepare_brief(session, run, params):
-    from app.assistant import image_followup
+    from app.assistant import image_followup, image_video_followup
     from app.images import ImageRequest
 
     prompt, followup = image_followup(params["content"])
+    animation = {}
+    if params["action"] == "image.generate_video":
+        prompt, motion = image_video_followup(params["content"])
+        animation = {"video_prompt": motion or prompt[:2000], "width": 1280, "height": 704}
+        followup = False
     request = ImageRequest(
         mode="t2i",
         prompt=prompt,
         prompt_style="prompt",
         upscale_result=params.get("upscale_result", False) or followup,
+        **animation,
     )
     run.parameters = {
         **run.parameters,
@@ -44,7 +50,8 @@ def publish_image(session, run, message):
         or parent.executor_type != "orchestrator"
         or parent.task_id != run.task_id
         or parent.conversation_id != run.conversation_id
-        or parent.metadata_json.get("plan", {}).get("action") != "image.generate"
+        or parent.metadata_json.get("plan", {}).get("action")
+        not in {"image.generate", "image.generate_video"}
         or run.metadata_json.get("child_run_id")
     ):
         raise ProviderError("Image brief has no valid originating image request")

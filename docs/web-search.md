@@ -51,3 +51,16 @@ separate research turn or disabling search, instead of silently changing intent
 or ignoring the selected tool. Explicit incompatible action/media combinations
 remain rejected before enqueueing. Normal verification uses fake search, model
 and native jobs; real search-informed generation is recorded separately when run.
+
+## Real search-informed image acceptance
+
+On 2026-10-14 the deployed Assistant completed public search → a visual brief
+from the owned local 27B llama.cpp model → prompt-only Qwen generation. The
+model was loaded using its saved two-GPU, 131072-context q8_0 preset; this brief
+did not exercise the full context length. Five actual source cards and a
+832×1216 Library image persisted in the conversation. The prompt-only output
+was visually inspected: an empty forest, without the earlier unrequested
+portrait. The original photo pipeline's SHA256 remained unchanged. Model and
+media reservations were released. Real desktop/mobile browser checks displayed
+the source cards and loaded image without JavaScript errors or horizontal
+overflow. Image generation took about 361 seconds.

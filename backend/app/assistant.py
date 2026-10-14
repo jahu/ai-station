@@ -182,7 +182,6 @@ def enqueue_assistant(session, conversation, user, body):
         or body.publish
         or body.load
         or body.stop
-        or body.web_search.enabled
         or body.speech_text
         or body.upscale_result
     ):
@@ -253,7 +252,7 @@ def enqueue_assistant(session, conversation, user, body):
     ):
         raise HTTPException(422, "Workstation inspection does not use attachments or mutation scope")
     if body.web_search.enabled and (
-        body.action not in {"auto", "chat", "image.generate"}
+        body.action not in {"auto", "chat", "image.generate", "image.generate_video"}
         or body.coding
         or body.commit
         or body.publish
@@ -565,7 +564,7 @@ class AssistantExecutor:
         if (
             run.parameters.get("web_search", {}).get("enabled")
             and plan
-            and plan.action not in {"chat", "image.generate", "clarify"}
+            and plan.action not in {"chat", "image.generate", "image.generate_video", "clarify"}
         ):
             plan = Plan(
                 action="clarify",
@@ -670,7 +669,7 @@ class AssistantExecutor:
                 message.content = "Reading current workstation telemetry and activity…"
         elif (
             plan.action == "chat"
-            or plan.action == "image.generate"
+            or plan.action in {"image.generate", "image.generate_video"}
             and params.get("web_search", {}).get("enabled")
         ):
             from app.chat import enqueue
@@ -681,10 +680,10 @@ class AssistantExecutor:
             message.metadata_json = {**message.metadata_json, "partial": True, "routing_only": True}
             child = enqueue(session, conversation, user=user, parent_run_id=run.id, commit=False)
             run.metadata_json = {**run.metadata_json, "child_run_id": child["id"]}
-            if plan.action == "image.generate":
+            if plan.action in {"image.generate", "image.generate_video"}:
                 from app.image_research import prepare_brief
 
-                prepare_brief(session, session.get(Run, child["id"]), params)
+                prepare_brief(session, session.get(Run, child["id"]), {**params, "action": plan.action})
                 message.metadata_json = {**message.metadata_json, "partial": False, "routing_only": False}
                 message.content = "Searching your public query, preparing an image prompt with the selected model, then generating locally. Sources and the image will appear here."
         elif plan.action.startswith("image."):
