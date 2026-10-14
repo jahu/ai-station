@@ -62,6 +62,9 @@ class RunnerClient:
     def hardware(self) -> dict:
         return self.request("GET", "/v1/hardware")
 
+    def gpu_processes(self) -> dict:
+        return self.request("GET", "/v1/gpu-processes")
+
     def observe_runtimes(self) -> dict:
         return self.request("GET", "/v1/runtimes/observe")
 

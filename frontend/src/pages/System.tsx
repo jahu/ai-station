@@ -3,6 +3,7 @@ import Connectors from "./Connectors";
 import Maintenance from "./Maintenance";
 import OperatorAccess from "./OperatorAccess";
 import RuntimeObservations from "./RuntimeObservations";
+import GpuProcesses from "./GpuProcesses";
 import { useId, type KeyboardEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -166,6 +167,7 @@ export default function System() {
           <small>{time(status.data?.scheduler.last_heartbeat ?? null)}</small>
         </section>
       </div>
+      <GpuProcesses gpus={hardware.data?.gpus ?? []} />
       <section className="panel">
         <div className="panel-heading">
           <h2>Integration checks</h2>

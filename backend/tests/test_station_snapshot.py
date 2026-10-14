@@ -213,3 +213,94 @@ def test_snapshot_does_not_accept_media_or_write_scope():
         assert result.status_code == 422
         with session_factory()() as session:
             assert not list(session.scalars(select(Run)))
+
+
+def test_gpu_processes_are_reported_and_persisted_with_allowlisted_fields(monkeypatch):
+    hardware = copy.deepcopy(HARDWARE)
+    hardware["gpus"][0]["uuid"] = "GPU-test"
+    monkeypatch.setattr(RunnerClient, "hardware", lambda _: hardware)
+    observation = {
+        "status": "available",
+        "sampled_at": "2026-10-14T08:00:00Z",
+        "truncated": False,
+        "unexpected_secret": "hidden",
+        "processes": [
+            {
+                "gpu_uuid": "GPU-test",
+                "pid": 4242,
+                "name": "/private/python",
+                "memory_used_mib": 512,
+                "command_line": "--token secret",
+            }
+        ],
+    }
+    monkeypatch.setattr(RunnerClient, "gpu_processes", lambda _: observation)
+    with TestClient(app) as client:
+        cid = setup_conversation()
+        rid = dispatch(client, cid)
+        step()
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        message = detail["messages"][-1]
+        assert "PID 4242" in message["content"] and "GPU 7" in message["content"]
+        assert "python" in message["content"] and "512 MiB" in message["content"]
+        assert "/private" not in message["content"] and "secret" not in message["content"]
+        artifacts = client.get("/api/artifacts?run_id=" + rid).json()
+        artifact = next(a for a in artifacts if a["type"] == "json")
+        result = client.get("/api/artifacts/" + artifact["id"] + "/file").json()
+        assert result["gpu_processes"]["processes"] == [
+            {"gpu_uuid": "GPU-test", "pid": 4242, "name": "python", "memory_used_mib": 512}
+        ]
+        assert "secret" not in json.dumps(result)
+        reset_engine()
+        assert "PID 4242" in client.get(f"/api/chat/conversations/{cid}").json()["messages"][-1]["content"]
+
+
+def test_cancel_during_compute_query_does_not_publish_report(monkeypatch):
+    monkeypatch.setattr(RunnerClient, "hardware", lambda _: copy.deepcopy(HARDWARE))
+
+    def query(self):
+        with session_factory()() as session:
+            run = session.scalar(select(Run).where(Run.executor_type == "station_snapshot"))
+            request_cancel(session, run)
+            session.commit()
+        return {"status": "available", "processes": []}
+
+    monkeypatch.setattr(RunnerClient, "gpu_processes", query)
+    with TestClient(app) as client:
+        rid = dispatch(client, setup_conversation())
+        step()
+        assert client.get("/api/runs/" + rid).json()["status"] == "canceled"
+        assert client.get("/api/artifacts?run_id=" + rid).json() == []
+
+
+def test_live_process_api_unavailable_and_metadata_validation(monkeypatch):
+    monkeypatch.setattr(
+        RunnerClient,
+        "gpu_processes",
+        lambda _: {
+            "status": "available",
+            "processes": [
+                {"gpu_uuid": "GPU-x", "pid": True, "name": "bad"},
+                {
+                    "gpu_uuid": "GPU-x",
+                    "pid": 12,
+                    "name": "/secret/bin/tool",
+                    "memory_used_mib": float("nan"),
+                    "secret": "hidden",
+                },
+            ],
+        },
+    )
+    with TestClient(app) as client:
+        result = client.get("/api/system/gpu-processes").json()
+        assert result["status"] == "partial"
+        assert result["processes"] == [
+            {"gpu_uuid": "GPU-x", "pid": 12, "name": "tool", "memory_used_mib": None}
+        ]
+
+        def unavailable(self):
+            raise RunnerUnavailable("private path")
+
+        monkeypatch.setattr(RunnerClient, "gpu_processes", unavailable)
+        result = client.get("/api/system/gpu-processes").json()
+        assert result["status"] == "unavailable" and result["processes"] == []

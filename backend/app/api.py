@@ -290,6 +290,16 @@ def hardware():
     return RunnerClient(timeout=8).hardware()
 
 
+@app.get("/api/system/gpu-processes")
+def gpu_process_observation():
+    from app.gpu_processes import normalize
+
+    try:
+        return normalize(RunnerClient(timeout=4).gpu_processes())
+    except (RunnerError, RunnerUnavailable):
+        return normalize(None)
+
+
 @app.get("/api/system/status")
 def system_status(session: DB):
     counts = dict(session.execute(select(Run.status, func.count()).group_by(Run.status)).all())

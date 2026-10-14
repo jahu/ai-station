@@ -38,6 +38,7 @@ from ai_station_runner.gitops import (
     remove_worktree,
     run_project_command,
 )
+from ai_station_runner.gpu_processes import collect as collect_gpu_processes
 from ai_station_runner.llama_runtime import router as llama_router
 from ai_station_runner.local_coding_runs import LocalCodingRequest, local_coding_report, start_local_coding
 from ai_station_runner.local_model import router as local_model_router
@@ -363,6 +364,11 @@ def diagnostics():
     return collect_diagnostics(get_settings())
 
 
+@app.get("/v1/gpu-processes")
+def gpu_process_observation():
+    return collect_gpu_processes()
+
+
 @app.post("/v1/models/scan")
 def models_scan():
     roots = []
@@ -609,6 +615,7 @@ _operational = {
     "/v1/runs/photo",
     "/health",
     "/v1/hardware",
+    "/v1/gpu-processes",
     "/v1/diagnostics",
     "/v1/process/{run_id}",
     "/v1/process/cancel",

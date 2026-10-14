@@ -47,6 +47,13 @@ function mount(
             load: {},
           };
         }
+        if (url.includes("/system/gpu-processes"))
+          return {
+            status: "unavailable",
+            sampled_at: null,
+            processes: [],
+            truncated: false,
+          };
         if (url.includes("/system/diagnostics"))
           return { checks: extras.checks ?? [] };
         if (url.includes("/system/status")) {

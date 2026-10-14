@@ -264,3 +264,8 @@ In the Platform assistant, choose **Create project** and enter a name. Or type
 “Stwórz projekt o nazwie Pogoda”. When Git/environment setup finishes, **Continue
 here with Local AI** selects it for your next coding prompt; no manual path is
 required. Advanced policies remain in Projects.
+
+System and the central workstation report now include bounded NVIDIA compute
+process observations: GPU, executable basename, PID and reported VRAM. They
+never expose command lines or control external processes. See
+[GPU process reporting](docs/gpu-processes.md).
