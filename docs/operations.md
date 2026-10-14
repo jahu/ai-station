@@ -11,7 +11,7 @@ Ctrl+C on the owned supervisor stops only that deployment's containers and, if t
 ## Honest upgrade path
 
 1. Confirm there are no Runs you still need to finish. System reports `active_runs`. Interrupted work stays inspectable; recovery never blindly repeats uncertain side effects.
-2. From **System → Backup and upgrade readiness**, queue **Back up SQLite**. Wait for the Run to succeed and keep the integrity-checked copy under `backups/<run-id>.sqlite`. **Inspect copy** re-checks that file in place; applying it over the live database stays unpublished in-app.
+2. From **Settings → Maintenance → Backup and upgrade readiness**, queue **Back up SQLite**. Wait for the Run to succeed and keep the integrity-checked copy under `backups/<run-id>.sqlite`. **Inspect copy** re-checks that file in place; applying it over the live database stays unpublished in-app.
 3. Stop the owned supervisor (Ctrl+C) or `docker compose down` without `--volumes`.
 4. Check out a reviewed commit on `develop` in a new isolated worktree if you are replacing a running preview. Do not treat preview `:8765` as containing later PRs.
 5. Rebuild the application image (`./scripts/start.sh`, or `--no-build` only when that image already contains the reviewed commit).
@@ -36,7 +36,7 @@ Conservative recovery still parks uncertain dispatched work as `interrupted` aft
 
 ## Compose image inspect
 
-**System → Backup and upgrade readiness → Inspect running image** compares the current `ai-station:local` image ID with running control-plane containers that use that tag. Running containers are one keyboard sequence (arrows, Home, End) with unique Container names. A mismatch means the tag was rebuilt while those containers still run an older ID. Applying that tag, building from the UI, or taking over preview `:8765` stays unpublished. Rebuild from a reviewed checkout in an isolated worktree using `./scripts/start.sh`.
+**Settings → Maintenance → Backup and upgrade readiness → Inspect running image** compares the current `ai-station:local` image ID with running control-plane containers that use that tag. Running containers are one keyboard sequence (arrows, Home, End) with unique Container names. A mismatch means the tag was rebuilt while those containers still run an older ID. Applying that tag, building from the UI, or taking over preview `:8765` stays unpublished. Rebuild from a reviewed checkout in an isolated worktree using `./scripts/start.sh`.
 
 ## What remains unpublished
 

@@ -4607,3 +4607,50 @@ section:has(> .memory-grid) > .dashboard-note {
   width: fit-content;
   padding: 10px 12px;
 }
+
+.settings-navigation {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+.settings-navigation a {
+  color: var(--muted);
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-decoration: none;
+}
+.settings-navigation a.active {
+  color: var(--accent);
+  background: #b9f48a0d;
+  border-color: #b9f48a55;
+}
+.settings-navigation a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.settings-general {
+  padding: 24px;
+  max-width: 780px;
+}
+.settings-general form {
+  display: grid;
+  gap: 22px;
+  margin-top: 24px;
+}
+.settings-general label,
+.settings-label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.settings-label {
+  margin-bottom: 8px;
+}
+.settings-secondary-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+}

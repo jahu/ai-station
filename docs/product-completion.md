@@ -4,8 +4,9 @@
 
 The [first increment](first-send.md) implements immediate first Send, durable
 idempotency, settings revisions, remembered new-conversation selection and visible
-server-enforced Chat/Work modes. The shared-shell/model-picker refinement,
-System/Settings split, verified reasoning and longer media remain next increments.
+server-enforced Chat/Work modes. [System/Settings separation](settings.md) is also
+implemented. Shared-shell/model
+picker refinement, verified reasoning and longer media remain next increments.
 
 User direction on 2026-10-14 is captured in the
 [implementation brief and handoff](plans/2026-10-chat-work-media.md): immediate

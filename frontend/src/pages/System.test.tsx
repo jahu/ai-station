@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import System from "./System";
+import System, { SystemDiagnostics } from "./System";
 
 afterEach(() => {
   cleanup();
@@ -22,6 +22,7 @@ const lease = {
 function mount(
   leases: Array<typeof lease & { id: string }>,
   extras: {
+    diagnostics?: boolean;
     checks?: { name: string; status: string; detail: string }[];
     workers?: { id: string; available: boolean; last_heartbeat: string }[];
   } = {},
@@ -123,7 +124,7 @@ function mount(
       }
     >
       <MemoryRouter>
-        <System />
+        {extras.diagnostics ? <SystemDiagnostics /> : <System />}
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -185,6 +186,7 @@ it("moves through worker leases with arrow keys", async () => {
 
 it("moves through integration checks with arrow keys", async () => {
   mount([], {
+    diagnostics: true,
     checks: [
       {
         name: "Docker",

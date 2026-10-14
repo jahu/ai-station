@@ -9,6 +9,10 @@ entry with Chat/Work, simple model and verified reasoning selection, separate
 System/Settings, and longer local video/avatars. Start with the
 [implementation brief and model handoff](docs/plans/2026-10-chat-work-media.md).
 
+**Settings** now has General, Providers, Integrations, Access and Maintenance.
+**System** shows workstation observations and execution health, with separate
+integration diagnostics. See [workspace ownership and links](docs/settings.md).
+
 A local-first AI workstation control plane. Work is represented by **Task → Run → Events → Artifacts**, with a Dockerized control plane and a native, user-level Host Runner.
 
 Development targets the [complete product vision](docs/product-completion.md). Earlier [local acceptance evidence](docs/mvp-acceptance.md) records verified milestones, not completion of that vision.
@@ -165,7 +169,7 @@ Describe a task in Agents, inspect and edit the disabled definition, select a lo
 
 Runtime observations are refreshed through a normal Run from **System → Observe runtimes**. Process presence, endpoint availability and model files remain separate. See [runtime observation semantics](docs/runtimes.md).
 
-**System → Backup and upgrade readiness** queues an integrity-checked SQLite backup Run, re-checks a successful copy without restoring it, downloads that stored file, compares the running compose image with `ai-station:local`, lists interrupted work for inspection, and states that compose down keeps bind-mounted data. Restore and image rollout stay unpublished. See [operations](docs/operations.md).
+**Settings → Maintenance → Backup and upgrade readiness** queues an integrity-checked SQLite backup Run, re-checks a successful copy without restoring it, downloads that stored file, compares the running compose image with `ai-station:local`, lists interrupted work for inspection, and states that compose down keeps bind-mounted data. Restore and image rollout stay unpublished. See [operations](docs/operations.md).
 
 
 The Home workspace leads with a unified attention list: interrupted Runs (Mark inspected, no replay; interrupted Images can Retry as a new run without leaving Home), unread notices (Mark read, no replay), parked approvals (Approve queues the Run; Deny cancels it; tools have not started), and in-progress work with Stop. The list is one keyboard sequence (arrows, Home, End, Enter) with unique Inspect and action names that include a short Run or notice id. Reuses the shared list keyboard. The conversation, Agents and the Run inspector can still grant or deny the same parked Run. Upcoming schedules, enabled agents, recent conversations, recent artifacts and runtime observations are each a separate keyboard sequence with unique Inspect names. Enter inspects the agent, conversation or artifact; runtime rows open System and do not invent an observation Run. Hardware follows as labelled regions. Arrow keys move through Home GPU cards; there is no inspectable GPU Run. Arrow keys move through CPU, memory, storage and in-progress Run cards with unique Metric names; Enter inspects Runs from that card and does not invent a telemetry Run. Quick actions and Ctrl+K open workspaces without starting a workload.
