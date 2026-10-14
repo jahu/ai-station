@@ -61,7 +61,7 @@ def main(config_path):
         stage("preparing first frame" if config["image"] else "preparing video")
         vae = nodes.VAELoader().load_vae(aliases["wan_vae"])[0]
         image = None
-        if config.get("previous_video"):
+        if config.get("previous_video") and not config.get("motion_context"):
             import hashlib
 
             source = Path(config["previous_video"])
@@ -92,6 +92,29 @@ def main(config_path):
         latent = Wan22ImageToVideoLatent.execute(
             vae, request["width"], request["height"], request["frames"], 1, image
         )[0]
+        if config.get("motion_context"):
+            import hashlib
+
+            from safetensors.torch import load_file
+
+            from ai_station_runner.wan_motion import profile_key, validate_checkpoint
+
+            checkpoint = Path(config["motion_context"])
+            digest = hashlib.sha256()
+            with checkpoint.open("rb") as source:
+                for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            if digest.hexdigest() != request["motion_context"]["sha256"]:
+                raise ValueError("Motion checkpoint content changed")
+            validate_checkpoint(checkpoint, request["width"], request["height"], profile_key(paths))
+            context = load_file(str(checkpoint), device="cpu")["motion"]
+            if not torch.isfinite(context).all():
+                raise ValueError("Non-finite motion checkpoint")
+            latent["samples"] = comfy.latent_formats.Wan22().process_out(latent["samples"])
+            latent["samples"][:, :, :5] = context.to(latent["samples"])
+            mask = torch.ones_like(latent["samples"][:, :1])
+            mask[:, :, :5] = 0
+            latent["noise_mask"] = mask
         stage("loading Wan 2.2")
         model = nodes.UNETLoader().load_unet(aliases["wan_model"], "default")[0]
         model = ModelSamplingSD3().patch(model, 8.0)[0]
@@ -107,6 +130,19 @@ def main(config_path):
             negative,
             latent,
         )[0]
+        from safetensors.torch import save_file
+
+        from ai_station_runner.wan_motion import profile_key, validate_checkpoint
+
+        checkpoint = Path(config["output"]).with_suffix(".safetensors")
+        partial_checkpoint = checkpoint.with_suffix(".partial.safetensors")
+        save_file(
+            {"motion": samples["samples"][:, :, -5:].detach().cpu().float().contiguous()},
+            str(partial_checkpoint),
+            metadata={"station.wan_profile": profile_key(paths)},
+        )
+        validate_checkpoint(partial_checkpoint, request["width"], request["height"], profile_key(paths))
+        partial_checkpoint.replace(checkpoint)
         comfy.model_management.unload_all_models()
         del model
         gc.collect()
@@ -131,6 +167,26 @@ def main(config_path):
             for packet in stream.encode():
                 container.mux(packet)
         temporary.replace(output)
+        import hashlib
+
+        checkpoint_hash = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+        output.with_suffix(".json").write_text(
+            json.dumps(
+                {
+                    "motion_context": {
+                        "relative_path": str(checkpoint.relative_to(Path(config["root"]))),
+                        "sha256": checkpoint_hash,
+                        "size_bytes": checkpoint.stat().st_size,
+                        "context_frames": 17,
+                    },
+                    "motion_context_source": "latents"
+                    if config.get("motion_context")
+                    else "pixels"
+                    if config.get("previous_video")
+                    else "initial",
+                }
+            )
+        )
         stage("completed")
 
 

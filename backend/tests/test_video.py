@@ -292,3 +292,84 @@ def test_assistant_unavailable_video_clarifies_without_child(monkeypatch):
         parent = s.get(Run, response.json()["id"])
         assert parent.status == "succeeded" and parent.metadata_json["plan"]["action"] == "clarify"
     assert "needs setup" in api.get(f"/api/chat/conversations/{cid}").json()["messages"][-1]["content"]
+
+
+def test_motion_checkpoint_is_an_inspectable_hidden_artifact_with_video_lineage(
+    session, tmp_path, monkeypatch
+):
+    import hashlib
+
+    from app.artifacts import adopt_existing
+    from app.config import get_settings
+    from app.models import Artifact
+    from app.runs import create_run, create_task
+    from app.video import VideoExecutor
+    from sqlalchemy import select
+
+    root = get_settings().data_dir
+    (root / "artifacts").mkdir(parents=True, exist_ok=True)
+    (root / "artifacts/motion.safetensors").write_bytes(b"opaque safe motion fixture")
+    (root / "artifacts/clip.mp4").write_bytes(b"owned video fixture")
+    raw = (root / "artifacts/motion.safetensors").read_bytes()
+    task = create_task(session, title="Video", prompt="", capability="video.generate")
+    run = create_run(session, task, run_type="video", capability="video.generate", executor_type="wan_video")
+    video = adopt_existing(
+        session,
+        relative_path="artifacts/clip.mp4",
+        artifact_type="video",
+        mime_type="video/mp4",
+        original_filename="clip.mp4",
+        run_id=run.id,
+        metadata={
+            "motion_context": {
+                "relative_path": "artifacts/motion.safetensors",
+                "size_bytes": len(raw),
+                "sha256": hashlib.sha256(raw).hexdigest(),
+                "context_frames": 17,
+            }
+        },
+    )
+    VideoExecutor().on_success(session, run, video)
+    motion = session.get(Artifact, video.metadata_json["motion_context_artifact_id"])
+    assert motion.metadata_json["internal_media"] and motion.metadata_json["role"] == "wan_motion"
+    assert motion.parent_artifact_ids == [video.id] and motion.run_id == run.id
+    assert len(list(session.scalars(select(Artifact)))) == 2
+
+
+def test_native_motion_checkpoint_rejects_oversize_or_malformed_before_launch(bridge):
+    import hashlib
+
+    from ai_station_runner.config import get_settings
+
+    root = get_settings().host_data_dir()
+    (root / "artifacts").mkdir(exist_ok=True)
+    previous = root / "artifacts/previous.mp4"
+    previous.write_bytes(b"owned clip fixture")
+    motion = root / "artifacts/motion.safetensors"
+    motion.write_bytes(b"malformed header")
+
+    def descriptor(path):
+        return {
+            "relative_path": str(path.relative_to(root)),
+            "size_bytes": path.stat().st_size,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+
+    body = {
+        "run_id": str(uuid4()),
+        "prompt": "Scene",
+        "gpu": 7,
+        "permissions": ["filesystem_read", "workspace_write"],
+        "continuation": descriptor(previous),
+        "motion_context": descriptor(motion),
+    }
+    response = bridge.post("/v1/runs/video", json=body)
+    assert response.status_code == 422, response.text
+    assert not (root / "runs" / body["run_id"]).exists()
+    response = bridge.post(
+        "/v1/runs/video",
+        json={**body, "motion_context": {**body["motion_context"], "size_bytes": 4 * 1024**2 + 1}},
+    )
+    assert response.status_code == 422
+    response = bridge.post("/v1/runs/video", json={**body, "image_relative": "artifacts/portrait.png"})
+    assert response.status_code == 422

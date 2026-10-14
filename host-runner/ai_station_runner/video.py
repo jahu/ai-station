@@ -31,6 +31,7 @@ class VideoRequest(BaseModel):
     prompt: str = Field(min_length=1, max_length=2000)
     negative_prompt: str = Field(default="", max_length=2000)
     continuation: MediaInput | None = None
+    motion_context: MediaInput | None = None
     image_relative: str | None = Field(default=None, max_length=500)
     width: int = Field(default=1280, ge=128, le=1280, multiple_of=32)
     height: int = Field(default=704, ge=128, le=1280, multiple_of=32)
@@ -43,6 +44,10 @@ class VideoRequest(BaseModel):
 
     @model_validator(mode="after")
     def area(self):
+        if self.continuation and self.image_relative:
+            raise ValueError("Choose an initial image or preceding motion, not both")
+        if self.motion_context and (not self.continuation or self.motion_context.size_bytes > 4 * 1024**2):
+            raise ValueError("Motion checkpoints require a bounded preceding video")
         if self.width * self.height > 1280 * 704:
             raise ValueError("Video dimensions exceed the profile limit")
         return self
@@ -114,6 +119,16 @@ def start_video(manager, body):
     previous = verified_path(root, body.continuation, verify_hash=False) if body.continuation else None
     if previous and previous.suffix != ".mp4":
         raise HTTPException(422, "Choose an owned prior video segment")
+    motion = verified_path(root, body.motion_context, verify_hash=False) if body.motion_context else None
+    if motion and motion.suffix != ".safetensors":
+        raise HTTPException(422, "Use an owned safe motion checkpoint")
+    if motion:
+        from ai_station_runner.wan_motion import profile_key, validate_checkpoint
+
+        try:
+            validate_checkpoint(motion, body.width, body.height, profile_key(paths))
+        except (ValueError, OSError) as exc:
+            raise HTTPException(422, "Invalid bounded motion checkpoint") from exc
     image = None
     if body.image_relative:
         image = owned(root, body.image_relative)
@@ -148,7 +163,9 @@ def start_video(manager, body):
                 "paths": {key: str(value) for key, value in paths.items()},
                 "image": str(image) if image else None,
                 "previous_video": str(previous) if previous else None,
+                "motion_context": str(motion) if motion else None,
                 "output": str(output),
+                "root": str(root),
                 "work": str(work),
             }
         )
