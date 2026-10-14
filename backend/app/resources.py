@@ -71,3 +71,30 @@ def release_run_locks(session: Session, run_id: str) -> None:
     for row in rows:
         row.released_at = now
     session.flush()
+
+
+def reserve_memory(session, run, available_mib, required_mib):
+    """Conservative admission: observed available RAM minus other live reservations."""
+    if not required_mib:
+        return True
+    if not isinstance(available_mib, (int, float)) or available_mib < 0:
+        return False
+    held = list(
+        session.scalars(
+            select(ResourceLock).where(
+                ResourceLock.resource_key.like("ram:%"), ResourceLock.released_at.is_(None)
+            )
+        )
+    )
+    reserved = sum(
+        (session.get(Run, item.run_id).allocated_resources or {}).get("ram_mib", 0)
+        for item in held
+        if item.run_id != run.id
+    )
+    if available_mib - reserved - 1024 < required_mib:
+        return False
+    if not any(item.run_id == run.id for item in held):
+        session.add(ResourceLock(resource_key="ram:" + run.id, run_id=run.id))
+    run.allocated_resources = {**run.allocated_resources, "ram_mib": required_mib}
+    session.flush()
+    return True

@@ -46,8 +46,10 @@ those findings are not proof that delivered APIs/components remain absent.
    plan revisions/unique stage operation keys, existing RunDependency edges, aggregate
    job state, atomic Stop/resume, typed CPU composition with full decode/timing checks,
    GPU plus system-RAM admission. Then qualify Wan continuous/shots and full-audio
-   avatar windows. Current Wan/avatar still accept only 17–81 frames; no longer-film
-   capability is delivered by the conversation changes.
+   avatar windows. The long-media branch now implements 5–60-second video and full-speech avatar
+   job APIs, deterministic timelines, CPU composition and Stop/resume. See
+   [implementation](../long-media.md). Real Wan acceptance is ongoing; do not
+   claim it or full-avatar quality qualified until evidence is complete.
 4. Broaden draft persistence to reviewed scope/attachment contracts if needed; keep
    the current text-only restore explanation and receipt compatibility. Do not cache
    credential values or large media request bodies in browser storage.

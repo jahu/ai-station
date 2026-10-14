@@ -56,6 +56,7 @@ it("selects existing inputs, queues video and keeps the live result beside the f
   }));
   vi.stubGlobal("fetch", fetch);
   mount();
+  fireEvent.click(screen.getByLabelText("Full recording (up to 60 seconds)"));
   fireEvent.click(
     screen.getAllByRole("button", { name: "Choose from Library" })[0],
   );
@@ -184,6 +185,7 @@ it("queues typed speech with a voice reference while keeping recording mode unch
   }));
   vi.stubGlobal("fetch", fetch);
   mount("/avatars?image=portrait&audio=voice");
+  fireEvent.click(screen.getByLabelText("Full recording (up to 60 seconds)"));
   expect(screen.queryByLabelText("Words to say")).toBeNull();
   fireEvent.click(screen.getByLabelText("Type what to say"));
   expect(screen.getByText("Voice reference")).toBeTruthy();
@@ -257,4 +259,57 @@ it("restores a speech-to-avatar workflow and stops its active animation", async 
   expect(
     fetch.mock.calls.some(([url]) => url === "/api/runs/speech/cancel"),
   ).toBe(false);
+});
+
+it("defaults to the complete recording and restores its durable job", async () => {
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => ({
+    ok: true,
+    json: async () => {
+      if (init?.method === "POST") expect(path).toBe("/api/media/jobs/avatar");
+      if (path.endsWith("/hardware")) return { gpus: [] };
+      if (path.includes("/media/jobs"))
+        return {
+          task_id: "whole-recording",
+          revision: 1,
+          kind: "avatar",
+          mode: "continuous",
+          status: "queued",
+          duration_seconds: 30,
+          total_segments: 12,
+          completed_segments: 0,
+          active_run_ids: ["segment"],
+          final_artifact_id: null,
+          resume_allowed: false,
+          error_message: "",
+        };
+      return {
+        id: path.endsWith("portrait") ? "portrait" : "speech",
+        type: path.endsWith("portrait") ? "image" : "audio",
+        mime_type: path.endsWith("portrait") ? "image/png" : "audio/wav",
+      };
+    },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount("/avatars?image=portrait&audio=speech");
+  expect(
+    (
+      screen.getByLabelText(
+        "Full recording (up to 60 seconds)",
+      ) as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Generate avatar video" }),
+  );
+  await screen.findByText("Your talking avatar");
+  const request = fetch.mock.calls.find(
+    ([url, init]) =>
+      url === "/api/media/jobs/avatar" && init?.method === "POST",
+  );
+  expect(request).toBeTruthy();
+  const body = JSON.parse(String(request![1]!.body));
+  expect(body.client_request_id).toMatch(/^[0-9a-f-]{36}$/);
+  expect(body.frames).toBeUndefined();
+  expect(body.image_artifact_id).toBe("portrait");
+  expect(screen.getByText("0 of 12 segments complete")).toBeTruthy();
 });

@@ -48,6 +48,8 @@ class Task(Base):
 
 class Run(Base):
     __tablename__ = "runs"
+    __table_args__ = (Index("uq_run_task_operation", "task_id", "operation_key", unique=True),)
+    operation_key: Mapped[str | None] = mapped_column(String(160), nullable=True)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
     task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), index=True)

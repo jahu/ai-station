@@ -1,3 +1,9 @@
+import MediaJobResult, {
+  useMediaJob,
+  jobBusy,
+  type MediaJob,
+} from "../components/media/MediaJobResult";
+import { chatRequestId, clearChatRequest } from "./chat-draft";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
@@ -53,17 +59,38 @@ function AvatarForm({
   );
   const [size, setSize] = useState(384);
   const [frames, setFrames] = useState(81);
+  const [fullRecording, setFullRecording] = useState(true);
   const [steps, setSteps] = useState(8);
   const [seed, setSeed] = useState(43);
   const [gpu, setGpu] = useState("auto");
   const hardware = useHardware();
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
+  const jobId = search.get("job") ?? "";
+  const job = useMediaJob(jobId);
   const workflow = useAvatarWorkflow(run.data);
   const activeRun = workflow.data?.steps.at(-1) ?? run.data;
   const generate = useMutation({
-    mutationFn: () =>
-      api<Run>("/avatars/runs", {
+    mutationFn: async () => {
+      if (fullRecording) {
+        const body = {
+          image_artifact_id: image,
+          audio_artifact_id: audio,
+          prompt,
+          size,
+          steps,
+          seed,
+          gpu,
+          ...(voiceMode === "text" ? { speech_text: speechText } : {}),
+        };
+        const key = await chatRequestId("avatar-job", JSON.stringify(body));
+        return api<MediaJob>("/media/jobs/avatar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...body, client_request_id: key }),
+        });
+      }
+      return api<Run>("/avatars/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -77,11 +104,24 @@ function AvatarForm({
           gpu,
           ...(voiceMode === "text" ? { speech_text: speechText } : {}),
         }),
-      }),
+      });
+    },
     onSuccess: (result) => {
+      if ("revision" in result) {
+        clearChatRequest("avatar-job");
+        cache.setQueryData(["media-job", result.task_id], result);
+        setSearch((current) => {
+          const next = new URLSearchParams(current);
+          next.delete("run");
+          next.set("job", result.task_id);
+          return next;
+        });
+        return;
+      }
       cache.setQueryData(["run", result.id], result);
       setSearch((current) => {
         const next = new URLSearchParams(current);
+        next.delete("job");
         next.set("run", result.id);
         return next;
       });
@@ -90,18 +130,14 @@ function AvatarForm({
   const busy =
     generate.isPending ||
     mediaBusy(activeRun) ||
+    jobBusy(job.data) ||
     (!!run.data?.parameters?.avatar_after_speech && workflow.isPending);
   return (
     <>
       <PageTitle
         eyebrow={video ? "CREATE / VIDEO" : "CREATE / AVATARS"}
         title="Bring a portrait to life."
-        action={
-          <span className="media-runtime">
-            <i />
-            EchoMimic · Local
-          </span>
-        }
+        action={<span className="media-runtime">EchoMimic · Local</span>}
       >
         Combine a portrait with speech to create a talking avatar. Preview the
         finished film without leaving your workspace.
@@ -120,7 +156,7 @@ function AvatarForm({
             <span>01 / Portrait & voice</span>
           </div>
           <fieldset disabled={busy || uploading}>
-            <fieldset className="avatar-voice-mode">
+            <fieldset className="avatar-voice-mode video-source-mode">
               <legend>Speech source</legend>
               <label>
                 <input
@@ -217,12 +253,23 @@ function AvatarForm({
                 />
               </div>
               <div>
-                <span>Clip length</span>
-                <AvatarClipChoiceList
-                  value={frames}
-                  disabled={busy || uploading}
-                  onChange={setFrames}
-                />
+                <span>Length</span>
+                <label className="work-context-consent">
+                  <input
+                    type="checkbox"
+                    checked={fullRecording}
+                    disabled={busy || uploading}
+                    onChange={(event) => setFullRecording(event.target.checked)}
+                  />
+                  Full recording (up to 60 seconds)
+                </label>
+                {!fullRecording && (
+                  <AvatarClipChoiceList
+                    value={frames}
+                    disabled={busy || uploading}
+                    onChange={setFrames}
+                  />
+                )}
               </div>
             </div>
             <details className="media-advanced">
@@ -280,19 +327,23 @@ function AvatarForm({
               {busy ? "Creating your avatar…" : "Generate avatar video"}
             </Button>
             <p className="media-privacy">
-              {voiceMode === "text"
-                ? "Speech is generated first · clip length controls how much is animated."
-                : "Uses the start of your recording · preserves portrait proportions."}
+              {fullRecording
+                ? "Uses the whole recording or generated speech · preserves portrait proportions."
+                : "Short preview · animates only the start of the recording."}
             </p>
           </fieldset>
         </form>
-        <MediaResult
-          kind="video"
-          runId={activeRun?.id ?? runId}
-          run={activeRun}
-          steps={workflow.data?.steps}
-          error={run.error ?? workflow.error}
-        />
+        {jobId ? (
+          <MediaJobResult id={jobId} job={job.data} error={job.error} />
+        ) : (
+          <MediaResult
+            kind="video"
+            runId={activeRun?.id ?? runId}
+            run={activeRun}
+            steps={workflow.data?.steps}
+            error={run.error ?? workflow.error}
+          />
+        )}
       </div>
     </>
   );

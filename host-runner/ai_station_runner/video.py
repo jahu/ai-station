@@ -12,14 +12,25 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ai_station_runner.avatars import owned
 from ai_station_runner.config import get_settings
+from ai_station_runner.media_compose import MediaInput, verified_path
 from ai_station_runner.telemetry import collect
+
+
+class FileObservation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    size_bytes: int = Field(ge=0)
+    mtime: float = Field(ge=0, allow_inf_nan=False)
 
 
 class VideoRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     run_id: UUID
+    profile_observation: dict[Literal["wan_model", "wan_text_encoder", "wan_vae"], FileObservation] | None = (
+        None
+    )
     prompt: str = Field(min_length=1, max_length=2000)
     negative_prompt: str = Field(default="", max_length=2000)
+    continuation: MediaInput | None = None
     image_relative: str | None = Field(default=None, max_length=500)
     width: int = Field(default=1280, ge=128, le=1280, multiple_of=32)
     height: int = Field(default=704, ge=128, le=1280, multiple_of=32)
@@ -62,8 +73,28 @@ def profile():
 
 def capabilities():
     try:
-        profile()
-        return {"available": True, "backend": "wan2.2-5b", "modes": ["generate", "animate"], "fps": 24}
+        paths = profile()
+        observation = {
+            key: {"size_bytes": paths[key].stat().st_size, "mtime": paths[key].stat().st_mtime}
+            for key in ("wan_model", "wan_text_encoder", "wan_vae")
+        }
+        memory_mib = (
+            (
+                max(paths["wan_model"].stat().st_size, paths["wan_text_encoder"].stat().st_size)
+                + paths["wan_vae"].stat().st_size
+            )
+            // (1024 * 1024)
+            + 4096
+            + 81 * 1280 * 704 * 12 // (1024 * 1024)
+        )
+        return {
+            "available": True,
+            "backend": "wan2.2-5b",
+            "modes": ["generate", "animate"],
+            "fps": 24,
+            "memory_estimate_mib": memory_mib,
+            "profile_observation": observation,
+        }
     except HTTPException as exc:
         return {"available": False, "backend": "wan2.2-5b", "reason": exc.detail}
 
@@ -72,7 +103,17 @@ def start_video(manager, body):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise HTTPException(403, "Video read/write permissions are required")
     paths = profile()
+    if body.profile_observation is not None:
+        observed = {
+            key: {"size_bytes": paths[key].stat().st_size, "mtime": paths[key].stat().st_mtime}
+            for key in ("wan_model", "wan_text_encoder", "wan_vae")
+        }
+        if {key: value.model_dump() for key, value in body.profile_observation.items()} != observed:
+            raise HTTPException(409, "Wan model files changed after this job was prepared")
     root = get_settings().host_data_dir().resolve()
+    previous = verified_path(root, body.continuation, verify_hash=False) if body.continuation else None
+    if previous and previous.suffix != ".mp4":
+        raise HTTPException(422, "Choose an owned prior video segment")
     image = None
     if body.image_relative:
         image = owned(root, body.image_relative)
@@ -106,6 +147,7 @@ def start_video(manager, body):
                 "request": body.model_dump(mode="json"),
                 "paths": {key: str(value) for key, value in paths.items()},
                 "image": str(image) if image else None,
+                "previous_video": str(previous) if previous else None,
                 "output": str(output),
                 "work": str(work),
             }

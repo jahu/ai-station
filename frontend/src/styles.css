@@ -4902,3 +4902,67 @@ section:has(> .memory-grid) > .dashboard-note {
 .work-context-consent input {
   flex-shrink: 0;
 }
+
+.media-job-result {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+.media-job-result h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+.media-job-result .row {
+  flex-wrap: wrap;
+}
+.media-job-result video {
+  width: 100%;
+  max-height: 65vh;
+  border-radius: 12px;
+  background: #101113;
+}
+.media-job-progress progress {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.media-composer .work-context-consent {
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 1.5;
+}
+.media-composer .work-context-consent:has(input:checked) {
+  border-color: var(--accent);
+  background: #b9f48a0d;
+}
+.media-composer .work-context-consent input[type="checkbox"] {
+  width: 1rem;
+  padding: 0;
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+.media-job-progress progress {
+  appearance: none;
+  border: 0;
+  height: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--border);
+}
+.media-job-progress progress::-webkit-progress-bar {
+  background: var(--border);
+}
+.media-job-progress progress::-webkit-progress-value {
+  background: var(--accent);
+  border-radius: 8px;
+}
+.media-job-progress progress::-moz-progress-bar {
+  background: var(--accent);
+}

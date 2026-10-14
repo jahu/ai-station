@@ -78,14 +78,19 @@ def adopt_existing(
     path = safe_join(settings.data_dir, relative)
     if not path.is_file():
         raise FileNotFoundError(relative)
-    data = path.read_bytes()
+    digest = hashlib.sha256()
+    size = 0
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            size += len(chunk)
+            digest.update(chunk)
     artifact = Artifact(
         artifact_type=artifact_type,
         mime_type=mime_type,
         relative_path=relative,
         original_filename=original_filename,
-        size_bytes=len(data),
-        sha256=hashlib.sha256(data).hexdigest(),
+        size_bytes=size,
+        sha256=digest.hexdigest(),
         run_id=run_id,
         metadata_json=metadata or {},
         parent_artifact_ids=parent_artifact_ids or [],

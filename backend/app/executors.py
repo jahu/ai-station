@@ -28,6 +28,7 @@ from app.events import append_event
 from app.llama import LlamaExecutor, LlamaHealthExecutor
 from app.local_coding import LocalProposalExecutor
 from app.maintenance import SqliteBackupExecutor
+from app.media_jobs import AvatarPlannerExecutor, CompositionExecutor
 from app.model_definitions import ModelInstallExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
@@ -299,6 +300,8 @@ EXECUTORS = {
     "chatterbox": AudioExecutor(),
     "echomimic": AvatarExecutor(),
     "wan_video": VideoExecutor(),
+    CompositionExecutor.name: CompositionExecutor(),
+    AvatarPlannerExecutor.name: AvatarPlannerExecutor(),
     "reviewed_commit": ReviewedCommitExecutor(),
     "github_publication": GithubPublicationExecutor(),
     "publication_reconcile": PublicationReconcileExecutor(),

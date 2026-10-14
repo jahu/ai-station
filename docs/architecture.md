@@ -21,18 +21,13 @@ autoload, the [shared conversation shell](conversation-shell.md), the
 [unified model catalog](model-catalog.md) and distinct System/Settings are delivered.
 [Qualified thinking](chat-thinking.md), session drafts and searchable history are also delivered.
 [Contextual Work](contextual-work.md) reuses coding Tasks/worktrees with durable
-Task Stop. The remaining design adds
-bounded segmented media using existing RunDependency, owned native executors and
-final artifacts. No new orchestration service or arbitrary tool API is introduced.
-See [conversation contracts](plans/chat-work-experience.md),
-[workspace separation](plans/system-settings-separation.md) and
-[long-media execution](plans/long-media-execution.md) for schema, lifecycle,
-resource and acceptance decisions. Preserve current behavior until each reviewed
-increment is delivered; longer duration is not yet operational. A media planner finishing does not finish the user job:
-the proposed Task projection requires a verified final artifact from its current
-selected stage attempts. Its Stop/resume boundary covers the bounded media graph,
-not arbitrary descendant processes. See the planned
-[execution contract](execution-model.md#planned-segmented-media-extension).
+Task Stop. [Long-media jobs](long-media.md) add durable segmented video/full-speech
+avatar plans, existing RunDependency edges, owned native execution and a typed CPU
+composition executor. Final job success requires a verified final artifact from
+the selected revision. Task Stop/resume covers this bounded graph; resource
+admission includes GPU and host RAM. Longer output hardware qualification is
+recorded separately from normal fake-GPU/real-CPU integration tests. See
+[the media execution design](plans/long-media-execution.md) for subsequent profiles.
 
 > Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage, including bounded text, PDF text extraction and stored image attachments and assistant pixel inspection through owned vision GGUF/projector pairs, plus a persisted provider registry with secret references. Project registration, policy editing, and read-only Git status are enabled with disposable-repository integration coverage. Owned worktree preparation, explicit confirmed removal are enabled through the worker and a managed native process. Scoped memory with pinned Chat context and managed model-file discovery are enabled. Local agents now have reviewed definitions, explicit activation, durable schedules, scoped context tools, GET of reviewed public pages, versioned Skills as instruction packs, optional durable approval before each Run, sequential or gated workflow steps, optional bounded registry tool calling during the report, saved retry policies and in-app notices. Named HTTP GET connectors with secret references are inspectable health Runs; public-page Browser is an optional agent workflow tool; account browser automation and other connector kinds stay unpublished. Bounded Cursor and Local AI file-edit proposals (complete rewrites or unique snippet replacements), review artifacts and separate validation Runs are operational. Declared Python dependency installation in owned worktrees is operational. Codex also uses the bounded proposal workflow; Claude Code remains inactive. The Platform assistant can review, commit and publish those coding Tasks through the same Git domain services, and can load or unload owned llama.cpp instances without granting extra permissions from a model plan. See README for runnable commands and limitations.
 

@@ -16,6 +16,8 @@ def main():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--runtime-dir", required=True)
     parser.add_argument("--output-path", required=True)
+    parser.add_argument("--previous-video")
+    parser.add_argument("--previous-hash")
     options, arguments = parser.parse_known_args()
     sys.path.insert(0, options.runtime_dir)
     inference = importlib.import_module("infer_flash")
@@ -27,6 +29,44 @@ def main():
                 self._station_offloaded = True
                 self.enable_sequential_cpu_offload(gpu_id=0)
             return self
+
+    if options.previous_video:
+        import hashlib
+
+        digest = hashlib.sha256()
+        with Path(options.previous_video).open("rb") as source:
+            for chunk in iter(lambda: source.read(1024 * 1024), b""):
+                digest.update(chunk)
+        if digest.hexdigest() != options.previous_hash:
+            raise ValueError("Avatar motion context content changed")
+        original = inference.get_image_to_video_latent2
+
+        def continued_latents(*args, **kwargs):
+            from collections import deque
+
+            import av
+            import numpy as np
+            import torch
+
+            video, mask, identity = original(*args, **kwargs)
+            frames = deque(maxlen=17)
+            count = 0
+            with av.open(options.previous_video) as source:
+                for frame in source.decode(video=0):
+                    if (frame.height, frame.width) != tuple(video.shape[-2:]):
+                        raise ValueError("Avatar motion context dimensions changed")
+                    frames.append(frame.to_ndarray(format="rgb24"))
+                    count += 1
+                    if count > 81:
+                        raise ValueError("Avatar motion context exceeds a native window")
+            if len(frames) < 17:
+                raise ValueError("Avatar continuation needs seventeen motion frames")
+            context = torch.from_numpy(np.stack(list(frames))).permute(3, 0, 1, 2).unsqueeze(0) / 255
+            video[:, :, :17] = context.to(dtype=video.dtype)
+            mask[:, :, :17] = 0
+            return video, mask, identity
+
+        inference.get_image_to_video_latent2 = continued_latents
 
     inference.WanFunInpaintAudioPipeline = OffloadedPipeline
     sys.argv = [sys.argv[0], *arguments]

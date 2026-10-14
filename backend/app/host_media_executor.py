@@ -9,7 +9,7 @@ from app.db import utcnow
 from app.events import append_event
 from app.models import Run
 from app.permissions import require
-from app.resources import release_run_locks, reserve_gpu
+from app.resources import release_run_locks, reserve_gpu, reserve_memory
 from app.runner_client import RunnerClient, RunnerError
 from app.runs import mark_failed, transition
 from app.state import RunStatus
@@ -17,6 +17,7 @@ from app.state import RunStatus
 
 class HostMediaExecutor:
     name = "host_media"
+    requires_gpu = True
     suffix = ".bin"
     artifact_type = "document"
     mime_type = "application/octet-stream"
@@ -30,25 +31,33 @@ class HostMediaExecutor:
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})
         session.commit()
         runner = RunnerClient()
-        indexes = [int(gpu["index"]) for gpu in runner.hardware().get("gpus", [])]
+        hardware = runner.hardware() if self.requires_gpu or run.requested_resources.get("ram_mib") else {}
+        indexes = [int(gpu["index"]) for gpu in hardware.get("gpus", [])] if self.requires_gpu else []
         session.refresh(run)
         if self._cancel_before_dispatch(session, run):
             return "done"
-        allocated = reserve_gpu(session, run, indexes)
-        if allocated is None:
+        memory_ready = reserve_memory(
+            session,
+            run,
+            (hardware.get("memory") or {}).get("available_mib"),
+            run.requested_resources.get("ram_mib", 0),
+        )
+        allocated = reserve_gpu(session, run, indexes) if self.requires_gpu and memory_ready else None
+        if not memory_ready or self.requires_gpu and allocated is None:
+            release_run_locks(session, run.id)
             transition(
                 session,
                 run,
                 RunStatus.INTERRUPTED,
                 event_type="run.interrupted",
-                payload={"reason": "GPU busy"},
+                payload={"reason": "GPU busy" if memory_ready else "Waiting for available host RAM"},
             )
             transition(session, run, RunStatus.QUEUED, event_type="run.requeued", payload={})
             run.queued_at = utcnow()
             run.finished_at = None
             run.worker_id = None
             run.lease_expires_at = None
-            if run.requested_gpu != "none":
+            if memory_ready and run.requested_gpu != "none":
                 from app.llama import evict_idle_models
 
                 evict_idle_models(session, run, indexes)

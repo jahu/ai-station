@@ -95,6 +95,32 @@ class AvatarExecutor(HostMediaExecutor):
     mime_type = "video/mp4"
 
     def _start(self, runner, run, allocated, output):
+        previous_reference = None
+        if run.parameters.get("previous_video_run_id"):
+            from sqlalchemy import select
+
+            from app.db import session_factory
+            from app.models import Run
+
+            with session_factory()() as session:
+                previous = session.get(Run, run.parameters["previous_video_run_id"])
+                artifact = (
+                    session.scalar(
+                        select(Artifact).where(
+                            Artifact.run_id == previous.id, Artifact.artifact_type == "video"
+                        )
+                    )
+                    if previous and previous.status == "succeeded" and previous.task_id == run.task_id
+                    else None
+                )
+                if not artifact or artifact.trashed_at is not None:
+                    raise ValueError("Successful preceding avatar motion is unavailable")
+                previous_reference = {
+                    "relative_path": artifact.relative_path,
+                    "sha256": artifact.sha256,
+                    "size_bytes": artifact.size_bytes,
+                }
+
         return runner.request(
             "POST",
             "/v1/runs/avatar",
@@ -102,6 +128,12 @@ class AvatarExecutor(HostMediaExecutor):
                 "run_id": run.id,
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **(
+                    {"audio_window": run.parameters["audio_window"]}
+                    if run.parameters.get("audio_window")
+                    else {}
+                ),
+                **({"previous_video": previous_reference} if previous_reference else {}),
                 **{
                     key: run.parameters[key]
                     for key in (
