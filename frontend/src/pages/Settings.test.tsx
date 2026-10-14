@@ -122,6 +122,9 @@ it("saves typed defaults and send preference without submitting a Run", async ()
   ]);
   fireEvent.click(screen.getByRole("button", { name: "Chat" }));
   expect(screen.queryByText("Preferences saved")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
+  await vi.waitFor(() => expect(writes).toHaveLength(2));
+  expect(writes[1].body).toMatchObject({ version: 4, mode: "chat" });
 });
 
 it("redirects the existing System maintenance bookmark to its canonical Settings page", async () => {

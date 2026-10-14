@@ -5,6 +5,11 @@
 The [first-send increment](first-send.md) now adds transactional turn receipts and
 mode enforcement to existing services, with no additional execution architecture.
 
+[Create project & build](assistant-project-build.md) composes existing setup,
+worktree, proposal and configured checks on the same Task. Only confirmed setup
+completion publishes coding; failure preserves the created project and the failed
+stage. The dispatcher performs deterministic routing without provider inference.
+
 [First-use model loading](chat-model-selection.md) uses the existing owned runtime
 load prerequisite. Merely selecting a GGUF creates no workload; explicit presets
 or dynamically discovered devices configure its first consumer.

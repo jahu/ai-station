@@ -986,6 +986,57 @@ def test_project_followup_is_not_silently_treated_as_a_name(monkeypatch, instruc
         assert client.post(route + "/messages", json={"content": instruction}).status_code == 202
         step()
         d = client.get(route).json()
-        assert d["active_run"] is None
-        assert "enter its name" in d["messages"][-1]["content"]
+        assert d["active_run"]["executor_type"] == "project_setup"
+        assert d["active_run"]["parameters"]["settings"]["name"] in {"Weather", "Pogoda"}
+        assert d["messages"][-1]["task_status"] == "queued"
         assert client.get("/api/projects").json() == []
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        {"new_project": {"name": "Weather", "executor": "cursor", "external_ai": False}},
+        {"new_project": {"name": "Weather", "executor": "local", "external_ai": True}},
+        {"new_project": {"name": "Weather"}, "web_search": {"enabled": True}},
+        {"new_project": {"name": "Weather"}, "speech_text": "extra"},
+        {"new_project": {"name": "Weather"}, "action": "chat"},
+        {"content": "Create project Weather and build a website with Cursor"},
+        {"new_project": {"name": "Weather"}, "content": "x" * 10001},
+        {"new_project": {"name": "Weather"}, "execution_mode": "chat"},
+    ],
+)
+def test_project_build_rejects_unauthorized_or_mixed_requests_without_side_effects(extra):
+    with TestClient(app) as client:
+        cid = create(client)
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "action": "auto",
+                "content": "Build a weather app",
+                **extra,
+            },
+        )
+        assert response.status_code == 422, response.text
+        assert client.get("/api/projects").json() == [] and client.get("/api/runs").json() == []
+
+
+def test_work_first_send_project_build_is_idempotent_and_keeps_quoted_name():
+    from uuid import uuid4
+
+    with TestClient(app) as client:
+        body = {
+            "client_request_id": str(uuid4()),
+            "selection": {"model": "test", "execution_mode": "work"},
+            "content": 'Create project "Art and build Co" and build a website',
+            "execution_mode": "work",
+        }
+        result = client.post("/api/chat/turns", json=body)
+        assert result.status_code == 202, result.text
+        receipt = result.json()
+        assert client.post("/api/chat/turns", json=body).json() == receipt
+        step()
+        detail = client.get("/api/chat/conversations/" + receipt["conversation_id"]).json()
+        assert detail["active_run"]["executor_type"] == "project_setup"
+        assert detail["active_run"]["parameters"]["settings"]["name"] == "Art and build Co"
+        assert detail["active_run"]["parameters"]["coding_request"]["prompt"] == "build a website"
+        assert len(client.get("/api/runs").json()) == 2

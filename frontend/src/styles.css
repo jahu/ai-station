@@ -3549,6 +3549,33 @@ section:has(> .memory-grid) > .dashboard-note {
   margin-top: 12px;
 }
 
+.project-build-agents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.new-project-build .agent-tool {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.project-build-agents .agent-tool {
+  margin-top: 8px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.project-build-agents .agent-tool:has(input:checked) {
+  border-color: var(--accent);
+  background: rgba(185, 245, 139, 0.08);
+}
+.new-project-build .agent-tool input {
+  width: auto;
+  margin: 0;
+  flex-shrink: 0;
+}
+
 .chat-web-search {
   margin: 12px 0;
 }

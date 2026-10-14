@@ -22,6 +22,8 @@ import { ArtifactLineage } from "./ArtifactLineage";
 import LibraryActions from "./LibraryActions";
 import { ProjectChoiceList } from "./ProjectChoiceList";
 import { CodingModelChoiceList } from "./CodingModelChoiceList";
+import { NewProjectBuild } from "./NewProjectBuild";
+import { newProjectScope, type NewProjectScope } from "./new-project-scope";
 import { GgufChoiceList } from "./GgufChoiceList";
 import { RuntimeChoiceList } from "./RuntimeChoiceList";
 import {
@@ -66,6 +68,7 @@ export type AssistantOptions = {
   image_artifact_ids: string[];
   audio_artifact_id?: string | null;
   coding: CodingScope | null;
+  new_project?: NewProjectScope | null;
   commit: CommitScope | null;
   publish: PublishScope | null;
   load: LoadScope | null;
@@ -87,7 +90,12 @@ export type ActionResult = {
   artifacts?: Artifact[];
   coding_runs?: Run[];
   task_status?: string;
-  created_projects?: { id: string; name: string; updated_at: string }[];
+  created_projects?: {
+    id: string;
+    name: string;
+    updated_at: string;
+    coding_task_id?: string;
+  }[];
 };
 const IMAGE_STEPS = new Set([
   "image.generate",
@@ -196,7 +204,14 @@ export function AssistantResults({
             <Link className="text-link" to={`/projects/${project.id}`}>
               Open project
             </Link>
-            <Link className="text-link" to={`/coding?project=${project.id}`}>
+            <Link
+              className="text-link"
+              to={
+                project.coding_task_id
+                  ? `/coding/${project.coding_task_id}`
+                  : `/coding?project=${project.id}`
+              }
+            >
               Open Coding workspace
             </Link>
             {onProject && (
@@ -603,6 +618,20 @@ export default function AssistantActions({
     });
   }
   function resetAction(action: string) {
+    if (action === "project.create_code") {
+      onChange({
+        action,
+        image_artifact_ids: [],
+        audio_artifact_id: null,
+        coding: null,
+        new_project: { ...newProjectScope },
+        commit: null,
+        publish: null,
+        load: null,
+        stop: null,
+      });
+      return;
+    }
     setExternal(false);
     setCodingModel("");
     setReviewed(false);
@@ -827,7 +856,8 @@ export default function AssistantActions({
         !value.action.startsWith("runtime.") &&
         value.action !== "system.inspect" &&
         value.action !== "image.generate_video" &&
-        value.action !== "project.create" && (
+        value.action !== "project.create" &&
+        value.action !== "project.create_code" && (
           <div className="assistant-attachment-toolbar">
             <Button
               type="button"
@@ -937,7 +967,8 @@ export default function AssistantActions({
       {((!value.action.startsWith("coding.") &&
         !value.action.startsWith("runtime.") &&
         value.action !== "image.generate_video" &&
-        value.action !== "project.create") ||
+        value.action !== "project.create" &&
+        value.action !== "project.create_code") ||
         value.image_artifact_ids.length > 0) && (
         <div
           className="assistant-reference-area"
@@ -977,6 +1008,13 @@ export default function AssistantActions({
             }
           />
         </div>
+      )}
+      {value.action === "project.create_code" && (
+        <NewProjectBuild
+          busy={busy}
+          value={value.new_project ?? newProjectScope}
+          onChange={(new_project) => onChange({ ...value, new_project })}
+        />
       )}
       {value.action === "coding.commit" && (
         <details open className="assistant-coding-scope">

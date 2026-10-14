@@ -65,8 +65,9 @@ the media plan and must not be relabelled as new long-media acceptance.
 As of the planning refresh at **f7387bf**, increment 1 and increment 3 are delivered
 (PRs #269 and #270). Increment 2 has local selection/autoload delivered in #271,
 but its shared shell, unified provider/model catalog and contextual attachment
-flow are still open. Increment 5 has uncommitted work in `.tools/work-project-build`;
-it is not merged or deployed. Increments 4 and 6–9 are planned. Do not repeat
+flow are still open. Increment 5's project creation/coding composition is now
+[delivered](../assistant-project-build.md); conversational context and full task
+Stop remain follow-ups. Increments 4 and 6–9 are planned. Do not repeat
 delivered schema changes or treat an unfinished branch as a released capability.
 
 Each row is a feature/fix PR to `develop`, with a usable end-to-end result. Keep

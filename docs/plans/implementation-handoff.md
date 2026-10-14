@@ -2,9 +2,15 @@
 
 Planning checkpoint: 2026-10-14, `develop` **f7387bf**. This document updates the
 [delivery brief](2026-10-chat-work-media.md), not the execution architecture.
-The user requested **analysis and documentation only** for this turn; implementation
-is for GPT-6.1-Sol after an explicit switch/resume. No application code, deployment,
-runtime or installed models are changed by this planning update.
+The original planning turn requested analysis/documentation only. **The user has
+since explicitly resumed implementation and corrected an erroneous pause.** Do not
+treat that historical planning-only instruction as a current implementation stop.
+The planning PR itself changed no application code, deployment or installed models.
+
+Current delivery: [Create project & build](../assistant-project-build.md) integrates
+the adapted Work WIP. Shared conversation shell/catalog/reasoning and long media
+remain next work. The WIP inventory below records the historical pre-delivery
+checkpoint; preserve original Memory and `.tools/assistant-project-build` changes.
 
 ## 1. Current release and preserved work
 
@@ -173,8 +179,9 @@ Docker-backed `scripts/frontend.sh` in isolated worktrees.
 For each PR: full diff review, successful local checks as authorized, squash to
 `develop`; never touch release branches. Existing AI Station restart permission
 allows deployment during implementation with DB backup and ownership checks.
-It does **not** authorize deployment during this planning-only turn. Preserve data
-and distinguish fake integration, real CPU and real GPU/provider acceptance.
+The historical planning turn performed no deployment. Implementation is now
+resumed with existing restart authorization. Preserve data and distinguish fake
+integration, real CPU and real GPU/provider acceptance.
 After switching model, begin with the shared conversation shell or reviewed Work WIP;
 do not regenerate this plan or repeat #269–271. Long media remains a required
 deliverable, not a cosmetic unavailable screen or a promised checkbox.

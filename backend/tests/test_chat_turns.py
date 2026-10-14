@@ -86,7 +86,15 @@ def test_concurrent_retries_publish_one_turn(local):
 
 
 @pytest.mark.parametrize(
-    "action", ["coding.local", "project.create", "agent.create", "runtime.load", "coding.commit"]
+    "action",
+    [
+        "coding.local",
+        "project.create",
+        "project.create_code",
+        "agent.create",
+        "runtime.load",
+        "coding.commit",
+    ],
 )
 def test_chat_rejects_work_actions_before_creating_domain_rows(local, action):
     with TestClient(app) as client:

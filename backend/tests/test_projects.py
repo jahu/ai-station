@@ -3099,3 +3099,191 @@ def test_assistant_creates_owned_project_in_one_task_without_inference(
             tick(session, "coding-dispatch")
         assert client.get(route).json()["active_run"]["executor_type"] == "worktree_prepare"
         assert len(client.get("/api/projects").json()) == 1
+
+
+@pytest.mark.parametrize("provider", ["local", "cursor", "codex"])
+def test_assistant_project_build_reuses_setup_worktree_and_coding(
+    repository,
+    owned_runner,
+    local_coding_bridge,
+    monkeypatch,
+    request,
+    provider,
+):
+    from app.db import reset_engine
+    from app.local_provider import LocalChatProvider
+
+    if provider != "local":
+        request.getfixturevalue("fake_" + provider)
+    else:
+        local_coding_bridge["mode"] = "explore"
+
+    async def forbidden(self, **params):
+        raise AssertionError("Deterministic project routing must not perform inference")
+        yield ""
+
+    monkeypatch.setattr(LocalChatProvider, "stream", forbidden)
+    original_index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        cid = client.post(
+            "/api/chat/conversations",
+            json={
+                "model": "fixture-local",
+                "execution_mode": "orchestrator",
+            },
+        ).json()["id"]
+        route = "/api/chat/conversations/" + cid
+        response = client.post(
+            route + "/messages",
+            json={
+                "action": "project.create_code",
+                "content": "Build a README and new.py for a simple app",
+                "new_project": {
+                    "name": "New station app",
+                    "executor": provider,
+                    "external_ai": provider != "local",
+                },
+            },
+        )
+        assert response.status_code == 202, response.text
+        parent = response.json()
+        with session_factory()() as session:
+            tick(session, "project-dispatch")
+        setup = client.get(route).json()["active_run"]
+        assert setup["executor_type"] == "project_setup"
+        assert not local_coding_bridge["requests"]
+        with session_factory()() as session:
+            tick(session, "project-setup")
+        reset_engine()
+        detail = client.get(route).json()
+        preparation = detail["active_run"]
+        assert preparation["executor_type"] == "worktree_prepare"
+        assert preparation["parent_run_id"] == setup["id"]
+        project = detail["messages"][1]["created_projects"][0]
+        assert project["name"] == "New station app" and project["coding_task_id"] == parent["task_id"]
+        native_repo = owned_runner.data_dir / "projects" / project["id"]
+        assert (native_repo / ".venv/bin/python").is_file()
+        created_head = subprocess.check_output(
+            ["git", "-C", str(native_repo), "rev-parse", "HEAD"], text=True
+        )
+        with session_factory()() as session:
+            tick(session, "worktree")
+            coding_id = tick(session, "proposal")
+            assert tick(session, "after-restart") is None
+        coding = client.get("/api/runs/" + coding_id).json()
+        assert coding["status"] == "succeeded", coding
+        assert coding["executor_type"] == (
+            "local_proposal" if provider == "local" else provider + "_proposal"
+        )
+        assert ("external_ai" in coding["effective_permissions"]) == (provider != "local")
+        assert coding["metadata"]["coding_review"]["files"]
+        rows = client.get("/api/runs", params={"conversation_id": cid}).json()
+        assert len(rows) == 4 and {row["task_id"] for row in rows} == {parent["task_id"]}
+        assert len(client.get("/api/projects").json()) == 1
+        assert client.get("/api/coding/sessions/" + parent["task_id"]).status_code == 200
+        assert (
+            subprocess.check_output(["git", "-C", str(native_repo), "rev-parse", "HEAD"], text=True)
+            == created_head
+        )
+        assert (repository / ".git/index").read_bytes() == original_index
+        assert (repository / "README.md").read_text() == "Original repository\n"
+
+
+@pytest.mark.parametrize("failure", ["cancel", "reject"])
+def test_assistant_project_build_does_not_publish_coding_after_setup_failure(
+    repository,
+    owned_runner,
+    monkeypatch,
+    failure,
+):
+    from app.runner_client import RunnerError
+
+    with TestClient(app) as client:
+        cid = client.post(
+            "/api/chat/conversations", json={"model": "fixture", "execution_mode": "orchestrator"}
+        ).json()["id"]
+        route = "/api/chat/conversations/" + cid
+        response = client.post(
+            route + "/messages", json={"content": "Stwórz projekt Pogoda i zbuduj stronę pogodową"}
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "dispatch")
+        setup = client.get(route).json()["active_run"]
+        if failure == "cancel":
+            client.post("/api/runs/" + setup["id"] + "/cancel").raise_for_status()
+        else:
+            original = RunnerClient.request
+
+            def reject(self, method, path, *args):
+                if path == "/v1/projects/create":
+                    raise RunnerError(422, "Fixture rejects setup")
+                return original(self, method, path, *args)
+
+            monkeypatch.setattr(RunnerClient, "request", reject)
+        with session_factory()() as session:
+            tick(session, "setup")
+        rows = client.get("/api/runs", params={"conversation_id": cid}).json()
+        assert len(rows) == 2 and all(
+            row["executor_type"] not in {"worktree_prepare", "local_proposal", "llama_load"} for row in rows
+        )
+        assert client.get("/api/projects").json() == []
+        assert not (owned_runner.data_dir / "projects" / setup["parameters"]["project_id"]).exists()
+
+
+def test_project_build_preserves_project_when_coding_model_disappears(repository, owned_runner, monkeypatch):
+    from app.providers import ProviderError
+
+    with TestClient(app) as client:
+        cid = client.post(
+            "/api/chat/conversations", json={"model": "fixture", "execution_mode": "orchestrator"}
+        ).json()["id"]
+        route = "/api/chat/conversations/" + cid
+        response = client.post(
+            route + "/messages", json={"content": "Create project Weather and build a weather app"}
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "dispatch")
+
+        def unavailable(*args, **kwargs):
+            raise ProviderError("Fixture model disappeared")
+
+        monkeypatch.setattr("app.local_provider.model_endpoint", unavailable)
+        with session_factory()() as session:
+            tick(session, "native-setup")
+        detail = client.get(route).json()
+        assert detail["active_run"] is None
+        result = detail["messages"][1]
+        assert result["task_status"] == "failed" and len(result["created_projects"]) == 1
+        project = result["created_projects"][0]
+        assert (owned_runner.data_dir / "projects" / project["id"] / ".venv/bin/python").is_file()
+        assert result["coding_runs"][0]["error_type"] == "CodingSetupFailed"
+        assert client.get("/api/coding/sessions/" + response.json()["task_id"]).status_code == 200
+        with session_factory()() as session:
+            assert tick(session, "no-replay") is None
+
+
+def test_stop_project_build_parent_after_setup_cancels_queued_coding_child(
+    repository, owned_runner, local_coding_bridge
+):
+    with TestClient(app) as client:
+        cid = client.post(
+            "/api/chat/conversations", json={"model": "fixture", "execution_mode": "work"}
+        ).json()["id"]
+        route = "/api/chat/conversations/" + cid
+        parent = client.post(
+            route + "/messages", json={"content": "Create project Weather and build a weather app"}
+        ).json()
+        with session_factory()() as session:
+            tick(session, "dispatch")
+            tick(session, "setup")
+        preparation = client.get(route).json()["active_run"]
+        assert preparation["executor_type"] == "worktree_prepare"
+        stopped = client.post("/api/runs/" + parent["id"] + "/cancel")
+        assert stopped.status_code == 200, stopped.text
+        assert client.get("/api/runs/" + preparation["id"]).json()["status"] == "canceled"
+        assert len(client.get("/api/projects").json()) == 1
+        assert not local_coding_bridge["requests"]
+        with session_factory()() as session:
+            assert tick(session, "no-coding") is None

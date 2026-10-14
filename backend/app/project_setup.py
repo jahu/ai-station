@@ -103,4 +103,7 @@ class ProjectSetupExecutor(NativeJobExecutor):
         transition(
             session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={"project_id": project.id}
         )
+        from app.project_build import queue_project_build
+
+        queue_project_build(session, run, project)
         return "done"

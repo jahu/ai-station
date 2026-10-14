@@ -755,15 +755,20 @@ function ConversationView({
     (options.action === "coding.commit" && !!options.commit) ||
     (options.action === "coding.publish" && !!options.publish);
   const canSend =
-    assistantTurn && options.action === "system.inspect"
-      ? true
-      : assistantTurn && options.action.startsWith("runtime.")
-        ? runtimeReady
-        : assistantTurn &&
-            (options.action === "coding.commit" ||
-              options.action === "coding.publish")
-          ? gitReady
-          : !!draft.trim();
+    assistantTurn && options.action === "project.create_code"
+      ? !!draft.trim() &&
+        !!options.new_project?.name.trim() &&
+        (options.new_project.executor === "local" ||
+          options.new_project.external_ai)
+      : assistantTurn && options.action === "system.inspect"
+        ? true
+        : assistantTurn && options.action.startsWith("runtime.")
+          ? runtimeReady
+          : assistantTurn &&
+              (options.action === "coding.commit" ||
+                options.action === "coding.publish")
+            ? gitReady
+            : !!draft.trim();
   const send = useMutation({
     mutationFn: () => {
       const values = {
@@ -929,6 +934,7 @@ function ConversationView({
                 void cache.invalidateQueries({ queryKey: ["projects"] });
                 setOptions({
                   action: "coding.local",
+                  new_project: null,
                   image_artifact_ids: [],
                   audio_artifact_id: null,
                   coding: {
@@ -974,9 +980,11 @@ function ConversationView({
               assistantTurn
                 ? options.action === "image.generate_video"
                   ? "Describe the scene and motion. Example: a forest at dawn, then animate it: mist drifts."
-                  : options.action === "project.create"
-                    ? "Name your project — for example Weather Station"
-                    : "Describe your task — or drop reference images below…"
+                  : options.action === "project.create_code"
+                    ? "Describe what your new project should do…"
+                    : options.action === "project.create"
+                      ? "Name your project — for example Weather Station"
+                      : "Describe your task — or drop reference images below…"
                 : "Ask your local model…"
             }
             rows={3}
@@ -1042,7 +1050,8 @@ function ConversationView({
               options.action.startsWith("runtime.") ||
               options.action === "system.inspect" ||
               options.action === "image.generate_video" ||
-              options.action === "project.create"
+              options.action === "project.create" ||
+              options.action === "project.create_code"
             ) ||
             attachments.length > 0) && (
             <TextAttachments

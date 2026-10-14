@@ -75,6 +75,12 @@ const ACTIONS = [
       "Enter a project name. AI Station creates its Git repository and Python environment, ready for coding.",
   },
   {
+    key: "project.create_code",
+    title: "Create project & build",
+    detail:
+      "Name your project and describe the first task. Setup and isolated coding run automatically.",
+  },
+  {
     key: "coding.local",
     title: "Coding with Local AI",
     detail: "Uses this conversation's local model in an owned worktree.",

@@ -17,6 +17,7 @@ from app.db import utcnow
 from app.events import append_event
 from app.llama import LoadModel
 from app.models import Artifact, Conversation, Message, Project, Run, RuntimeInstance
+from app.project_build import ProjectBuildScope, project_build_request
 from app.providers import ProviderError
 from app.publication import PublishBody
 from app.reviewed_commits import ReviewedCommit
@@ -38,6 +39,7 @@ Action = Literal[
     "video.generate",
     "agent.create",
     "project.create",
+    "project.create_code",
     "system.inspect",
     "coding.cursor",
     "coding.codex",
@@ -112,6 +114,7 @@ class AssistantInputs(BaseModel):
         "video.generate",
         "agent.create",
         "project.create",
+        "project.create_code",
         "system.inspect",
         "coding.cursor",
         "coding.codex",
@@ -123,6 +126,7 @@ class AssistantInputs(BaseModel):
     ] = "auto"
     audio_artifact_id: UUID | None = None
     coding: CodingScope | None = None
+    new_project: ProjectBuildScope | None = None
     commit: CommitScope | None = None
     publish: PublishScope | None = None
     load: LoadModel | None = None
@@ -146,6 +150,7 @@ def assistant_needs_provider(body):
         "system.inspect",
         "image.describe",
         "project.create",
+        "project.create_code",
     }
 
 
@@ -204,6 +209,40 @@ def planner_context(session, conversation, user):
 
 def enqueue_assistant(session, conversation, user, body, *, commit=True):
     selected_plan = explicit_plan(body.model_dump(mode="json", exclude={"attachments"}))
+    build = project_build_request(body.model_dump(mode="json", exclude={"attachments"}))
+    if body.new_project or body.action == "project.create_code" or build:
+        if not build or any(
+            (
+                body.coding,
+                body.commit,
+                body.publish,
+                body.load,
+                body.stop,
+                body.attachments,
+                body.image_artifact_ids,
+                body.audio_artifact_id,
+                body.web_search.enabled,
+                body.upscale_result,
+                body.speech_text,
+            )
+        ):
+            raise HTTPException(
+                422, "Create project & build needs a name and coding goal without other action settings"
+            )
+        scope, _ = build
+        if scope.executor == "local":
+            from app.chat_providers import get_provider
+            from app.local_provider import model_endpoint
+
+            provider = get_provider(session, conversation.provider)
+            if not provider.enabled or provider.key != BUILTIN_KEY:
+                raise HTTPException(422, "Choose a local conversation model for local project coding")
+            if not conversation.model.strip():
+                raise HTTPException(422, "Choose a local conversation model before starting coding")
+            try:
+                model_endpoint(conversation.model, session)
+            except ProviderError as exc:
+                raise HTTPException(409, str(exc)) from exc
     project_name = (
         requested_project_name(body.content, body.action)
         if selected_plan and selected_plan.action == "project.create"
@@ -404,7 +443,11 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
             snapshot,
             ([] if getattr(body, "execution_mode", None) == "chat" else ["manage_agents"])
             + (["filesystem_read", "manage_models"] if images else [])
-            + (["external_ai"] if body.coding and body.coding.external_ai else []),
+            + (
+                ["external_ai"]
+                if (body.coding and body.coding.external_ai) or (build and build[0].external_ai)
+                else []
+            ),
         ),
     )
     from app.llama import prepare_consumer
@@ -442,6 +485,11 @@ def explicit_plan(params):
     action = params["action"]
     if action != "auto":
         return Plan(action=action, reason="Using your selected action.")
+    if project_build_request(params):
+        return Plan(
+            action="project.create_code",
+            reason="Create a new owned project, then code its requested first task.",
+        )
     if params.get("commit"):
         return Plan(action="coding.commit", reason="Using your confirmed review of this coding proposal.")
     if params.get("publish"):
@@ -586,6 +634,7 @@ image.recompose: compose an image using one or more attached references (includi
 image.upscale: enlarge one attached image;
 agent.create: create a persistent agent definition, including requests whose agent goal mentions images/code;
 project.create: explicitly create a NEW project from its name; never import or modify an existing repository;
+project.create_code: create a named new project and its first coding task only from an explicit name/goal or supplied new-project scope;
 coding.local: implement changes in a registered software project with the local conversation model;
 coding.cursor: implement changes only with explicit external Cursor consent in the coding scope;
 coding.codex: implement changes only with explicit external Codex consent in the coding scope;
@@ -666,7 +715,30 @@ class AssistantExecutor:
         message.content = plan.reason
         params = run.parameters
         images = params["image_artifact_ids"]
-        if plan.action == "project.create":
+        if plan.action == "project.create_code":
+            from app.project_setup import enqueue_project
+
+            build = project_build_request(params)
+            if build is None:
+                message.content = (
+                    "Choose Create project & build, enter its name and describe the first coding goal."
+                )
+            else:
+                scope, prompt = build
+                if scope.external_ai and "external_ai" not in run.effective_permissions:
+                    raise ValueError("New project coding has no external sharing consent")
+                child = enqueue_project(session, scope, task=run.task, parent_run_id=run.id)
+                child.parameters = {
+                    **child.parameters,
+                    "coding_request": {
+                        "scope": scope.model_dump(),
+                        "prompt": prompt,
+                        "model": params["model"],
+                    },
+                }
+                run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                message.content = f"Creating {scope.name}. {scope.executor.title()} coding will start in an isolated worktree when setup finishes; results appear here."
+        elif plan.action == "project.create":
             from app.project_setup import ProjectName, enqueue_project
 
             name = requested_project_name(params["content"], params["action"])
@@ -1130,7 +1202,12 @@ def task_results(session, message, run):
         "artifacts": [artifact_dict(artifact) for artifact in artifacts],
         "coding_runs": [run_dict(step) for step in steps if step.executor_type in CODING_REVIEW_EXECUTORS],
         "created_projects": [
-            {"id": project.id, "name": project.name, "updated_at": iso(project.updated_at)}
+            {
+                "id": project.id,
+                "name": project.name,
+                "updated_at": iso(project.updated_at),
+                **({"coding_task_id": step.task_id} if step.metadata_json.get("coding_run_id") else {}),
+            }
             for step in steps
             if step.executor_type == "project_setup"
             and step.status == "succeeded"
