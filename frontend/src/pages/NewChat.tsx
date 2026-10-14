@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { ErrorNotice } from "../components/common";
-import LlamaModels from "./LlamaModels";
+import UnifiedModelPicker from "./UnifiedModelPicker";
 import ConversationComposer from "./ConversationComposer";
 import AssistantActions from "./AssistantActions";
 import { emptyOptions } from "./assistant-options";
@@ -43,12 +43,14 @@ export default function NewChat({
   const [selection, setSelection] = useState<{
     provider: string;
     model: string;
+    version?: string;
+    label?: string;
+    location?: "local" | "external";
   } | null>(null);
   const [draft, setDraft] = useState("");
   const [options, setOptions] = useState(emptyOptions);
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [modelPending, setModelPending] = useState(false);
   const [webEnabled, setWebEnabled] = useState(false);
   const [webQuery, setWebQuery] = useState("");
   useEffect(() => {
@@ -72,6 +74,12 @@ export default function NewChat({
     mutationFn: async () => {
       const values = {
         selection: { execution_mode: mode, provider: provider?.key, model },
+        ...(selection?.version || provider?.updated_at
+          ? {
+              expected_provider_version:
+                selection?.version ?? provider?.updated_at,
+            }
+          : {}),
         execution_mode: mode,
         content: draft.trim(),
         attachments,
@@ -96,8 +104,7 @@ export default function NewChat({
       onAccepted(receipt.conversation_id);
     },
   });
-  const busy =
-    send.isPending || uploading || modelPending || preferences.isPending;
+  const busy = send.isPending || uploading || preferences.isPending;
   const canSend =
     !!draft.trim() &&
     !!model &&
@@ -125,66 +132,23 @@ export default function NewChat({
             setOptions(emptyOptions);
           }}
         />
-        {provider?.builtin ? (
-          <LlamaModels
-            selectionOnly
-            compact
-            value={model}
-            models={provider.models ?? []}
-            busy={send.isPending}
-            onBusy={setModelPending}
-            onSelect={(value) =>
-              setSelection({ provider: provider.key, model: value })
-            }
-          />
-        ) : (
-          <label className="new-chat-model">
-            Model
-            <select
-              value={model}
-              onChange={(e) =>
-                setSelection({
-                  provider: provider?.key ?? "",
-                  model: e.target.value,
-                })
-              }
-            >
-              {(provider?.models?.length
-                ? provider.models
-                : provider?.default_model
-                  ? [provider.default_model]
-                  : []
-              ).map((name) => (
-                <option key={name}>{name}</option>
-              ))}
-            </select>
-          </label>
-        )}
-        {providers.length > 1 && (
-          <label className="new-chat-provider">
-            Provider
-            <select
-              aria-label="Provider"
-              value={provider?.key ?? ""}
-              onChange={(e) => {
-                onProviderChange(e.target.value);
-                const next = providers.find(
-                  (item) => item.key === e.target.value,
-                );
-                setSelection({
-                  provider: e.target.value,
-                  model: next?.default_model || next?.models?.[0] || "",
-                });
-              }}
-            >
-              {providers.map((p) => (
-                <option key={p.key} value={p.key} disabled={!p.enabled}>
-                  {p.name} · {p.location}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+        <UnifiedModelPicker
+          providerKey={selection?.provider ?? provider?.key ?? ""}
+          modelKey={model}
+          label={selection?.label}
+          location={selection?.location ?? provider?.location}
+          busy={send.isPending}
+          onSelect={(choice) => {
+            onProviderChange(choice.provider_key);
+            setSelection({
+              provider: choice.provider_key,
+              model: choice.model_key,
+              version: choice.config_version,
+              label: choice.display_name,
+              location: choice.location,
+            });
+          }}
+        />
       </div>
       <ConversationComposer
         id="new-chat-message"

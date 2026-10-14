@@ -4,6 +4,7 @@ import {
   type WebSources,
 } from "./ChatWebSearch";
 import LlamaModels from "./LlamaModels";
+import UnifiedModelPicker from "./UnifiedModelPicker";
 import NewChat from "./NewChat";
 import ConversationComposer from "./ConversationComposer";
 import ChatModeSwitch from "./ChatModeSwitch";
@@ -746,7 +747,6 @@ function ConversationView({
   const pendingRequest = useRef<{ body: string; id: string } | null>(null);
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [readingAttachment, setReadingAttachment] = useState(false);
-  const [modelPending, setModelPending] = useState(false);
   const [clipboardError, setClipboardError] = useState<Error | null>(null);
   const refresh = () => {
     void cache.invalidateQueries({
@@ -791,6 +791,9 @@ function ConversationView({
                 : ""),
         conversation_id: conversation.id,
         expected_settings_version: conversation.settings_version ?? 1,
+        ...(selected.data?.updated_at
+          ? { expected_provider_version: selected.data.updated_at }
+          : {}),
         attachments,
         execution_mode: turnMode,
         ...(assistantTurn ? options : {}),
@@ -841,7 +844,6 @@ function ConversationView({
     send.isPending ||
     regenerate.isPending ||
     readingAttachment ||
-    modelPending ||
     settings.isPending;
   const messages = conversation.messages;
   return (
@@ -849,33 +851,26 @@ function ConversationView({
       <div className="chat-heading">
         <div>
           <h2>{conversation.title}</h2>
-          {selected.data?.builtin && selected.data.location === "local" ? (
-            <LlamaModels
-              selectionOnly
-              compact
-              value={conversation.model}
-              label={conversation.model_label}
-              models={models}
-              busy={busy}
-              onBusy={setModelPending}
-              onSelect={(model) =>
-                settings.mutate({
-                  model,
-                  provider: conversation.provider,
-                  execution_mode: conversation.execution_mode,
-                  title: conversation.title,
-                  system_prompt: conversation.system_prompt,
-                  temperature: conversation.temperature,
-                  max_tokens: conversation.max_tokens,
-                })
-              }
-            />
-          ) : (
-            <p className="muted">
-              {conversation.provider_name ?? conversation.provider} ·{" "}
-              {conversation.model_label ?? conversation.model}
-            </p>
-          )}
+          <UnifiedModelPicker
+            providerKey={conversation.provider}
+            modelKey={conversation.model}
+            label={conversation.model_label}
+            location={
+              conversation.provider_location as "local" | "external" | undefined
+            }
+            busy={busy}
+            onSelect={(choice) =>
+              settings.mutate({
+                model: choice.model_key,
+                provider: choice.provider_key,
+                execution_mode: conversation.execution_mode,
+                title: conversation.title,
+                system_prompt: conversation.system_prompt,
+                temperature: conversation.temperature,
+                max_tokens: conversation.max_tokens,
+              })
+            }
+          />
         </div>
         {conversation.active_run && (
           <Link to={`/runs/${conversation.active_run.id}`}>

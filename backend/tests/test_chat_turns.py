@@ -158,3 +158,59 @@ def test_followup_checks_settings_revision_and_preferences_are_versioned(local):
         assert saved.json()["version"] == defaults["version"] + 1
         assert client.put("/api/chat/preferences", json=defaults).status_code == 409
         assert client.get("/api/chat/preferences").json()["mode"] == "work"
+
+
+def test_provider_version_is_stable_on_read_and_stale_send_has_no_side_effects(local):
+    from app.chat_providers import BUILTIN_KEY
+    from app.db import utcnow
+    from app.models import ChatProvider
+
+    with TestClient(app) as client:
+        provider = client.get("/api/chat/providers/" + BUILTIN_KEY).json()
+        version = provider["updated_at"]
+        assert client.get("/api/chat/providers/" + BUILTIN_KEY).json()["updated_at"] == version
+        body = turn(expected_provider_version=version)
+        with session_factory()() as session:
+            row = session.scalar(select(ChatProvider).where(ChatProvider.key == BUILTIN_KEY))
+            row.name = "Renamed provider"
+            row.updated_at = utcnow()
+            session.commit()
+        before = counts()
+        assert client.post("/api/chat/turns", json=body).status_code == 409
+        assert counts() == before
+        fresh = client.get("/api/chat/providers/" + BUILTIN_KEY).json()["updated_at"]
+        accepted = client.post("/api/chat/turns", json={**body, "expected_provider_version": fresh})
+        assert accepted.status_code == 202, accepted.text
+        assert accepted.json()["run"]["parameters"]["provider_config_version"] == fresh
+        with session_factory()() as session:
+            row = session.scalar(select(ChatProvider).where(ChatProvider.key == BUILTIN_KEY))
+            row.updated_at = utcnow()
+            session.commit()
+        replay = client.post("/api/chat/turns", json={**body, "expected_provider_version": fresh})
+        assert replay.json() == accepted.json()
+        assert client.post("/api/chat/turns", json=body).status_code == 409
+
+
+def test_legacy_receipt_replays_after_optional_scope_schema_extension(local):
+    import hashlib
+    import json
+
+    from app.chat import TurnBody
+
+    with TestClient(app) as client:
+        body = turn()
+        accepted = client.post("/api/chat/turns", json=body)
+        assert accepted.status_code == 202
+        legacy = TurnBody.model_validate(body).model_dump(mode="json")
+        legacy.pop("expected_provider_version")
+        legacy.pop("new_project")
+        with session_factory()() as session:
+            receipt = session.get(ChatTurnRequest, body["client_request_id"])
+            receipt.payload_hash = hashlib.sha256(
+                json.dumps(legacy, sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest()
+            session.commit()
+        before = counts()
+        assert client.post("/api/chat/turns", json=body).json() == accepted.json()
+        assert counts() == before
+        assert client.post("/api/chat/turns", json={**body, "content": "Different goal"}).status_code == 409

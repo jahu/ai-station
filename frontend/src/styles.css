@@ -3165,6 +3165,66 @@ section:has(> .memory-grid) > .dashboard-note {
   border-color: #65814e;
   background: #252e20;
 }
+.unified-model-options section {
+  margin-top: 20px;
+}
+.unified-model-options h3 {
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.unified-model-dialog .model-option > svg {
+  flex-shrink: 0;
+}
+.unified-model-name {
+  flex: 1;
+  min-width: 0;
+}
+.unified-model-name strong,
+.unified-model-name small {
+  display: block;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.unified-model-name small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.unified-model-dialog .model-option:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.model-provider-browse {
+  display: grid;
+  gap: 6px;
+  padding: 4px 14px;
+}
+.model-picker-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 18px;
+  margin-top: 18px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .unified-model-dialog .model-option {
+    position: relative;
+    display: grid;
+    grid-template-columns: 18px minmax(0, 1fr);
+  }
+  .unified-model-dialog .model-option > .chip {
+    grid-column: 2;
+    width: fit-content;
+  }
+  .unified-model-dialog .model-option > svg:last-child {
+    position: absolute;
+    right: 10px;
+    top: 12px;
+  }
+}
 .model-option-icon {
   display: grid;
   place-items: center;

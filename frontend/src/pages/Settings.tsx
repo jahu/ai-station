@@ -4,12 +4,12 @@ import { Link, Navigate, NavLink, useParams } from "react-router-dom";
 import { api } from "../api";
 import { ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
-import ChatProviders, { type ChatProviderInfo } from "./ChatProviders";
+import ChatProviders from "./ChatProviders";
 import ChatModeSwitch, { type ChatMode } from "./ChatModeSwitch";
 import Connectors from "./Connectors";
 import Maintenance from "./Maintenance";
 import OperatorAccess from "./OperatorAccess";
-import LlamaModels from "./LlamaModels";
+import UnifiedModelPicker, { type Catalog } from "./UnifiedModelPicker";
 
 const sections = [
   ["general", "General"],
@@ -60,18 +60,16 @@ function GeneralSettings() {
     queryKey: ["chat-preferences"],
     queryFn: () => api<Preferences>("/chat/preferences"),
   });
-  const providers = useQuery({
-    queryKey: ["chat-providers"],
-    queryFn: () => api<ChatProviderInfo[]>("/chat/providers"),
-  });
   const [draft, setValues] = useState<Preferences | null>(null);
   const values = draft ?? preferences.data ?? null;
-  const [modelBusy, setModelBusy] = useState(false);
-  const provider = useQuery({
-    queryKey: ["chat-provider", values?.provider],
-    queryFn: () => api<ChatProviderInfo>(`/chat/providers/${values?.provider}`),
-    enabled: !!values?.provider,
+  const modelCatalog = useQuery({
+    queryKey: ["chat-model-catalog"],
+    queryFn: () => api<Catalog>("/chat/model-catalog"),
+    staleTime: 30000,
   });
+  const provider = modelCatalog.data?.providers?.find(
+    (item) => item.key === values?.provider,
+  );
   const save = useMutation({
     mutationFn: () =>
       api<Preferences>("/chat/preferences", {
@@ -84,7 +82,7 @@ function GeneralSettings() {
       setValues(null);
     },
   });
-  const busy = save.isPending || modelBusy;
+  const busy = save.isPending;
   return (
     <section className="panel settings-general">
       <div className="panel-heading">
@@ -94,11 +92,7 @@ function GeneralSettings() {
         Model and mode apply to new conversations. The send shortcut applies to
         every chat composer.
       </p>
-      <ErrorNotice
-        error={
-          preferences.error ?? providers.error ?? provider.error ?? save.error
-        }
-      />
+      <ErrorNotice error={preferences.error ?? save.error} />
       {preferences.isPending ? (
         <Loading />
       ) : (
@@ -117,57 +111,20 @@ function GeneralSettings() {
                 onChange={(mode) => setValues({ ...values, mode })}
               />
             </div>
-            <label>
-              Default provider
-              <select
-                disabled={busy}
-                value={values.provider}
-                onChange={(e) =>
-                  setValues({ ...values, provider: e.target.value, model: "" })
-                }
-              >
-                {providers.data?.map((p) => (
-                  <option key={p.key} value={p.key} disabled={!p.enabled}>
-                    {p.name} · {p.location}
-                  </option>
-                ))}
-              </select>
-            </label>
             <div>
               <span className="settings-label">Default model</span>
-              {provider.data?.builtin ? (
-                <LlamaModels
-                  selectionOnly
-                  compact
-                  value={values.model}
-                  models={provider.data.models ?? []}
-                  busy={save.isPending}
-                  onBusy={setModelBusy}
-                  onSelect={(model) => setValues({ ...values, model })}
-                />
-              ) : (
-                <select
-                  aria-label="Default model"
-                  value={values.model}
-                  disabled={busy}
-                  onChange={(e) =>
-                    setValues({ ...values, model: e.target.value })
-                  }
-                >
-                  <option value="">Provider default</option>
-                  {[
-                    ...new Set(
-                      [
-                        ...(provider.data?.models ?? []),
-                        provider.data?.default_model,
-                        values.model,
-                      ].filter((name): name is string => !!name),
-                    ),
-                  ].map((name) => (
-                    <option key={name}>{name}</option>
-                  ))}
-                </select>
-              )}
+              <UnifiedModelPicker
+                providerKey={values.provider}
+                modelKey={values.model}
+                busy={busy}
+                onSelect={(choice) =>
+                  setValues({
+                    ...values,
+                    provider: choice.provider_key,
+                    model: choice.model_key,
+                  })
+                }
+              />
               <Link className="settings-secondary-link" to="/models">
                 Manage installed models
               </Link>
@@ -190,7 +147,7 @@ function GeneralSettings() {
                 <option value="ctrl-enter">Ctrl/⌘+Enter</option>
               </select>
             </label>
-            {provider.data?.location === "external" && (
+            {provider?.location === "external" && (
               <p className="notice">
                 External AI sends selected conversation data outside this
                 workstation.
