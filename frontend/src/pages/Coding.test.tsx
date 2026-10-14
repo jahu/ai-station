@@ -154,7 +154,9 @@ it.each(["Cursor", "Codex", "Local AI"])(
       expect(
         screen.getByText(/Public URLs in the task are fetched automatically/),
       ).toBeTruthy();
-      fireEvent.click(await screen.findByRole("button", { name: "Model" }));
+      fireEvent.click(
+        await screen.findByRole("button", { name: "Choose a model" }),
+      );
       await screen.findByRole("button", { name: "local-model, local server" });
       fireEvent.click(
         await screen.findByRole("button", {

@@ -10,6 +10,6 @@ export const newProjectScope: NewProjectScope = {
   name: "",
   executor: "local",
   external_ai: false,
-  model: "",
+  model: "auto",
   max_repair_attempts: 0,
 };

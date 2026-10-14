@@ -517,6 +517,9 @@ export default function AssistantActions({
     value.coding?.max_repair_attempts ?? 0,
   );
   const [codingModel, setCodingModel] = useState(value.coding?.model ?? "");
+  const [localCodingAuto, setLocalCodingAuto] = useState(
+    !value.coding || value.coding.model === "auto",
+  );
   const [external, setExternal] = useState(false);
   const [commitMessage, setCommitMessage] = useState("Apply reviewed changes");
   const [reviewed, setReviewed] = useState(false);
@@ -736,6 +739,7 @@ export default function AssistantActions({
     auto = explore,
     repairs = repairAttempts,
     nativeModel = codingModel,
+    localAuto = localCodingAuto,
   ) {
     const autoExplore =
       ["coding.local", "coding.cursor", "coding.codex"].includes(action) &&
@@ -766,9 +770,11 @@ export default function AssistantActions({
               ...(action === "coding.codex"
                 ? { executor: "codex" as const }
                 : {}),
-              ...(action !== "coding.local" && nativeModel
-                ? { model: nativeModel }
-                : {}),
+              ...(action === "coding.local"
+                ? { model: localAuto ? "auto" : "" }
+                : nativeModel
+                  ? { model: nativeModel }
+                  : {}),
             }
           : null,
     });
@@ -1362,11 +1368,36 @@ export default function AssistantActions({
             />
           )}
           {value.action === "coding.local" ? (
-            <p className="muted">
-              Uses this conversation's local model. Changes stay in a new
-              worktree; review the diff and validation results here before
-              committing.
-            </p>
+            <label>
+              Coding model
+              <select
+                value={localCodingAuto ? "auto" : "conversation"}
+                disabled={busy}
+                onChange={(event) => {
+                  const automatic = event.target.value === "auto";
+                  setLocalCodingAuto(automatic);
+                  scope(
+                    projectId,
+                    files,
+                    false,
+                    value.action,
+                    explore,
+                    repairAttempts,
+                    codingModel,
+                    automatic,
+                  );
+                }}
+              >
+                <option value="auto">
+                  Auto · local model with 100k+ context
+                </option>
+                <option value="conversation">Use the conversation model</option>
+              </select>
+              <small className="muted">
+                Changes stay in an isolated worktree. Review the diff and
+                validation before committing.
+              </small>
+            </label>
           ) : (
             <ConsentChoiceList
               checked={external}

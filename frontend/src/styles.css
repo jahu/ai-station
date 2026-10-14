@@ -4966,3 +4966,29 @@ section:has(> .memory-grid) > .dashboard-note {
 .media-job-progress progress::-moz-progress-bar {
   background: var(--accent);
 }
+
+.coding-auto-model {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+.coding-auto-selection {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: #b9f48a0a;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 100%;
+}
+.coding-auto-selection svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--accent);
+}
+.coding-auto-selection p {
+  margin: 5px 0 0;
+  overflow-wrap: anywhere;
+}

@@ -1,4 +1,4 @@
-import LlamaModels from "./LlamaModels";
+import CodingLocalModel from "./CodingLocalModel";
 import { Plus, ArrowUpRight } from "lucide-react";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -37,7 +37,7 @@ export default function Coding() {
   const [choice, setChoice] = useState<CodingExecutorChoice>("auto");
   const [explore, setExplore] = useState(true);
   const [repairAttempts, setRepairAttempts] = useState(0);
-  const [localModel, setLocalModel] = useState("");
+  const [localModel, setLocalModel] = useState("auto");
   const [modelPending, setModelPending] = useState(false);
   const projects = useQuery({
     queryKey: ["coding-projects"],
@@ -175,8 +175,7 @@ export default function Coding() {
                 {local ? (
                   <div className="coding-local-model">
                     <span>Model</span>
-                    <LlamaModels
-                      coding
+                    <CodingLocalModel
                       value={selectedModel}
                       models={provider.data?.models ?? []}
                       busy={create.isPending}

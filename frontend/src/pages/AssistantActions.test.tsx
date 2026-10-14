@@ -562,6 +562,7 @@ it("stages local coding scope without granting Cursor consent", async () => {
     expected_updated_at: "2026-09-29T00:00:00Z",
     files: ["README.md", "src/app.py"],
     external_ai: false,
+    model: "auto",
   });
   expect(
     (

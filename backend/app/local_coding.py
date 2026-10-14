@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api/coding")
 
 # Keep common input limits without accepting Cursor's external-AI permission.
 class LocalCodingTask(CodingTask):
-    model: str = Field(min_length=1, max_length=200)
+    model: str = Field(default="auto", min_length=1, max_length=200)
     explore: StrictBool = False
     max_repair_attempts: StrictInt = Field(default=0, ge=0, le=2)
     files: list[Annotated[str, Field(min_length=1, max_length=300)]] = Field(
@@ -35,6 +35,16 @@ class LocalCodingTask(CodingTask):
         if self.explore and self.files or not self.explore and not self.files:
             raise ValueError("Choose repository exploration or explicit source files")
         return self
+
+
+@router.get("/auto-model")
+def auto_model(session: Annotated[Session, Depends(session_scope)]):
+    from app.coding_model_routing import select_coding_model
+
+    try:
+        return {"available": True, **select_coding_model(session)}
+    except ProviderError as exc:
+        return {"available": False, "reason": str(exc)}
 
 
 @router.post("/local", status_code=202)
@@ -195,6 +205,43 @@ class LocalProposalExecutor(CodingProposalExecutor):
     name = "local_proposal"
     error_type = "LocalCodingFailed"
     permissions = ("filesystem_read", "workspace_write", "git_read", "network_read")
+
+    def execute(self, session, run):
+        if (
+            run.status != "cancel_requested"
+            and run.parameters.get("model_selection", {}).get("requested") == "auto"
+        ):
+            from app.coding_model_routing import MINIMUM_CONTEXT
+            from app.models import RuntimeInstance
+
+            instance = session.scalar(
+                select(RuntimeInstance).where(
+                    RuntimeInstance.ownership == "managed",
+                    RuntimeInstance.endpoint == run.parameters["endpoint"],
+                    RuntimeInstance.status == "ready",
+                )
+            )
+            selected = run.parameters["model_selection"]
+            if not instance or (
+                instance.metadata_json.get("context_size", 0) < MINIMUM_CONTEXT
+                or instance.metadata_json.get("gpus") != selected["gpus"]
+                or "llamacpp:" + instance.metadata_json.get("model_file_id", "") != selected["model"]
+            ):
+                raise ProviderError(
+                    "The selected Auto runtime is not ready with 100k+ context on its selected GPUs. Inspect Models before resuming coding."
+                )
+            append_event(
+                session,
+                run.id,
+                "coding.context_verified",
+                {
+                    "model": selected["model"],
+                    "instance_id": instance.id,
+                    "context_size": instance.metadata_json["context_size"],
+                    "gpus": selected["gpus"],
+                },
+            )
+        return super().execute(session, run)
 
     def payload(self, run):
         return {

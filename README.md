@@ -318,3 +318,9 @@ use a durable job card with real segment progress, Stop and Resume unfinished
 work; the checked final MP4 appears in Library. Existing short previews remain.
 See [long-media execution](docs/long-media.md) for requirements, architecture
 and the distinction between integration and hardware verification.
+
+Coding now defaults to **Auto · local long-context model**, selecting an installed
+GGUF with observed 100k+ context and preserving the user's GPU allocation. Choose
+a model to override it; selection performs no inference. Work and Create project
+& build also offer Auto versus the conversation model. See
+[automatic coding selection](docs/coding-auto-model.md).

@@ -18,8 +18,8 @@ class ProjectBuildScope(ProjectName):
     def permission_scope(self):
         if self.executor != "local" and not self.external_ai:
             raise ValueError("Allow sharing with the selected coding agent before creating the project")
-        if self.executor == "local" and (self.external_ai or self.model):
-            raise ValueError("Local coding uses the conversation's local model without external consent")
+        if self.executor == "local" and (self.external_ai or self.model not in {"", "auto"}):
+            raise ValueError("Local coding uses Auto or the conversation model without external consent")
         if self.executor != "local" and self.max_repair_attempts:
             raise ValueError("Automatic repair is available only for local coding")
         return self

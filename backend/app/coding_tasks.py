@@ -102,7 +102,13 @@ def enqueue_coding_task(
     if local:
         from app.local_provider import model_endpoint
 
-        request["endpoint"] = model_endpoint(body.model, session)
+        if body.model == "auto":
+            from app.coding_model_routing import select_coding_model
+
+            selection = select_coding_model(session)
+            request["model"] = selection["model"]
+            request["model_selection"] = {"requested": "auto", **selection}
+        request["endpoint"] = model_endpoint(request["model"], session)
         request["explore"] = body.explore
         request["max_repair_attempts"] = body.max_repair_attempts
     run = create_run(
