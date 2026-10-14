@@ -1,5 +1,10 @@
 # AI Station
 
+**Next implementation milestone (planned, not deployed):** a conversation-first
+entry with Chat/Work, simple model and verified reasoning selection, separate
+System/Settings, and longer local video/avatars. Start with the
+[implementation brief and model handoff](docs/plans/2026-10-chat-work-media.md).
+
 A local-first AI workstation control plane. Work is represented by **Task → Run → Events → Artifacts**, with a Dockerized control plane and a native, user-level Host Runner.
 
 Development targets the [complete product vision](docs/product-completion.md). Earlier [local acceptance evidence](docs/mvp-acceptance.md) records verified milestones, not completion of that vision.

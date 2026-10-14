@@ -1,5 +1,19 @@
 # Architecture
 
+## Planned conversation and long-media milestone — 2026-10-14
+
+The [implementation brief](plans/2026-10-chat-work-media.md) specifies the next
+increment, not current functionality. It adds an atomic first-turn entry and
+server-enforced Chat/Work action sets over the existing conversation/Run services;
+simple model selection with verified reasoning capabilities; distinct System and
+Settings; and bounded segmented media using existing RunDependency, owned native
+executors and final artifacts. No new orchestration service or arbitrary tool API
+is introduced. See [conversation contracts](plans/chat-work-experience.md),
+[workspace separation](plans/system-settings-separation.md) and
+[long-media execution](plans/long-media-execution.md) for schema, lifecycle,
+resource and acceptance decisions. Preserve current behavior until each reviewed
+increment is delivered; planned UI and longer duration are not yet operational.
+
 > Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage, including bounded text, PDF text extraction and stored image attachments and assistant pixel inspection through owned vision GGUF/projector pairs, plus a persisted provider registry with secret references. Project registration, policy editing, and read-only Git status are enabled with disposable-repository integration coverage. Owned worktree preparation, explicit confirmed removal are enabled through the worker and a managed native process. Scoped memory with pinned Chat context and managed model-file discovery are enabled. Local agents now have reviewed definitions, explicit activation, durable schedules, scoped context tools, GET of reviewed public pages, versioned Skills as instruction packs, optional durable approval before each Run, sequential or gated workflow steps, optional bounded registry tool calling during the report, saved retry policies and in-app notices. Named HTTP GET connectors with secret references are inspectable health Runs; public-page Browser is an optional agent workflow tool; account browser automation and other connector kinds stay unpublished. Bounded Cursor and Local AI file-edit proposals (complete rewrites or unique snippet replacements), review artifacts and separate validation Runs are operational. Declared Python dependency installation in owned worktrees is operational. Codex also uses the bounded proposal workflow; Claude Code remains inactive. The Platform assistant can review, commit and publish those coding Tasks through the same Git domain services, and can load or unload owned llama.cpp instances without granting extra permissions from a model plan. See README for runnable commands and limitations.
 
 

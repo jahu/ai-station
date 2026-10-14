@@ -1,5 +1,10 @@
 # Local general video
 
+**Planned, not implemented:** [longer local video and avatar execution](plans/long-media-execution.md)
+defines duration-based UI, bounded continuation/shot Runs, CPU composition,
+RAM-aware scheduling, Stop/resume and real quality acceptance. The short-clip
+limits and verification below remain the current behavior until that work lands.
+
 The Video workspace offers text-to-video and image-to-video with an installed
 Wan 2.2 TI2V 5B profile, alongside the existing portrait-and-speech workflow.
 Each request is an ordinary Task → Run → Events → MP4 Artifact. The worker uses

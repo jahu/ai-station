@@ -1,5 +1,10 @@
 # Typed speech → Avatar workflow
 
+The [long-media plan](plans/long-media-execution.md#6-full-speech-echomimic-without-audio-truncation)
+specifies full-speech animation, including bounded long-text speech stages and
+audio-aligned windows. This is planned; the current implementation described below
+still animates only the selected opening clip.
+
 In Avatars or Video, select **Type what to say**, attach a portrait and a short WAV voice reference, and enter Polish speech text. **Use a recording** retains the existing direct animation path. Scene direction, quality, clip length and advanced GPU/steps/seed remain available. The clip animates the start of the generated speech for the selected length; it does not promise to cover an arbitrarily long script.
 
 The Platform assistant accepts the optional **Words to say** field with one portrait and one WAV. It also recognizes explicit current spoken words, for example “Zrób awatar, który powie: Cześć!” or `Animate this portrait saying "Hello there"`. Ordinary portrait animation still uses the recording directly. Prior conversation instructions and attachment contents cannot select spoken text or authorize additional steps.

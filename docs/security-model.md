@@ -1,5 +1,19 @@
 # Security model
 
+## Planned Chat/Work and long-media boundaries
+
+The [2026-10-14 plan](plans/2026-10-chat-work-media.md) is not implemented yet.
+Chat will allow selected conversational/media tools; Work additionally permits
+scoped project and agent actions. Both are server-enforced allowlists intersected
+with explicit permissions, never a full-access switch. Existing Git review,
+external disclosure, agent activation and owned process restrictions remain.
+Reasoning controls permit only verified typed provider fields. Media continuation
+and CPU composition accept owned artifact references and bounded numeric settings,
+not shell commands, network URLs or arbitrary graphs. Task cancellation covers all
+owned stages, while uncertain process ownership retains reservations for inspection.
+See the [policy matrix](plans/chat-work-experience.md#4-chatwork-server-policy) and
+[composition boundary](plans/long-media-execution.md#7-cpu-composition-artifact-and-security-contract).
+
 > Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Local agents now have explicit activation, durable schedules, bounded context tools, GET of reviewed public pages, versioned Skills as instruction packs, sequential or gated workflow steps, optional bounded registry tool calling during the report, saved retry policies and in-app notices. Named HTTP GET connectors are operational; account browser automation and other connector kinds are not. Bounded Cursor file-edit proposals, review artifacts and separate validation Runs are operational. Other coding adapters remain inactive. See README for runnable commands and limitations.
 
 

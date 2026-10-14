@@ -1,5 +1,12 @@
 # Execution model
 
+Planned extension: [conversation-first and long-media delivery](plans/2026-10-chat-work-media.md).
+The [long-media contract](plans/long-media-execution.md) reuses durable Run
+dependencies for bounded segments and CPU composition, adds idempotent stage
+publication and task-wide Stop/resume, and distinguishes plan-prepared from final
+artifact success. It specifies RAM-aware admission and qualified two-GPU shot
+concurrency. These are design requirements, not implemented execution behavior.
+
 > Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Project registration, policy editing, and read-only Git status are enabled with disposable-repository integration coverage. Owned worktree preparation is enabled through the worker and a managed native process. Scoped memory with pinned Chat context and managed model-file discovery are enabled. Local agents use disabled drafts, explicit activation, persistent schedules and bounded context tools. Bounded Cursor file-edit proposals, review artifacts and separate validation Runs are operational. Other coding adapters remain inactive. See README for runnable commands and limitations.
 
 
