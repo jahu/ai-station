@@ -303,3 +303,11 @@ def test_proposal_prompt_includes_fetched_page_facts():
     without = proposal_prompt(prompt="Build", selected=selected, guidance="")
     assert "web_observations" not in without
     assert '"delete": true' in without and "existing selected file" in without
+
+
+def test_non_json_output_reports_no_application_and_preserves_source(tmp_path):
+    (tmp_path / "example.py").write_text("original = True\n")
+    selected = read_selected(tmp_path, ["example.py"])
+    with pytest.raises(ValueError, match="non-JSON coding proposal; no files were applied"):
+        parse_proposal("I need to extend this file with a multiply function.", selected)
+    assert (tmp_path / "example.py").read_text() == "original = True\n"

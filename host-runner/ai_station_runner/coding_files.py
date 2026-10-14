@@ -64,7 +64,10 @@ def read_selected(workspace: Path, names: list[str]) -> list[dict]:
 def parse_proposal(text: str, selected: list[dict]) -> dict:
     if len(text.encode()) > MAX_TOTAL * 2:
         raise ValueError("Coding result exceeds its size limit")
-    value = json.loads(text)
+    try:
+        value = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError("Model returned a non-JSON coding proposal; no files were applied") from exc
     if not isinstance(value, dict) or set(value) != {"summary", "files"}:
         raise ValueError("Coding result must contain summary and files")
     if not isinstance(value["summary"], str) or len(value["summary"]) > 4000:

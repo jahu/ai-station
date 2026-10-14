@@ -346,3 +346,9 @@ selected. Opening it creates no conversation or Run; the first Send binds a new
 conversation and continues the same worktree atomically. The selected proposal
 version stays pinned in the draft URL, and stale drafts cannot silently submit
 against newer task results. External agents require fresh sharing consent.
+
+Local Coding requests constrained JSON-object inference for its proposals and
+source exploration. The private bridge accepts only a strict boolean for this
+format; it does not expose arbitrary provider options or schemas. Complete stream
+termination, selected-path checks and source hashes remain required before files
+can change. Malformed output reports that no proposal was applied.
