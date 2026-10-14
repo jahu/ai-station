@@ -1,3 +1,4 @@
+import { useChatDraft, chatRequestId, clearChatRequest } from "./chat-draft";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
@@ -49,7 +50,10 @@ export default function NewChat({
     label?: string;
     location?: "local" | "external";
   } | null>(null);
-  const [draft, setDraft] = useState("");
+  const draftState = useChatDraft("new");
+  const submittedDraft = useRef("");
+  const draft = draftState.value,
+    setDraft = draftState.update;
   const [options, setOptions] = useState(emptyOptions);
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -81,6 +85,7 @@ export default function NewChat({
   );
   const send = useMutation({
     mutationFn: async () => {
+      submittedDraft.current = draft;
       const values = {
         selection: { execution_mode: mode, provider: provider?.key, model },
         ...(selection?.version || provider?.updated_at
@@ -100,7 +105,7 @@ export default function NewChat({
       };
       const body = JSON.stringify(values);
       if (pendingRequest.current?.body !== body)
-        pendingRequest.current = { body, id: crypto.randomUUID() };
+        pendingRequest.current = { body, id: await chatRequestId("new", body) };
       return api<Receipt>("/chat/turns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,6 +116,9 @@ export default function NewChat({
       });
     },
     onSuccess: (receipt) => {
+      pendingRequest.current = null;
+      draftState.accept(submittedDraft.current);
+      clearChatRequest("new");
       void cache.invalidateQueries({ queryKey: ["chat-preferences"] });
       void cache.invalidateQueries({ queryKey: ["conversations"] });
       onAccepted(receipt.conversation_id);
@@ -169,6 +177,11 @@ export default function NewChat({
           blocked={thinking.blocked}
           onChange={thinking.onChange}
         />
+      )}
+      {draftState.restored && (
+        <p className="muted">
+          Draft text restored. Reattach files and confirm tools before sending.
+        </p>
       )}
       <ConversationComposer
         id="new-chat-message"
