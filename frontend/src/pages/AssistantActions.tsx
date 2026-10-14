@@ -1,6 +1,5 @@
-import MediaJobResult, {
-  type MediaJob,
-} from "../components/media/MediaJobResult";
+import MediaJobResult from "../components/media/MediaJobResult";
+import type { MediaJob } from "../components/media/media-job";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";

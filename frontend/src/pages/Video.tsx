@@ -1,8 +1,9 @@
-import MediaJobResult, {
+import MediaJobResult from "../components/media/MediaJobResult";
+import {
   useMediaJob,
   jobBusy,
   type MediaJob,
-} from "../components/media/MediaJobResult";
+} from "../components/media/media-job";
 import { chatRequestId, clearChatRequest } from "./chat-draft";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";

@@ -814,7 +814,7 @@ it("stops the entire media task from the conversation Stop control", async () =>
     </QueryClientProvider>,
   );
   await screen.findByText("2 of 12 segments complete");
-  fireEvent.click(screen.getByRole("button", { name: "Stop", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Stop" }));
   await vi.waitFor(() =>
     expect(writes).toEqual(["/api/media/jobs/film-task/cancel"]),
   );
