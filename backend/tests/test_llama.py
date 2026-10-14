@@ -64,6 +64,89 @@ def tick_once():
         return tick(session, "llama-test")
 
 
+def test_first_model_selection_is_read_only_until_send_and_shares_initial_load(managed, monkeypatch):
+    from app.models import RuntimeInstance
+
+    model_id, records = managed
+
+    async def reply(self, **kwargs):
+        yield "Automatically prepared reply"
+
+    monkeypatch.setattr(LocalChatProvider, "stream", reply)
+    with TestClient(app) as client:
+        selected = {"model": "llamacpp:" + model_id, "execution_mode": "chat"}
+        a = client.post("/api/chat/conversations", json=selected)
+        b = client.post("/api/chat/conversations", json=selected)
+        assert a.status_code == b.status_code == 201
+        with session_factory()() as session:
+            assert not session.scalars(select(RuntimeInstance)).all()
+            assert not session.scalars(select(Run)).all()
+            assert not active_locks(session)
+        runs = []
+        for conversation in (a.json(), b.json()):
+            response = client.post(
+                f"/api/chat/conversations/{conversation['id']}/messages", json={"content": "Hello"}
+            )
+            assert response.status_code == 202, response.text
+            runs.append(response.json())
+        with session_factory()() as session:
+            loads = session.scalars(select(Run).where(Run.executor_type == "llama_load")).all()
+            assert len(loads) == 1
+            assert loads[0].parameters["gpus"] == [2, 7]
+            assert loads[0].parameters["context_size"] == 4096
+        assert not records
+        tick_once()
+        tick_once()
+        tick_once()
+        assert all(client.get("/api/runs/" + run["id"]).json()["status"] == "succeeded" for run in runs)
+        assert len(records) == 1
+
+
+def test_first_load_uses_saved_explicit_cpu_preset(managed):
+    from app.models import ModelDefinition
+
+    model_id, _ = managed
+    with session_factory()() as session:
+        session.add(
+            ModelDefinition(
+                name="My preset",
+                file_id=model_id,
+                metadata_json={"gpus": [], "context_size": 8192, "cache_type": "f16"},
+            )
+        )
+        session.commit()
+    with TestClient(app) as client:
+        conversation = client.post("/api/chat/conversations", json={"model": "llamacpp:" + model_id}).json()
+        result = client.post(
+            f"/api/chat/conversations/{conversation['id']}/messages", json={"content": "Hello"}
+        )
+        assert result.status_code == 202, result.text
+        with session_factory()() as session:
+            load_run = session.scalar(select(Run).where(Run.executor_type == "llama_load"))
+            assert load_run.parameters["gpus"] == []
+            assert load_run.parameters["context_size"] == 8192
+
+
+def test_missing_device_discovery_does_not_guess_gpus_or_dispatch(managed, monkeypatch):
+    from app.runner_client import RunnerUnavailable
+
+    model_id, records = managed
+
+    def unavailable(_):
+        raise RunnerUnavailable("Private socket unavailable")
+
+    monkeypatch.setattr(RunnerClient, "hardware", unavailable)
+    with TestClient(app) as client:
+        conversation = client.post("/api/chat/conversations", json={"model": "llamacpp:" + model_id}).json()
+        result = client.post(
+            f"/api/chat/conversations/{conversation['id']}/messages", json={"content": "Hello"}
+        )
+        assert result.status_code == 409
+        assert "device discovery" in result.text
+        assert not client.get("/api/runs").json()
+        assert not records
+
+
 def test_load_holds_both_gpus_until_stop_and_chat_uses_private_instance(managed, monkeypatch):
     model_id, records = managed
     with TestClient(app) as client:

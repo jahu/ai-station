@@ -122,6 +122,7 @@ export default function NewChat({
         />
         {provider?.builtin ? (
           <LlamaModels
+            selectionOnly
             compact
             value={model}
             models={provider.models ?? []}

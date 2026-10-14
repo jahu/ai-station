@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.artifacts import register_file
 from app.db import session_scope, utcnow
 from app.events import append_event
-from app.models import ModelFile, ResourceLock, Run, RuntimeInstance, Task
+from app.models import ModelDefinition, ModelFile, ResourceLock, Run, RuntimeInstance, Task
 from app.permissions import require
 from app.resources import active_locks, release_run_locks
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
@@ -829,11 +829,31 @@ def model_endpoint(model, session, *, allow_pending=False):
             return instance.endpoint
     if allow_pending:
         row = session.get(ModelFile, file_id)
-        if loadable_model(row) and any(
-            i.metadata_json.get("model_file_id") == file_id for i in instances(session)
-        ):
+        if loadable_model(row):
             return "llamacpp:pending:" + file_id
     raise ProviderError("Load the selected model with llama.cpp before sending a message")
+
+
+def initial_preset(session, file_id):
+    """Use explicit curated preferences, otherwise discovered local devices."""
+    from app.model_definitions import preset_of
+    from app.providers import ProviderError
+
+    definition = session.scalar(select(ModelDefinition).where(ModelDefinition.file_id == file_id))
+    if definition is not None and "gpus" in (definition.metadata_json or {}):
+        return preset_of(definition)
+    try:
+        hardware = RunnerClient().hardware()
+        if not isinstance(hardware.get("gpus"), list):
+            raise ValueError("Missing device discovery")
+        gpus = sorted({int(gpu["index"]) for gpu in hardware["gpus"]})
+        if any(index < 0 for index in gpus) or len(gpus) > 16:
+            raise ValueError("Invalid device discovery")
+    except (RunnerError, RunnerUnavailable, ValueError, KeyError, TypeError) as exc:
+        raise ProviderError(
+            "Host Runner device discovery is unavailable; inspect System diagnostics"
+        ) from exc
+    return {"gpus": gpus, "context_size": 4096, "cache_type": "f16"}
 
 
 def prepare_consumer(session, run):
@@ -857,9 +877,8 @@ def prepare_consumer(session, run):
         if not loadable_model(row):
             raise ProviderError("Choose a present language-model GGUF; mmproj files are vision companions")
         source = instance or (matching[0] if matching else None)
-        if source is None:
-            raise ProviderError("Choose GPUs and load this model once in conversation settings")
-        target = coding_context_target(session, row, source.metadata_json["gpus"])
+        preset = source.metadata_json if source else initial_preset(session, file_id)
+        target = coding_context_target(session, row, preset["gpus"])
     needs_upgrade = bool(
         instance is not None
         and target
@@ -889,11 +908,9 @@ def prepare_consumer(session, run):
         )
         instance = None
     if instance is None:
-        if not matching:
-            raise ProviderError("Choose GPUs and load this model once in conversation settings")
         if any(i.status == "unknown" for i in matching):
             raise ProviderError("Inspect the model runtime before loading it again")
-        preset = matching[0].metadata_json
+        preset = matching[0].metadata_json if matching else initial_preset(session, file_id)
         try:
             load_run = enqueue_load(
                 LoadModel(

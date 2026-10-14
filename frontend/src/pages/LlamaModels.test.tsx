@@ -15,6 +15,54 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+it("chooses a first-use GGUF without starting or configuring a runtime", async () => {
+  const select = vi.fn();
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path.endsWith("/hardware")
+        ? { gpus: [] }
+        : {
+            models: [
+              {
+                id: "file",
+                model_key: "llamacpp:file",
+                name: "27B.gguf",
+                size_bytes: 16000000000,
+              },
+            ],
+            instances: [],
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <LlamaModels
+          selectionOnly
+          value="qwen"
+          models={["qwen"]}
+          onSelect={select}
+          busy={false}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Model" }));
+  fireEvent.click(await screen.findByRole("button", { name: /27B/ }));
+  expect(screen.queryByLabelText("Context size")).toBeNull();
+  expect(screen.queryByText("Advanced settings")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Use model" }));
+  expect(select).toHaveBeenCalledWith("llamacpp:file");
+  expect(fetch.mock.calls.every((call) => !call[0].endsWith("/load"))).toBe(
+    true,
+  );
+});
+
 it("selects a queued GGUF immediately so the conversation can wait for its load", async () => {
   let started = false;
   const select = vi.fn();

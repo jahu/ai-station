@@ -8,6 +8,11 @@ server-enforced Chat/Work modes. [System/Settings separation](settings.md) is al
 implemented. Shared-shell/model
 picker refinement, verified reasoning and longer media remain next increments.
 
+[Local model selection/autoload](chat-model-selection.md) now removes the mandatory
+first manual load. A real first-use 9B GGUF completed Chat on both discovered GPUs
+in an isolated database, then its owned runtime stopped. Broader model/context
+combinations and the remaining conversation-shell work are still separate acceptance.
+
 User direction on 2026-10-14 is captured in the
 [implementation brief and handoff](plans/2026-10-chat-work-media.md): immediate
 first Send, explicit Chat/Work with media tools, unified model/verified reasoning

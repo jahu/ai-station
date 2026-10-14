@@ -5,6 +5,10 @@
 The [first-send increment](first-send.md) now adds transactional turn receipts and
 mode enforcement to existing services, with no additional execution architecture.
 
+[First-use model loading](chat-model-selection.md) uses the existing owned runtime
+load prerequisite. Merely selecting a GGUF creates no workload; explicit presets
+or dynamically discovered devices configure its first consumer.
+
 The [implementation brief](plans/2026-10-chat-work-media.md) specifies the next
 increment, not current functionality. It adds an atomic first-turn entry and
 server-enforced Chat/Work action sets over the existing conversation/Run services;
