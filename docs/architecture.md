@@ -49,6 +49,12 @@ Replacing containers does not drop the database, artifacts, memory, or run histo
 
 Almost every action is a **Task** that produces one or more **Runs**. A Run is performed by an **Executor** on an **Execution Target** (`host` or `container`; `remote-node` is reserved). The worker is the only component that executes runs. HTTP handlers enqueue work and stream stored events.
 
+The worker container supervises bounded independent process slots (three by
+default, configurable with `AI_STATION_WORKER_SLOTS`). Slots share the durable
+queue and resource reservations, not ORM sessions or executor instances. They
+preserve the same claim, permission, cancellation and recovery contracts. See
+[execution model](execution-model.md) for shutdown and restart behavior.
+
 The Host Runner does not expose an arbitrary shell. Photo, Git, coding CLIs, cancellation, telemetry, and discovery are separate validated operations.
 
 SQLite backups are explicit Task/Run copies (`VACUUM INTO` plus integrity check). A successful copy can be re-checked in place. The Host Runner can inspect `ai-station:local` versus running compose containers without building or retagging; restore and image rollout stay unpublished. See [operations](operations.md).

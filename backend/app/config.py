@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     allowed_roots: str = ""
     lease_seconds: int = 45
     heartbeat_seconds: int = 5
+    worker_slots: int = Field(default=3, ge=1, le=8)
     cancel_grace_seconds: float = 3.0
     frontend_dist: str = ""
     skills_dir: str = ""

@@ -96,6 +96,11 @@ The installed, authenticated `cursor-agent` CLI is required. Credentials are use
 
 ## Development and verification
 
+The worker uses three independent slots so long media jobs leave capacity for
+unrelated work. Set `AI_STATION_WORKER_SLOTS=1` for serial execution or choose
+2–8 in `.env` and restart AI Station. GPU and worktree reservations remain
+exclusive; System shows each slot's heartbeat and held Run leases.
+
 ```bash
 ./scripts/dev.sh                 # runner + Docker backend/worker/scheduler + Vite
 # Open http://127.0.0.1:5173; Ctrl+C shuts down this deployment.
