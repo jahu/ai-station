@@ -446,87 +446,92 @@ it("overrides this turn without sending or rewriting conversation settings", asy
   expect(await screen.findByRole("combobox", { name: "Action" })).toBeTruthy();
 });
 
-it("keeps optional web research when choosing Generate image and sends the reviewed query", async () => {
-  const conversation = {
-    id: "research",
-    title: "Research an image",
-    provider: builtin.key,
-    provider_name: builtin.name,
-    provider_location: "local",
-    model: "test-model",
-    system_prompt: "",
-    temperature: 0.7,
-    max_tokens: 2048,
-    updated_at: "2026-10-13T12:00:00Z",
-    execution_mode: "orchestrator",
-    auto_summary: false,
-    summary: null,
-    active_run: null,
-    messages: [],
-  };
-  const requests: { path: string; body: unknown }[] = [];
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (path: string, init?: RequestInit) => {
-      if (init?.method === "POST") {
-        requests.push({ path, body: JSON.parse(String(init.body)) });
-        return { ok: true, json: async () => ({ id: "queued" }) };
-      }
-      return {
-        ok: true,
-        json: async () =>
-          path.endsWith("/chat/providers")
-            ? [builtin]
-            : path.includes("/chat/providers/")
-              ? builtin
-              : path.endsWith("/llama")
-                ? { models: [], instances: [] }
-                : path.endsWith("/hardware")
-                  ? { gpus: [] }
-                  : path.endsWith("/chat/conversations")
-                    ? [conversation]
-                    : path.includes("/chat/conversations/")
-                      ? conversation
-                      : [],
-      };
-    }),
-  );
-  render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <MemoryRouter initialEntries={["/chat/research"]}>
-        <Routes>
-          <Route path="/chat/:id" element={<Chat />} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-  const toggle = await screen.findByRole("switch", { name: "Search the web" });
-  fireEvent.click(toggle);
-  fireEvent.change(screen.getByLabelText("Search query"), {
-    target: { value: "example.com brand" },
-  });
-  fireEvent.change(screen.getByLabelText("Action", { exact: true }), {
-    target: { value: "image.generate" },
-  });
-  expect(
-    screen
-      .getByRole("switch", { name: "Search the web" })
-      .getAttribute("aria-checked"),
-  ).toBe("true");
-  fireEvent.change(screen.getByLabelText("Message", { exact: true }), {
-    target: { value: "Create a promotional image" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Send" }));
-  await vi.waitFor(() => expect(requests).toHaveLength(1));
-  expect(requests[0]).toEqual({
-    path: "/api/chat/conversations/research/messages",
-    body: expect.objectContaining({
-      action: "image.generate",
-      web_search: { enabled: true, query: "example.com brand" },
-    }),
-  });
-});
+it.each(["image.generate", "image.generate_video"])(
+  "keeps optional web research for %s and sends the reviewed query",
+  async (action) => {
+    const conversation = {
+      id: "research",
+      title: "Research an image",
+      provider: builtin.key,
+      provider_name: builtin.name,
+      provider_location: "local",
+      model: "test-model",
+      system_prompt: "",
+      temperature: 0.7,
+      max_tokens: 2048,
+      updated_at: "2026-10-13T12:00:00Z",
+      execution_mode: "orchestrator",
+      auto_summary: false,
+      summary: null,
+      active_run: null,
+      messages: [],
+    };
+    const requests: { path: string; body: unknown }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          requests.push({ path, body: JSON.parse(String(init.body)) });
+          return { ok: true, json: async () => ({ id: "queued" }) };
+        }
+        return {
+          ok: true,
+          json: async () =>
+            path.endsWith("/chat/providers")
+              ? [builtin]
+              : path.includes("/chat/providers/")
+                ? builtin
+                : path.endsWith("/llama")
+                  ? { models: [], instances: [] }
+                  : path.endsWith("/hardware")
+                    ? { gpus: [] }
+                    : path.endsWith("/chat/conversations")
+                      ? [conversation]
+                      : path.includes("/chat/conversations/")
+                        ? conversation
+                        : [],
+        };
+      }),
+    );
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter initialEntries={["/chat/research"]}>
+          <Routes>
+            <Route path="/chat/:id" element={<Chat />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const toggle = await screen.findByRole("switch", {
+      name: "Search the web",
+    });
+    fireEvent.click(toggle);
+    fireEvent.change(screen.getByLabelText("Search query"), {
+      target: { value: "example.com brand" },
+    });
+    fireEvent.change(screen.getByLabelText("Action", { exact: true }), {
+      target: { value: action },
+    });
+    expect(
+      screen
+        .getByRole("switch", { name: "Search the web" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    fireEvent.change(screen.getByLabelText("Message", { exact: true }), {
+      target: { value: "Create a promotional image" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await vi.waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0]).toEqual({
+      path: "/api/chat/conversations/research/messages",
+      body: expect.objectContaining({
+        action,
+        web_search: { enabled: true, query: "example.com brand" },
+      }),
+    });
+  },
+);

@@ -209,3 +209,8 @@ The image Generate adapter's prompt-only profile changes two style defaults in
 an owned imported pipeline process without changing the original file. The
 configured pipeline and Python remain administrator-owned; callers select only
 the typed profile. See [image profiles](image-workflows.md#prompt-only-generation-profile).
+
+Optional research can now precede the same first-frame animation workflow.
+The selected action determines whether a bounded Chat brief publishes a plain
+image or an image with the user's separate motion instruction; photo completion
+then publishes Wan atomically. No model-generated tool graph is executed.

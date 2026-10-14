@@ -67,3 +67,21 @@ fail explicitly. This is a fixed typed profile, without caller-selected scripts,
 module paths or Python code. GPU selection, process-group ownership, cancellation,
 recovery, offline operation and artifact paths reuse the existing photo executor.
 The chosen style remains in Run and Artifact parameters.
+
+On 2026-10-14 the prompt-only profile completed real Qwen generation through
+the Assistant's search-informed workflow. The inspected empty-forest output
+contains no people; the original pipeline hash remained unchanged. See
+[search-informed acceptance](web-search.md#real-search-informed-image-acceptance).
+
+## Researched first-frame animation
+
+Image → video can optionally search the web before preparing its first frame.
+The bounded sequence is search/local brief → prompt-only image → Wan animation,
+with scene and motion instructions kept separate. Sources, the image and video
+remain in one Task's history. Missing video setup is checked before research;
+failed/canceled research or generation never publishes the next media stage.
+Explicit Generate image stays a single image even if its description mentions
+an animation; the selected action remains authoritative. Normal composed
+verification uses fake providers/native jobs. The separately executed real
+search→image and image→Wan acceptances do not claim a real combined four-stage
+execution.

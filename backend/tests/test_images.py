@@ -700,3 +700,107 @@ def test_prompt_style_validation_and_auditable_native_dispatch(bridge):
             "photo.profile: prompt-only"
             in bridge.get("/v1/process/" + run["id"], params={"stdout_offset": 0}).json()["stdout"]
         )
+
+
+@pytest.mark.parametrize("action", ["auto", "image.generate_video"])
+def test_researched_image_animation_is_one_task_with_separate_motion(video_bridge, monkeypatch, action):
+    from app import web_search
+    from app.local_provider import LocalChatProvider
+
+    async def search(query):
+        assert query == "forest scenery"
+        return {
+            "query": query,
+            "provider": "fixture",
+            "searched_at": "2026-10-14T07:00:00Z",
+            "partial": False,
+            "sources": [
+                {"id": 1, "title": "Forest", "url": "https://example.com/forest", "snippet": "Green trees"}
+            ],
+        }
+
+    async def stream(self, **params):
+        assert "mist drifts" not in params["messages"][-1]["content"]
+        yield "An empty forest with green trees."
+
+    monkeypatch.setattr(web_search, "search", search)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as api:
+        conv = api.post(
+            "/api/chat/conversations", json={"model": "fixture", "execution_mode": "orchestrator"}
+        ).json()
+        route = "/api/chat/conversations/" + conv["id"]
+        r = api.post(
+            route + "/messages",
+            json={
+                "action": action,
+                "content": "Generate an image of a forest, then animate it: mist drifts",
+                "web_search": {"enabled": True, "query": "forest scenery"},
+            },
+        )
+        assert r.status_code == 202, r.text
+        with session_factory()() as session:
+            for _ in range(4):
+                tick(session, "research-video-test")
+            assert active_locks(session) == set()
+        d = api.get(route).json()
+        assert d["active_run"] is None
+        result = d["messages"][1]
+        assert result["task_status"] == "succeeded", result
+        assert [s["capability"] for s in result["steps"]] == [
+            "assistant.orchestrate",
+            "chat.completion",
+            "image.generate",
+            "video.generate",
+        ]
+        image = next(a for a in result["artifacts"] if a["type"] == "image")
+        video = next(a for a in result["artifacts"] if a["type"] == "video")
+        assert image["metadata"]["prompt"] == "An empty forest with green trees."
+        assert video["metadata"]["prompt"] == "mist drifts"
+        assert video["parent_artifact_ids"] == [image["id"]]
+        runs = [api.get("/api/runs/" + s["id"]).json() for s in result["steps"]]
+        assert len({r["task_id"] for r in runs}) == 1
+        assert runs[2]["parent_run_id"] == runs[1]["id"] and runs[3]["parent_run_id"] == runs[2]["id"]
+        assert all("network_read" not in r["effective_permissions"] for r in runs[2:])
+
+
+def test_explicit_researched_image_does_not_add_unselected_video(video_bridge, monkeypatch):
+    from app import web_search
+    from app.local_provider import LocalChatProvider
+
+    async def search(query):
+        return {
+            "query": query,
+            "provider": "fixture",
+            "searched_at": "2026-10-14T07:00:00Z",
+            "partial": False,
+            "sources": [
+                {"id": 1, "title": "Forest", "url": "https://example.com/forest", "snippet": "Trees"}
+            ],
+        }
+
+    async def stream(self, **params):
+        yield "A forest."
+
+    monkeypatch.setattr(web_search, "search", search)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as api:
+        cid = api.post(
+            "/api/chat/conversations", json={"model": "fixture", "execution_mode": "orchestrator"}
+        ).json()["id"]
+        route = "/api/chat/conversations/" + cid
+        r = api.post(
+            route + "/messages",
+            json={
+                "action": "image.generate",
+                "content": "Generate an image of a forest, then animate it: mist drifts",
+                "web_search": {"enabled": True, "query": "forest"},
+            },
+        )
+        assert r.status_code == 202
+        with session_factory()() as session:
+            for _ in range(3):
+                tick(session, "research-video-test")
+        result = api.get(route).json()["messages"][1]
+        assert result["task_status"] == "succeeded"
+        assert not any(s["capability"] == "video.generate" for s in result["steps"])
