@@ -329,6 +329,7 @@ function SettingsForm({
       <fieldset disabled={pending}>
         {localBuiltin ? (
           <LlamaModels
+            selectionOnly
             value={model}
             label={model === defaults.model ? defaults.model_label : undefined}
             models={models}
@@ -838,6 +839,7 @@ function ConversationView({
           <h2>{conversation.title}</h2>
           {selected.data?.builtin && selected.data.location === "local" ? (
             <LlamaModels
+              selectionOnly
               compact
               value={conversation.model}
               label={conversation.model_label}

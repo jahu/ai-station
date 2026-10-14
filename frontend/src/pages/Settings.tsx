@@ -136,6 +136,7 @@ function GeneralSettings() {
               <span className="settings-label">Default model</span>
               {provider.data?.builtin ? (
                 <LlamaModels
+                  selectionOnly
                   compact
                   value={values.model}
                   models={provider.data.models ?? []}

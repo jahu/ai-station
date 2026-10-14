@@ -73,6 +73,7 @@ export default function LlamaModels({
   coding = false,
   tabIndex,
   triggerLabel,
+  selectionOnly = false,
 }: {
   value: string;
   label?: string;
@@ -84,6 +85,7 @@ export default function LlamaModels({
   coding?: boolean;
   tabIndex?: number;
   triggerLabel?: string;
+  selectionOnly?: boolean;
 }) {
   const cache = useQueryClient();
   const hardware = useHardware();
@@ -183,7 +185,8 @@ export default function LlamaModels({
     draft.length > 200 ||
     (draft.startsWith("llamacpp:") &&
       (!choice || instance?.status === "unknown")) ||
-    (needsSetup &&
+    (!selectionOnly &&
+      needsSetup &&
       (hardware.isPending ||
         !!hardware.error ||
         !Number.isInteger(context) ||
@@ -206,7 +209,7 @@ export default function LlamaModels({
   );
   function choose() {
     if (pending || invalid) return;
-    if (needsSetup) load.mutate(choice);
+    if (needsSetup && !selectionOnly) load.mutate(choice);
     else {
       onSelect(draft.trim());
       setOpen(false);
@@ -289,7 +292,7 @@ export default function LlamaModels({
                 stop.error ??
                 health.error ??
                 restart.error ??
-                (needsSetup ? hardware.error : null)
+                (!selectionOnly && needsSetup ? hardware.error : null)
               }
             />
             <section aria-labelledby={headingId}>
@@ -386,157 +389,161 @@ export default function LlamaModels({
                 )}
               </div>
             </section>
-            <details className="model-advanced">
-              <summary>GPU, context and advanced options</summary>
-              {choice ? (
-                <>
-                  <p>
-                    {instance
-                      ? "This model keeps its saved GPU and context settings when reloaded."
-                      : coding
-                        ? "The first Coding load asks for the largest Q8 context that fits the selected GPUs, up to this ceiling. Layers stay on those GPUs; 128k is not a guarantee."
-                        : "The first load uses these GPUs. Selecting several cards splits model layers across them; no cards uses the CPU."}
-                  </p>
-                  <fieldset
-                    disabled={
-                      pending ||
-                      !!instance ||
-                      hardware.isPending ||
-                      !!hardware.error
-                    }
-                  >
-                    <legend>GPU allocation</legend>
-                    <GpuChoiceList
-                      gpus={hardware.data?.gpus ?? []}
-                      selected={(instance?.metadata.gpus ?? selectedGpus).map(
-                        Number,
-                      )}
+            {!selectionOnly && (
+              <details className="model-advanced">
+                <summary>GPU, context and advanced options</summary>
+                {choice ? (
+                  <>
+                    <p>
+                      {instance
+                        ? "This model keeps its saved GPU and context settings when reloaded."
+                        : coding
+                          ? "The first Coding load asks for the largest Q8 context that fits the selected GPUs, up to this ceiling. Layers stay on those GPUs; 128k is not a guarantee."
+                          : "The first load uses these GPUs. Selecting several cards splits model layers across them; no cards uses the CPU."}
+                    </p>
+                    <fieldset
                       disabled={
                         pending ||
                         !!instance ||
                         hardware.isPending ||
                         !!hardware.error
                       }
-                      onChange={setGpus}
-                    />
-                    {!selectedGpus.length && !instance && (
-                      <p>CPU execution selected.</p>
-                    )}
-                    <label>
-                      {coding ? "Context ceiling" : "Context size"}
-                      <input
-                        type="number"
-                        min={512}
-                        max={262144}
-                        step={256}
-                        value={instance?.metadata.context_size ?? context}
-                        onChange={(e) => setContext(Number(e.target.value))}
+                    >
+                      <legend>GPU allocation</legend>
+                      <GpuChoiceList
+                        gpus={hardware.data?.gpus ?? []}
+                        selected={(instance?.metadata.gpus ?? selectedGpus).map(
+                          Number,
+                        )}
+                        disabled={
+                          pending ||
+                          !!instance ||
+                          hardware.isPending ||
+                          !!hardware.error
+                        }
+                        onChange={setGpus}
                       />
-                    </label>
-                    {instance?.metadata.context_size != null && (
+                      {!selectedGpus.length && !instance && (
+                        <p>CPU execution selected.</p>
+                      )}
+                      <label>
+                        {coding ? "Context ceiling" : "Context size"}
+                        <input
+                          type="number"
+                          min={512}
+                          max={262144}
+                          step={256}
+                          value={instance?.metadata.context_size ?? context}
+                          onChange={(e) => setContext(Number(e.target.value))}
+                        />
+                      </label>
+                      {instance?.metadata.context_size != null && (
+                        <p>
+                          Loaded context:{" "}
+                          {instance.metadata.context_size.toLocaleString()}
+                          {instance.metadata.observation?.n_ctx != null &&
+                          instance.metadata.observation.n_ctx !==
+                            instance.metadata.context_size
+                            ? ` · runtime reports ${instance.metadata.observation.n_ctx.toLocaleString()}`
+                            : ""}
+                          {instance.metadata.n_ctx_train
+                            ? ` · trained ${instance.metadata.n_ctx_train.toLocaleString()}`
+                            : ""}
+                        </p>
+                      )}
+                    </fieldset>
+                    {instance?.metadata.health && (
                       <p>
-                        Loaded context:{" "}
-                        {instance.metadata.context_size.toLocaleString()}
-                        {instance.metadata.observation?.n_ctx != null &&
-                        instance.metadata.observation.n_ctx !==
-                          instance.metadata.context_size
-                          ? ` · runtime reports ${instance.metadata.observation.n_ctx.toLocaleString()}`
+                        Last health: {instance.metadata.health.status}
+                        {instance.metadata.health.alive
+                          ? " · process alive"
+                          : " · not running"}
+                        {instance.metadata.health.n_ctx
+                          ? ` · n_ctx ${instance.metadata.health.n_ctx}`
                           : ""}
-                        {instance.metadata.n_ctx_train
-                          ? ` · trained ${instance.metadata.n_ctx_train.toLocaleString()}`
-                          : ""}
+                        {instance.metadata.health_run_id && (
+                          <>
+                            {" "}
+                            <Link
+                              to={`/runs/${instance.metadata.health_run_id}`}
+                              onClick={() => setOpen(false)}
+                            >
+                              Inspect health Run
+                            </Link>
+                          </>
+                        )}
                       </p>
                     )}
-                  </fieldset>
-                  {instance?.metadata.health && (
-                    <p>
-                      Last health: {instance.metadata.health.status}
-                      {instance.metadata.health.alive
-                        ? " · process alive"
-                        : " · not running"}
-                      {instance.metadata.health.n_ctx
-                        ? ` · n_ctx ${instance.metadata.health.n_ctx}`
-                        : ""}
-                      {instance.metadata.health_run_id && (
-                        <>
-                          {" "}
-                          <Link
-                            to={`/runs/${instance.metadata.health_run_id}`}
-                            onClick={() => setOpen(false)}
-                          >
-                            Inspect health Run
-                          </Link>
-                        </>
-                      )}
-                    </p>
-                  )}
-                  {instance && (
-                    <div className="row">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        disabled={pending}
-                        onClick={() => health.mutate(instance.id)}
-                      >
-                        Check health
-                      </Button>
-                      {(instance.status === "ready" ||
-                        instance.status === "stopped" ||
-                        instance.status === "failed") && (
+                    {instance && (
+                      <div className="row">
                         <Button
                           type="button"
                           variant="secondary"
                           disabled={pending}
-                          onClick={() => restart.mutate(instance.id)}
+                          onClick={() => health.mutate(instance.id)}
                         >
-                          Restart owned runtime
+                          Check health
                         </Button>
-                      )}
-                    </div>
-                  )}
-                  {instance?.status === "ready" && (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      disabled={pending}
-                      onClick={() => stop.mutate(instance.id)}
-                    >
-                      Unload model · release GPUs
-                    </Button>
-                  )}
-                  {instance && (
-                    <Link
-                      to={`/runs/${instance.metadata.operation_run_id ?? instance.metadata.load_run_id}`}
-                      onClick={() => setOpen(false)}
-                    >
-                      Inspect runtime / cancel
-                    </Link>
-                  )}
-                  {instance?.metadata.observation?.error && (
-                    <p className="notice">
-                      {instance.metadata.observation.error}
-                    </p>
-                  )}
-                </>
-              ) : (
-                <label>
-                  Other model on configured server
-                  <input
-                    maxLength={200}
-                    value={draft}
-                    placeholder="Model name supplied by your server"
-                    onChange={(e) => setDraft(e.target.value)}
-                  />
-                </label>
-              )}
-            </details>
+                        {(instance.status === "ready" ||
+                          instance.status === "stopped" ||
+                          instance.status === "failed") && (
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            disabled={pending}
+                            onClick={() => restart.mutate(instance.id)}
+                          >
+                            Restart owned runtime
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {instance?.status === "ready" && (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        disabled={pending}
+                        onClick={() => stop.mutate(instance.id)}
+                      >
+                        Unload model · release GPUs
+                      </Button>
+                    )}
+                    {instance && (
+                      <Link
+                        to={`/runs/${instance.metadata.operation_run_id ?? instance.metadata.load_run_id}`}
+                        onClick={() => setOpen(false)}
+                      >
+                        Inspect runtime / cancel
+                      </Link>
+                    )}
+                    {instance?.metadata.observation?.error && (
+                      <p className="notice">
+                        {instance.metadata.observation.error}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <label>
+                    Other model on configured server
+                    <input
+                      maxLength={200}
+                      value={draft}
+                      placeholder="Model name supplied by your server"
+                      onChange={(e) => setDraft(e.target.value)}
+                    />
+                  </label>
+                )}
+              </details>
+            )}
             <div className="model-dialog-footer">
               <p>
-                {needsSetup
-                  ? "The first load starts when you select this model. Messages wait until it is ready."
-                  : choice
-                    ? "Loads automatically when your next message needs it."
-                    : "Inference stays on your configured local server."}
+                {selectionOnly
+                  ? "Choose a model. AI Station prepares it when you send a message."
+                  : needsSetup
+                    ? "The first load starts when you select this model. Messages wait until it is ready."
+                    : choice
+                      ? "Loads automatically when your next message needs it."
+                      : "Inference stays on your configured local server."}
               </p>
               <Button
                 type="button"

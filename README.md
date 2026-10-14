@@ -4,6 +4,10 @@
 the conversation. Chat supports replies and media tools; Work adds scoped project,
 coding and agent actions. See [first-send contracts](docs/first-send.md).
 
+In Chat, selecting an installed llama.cpp model does not start it. Send queues its
+owned load when needed, using saved preferences or discovered devices. See
+[model selection and real autoload acceptance](docs/chat-model-selection.md).
+
 **Implementation roadmap:** a conversation-first
 entry with Chat/Work, simple model and verified reasoning selection, separate
 System/Settings, and longer local video/avatars. Start with the
