@@ -99,6 +99,32 @@ class VideoExecutor(HostMediaExecutor):
     mime_type = "video/mp4"
 
     def _start(self, runner, run, allocated, output):
+        continuation = None
+        if run.parameters.get("previous_video_run_id"):
+            from sqlalchemy import select
+
+            from app.db import session_factory
+            from app.models import Run
+
+            with session_factory()() as session:
+                previous = session.get(Run, run.parameters["previous_video_run_id"])
+                artifact = (
+                    session.scalar(
+                        select(Artifact).where(
+                            Artifact.run_id == previous.id, Artifact.artifact_type == "video"
+                        )
+                    )
+                    if previous and previous.status == "succeeded" and previous.task_id == run.task_id
+                    else None
+                )
+                if not artifact or artifact.trashed_at is not None:
+                    raise ValueError("Successful prior motion context is unavailable")
+                continuation = {
+                    "relative_path": artifact.relative_path,
+                    "sha256": artifact.sha256,
+                    "size_bytes": artifact.size_bytes,
+                }
+
         keys = (
             "prompt",
             "negative_prompt",
@@ -117,6 +143,13 @@ class VideoExecutor(HostMediaExecutor):
                 "run_id": run.id,
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **({"continuation": continuation} if continuation else {}),
                 **{key: run.parameters[key] for key in keys},
+                **({"image_relative": None} if continuation else {}),
+                **(
+                    {"profile_observation": run.parameters["profile_observation"]}
+                    if run.parameters.get("profile_observation") is not None
+                    else {}
+                ),
             },
         )

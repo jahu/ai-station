@@ -309,3 +309,12 @@ System and the central workstation report now include bounded NVIDIA compute
 process observations: GPU, executable basename, PID and reported VRAM. They
 never expose command lines or control external processes. See
 [GPU process reporting](docs/gpu-processes.md).
+
+## Long video and whole-speech avatars
+
+Video offers 15/30/60-second continuous scenes or a sequence of shots. Avatars
+defaults to the complete recording or generated speech, up to 60 seconds. Both
+use a durable job card with real segment progress, Stop and Resume unfinished
+work; the checked final MP4 appears in Library. Existing short previews remain.
+See [long-media execution](docs/long-media.md) for requirements, architecture
+and the distinction between integration and hardware verification.

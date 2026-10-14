@@ -41,6 +41,7 @@ from app.library import router as library_router
 from app.llama import router as llama_router
 from app.local_coding import router as local_coding_router
 from app.maintenance import router as maintenance_router
+from app.media_jobs import router as media_jobs_router
 from app.memory_api import router as memory_router
 from app.model_definitions import router as model_definition_router
 from app.model_registry import router as model_router
@@ -347,6 +348,7 @@ app.include_router(connector_router)
 app.include_router(audio_router)
 app.include_router(avatar_router)
 app.include_router(video_router)
+app.include_router(media_jobs_router)
 app.include_router(commit_router)
 app.include_router(codex_router)
 app.include_router(coding_sessions_router)

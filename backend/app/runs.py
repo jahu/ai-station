@@ -51,6 +51,7 @@ def create_run(
     capability: str,
     executor_type: str,
     execution_target: str = "host",
+    operation_key: str | None = None,
     parameters: dict | None = None,
     requested_resources: dict | None = None,
     requested_gpu: str = "none",
@@ -75,6 +76,7 @@ def create_run(
     now = utcnow()
     run = Run(
         task_id=task.id,
+        operation_key=operation_key,
         run_type=run_type,
         capability=capability,
         executor_type=executor_type,
@@ -269,6 +271,7 @@ def run_dict(run: Run) -> dict[str, Any]:
     return {
         "id": run.id,
         "task_id": run.task_id,
+        "operation_key": run.operation_key,
         "run_type": run.run_type,
         "capability": run.capability,
         "executor_type": run.executor_type,

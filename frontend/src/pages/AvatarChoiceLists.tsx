@@ -48,7 +48,7 @@ export function AvatarQualityChoiceList({
   );
   return (
     <>
-      <p id={labelId} className="dashboard-note">
+      <p id={labelId} className="sr-only">
         Arrow keys choose Quality while the list is focused. Space or Enter
         selects it. Enter does not queue a Run. There is no inspectable quality
         Run.
@@ -121,7 +121,7 @@ export function AvatarClipChoiceList({
   );
   return (
     <>
-      <p id={labelId} className="dashboard-note">
+      <p id={labelId} className="sr-only">
         Arrow keys choose Clip length while the list is focused. Space or Enter
         selects it. Enter does not queue a Run. There is no inspectable
         clip-length Run.

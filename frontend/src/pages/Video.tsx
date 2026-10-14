@@ -1,3 +1,9 @@
+import MediaJobResult, {
+  useMediaJob,
+  jobBusy,
+  type MediaJob,
+} from "../components/media/MediaJobResult";
+import { chatRequestId, clearChatRequest } from "./chat-draft";
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,7 +20,8 @@ import Avatars from "./Avatars";
 export default function Video() {
   const [search, setSearch] = useSearchParams();
   const currentRun = useMediaRun(search.get("run") ?? "");
-  const busy = mediaBusy(currentRun.data);
+  const currentJob = useMediaJob(search.get("job") ?? "");
+  const busy = mediaBusy(currentRun.data) || jobBusy(currentJob.data);
   const avatar = search.get("mode") === "avatar" || !!search.get("audio");
   return (
     <>
@@ -58,7 +65,10 @@ function VideoForm({ initialImage }: { initialImage: string }) {
   const [prompt, setPrompt] = useState("");
   const [negative, setNegative] = useState("");
   const [resolution, setResolution] = useState("1280x704");
-  const [frames, setFrames] = useState(49);
+  const [duration, setDuration] = useState("49");
+  const [compositionMode, setCompositionMode] = useState<
+    "continuous" | "shots"
+  >("continuous");
   const [steps, setSteps] = useState(20);
   const [seed, setSeed] = useState(43);
   const [gpu, setGpu] = useState("auto");
@@ -71,9 +81,34 @@ function VideoForm({ initialImage }: { initialImage: string }) {
   const hardware = useHardware();
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
+  const jobId = search.get("job") ?? "";
+  const job = useMediaJob(jobId);
   const generate = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const [width, height] = resolution.split("x").map(Number);
+      const values = {
+        prompt,
+        negative_prompt: negative,
+        width,
+        height,
+        steps,
+        seed,
+        gpu,
+        image_artifact_id: mode === "animate" ? image : null,
+      };
+      if (duration.endsWith("s")) {
+        const body = {
+          ...values,
+          duration_seconds: Number(duration.slice(0, -1)),
+          composition_mode: compositionMode,
+        };
+        const key = await chatRequestId("video-job", JSON.stringify(body));
+        return api<MediaJob>("/media/jobs/video", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...body, client_request_id: key }),
+        });
+      }
       return api<Run>("/video/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -82,7 +117,7 @@ function VideoForm({ initialImage }: { initialImage: string }) {
           negative_prompt: negative,
           width,
           height,
-          frames,
+          frames: Number(duration),
           steps,
           seed,
           gpu,
@@ -91,15 +126,27 @@ function VideoForm({ initialImage }: { initialImage: string }) {
       });
     },
     onSuccess: (result) => {
+      if ("revision" in result) {
+        clearChatRequest("video-job");
+        cache.setQueryData(["media-job", result.task_id], result);
+        setSearch((current) => {
+          const next = new URLSearchParams(current);
+          next.delete("run");
+          next.set("job", result.task_id);
+          return next;
+        });
+        return;
+      }
       cache.setQueryData(["run", result.id], result);
       setSearch((current) => {
         const next = new URLSearchParams(current);
+        next.delete("job");
         next.set("run", result.id);
         return next;
       });
     },
   });
-  const busy = generate.isPending || mediaBusy(run.data);
+  const busy = generate.isPending || mediaBusy(run.data) || jobBusy(job.data);
   return (
     <>
       <PageTitle
@@ -197,15 +244,38 @@ function VideoForm({ initialImage }: { initialImage: string }) {
               <label>
                 Duration
                 <select
-                  value={frames}
-                  onChange={(event) => setFrames(Number(event.target.value))}
+                  value={duration}
+                  onChange={(event) => setDuration(event.target.value)}
                 >
                   <option value={33}>1.4 seconds</option>
                   <option value={49}>2 seconds</option>
                   <option value={81}>3.4 seconds</option>
+                  <option value="15s">15 seconds</option>
+                  <option value="30s">30 seconds</option>
+                  <option value="60s">1 minute</option>
                 </select>
               </label>
             </div>
+            {duration.endsWith("s") && (
+              <label>
+                Composition
+                <select
+                  value={compositionMode}
+                  onChange={(event) =>
+                    setCompositionMode(
+                      event.target.value as "continuous" | "shots",
+                    )
+                  }
+                >
+                  <option value="continuous">One continuous scene</option>
+                  <option value="shots">Sequence of shots</option>
+                </select>
+                <small className="muted">
+                  Long videos render in resumable segments, then become one
+                  checked MP4.
+                </small>
+              </label>
+            )}
             <details className="media-advanced">
               <summary>
                 <Settings2 size={15} />
@@ -276,13 +346,17 @@ function VideoForm({ initialImage }: { initialImage: string }) {
             </p>
           </fieldset>
         </form>
-        <MediaResult
-          kind="video"
-          videoMode="scene"
-          runId={runId}
-          run={run.data}
-          error={run.error}
-        />
+        {jobId ? (
+          <MediaJobResult id={jobId} job={job.data} error={job.error} />
+        ) : (
+          <MediaResult
+            kind="video"
+            videoMode="scene"
+            runId={runId}
+            run={run.data}
+            error={run.error}
+          />
+        )}
       </div>
     </>
   );

@@ -7,17 +7,25 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import HTTPException
-from PIL import Image
-from pydantic import BaseModel, ConfigDict, Field
+from PIL import Image, ImageOps
+from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
 from ai_station_runner.config import get_settings
+from ai_station_runner.media_inputs import MediaInput
 from ai_station_runner.security import resolve_child
 from ai_station_runner.telemetry import collect
+
+
+class AudioWindow(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    start_frame: StrictInt = Field(ge=0, le=7499)
 
 
 class AvatarRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     run_id: UUID
+    audio_window: AudioWindow | None = None
+    previous_video: MediaInput | None = None
     image_relative: str = Field(max_length=500)
     audio_relative: str = Field(max_length=500)
     prompt: str = Field(min_length=1, max_length=2000)
@@ -95,6 +103,34 @@ def start_avatar(manager, body):
     if output.exists() or work.exists():
         raise HTTPException(409, "Inspect existing avatar work before retrying")
     work.mkdir(parents=True)
+    if body.audio_window is not None:
+        sliced = work / "audio-window.wav"
+        with wave.open(str(speech), "rb") as source:
+            start = body.audio_window.start_frame * rate // 25
+            count = (body.frames * rate + 24) // 25 + (rate + 24) // 25
+            if start >= source.getnframes():
+                raise HTTPException(422, "Audio window starts beyond the canonical recording")
+            source.setpos(start)
+            raw = source.readframes(count)
+            padding = count * channels * source.getsampwidth() - len(raw)
+            raw += (b"\x80" if source.getsampwidth() == 1 else b"\x00") * padding
+            with wave.open(str(sliced), "wb") as target:
+                target.setparams(source.getparams())
+                target.writeframes(raw)
+        speech = sliced
+        # Upstream derives output dimensions from the portrait's aspect ratio.
+        # Full jobs need one fixed canvas across all windows and composition.
+        canvas = work / "portrait-canvas.png"
+        with Image.open(portrait) as image:
+            ImageOps.pad(image.convert("RGB"), (body.size, body.size), color="black").save(canvas)
+        portrait = canvas
+    previous = owned(root, body.previous_video.relative_path) if body.previous_video else None
+    if previous and (
+        previous.suffix != ".mp4"
+        or not previous.is_file()
+        or previous.stat().st_size != body.previous_video.size_bytes
+    ):
+        raise HTTPException(422, "Choose a bounded owned preceding video segment")
     output.parent.mkdir(parents=True, exist_ok=True)
     argv = [
         str(python),
@@ -132,6 +168,8 @@ def start_avatar(manager, body):
         "1",
         "--teacache_offload",
     ]
+    if previous:
+        argv.extend(["--previous-video", str(previous), "--previous-hash", body.previous_video.sha256])
     environment = {
         **os.environ,
         "HF_HUB_OFFLINE": "1",

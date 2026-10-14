@@ -42,6 +42,7 @@ from ai_station_runner.gpu_processes import collect as collect_gpu_processes
 from ai_station_runner.llama_runtime import router as llama_router
 from ai_station_runner.local_coding_runs import LocalCodingRequest, local_coding_report, start_local_coding
 from ai_station_runner.local_model import router as local_model_router
+from ai_station_runner.media_compose import ComposeRequest, start_composition
 from ai_station_runner.model_verify import VerifyModel, verify_model
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
@@ -846,5 +847,13 @@ def video_available():
 def video_run(body: VideoRequest):
     try:
         return {**start_video(manager(), body), "runner_id": get_settings().runner_id}
+    except PathBoundaryError as exc:
+        raise HTTPException(403, str(exc)) from exc
+
+
+@app.post("/v1/runs/media-compose")
+def compose_media(body: ComposeRequest):
+    try:
+        return {**start_composition(manager(), body), "runner_id": get_settings().runner_id}
     except PathBoundaryError as exc:
         raise HTTPException(403, str(exc)) from exc

@@ -382,3 +382,35 @@ def test_current_spoken_words_route_without_inventing_text(avatar_bridge, conten
         assert run["executor_type"] == ("chatterbox" if text else "echomimic")
         if text:
             assert run["parameters"]["text"] == text
+
+
+def test_native_avatar_uses_absolute_audio_window_and_pads_only_final_tail(avatar_bridge):
+    from app.config import get_settings
+
+    host, calls = avatar_bridge
+    with TestClient(app) as client:
+        portrait, speech = inputs(client)
+        response = host.post(
+            "/v1/runs/avatar",
+            json={
+                "run_id": str(uuid4()),
+                "image_relative": portrait["relative_path"],
+                "audio_relative": speech["relative_path"],
+                "prompt": "Speak",
+                "size": 256,
+                "frames": 33,
+                "steps": 4,
+                "gpu": 7,
+                "audio_window": {"start_frame": 17},
+                "permissions": ["filesystem_read", "workspace_write"],
+            },
+        )
+        assert response.status_code == 200, response.text
+        args = calls[-1]["argv"]
+        window = args[args.index("--audio_path") + 1]
+        with wave.open(window, "rb") as sound:
+            assert sound.getnframes() == 34 * 16000 // 25
+            assert sound.getframerate() == 16000
+        with wave.open(str(get_settings().data_dir / speech["relative_path"]), "rb") as sound:
+            assert sound.getnframes() == 16000  # Canonical source is unchanged.
+        assert window.endswith("audio-window.wav")

@@ -63,6 +63,7 @@ def artifacts(
     kind: str = Query("", max_length=40, pattern=r"^[a-z_]*$"),
     search: str = Query("", max_length=200),
     view: Literal["active", "trash"] = "active",
+    include_internal: bool = False,
 ):
     statement = select(Artifact)
     if run_id:
@@ -71,6 +72,8 @@ def artifacts(
         statement = statement.where(
             Artifact.trashed_at.is_not(None) if view == "trash" else Artifact.trashed_at.is_(None)
         )
+    if not run_id and not include_internal:
+        statement = statement.where(Artifact.metadata_json["internal_media"].as_boolean().is_not(True))
     if kind == "files":
         statement = statement.where(Artifact.artifact_type.not_in(["image", "audio", "video"]))
     elif kind:
