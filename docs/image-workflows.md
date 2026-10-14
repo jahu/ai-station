@@ -49,3 +49,21 @@ not certify every prompt's visual accuracy: the existing photo pipeline appends
 skin/face styling, and this forest instruction also produced an unrequested
 portrait. That bias requires a prompt-only adapter profile without changing
 the original pipeline. No claim of exact scene adherence is made for this sample.
+
+## Prompt-only generation profile
+
+New Assistant image generation and the Images workspace use the submitted prompt
+without the pipeline's implicit skin/face photo styling. **Add portrait styling**
+in Images restores that original profile explicitly. The raw image API keeps its
+`pipeline` default for existing integrations; `prompt_style: "prompt"` selects
+the new profile for Generate only. Edit, Recompose and Upscale retain their
+existing identity and input contracts.
+
+The Runner launches an app-owned wrapper using the configured photo Python. It
+imports the trusted existing pipeline and clears only `PHOTO_SUFFIX` and
+`T2I_NEGATIVE` in that owned process; the file on disk is unchanged. User-supplied
+negative prompts still pass through the real CLI. Unsupported pipeline versions
+fail explicitly. This is a fixed typed profile, without caller-selected scripts,
+module paths or Python code. GPU selection, process-group ownership, cancellation,
+recovery, offline operation and artifact paths reuse the existing photo executor.
+The chosen style remains in Run and Artifact parameters.

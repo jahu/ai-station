@@ -127,6 +127,7 @@ function ImageForm({
   const [maxSide, setMaxSide] = useState(1216);
   const [gpu, setGpu] = useState("auto");
   const [upscaleResult, setUpscaleResult] = useState(false);
+  const [portraitStyling, setPortraitStyling] = useState(false);
   const [ids, setIds] = useState<string[]>(initialInput ? [initialInput] : []);
   const [localError, setLocalError] = useState<Error | null>(null);
   const hardware = useHardware();
@@ -192,6 +193,8 @@ function ImageForm({
       };
       if (mode === "t2i" || mode === "recompose")
         Object.assign(parameters, { prompt, width, height, steps, cfg });
+      if (mode === "t2i")
+        parameters.prompt_style = portraitStyling ? "pipeline" : "prompt";
       if (mode === "img2img")
         Object.assign(parameters, {
           edit_prompt: prompt,
@@ -433,6 +436,24 @@ function ImageForm({
                     onChange={setBackend}
                   />
                 </div>
+              )}
+              {mode === "t2i" && (
+                <label className="image-workflow-option">
+                  <input
+                    type="checkbox"
+                    aria-label="Add portrait styling"
+                    checked={portraitStyling}
+                    disabled={busy}
+                    onChange={(e) => setPortraitStyling(e.target.checked)}
+                  />
+                  <span>
+                    Add portrait styling
+                    <small>
+                      Adds skin, hair and eye detail. Leave off for scenes,
+                      products and illustrations.
+                    </small>
+                  </span>
+                </label>
               )}
               {(mode === "t2i" || mode === "recompose") && (
                 <>
