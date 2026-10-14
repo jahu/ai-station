@@ -198,3 +198,9 @@ The Assistant's bounded Image → video workflow composes the existing photo and
 Wan executors. Successful image registration, child publication and completion
 commit atomically; the child consumes only that registered artifact and uses a
 new normal GPU reservation. See [media workflow](image-workflows.md).
+
+Search-informed image generation composes ordinary Assistant → Chat brief →
+Photo Runs in one Task. The search switch augments an explicit new-image intent
+instead of overriding routing. Sources and the generated prompt are persisted;
+only successful bounded inference publishes the photo child in the completion
+transaction. See [web search](web-search.md#search-informed-image-generation).

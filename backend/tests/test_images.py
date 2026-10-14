@@ -617,3 +617,52 @@ def test_animation_mention_inside_scene_does_not_add_followup():
 
     prompt = 'Generate an image of a book titled "then animate it" on a table'
     assert image_video_followup(prompt) == (prompt, None)
+
+
+def test_search_brief_to_managed_photo_preserves_research_lineage(bridge, monkeypatch):
+    from app import web_search
+    from app.local_provider import LocalChatProvider
+
+    async def search(query):
+        assert query == "forest scenery"
+        return {
+            "query": query,
+            "provider": "fixture",
+            "searched_at": "2026-10-13T12:00:00Z",
+            "partial": False,
+            "sources": [
+                {"id": 1, "title": "Forest", "url": "https://example.com/forest", "snippet": "Green trees"}
+            ],
+        }
+
+    async def stream(self, **params):
+        yield "A sunlit forest with green trees."
+
+    monkeypatch.setattr(web_search, "search", search)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        conversation = client.post(
+            "/api/chat/conversations", json={"model": "fixture", "execution_mode": "orchestrator"}
+        ).json()
+        route = "/api/chat/conversations/" + conversation["id"]
+        r = client.post(
+            route + "/messages",
+            json={"content": "Stwórz obraz lasu", "web_search": {"enabled": True, "query": "forest scenery"}},
+        )
+        assert r.status_code == 202, r.text
+        with session_factory()() as session:
+            tick(session, "research-test")
+            tick(session, "research-test")
+            tick(session, "research-test")
+            assert active_locks(session) == set()
+        detail = client.get(route).json()
+        assert detail["active_run"] is None
+        result = detail["messages"][1]
+        assert result["task_status"] == "succeeded"
+        artifact = next(a for a in result["artifacts"] if a["type"] == "image")
+        assert artifact["metadata"]["research_run_id"] == detail["messages"][-1]["run_id"]
+        assert (
+            artifact["metadata"]["search_artifact_id"]
+            == detail["messages"][-1]["metadata"]["web_search"]["artifact_id"]
+        )
+        assert client.get("/api/artifacts/" + artifact["id"] + "/file").content == png()

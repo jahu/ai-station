@@ -195,7 +195,7 @@ def test_query_validation_and_action_conflicts():
         for body in [
             {"content": "x" * 501, "web_search": {"enabled": True}},
             {"content": "Search", "web_search": {"enabled": True, "url": "http://localhost"}},
-            {"content": "Create an image", "action": "image.generate", "web_search": {"enabled": True}},
+            {"content": "Create a video", "action": "video.generate", "web_search": {"enabled": True}},
         ]:
             response = client.post(route + "/messages", json=body)
             assert response.status_code == 422, response.text
@@ -226,3 +226,149 @@ async def test_search_rejects_provider_failures(monkeypatch, failure):
     with pytest.raises(ProviderError):
         await web_search.search("test")
     assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "action,content",
+    [
+        ("auto", "Stwórz obraz promocyjny dla firmy example.com na sociale"),
+        ("auto", "Create an image for example.com"),
+        ("image.generate", "A promotional scene for example.com"),
+    ],
+)
+def test_search_informs_image_brief_then_publishes_one_image(action, content, monkeypatch):
+    from app.models import Artifact
+    from sqlalchemy import select
+
+    queries, prompts = [], []
+
+    async def search(query):
+        queries.append(query)
+        return RESULT
+
+    async def stream(self, **params):
+        prompts.append(params)
+        assert "untrusted search snippets" in params["messages"][-1]["content"]
+        assert "source URLs and attribution are displayed separately" in params["messages"][-1]["content"]
+        yield "A polished promotional scene with forest-green accents and a clean website layout."
+
+    monkeypatch.setattr(web_search, "search", search)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        route = conversation(client, "orchestrator")
+        parent = client.post(
+            route + "/messages",
+            json={
+                "content": content,
+                "action": action,
+                "web_search": {"enabled": True, "query": "example.com design"},
+            },
+        ).json()
+        step()
+        brief = client.get(route).json()["active_run"]
+        assert brief["executor_type"] == "chat"
+        assert brief["parameters"]["image_followup"]["mode"] == "t2i"
+        assert brief["effective_permissions"] == ["network_read"]
+        step()
+        detail = client.get(route).json()
+        child = detail["active_run"]
+        assert child["executor_type"] == "photo_pipe"
+        assert not detail["messages"][1]["metadata"].get("routing_only")
+        assert child["parent_run_id"] == brief["id"]
+        assert child["task_id"] == brief["task_id"] == parent["task_id"]
+        assert child["parameters"]["prompt"].startswith("A polished promotional scene")
+        assert "network_read" not in child["effective_permissions"]
+        assert child["metadata"]["research_run_id"] == brief["id"]
+        assert detail["messages"][-1]["metadata"]["web_search"]["sources"] == RESULT["sources"]
+        assert queries == ["example.com design"] and len(prompts) == 1
+        assert len(prompts[0]["messages"]) == 2
+        with session_factory()() as session:
+            assert len(list(session.scalars(select(Run)))) == 3
+            source = session.get(Artifact, child["metadata"]["search_artifact_id"])
+            assert source.run_id == brief["id"]
+        reset_engine()
+        detail = client.get(route).json()
+        assert detail["active_run"]["id"] == child["id"]
+        assert [x["capability"] for x in detail["messages"][1]["steps"]] == [
+            "assistant.orchestrate",
+            "chat.completion",
+            "image.generate",
+        ]
+
+
+@pytest.mark.parametrize("failure", ["search", "empty", "inference", "oversize", "cancel", "permission"])
+def test_researched_image_does_not_publish_after_failed_or_canceled_brief(failure, monkeypatch):
+    from sqlalchemy import select
+
+    queries, closed = [], []
+    brief_id = None
+
+    async def search(query):
+        queries.append(query)
+        if failure == "permission":
+            raise AssertionError("Missing permission must stop before search")
+        if failure == "search":
+            raise ProviderError("Search failed")
+        if failure == "empty":
+            return {**RESULT, "sources": []}
+        return RESULT
+
+    async def stream(self, **params):
+        try:
+            if failure == "inference":
+                raise ProviderError("Inference failed")
+            if failure == "cancel":
+                with session_factory()() as session:
+                    request_cancel(session, session.get(Run, brief_id))
+                    session.commit()
+                yield "A partial image prompt"
+            else:
+                yield "x" * 4001
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr(web_search, "search", search)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        route = conversation(client, "orchestrator")
+        response = client.post(
+            route + "/messages",
+            json={
+                "content": "Generate an image of a forest",
+                "web_search": {"enabled": True, "query": "forest"},
+            },
+        )
+        assert response.status_code == 202, response.text
+        step()
+        brief_id = client.get(route).json()["active_run"]["id"]
+        if failure == "permission":
+            with session_factory()() as session:
+                session.get(Run, brief_id).effective_permissions = []
+                session.commit()
+        step()
+        brief = client.get("/api/runs/" + brief_id).json()
+        assert brief["status"] == ("canceled" if failure == "cancel" else "failed")
+        assert not brief["metadata"].get("child_run_id")
+        with session_factory()() as session:
+            assert not list(session.scalars(select(Run).where(Run.executor_type == "photo_pipe")))
+        assert client.get(route).json()["active_run"] is None
+        if failure in {"inference", "oversize", "cancel"}:
+            assert closed == [True]
+
+
+def test_search_does_not_silently_override_other_actions(monkeypatch):
+    async def search(query):
+        raise AssertionError("An unsupported combined action must not search")
+
+    monkeypatch.setattr(web_search, "search", search)
+    with TestClient(app) as client:
+        route = conversation(client, "orchestrator")
+        client.post(
+            route + "/messages",
+            json={"content": "Create an agent that generates images", "web_search": {"enabled": True}},
+        )
+        step()
+        detail = client.get(route).json()
+        assert detail["active_run"] is None
+        assert "Turn it off for this action" in detail["messages"][-1]["content"]
+        assert detail["messages"][-1]["metadata"].get("agent_id") is None

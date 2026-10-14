@@ -253,7 +253,7 @@ def enqueue_assistant(session, conversation, user, body):
     ):
         raise HTTPException(422, "Workstation inspection does not use attachments or mutation scope")
     if body.web_search.enabled and (
-        body.action not in {"auto", "chat"}
+        body.action not in {"auto", "chat", "image.generate"}
         or body.coding
         or body.commit
         or body.publish
@@ -264,7 +264,7 @@ def enqueue_assistant(session, conversation, user, body):
     ):
         raise HTTPException(
             422,
-            "Web search is available for conversation answers. Select Conversation or Auto and remove media/coding scope.",
+            "Web search supports conversation answers and new images. Remove reference media/coding scope.",
         )
     if body.action == "coding.commit":
         if body.commit is None or body.coding or body.publish:
@@ -378,8 +378,6 @@ def enqueue_assistant(session, conversation, user, body):
 
 
 def explicit_plan(params):
-    if params.get("web_search", {}).get("enabled"):
-        return Plan(action="chat", reason="Answer using your requested web search and local model.")
     action = params["action"]
     if action != "auto":
         return Plan(action=action, reason="Using your selected action.")
@@ -435,7 +433,8 @@ def explicit_plan(params):
             reason="Create a local scene video from your prompt and optional first frame.",
         )
     if re.match(
-        r"^(generate|draw|wygeneruj|narysuj)\b.{0,30}\b(image|picture|photo|obraz|zdję|fotograf)", prompt
+        r"^(generate|draw|create|make|wygeneruj|narysuj|stw[oó]rz|utw[oó]rz)\b.{0,30}\b(image|picture|photo|obraz|zdję|fotograf)",
+        prompt,
     ):
         return Plan(action="image.generate", reason="Generate an image from your instruction.")
     if params["image_artifact_ids"] and re.match(
@@ -450,6 +449,8 @@ def explicit_plan(params):
     ):
         action = "image.recompose" if len(params["image_artifact_ids"]) > 1 else "image.edit"
         return Plan(action=action, reason="Use your ordered references and edit instruction.")
+    if params.get("web_search", {}).get("enabled"):
+        return Plan(action="chat", reason="Answer using your requested web search and local model.")
     return None
 
 
@@ -561,6 +562,15 @@ class AssistantExecutor:
                     action="clarify",
                     reason="Local video needs setup. Open Video to inspect the configured Wan runtime before generating.",
                 )
+        if (
+            run.parameters.get("web_search", {}).get("enabled")
+            and plan
+            and plan.action not in {"chat", "image.generate", "clarify"}
+        ):
+            plan = Plan(
+                action="clarify",
+                reason="Web search can inform a conversation answer or a new image. Turn it off for this action, or ask a separate research question first.",
+            )
         session.refresh(run)
         if run.status == "cancel_requested" or plan is None:
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
@@ -658,7 +668,11 @@ class AssistantExecutor:
                 child = enqueue_snapshot(session, run)
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                 message.content = "Reading current workstation telemetry and activity…"
-        elif plan.action == "chat":
+        elif (
+            plan.action == "chat"
+            or plan.action == "image.generate"
+            and params.get("web_search", {}).get("enabled")
+        ):
             from app.chat import enqueue
 
             conversation = session.get(Conversation, run.conversation_id)
@@ -667,6 +681,12 @@ class AssistantExecutor:
             message.metadata_json = {**message.metadata_json, "partial": True, "routing_only": True}
             child = enqueue(session, conversation, user=user, parent_run_id=run.id, commit=False)
             run.metadata_json = {**run.metadata_json, "child_run_id": child["id"]}
+            if plan.action == "image.generate":
+                from app.image_research import prepare_brief
+
+                prepare_brief(session, session.get(Run, child["id"]), params)
+                message.metadata_json = {**message.metadata_json, "partial": False, "routing_only": False}
+                message.content = "Searching your public query, preparing an image prompt with the selected model, then generating locally. Sources and the image will appear here."
         elif plan.action.startswith("image."):
             from app.images import ImageRequest, create_image_run
 

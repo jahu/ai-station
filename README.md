@@ -250,3 +250,8 @@ a separate mode. See [video configuration and verification](docs/video.md).
 The Assistant's **Image → video** action generates a first frame and then animates
 it with Wan, keeping both outputs in Library. For example: “Generate an image of
 a forest, then animate it: mist drifts between the trees”. See [image workflows](docs/image-workflows.md).
+
+To research an image subject, choose **Generate image** (or use Auto), turn on
+**Search the web**, enter a short **Search query** and describe the visual result.
+The Assistant researches, prepares a prompt with your selected model and
+queues image generation, keeping source cards and the image in the conversation.
