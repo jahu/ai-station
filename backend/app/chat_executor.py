@@ -89,6 +89,29 @@ class ChatExecutor:
                         break
                     finally:
                         pending = None
+                    from app.chat_reasoning import CompletionFinished, ReasoningDelta
+
+                    if isinstance(token, CompletionFinished):
+                        message.metadata_json = {**message.metadata_json, "finish_reason": token.reason}
+                        if token.reason == "length":
+                            raise ProviderError(
+                                "Output budget exhausted; the partial answer and thinking are preserved"
+                            )
+                        continue
+
+                    if isinstance(token, ReasoningDelta):
+                        text = message.metadata_json.get("reasoning_text", "") + token.text
+                        if len(text) > 65536:
+                            raise ProviderError("Thinking output exceeded its bound")
+                        message.metadata_json = {**message.metadata_json, "reasoning_text": text}
+                        append_event(
+                            session,
+                            run.id,
+                            "chat.reasoning_delta",
+                            {"message_id": message.id, "text": token.text},
+                        )
+                        session.commit()
+                        continue
                     if len(message.content) + len(token) > 256000:
                         raise ProviderError("Completion exceeded the output size limit")
                     message.content += token

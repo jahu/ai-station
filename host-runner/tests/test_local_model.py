@@ -174,3 +174,65 @@ def test_disconnect_before_provider_headers_cancels_upstream(monkeypatch):
         assert stopped.is_set() and client.is_closed
 
     asyncio.run(exercise())
+
+
+def test_reasoning_is_bounded_and_not_forwarded_to_unqualified_local_endpoint():
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/v1/llm/chat/completions",
+                headers=HEADERS,
+                json={**BODY, "max_tokens": 768, "reasoning": {"enabled": True, "budget": 128}},
+            ).status_code
+            == 422
+        )
+        assert (
+            client.post(
+                "/v1/llm/chat/completions",
+                headers=HEADERS,
+                json={**BODY, "reasoning": {"enabled": True, "budget": 128}},
+            ).status_code
+            == 422
+        )
+        assert (
+            client.post(
+                "/v1/llm/chat/completions",
+                headers=HEADERS,
+                json={**BODY, "max_tokens": 768, "reasoning": {"enabled": "yes", "budget": 128}},
+            ).status_code
+            == 422
+        )
+
+
+@pytest.mark.parametrize("enabled", [False, True])
+def test_owned_forwarding_maps_only_typed_reasoning_fields(enabled):
+    recorded = []
+
+    class Stream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield b"data: [DONE]\n\n"
+
+    def handler(request):
+        recorded.append(json.loads(request.content))
+        return httpx.Response(200, headers={"content-type": "text/event-stream"}, stream=Stream())
+
+    async def run():
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        response = await local_model.forward_completion(
+            local_model.Completion(
+                **{**BODY, "max_tokens": 768, "reasoning": {"enabled": enabled, "budget": 128}}
+            ),
+            Request({"type": "http"}),
+            "http://llama/v1",
+            client,
+            {},
+        )
+        async for _ in response.body_iterator:
+            pass
+        assert client.is_closed
+
+    asyncio.run(run())
+    assert recorded[0]["chat_template_kwargs"] == {"enable_thinking": enabled}
+    assert recorded[0]["reasoning_budget_tokens"] == (128 if enabled else 0)
+    assert recorded[0]["reasoning_format"] == "deepseek" and "reasoning" not in recorded[0]
+    assert ("reasoning_effort" in recorded[0]) == (not enabled)

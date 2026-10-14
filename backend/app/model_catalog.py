@@ -148,6 +148,9 @@ def build_catalog(session, *, discover_provider=None):
             )
         }
         for model in [*owned["models"], *missing]:
+            from app.chat_reasoning import certificate
+
+            qualification = certificate(session, model["model_key"])
             matches = [
                 instance
                 for instance in owned["instances"]
@@ -196,7 +199,15 @@ def build_catalog(session, *, discover_provider=None):
                     unavailable_reason=reason,
                     modalities=["text", *(["image"] if model.get("vision_available") else [])],
                     context_limit=context if isinstance(context, int) and context > 0 else None,
-                    reasoning_capability={"kind": "unsupported", "verified": False},
+                    reasoning_capability={
+                        "kind": "toggle",
+                        "verified": True,
+                        "default_budget": 256,
+                        "maximum_budget": 1024,
+                        "source_run_id": qualification["source_run_id"],
+                    }
+                    if qualification
+                    else {"kind": "unsupported", "verified": False},
                     capability_provenance={
                         "source": "owned.model-registry",
                         "vision": "installed companion"

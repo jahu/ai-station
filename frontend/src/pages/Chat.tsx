@@ -5,6 +5,8 @@ import {
 } from "./ChatWebSearch";
 import LlamaModels from "./LlamaModels";
 import UnifiedModelPicker from "./UnifiedModelPicker";
+import ChatThinking from "./ChatThinking";
+import { useThinking } from "./chat-thinking";
 import NewChat from "./NewChat";
 import ConversationComposer from "./ConversationComposer";
 import ChatModeSwitch from "./ChatModeSwitch";
@@ -60,6 +62,7 @@ type Message = ActionResult & {
   run_status: string | null;
   error_message: string;
   metadata: {
+    reasoning_text?: string;
     web_search?: WebSources;
     orchestration?: boolean;
     routing_only?: boolean;
@@ -580,6 +583,12 @@ function Transcript({
                 </strong>
                 <small className="muted">{time(message.created_at)}</small>
               </div>
+              {message.metadata.reasoning_text && (
+                <details className="message-thinking">
+                  <summary>Thinking</summary>
+                  <p>{message.metadata.reasoning_text}</p>
+                </details>
+              )}
               <div className="markdown">
                 <Markdown
                   remarkPlugins={[remarkGfm]}
@@ -776,6 +785,14 @@ function ConversationView({
                 options.action === "coding.publish")
             ? gitReady
             : !!draft.trim();
+  const thinking = useThinking(
+    conversation.model,
+    turnMode === "chat" &&
+      ["auto", "chat"].includes(options.action) &&
+      !options.image_artifact_ids.length &&
+      !attachments.some((item) => item.kind === "image"),
+    conversation.max_tokens,
+  );
   const send = useMutation({
     mutationFn: () => {
       const values = {
@@ -796,6 +813,9 @@ function ConversationView({
           : {}),
         attachments,
         execution_mode: turnMode,
+        ...(thinking.enabled
+          ? { reasoning: { enabled: true, budget: 256 } }
+          : {}),
         ...(assistantTurn ? options : {}),
         web_search: { enabled: webEnabled, query: webQuery },
       };
@@ -880,6 +900,14 @@ function ConversationView({
           </Link>
         )}
       </div>
+      {thinking.available && (
+        <ChatThinking
+          value={thinking.enabled}
+          busy={busy}
+          blocked={thinking.blocked}
+          onChange={thinking.onChange}
+        />
+      )}
       <details className="chat-settings-panel">
         <summary>Conversation settings</summary>
         <SettingsForm

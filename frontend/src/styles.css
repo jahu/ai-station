@@ -3209,6 +3209,45 @@ section:has(> .memory-grid) > .dashboard-note {
   border-top: 1px solid var(--border);
   font-size: 12px;
 }
+.thinking-support {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.thinking-support > summary,
+.message-thinking > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+}
+.thinking-qualification {
+  display: grid;
+  gap: 12px;
+  padding-top: 12px;
+}
+.thinking-qualification > button {
+  width: fit-content;
+}
+.chat-thinking-control {
+  width: fit-content;
+  flex-shrink: 0;
+  margin: 8px 24px;
+}
+.new-chat > .chat-thinking-control {
+  margin: 0 0 14px;
+}
+.message-thinking {
+  margin-bottom: 12px;
+}
+.message-thinking > p {
+  white-space: pre-wrap;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 12px;
+  border-left: 2px solid var(--border);
+  max-height: 320px;
+  overflow: auto;
+}
 @media (max-width: 600px) {
   .unified-model-dialog .model-option {
     position: relative;

@@ -11,7 +11,8 @@ Current delivery: [Create project & build](../assistant-project-build.md) integr
 the adapted Work WIP. [Shared conversation shell](../conversation-shell.md) now
 unifies composer presentation, collapsed history/tools and scroll preservation.
 The [unified catalog](../model-catalog.md) now combines provider/model selection
-and version guards. Reasoning, automatic model routing, draft persistence,
+and version guards. [Qualified local thinking](../chat-thinking.md) adds a tested optional Chat toggle.
+Automatic model routing, draft persistence,
 contextual Work and long media remain
 next work. The WIP inventory below records the historical pre-delivery
 checkpoint; preserve original Memory and `.tools/assistant-project-build` changes.

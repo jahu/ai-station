@@ -211,7 +211,12 @@ def test_query_runtime_metadata_prefers_props_n_ctx_and_drops_chat_template():
             raise httpx.HTTPError("unexpected")
 
     observed = llama.query_runtime_metadata(Client())
-    assert observed == {"n_ctx": 32768, "n_ctx_train": 262144, "n_params": 26895998464}
+    assert observed == {
+        "n_ctx": 32768,
+        "n_ctx_train": 262144,
+        "n_params": 26895998464,
+        "template_sha256": "72fc3c85da09aa741f2196eefbcc30ab76f6a16597171b30ee967ce02e688912",
+    }
     assert "chat_template" not in observed
 
 

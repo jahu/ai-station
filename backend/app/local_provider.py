@@ -121,8 +121,11 @@ class LocalChatProvider:
         location: str = "local",
         tools: list[dict] | None = None,
         on_tool_calls=None,
+        reasoning: dict | None = None,
     ):
         managed = model.startswith("llamacpp:")
+        if reasoning is not None and not managed:
+            raise ProviderError("Thinking controls require an owned local model")
         if managed and location != "local":
             raise ProviderError("Owned llama.cpp models require the local provider")
         original = endpoint
@@ -150,6 +153,8 @@ class LocalChatProvider:
         if tools is not None:
             body["tools"] = _validated_tools(tools)
             body["tool_choice"] = "auto"
+        if reasoning is not None:
+            body["reasoning"] = reasoning
         tool_acc: dict[int, dict[str, str]] = {}
         try:
             async with httpx.AsyncClient(
@@ -190,6 +195,14 @@ class LocalChatProvider:
                             choice = choices[0]
                             done = done or choice.get("finish_reason") is not None
                             delta = choice.get("delta") or {}
+                            thinking = delta.get("reasoning_content")
+                            if reasoning is not None and thinking is not None:
+                                from app.chat_reasoning import ReasoningDelta
+
+                                if not isinstance(thinking, str):
+                                    raise ProviderError("Unsupported thinking format")
+                                if thinking:
+                                    yield ReasoningDelta(thinking)
                             for item in delta.get("tool_calls") or []:
                                 _accumulate_tool_delta(tool_acc, item)
                             content = delta.get("content")
@@ -198,6 +211,10 @@ class LocalChatProvider:
                                     raise ProviderError("Unsupported provider content format")
                                 if content:
                                     yield content
+                            if reasoning is not None and choice.get("finish_reason") is not None:
+                                from app.chat_reasoning import CompletionFinished
+
+                                yield CompletionFinished(str(choice["finish_reason"]))
                         if finished:
                             break
             if tool_acc:

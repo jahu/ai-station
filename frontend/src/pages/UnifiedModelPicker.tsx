@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { api } from "../api";
 import { ErrorNotice, Loading } from "../components/common";
 import { useListKeyboard } from "./useListKeyboard";
+import ThinkingQualification from "./ThinkingQualification";
 
 export type CatalogModel = {
   model_ref: string;
@@ -22,6 +23,7 @@ export type CatalogModel = {
   modalities: string[];
   file_size_bytes?: number | null;
   quantization?: string;
+  reasoning_capability?: { kind: string; verified: boolean };
 };
 export type Catalog = {
   models: CatalogModel[];
@@ -287,6 +289,24 @@ export default function UnifiedModelPicker({
                 </p>
               )}
             </div>
+            {selected?.runtime_kind === "llama.cpp" &&
+              !["unavailable", "needs_inspection"].includes(
+                selected.availability,
+              ) && (
+                <details className="thinking-support">
+                  <summary>
+                    Thinking support{" "}
+                    {selected.reasoning_capability?.verified
+                      ? "· verified"
+                      : ""}
+                  </summary>
+                  <ThinkingQualification
+                    key={selected.model_key}
+                    model={selected.model_key}
+                    disabled={busy}
+                  />
+                </details>
+              )}
             <div className="model-picker-links">
               <Link to="/models">Manage local models</Link>
               <Link to="/settings/providers">Configure providers</Link>

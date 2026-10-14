@@ -36,9 +36,10 @@ Older clients and receipts remain compatible, including hashes from before the
 optional new-project scope was introduced. A changed prompt/scope/version under
 an already accepted request UUID remains a conflict.
 
-Reasoning has no verified per-turn mapping yet and is not exposed as a fake slider.
-The catalog reports that state. Automatic modality/context-based model routing,
-reasoning qualification and remaining Work/media increments are separate work.
+Qualified owned models expose an optional [Thinking switch](chat-thinking.md).
+Qualification is an explicit, cancellable local Run; unsupported or untested models
+have no switch. Automatic modality/context-based model routing and remaining
+Work/media increments are separate work.
 
 Verification uses temporary DBs/fake endpoints for projection, absent/unknown
 models, secret redaction, explicit discovery, provider-version guards and legacy

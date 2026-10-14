@@ -33,7 +33,7 @@ def payload():
 
 def test_valid_inline_pixels_are_forwarded_without_file_or_url_access():
     data = payload()
-    assert VisionCompletion.model_validate(data).model_dump() == data
+    assert VisionCompletion.model_validate(data).model_dump(exclude={"reasoning"}) == data
 
 
 @pytest.mark.parametrize(

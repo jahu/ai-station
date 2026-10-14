@@ -176,6 +176,9 @@ def query_runtime_metadata(client) -> dict:
         if response.status_code == 200:
             payload = response.json()
             settings = payload.get("default_generation_settings")
+            template = payload.get("chat_template")
+            if isinstance(template, str) and len(template) <= 262144:
+                observed["template_sha256"] = hashlib.sha256(template.encode()).hexdigest()
             take(settings if isinstance(settings, dict) else {}, "n_ctx")
             take(payload, "n_ctx_train")
     except (httpx.HTTPError, ValueError, TypeError):
@@ -221,7 +224,8 @@ def snapshot(instance_id):
         "error": error,
         "gpus": record["request"]["gpus"],
     }
-    for key in ("n_ctx", "n_ctx_train", "n_params"):
+    result["image_id"] = record["image"]
+    for key in ("n_ctx", "n_ctx_train", "n_params", "template_sha256"):
         if key in observed:
             result[key] = observed[key]
     return result

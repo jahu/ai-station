@@ -240,6 +240,9 @@ def bind_completion(session: Session, params: dict) -> dict:
 
 
 def completion_stream(session, params):
+    from app.chat_reasoning import check_binding
+
+    check_binding(params, session)
     bound = bind_completion(session, params)
     return LocalChatProvider().stream(
         endpoint=params["endpoint"],
@@ -249,6 +252,7 @@ def completion_stream(session, params):
         max_tokens=params["max_tokens"],
         headers=bound["headers"],
         location=bound["location"],
+        **({"reasoning": params["reasoning"]} if params.get("reasoning") is not None else {}),
     )
 
 
