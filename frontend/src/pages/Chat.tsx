@@ -1,4 +1,10 @@
 import {
+  useChatDraft,
+  chatRequestId,
+  clearChatRequest,
+  clearChatDraft,
+} from "./chat-draft";
+import {
   WebSearchControl,
   SearchSources,
   type WebSources,
@@ -100,11 +106,13 @@ function ConversationHistory({
   currentId,
   newTo,
   pending,
+  onNew,
 }: {
   conversations: Conversation[];
   currentId?: string;
   newTo: string;
   pending: boolean;
+  onNew: () => void;
 }) {
   const headingId = useId();
   const labelId = useId();
@@ -116,7 +124,7 @@ function ConversationHistory({
   return (
     <aside className="panel chat-history">
       <Button asChild>
-        <Link to={newTo}>
+        <Link to={newTo} onClick={onNew}>
           <Plus size={15} aria-hidden="true" />
           New conversation
         </Link>
@@ -172,6 +180,7 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
   const { id } = useParams();
   const cache = useQueryClient();
   const navigate = useNavigate();
+  const [newDraftKey, setNewDraftKey] = useState(0);
   const conversations = useQuery({
     queryKey: ["conversations"],
     queryFn: () => api<Conversation[]>("/chat/conversations"),
@@ -236,11 +245,17 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
             currentId={id}
             newTo={assistant ? "/" : "/chat"}
             pending={conversations.isPending}
+            onNew={() => {
+              clearChatDraft("new");
+              clearChatRequest("new");
+              setNewDraftKey((value) => value + 1);
+            }}
           />
         </details>
         <section className="chat-main panel">
           {!id ? (
             <NewChat
+              key={newDraftKey}
               providers={providers.data ?? []}
               provider={provider.data}
               onProviderChange={setProviderKey}
@@ -741,7 +756,10 @@ function ConversationView({
       api<{ send_key: "enter" | "ctrl-enter" }>("/chat/preferences"),
   });
   const models = selected.data?.models ?? [];
-  const [draft, setDraft] = useState("");
+  const draftState = useChatDraft(conversation.id);
+  const submittedDraft = useRef("");
+  const draft = draftState.value,
+    setDraft = draftState.update;
   const [options, setOptions] = useState(emptyOptions);
   const [webEnabled, setWebEnabled] = useState(false);
   const [projectSelectionVersion, setProjectSelectionVersion] = useState(0);
@@ -794,7 +812,8 @@ function ConversationView({
     conversation.max_tokens,
   );
   const send = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
+      submittedDraft.current = draft;
       const values = {
         content:
           draft.trim() ||
@@ -821,7 +840,10 @@ function ConversationView({
       };
       const body = JSON.stringify(values);
       if (pendingRequest.current?.body !== body)
-        pendingRequest.current = { body, id: crypto.randomUUID() };
+        pendingRequest.current = {
+          body,
+          id: await chatRequestId(conversation.id, body),
+        };
       return api("/chat/turns", {
         method: "POST",
         ...json({
@@ -832,7 +854,8 @@ function ConversationView({
     },
     onSuccess: () => {
       pendingRequest.current = null;
-      setDraft("");
+      clearChatRequest(conversation.id);
+      draftState.accept(submittedDraft.current);
       setWebQuery("");
       setAttachments([]);
       setOptions(emptyOptions);
@@ -998,6 +1021,12 @@ function ConversationView({
             clipboardError
           }
         />
+        {draftState.restored && (
+          <p className="muted">
+            Draft text restored. Reattach files and confirm tools before
+            sending.
+          </p>
+        )}
         <ConversationComposer
           id="chat-draft"
           value={draft}

@@ -28,6 +28,8 @@ messages, verifies the unchanged scroll position and Jump to latest, and submits
 no workload. Evidence: `data/acceptance/conversation-shell-20261014`.
 
 This advances the [conversation plan](plans/chat-work-experience.md); a unified
-provider/model catalog, verified reasoning, session draft persistence, history
-pagination and richer contextual Work follow-ups remain separate increments.
+provider/model catalog and verified reasoning have been delivered.
+[Session draft text](chat-drafts.md) now survives refresh/navigation with a compact
+retry identity. History pagination and richer contextual Work follow-ups remain
+separate increments.
 It does not claim that long-media or those remaining features are delivered.
