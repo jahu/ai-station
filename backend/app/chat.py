@@ -5,9 +5,9 @@ import json
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictBool, model_validator
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.assistant import (
@@ -109,14 +109,42 @@ def ensure_idle(session, conversation_id):
 
 
 @router.get("/conversations")
-def conversations(session: DB):
+def conversations(
+    session: DB,
+    q: Annotated[str, Query(max_length=200)] = "",
+    before: AwareDatetime | None = None,
+    before_id: UUID | None = None,
+):
     from app.chat_providers import ensure_builtin
 
     ensure_builtin(session)
     session.commit()
+    if (before is None) != (before_id is None):
+        raise HTTPException(422, "History cursor requires both timestamp and conversation ID")
+    query = select(Conversation)
+    if q.strip():
+        text = q.strip()
+        matching_message = (
+            select(Message.id)
+            .where(
+                Message.conversation_id == Conversation.id,
+                Message.content.contains(text, autoescape=True),
+            )
+            .exists()
+        )
+        query = query.where(or_(Conversation.title.contains(text, autoescape=True), matching_message))
+    if before is not None:
+        query = query.where(
+            or_(
+                Conversation.updated_at < before,
+                and_(Conversation.updated_at == before, Conversation.id < str(before_id)),
+            )
+        )
     return [
         conversation_view(session, row)
-        for row in session.scalars(select(Conversation).order_by(Conversation.updated_at.desc()).limit(100))
+        for row in session.scalars(
+            query.order_by(Conversation.updated_at.desc(), Conversation.id.desc()).limit(100)
+        )
     ]
 
 

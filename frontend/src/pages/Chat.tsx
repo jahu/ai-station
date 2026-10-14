@@ -26,9 +26,21 @@ import AssistantActions, {
 import { AssistantAgentDraft } from "./AssistantAgentDraft";
 import TextAttachments, { type TextAttachment } from "./TextAttachments";
 import ConversationSummary, { type Summary } from "./ConversationSummary";
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useDeferredValue,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -107,12 +119,22 @@ function ConversationHistory({
   newTo,
   pending,
   onNew,
+  search,
+  onSearch,
+  hasMore,
+  loadingMore,
+  onMore,
 }: {
   conversations: Conversation[];
   currentId?: string;
   newTo: string;
   pending: boolean;
   onNew: () => void;
+  search: string;
+  onSearch: (value: string) => void;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onMore: () => void;
 }) {
   const headingId = useId();
   const labelId = useId();
@@ -129,12 +151,22 @@ function ConversationHistory({
           New conversation
         </Link>
       </Button>
+      <label className="chat-history-search">
+        <span className="sr-only">Search conversations</span>
+        <input
+          type="search"
+          value={search}
+          maxLength={200}
+          placeholder="Search conversations…"
+          onChange={(event) => onSearch(event.target.value)}
+        />
+      </label>
       {conversations.length ? (
         <section aria-labelledby={headingId}>
           <h2 id={headingId} className="sr-only">
             Conversations
           </h2>
-          <p id={labelId} className="dashboard-note">
+          <p id={labelId} className="sr-only">
             Arrow keys choose a conversation while the list is focused. Enter
             opens it.
           </p>
@@ -168,9 +200,21 @@ function ConversationHistory({
       ) : (
         !pending && (
           <p className="muted">
-            Your conversations will stay here after a restart.
+            {search.trim()
+              ? "No matching conversations."
+              : "Your conversations will stay here after a restart."}
           </p>
         )
+      )}
+      {hasMore && (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={loadingMore}
+          onClick={onMore}
+        >
+          {loadingMore ? "Loading…" : "Load older conversations"}
+        </Button>
       )}
     </aside>
   );
@@ -181,11 +225,33 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
   const cache = useQueryClient();
   const navigate = useNavigate();
   const [newDraftKey, setNewDraftKey] = useState(0);
-  const conversations = useQuery({
-    queryKey: ["conversations"],
-    queryFn: () => api<Conversation[]>("/chat/conversations"),
+  const [historySearch, setHistorySearch] = useState("");
+  const historyQuery = useDeferredValue(historySearch.trim());
+  const conversations = useInfiniteQuery({
+    queryKey: ["conversations", "history", historyQuery],
+    initialPageParam: null as { at: string; id: string } | null,
+    queryFn: ({ pageParam }) => {
+      const query = new URLSearchParams();
+      if (historyQuery) query.set("q", historyQuery);
+      if (pageParam) {
+        query.set("before", pageParam.at);
+        query.set("before_id", pageParam.id);
+      }
+      return api<Conversation[]>(
+        "/chat/conversations" + (query.size ? "?" + query : ""),
+      );
+    },
+    getNextPageParam: (last) =>
+      last.length === 100
+        ? { at: last[last.length - 1].updated_at, id: last[last.length - 1].id }
+        : undefined,
     refetchInterval: 5000,
   });
+  const historyRows = Array.from(
+    new Map(
+      (conversations.data?.pages.flat() ?? []).map((row) => [row.id, row]),
+    ).values(),
+  );
   const providers = useQuery({
     queryKey: ["chat-providers"],
     queryFn: () => api<Provider[]>("/chat/providers"),
@@ -241,10 +307,17 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
         <details className="chat-entry-history">
           <summary>Recent conversations</summary>
           <ConversationHistory
-            conversations={conversations.data ?? []}
+            conversations={historyRows}
             currentId={id}
             newTo={assistant ? "/" : "/chat"}
             pending={conversations.isPending}
+            search={historySearch}
+            onSearch={setHistorySearch}
+            hasMore={conversations.hasNextPage}
+            loadingMore={conversations.isFetchingNextPage}
+            onMore={() => {
+              void conversations.fetchNextPage();
+            }}
             onNew={() => {
               clearChatDraft("new");
               clearChatRequest("new");
