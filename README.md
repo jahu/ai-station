@@ -99,6 +99,10 @@ The built-in local provider stays on localhost, host.docker.internal and loopbac
 
 Attach up to four files in the Chat composer: UTF-8 text/code (16 KB each, 24 KB combined), PDFs (1 MiB, eight pages of extractable text) or PNG/JPEG/WebP (2 MiB, 4 megapixels). Preview or remove them before sending; the prompt and serialized attachment context share a 32,000-character limit. PDFs that have no extractable text are rejected instead of pretending the model saw the page. Image pixels are stored as artifacts and are not sent to the current local text models. Files keep hashes and message/Run provenance, remain downloadable after restart, and are included in regeneration and explicit summaries. Arrow keys move through staged composer attachments; Remove stays on the selected file and Enter does not send. Saved attachments in the transcript are a nested keyboard sequence with unique Saved attachment names; Enter opens the selected file. There is no inspectable attachment Run. See [Chat attachments](docs/chat-attachments.md).
 
+Qualified owned llama.cpp models offer an optional Thinking switch in Chat. Use
+**Model → Thinking support → Check thinking support** before enabling it; the
+check and generation are cancellable Runs. See [local thinking](docs/chat-thinking.md).
+
 ## Images
 
 Set `AI_STATION_PHOTO_PYTHON` and `AI_STATION_PHOTO_SCRIPT` to absolute paths for the existing Python environment and `photo_pipe.py`; `AI_STATION_SD_CLI` helps diagnostics. Restart AI Station after changing configuration. The original script remains independent and unchanged.

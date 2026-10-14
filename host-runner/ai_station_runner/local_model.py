@@ -10,7 +10,7 @@ import anyio
 import httpx
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, model_validator
 
 from ai_station_runner.config import get_settings
 
@@ -64,6 +64,12 @@ class ChatMessage(BaseModel):
     content: str = Field(max_length=100000)
 
 
+class ReasoningOptions(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    enabled: StrictBool
+    budget: StrictInt = Field(default=256, ge=32, le=1024)
+
+
 class Completion(BaseModel):
     model_config = ConfigDict(extra="forbid")
     model: str = Field(min_length=1, max_length=200)
@@ -71,6 +77,13 @@ class Completion(BaseModel):
     temperature: float = Field(ge=0, le=2, allow_inf_nan=False)
     max_tokens: int = Field(ge=1, le=8192)
     stream: Literal[True]
+    reasoning: ReasoningOptions | None = None
+
+    @model_validator(mode="after")
+    def reasoning_budget(self):
+        if self.reasoning and self.reasoning.enabled and self.max_tokens < self.reasoning.budget + 256:
+            raise ValueError("Leave at least 256 output tokens for the final answer")
+        return self
 
     @model_validator(mode="after")
     def bound_context(self):
@@ -128,6 +141,8 @@ async def send_until_disconnect(client, upstream, incoming):
 
 @router.post("/chat/completions")
 async def completion(body: Completion, expected: ExpectedEndpoint, incoming: Request):
+    if body.reasoning is not None:
+        raise HTTPException(422, "Reasoning controls require an owned llama.cpp runtime")
     url = endpoint(expected)
     client = upstream_client()
     return await forward_completion(body, incoming, url, client, headers())
@@ -136,8 +151,17 @@ async def completion(body: Completion, expected: ExpectedEndpoint, incoming: Req
 async def forward_completion(body, incoming, url, client, request_headers):
     response = None
     try:
+        payload = body.model_dump(exclude={"reasoning"})
+        if body.reasoning is not None:
+            payload.update(
+                chat_template_kwargs={"enable_thinking": body.reasoning.enabled},
+                reasoning_format="deepseek",
+                reasoning_budget_tokens=body.reasoning.budget if body.reasoning.enabled else 0,
+            )
+            if not body.reasoning.enabled:
+                payload["reasoning_effort"] = "none"
         request = client.build_request(
-            "POST", url + "/chat/completions", headers=request_headers, json=body.model_dump()
+            "POST", url + "/chat/completions", headers=request_headers, json=payload
         )
         response = await send_until_disconnect(client, request, incoming)
         response.raise_for_status()

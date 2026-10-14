@@ -20,6 +20,7 @@ from app.assistant import (
 from app.chat_attachments import TextAttachment, link_attachments, message_content, save_attachments
 from app.chat_policy import POLICY_VERSION, policy_mode, validate_chat_scope
 from app.chat_providers import BUILTIN_KEY, chat_permissions, snapshot_provider
+from app.chat_reasoning import ReasoningOptions
 from app.conversation_summary import (
     enqueue_summary,
     latest_summary,
@@ -54,6 +55,7 @@ class MessageBody(AssistantInputs):
     content: str = Field(min_length=1, max_length=32000)
     attachments: list[TextAttachment] = Field(default_factory=list, max_length=4)
     execution_mode: Literal["auto", "local", "orchestrator", "chat", "work"] = "auto"
+    reasoning: ReasoningOptions | None = None
 
     @model_validator(mode="after")
     def validate_context(self):
@@ -310,6 +312,14 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
             "model": row.model,
             "temperature": row.temperature,
             "max_tokens": row.max_tokens,
+            **(
+                {
+                    "reasoning": user.metadata_json["reasoning"],
+                    "reasoning_certificate": user.metadata_json["reasoning_certificate"],
+                }
+                if user.metadata_json.get("reasoning") is not None
+                else {}
+            ),
             "messages": context,
             "memory_sources": memory_sources,
             "summary_source": {
@@ -374,6 +384,19 @@ def submit_message(conversation_id, body, session, *, commit=True):
         content=message_content(body.content, body.attachments),
         metadata_json={"user_text": body.content} if body.attachments else {},
     )
+    if body.reasoning is not None:
+        from app.chat_reasoning import certificate, validated_options
+
+        if use_assistant or body.action not in {"auto", "chat"} or mode not in {"chat", "local"}:
+            raise HTTPException(
+                422, "Thinking controls apply to Chat replies; Work uses its executor policies"
+            )
+        options = validated_options(session, row.model, body.reasoning, row.max_tokens)
+        user.metadata_json = {
+            **user.metadata_json,
+            "reasoning": options,
+            "reasoning_certificate": certificate(session, row.model),
+        }
     from app.web_search import selection
 
     try:
@@ -438,6 +461,8 @@ def accept_turn(body: TurnBody, session: DB):
     payload = body.model_dump(mode="json")
     if body.expected_provider_version is None:
         payload.pop("expected_provider_version")
+    if body.reasoning is None:
+        payload.pop("reasoning")
 
     def fingerprint(values):
         return hashlib.sha256(json.dumps(values, sort_keys=True, separators=(",", ":")).encode()).hexdigest()

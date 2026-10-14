@@ -17,6 +17,7 @@ from app.audio import AudioExecutor
 from app.avatars import AvatarExecutor
 from app.browser import BrowserExecutor
 from app.chat_executor import ChatExecutor
+from app.chat_reasoning import ReasoningCheckExecutor
 from app.codex_coding import CodexProposalExecutor
 from app.commit_executor import ReviewedCommitExecutor
 from app.config import get_settings
@@ -302,6 +303,7 @@ EXECUTORS = {
     "github_publication": GithubPublicationExecutor(),
     "publication_reconcile": PublicationReconcileExecutor(),
     "chat": ChatExecutor(),
+    "reasoning_check": ReasoningCheckExecutor(),
     "chat_summary": SummaryExecutor(),
     "worktree_prepare": WorktreeExecutor(),
     "worktree_remove": WorktreeRemoveExecutor(),

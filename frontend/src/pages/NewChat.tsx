@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { ErrorNotice } from "../components/common";
 import UnifiedModelPicker from "./UnifiedModelPicker";
+import ChatThinking from "./ChatThinking";
+import { useThinking } from "./chat-thinking";
 import ConversationComposer from "./ConversationComposer";
 import AssistantActions from "./AssistantActions";
 import { emptyOptions } from "./assistant-options";
@@ -70,6 +72,13 @@ export default function NewChat({
       : preferences.data?.provider === provider?.key && preferences.data?.model
         ? preferences.data.model
         : provider?.default_model || provider?.models?.[0] || "";
+  const thinking = useThinking(
+    model,
+    mode === "chat" &&
+      ["auto", "chat"].includes(options.action) &&
+      !options.image_artifact_ids.length &&
+      !attachments.some((item) => item.kind === "image"),
+  );
   const send = useMutation({
     mutationFn: async () => {
       const values = {
@@ -81,6 +90,9 @@ export default function NewChat({
             }
           : {}),
         execution_mode: mode,
+        ...(thinking.enabled
+          ? { reasoning: { enabled: true, budget: 256 } }
+          : {}),
         content: draft.trim(),
         attachments,
         ...options,
@@ -150,6 +162,14 @@ export default function NewChat({
           }}
         />
       </div>
+      {thinking.available && (
+        <ChatThinking
+          value={thinking.enabled}
+          busy={send.isPending}
+          blocked={thinking.blocked}
+          onChange={thinking.onChange}
+        />
+      )}
       <ConversationComposer
         id="new-chat-message"
         value={draft}
