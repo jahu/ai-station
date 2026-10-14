@@ -22,6 +22,7 @@ export type ChatProviderInfo = {
   secret_source: "none" | "env" | "stored";
   secret_present: boolean;
   models?: string[];
+  updated_at?: string;
 };
 
 const json = (method: string, body: unknown) => ({

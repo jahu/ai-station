@@ -17,15 +17,16 @@ or dynamically discovered devices configure its first consumer.
 The [implementation brief](plans/2026-10-chat-work-media.md) and
 [updated handoff](plans/implementation-handoff.md) distinguish delivered and planned
 increments. Atomic first Send, server-enforced Chat/Work, selection-only local
-autoload and distinct System/Settings are delivered. The remaining design adds a
-shared conversation shell, unified model selection with verified reasoning, and
+autoload, the [shared conversation shell](conversation-shell.md), the
+[unified model catalog](model-catalog.md) and distinct System/Settings are delivered.
+The remaining design adds verified reasoning and
 bounded segmented media using existing RunDependency, owned native executors and
 final artifacts. No new orchestration service or arbitrary tool API is introduced.
 See [conversation contracts](plans/chat-work-experience.md),
 [workspace separation](plans/system-settings-separation.md) and
 [long-media execution](plans/long-media-execution.md) for schema, lifecycle,
 resource and acceptance decisions. Preserve current behavior until each reviewed
-increment is delivered; the remaining shell/reasoning and longer duration are
+increment is delivered; reasoning and longer duration are
 not yet operational. A media planner finishing does not finish the user job:
 the proposed Task projection requires a verified final artifact from its current
 selected stage attempts. Its Stop/resume boundary covers the bounded media graph,

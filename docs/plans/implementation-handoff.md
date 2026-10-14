@@ -10,7 +10,9 @@ The planning PR itself changed no application code, deployment or installed mode
 Current delivery: [Create project & build](../assistant-project-build.md) integrates
 the adapted Work WIP. [Shared conversation shell](../conversation-shell.md) now
 unifies composer presentation, collapsed history/tools and scroll preservation.
-Unified catalog/reasoning, draft persistence, contextual Work and long media remain
+The [unified catalog](../model-catalog.md) now combines provider/model selection
+and version guards. Reasoning, automatic model routing, draft persistence,
+contextual Work and long media remain
 next work. The WIP inventory below records the historical pre-delivery
 checkpoint; preserve original Memory and `.tools/assistant-project-build` changes.
 

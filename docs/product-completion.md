@@ -2,6 +2,11 @@
 
 ## Next priority: conversation-first entry and useful long media
 
+[Unified model catalog](model-catalog.md) now replaces separate happy-path model
+and provider selectors in entry, conversations and General settings. Selection is
+metadata-only; provider discovery, location disclosure, version guards and old
+receipt replay are explicit. Automatic model routing/verified reasoning remain next.
+
 [Conversation shell](conversation-shell.md) now shares entry/follow-up composition,
 collapses history and tools and preserves reading position during updates. Unified
 catalog, reasoning, persistent drafts and contextual Work continuity remain next.

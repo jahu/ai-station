@@ -15,6 +15,9 @@ default; Cursor/Codex require explicit sharing consent. See the
 In Chat, selecting an installed llama.cpp model does not start it. Send queues its
 owned load when needed, using saved preferences or discovered devices. See
 [model selection and real autoload acceptance](docs/chat-model-selection.md).
+Chat and General preferences now use [one searchable model picker](docs/model-catalog.md)
+for llama.cpp, local servers and configured external providers. Endpoint discovery
+is explicit; model selection starts no workload.
 
 **Implementation roadmap:** a conversation-first
 entry with Chat/Work, simple model and verified reasoning selection, separate

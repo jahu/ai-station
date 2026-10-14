@@ -6,7 +6,7 @@ import re
 from typing import Annotated, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -20,6 +20,7 @@ from app.local_provider import (
     model_endpoint,
     validate_endpoint,
 )
+from app.model_catalog import ModelCatalog
 from app.models import ChatProvider, Conversation
 from app.paths import PathBoundaryError
 from app.providers import ProviderError
@@ -115,11 +116,16 @@ def ensure_builtin(session: Session) -> ChatProvider:
         session.add(row)
         session.flush()
         return row
-    row.endpoint = endpoint
-    row.secret_ref = secret_ref
-    row.default_model = get_settings().llm_model
-    row.enabled = True
-    row.updated_at = utcnow()
+    values = {
+        "endpoint": endpoint,
+        "secret_ref": secret_ref,
+        "default_model": get_settings().llm_model,
+        "enabled": True,
+    }
+    if any(getattr(row, key) != value for key, value in values.items()):
+        for key, value in values.items():
+            setattr(row, key, value)
+        row.updated_at = utcnow()
     return row
 
 
@@ -195,6 +201,7 @@ def snapshot_provider(session: Session, conversation: Conversation) -> dict:
         "location": row.location,
         "endpoint": endpoint,
         "secret_ref": row.secret_ref,
+        "provider_config_version": iso(row.updated_at),
     }
 
 
@@ -316,6 +323,13 @@ def list_providers(session: DB):
         session.scalars(select(ChatProvider).order_by(ChatProvider.builtin.desc(), ChatProvider.name))
     )
     return [provider_dict(row) for row in rows]
+
+
+@router.get("/model-catalog", response_model=ModelCatalog)
+def model_catalog(session: DB, discover_provider: Annotated[str | None, Query(max_length=80)] = None):
+    from app.model_catalog import build_catalog
+
+    return build_catalog(session, discover_provider=discover_provider)
 
 
 @router.post("/providers", status_code=201)

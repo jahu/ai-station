@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, StrictBool, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -420,6 +420,7 @@ class TurnBody(MessageBody):
     conversation_id: UUID | None = None
     selection: ConversationBody | None = None
     expected_settings_version: int | None = Field(default=None, ge=1)
+    expected_provider_version: AwareDatetime | None = None
 
     @model_validator(mode="after")
     def selection_scope(self):
@@ -434,12 +435,21 @@ class TurnBody(MessageBody):
 
 @router.post("/turns", status_code=202)
 def accept_turn(body: TurnBody, session: DB):
-    digest = hashlib.sha256(
-        json.dumps(body.model_dump(mode="json"), sort_keys=True, separators=(",", ":")).encode()
-    ).hexdigest()
+    payload = body.model_dump(mode="json")
+    if body.expected_provider_version is None:
+        payload.pop("expected_provider_version")
+
+    def fingerprint(values):
+        return hashlib.sha256(json.dumps(values, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+    digest = fingerprint(payload)
     receipt = session.get(ChatTurnRequest, str(body.client_request_id))
     if receipt:
-        if receipt.payload_hash != digest:
+        hashes = {digest}
+        # Before #273, receipts did not include the optional new-project scope.
+        if payload.get("new_project") is None:
+            hashes.add(fingerprint({key: value for key, value in payload.items() if key != "new_project"}))
+        if receipt.payload_hash not in hashes:
             raise HTTPException(409, "This request ID already belongs to a different message")
         return turn_receipt(session, receipt)
     if body.conversation_id:
@@ -448,10 +458,20 @@ def accept_turn(body: TurnBody, session: DB):
             raise HTTPException(409, "Conversation settings changed; refresh before sending")
     else:
         selection = body.selection
+        if body.expected_provider_version is not None:
+            from app.chat_providers import get_provider
+
+            if get_provider(session, selection.provider).updated_at != body.expected_provider_version:
+                raise HTTPException(409, "Provider configuration changed; choose the model again")
         snapshot_provider(session, Conversation(provider=selection.provider, model=selection.model))
         row = Conversation(**selection.model_dump())
         session.add(row)
         session.flush()
+    if body.conversation_id and body.expected_provider_version is not None:
+        from app.chat_providers import get_provider
+
+        if get_provider(session, row.provider).updated_at != body.expected_provider_version:
+            raise HTTPException(409, "Provider configuration changed; choose the model again")
     message = MessageBody.model_validate({key: getattr(body, key) for key in MessageBody.model_fields})
     result = submit_message(row.id, message, session, commit=False)
     session.flush()
