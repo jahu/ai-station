@@ -1,6 +1,7 @@
 """Commit only reviewed snapshots using a private index and atomic ref update."""
 
 import fcntl
+import hashlib
 import json
 import os
 import subprocess
@@ -40,7 +41,10 @@ def execute(run_id):
             raise ValueError("Worktree index changed; inspect staged changes before committing")
         files = read_selected(workspace, [item["path"] for item in review["files"]])
         for actual, expected in zip(files, review["files"], strict=True):
-            if actual["content"] is None or actual["sha256"] != expected["after_sha256"]:
+            deleted = expected.get("operation") == "delete"
+            if (deleted and (expected["after_sha256"] is not None or actual["content"] is not None)) or (
+                not deleted and (actual["content"] is None or actual["sha256"] != expected["after_sha256"])
+            ):
                 raise ValueError("Reviewed file changed; request a new review")
         env = {
             **git_environment(),
@@ -78,6 +82,14 @@ def execute(run_id):
         git("read-tree", parent)
         for index, (actual, expected) in enumerate(zip(files, review["files"], strict=True)):
             entry = repo.read(["ls-tree", parent, "--", actual["path"]]).stdout
+            if expected.get("operation") == "delete":
+                if not entry or entry.split()[0] not in {"100644", "100755"}:
+                    raise ValueError("Reviewed deletion requires an ordinary tracked source file")
+                original = repo.read(["show", f"{parent}:{actual['path']}"]).stdout
+                if hashlib.sha256(original.encode()).hexdigest() != expected["before_sha256"]:
+                    raise ValueError("Reviewed deletion source changed; request a new review")
+                git("update-index", "--force-remove", "--", actual["path"])
+                continue
             mode = entry.split()[0] if entry else "100644"
             if mode not in {"100644", "100755"} or bool(actual["mode"] & 0o111) != (mode == "100755"):
                 raise ValueError("Reviewed file mode changed")

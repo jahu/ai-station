@@ -8,6 +8,51 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+it("shows selected-file deletion and its patch without queuing a commit", () => {
+  const fetcher = vi.fn(async () => ({ ok: true, json: async () => [] }));
+  vi.stubGlobal("fetch", fetcher);
+  const run = {
+    id: "removal",
+    status: "succeeded",
+    metadata: {
+      execution_location: "local",
+      coding_review: {
+        branch: "ai/task",
+        files: [
+          {
+            path: "old.py",
+            operation: "delete",
+            diff: "deleted file mode 100644\n--- a/old.py\n+++ /dev/null\n-old",
+            insertions: 0,
+            deletions: 1,
+          },
+        ],
+      },
+    },
+  } as unknown as Run;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <CodingReview run={run} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText("Deleted", { exact: true })).toBeTruthy();
+  expect(
+    screen.getByRole("option", { name: "File old.py · Deleted" }),
+  ).toBeTruthy();
+  expect(screen.getByLabelText("Diff for old.py").textContent).toContain(
+    "/dev/null",
+  );
+  expect(screen.getByLabelText("Diff for old.py").textContent).toContain(
+    "deleted file mode",
+  );
+  expect(screen.getByText(/1 file · \+0 \/ −1/)).toBeTruthy();
+  expect(fetcher).not.toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({ method: "POST" }),
+  );
+});
 it("keeps a queued commit in the conversation when asked not to navigate", async () => {
   const queued = vi.fn();
   vi.stubGlobal(

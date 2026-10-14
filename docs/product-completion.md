@@ -1,5 +1,17 @@
 # Full-product acceptance ledger
 
+Coding supports checked removal of selected source files, explicit Deleted
+review labels, cumulative follow-up patches and separate reviewed commits.
+Repairs cannot introduce deletions. See [source removal](coding-file-removal.md)
+for the fake-provider/disposable-Git verification scope.
+
+Real scheduled-agent acceptance on 2026-10-14 completed two interval workflows
+using existing qwen3:8b inference and actual workstation observations. Eight Runs
+succeeded; both reports retained agent-scoped memory with source provenance, and
+the second workflow retrieved the first report. Desktop/mobile rendered the real
+report. The acceptance agent was paused afterward. Evidence:
+`data/acceptance/scheduled-agent-20261014`. This does not prove other tool schedules.
+
 Worker execution uses three configurable, independent process slots. Tests
 cover short work completing during a held long Run, exclusive GPU reservation,
 lease renewal, cancellation and supervisor shutdown/crash handling. This is

@@ -36,6 +36,10 @@ def execute_proposal(run_id, body, root, generate, *, location, discover=None):
     print(f"{location.upper()} proposal for {len(selected)} selected files; tools disabled", flush=True)
     text, provider = generate(selected)
     proposal = parse_proposal(text, selected)
+    if getattr(body, "repair_source_run_id", None) and any(
+        item["content"] is None for item in proposal["files"]
+    ):
+        raise ValueError("Repair cannot delete selected source files")
     # Recheck repository identity as well as every source file after inference.
     current = Repository(workspace, shared_group=True)
     if (
@@ -61,13 +65,15 @@ def execute_proposal(run_id, body, root, generate, *, location, discover=None):
             blob = repo.read(["show", f"HEAD:{item['path']}"], check=False)
             original = {**item, "content": None, "sha256": None}
             if blob.returncode == 0:
+                mode = repo.read(["ls-tree", "HEAD", "--", item["path"]]).stdout.split()[0]
+                if mode not in {"100644", "100755"}:
+                    raise ValueError("Cumulative review requires ordinary source files")
                 original["content"] = blob.stdout
                 original["sha256"] = hashlib.sha256(blob.stdout.encode()).hexdigest()
+                original["mode"] = int(mode, 8) & 0o777
             elif repo.read(["ls-tree", "HEAD", "--", item["path"]]).stdout:
                 raise ValueError("Could not read the task base for repair review")
             if original["content"] != item["content"]:
-                if item["content"] is None:
-                    raise ValueError("Repair cannot delete source files")
                 changes.append(describe_change(original, item))
         report["files"] = changes
         report["repair_source_run_id"] = str(getattr(body, "repair_source_run_id", ""))

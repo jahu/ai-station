@@ -23,6 +23,7 @@ type Review = {
     diff: string;
     insertions: number;
     deletions: number;
+    operation?: "delete";
   }[];
 };
 
@@ -281,13 +282,18 @@ function ReviewFiles({ files }: { files: Review["files"] }) {
             key={item.path}
             role="option"
             aria-selected={i === index}
-            aria-label={`File ${item.path}`}
+            aria-label={`File ${item.path}${item.operation === "delete" ? " · Deleted" : ""}`}
             className="coding-review-file"
             onClick={() => setSelectedKey(item.path)}
             {...itemProps(i, item.path)}
           >
-            <span className="mono">{item.path}</span>
-            <span>
+            <span className="coding-review-file-name">
+              <span className="mono">{item.path}</span>
+              {item.operation === "delete" && (
+                <span className="chip">Deleted</span>
+              )}
+            </span>
+            <span className="coding-review-file-counts">
               +{item.insertions} / −{item.deletions}
             </span>
           </div>

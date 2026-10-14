@@ -34,6 +34,11 @@ Coding work happens in a fresh worktree and a new `ai/...` branch. The user's cu
 
 ## Permissions
 
+Coding's existing `workspace_write` permission covers checked selected source
+removal inside the owned worktree. It exposes no general deletion operation.
+Review identifies every removal; commit remains a separate `git_write` Run.
+Repairs cannot introduce removals. See [source removal](coding-file-removal.md).
+
 Runs store an effective permission list. There is no universal full-access flag. Profiles grant named capabilities (`filesystem_read`, `workspace_write`, `git_read`, `git_write`, `network_read`, `network_external`, `shell_project_commands`, `external_ai`, `manage_station`, and others). Missing permission fails the tool call. SQLite backup Runs require `manage_station`; agents do not receive it. Inspecting a copy is read-only. Restore and image rollout are unpublished.
 
 ## Network tools

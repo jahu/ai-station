@@ -1,7 +1,94 @@
 import json
+import subprocess
 
 import pytest
 from ai_station_runner.coding_files import apply_proposal, parse_proposal, proposal_prompt, read_selected
+
+
+@pytest.mark.parametrize("content", ["", "old\n", "no newline"])
+@pytest.mark.parametrize("mode", [0o644, 0o755])
+def test_selected_deletion_has_reversible_git_patch(tmp_path, content, mode):
+    workspace, target = tmp_path / "workspace", tmp_path / "target"
+    for root in (workspace, target):
+        root.mkdir()
+        (root / "old file.py").write_text(content)
+        (root / "old file.py").chmod(mode)
+        (root / "keep.py").write_text("before\n")
+    selected = read_selected(workspace, ["old file.py", "keep.py"])
+    proposal = parse_proposal(
+        json.dumps(
+            {
+                "summary": "Remove obsolete source",
+                "files": [
+                    {"path": "old file.py", "delete": True},
+                    {"path": "keep.py", "content": "after\n"},
+                ],
+            }
+        ),
+        selected,
+    )
+    report = apply_proposal(workspace, selected, proposal)
+    assert not (workspace / "old file.py").exists()
+    assert (workspace / "keep.py").read_text() == "after\n"
+    removed = report["files"][0]
+    assert removed["operation"] == "delete" and removed["after_sha256"] is None
+    assert removed["before_sha256"] == selected[0]["sha256"]
+    assert removed["insertions"] == 0 and removed["deletions"] == len(content.splitlines())
+    assert f"deleted file mode {0o100000 | mode:o}" in removed["diff"]
+    patch = "".join(item["diff"] for item in report["files"])
+    subprocess.run(["git", "init", str(target)], capture_output=True, check=True)
+    for args in ([], ["--reverse"]):
+        result = subprocess.run(
+            ["git", "-C", str(target), "apply", *args, "--"], input=patch, text=True, capture_output=True
+        )
+        assert result.returncode == 0, result.stderr
+    assert (target / "old file.py").read_text() == content
+    # Git patches preserve the executable bit; permissions also follow umask.
+    assert bool((target / "old file.py").stat().st_mode & 0o111) == bool(mode & 0o111)
+    assert (target / "keep.py").read_text() == "before\n"
+
+
+def test_stale_deletion_rejects_all_changes_before_application(tmp_path):
+    (tmp_path / "old.py").write_text("original\n")
+    (tmp_path / "keep.py").write_text("before\n")
+    selected = read_selected(tmp_path, ["old.py", "keep.py"])
+    proposal = parse_proposal(
+        json.dumps(
+            {
+                "summary": "change",
+                "files": [
+                    {"path": "keep.py", "content": "after\n"},
+                    {"path": "old.py", "delete": True},
+                ],
+            }
+        ),
+        selected,
+    )
+    (tmp_path / "old.py").write_text("human change\n")
+    with pytest.raises(ValueError, match="changed after"):
+        apply_proposal(tmp_path, selected, proposal)
+    assert (tmp_path / "old.py").read_text() == "human change\n"
+    assert (tmp_path / "keep.py").read_text() == "before\n"
+
+
+def test_deletion_rejects_missing_unselected_and_redirected_paths(tmp_path):
+    (tmp_path / "source.py").write_text("original\n")
+    selected = read_selected(tmp_path, ["source.py", "missing.py"])
+    for path in ("missing.py", "unselected.py"):
+        with pytest.raises(ValueError):
+            parse_proposal(
+                json.dumps({"summary": "remove", "files": [{"path": path, "delete": True}]}), selected
+            )
+    proposal = parse_proposal(
+        json.dumps({"summary": "remove", "files": [{"path": "source.py", "delete": True}]}), selected
+    )
+    (tmp_path / "source.py").unlink()
+    outside = tmp_path.parent / "outside.py"
+    outside.write_text("unrelated\n")
+    (tmp_path / "source.py").symlink_to(outside)
+    with pytest.raises(ValueError, match="symlink"):
+        apply_proposal(tmp_path, selected, proposal)
+    assert outside.read_text() == "unrelated\n"
 
 
 def test_checked_replacements_preserve_unchanged_files_and_executable_mode(tmp_path):
@@ -165,7 +252,10 @@ def test_unique_snippet_replacements_apply_and_reject_ambiguous_matches(tmp_path
         {"path": "app.py", "replacements": [{"old": "", "new": "x"}]},
         {"path": "app.py", "replacements": [{"old": "missing", "new": "x"}]},
         {"path": "app.py", "replacements": [{"old": "print(1)\n", "new": "x"}] * 21},
-        {"path": "app.py", "delete": True},
+        {"path": "app.py", "delete": False},
+        {"path": "app.py", "delete": 1},
+        {"path": "app.py", "delete": "true"},
+        {"path": "app.py", "delete": True, "content": ""},
     ],
 )
 def test_invalid_snippet_replacements_fail_closed(tmp_path, payload):
@@ -212,4 +302,4 @@ def test_proposal_prompt_includes_fetched_page_facts():
     assert "exactly once" in message
     without = proposal_prompt(prompt="Build", selected=selected, guidance="")
     assert "web_observations" not in without
-    assert "file deletion" in without
+    assert '"delete": true' in without and "existing selected file" in without
