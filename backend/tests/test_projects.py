@@ -2849,3 +2849,81 @@ def test_coding_sessions_filter_by_project(session):
     missing = "00000000-0000-0000-0000-000000000001"
     assert api.get("/api/coding/sessions", params={"project_id": missing}).json() == []
     assert "private" not in str(listed)
+
+
+@pytest.mark.parametrize(
+    "action,content,name",
+    [
+        ("project.create", "Weather Station", "Weather Station"),
+        ("auto", 'Create a project named "Weather Station"', "Weather Station"),
+        ("auto", "Stwórz projekt o nazwie Pogoda", "Pogoda"),
+        ("auto", "Create a project named Agent Studio", "Agent Studio"),
+    ],
+)
+def test_assistant_creates_owned_project_in_one_task_without_inference(
+    repository, owned_runner, monkeypatch, action, content, name
+):
+    from app.db import reset_engine
+    from app.local_provider import LocalChatProvider
+
+    async def forbidden(self, **params):
+        raise AssertionError("Project creation must not contact a model")
+        yield ""
+
+    monkeypatch.setattr(LocalChatProvider, "stream", forbidden)
+    with TestClient(app) as client:
+        cid = client.post(
+            "/api/chat/conversations", json={"model": "fixture", "execution_mode": "orchestrator"}
+        ).json()["id"]
+        route = "/api/chat/conversations/" + cid
+        response = client.post(route + "/messages", json={"action": action, "content": content})
+        assert response.status_code == 202, response.text
+        parent = response.json()
+        with session_factory()() as session:
+            tick(session, "assistant-create")
+        d = client.get(route).json()
+        child = d["active_run"]
+        assert child["executor_type"] == "project_setup"
+        assert child["task_id"] == parent["task_id"] and child["parent_run_id"] == parent["id"]
+        assert child["effective_permissions"] == ["workspace_write", "git_write"]
+        assert client.get("/api/projects").json() == []
+        with session_factory()() as session:
+            tick(session, "native-create")
+        reset_engine()
+        d = client.get(route).json()
+        assert d["active_run"] is None
+        result = d["messages"][1]
+        assert result["task_status"] == "succeeded"
+        project = result["created_projects"][0]
+        assert project["name"] == name
+        persisted = client.get("/api/projects/" + project["id"]).json()
+        assert project["updated_at"] == persisted["updated_at"]
+        repo = owned_runner.data_dir / "projects" / project["id"]
+        assert (repo / ".venv/bin/python").is_file()
+        assert (
+            subprocess.check_output(["git", "-C", str(repo), "branch", "--show-current"], text=True).strip()
+            == "develop"
+        )
+        assert (repository / "README.md").read_text() == "Original repository\n"
+        assert len(result["steps"]) == 2
+        with session_factory()() as session:
+            assert tick(session, "after-restart") is None
+        # Selecting local coding on this newly created version uses normal scope;
+        # a project-related coding instruction must not create another project.
+        body = {
+            "action": "coding.local",
+            "content": "Create a project setup guide",
+            "coding": {
+                "project_id": project["id"],
+                "expected_updated_at": project["updated_at"],
+                "files": [],
+                "explore": True,
+                "external_ai": False,
+            },
+        }
+        response = client.post(route + "/messages", json=body)
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "coding-dispatch")
+        assert client.get(route).json()["active_run"]["executor_type"] == "worktree_prepare"
+        assert len(client.get("/api/projects").json()) == 1

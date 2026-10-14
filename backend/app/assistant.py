@@ -16,12 +16,12 @@ from app.chat_providers import BUILTIN_KEY, chat_permissions, completion_stream,
 from app.db import utcnow
 from app.events import append_event
 from app.llama import LoadModel
-from app.models import Artifact, Conversation, Message, Run, RuntimeInstance
+from app.models import Artifact, Conversation, Message, Project, Run, RuntimeInstance
 from app.providers import ProviderError
 from app.publication import PublishBody
 from app.reviewed_commits import ReviewedCommit
 from app.runs import create_run, create_task, run_dict, transition
-from app.serialize import artifact_dict
+from app.serialize import artifact_dict, iso
 from app.state import TERMINAL, RunStatus
 from app.web_search import SearchOptions
 
@@ -37,6 +37,7 @@ Action = Literal[
     "avatar.animate",
     "video.generate",
     "agent.create",
+    "project.create",
     "system.inspect",
     "coding.cursor",
     "coding.codex",
@@ -110,6 +111,7 @@ class AssistantInputs(BaseModel):
         "avatar.animate",
         "video.generate",
         "agent.create",
+        "project.create",
         "system.inspect",
         "coding.cursor",
         "coding.codex",
@@ -138,7 +140,35 @@ class Plan(BaseModel):
 
 def assistant_needs_provider(body):
     plan = explicit_plan(body.model_dump(mode="json", exclude={"attachments"}))
-    return not plan or plan.action not in {"runtime.load", "runtime.stop", "system.inspect", "image.describe"}
+    return not plan or plan.action not in {
+        "runtime.load",
+        "runtime.stop",
+        "system.inspect",
+        "image.describe",
+        "project.create",
+    }
+
+
+def requested_project_name(content, action="auto"):
+    match = re.fullmatch(
+        r"(?:create|make|stw[oó]rz|utw[oó]rz)\s+(?:(?:a|new|nowy)\s+){0,2}"
+        r"(?:project|projekt)\s+(?:(?:named|called|o nazwie|nazwany)\s+)?(.+)",
+        content.strip(),
+        re.I,
+    )
+    name = match.group(1) if match else content if action == "project.create" else None
+    if name is None:
+        return None
+    name = name.strip()
+    if len(name) >= 2 and (name[0], name[-1]) in {('"', '"'), ("'", "'"), ("“", "”")}:
+        name = name[1:-1].strip()
+    elif action == "auto" and re.search(
+        r"\b(?:then|potem|następnie|and\s+(?:build|create|run|delete|write)|i\s+(?:zbuduj|stw[oó]rz|usu[nń]|napisz))\b",
+        name,
+        re.I,
+    ):
+        return None
+    return name
 
 
 def planner_context(session, conversation, user):
@@ -173,6 +203,35 @@ def planner_context(session, conversation, user):
 
 
 def enqueue_assistant(session, conversation, user, body):
+    selected_plan = explicit_plan(body.model_dump(mode="json", exclude={"attachments"}))
+    project_name = (
+        requested_project_name(body.content, body.action)
+        if selected_plan and selected_plan.action == "project.create"
+        else None
+    )
+    if body.action == "project.create" or project_name is not None:
+        if (
+            body.image_artifact_ids
+            or body.audio_artifact_id
+            or body.attachments
+            or body.coding
+            or body.commit
+            or body.publish
+            or body.load
+            or body.stop
+            or body.web_search.enabled
+            or body.speech_text
+            or body.upscale_result
+        ):
+            raise HTTPException(
+                422, "Project creation needs only a name; remove media, research and other action settings"
+            )
+        from app.project_setup import ProjectName
+
+        try:
+            ProjectName(name=project_name or "")
+        except ValidationError as exc:
+            raise HTTPException(422, "Enter a readable project name between 1 and 200 characters") from exc
     if body.action == "image.generate_video" and (
         body.image_artifact_ids
         or body.audio_artifact_id
@@ -396,6 +455,11 @@ def explicit_plan(params):
         )
         return Plan(action=action, reason="Using your selected project and coding scope.")
     prompt = params["content"].strip().lower()
+    if requested_project_name(params["content"]) is not None:
+        return Plan(
+            action="project.create",
+            reason="Create an owned Git project and Python environment from its name.",
+        )
     if (
         not params["image_artifact_ids"]
         and not params.get("audio_artifact_id")
@@ -518,6 +582,7 @@ image.edit: modify one attached image;
 image.recompose: compose an image using one or more attached references (including person + clothing);
 image.upscale: enlarge one attached image;
 agent.create: create a persistent agent definition, including requests whose agent goal mentions images/code;
+project.create: explicitly create a NEW project from its name; never import or modify an existing repository;
 coding.local: implement changes in a registered software project with the local conversation model;
 coding.cursor: implement changes only with explicit external Cursor consent in the coding scope;
 coding.codex: implement changes only with explicit external Codex consent in the coding scope;
@@ -592,7 +657,17 @@ class AssistantExecutor:
         message.content = plan.reason
         params = run.parameters
         images = params["image_artifact_ids"]
-        if plan.action == "avatar.animate":
+        if plan.action == "project.create":
+            from app.project_setup import ProjectName, enqueue_project
+
+            name = requested_project_name(params["content"], params["action"])
+            if name is None:
+                message.content = "Choose Create project and enter its name, for example Weather Station."
+            else:
+                child = enqueue_project(session, ProjectName(name=name), task=run.task, parent_run_id=run.id)
+                run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                message.content = "Creating your project with Git and a Python environment. Its folder and branch settings are managed by AI Station; you can start coding here when it is ready."
+        elif plan.action == "avatar.animate":
             from app.avatars import AvatarRequest, create_avatar_run
 
             if len(images) != 1 or not params.get("audio_artifact_id"):
@@ -1045,6 +1120,14 @@ def task_results(session, message, run):
         ],
         "artifacts": [artifact_dict(artifact) for artifact in artifacts],
         "coding_runs": [run_dict(step) for step in steps if step.executor_type in CODING_REVIEW_EXECUTORS],
+        "created_projects": [
+            {"id": project.id, "name": project.name, "updated_at": iso(project.updated_at)}
+            for step in steps
+            if step.executor_type == "project_setup"
+            and step.status == "succeeded"
+            and step.project_id == step.parameters.get("project_id")
+            and (project := session.get(Project, step.project_id)) is not None
+        ],
         "task_status": next(
             (step.status for step in steps if step.status not in TERMINAL),
             next(

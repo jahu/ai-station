@@ -26,7 +26,7 @@ it("offers every action in a compact control and explains the selected action", 
     name: "Action",
   }) as HTMLSelectElement;
   expect(action.value).toBe("auto");
-  expect(screen.getAllByRole("option")).toHaveLength(20);
+  expect(screen.getAllByRole("option")).toHaveLength(21);
   expect(screen.queryByRole("radio")).toBeNull();
   fireEvent.change(action, { target: { value: "image.edit" } });
   expect(action.value).toBe("image.edit");

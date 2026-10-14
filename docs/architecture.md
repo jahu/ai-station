@@ -214,3 +214,9 @@ Optional research can now precede the same first-frame animation workflow.
 The selected action determines whether a bounded Chat brief publishes a plain
 image or an image with the user's separate motion instruction; photo completion
 then publishes Wan atomically. No model-generated tool graph is executed.
+
+Assistant project creation reuses the existing pure setup enqueue service with
+its parent's Task and ordinary native executor. The worker alone creates the
+repository/environment. Success publishes the saved project's identity back
+to the conversation; continuation selects a versioned coding scope without
+starting work from the UI. See [assistant projects](orchestrator.md#create-a-project-in-the-assistant).

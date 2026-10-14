@@ -259,3 +259,8 @@ queues image generation, keeping source cards and the image in the conversation.
 Generate now follows your prompt without adding face/skin styling. Enable
 **Add portrait styling** in Images to use the original photographic portrait
 profile. Edit and Recompose keep their identity-preserving behavior.
+
+In the Platform assistant, choose **Create project** and enter a name. Or type
+“Stwórz projekt o nazwie Pogoda”. When Git/environment setup finishes, **Continue
+here with Local AI** selects it for your next coding prompt; no manual path is
+required. Advanced policies remain in Projects.

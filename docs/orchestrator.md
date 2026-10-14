@@ -71,3 +71,18 @@ The assistant can inspect real workstation telemetry and saved activity through 
 Image generation and edits can now queue a dependent 4× Upscale with the existing photo executor. The result/completion and child publication are atomic, and Images follows the active stage after refresh. See [image workflows](image-workflows.md).
 
 Portraits can now use a voice reference and typed Polish speech through a sequential Chatterbox → EchoMimic workflow, retaining both outputs and following the active stage after refresh. See [speaking avatars](speaking-avatars.md).
+
+## Create a project in the assistant
+
+Choose **Create project** and enter its name, or use Auto with “Create a project
+named Weather Station” / “Stwórz projekt o nazwie Pogoda”. The existing project
+factory creates an ordinary host setup Run in the same Task. It manages the
+owned folder, Git branches and Python environment; no repository path, shell
+command, external model or credentials are needed. Existing repositories are
+not imported or changed. Mixed media, search and mutation scope is rejected.
+
+The conversation shows creation progress and, after successful setup, a project
+card with Open project, Open Coding workspace and Continue here with Local AI.
+The latter only selects that project and local coding scope for the next prompt;
+it does not execute, grant external-AI consent or publish Git changes. Creation
+uses the existing cancellation, ownership and inspection recovery contract.

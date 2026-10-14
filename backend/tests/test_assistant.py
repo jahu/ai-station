@@ -932,3 +932,60 @@ def test_image_workflow_option_cannot_authorize_other_actions():
         )
         assert result.status_code == 422
         assert client.get("/api/runs").json() == []
+
+
+def test_project_creation_rejects_mixed_scope_and_invalid_names_before_enqueue():
+    with TestClient(app) as client:
+        cid = create(client)
+        route = f"/api/chat/conversations/{cid}"
+        for body in [
+            {"action": "project.create", "content": "x" * 201},
+            {"action": "project.create", "content": '""'},
+            {
+                "action": "project.create",
+                "content": "Weather",
+                "web_search": {"enabled": True, "query": "public query"},
+            },
+            {"action": "auto", "content": "Create a project Weather", "upscale_result": True},
+        ]:
+            response = client.post(route + "/messages", json=body)
+            assert response.status_code == 422, response.text
+        assert client.get(route).json()["messages"] == []
+        with session_factory()() as session:
+            assert list(session.scalars(select(Run))) == []
+
+
+def test_conversation_override_does_not_create_project():
+    with TestClient(app) as client:
+        cid = create(client)
+        route = f"/api/chat/conversations/{cid}"
+        response = client.post(
+            route + "/messages", json={"action": "chat", "content": "Create a project Weather"}
+        )
+        assert response.status_code == 202
+        step()
+        child = client.get(route).json()["active_run"]
+        assert child["executor_type"] == "chat"
+
+
+@pytest.mark.parametrize(
+    "instruction",
+    [
+        "Create a project named Weather then build a website",
+        "Stwórz projekt Pogoda i zbuduj stronę",
+    ],
+)
+def test_project_followup_is_not_silently_treated_as_a_name(monkeypatch, instruction):
+    async def stream(self, **params):
+        yield json.dumps({"action": "project.create", "reason": "Create a project"})
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        cid = create(client)
+        route = f"/api/chat/conversations/{cid}"
+        assert client.post(route + "/messages", json={"content": instruction}).status_code == 202
+        step()
+        d = client.get(route).json()
+        assert d["active_run"] is None
+        assert "enter its name" in d["messages"][-1]["content"]
+        assert client.get("/api/projects").json() == []
