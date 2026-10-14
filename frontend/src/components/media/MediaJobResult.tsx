@@ -1,3 +1,4 @@
+import { useMediaJob, jobBusy, type MediaJob } from "./media-job";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Film, Square, RotateCcw } from "lucide-react";
@@ -6,37 +7,9 @@ import { Badge, ErrorNotice } from "../common";
 import { Button } from "../ui/button";
 import { chatRequestId, clearChatRequest } from "../../pages/chat-draft";
 
-export type MediaJob = {
-  task_id: string;
-  revision: number;
-  status: string;
-  kind: string;
-  mode: string;
-  duration_seconds: number | null;
-  completed_segments: number;
-  total_segments: number;
-  final_artifact_id: string | null;
-  active_run_ids: string[];
-  resume_allowed: boolean;
-  error_message: string;
-};
-export const jobBusy = (job?: MediaJob) =>
-  !!job &&
-  (!!job.active_run_ids?.length ||
-    !["succeeded", "failed", "canceled", "interrupted"].includes(job.status));
-export function useMediaJob(id: string) {
-  return useQuery({
-    queryKey: ["media-job", id],
-    queryFn: () => api<MediaJob>(`/media/jobs/${id}`),
-    enabled: !!id,
-    refetchInterval: (query) =>
-      query.state.data && !jobBusy(query.state.data) ? false : 1500,
-  });
-}
-
 export default function MediaJobResult({
   id,
-  job,
+  job: initialJob,
   error,
 }: {
   id: string;
@@ -44,6 +17,8 @@ export default function MediaJobResult({
   error?: Error | null;
 }) {
   const cache = useQueryClient();
+  const current = useMediaJob(id);
+  const job = current.data ?? initialJob;
   const artifact = useQuery({
     queryKey: ["artifact", job?.final_artifact_id],
     queryFn: () => api<Artifact>(`/artifacts/${job!.final_artifact_id}`),
@@ -75,7 +50,7 @@ export default function MediaJobResult({
   });
   const busy = jobBusy(job);
   return (
-    <section className="panel media-job-result" aria-label="Long video job">
+    <section className="panel media-job-result" aria-label="Media job">
       <div className="row spread">
         <h2>
           <Film size={20} />
@@ -144,7 +119,9 @@ export default function MediaJobResult({
         </>
       )}
       <ErrorNotice
-        error={error ?? artifact.error ?? stop.error ?? resume.error}
+        error={
+          error ?? current.error ?? artifact.error ?? stop.error ?? resume.error
+        }
       />
       {artifact.data && (
         <>

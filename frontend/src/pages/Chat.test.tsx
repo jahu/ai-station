@@ -717,3 +717,105 @@ it("retries an uncertain first Send with the same request identity and preserved
   expect(posted).toHaveLength(2);
   expect(posted[0].client_request_id).toBe(posted[1].client_request_id);
 });
+
+it("stops the entire media task from the conversation Stop control", async () => {
+  vi.stubGlobal(
+    "EventSource",
+    class {
+      addEventListener() {}
+      close() {}
+    },
+  );
+  const job = {
+    task_id: "film-task",
+    revision: 1,
+    kind: "video",
+    mode: "continuous",
+    status: "generating",
+    duration_seconds: 30,
+    total_segments: 12,
+    completed_segments: 2,
+    final_artifact_id: null,
+    active_run_ids: ["segment"],
+    resume_allowed: false,
+    error_message: "",
+  };
+  const detail = {
+    id: "film-chat",
+    title: "A film",
+    provider: builtin.key,
+    provider_location: "local",
+    model: "test-model",
+    system_prompt: "",
+    temperature: 0.7,
+    max_tokens: 2048,
+    updated_at: "2026-10-14T07:00:00Z",
+    execution_mode: "work",
+    active_run: {
+      id: "segment",
+      task_id: "film-task",
+      status: "running",
+      executor_type: "wan_video",
+      parameters: { internal_media: true },
+    },
+    messages: [
+      {
+        id: "answer",
+        role: "assistant",
+        content: "Rendering",
+        created_at: "2026-10-14T07:00:00Z",
+        run_id: "planner",
+        run_status: "succeeded",
+        error_message: "",
+        metadata: { orchestration: true },
+        media_job: job,
+        steps: [],
+        task_status: "generating",
+      },
+    ],
+  };
+  const writes: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === "POST") writes.push(url);
+      return {
+        ok: true,
+        json: async () =>
+          url.includes("/media/jobs/")
+            ? job
+            : url.endsWith("/chat/providers")
+              ? [builtin]
+              : url.includes("/chat/providers/")
+                ? builtin
+                : url.endsWith("/hardware")
+                  ? { gpus: [] }
+                  : url.endsWith("/llama")
+                    ? { models: [], instances: [] }
+                    : url.endsWith("/chat/conversations")
+                      ? [detail]
+                      : url.includes("/chat/conversations/")
+                        ? detail
+                        : [],
+      };
+    }),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/chat/film-chat"]}>
+        <Routes>
+          <Route path="/chat/:id" element={<Chat />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByText("2 of 12 segments complete");
+  fireEvent.click(screen.getByRole("button", { name: "Stop" }));
+  await vi.waitFor(() =>
+    expect(writes).toEqual(["/api/media/jobs/film-task/cancel"]),
+  );
+});

@@ -1,3 +1,5 @@
+import MediaJobResult from "../components/media/MediaJobResult";
+import type { MediaJob } from "../components/media/media-job";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -75,6 +77,10 @@ export type AssistantOptions = {
   stop: StopScope | null;
   upscale_result?: boolean;
   speech_text?: string | null;
+  media?: {
+    duration_seconds: number;
+    composition_mode: "continuous" | "shots";
+  } | null;
 };
 type Project = { id: string; name: string; updated_at: string };
 type TaskStep = {
@@ -86,6 +92,7 @@ type TaskStep = {
   location: string;
 };
 export type ActionResult = {
+  media_job?: MediaJob;
   steps?: TaskStep[];
   artifacts?: Artifact[];
   coding_runs?: Run[];
@@ -172,6 +179,10 @@ export function AssistantResults({
     updated_at: string;
   }) => void;
 }) {
+  if (result.media_job)
+    return (
+      <MediaJobResult id={result.media_job.task_id} job={result.media_job} />
+    );
   if (!result.steps) return null;
   return (
     <div className="assistant-results">
@@ -749,6 +760,7 @@ export default function AssistantActions({
     onChange({
       ...value,
       action,
+      media: action === "video.generate" ? value.media : null,
       commit: null,
       publish: null,
       load: null,
@@ -1014,6 +1026,34 @@ export default function AssistantActions({
             }
           />
         </div>
+      )}
+      {value.action === "video.generate" && (
+        <label>
+          Video length
+          <select
+            value={value.media?.duration_seconds ?? "preview"}
+            disabled={busy}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                media:
+                  event.target.value === "preview"
+                    ? null
+                    : {
+                        duration_seconds: Number(event.target.value),
+                        composition_mode: "continuous",
+                      },
+              })
+            }
+          >
+            <option value="preview">
+              Short preview · or describe the duration
+            </option>
+            <option value="15">15 seconds</option>
+            <option value="30">30 seconds</option>
+            <option value="60">60 seconds</option>
+          </select>
+        </label>
       )}
       {value.action === "project.create_code" && (
         <NewProjectBuild

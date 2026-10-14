@@ -1006,7 +1006,14 @@ function ConversationView({
       api(
         context && conversation.active_run?.task_id === context.task_id
           ? `/coding/sessions/${context.task_id}/cancel`
-          : `/runs/${conversation.active_run?.id}/cancel`,
+          : conversation.active_run &&
+              (conversation.active_run.parameters?.internal_media ||
+                conversation.active_run.parameters?.full_avatar_after_speech ||
+                ["media_compose", "avatar_media_plan"].includes(
+                  conversation.active_run.executor_type,
+                ))
+            ? `/media/jobs/${conversation.active_run.task_id}/cancel`
+            : `/runs/${conversation.active_run?.id}/cancel`,
         { method: "POST" },
       ),
     onSuccess: refresh,

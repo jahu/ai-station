@@ -1,7 +1,7 @@
 # Durable long video and full-speech avatars
 
 The long-media increment adds ordinary dependent Runs to one media Task. Video
-accepts 5–60 seconds with continuous motion or explicit shot cuts; Avatars defaults
+accepts 1–60 seconds with continuous motion or explicit shot cuts; Avatars defaults
 to the whole recording (0.68–60 seconds), retaining short preview controls.
 The existing short-Run URLs/endpoints remain compatible.
 
@@ -47,12 +47,17 @@ CPU MP4/audio composition, including exact frame counts, stop/resume, receipt
 replay, continuous audio windows, complete speech and speech reuse. Native tests
 cover canonical source preservation and final-window padding.
 
-A real 60-second 1280×704 continuous Wan acceptance is running in an isolated data
-root on the configured workstation. Evidence is recorded in
-`data/acceptance/long-media-20261014`. Until its final verification record exists,
-this is an ongoing test, not a successful hardware claim. Full-avatar continuity,
-lip synchronization and whole-speech hardware acceptance remain to be verified.
+A real 60-second 1280×704 continuous Wan job passed on this workstation:
+23 native segments, seventeen-frame motion carry, exact 1440-frame output, full
+MP4 decode/timing validation and request replay. Evidence is recorded in
+`data/acceptance/long-media-20261014/real-result.json`. This was a four-step draft
+on one GPU; it does not qualify simultaneous two-GPU generation, all quality
+profiles or image-conditioned long output. Full-avatar hardware acceptance is next.
 
 The longer-term design, including 120/300-second profiles, selected excerpts,
 measured parallel admission and broader quality gates, remains in
 [the execution plan](plans/long-media-execution.md).
+
+The [main conversation](conversational-media.md) now uses these same jobs for
+explicit video durations and whole-speech avatars. Both conversation and workspace
+Stop controls operate on the complete media Task.

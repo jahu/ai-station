@@ -69,12 +69,23 @@ class HostMediaExecutor:
         try:
             started = self._start(runner, run, allocated, output)
         except RunnerError as exc:
-            if exc.status_code < 500:
+            if exc.status_code >= 500:
+                raise
+            # A 409 can be an earlier accepted dispatch whose reply was lost.
+            # Only an owned-journal inspection may release resources or adopt it.
+            try:
+                started = runner.inspect_process(run.id)
+            except RunnerError as inspection:
+                if inspection.status_code != 404:
+                    raise
                 session.refresh(run)
+                run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
                 release_run_locks(session, run.id)
                 mark_failed(session, run, "RunnerRejected", str(exc))
                 return "done"
-            raise
+            if started.get("executor") != self.name:
+                raise ValueError("Owned media dispatch belongs to another executor") from exc
+            append_event(session, run.id, "executor.dispatch_reconciled", {"status": started.get("status")})
         session.refresh(run)
         run.pid = started.get("pid")
         run.process_group_id = started.get("process_group_id")

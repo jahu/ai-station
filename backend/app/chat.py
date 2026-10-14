@@ -500,6 +500,8 @@ def accept_turn(body: TurnBody, session: DB):
         payload.pop("reasoning")
     if body.continuation is None:
         payload.pop("continuation")
+    if body.media is None:
+        payload.pop("media")
 
     def fingerprint(values):
         return hashlib.sha256(json.dumps(values, sort_keys=True, separators=(",", ":")).encode()).hexdigest()

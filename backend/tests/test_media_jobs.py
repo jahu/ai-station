@@ -314,3 +314,141 @@ def test_full_avatar_resume_after_speech_does_not_repeat_speech(full_avatar_brid
                 session.scalars(select(Run).where(Run.task_id == tid, Run.executor_type == "chatterbox"))
             )
             assert len(speech) == 1
+
+
+@pytest.mark.parametrize("mode", ["chat", "work"])
+def test_conversation_media_has_aggregate_completion_and_exact_requested_duration(bridge, mode):
+    with TestClient(app) as client:
+        conv = client.post("/api/chat/conversations", json={"model": "test", "execution_mode": mode})
+        assert conv.status_code == 201
+        cid = conv.json()["id"]
+        sent = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "content": "Generate a 1-second forest video",
+                "action": "video.generate",
+            },
+        )
+        assert sent.status_code == 202, sent.text
+        with session_factory()() as session:
+            tick(session, "media-plan")
+        detail = client.get(f"/api/chat/conversations/{cid}").json()
+        media = detail["messages"][-1]["media_job"]
+        assert media["duration_seconds"] == 1 and media["status"] != "succeeded"
+        assert detail["messages"][-1]["run_status"] == "succeeded"  # Planner only.
+        for i in range(2):
+            with session_factory()() as session:
+                tick(session, f"media-{i}")
+        message = client.get(f"/api/chat/conversations/{cid}").json()["messages"][-1]
+        assert message["task_status"] == "succeeded" and message["media_job"]["status"] == "succeeded", (
+            message
+        )
+        assert len(message["artifacts"]) == 1  # Native windows are inspectable in Runs.
+        assert message["artifacts"][0]["metadata"]["frames"] == 24
+
+
+@pytest.mark.parametrize("speech_text", [None, "A complete sentence"])
+def test_conversation_avatar_returns_full_recording_and_reuses_same_task(full_avatar_bridge, speech_text):
+    with TestClient(app) as client:
+        inputs = avatar_sources(client)
+        conv = client.post("/api/chat/conversations", json={"model": "test", "execution_mode": "work"}).json()
+        cid = conv["id"]
+        sent = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "content": "Animate this portrait",
+                "action": "avatar.animate",
+                "image_artifact_ids": [inputs["image_artifact_id"]],
+                "audio_artifact_id": inputs["audio_artifact_id"],
+                **({"speech_text": speech_text} if speech_text else {}),
+            },
+        )
+        assert sent.status_code == 202, sent.text
+        for i in range(7):
+            with session_factory()() as session:
+                tick(session, f"conversation-avatar-{i}")
+        message = client.get(f"/api/chat/conversations/{cid}").json()["messages"][-1]
+        assert message["media_job"]["status"] == "succeeded", message
+        assert message["media_job"]["duration_seconds"] == 5
+        assert len(full_avatar_bridge) == 2
+
+
+def test_rejected_media_with_no_owned_process_can_resume_safely(bridge, monkeypatch):
+    from fastapi import HTTPException
+
+    original = host_app.start_video
+    monkeypatch.setattr(
+        host_app, "start_video", lambda *_: (_ for _ in ()).throw(HTTPException(422, "Invalid source"))
+    )
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/media/jobs/video",
+            json={
+                "client_request_id": str(uuid4()),
+                "prompt": "Scene",
+                "duration_seconds": 5,
+                "width": 128,
+                "height": 128,
+                "steps": 4,
+            },
+        )
+        tid = response.json()["task_id"]
+        for i in range(3):
+            with session_factory()() as session:
+                tick(session, f"rejected-{i}")
+        view = client.get("/api/media/jobs/" + tid).json()
+        assert view["resume_allowed"], view
+        with session_factory()() as session:
+            rejected = session.scalar(
+                select(Run).where(Run.task_id == tid, Run.error_type == "RunnerRejected")
+            )
+            assert rejected.metadata_json["process_confirmed_gone"]
+            assert not active_locks(session)
+        monkeypatch.setattr(host_app, "start_video", original)
+        assert (
+            client.post(
+                "/api/media/jobs/" + tid + "/resume",
+                json={"expected_revision": 1, "client_request_id": str(uuid4())},
+            ).status_code
+            == 202
+        )
+        for i in range(3):
+            with session_factory()() as session:
+                tick(session, f"resumed-{i}")
+        assert client.get("/api/media/jobs/" + tid).json()["status"] == "succeeded"
+
+
+def test_duplicate_dispatch_reply_reconciles_existing_owned_process_without_relaunch(bridge, monkeypatch):
+    from fastapi import HTTPException
+
+    original = host_app.start_video
+    first = True
+
+    def dispatch(manager, body):
+        nonlocal first
+        result = original(manager, body)
+        if first:
+            first = False
+            raise HTTPException(409, "Existing owned dispatch")
+        return result
+
+    monkeypatch.setattr(host_app, "start_video", dispatch)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/media/jobs/video",
+            json={
+                "client_request_id": str(uuid4()),
+                "prompt": "Scene",
+                "duration_seconds": 5,
+                "width": 128,
+                "height": 128,
+                "steps": 4,
+            },
+        )
+        tid = response.json()["task_id"]
+        for i in range(3):
+            with session_factory()() as session:
+                tick(session, f"reconciled-{i}")
+        view = client.get("/api/media/jobs/" + tid).json()
+        assert view["status"] == "succeeded", view
+        assert len(bridge) == 2
