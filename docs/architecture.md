@@ -220,3 +220,8 @@ its parent's Task and ordinary native executor. The worker alone creates the
 repository/environment. Success publishes the saved project's identity back
 to the conversation; continuation selects a versioned coding scope without
 starting work from the UI. See [assistant projects](orchestrator.md#create-a-project-in-the-assistant).
+
+System and the central workstation report now include bounded NVIDIA compute
+process observations: GPU, executable basename, PID and reported VRAM. They
+never expose command lines or control external processes. See
+[GPU process reporting](gpu-processes.md).

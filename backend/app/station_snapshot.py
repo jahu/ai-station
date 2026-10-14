@@ -52,6 +52,7 @@ def _hardware(raw):
         "gpus": [
             {
                 "name": _text(gpu.get("name")),
+                "uuid": _text(gpu.get("uuid")),
                 **_metrics(
                     gpu, ["index", "utilization", "memory_used_mib", "memory_total_mib", "temperature_c"]
                 ),
@@ -86,6 +87,28 @@ def render_snapshot(snapshot):
         )
     if not hardware["gpus"]:
         lines.append("GPU telemetry is unavailable or no GPU was detected.")
+    observation = snapshot.get("gpu_processes", {"status": "unavailable"})
+    lines.extend(["", "**GPU compute processes**"])
+    if observation["status"] == "unavailable":
+        lines.append("Compute-process reporting is unavailable.")
+    else:
+        indexes = {gpu["uuid"]: gpu["index"] for gpu in hardware["gpus"]}
+        lines.extend(
+            f"- GPU {_display(indexes.get(row['gpu_uuid']))} · {_markdown(row['gpu_uuid'])} · "
+            f"PID {row['pid']} · {_markdown(row['name'])} · {_display(row['memory_used_mib'], ' MiB')}"
+            for row in observation["processes"]
+        )
+        if not observation["processes"]:
+            lines.append(
+                "No compute processes were reported."
+                if observation["status"] == "available"
+                else "No valid compute-process records were returned."
+            )
+        if observation["status"] == "partial" or observation.get("truncated"):
+            lines.append("This process observation is incomplete.")
+        lines.append(
+            "Compute contexts only; graphics and other memory use may not appear. Observation grants no process-control permission."
+        )
     cpu, memory, disk = hardware["cpu"], hardware["memory"], hardware["disk"]
     free_gib = disk["free_bytes"] / 1024**3 if disk["free_bytes"] is not None else None
     lines.extend(
@@ -115,7 +138,7 @@ def render_snapshot(snapshot):
     lines.extend(
         [
             "",
-            "GPU metrics are live; runtime states are saved observations, not a new health check. This does not identify unrelated host processes.",
+            "GPU metrics and compute-process observations are live; runtime states are saved observations, not a new health check.",
         ]
     )
     return "\n\n".join(lines)
@@ -150,6 +173,15 @@ class StationSnapshotExecutor:
             raise
         if self.canceled(session, run):
             return "done"
+        from app.gpu_processes import normalize
+
+        session.commit()
+        try:
+            processes = normalize(RunnerClient(timeout=4).gpu_processes())
+        except (RunnerError, RunnerUnavailable):
+            processes = normalize(None)
+        if self.canceled(session, run):
+            return "done"
         runs = list(
             session.scalars(
                 select(Run)
@@ -168,6 +200,7 @@ class StationSnapshotExecutor:
         snapshot = {
             "sampled_at": utcnow().isoformat(),
             "hardware": hardware,
+            "gpu_processes": processes,
             "runs": [{"id": row.id, "capability": row.capability, "status": row.status} for row in runs],
             "runtimes": [
                 {

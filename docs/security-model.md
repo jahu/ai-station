@@ -185,3 +185,9 @@ uses administrator-configured existing safetensors, app-owned validated image in
 and UUID-derived outputs, an allowlisted environment with private Run caches and
 offline model flags. It starts no ComfyUI server or custom nodes. Cancellation
 and inspection use the shared owned-process group journal. See [video](video.md).
+
+GPU compute-process observation is a fixed, parameter-free native query. Only
+UUID, PID, basename and reported memory leave the Runner; command lines and
+environments are never read. Live polling is separate from permanent telemetry
+sampling. Unavailable/partial data remain explicit. This grants no process
+ownership or cancellation capability.
