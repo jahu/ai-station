@@ -36,7 +36,7 @@ export function useMediaJob(id: string) {
 
 export default function MediaJobResult({
   id,
-  job,
+  job: initialJob,
   error,
 }: {
   id: string;
@@ -44,6 +44,8 @@ export default function MediaJobResult({
   error?: Error | null;
 }) {
   const cache = useQueryClient();
+  const current = useMediaJob(id);
+  const job = current.data ?? initialJob;
   const artifact = useQuery({
     queryKey: ["artifact", job?.final_artifact_id],
     queryFn: () => api<Artifact>(`/artifacts/${job!.final_artifact_id}`),
@@ -144,7 +146,9 @@ export default function MediaJobResult({
         </>
       )}
       <ErrorNotice
-        error={error ?? artifact.error ?? stop.error ?? resume.error}
+        error={
+          error ?? current.error ?? artifact.error ?? stop.error ?? resume.error
+        }
       />
       {artifact.data && (
         <>

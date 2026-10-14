@@ -66,6 +66,7 @@ with wave.open(args[args.index('--out')+1], 'wb') as wav:
     wav.writeframes(b'\\0\\0' * 16000)
 """)
     monkeypatch.setenv("AI_STATION_CHATTERBOX_PYTHON", str(python))
+    monkeypatch.setenv("AI_STATION_VIDEO_PYTHON", sys.executable)
     monkeypatch.setenv("AI_STATION_CHATTERBOX_SCRIPT", str(speech_script))
     monkeypatch.setenv("AI_STATION_CHATTERBOX_CACHE", str(tmp_path))
     monkeypatch.delenv("AI_STATION_DATA_HOST_PATH", raising=False)
@@ -73,18 +74,42 @@ with wave.open(args[args.index('--out')+1], 'wb') as wav:
     host_app.reset_manager()
     monkeypatch.setattr(host_audio, "collect", lambda _: {"gpus": [{"index": 7}]})
     monkeypatch.setattr(host_avatar, "collect", lambda _: {"gpus": [{"index": 7}]})
-    monkeypatch.setattr(host_app, "collect", lambda _: {"gpus": [{"index": 7}]})
+    monkeypatch.setattr(
+        host_app, "collect", lambda _: {"gpus": [{"index": 7}], "memory": {"available_mib": 64000}}
+    )
     original = host_app.manager().start
     calls = []
 
     def fake_start(**kwargs):
         calls.append(kwargs.copy())
+        if kwargs["executor"] == "media_compose":
+            return original(**kwargs)
         assert kwargs["argv"][0] == str(python)
         assert kwargs["env"]["CUDA_VISIBLE_DEVICES"] == "7"
         assert kwargs["env"]["HF_HUB_OFFLINE"] == "1"
         if kwargs["executor"] == "chatterbox":
             return original(**kwargs)
         output = kwargs["argv"][kwargs["argv"].index("--output-path") + 1]
+        if "audio-window.wav" in kwargs["argv"][kwargs["argv"].index("--audio_path") + 1]:
+            frames = kwargs["argv"][kwargs["argv"].index("--video_length") + 1]
+            size = kwargs["argv"][kwargs["argv"].index("--sample_size") + 1]
+            kwargs["argv"] = [
+                sys.executable,
+                "-c",
+                """import av,sys
+with av.open(sys.argv[1],'w') as c:
+ s=c.add_stream('libx264',rate=25);s.width=s.height=int(sys.argv[3]);s.pix_fmt='yuv420p'
+ for n in range(int(sys.argv[2])):
+  f=av.VideoFrame(s.width,s.height,'yuv420p')
+  for p in f.planes:p.update(bytes([70+n])*p.buffer_size)
+  for packet in s.encode(f):c.mux(packet)
+ for packet in s.encode():c.mux(packet)
+""",
+                output,
+                frames,
+                size,
+            ]
+            return original(**kwargs)
         delay = "import time; time.sleep(30); " if "wait" in kwargs["argv"] else ""
         kwargs["argv"] = [
             sys.executable,
@@ -315,7 +340,7 @@ def test_cancel_queued_avatar_preserves_generated_speech(avatar_bridge):
         assert not client.get(f"/api/artifacts?run_id={child['id']}").json()
 
 
-def test_assistant_spoken_avatar_projects_three_runs(avatar_bridge):
+def test_assistant_spoken_avatar_projects_full_media_graph(avatar_bridge):
     with TestClient(app) as client:
         portrait, voice = inputs(client)
         conversation = client.post(
@@ -333,7 +358,7 @@ def test_assistant_spoken_avatar_projects_three_runs(avatar_bridge):
         )
         assert response.status_code == 202, response.text
         with session_factory()() as session:
-            for _ in range(3):
+            for _ in range(5):
                 tick(session, "avatar-workflow")
         detail = client.get(route).json()
         assert detail["active_run"] is None
@@ -342,7 +367,9 @@ def test_assistant_spoken_avatar_projects_three_runs(avatar_bridge):
         assert [s["capability"] for s in result["steps"]] == [
             "assistant.orchestrate",
             "audio.speech",
+            "avatar.plan",
             "avatar.animate",
+            "media.compose",
         ]
         assert [a["type"] for a in result["artifacts"]] == ["audio", "video"]
         assert (

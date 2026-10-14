@@ -324,3 +324,8 @@ GGUF with observed 100k+ context and preserving the user's GPU allocation. Choos
 a model to override it; selection performs no inference. Work and Create project
 & build also offer Auto versus the conversation model. See
 [automatic coding selection](docs/coding-auto-model.md).
+
+The main Chat/Work conversation also creates these jobs: choose Video length or
+request a film of 1–60 seconds; attach a portrait and WAV for a complete talking
+avatar. Progress, Stop, Resume and the finished player remain in the conversation.
+See [conversational media](docs/conversational-media.md).

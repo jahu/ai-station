@@ -72,6 +72,7 @@ def enqueue_continuation(session, conversation, user, body):
                 body.reasoning,
                 body.speech_text,
                 body.upscale_result,
+                body.media,
             )
         )
     ):

@@ -1,7 +1,7 @@
 # Durable long video and full-speech avatars
 
 The long-media increment adds ordinary dependent Runs to one media Task. Video
-accepts 5–60 seconds with continuous motion or explicit shot cuts; Avatars defaults
+accepts 1–60 seconds with continuous motion or explicit shot cuts; Avatars defaults
 to the whole recording (0.68–60 seconds), retaining short preview controls.
 The existing short-Run URLs/endpoints remain compatible.
 
@@ -56,3 +56,7 @@ lip synchronization and whole-speech hardware acceptance remain to be verified.
 The longer-term design, including 120/300-second profiles, selected excerpts,
 measured parallel admission and broader quality gates, remains in
 [the execution plan](plans/long-media-execution.md).
+
+The [main conversation](conversational-media.md) now uses these same jobs for
+explicit video durations and whole-speech avatars. Both conversation and workspace
+Stop controls operate on the complete media Task.

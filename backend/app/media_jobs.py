@@ -27,7 +27,7 @@ DB = Annotated[Session, Depends(session_scope)]
 
 class LongVideoRequest(VideoRequest):
     client_request_id: UUID
-    duration_seconds: StrictInt = Field(default=15, ge=5, le=60)
+    duration_seconds: StrictInt = Field(default=15, ge=1, le=60)
     composition_mode: Literal["continuous", "shots"] = "continuous"
 
     @model_validator(mode="after")
@@ -522,7 +522,7 @@ class FullAvatarRequest(BaseModel):
     gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]{1,12})$")
 
 
-def publish_avatar(session, body, *, task=None):
+def publish_avatar(session, body, *, task=None, parent_run_id=None):
     import wave
 
     from app.avatars import AvatarRequest, create_avatar_run
@@ -541,22 +541,26 @@ def publish_avatar(session, body, *, task=None):
     image = session.get(Artifact, str(body.image_artifact_id))
     if not image or image.trashed_at is not None or image.mime_type not in {"image/png", "image/jpeg"}:
         raise HTTPException(422, "Choose an available PNG/JPEG portrait")
-    if body.speech_text is not None and task is None:
+    if body.speech_text is not None:
         from app.audio import SpeechRequest, create_audio_run
 
-        task = Task(
-            id=str(body.client_request_id),
-            title=body.prompt[:80],
-            prompt=body.prompt,
-            capability="avatar.long",
-            metadata_json={"media_request": request},
-        )
-        session.add(task)
-        session.flush()
+        if task is None:
+            task = Task(
+                id=str(body.client_request_id),
+                title=body.prompt[:80],
+                prompt=body.prompt,
+                capability="avatar.long",
+                metadata_json={"media_request": request},
+            )
+            session.add(task)
+            session.flush()
+        lock_task(session, task)
+        task.metadata_json = {**task.metadata_json, "media_request": request}
         speech = create_audio_run(
             session,
             SpeechRequest(text=body.speech_text, reference_artifact_id=body.audio_artifact_id, gpu=body.gpu),
             task=task,
+            parent_run_id=parent_run_id,
         )
         speech.parameters = {**speech.parameters, "full_avatar_after_speech": request}
         planner = create_run(
@@ -567,6 +571,7 @@ def publish_avatar(session, body, *, task=None):
             executor_type="avatar_media_plan",
             execution_target="container",
             operation_key="media:1:plan:attempt:1",
+            parent_run_id=parent_run_id,
             parameters={"speech_run_id": speech.id, "request": request},
             permissions=["filesystem_read", "workspace_write"],
             retry_class="inspect",
@@ -639,7 +644,7 @@ def publish_avatar(session, body, *, task=None):
             gpu=body.gpu,
             frames=segment.generated_frames,
         )
-        run = create_avatar_run(session, settings, task=task)
+        run = create_avatar_run(session, settings, task=task, parent_run_id=parent_run_id)
         run.operation_key = f"media:{revision}:segment:{segment.index}:attempt:1"
         run.requested_resources = {"ram_mib": 16384}
         run.parameters = {
@@ -727,7 +732,7 @@ class AvatarPlannerExecutor:
         request = FullAvatarRequest.model_validate(
             {**run.parameters["request"], "audio_artifact_id": audio.id, "speech_text": None}
         )
-        publish_avatar(session, request, task=run.task)
+        publish_avatar(session, request, task=run.task, parent_run_id=run.id)
         transition(session, run, RunStatus.RUNNING, event_type="executor.started", payload={})
         transition(
             session,

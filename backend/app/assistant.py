@@ -104,6 +104,28 @@ class ContinuationScope(BaseModel):
     external_ai: StrictBool = False
 
 
+class VideoScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    duration_seconds: StrictInt = Field(ge=1, le=60)
+    composition_mode: Literal["continuous", "shots"] = "continuous"
+
+
+def video_scope(params):
+    if params.get("media"):
+        return VideoScope.model_validate(params["media"])
+    found = re.search(
+        r"(?<![\w.,])(\d{1,4}(?:[.,]\d+)?)\s*[- ]?\s*(seconds?|secs?|sekund(?:y|ę|owy|owe|owego)?|sek|minutes?|minut(?:y|ę|a)?|min|s)\b",
+        params["content"],
+        re.I,
+    )
+    if not found:
+        return None
+    value = float(found[1].replace(",", ".")) * (60 if found[2].lower().startswith("min") else 1)
+    if not value.is_integer() or not 1 <= value <= 60:
+        raise ValueError("Choose a whole video duration between 1 and 60 seconds")
+    return VideoScope(duration_seconds=int(value))
+
+
 class AssistantInputs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     image_artifact_ids: list[UUID] = Field(default_factory=list, max_length=8)
@@ -133,6 +155,7 @@ class AssistantInputs(BaseModel):
     ] = "auto"
     audio_artifact_id: UUID | None = None
     continuation: ContinuationScope | None = None
+    media: VideoScope | None = None
     coding: CodingScope | None = None
     new_project: ProjectBuildScope | None = None
     commit: CommitScope | None = None
@@ -159,6 +182,8 @@ def assistant_needs_provider(body):
         "image.describe",
         "project.create",
         "project.create_code",
+        "video.generate",
+        "avatar.animate",
     }
 
 
@@ -216,6 +241,22 @@ def planner_context(session, conversation, user):
 
 
 def enqueue_assistant(session, conversation, user, body, *, commit=True):
+    if body.media and (
+        body.action not in {"auto", "video.generate"}
+        or body.audio_artifact_id
+        or body.coding
+        or body.new_project
+        or body.continuation
+        or body.commit
+        or body.publish
+        or body.load
+        or body.stop
+        or body.attachments
+        or body.web_search.enabled
+        or body.upscale_result
+        or body.speech_text
+    ):
+        raise HTTPException(422, "Video duration applies to a scene video with at most one first-frame image")
     selected_plan = explicit_plan(body.model_dump(mode="json", exclude={"attachments"}))
     build = project_build_request(body.model_dump(mode="json", exclude={"attachments"}))
     if body.new_project or body.action == "project.create_code" or build:
@@ -764,41 +805,56 @@ class AssistantExecutor:
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                 message.content = "Creating your project with Git and a Python environment. Its folder and branch settings are managed by AI Station; you can start coding here when it is ready."
         elif plan.action == "avatar.animate":
-            from app.avatars import AvatarRequest, create_avatar_run
+            from app.media_jobs import FullAvatarRequest, publish_avatar
 
             if len(images) != 1 or not params.get("audio_artifact_id"):
                 message.content = "Attach exactly one portrait and one speech WAV to animate an avatar."
             else:
                 try:
-                    request = AvatarRequest(
+                    request = FullAvatarRequest(
+                        client_request_id=UUID(run.id),
                         image_artifact_id=images[0],
                         audio_artifact_id=params["audio_artifact_id"],
                         prompt=params["content"][:2000],
                         speech_text=params.get("speech_text") or avatar_speech_text(params["content"]),
                     )
-                except ValidationError:
+                    publish_avatar(session, request, task=run.task, parent_run_id=run.id)
+                except (ValidationError, HTTPException) as exc:
                     message.content = (
-                        "Use spoken text of 1–1000 characters with a portrait and WAV voice reference."
+                        exc.detail
+                        if isinstance(exc, HTTPException)
+                        else "Use a portrait, intact WAV and spoken text of up to 1000 characters."
                     )
                 else:
-                    child = create_avatar_run(session, request, task=run.task, parent_run_id=run.id)
-                    run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
-                    if request.speech_text:
-                        message.content = "Generating Polish speech from your text, then animating the portrait. Both results stay in Library."
+                    message.content = "Animating the complete recording locally. The full talking avatar will appear here and in Library."
         elif plan.action == "video.generate":
+            from app.media_jobs import LongVideoRequest, publish_video
             from app.video import VideoRequest, create_video_run
 
             if len(images) > 1 or params.get("audio_artifact_id"):
                 message.content = "Use a scene prompt and at most one first-frame image for a silent video."
             else:
-                request = VideoRequest(
-                    prompt=params["content"][:2000], image_artifact_id=images[0] if images else None
-                )
-                child = create_video_run(session, request, task=run.task, parent_run_id=run.id)
-                run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
-                message.content = (
-                    "Generating your scene locally with Wan 2.2. The video will appear here and in Library."
-                )
+                try:
+                    scope = video_scope(params)
+                except ValueError as exc:
+                    message.content = str(exc)
+                else:
+                    if scope:
+                        request = LongVideoRequest(
+                            client_request_id=UUID(run.id),
+                            prompt=params["content"][:2000],
+                            image_artifact_id=images[0] if images else None,
+                            **scope.model_dump(),
+                        )
+                        publish_video(session, request, task=run.task, parent_run_id=run.id)
+                        message.content = f"Generating your {scope.duration_seconds}-second video locally. Finished segments are preserved; the checked full MP4 appears here and in Library."
+                    else:
+                        request = VideoRequest(
+                            prompt=params["content"][:2000], image_artifact_id=images[0] if images else None
+                        )
+                        child = create_video_run(session, request, task=run.task, parent_run_id=run.id)
+                        run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                        message.content = "Generating your scene locally with Wan 2.2. The video will appear here and in Library."
         elif params.get("audio_artifact_id") and plan.action != "audio.speech":
             message.content = "Choose Speech to read your message with this voice reference. Audio transcription is not enabled."
         elif plan.action == "audio.speech":
@@ -1208,7 +1264,13 @@ def task_results(session, message, run):
             and replacement.parent_run_id == step.id
         ):
             superseded.add(step.id)
+    media = None
+    if run.task.metadata_json.get("media_plan"):
+        from app.media_jobs import job_view
+
+        media = job_view(session, run.task)
     return {
+        **({"media_job": media} if media else {}),
         "steps": [
             {
                 "id": step.id,
@@ -1220,7 +1282,11 @@ def task_results(session, message, run):
             }
             for step in steps
         ],
-        "artifacts": [artifact_dict(artifact) for artifact in artifacts],
+        "artifacts": [
+            artifact_dict(artifact)
+            for artifact in artifacts
+            if not artifact.metadata_json.get("internal_media")
+        ],
         "coding_runs": [run_dict(step) for step in steps if step.executor_type in CODING_REVIEW_EXECUTORS],
         "created_projects": [
             {
@@ -1235,7 +1301,9 @@ def task_results(session, message, run):
             and step.project_id == step.parameters.get("project_id")
             and (project := session.get(Project, step.project_id)) is not None
         ],
-        "task_status": next(
+        "task_status": media["status"]
+        if media
+        else next(
             (step.status for step in steps if step.status not in TERMINAL),
             next(
                 (
