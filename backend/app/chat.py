@@ -234,6 +234,19 @@ def detail(conversation_id: UUID, session: DB):
     }
 
 
+@router.post("/conversations/{conversation_id}/tasks/{task_id}/cancel")
+def stop_conversation_task(conversation_id: UUID, task_id: UUID, session: DB):
+    from app.task_control import cancel_task
+
+    row = conversation(session, conversation_id)
+    task = session.get(Task, str(task_id))
+    if task is None or task.conversation_id != row.id:
+        raise HTTPException(404, "Task not found in this conversation")
+    result = cancel_task(session, task)
+    session.commit()
+    return result
+
+
 def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
     snapshot = snapshot_provider(session, row)
     web_search = user.metadata_json.get("web_search")
@@ -625,6 +638,20 @@ def regenerate(conversation_id: UUID, session: DB):
     source_run = session.get(Run, user.run_id) if user.run_id else None
     if source_run and source_run.executor_type == "orchestrator":
         raise HTTPException(409, "Send a new instruction to repeat an assistant action explicitly")
+    if source_run:
+        from app.task_control import lock_task
+
+        task = session.get(Task, source_run.task_id)
+        lock_task(session, task)
+        if task.metadata_json.get("stop_requested_at"):
+            if source_run.executor_type != "chat" or session.scalar(
+                select(Run.id).where(Run.task_id == task.id, Run.status.not_in(TERMINAL)).limit(1)
+            ):
+                raise HTTPException(409, "Wait for stopped work to finish or send a new instruction")
+            # Regenerate is an explicit new attempt after every old stage ended.
+            task.metadata_json = {
+                key: value for key, value in task.metadata_json.items() if key != "stop_requested_at"
+            }
     responses = list(
         session.scalars(
             select(Message)

@@ -90,3 +90,13 @@ permission/ownership/cancellation/recovery contracts. Agent history adopts rende
 text and Library screenshots; account browser automation remains a separate future
 connector capability. Real Chromium/native acceptance and fake-provider agent
 acceptance are distinguished in [browser verification](browser.md).
+
+
+2026-10-15 real Auto Local coding acceptance: the normal production API and
+worker created a name-only disposable project, selected the installed
+RVN-IQ2_XS GGUF, loaded it through owned multi-GPU llama.cpp with 131072 tokens,
+created arithmetic code and unittest tests in an isolated worktree, and passed
+the configured sandboxed validation. Independently repeated unittest validation
+passed and the original checkout's files were unchanged. Evidence:
+`data/acceptance/local-coding-auto-20261015/result.json`. This qualifies that
+concrete task/model profile, not every possible coding task.
