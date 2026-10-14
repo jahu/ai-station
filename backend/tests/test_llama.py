@@ -1044,3 +1044,62 @@ def test_new_header_estimate_cannot_exceed_a_previously_failed_allocation():
         failed_sizes=[65536],
     )
     assert fitted <= 32768
+
+
+def test_chat_stop_retains_model_startup_shared_by_another_conversation(managed, monkeypatch):
+    from app.models import Task
+
+    model_id, _ = managed
+
+    async def reply(self, **kwargs):
+        yield "Still available"
+
+    monkeypatch.setattr(LocalChatProvider, "stream", reply)
+    with TestClient(app) as client:
+        conversations = [
+            client.post("/api/chat/conversations", json={"model": "llamacpp:" + model_id}).json()
+            for _ in range(2)
+        ]
+        chats = [
+            client.post(f"/api/chat/conversations/{c['id']}/messages", json={"content": "Hello"}).json()
+            for c in conversations
+        ]
+        with session_factory()() as s:
+            loading = s.scalar(select(Run).where(Run.executor_type == "llama_load"))
+            load_id = loading.id
+            assert loading.task_id == chats[0]["task_id"]
+        stop = client.post(
+            f"/api/chat/conversations/{conversations[0]['id']}/tasks/{chats[0]['task_id']}/cancel"
+        )
+        assert stop.status_code == 200, stop.text
+        assert stop.json()["retained_run_ids"] == [load_id]
+        assert stop.json()["run_ids"] == [chats[0]["id"]]
+        assert tick_once() == load_id
+        assert tick_once() == chats[1]["id"]
+        with session_factory()() as s:
+            assert s.get(Run, chats[0]["id"]).status == "canceled"
+            assert s.get(Run, chats[1]["id"]).status == "succeeded"
+            assert s.get(Task, chats[0]["task_id"]).metadata_json["stop_requested_at"]
+
+
+def test_chat_stop_cancels_unshared_startup_and_does_not_attach_new_consumer(managed):
+    model_id, _ = managed
+    with TestClient(app) as client:
+        first = client.post("/api/chat/conversations", json={"model": "llamacpp:" + model_id}).json()
+        chat = client.post(
+            f"/api/chat/conversations/{first['id']}/messages", json={"content": "Hello"}
+        ).json()
+        with session_factory()() as s:
+            loading = s.scalar(select(Run).where(Run.executor_type == "llama_load"))
+            # Exercise Stop after native dispatch has begun, before readiness.
+            loading.status = "running"
+            load_id = loading.id
+            s.commit()
+        stopped = client.post(f"/api/chat/conversations/{first['id']}/tasks/{chat['task_id']}/cancel").json()
+        assert set(stopped["run_ids"]) == {chat["id"], load_id}
+        second = client.post("/api/chat/conversations", json={"model": "llamacpp:" + model_id}).json()
+        response = client.post(
+            f"/api/chat/conversations/{second['id']}/messages", json={"content": "Too soon"}
+        )
+        assert response.status_code == 409, response.text
+        assert "canceled startup" in response.text

@@ -933,7 +933,10 @@ def prepare_consumer(session, run):
                 depend_on(session, load_run, operation)
         instance = session.get(RuntimeInstance, load_run.parameters["instance_id"])
     if instance.status != "ready":
-        depend_on(session, run, session.get(Run, instance.metadata_json["load_run_id"]))
+        loading = session.get(Run, instance.metadata_json["load_run_id"])
+        if loading.status in {"cancel_requested", "canceled", "failed", "interrupted"}:
+            raise ProviderError("Wait for the selected model's canceled startup to finish before sending")
+        depend_on(session, run, loading)
     run.parameters = {**run.parameters, "endpoint": instance.endpoint}
 
 

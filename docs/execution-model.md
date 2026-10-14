@@ -155,3 +155,13 @@ Local coding uses the same worktree preparation, owned process lifecycle, checke
 ## Run inspector
 
 The inspector separates structured Activity from grouped Output and raw All events. Activity/raw pages show at most 50 events; sequence boundaries keep older pages stable as new events arrive. Arrow keys, Home and End move through the current page; older and newer paging stays outside that list. Full persisted events remain available. SSE resumes after the loaded sequence and merges batches into the cache without re-fetching the entire history per token. Large output, payloads and expandable parameters scroll within bounded panels.
+
+
+Chat and Work Stop address the active Task within that conversation, including
+project setup before a coding workspace exists. The durable Task stop marker
+blocks later child publication; a stale stop targets the original Task, never a
+new turn. A pending owned llama.cpp load is retained if another active Task
+already depends on it. The stopped conversation's consumers are canceled while
+the other conversation keeps its model prerequisite. Newly submitted consumers
+cannot attach to a startup already being canceled. Native cancellation and
+process inspection continue through the existing worker/Runner contracts.

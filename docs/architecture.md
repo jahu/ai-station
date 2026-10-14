@@ -273,3 +273,13 @@ System and the central workstation report now include bounded NVIDIA compute
 process observations: GPU, executable basename, PID and reported VRAM. They
 never expose command lines or control external processes. See
 [GPU process reporting](gpu-processes.md).
+
+
+Chat and Work Stop address the active Task within that conversation, including
+project setup before a coding workspace exists. The durable Task stop marker
+blocks later child publication; a stale stop targets the original Task, never a
+new turn. A pending owned llama.cpp load is retained if another active Task
+already depends on it. The stopped conversation's consumers are canceled while
+the other conversation keeps its model prerequisite. Newly submitted consumers
+cannot attach to a startup already being canceled. Native cancellation and
+process inspection continue through the existing worker/Runner contracts.

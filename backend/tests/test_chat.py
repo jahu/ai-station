@@ -443,3 +443,19 @@ def test_invalid_pdf_and_image_attachments_are_rejected(provider):
             assert result.status_code == 422, result.text
         assert not client.get(f"/api/chat/conversations/{conversation_id}").json()["messages"]
         assert not client.get("/api/artifacts").json()
+
+
+def test_regenerate_after_task_stop_explicitly_starts_a_new_chat_attempt(provider):
+    with TestClient(app) as client:
+        cid = new_conversation(client)
+        original = client.post(f"/api/chat/conversations/{cid}/messages", json={"content": "Hello"}).json()
+        stopped = client.post(f"/api/chat/conversations/{cid}/tasks/{original['task_id']}/cancel")
+        assert stopped.status_code == 200
+        assert client.get("/api/runs/" + original["id"]).json()["status"] == "canceled"
+        retry = client.post(f"/api/chat/conversations/{cid}/regenerate")
+        assert retry.status_code == 202, retry.text
+        assert retry.json()["task_id"] == original["task_id"]
+        assert retry.json()["id"] != original["id"]
+        with session_factory()() as s:
+            assert tick(s, "regenerate-after-stop") == retry.json()["id"]
+        assert client.get("/api/runs/" + retry.json()["id"]).json()["status"] == "succeeded"
