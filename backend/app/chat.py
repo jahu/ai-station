@@ -208,6 +208,8 @@ def detail(conversation_id: UUID, session: DB):
         .order_by(Run.created_at.desc(), Run.id.desc())
         .limit(1)
     )
+    from app.work_context import project_context
+
     return {
         **conversation_view(session, row),
         "summary_update": {
@@ -228,6 +230,7 @@ def detail(conversation_id: UUID, session: DB):
         ],
         "active_run": run_dict(active) if active else None,
         "summary": summary_view(session, row.id),
+        "work_context": project_context(session, row.id),
     }
 
 
@@ -404,7 +407,7 @@ def submit_message(conversation_id, body, session, *, commit=True):
     if mode in {"chat", "work"}:
         body = body.model_copy(update={"execution_mode": mode})
     # Deterministic host inspection/runtime control does not contact an LLM.
-    if not use_assistant or assistant_needs_provider(body):
+    if body.continuation is None and (not use_assistant or assistant_needs_provider(body)):
         snapshot_provider(session, row)  # Validate the selected provider before attachments.
     user = Message(
         conversation_id=row.id,
@@ -440,7 +443,11 @@ def submit_message(conversation_id, body, session, *, commit=True):
         "execution_mode": mode,
         "execution_mode_override": body.execution_mode,
     }
-    if use_assistant:
+    if body.continuation is not None:
+        from app.work_context import enqueue_continuation
+
+        result = enqueue_continuation(session, row, user, body)
+    elif use_assistant:
         result = enqueue_assistant(session, row, user, body, commit=False)
     elif (
         body.image_artifact_ids
@@ -491,6 +498,8 @@ def accept_turn(body: TurnBody, session: DB):
         payload.pop("expected_provider_version")
     if body.reasoning is None:
         payload.pop("reasoning")
+    if body.continuation is None:
+        payload.pop("continuation")
 
     def fingerprint(values):
         return hashlib.sha256(json.dumps(values, sort_keys=True, separators=(",", ":")).encode()).hexdigest()

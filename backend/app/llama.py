@@ -861,6 +861,8 @@ def prepare_consumer(session, run):
     from app.dependencies import depend_on
     from app.providers import ProviderError
 
+    if run.status == "canceled":
+        return
     model = run.parameters.get("model") or run.parameters.get("definition", {}).get("model", "")
     if not model.startswith("llamacpp:"):
         return

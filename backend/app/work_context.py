@@ -1,0 +1,97 @@
+"""Visible coding context and atomic Chat continuation of the same owned Task."""
+
+from fastapi import HTTPException
+from sqlalchemy import select
+
+from app.coding_sessions import PROPOSALS, Followup, enqueue_followup
+from app.db import utcnow
+from app.models import Message, Project, Run, Task, Worktree
+from app.state import TERMINAL
+
+
+def project_context(session, conversation_id):
+    source = session.scalar(
+        select(Run)
+        .join(Task)
+        .where(Task.conversation_id == conversation_id, Run.executor_type.in_(PROPOSALS))
+        .order_by(Run.created_at.desc(), Run.id.desc())
+        .limit(1)
+    )
+    if source is None:
+        return None
+    task = session.get(Task, source.task_id)
+    project = session.get(Project, task.project_id)
+    worktree = session.get(Worktree, source.parameters.get("worktree_id", ""))
+    safe_failure = source.status in {"failed", "canceled"} and (
+        source.metadata_json.get("process_confirmed_gone")
+        or not source.metadata_json.get("dispatch_attempted")
+    )
+    reason = None
+    if not project or not worktree or not worktree.owned or worktree.removed_at is not None:
+        reason = "The owned task workspace is unavailable."
+    elif session.scalar(
+        select(Run.id).where(Run.project_id == task.project_id, Run.status.not_in(TERMINAL)).limit(1)
+    ):
+        reason = "Wait for this project's active work to finish."
+    elif source.status != "succeeded" and not safe_failure:
+        reason = "Inspect the previous execution before continuing."
+    return {
+        "task_id": task.id,
+        "project_id": task.project_id,
+        "project_name": project.name if project else "Project",
+        "title": task.title,
+        "expected_run_id": source.id,
+        "executor": source.executor_type.removesuffix("_proposal"),
+        "model": source.parameters.get("model", ""),
+        "external": source.executor_type != "local_proposal",
+        "ready": reason is None,
+        "reason": reason,
+    }
+
+
+def enqueue_continuation(session, conversation, user, body):
+    scope = body.continuation
+    task = session.get(Task, str(scope.task_id))
+    if not task or task.conversation_id != conversation.id:
+        raise HTTPException(422, "Choose a coding task belonging to this conversation")
+    if (
+        body.execution_mode not in {"work", "orchestrator"}
+        or body.action != "auto"
+        or any(
+            (
+                body.coding,
+                body.new_project,
+                body.commit,
+                body.publish,
+                body.load,
+                body.stop,
+                body.attachments,
+                body.image_artifact_ids,
+                body.audio_artifact_id,
+                body.web_search.enabled,
+                body.reasoning,
+                body.speech_text,
+                body.upscale_result,
+            )
+        )
+    ):
+        raise HTTPException(422, "Continue the selected Work task without other actions or attachments")
+    result = enqueue_followup(
+        session,
+        task.id,
+        Followup(prompt=body.content, expected_run_id=scope.expected_run_id, external_ai=scope.external_ai),
+        commit=False,
+    )
+    user.run_id = result["id"]
+    user.metadata_json = {**user.metadata_json, "work_task_id": task.id}
+    session.add(
+        Message(
+            conversation_id=conversation.id,
+            role="assistant",
+            run_id=result["id"],
+            content="Continuing work in the existing project branch. Changes and validation will appear below.",
+            metadata_json={"orchestration": True, "work_task_id": task.id},
+        )
+    )
+    conversation.updated_at = utcnow()
+    return result

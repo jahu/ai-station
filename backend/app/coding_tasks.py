@@ -144,6 +144,11 @@ def enqueue_coding_task(
 
 
 def queue_proposal(session, preparation, worktree):
+    from app.task_control import stopped_task
+
+    if stopped_task(session, preparation.task):
+        preparation.metadata_json = {**preparation.metadata_json, "coding_canceled": True}
+        return
     local = "local_coding" in preparation.parameters
     provider = "local" if local else "codex" if "codex" in preparation.parameters else "cursor"
     request = preparation.parameters.get("local_coding" if local else provider)
@@ -181,6 +186,11 @@ def queue_proposal(session, preparation, worktree):
 
 
 def queue_validation(session, coding_run):
+    from app.task_control import stopped_task
+
+    if stopped_task(session, coding_run.task):
+        coding_run.metadata_json = {**coding_run.metadata_json, "validation_status": "canceled"}
+        return
     commands = coding_run.parameters["commands"]
     if not commands:
         coding_run.metadata_json = {**coding_run.metadata_json, "validation_status": "not_configured"}

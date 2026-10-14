@@ -97,6 +97,13 @@ class StopScope(BaseModel):
     instance_id: UUID
 
 
+class ContinuationScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    task_id: UUID
+    expected_run_id: UUID
+    external_ai: StrictBool = False
+
+
 class AssistantInputs(BaseModel):
     model_config = ConfigDict(extra="forbid")
     image_artifact_ids: list[UUID] = Field(default_factory=list, max_length=8)
@@ -125,6 +132,7 @@ class AssistantInputs(BaseModel):
         "runtime.stop",
     ] = "auto"
     audio_artifact_id: UUID | None = None
+    continuation: ContinuationScope | None = None
     coding: CodingScope | None = None
     new_project: ProjectBuildScope | None = None
     commit: CommitScope | None = None
@@ -1141,9 +1149,13 @@ def task_results(session, message, run):
         return {}
     steps = list(
         session.scalars(
-            select(Run).where(Run.task_id == run.task_id).order_by(Run.created_at, Run.id).limit(40)
+            select(Run)
+            .where(Run.task_id == run.task_id)
+            .order_by(Run.created_at.desc(), Run.id.desc())
+            .limit(40)
         )
     )
+    steps.reverse()
     child = session.get(Run, run.metadata_json.get("child_run_id", ""))
     if (
         child is not None

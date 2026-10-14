@@ -100,7 +100,20 @@ type Message = ActionResult & {
     }[];
   };
 };
+type WorkContext = {
+  task_id: string;
+  project_id: string;
+  project_name: string;
+  title: string;
+  expected_run_id: string;
+  executor: string;
+  model: string;
+  external: boolean;
+  ready: boolean;
+  reason: string | null;
+};
 type Detail = Conversation & {
+  work_context?: WorkContext | null;
   auto_summary: boolean;
   summary_update: { id: string; status: string; error_message: string } | null;
   messages: Message[];
@@ -810,6 +823,22 @@ function Transcript({
     </section>
   );
 }
+function readWorkChoice(key: string) {
+  try {
+    return sessionStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function saveWorkChoice(key: string, value: string | null) {
+  try {
+    if (value) sessionStorage.setItem(key, value);
+    else sessionStorage.removeItem(key);
+  } catch {
+    /* keep the in-memory choice */
+  }
+}
+
 function ConversationView({
   conversation,
   providers,
@@ -840,13 +869,39 @@ function ConversationView({
   const orchestrator = ["work", "orchestrator"].includes(
     conversation.execution_mode ?? "local",
   );
-  const [turnMode, setTurnMode] = useState<"chat" | "work">(
-    orchestrator ? "work" : "chat",
-  );
+  const turnChoiceKey = "ai-station:turn-mode:" + conversation.id;
+  const [turnMode, setTurnMode] = useState<"chat" | "work">(() => {
+    const saved = readWorkChoice(turnChoiceKey);
+    return saved === "chat" || saved === "work"
+      ? saved
+      : orchestrator
+        ? "work"
+        : "chat";
+  });
   const assistantTurn = true;
   const pendingRequest = useRef<{ body: string; id: string } | null>(null);
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [readingAttachment, setReadingAttachment] = useState(false);
+  const generalChoiceKey = "ai-station:general-work:" + conversation.id;
+  const [generalTask, setGeneralTask] = useState<string | null>(() =>
+    readWorkChoice(generalChoiceKey),
+  );
+  const [externalConsentFor, setExternalConsentFor] = useState("");
+  const context = conversation.work_context;
+  const continuing =
+    !!context &&
+    turnMode === "work" &&
+    generalTask !== context.task_id &&
+    options.action === "auto";
+  const contextReady =
+    !continuing ||
+    (!!context?.ready &&
+      draft.trim().length <= 4000 &&
+      (!context.external || externalConsentFor === context.expected_run_id) &&
+      !attachments.length &&
+      !options.image_artifact_ids.length &&
+      !options.audio_artifact_id &&
+      !webEnabled);
   const [clipboardError, setClipboardError] = useState<Error | null>(null);
   const refresh = () => {
     void cache.invalidateQueries({
@@ -905,6 +960,17 @@ function ConversationView({
           : {}),
         attachments,
         execution_mode: turnMode,
+        ...(continuing && context
+          ? {
+              continuation: {
+                task_id: context.task_id,
+                expected_run_id: context.expected_run_id,
+                external_ai:
+                  context.external &&
+                  externalConsentFor === context.expected_run_id,
+              },
+            }
+          : {}),
         ...(thinking.enabled
           ? { reasoning: { enabled: true, budget: 256 } }
           : {}),
@@ -937,7 +1003,12 @@ function ConversationView({
   });
   const stop = useMutation({
     mutationFn: () =>
-      api(`/runs/${conversation.active_run?.id}/cancel`, { method: "POST" }),
+      api(
+        context && conversation.active_run?.task_id === context.task_id
+          ? `/coding/sessions/${context.task_id}/cancel`
+          : `/runs/${conversation.active_run?.id}/cancel`,
+        { method: "POST" },
+      ),
     onSuccess: refresh,
   });
   const regenerate = useMutation({
@@ -1003,6 +1074,69 @@ function ConversationView({
           blocked={thinking.blocked}
           onChange={thinking.onChange}
         />
+      )}
+      {context && turnMode === "work" && (
+        <section className="work-context-card" aria-label="Current coding task">
+          <div className="row spread">
+            <div>
+              <strong>{context.project_name}</strong>
+              <p className="muted">
+                {context.executor === "local" ? "Local AI" : context.executor} ·{" "}
+                {context.model || "Provider default"} ·{" "}
+                {continuing ? "Continuing this task" : "General Work"}
+              </p>
+            </div>
+            <div className="row">
+              <Link to={`/coding/${context.task_id}`}>Open workspace</Link>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  const next =
+                    generalTask === context.task_id ? null : context.task_id;
+                  setGeneralTask(next);
+                  saveWorkChoice(generalChoiceKey, next);
+                }}
+              >
+                {generalTask === context.task_id
+                  ? "Continue this task"
+                  : "Use general Work"}
+              </Button>
+            </div>
+          </div>
+          {continuing && context.reason && (
+            <p className="notice">{context.reason}</p>
+          )}
+          {continuing && context.external && (
+            <label className="work-context-consent">
+              <input
+                type="checkbox"
+                checked={externalConsentFor === context.expected_run_id}
+                onChange={(event) =>
+                  setExternalConsentFor(
+                    event.target.checked ? context.expected_run_id : "",
+                  )
+                }
+              />
+              Share this prompt and relevant source with {context.executor}.
+            </label>
+          )}
+          {continuing &&
+            (attachments.length > 0 ||
+              options.image_artifact_ids.length > 0 ||
+              options.audio_artifact_id ||
+              webEnabled) && (
+              <p className="notice">
+                Remove attachments and web search to continue coding, or choose
+                general Work.
+              </p>
+            )}
+          {continuing && draft.trim().length > 4000 && (
+            <p className="notice">
+              Keep this coding follow-up within 4,000 characters.
+            </p>
+          )}
+        </section>
       )}
       <details className="chat-settings-panel">
         <summary>Conversation settings</summary>
@@ -1105,7 +1239,7 @@ function ConversationView({
           value={draft}
           onChange={setDraft}
           onSend={() => send.mutate()}
-          canSend={canSend}
+          canSend={canSend && contextReady}
           busy={busy}
           sendKey={preferences.data?.send_key}
           placeholder={
@@ -1179,6 +1313,7 @@ function ConversationView({
                 disabled={busy}
                 onChange={(next) => {
                   setTurnMode(next);
+                  saveWorkChoice(turnChoiceKey, next);
                   setOptions(emptyOptions);
                 }}
               />

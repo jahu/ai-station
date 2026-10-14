@@ -3287,3 +3287,61 @@ def test_stop_project_build_parent_after_setup_cancels_queued_coding_child(
         assert not local_coding_bridge["requests"]
         with session_factory()() as session:
             assert tick(session, "no-coding") is None
+
+
+@pytest.mark.parametrize("provider", ["cursor", "codex"])
+def test_chat_work_continues_coding_in_the_same_real_disposable_worktree(
+    repository, owned_runner, provider, request
+):
+    from uuid import uuid4
+
+    from app.models import Conversation, Run, Task
+
+    request.getfixturevalue("fake_" + provider)
+    with TestClient(app) as client:
+        project = register(client, repository)
+        prepared = client.post(
+            f"/api/coding/{provider}", json=coding_request(project, files=[], explore=True)
+        ).json()
+        for worker in ("prepare", "first-turn"):
+            with session_factory()() as session:
+                tick(session, worker)
+        detail = client.get(f"/api/coding/sessions/{prepared['task_id']}").json()
+        source = next(r for r in detail["runs"] if r["executor_type"] == f"{provider}_proposal")
+        assert source["status"] == "succeeded", source
+        with session_factory()() as session:
+            conversation = Conversation(model="plain", execution_mode="work")
+            session.add(conversation)
+            session.flush()
+            session.get(Task, prepared["task_id"]).conversation_id = conversation.id
+            for run in session.scalars(select(Run).where(Run.task_id == prepared["task_id"])):
+                run.conversation_id = conversation.id
+            cid = conversation.id
+            session.commit()
+        values = {
+            "client_request_id": str(uuid4()),
+            "conversation_id": cid,
+            "expected_settings_version": 1,
+            "execution_mode": "work",
+            "content": "SECOND_TURN add another file",
+            "continuation": {
+                "task_id": prepared["task_id"],
+                "expected_run_id": source["id"],
+                "external_ai": True,
+            },
+        }
+        response = client.post("/api/chat/turns", json=values)
+        assert response.status_code == 202, response.text
+        second = response.json()["run"]
+        assert second["parameters"]["worktree_id"] == source["parameters"]["worktree_id"]
+        with session_factory()() as session:
+            tick(session, "chat-followup")
+        final = client.get("/api/runs/" + second["id"]).json()
+        assert final["status"] == "succeeded", final
+        assert {f["path"] for f in final["metadata"]["coding_review"]["files"]} == {
+            "README.md",
+            "new.py",
+            "more.py",
+        }
+        assert client.post("/api/chat/turns", json=values).json()["run"]["id"] == second["id"]
+        assert (repository / "README.md").read_text() == "Original repository\n"
