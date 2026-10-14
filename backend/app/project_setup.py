@@ -33,7 +33,13 @@ class ProjectName(BaseModel):
 
 @router.post("/create", status_code=202)
 def create_project(body: ProjectName, session: Annotated[Session, Depends(session_scope)]):
-    task = create_task(
+    run = enqueue_project(session, body)
+    session.commit()
+    return run_dict(run)
+
+
+def enqueue_project(session, body: ProjectName, *, task=None, parent_run_id=None):
+    task = task or create_task(
         session,
         title=f"Create {body.name}",
         prompt="Create an application-owned project",
@@ -49,9 +55,9 @@ def create_project(body: ProjectName, session: Annotated[Session, Depends(sessio
         permissions=["workspace_write", "git_write"],
         retry_class="inspect",
         parameters={"project_id": str(uuid4()), "settings": ProjectSettings(name=body.name).model_dump()},
+        parent_run_id=parent_run_id,
     )
-    session.commit()
-    return run_dict(run)
+    return run
 
 
 class ProjectSetupExecutor(NativeJobExecutor):

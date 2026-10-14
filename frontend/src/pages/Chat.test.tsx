@@ -535,3 +535,111 @@ it.each(["image.generate", "image.generate_video"])(
     });
   },
 );
+
+it("continues coding a created project with local scope without starting work on click", async () => {
+  const project = {
+    id: "project-new",
+    name: "Weather Station",
+    updated_at: "2026-10-14T07:00:00Z",
+  };
+  const conversation = {
+    id: "project-chat",
+    title: "Build Weather",
+    provider: builtin.key,
+    provider_location: "local",
+    model: "test-model",
+    system_prompt: "",
+    temperature: 0.7,
+    max_tokens: 2048,
+    updated_at: project.updated_at,
+    execution_mode: "local",
+    active_run: null,
+    messages: [
+      {
+        id: "project-result",
+        role: "assistant",
+        content: "Project ready",
+        created_at: project.updated_at,
+        run_id: "setup",
+        run_status: "succeeded",
+        error_message: "",
+        metadata: { orchestration: true },
+        steps: [],
+        created_projects: [project],
+        task_status: "succeeded",
+      },
+    ],
+  };
+  const writes: { path: string; body: unknown }[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        writes.push({ path, body: JSON.parse(String(init.body)) });
+        return { ok: true, json: async () => ({ id: "queued" }) };
+      }
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/chat/providers")
+            ? [builtin]
+            : path.includes("/chat/providers/")
+              ? builtin
+              : path.endsWith("/llama")
+                ? { models: [], instances: [] }
+                : path.endsWith("/hardware")
+                  ? { gpus: [] }
+                  : path.startsWith("/api/projects")
+                    ? [project]
+                    : path.endsWith("/chat/conversations")
+                      ? [conversation]
+                      : path.includes("/chat/conversations/")
+                        ? conversation
+                        : [],
+      };
+    }),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/chat/project-chat"]}>
+        <Routes>
+          <Route path="/chat/:id" element={<Chat />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Continue here with Local AI" }),
+  );
+  expect(writes).toHaveLength(0);
+  const selectedProject = await screen.findByRole("radio", {
+    name: /Weather Station/,
+  });
+  expect((selectedProject as HTMLInputElement).checked).toBe(true);
+  expect(
+    (screen.getByLabelText("Action", { exact: true }) as HTMLSelectElement)
+      .value,
+  ).toBe("coding.local");
+  fireEvent.change(screen.getByLabelText("Message", { exact: true }), {
+    target: { value: "Build a weather page" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Send" }));
+  await vi.waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0].body).toEqual(
+    expect.objectContaining({
+      action: "coding.local",
+      execution_mode: "orchestrator",
+      coding: expect.objectContaining({
+        project_id: project.id,
+        expected_updated_at: project.updated_at,
+        files: [],
+        external_ai: false,
+        explore: true,
+      }),
+    }),
+  );
+});

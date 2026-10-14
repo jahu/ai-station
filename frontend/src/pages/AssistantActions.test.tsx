@@ -1149,3 +1149,39 @@ it("clears media scope and hides irrelevant upload controls for workstation insp
   expect(options.audio_artifact_id).toBeNull();
   expect(options.coding).toBeNull();
 });
+
+it("shows a completed project and selects local continuation without enqueueing", () => {
+  const project = {
+    id: "project-new",
+    name: "Weather Station",
+    updated_at: "2026-10-14T07:00:00Z",
+  };
+  const onProject = vi.fn();
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <MemoryRouter>
+      <AssistantResults
+        result={{
+          steps: [],
+          task_status: "succeeded",
+          created_projects: [project],
+        }}
+        onProject={onProject}
+      />
+    </MemoryRouter>,
+  );
+  expect(
+    screen.getByRole("link", { name: "Open project" }).getAttribute("href"),
+  ).toBe("/projects/project-new");
+  expect(
+    screen
+      .getByRole("link", { name: "Open Coding workspace" })
+      .getAttribute("href"),
+  ).toBe("/coding?project=project-new");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Continue here with Local AI" }),
+  );
+  expect(onProject).toHaveBeenCalledWith(project);
+  expect(fetch).not.toHaveBeenCalled();
+});

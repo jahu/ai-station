@@ -69,6 +69,12 @@ const ACTIONS = [
     detail: "Saves a disabled definition. Activation stays explicit.",
   },
   {
+    key: "project.create",
+    title: "Create project",
+    detail:
+      "Enter a project name. AI Station creates its Git repository and Python environment, ready for coding.",
+  },
+  {
     key: "coding.local",
     title: "Coding with Local AI",
     detail: "Uses this conversation's local model in an owned worktree.",

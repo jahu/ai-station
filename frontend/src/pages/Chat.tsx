@@ -540,6 +540,7 @@ function Transcript({
   setOptions,
   setClipboardError,
   emptyHint,
+  onProject,
 }: {
   messages: Message[];
   orchestrator: boolean;
@@ -551,6 +552,11 @@ function Transcript({
   ) => void;
   setClipboardError: (error: Error | null) => void;
   emptyHint: string;
+  onProject?: (project: {
+    id: string;
+    name: string;
+    updated_at: string;
+  }) => void;
 }) {
   const headingId = useId();
   const labelId = useId();
@@ -669,6 +675,7 @@ function Transcript({
                 inputs={options}
                 busy={busy}
                 onQueued={orchestrator ? refresh : undefined}
+                onProject={onProject}
                 onUse={
                   orchestrator
                     ? (artifact) =>
@@ -753,6 +760,7 @@ function ConversationView({
   const [draft, setDraft] = useState("");
   const [options, setOptions] = useState(emptyOptions);
   const [webEnabled, setWebEnabled] = useState(false);
+  const [projectSelectionVersion, setProjectSelectionVersion] = useState(0);
   const [webQuery, setWebQuery] = useState("");
   const orchestrator = conversation.execution_mode === "orchestrator";
   const [turnMode, setTurnMode] = useState<"auto" | "local" | "orchestrator">(
@@ -930,6 +938,35 @@ function ConversationView({
               ? "Send a message through the selected external provider. The secret value is never displayed."
               : "Send a message to the selected local provider."
         }
+        onProject={
+          conversation.provider_location !== "external"
+            ? (project) => {
+                setProjectSelectionVersion((current) => current + 1);
+                setTurnMode("orchestrator");
+                setWebEnabled(false);
+                void cache.invalidateQueries({ queryKey: ["coding-projects"] });
+                void cache.invalidateQueries({ queryKey: ["projects"] });
+                setOptions({
+                  action: "coding.local",
+                  image_artifact_ids: [],
+                  audio_artifact_id: null,
+                  coding: {
+                    project_id: project.id,
+                    expected_updated_at: project.updated_at,
+                    files: [],
+                    external_ai: false,
+                    explore: true,
+                  },
+                  commit: null,
+                  publish: null,
+                  load: null,
+                  stop: null,
+                  upscale_result: false,
+                  speech_text: null,
+                });
+              }
+            : undefined
+        }
       />
       <div className="chat-composer">
         <ErrorNotice
@@ -956,7 +993,9 @@ function ConversationView({
               assistantTurn
                 ? options.action === "image.generate_video"
                   ? "Describe the scene and motion. Example: a forest at dawn, then animate it: mist drifts."
-                  : "Describe your task — or drop reference images below…"
+                  : options.action === "project.create"
+                    ? "Name your project — for example Weather Station"
+                    : "Describe your task — or drop reference images below…"
                 : "Ask your local model…"
             }
             rows={3}
@@ -993,6 +1032,7 @@ function ConversationView({
           </details>
           {assistantTurn && (
             <AssistantActions
+              key={projectSelectionVersion}
               value={options}
               sources={messages.flatMap((message) => message.coding_runs ?? [])}
               onChange={(next) => {
@@ -1024,7 +1064,8 @@ function ConversationView({
               options.action.startsWith("coding.") ||
               options.action.startsWith("runtime.") ||
               options.action === "system.inspect" ||
-              options.action === "image.generate_video"
+              options.action === "image.generate_video" ||
+              options.action === "project.create"
             ) ||
             attachments.length > 0) && (
             <TextAttachments

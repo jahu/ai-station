@@ -87,6 +87,7 @@ export type ActionResult = {
   artifacts?: Artifact[];
   coding_runs?: Run[];
   task_status?: string;
+  created_projects?: { id: string; name: string; updated_at: string }[];
 };
 const IMAGE_STEPS = new Set([
   "image.generate",
@@ -150,12 +151,18 @@ export function AssistantResults({
   busy,
   onUse,
   onQueued,
+  onProject,
 }: {
   result: ActionResult;
   inputs?: AssistantOptions;
   busy?: boolean;
   onUse?: (artifact: Artifact) => void;
   onQueued?: (result: Run) => void;
+  onProject?: (project: {
+    id: string;
+    name: string;
+    updated_at: string;
+  }) => void;
 }) {
   if (!result.steps) return null;
   return (
@@ -174,6 +181,36 @@ export function AssistantResults({
             <ImageStepRetry step={step} busy={busy} onQueued={onQueued} />
           )}
         </div>
+      ))}
+      {result.created_projects?.map((project) => (
+        <section
+          className="content-panel"
+          key={`project-${project.id}`}
+          aria-label={`Created project ${project.name}`}
+        >
+          <strong>{project.name}</strong>
+          <p className="muted">
+            Your Git repository and Python environment are ready.
+          </p>
+          <div className="row">
+            <Link className="text-link" to={`/projects/${project.id}`}>
+              Open project
+            </Link>
+            <Link className="text-link" to={`/coding?project=${project.id}`}>
+              Open Coding workspace
+            </Link>
+            {onProject && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => onProject(project)}
+              >
+                Continue here with Local AI
+              </Button>
+            )}
+          </div>
+        </section>
       ))}
       {result.coding_runs?.map((run) => (
         <div key={`coding-${run.id}`}>
@@ -456,11 +493,13 @@ export default function AssistantActions({
   const [error, setError] = useState<Error | null>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const voiceInput = useRef<HTMLInputElement>(null);
-  const [projectId, setProjectId] = useState("");
-  const [files, setFiles] = useState("");
-  const [explore, setExplore] = useState(true);
-  const [repairAttempts, setRepairAttempts] = useState(0);
-  const [codingModel, setCodingModel] = useState("");
+  const [projectId, setProjectId] = useState(value.coding?.project_id ?? "");
+  const [files, setFiles] = useState(value.coding?.files.join("\n") ?? "");
+  const [explore, setExplore] = useState(value.coding?.explore ?? true);
+  const [repairAttempts, setRepairAttempts] = useState(
+    value.coding?.max_repair_attempts ?? 0,
+  );
+  const [codingModel, setCodingModel] = useState(value.coding?.model ?? "");
   const [external, setExternal] = useState(false);
   const [commitMessage, setCommitMessage] = useState("Apply reviewed changes");
   const [reviewed, setReviewed] = useState(false);
@@ -591,6 +630,7 @@ export default function AssistantActions({
         "runtime.stop",
         "system.inspect",
         "image.generate_video",
+        "project.create",
       ].includes(action)
     ) {
       onChange({
@@ -783,7 +823,8 @@ export default function AssistantActions({
       {!value.action.startsWith("coding.") &&
         !value.action.startsWith("runtime.") &&
         value.action !== "system.inspect" &&
-        value.action !== "image.generate_video" && (
+        value.action !== "image.generate_video" &&
+        value.action !== "project.create" && (
           <div className="assistant-attachment-toolbar">
             <Button
               type="button"
@@ -892,7 +933,8 @@ export default function AssistantActions({
       )}
       {((!value.action.startsWith("coding.") &&
         !value.action.startsWith("runtime.") &&
-        value.action !== "image.generate_video") ||
+        value.action !== "image.generate_video" &&
+        value.action !== "project.create") ||
         value.image_artifact_ids.length > 0) && (
         <div
           className="assistant-reference-area"
