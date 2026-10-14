@@ -1,5 +1,11 @@
 # Full-product acceptance ledger
 
+Worker execution uses three configurable, independent process slots. Tests
+cover short work completing during a held long Run, exclusive GPU reservation,
+lease renewal, cancellation and supervisor shutdown/crash handling. This is
+concurrency coverage with fake executors, not a claim that several real model
+servers or GPU workloads were stress-tested together.
+
 The target is the complete AI Station vision, reconfirmed on 2026-10-13. An implemented capability is complete only after its UI, persistence, permissions, cancellation/recovery, artifacts and applicable real integration are verified. A passing fake adapter test is not a real hardware smoke test.
 
 | Workstream | Implemented | Remaining delivery and acceptance |

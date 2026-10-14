@@ -14,6 +14,23 @@
 
 HTTP handlers do not generate images, run coding agents, or execute agent loops.
 
+The worker service supervises three independent execution slots by default.
+`AI_STATION_WORKER_SLOTS` accepts 1–8; set it to 1 for serial execution.
+Each slot runs in a spawned process with its own database sessions, executor
+instances, worker identity and lease renewals. A long media Run therefore leaves
+other slots available for unrelated Chat, inspection or project setup Runs.
+The shared queue, prerequisites and GPU/worktree reservations still apply:
+increasing slots does not allow two heavy jobs to reserve the same GPU or two
+mutations to enter the same worktree. SQLite transactions serialize claims and
+resource grants; slots release transactions while waiting on host work.
+
+The supervisor stops only its children on SIGTERM or Ctrl+C. If any slot exits
+unexpectedly, it stops the others and exits with an error so the existing Compose
+restart policy replaces the group. Native processes retain their ownership
+journals; expired leases use the recovery policy below rather than replaying
+dispatched work. All slots can still be occupied by independent long Runs, and
+the configured model server determines its own inference capacity.
+
 ## Claim and lease
 
 A claim is an `UPDATE ... WHERE status = 'queued'` under SQLite `IMMEDIATE` transactions. Exactly one worker can win. The claim sets `worker_id`, `claimed_at`, and `lease_expires_at`.
