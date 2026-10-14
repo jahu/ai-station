@@ -9,10 +9,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
   sessionStorage.clear();
 });
-function mount(status = "generating") {
+function mount(status = "generating", preview?: string) {
   const writes: { url: string; body?: Record<string, unknown> }[] = [];
   const job: MediaJob = {
     task_id: "task",
+    preview_artifact_id: preview,
     revision: 1,
     status,
     kind: "video",
@@ -35,7 +36,10 @@ function mount(status = "generating") {
         });
       return {
         ok: true,
-        json: async () => ({ ...job, revision: 2, status: "queued" }),
+        json: async () =>
+          init?.method === "POST"
+            ? { ...job, revision: 2, status: "queued" }
+            : job,
       };
     }),
   );
@@ -79,4 +83,15 @@ it("keeps polling failed jobs until dependent stages stop, so Resume can appear"
   expect(
     jobBusy({ status: "failed", active_run_ids: [] } as unknown as MediaJob),
   ).toBe(false);
+});
+
+it("shows one labeled partial preview without presenting it as the final movie", async () => {
+  mount("generating", "clip");
+  expect(
+    screen.getByLabelText("Latest completed segment").getAttribute("src"),
+  ).toBe("/api/artifacts/clip/file");
+  expect(
+    screen.getByText("Latest completed segment · partial preview"),
+  ).toBeTruthy();
+  expect(screen.queryByLabelText("Generated full video")).toBeNull();
 });

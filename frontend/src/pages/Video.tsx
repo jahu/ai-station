@@ -3,6 +3,7 @@ import {
   useMediaJob,
   jobBusy,
   type MediaJob,
+  type MediaRequest,
 } from "../components/media/media-job";
 import { chatRequestId, clearChatRequest } from "./chat-draft";
 import { useState } from "react";
@@ -22,8 +23,14 @@ export default function Video() {
   const [search, setSearch] = useSearchParams();
   const currentRun = useMediaRun(search.get("run") ?? "");
   const currentJob = useMediaJob(search.get("job") ?? "");
-  const busy = mediaBusy(currentRun.data) || jobBusy(currentJob.data);
-  const avatar = search.get("mode") === "avatar" || !!search.get("audio");
+  const busy =
+    mediaBusy(currentRun.data) ||
+    jobBusy(currentJob.data) ||
+    (!!search.get("job") && currentJob.isPending);
+  const avatar =
+    search.get("mode") === "avatar" ||
+    !!search.get("audio") ||
+    currentJob.data?.kind === "avatar";
   return (
     <>
       <nav className="mode-tabs" aria-label="Video type">
@@ -50,29 +57,50 @@ export default function Video() {
         <Avatars video />
       ) : (
         <VideoForm
-          key={search.get("input") ?? ""}
-          initialImage={search.get("input") ?? ""}
+          key={`${search.get("input") ?? currentJob.data?.request?.image_artifact_id ?? ""}|${search.get("job") ?? ""}|${currentJob.data?.request ? "restored" : ""}`}
+          initialImage={
+            search.get("input") ??
+            currentJob.data?.request?.image_artifact_id ??
+            ""
+          }
+          initialRequest={currentJob.data?.request}
         />
       )}
     </>
   );
 }
 
-function VideoForm({ initialImage }: { initialImage: string }) {
+function VideoForm({
+  initialImage,
+  initialRequest,
+}: {
+  initialImage: string;
+  initialRequest?: MediaRequest;
+}) {
   const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
   const [mode, setMode] = useState(initialImage ? "animate" : "generate");
   const [image, setImage] = useState(initialImage);
-  const [prompt, setPrompt] = useState("");
-  const [negative, setNegative] = useState("");
-  const [resolution, setResolution] = useState("1280x704");
-  const [duration, setDuration] = useState("49");
+  const [prompt, setPrompt] = useState(initialRequest?.prompt ?? "");
+  const [negative, setNegative] = useState(
+    initialRequest?.negative_prompt ?? "",
+  );
+  const [resolution, setResolution] = useState(
+    initialRequest?.width && initialRequest?.height
+      ? `${initialRequest.width}x${initialRequest.height}`
+      : "1280x704",
+  );
+  const [duration, setDuration] = useState(
+    initialRequest?.duration_seconds
+      ? `${initialRequest.duration_seconds}s`
+      : "49",
+  );
   const [compositionMode, setCompositionMode] = useState<
     "continuous" | "shots"
-  >("continuous");
-  const [steps, setSteps] = useState(20);
-  const [seed, setSeed] = useState(43);
-  const [gpu, setGpu] = useState("auto");
+  >(initialRequest?.composition_mode ?? "continuous");
+  const [steps, setSteps] = useState(initialRequest?.steps ?? 20);
+  const [seed, setSeed] = useState(initialRequest?.seed ?? 43);
+  const [gpu, setGpu] = useState(initialRequest?.gpu ?? "auto");
   const [uploading, setUploading] = useState(false);
   const capability = useQuery({
     queryKey: ["video-capabilities"],
@@ -147,7 +175,11 @@ function VideoForm({ initialImage }: { initialImage: string }) {
       });
     },
   });
-  const busy = generate.isPending || mediaBusy(run.data) || jobBusy(job.data);
+  const busy =
+    generate.isPending ||
+    mediaBusy(run.data) ||
+    jobBusy(job.data) ||
+    (!!jobId && job.isPending);
   return (
     <>
       <PageTitle
@@ -237,6 +269,13 @@ function VideoForm({ initialImage }: { initialImage: string }) {
                   value={resolution}
                   onChange={(event) => setResolution(event.target.value)}
                 >
+                  {!["1280x704", "704x1280", "768x768"].includes(
+                    resolution,
+                  ) && (
+                    <option value={resolution}>
+                      {resolution.replace("x", " × ")}
+                    </option>
+                  )}
                   <option value="1280x704">Landscape · 1280 × 704</option>
                   <option value="704x1280">Portrait · 704 × 1280</option>
                   <option value="768x768">Square · 768 × 768</option>
@@ -251,6 +290,12 @@ function VideoForm({ initialImage }: { initialImage: string }) {
                   <option value={33}>1.4 seconds</option>
                   <option value={49}>2 seconds</option>
                   <option value={81}>3.4 seconds</option>
+                  {duration.endsWith("s") &&
+                    !["15s", "30s", "60s"].includes(duration) && (
+                      <option value={duration}>
+                        {duration.slice(0, -1)} seconds
+                      </option>
+                    )}
                   <option value="15s">15 seconds</option>
                   <option value="30s">30 seconds</option>
                   <option value="60s">1 minute</option>

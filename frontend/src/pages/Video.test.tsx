@@ -118,3 +118,57 @@ it("does not submit animation without a first frame through the form", async () 
     false,
   );
 });
+
+it("restores exact custom duration, scene and dimensions from a saved media job", async () => {
+  const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+    expect(init?.method).not.toBe("POST");
+    return {
+      ok: true,
+      json: async () =>
+        url.includes("/media/jobs/")
+          ? {
+              task_id: "saved",
+              revision: 1,
+              kind: "video",
+              mode: "continuous",
+              status: "succeeded",
+              duration_seconds: 5,
+              completed_segments: 2,
+              total_segments: 2,
+              active_run_ids: [],
+              final_artifact_id: null,
+              resume_allowed: false,
+              error_message: "",
+              request: {
+                prompt: "Saved forest scene",
+                negative_prompt: "No captions",
+                width: 512,
+                height: 512,
+                duration_seconds: 5,
+                composition_mode: "continuous",
+                steps: 4,
+                seed: 43,
+                gpu: "auto",
+              },
+            }
+          : url.endsWith("/hardware")
+            ? { gpus: [] }
+            : { available: true, modes: ["generate", "animate"] },
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/video?job=saved"]}>
+        <Video />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByDisplayValue("Saved forest scene");
+  expect(screen.getByDisplayValue("5 seconds")).toBeTruthy();
+  expect(screen.getByDisplayValue("512 × 512")).toBeTruthy();
+});

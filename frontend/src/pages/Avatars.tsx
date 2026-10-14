@@ -3,6 +3,7 @@ import {
   useMediaJob,
   jobBusy,
   type MediaJob,
+  type MediaRequest,
 } from "../components/media/media-job";
 import { chatRequestId, clearChatRequest } from "./chat-draft";
 import { useState } from "react";
@@ -27,14 +28,17 @@ import {
 
 export default function Avatars({ video = false }: { video?: boolean }) {
   const [search] = useSearchParams();
+  const current = useMediaJob(search.get("job") ?? "");
+  const saved = current.data?.request;
   // Remount when Library or a finished result chooses a portrait or speech,
   // not when a generation Run is recorded in the URL.
   return (
     <AvatarForm
-      key={`${search.get("image") ?? ""}|${search.get("audio") ?? ""}`}
+      key={`${search.get("image") ?? saved?.image_artifact_id ?? ""}|${search.get("audio") ?? saved?.audio_artifact_id ?? ""}|${search.get("job") ?? ""}|${saved ? "restored" : ""}`}
       video={video}
-      initialImage={search.get("image")}
-      initialAudio={search.get("audio")}
+      initialImage={search.get("image") ?? saved?.image_artifact_id ?? null}
+      initialAudio={search.get("audio") ?? saved?.audio_artifact_id ?? null}
+      initialRequest={saved}
     />
   );
 }
@@ -43,27 +47,33 @@ function AvatarForm({
   video,
   initialImage,
   initialAudio,
+  initialRequest,
 }: {
   video: boolean;
   initialImage: string | null;
   initialAudio: string | null;
+  initialRequest?: MediaRequest;
 }) {
   const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
   const [image, setImage] = useState(initialImage ?? "");
   const [audio, setAudio] = useState(initialAudio ?? "");
-  const [voiceMode, setVoiceMode] = useState<"recording" | "text">("recording");
-  const [speechText, setSpeechText] = useState("");
+  const [voiceMode, setVoiceMode] = useState<"recording" | "text">(
+    initialRequest?.speech_text ? "text" : "recording",
+  );
+  const [speechText, setSpeechText] = useState(
+    initialRequest?.speech_text ?? "",
+  );
   const [uploading, setUploading] = useState(false);
   const [prompt, setPrompt] = useState(
-    "A person speaking naturally, static camera.",
+    initialRequest?.prompt ?? "A person speaking naturally, static camera.",
   );
-  const [size, setSize] = useState(384);
+  const [size, setSize] = useState(initialRequest?.size ?? 384);
   const [frames, setFrames] = useState(81);
   const [fullRecording, setFullRecording] = useState(true);
-  const [steps, setSteps] = useState(8);
-  const [seed, setSeed] = useState(43);
-  const [gpu, setGpu] = useState("auto");
+  const [steps, setSteps] = useState(initialRequest?.steps ?? 8);
+  const [seed, setSeed] = useState(initialRequest?.seed ?? 43);
+  const [gpu, setGpu] = useState(initialRequest?.gpu ?? "auto");
   const hardware = useHardware();
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
@@ -132,6 +142,7 @@ function AvatarForm({
     generate.isPending ||
     mediaBusy(activeRun) ||
     jobBusy(job.data) ||
+    (!!jobId && job.isPending) ||
     (!!run.data?.parameters?.avatar_after_speech && workflow.isPending);
   return (
     <>

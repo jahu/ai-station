@@ -137,6 +137,21 @@ def publish_video(session, body, *, task=None, parent_run_id=None):
     return job_view(session, task)
 
 
+def preview_artifact(session, plan):
+    rows = session.execute(
+        select(Artifact.run_id, Artifact.id)
+        .join(Run, Run.id == Artifact.run_id)
+        .where(
+            Artifact.run_id.in_(plan.get("segment_run_ids", [])),
+            Artifact.artifact_type == "video",
+            Artifact.trashed_at.is_(None),
+            Run.status == "succeeded",
+        )
+    ).all()
+    by_run = dict(rows)
+    return next((by_run[rid] for rid in reversed(plan.get("segment_run_ids", [])) if rid in by_run), None)
+
+
 def job_view(session, task):
     plan = task.metadata_json["media_plan"]
     if plan.get("timing") is None:
@@ -146,6 +161,8 @@ def job_view(session, task):
         active = [r.id for r in stages if r.status not in TERMINAL]
         return {
             "task_id": task.id,
+            "request": plan["request"],
+            "preview_artifact_id": None,
             "revision": plan["revision"],
             "kind": "avatar",
             "mode": "continuous",
@@ -183,6 +200,8 @@ def job_view(session, task):
         status = "queued"
     return {
         "task_id": task.id,
+        "request": plan["request"],
+        "preview_artifact_id": preview_artifact(session, plan),
         "revision": plan["revision"],
         "kind": plan["kind"],
         "mode": plan["mode"],

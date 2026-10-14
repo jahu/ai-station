@@ -102,6 +102,11 @@ def test_segmented_job_is_durable_and_finishes_only_after_real_cpu_composition(b
             tick(session, "first")
         partial = client.get("/api/media/jobs/" + tid).json()
         assert partial["completed_segments"] == 1 and partial["status"] != "succeeded"
+        assert partial["request"]["prompt"] == "A scene"
+        assert partial["preview_artifact_id"] is not None
+        assert client.get("/api/artifacts/" + partial["preview_artifact_id"]).json()["metadata"][
+            "internal_media"
+        ]
         for worker in ("second", "compose"):
             with session_factory()() as session:
                 tick(session, worker)

@@ -313,3 +313,66 @@ it("defaults to the complete recording and restores its durable job", async () =
   expect(body.image_artifact_id).toBe("portrait");
   expect(screen.getByText("0 of 12 segments complete")).toBeTruthy();
 });
+
+it("restores the saved full-avatar inputs and settings from a job URL without running work", async () => {
+  const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+    expect(init?.method).not.toBe("POST");
+    return {
+      ok: true,
+      json: async () =>
+        url.includes("/media/jobs/")
+          ? {
+              task_id: "saved",
+              revision: 1,
+              kind: "avatar",
+              mode: "continuous",
+              status: "succeeded",
+              duration_seconds: 5,
+              completed_segments: 2,
+              total_segments: 2,
+              active_run_ids: [],
+              resume_allowed: false,
+              error_message: "",
+              final_artifact_id: null,
+              request: {
+                image_artifact_id: "portrait",
+                audio_artifact_id: "voice",
+                speech_text: "Saved words",
+                prompt: "Saved motion",
+                size: 512,
+                steps: 12,
+                seed: 99,
+                gpu: "auto",
+              },
+            }
+          : url.endsWith("/hardware")
+            ? { gpus: [] }
+            : {
+                id: url.endsWith("portrait") ? "portrait" : "voice",
+                type: url.endsWith("portrait") ? "image" : "audio",
+                mime_type: url.endsWith("portrait") ? "image/png" : "audio/wav",
+                original_filename: url.endsWith("portrait")
+                  ? "Saved portrait.png"
+                  : "Saved voice.wav",
+              },
+    };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount("/avatars?job=saved");
+  expect(
+    ((await screen.findByLabelText("Words to say")) as HTMLTextAreaElement)
+      .value,
+  ).toBe("Saved words");
+  expect(
+    (screen.getByLabelText("Scene and motion") as HTMLTextAreaElement).value,
+  ).toBe("Saved motion");
+  await screen.findByText("Saved portrait.png");
+  await screen.findByText("Saved voice.wav");
+  expect(
+    (
+      screen
+        .getByLabelText("Quality 512")
+        .querySelector("input") as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+});
