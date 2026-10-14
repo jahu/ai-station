@@ -1,5 +1,12 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  renderHook,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { clearChatDraft, useChatDraft } from "./chat-draft";
 
 function Composer({ scope }: { scope: string }) {
@@ -101,4 +108,16 @@ it("keeps the same receipt identity for an unchanged retry after reload, but not
   } finally {
     vi.unstubAllGlobals();
   }
+});
+
+it("keeps a newer draft when an earlier Send is accepted", () => {
+  const { result, unmount } = renderHook(() => useChatDraft("one"));
+  act(() => result.current.update("First prompt"));
+  const submitted = result.current.value;
+  act(() => result.current.update("My next prompt"));
+  act(() => result.current.accept(submitted));
+  expect(result.current.value).toBe("My next prompt");
+  unmount();
+  const restored = renderHook(() => useChatDraft("one"));
+  expect(restored.result.current.value).toBe("My next prompt");
 });

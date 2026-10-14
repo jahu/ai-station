@@ -4,6 +4,8 @@ Unsent prompt text survives refresh and navigating between conversations in the
 same browser tab. Entry and saved conversations have separate session drafts;
 accepted Send clears its draft, while a network failure preserves it. Explicit
 **New conversation** clears only the entry draft. Nothing is sent while typing.
+If another prompt was typed while Send was being accepted, acceptance clears only
+the submitted text and preserves that newer draft.
 
 Drafts are bounded to the existing 32,000-character prompt limit and kept in
 browser session storage, not long-term memory. Closing the browser session ends
