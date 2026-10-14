@@ -86,7 +86,7 @@ it("opens a scoped Work draft without mutation and first Send keeps the selected
   await screen.findByText("Same branch and workspace", { exact: false });
   expect(state.writes).toEqual([]);
   expect(screen.queryByText("Attach files & choose tools")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Work", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Work" }));
   expect(
     screen.getByRole("region", { name: "Selected coding task" }),
   ).toBeTruthy();
