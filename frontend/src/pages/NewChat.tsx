@@ -39,7 +39,8 @@ export default function NewChat({
   });
   const initialized = useRef(false);
   const pendingRequest = useRef<{ body: string; id: string } | null>(null);
-  const [mode, setMode] = useState<ChatMode>("chat");
+  const [chosenMode, setMode] = useState<ChatMode | null>(null);
+  const mode = chosenMode ?? preferences.data?.mode ?? "chat";
   const [selection, setSelection] = useState<{
     provider: string;
     model: string;
@@ -55,19 +56,19 @@ export default function NewChat({
     if (initialized.current || !preferences.data || !providers.length) return;
     initialized.current = true;
     const saved = preferences.data;
-    if (saved.mode === "chat" || saved.mode === "work") setMode(saved.mode);
     if (
       saved.model &&
       providers.some((p) => p.key === saved.provider && p.enabled)
     ) {
       onProviderChange(saved.provider);
-      setSelection({ provider: saved.provider, model: saved.model });
     }
   }, [preferences.data, providers, onProviderChange]);
   const model =
     selection && selection.provider === provider?.key
       ? selection.model
-      : provider?.default_model || provider?.models?.[0] || "";
+      : preferences.data?.provider === provider?.key && preferences.data?.model
+        ? preferences.data.model
+        : provider?.default_model || provider?.models?.[0] || "";
   const send = useMutation({
     mutationFn: async () => {
       const values = {
@@ -96,13 +97,18 @@ export default function NewChat({
       onAccepted(receipt.conversation_id);
     },
   });
-  const busy = send.isPending || uploading || modelPending;
+  const busy =
+    send.isPending || uploading || modelPending || preferences.isPending;
   const canSend =
     !!draft.trim() &&
     !!model &&
     !!provider?.enabled &&
     (provider.secret_source === "none" || provider.secret_present) &&
-    !busy;
+    !busy &&
+    (options.action !== "project.create_code" ||
+      (!!options.new_project?.name.trim() &&
+        (options.new_project.executor === "local" ||
+          options.new_project.external_ai)));
   return (
     <section className="new-chat" aria-label="New conversation">
       <h1>What would you like to do?</h1>
@@ -163,7 +169,13 @@ export default function NewChat({
               value={provider?.key ?? ""}
               onChange={(e) => {
                 onProviderChange(e.target.value);
-                setSelection(null);
+                const next = providers.find(
+                  (item) => item.key === e.target.value,
+                );
+                setSelection({
+                  provider: e.target.value,
+                  model: next?.default_model || next?.models?.[0] || "",
+                });
               }}
             >
               {providers.map((p) => (
@@ -233,14 +245,16 @@ export default function NewChat({
             busy={busy || attachments.length > 0}
             onUploading={setUploading}
           />
-          {!options.image_artifact_ids.length && !options.audio_artifact_id && (
-            <TextAttachments
-              attachments={attachments}
-              onChange={setAttachments}
-              busy={send.isPending}
-              onReading={setUploading}
-            />
-          )}
+          {options.action !== "project.create_code" &&
+            !options.image_artifact_ids.length &&
+            !options.audio_artifact_id && (
+              <TextAttachments
+                attachments={attachments}
+                onChange={setAttachments}
+                busy={send.isPending}
+                onReading={setUploading}
+              />
+            )}
         </details>
         <div className="new-chat-footer">
           {["auto", "chat", "image.generate", "image.generate_video"].includes(

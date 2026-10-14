@@ -192,6 +192,22 @@ def mark_failed(session: Session, run: Run, error_type: str, message: str) -> No
 def request_cancel(session: Session, run: Run) -> Run:
     if run.status == RunStatus.CANCEL_REQUESTED:
         return run
+    # A stale Stop can arrive just after setup publishes its coding child.
+    coding_links = {
+        "orchestrator": ("child_run_id", {"project_setup"}),
+        "project_setup": ("coding_run_id", {"worktree_prepare"}),
+        "worktree_prepare": ("coding_run_id", {"local_proposal", "cursor_proposal", "codex_proposal"}),
+    }
+    if run.status == RunStatus.SUCCEEDED and run.executor_type in coding_links:
+        key, executors = coding_links[run.executor_type]
+        child = session.get(Run, run.metadata_json.get(key)) if run.metadata_json.get(key) else None
+        if (
+            child is not None
+            and child.task_id == run.task_id
+            and child.parent_run_id == run.id
+            and child.executor_type in executors
+        ):
+            return request_cancel(session, child)
     if run.executor_type == "agent_workflow" and run.status in TERMINAL:
         from app.agent_workflow import active_workflow_child
 

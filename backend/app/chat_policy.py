@@ -25,7 +25,8 @@ def policy_mode(mode):
 
 def validate_chat_scope(body):
     if body.action not in CHAT_ACTIONS or any(
-        getattr(body, key, None) is not None for key in ("coding", "commit", "publish", "load", "stop")
+        getattr(body, key, None) is not None
+        for key in ("coding", "commit", "publish", "load", "stop", "new_project")
     ):
         raise HTTPException(422, "Switch to Work to operate projects, agents or runtimes")
 

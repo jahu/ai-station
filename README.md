@@ -4,6 +4,11 @@
 the conversation. Chat supports replies and media tools; Work adds scoped project,
 coding and agent actions. See [first-send contracts](docs/first-send.md).
 
+In Work, **Create project & build** accepts a name and goal, creates the owned
+repository/environment and queues its first isolated coding Task. Local AI is the
+default; Cursor/Codex require explicit sharing consent. See the
+[composed project workflow](docs/assistant-project-build.md).
+
 In Chat, selecting an installed llama.cpp model does not start it. Send queues its
 owned load when needed, using saved preferences or discovered devices. See
 [model selection and real autoload acceptance](docs/chat-model-selection.md).

@@ -2,6 +2,11 @@
 
 ## Next priority: conversation-first entry and useful long media
 
+[Create project & build](assistant-project-build.md) now connects a Work name/goal
+to owned project setup and the existing isolated coding flow, with explicit
+external sharing. Shared conversational project context and task-wide graph Stop
+remain separate follow-up work.
+
 The [first increment](first-send.md) implements immediate first Send, durable
 idempotency, settings revisions, remembered new-conversation selection and visible
 server-enforced Chat/Work modes. [System/Settings separation](settings.md) is also

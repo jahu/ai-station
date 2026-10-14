@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Navigate, NavLink, useParams } from "react-router-dom";
 import { api } from "../api";
@@ -64,11 +64,9 @@ function GeneralSettings() {
     queryKey: ["chat-providers"],
     queryFn: () => api<ChatProviderInfo[]>("/chat/providers"),
   });
-  const [values, setValues] = useState<Preferences | null>(null);
+  const [draft, setValues] = useState<Preferences | null>(null);
+  const values = draft ?? preferences.data ?? null;
   const [modelBusy, setModelBusy] = useState(false);
-  useEffect(() => {
-    if (preferences.data) setValues(preferences.data);
-  }, [preferences.data]);
   const provider = useQuery({
     queryKey: ["chat-provider", values?.provider],
     queryFn: () => api<ChatProviderInfo>(`/chat/providers/${values?.provider}`),
@@ -81,7 +79,10 @@ function GeneralSettings() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       }),
-    onSuccess: (result) => cache.setQueryData(["chat-preferences"], result),
+    onSuccess: (result) => {
+      cache.setQueryData(["chat-preferences"], result);
+      setValues(null);
+    },
   });
   const busy = save.isPending || modelBusy;
   return (
