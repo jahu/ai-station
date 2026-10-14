@@ -8,6 +8,16 @@ A private SearXNG container provides the JSON search API without account credent
 
 References: [SearXNG Search API](https://docs.searxng.org/dev/search_api.html), [server configuration](https://docs.searxng.org/admin/settings/settings_server.html), [container installation](https://docs.searxng.org/admin/installation-docker.html). Search engines can throttle requests; such failures remain visible. Normal tests use fake HTTP results and never access the internet.
 
+The default profile explicitly enables Bing and Yahoo in `config/search/settings.yml`.
+Listing an engine under `keep_only` does not override its upstream disabled flag.
+On 2026-10-14 the previous profile returned no sources: Brave was rate-limited,
+DuckDuckGo required CAPTCHA, and Bing remained disabled by the pinned defaults.
+The replacement profile returned 11 and 17 results for two deliberate public
+queries in an isolated instance of the same pinned image, from Bing/Yahoo with
+no engine failures. No CAPTCHA or provider access controls are bypassed. This
+is current availability evidence; future provider failures remain visible and
+the operator-configured `AI_STATION_WEB_SEARCH_URL` override is unchanged.
+
 ## Verification
 
 On 2026-09-29, a real Chromium submission in an isolated database dispatched an Assistant Run and Chat Run, searched public llama.cpp documentation through SearXNG and streamed a Polish response from the workstation's managed 27B Q4 llama.cpp model. Five actual source cards persisted after refresh; desktop and mobile layouts passed browser checks. Run `2088778e-6f73-4cec-98f9-9d3a63348602` belongs to that isolated smoke database, not production history. The model was loaded beforehand using its existing two-GPU preset through a normal AI Station Run; no models were downloaded or external runtimes reconfigured.
