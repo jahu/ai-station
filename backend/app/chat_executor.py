@@ -58,6 +58,10 @@ class ChatExecutor:
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
             session.commit()
             return
+        if run.parameters.get("image_followup") and not message.metadata_json.get("web_search", {}).get(
+            "sources"
+        ):
+            raise ProviderError("No usable search sources were returned for this image")
         if run.parameters.get("vision_artifact_ids"):
             from app.vision import image_context
 
@@ -101,12 +105,17 @@ class ChatExecutor:
 
                 save_description(session, run, message)
             message.metadata_json = {**message.metadata_json, "partial": False}
+            if run.parameters.get("image_followup"):
+                from app.image_research import publish_image
+
+                publish_image(session, run, message)
             conversation = session.get(Conversation, run.conversation_id)
             conversation.updated_at = utcnow()
             transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})
             from app.conversation_summary import maybe_enqueue_automatic_summary
 
-            maybe_enqueue_automatic_summary(session, conversation, run)
+            if not run.parameters.get("image_followup"):
+                maybe_enqueue_automatic_summary(session, conversation, run)
         finally:
             session.commit()
             if pending is not None:

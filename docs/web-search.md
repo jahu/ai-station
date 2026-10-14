@@ -15,3 +15,29 @@ On 2026-09-29, a real Chromium submission in an isolated database dispatched an 
 The exact Compose search service passed startup and health checks as an isolated project and was removed afterward. Automated tests use mock HTTP and model providers and cover opt-in behavior, regeneration, source artifacts, cancellation, missing permissions, malformed/oversized responses, redirects, unsafe links and complete engine failure. Search result snippets can be incomplete; source cards identify what was actually retrieved, independently of the model's prose.
 
 Agents can also select this tool with a mandatory, separately reviewed public query. Manual and scheduled Runs share the search permission, cancellation, events and source artifact contracts. See [agent research](agents.md#scheduled-internet-research). Fetching full pages is a separate [reviewed HTTP GET tool](agents.md#reviewed-public-http-fetch); search still does not open result URLs.
+
+## Search-informed image generation
+
+In the Platform assistant, **Auto** and **Generate image** can use **Search the
+web**. Enter a short **Search query** for the subject or company and describe the
+visual result in Message. The switch no longer forces an explicit image request
+into a text-only conversation. Polish “Stwórz obraz…” and English “Create an
+image…” are deterministic image intents.
+
+The assistant queues a normal Chat Run for bounded search and a visual brief using
+the selected model. Only the reviewed query leaves for search; that brief uses
+the current instruction, without unrelated history, memories or summaries.
+Actual source cards and the JSON search artifact remain inspectable. Snippets
+are untrusted references, never tool grants or a claim that pages were opened.
+A successful nonempty brief of at most 4000 characters atomically publishes the
+image Run in the same Task. That Run gets its ordinary media permissions and
+fresh GPU reservation, without network permission. The Library image retains the
+research Run and source artifact ids; optional Upscale follows the existing chain.
+
+Failed search, empty usable sources, failed or oversized inference, cancellation
+and uncertain worker completion do not publish an image. Restart does not replay
+a completed brief. Search combined with another Auto-routed action asks for a
+separate research turn or disabling search, instead of silently changing intent
+or ignoring the selected tool. Explicit incompatible action/media combinations
+remain rejected before enqueueing. Normal verification uses fake search, model
+and native jobs; real search-informed generation is recorded separately when run.

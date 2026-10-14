@@ -998,7 +998,7 @@ function ConversationView({
               onChange={(next) => {
                 setOptions(next);
                 if (
-                  !["auto", "chat"].includes(next.action) ||
+                  !["auto", "chat", "image.generate"].includes(next.action) ||
                   next.image_artifact_ids.length ||
                   next.audio_artifact_id ||
                   next.coding ||
@@ -1030,7 +1030,7 @@ function ConversationView({
             />
           )}
           {(!assistantTurn ||
-            (["auto", "chat"].includes(options.action) &&
+            (["auto", "chat", "image.generate"].includes(options.action) &&
               !options.image_artifact_ids.length &&
               !options.audio_artifact_id &&
               !options.coding &&

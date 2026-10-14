@@ -34,3 +34,18 @@ active stage's image or video result; Stop targets that stage. The Assistant sho
 both outputs inline through its existing Task projection. The Wan child chooses
 the matching native landscape, portrait or square format from observed image
 dimensions. Advanced Edit follow-ups remain bounded to a 2048 maximum side.
+
+## Real combined acceptance
+
+On 2026-10-13 an explicit Assistant Image → video request in the live local
+deployment completed one Task with photo and Wan Runs, retaining both Library
+artifacts and the first-frame source lineage. Qwen generation took about 310
+seconds; Wan produced a fully decoded 1280×704 MP4, 49 frames at 24 fps, in
+about 378 seconds. Only an idle AI Station-owned llama.cpp instance was evicted
+through its normal stop Run to make room; media resource locks were released.
+
+This proves actual composed execution, persistence and video output. It does
+not certify every prompt's visual accuracy: the existing photo pipeline appends
+skin/face styling, and this forest instruction also produced an unrequested
+portrait. That bias requires a prompt-only adapter profile without changing
+the original pipeline. No claim of exact scene adherence is made for this sample.
