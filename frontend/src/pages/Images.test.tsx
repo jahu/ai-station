@@ -487,3 +487,34 @@ it("follows image-to-video after refresh and stops the active video stage", asyn
     false,
   );
 });
+
+it("uses the prompt alone by default and offers explicit portrait styling", async () => {
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path.endsWith("/hardware")
+        ? { gpus: [] }
+        : { id: "run-id", status: "queued" },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  const style = screen.getByRole("checkbox", {
+    name: "Add portrait styling",
+  }) as HTMLInputElement;
+  expect(style.checked).toBe(false);
+  expect(
+    screen.getByText(/Leave off for scenes, products and illustrations/),
+  ).toBeTruthy();
+  fireEvent.click(style);
+  fireEvent.change(screen.getByLabelText("Prompt"), {
+    target: { value: "A portrait in a forest" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Queue generate" }));
+  await screen.findByText("Waiting for an available GPU");
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/images/runs",
+    expect.objectContaining({
+      body: expect.stringContaining('"prompt_style":"pipeline"'),
+    }),
+  );
+});

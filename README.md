@@ -255,3 +255,7 @@ To research an image subject, choose **Generate image** (or use Auto), turn on
 **Search the web**, enter a short **Search query** and describe the visual result.
 The Assistant researches, prepares a prompt with your selected model and
 queues image generation, keeping source cards and the image in the conversation.
+
+Generate now follows your prompt without adding face/skin styling. Enable
+**Add portrait styling** in Images to use the original photographic portrait
+profile. Edit and Recompose keep their identity-preserving behavior.

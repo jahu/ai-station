@@ -120,6 +120,7 @@ class PhotoBody(RequestBody):
     mode: Literal["t2i", "img2img", "recompose", "upscale"]
     backend: Literal["qwen", "juggernaut"] = "qwen"
     prompt: str = Field(default="", max_length=10000)
+    prompt_style: Literal["pipeline", "prompt"] = "pipeline"
     negative: str | None = Field(default=None, max_length=10000)
     edit_prompt: str = Field(default="", max_length=10000)
     width: int | None = Field(default=None, ge=256, le=2048, multiple_of=32)
@@ -424,6 +425,7 @@ def start_photo(body: PhotoBody):
             device=device_for(body.gpu),
             output=str(output),
             inputs=inputs,
+            prompt_style=body.prompt_style,
         )
     except PhotoCommandError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

@@ -204,3 +204,8 @@ Photo Runs in one Task. The search switch augments an explicit new-image intent
 instead of overriding routing. Sources and the generated prompt are persisted;
 only successful bounded inference publishes the photo child in the completion
 transaction. See [web search](web-search.md#search-informed-image-generation).
+
+The image Generate adapter's prompt-only profile changes two style defaults in
+an owned imported pipeline process without changing the original file. The
+configured pipeline and Python remain administrator-owned; callers select only
+the typed profile. See [image profiles](image-workflows.md#prompt-only-generation-profile).

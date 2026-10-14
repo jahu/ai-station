@@ -11,7 +11,10 @@ def prepare_brief(session, run, params):
 
     prompt, followup = image_followup(params["content"])
     request = ImageRequest(
-        mode="t2i", prompt=prompt, upscale_result=params.get("upscale_result", False) or followup
+        mode="t2i",
+        prompt=prompt,
+        prompt_style="prompt",
+        upscale_result=params.get("upscale_result", False) or followup,
     )
     run.parameters = {
         **run.parameters,

@@ -30,12 +30,17 @@ from PIL import Image
 assert os.environ['HF_HUB_OFFLINE'] == '1'
 assert os.environ['TRANSFORMERS_OFFLINE'] == '1'
 args = sys.argv
-if '--prompt' in args and args[args.index('--prompt')+1] == 'fail':
-    print('expected failure', file=sys.stderr)
-    sys.exit(3)
-print('x' * 300000)
-print('diagnostic', file=sys.stderr)
-Image.new('RGB', (64,48), '#426c57').save(args[args.index('--out')+1])
+PHOTO_SUFFIX = 'portrait details'
+T2I_NEGATIVE = 'illustration'
+def main():
+    if '--prompt' in args and args[args.index('--prompt')+1] == 'fail':
+        print('expected failure', file=sys.stderr)
+        sys.exit(3)
+    print('x' * 300000)
+    print('diagnostic', file=sys.stderr)
+    Image.new('RGB', (64,48), '#426c57').save(args[args.index('--out')+1])
+if __name__ == '__main__':
+    main()
 """)
     monkeypatch.setenv("AI_STATION_PHOTO_PYTHON", sys.executable)
     monkeypatch.setenv("AI_STATION_PHOTO_SCRIPT", str(script))
@@ -666,3 +671,32 @@ def test_search_brief_to_managed_photo_preserves_research_lineage(bridge, monkey
             == detail["messages"][-1]["metadata"]["web_search"]["artifact_id"]
         )
         assert client.get("/api/artifacts/" + artifact["id"] + "/file").content == png()
+
+
+def test_prompt_style_validation_and_auditable_native_dispatch(bridge):
+    with TestClient(app) as client:
+        source = upload(client)
+        for body in [
+            {
+                "mode": "img2img",
+                "edit_prompt": "change sky",
+                "input_artifact_ids": [source["id"]],
+                "prompt_style": "prompt",
+            },
+            {"mode": "t2i", "prompt": "forest", "prompt_style": "unknown"},
+        ]:
+            assert client.post("/api/images/runs", json=body).status_code == 422
+        response = client.post(
+            "/api/images/runs", json={"mode": "t2i", "prompt": "forest", "prompt_style": "prompt"}
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "profile-test")
+        run = client.get("/api/runs/" + response.json()["id"]).json()
+        assert run["status"] == "succeeded", run
+        artifact = client.get("/api/artifacts?run_id=" + run["id"]).json()[0]
+        assert artifact["metadata"]["prompt_style"] == "prompt"
+        assert (
+            "photo.profile: prompt-only"
+            in bridge.get("/v1/process/" + run["id"], params={"stdout_offset": 0}).json()["stdout"]
+        )

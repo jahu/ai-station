@@ -37,7 +37,10 @@ def build_photo_argv(
     device: str,
     output: str,
     inputs: list[str],
+    prompt_style: str = "pipeline",
 ) -> list[str]:
+    if prompt_style not in {"pipeline", "prompt"} or prompt_style == "prompt" and mode != "t2i":
+        raise PhotoCommandError("Prompt-only styling supports text-to-image only")
     if not _DEVICE.match(device):
         raise PhotoCommandError("Device must look like cuda:<index>")
     for value in (python, script, output, *inputs):
@@ -72,6 +75,8 @@ def build_photo_argv(
         ]
         if negative:
             argv += ["--negative", negative]
+        if prompt_style == "prompt":
+            argv = [python, str(Path(__file__).with_name("photo_job.py")), script, *argv[2:]]
         return argv
     if mode == "img2img":
         if len(inputs) != 1:

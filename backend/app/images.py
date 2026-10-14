@@ -88,6 +88,7 @@ class ImageRequest(BaseModel):
     mode: Literal["t2i", "img2img", "recompose", "upscale"]
     backend: Literal["qwen", "juggernaut"] = "qwen"
     prompt: str = Field(default="", max_length=10_000)
+    prompt_style: Literal["pipeline", "prompt"] = "pipeline"
     negative: str | None = Field(default=None, max_length=10_000)
     edit_prompt: str = Field(default="", max_length=10_000)
     width: int | None = Field(default=None, ge=256, le=2048, multiple_of=32)
@@ -108,6 +109,8 @@ class ImageRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_mode(self) -> Self:
+        if self.prompt_style == "prompt" and self.mode != "t2i":
+            raise ValueError("Prompt-only styling applies to Generate")
         if self.mode == "upscale" and self.upscale_result:
             raise ValueError("Upscale already enlarges its source; choose it only once")
         if self.video_prompt and (self.upscale_result or self.mode == "upscale"):

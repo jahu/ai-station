@@ -86,5 +86,6 @@ class PhotoPipeExecutor(HostMediaExecutor):
                 "inputs",
             )
         }
+        payload["prompt_style"] = run.parameters.get("prompt_style", "pipeline")
         payload.update(run_id=run.id, gpu=allocated, output_relative=output)
         return runner.start_photo(payload)
