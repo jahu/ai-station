@@ -103,6 +103,7 @@ it("continues the visible task and keeps its model and workspace explicit", asyn
   const writes = mount();
   await screen.findByRole("region", { name: "Current coding task" });
   expect(screen.getByText(/Local AI · Coding model/)).toBeTruthy();
+  expect(screen.getByText(/Task model:/)).toBeTruthy();
   fireEvent.change(screen.getByRole("textbox", { name: "Message" }), {
     target: { value: "Add tests" },
   });

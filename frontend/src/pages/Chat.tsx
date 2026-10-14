@@ -1043,26 +1043,36 @@ function ConversationView({
       <div className="chat-heading">
         <div>
           <h2>{conversation.title}</h2>
-          <UnifiedModelPicker
-            providerKey={conversation.provider}
-            modelKey={conversation.model}
-            label={conversation.model_label}
-            location={
-              conversation.provider_location as "local" | "external" | undefined
-            }
-            busy={busy}
-            onSelect={(choice) =>
-              settings.mutate({
-                model: choice.model_key,
-                provider: choice.provider_key,
-                execution_mode: conversation.execution_mode,
-                title: conversation.title,
-                system_prompt: conversation.system_prompt,
-                temperature: conversation.temperature,
-                max_tokens: conversation.max_tokens,
-              })
-            }
-          />
+          {continuing && context ? (
+            <p className="muted">
+              Task model:{" "}
+              <strong>
+                {context.model_label || context.model || "Provider default"}
+              </strong>
+            </p>
+          ) : (
+            <UnifiedModelPicker
+              providerKey={conversation.provider}
+              modelKey={conversation.model}
+              label={conversation.model_label}
+              location={
+                conversation.provider_location as
+                  "local" | "external" | undefined
+              }
+              busy={busy}
+              onSelect={(choice) =>
+                settings.mutate({
+                  model: choice.model_key,
+                  provider: choice.provider_key,
+                  execution_mode: conversation.execution_mode,
+                  title: conversation.title,
+                  system_prompt: conversation.system_prompt,
+                  temperature: conversation.temperature,
+                  max_tokens: conversation.max_tokens,
+                })
+              }
+            />
+          )}
         </div>
         {conversation.active_run && (
           <Link to={`/runs/${conversation.active_run.id}`}>
