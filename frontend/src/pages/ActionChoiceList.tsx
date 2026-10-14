@@ -117,10 +117,12 @@ export function ActionChoiceList({
   value,
   onChange,
   disabled,
+  allowWork = true,
 }: {
   value: string;
   onChange: (action: string) => void;
   disabled?: boolean;
+  allowWork?: boolean;
 }) {
   const id = useId();
   const selected = ACTIONS.find((item) => item.key === value) ?? ACTIONS[0];
@@ -136,7 +138,15 @@ export function ActionChoiceList({
           if (event.key === "Enter") event.preventDefault();
         }}
       >
-        {ACTIONS.map((item) => (
+        {ACTIONS.filter(
+          (item) =>
+            allowWork ||
+            ["auto", "chat"].includes(item.key) ||
+            item.key.startsWith("image.") ||
+            ["audio.speech", "avatar.animate", "video.generate"].includes(
+              item.key,
+            ),
+        ).map((item) => (
           <option key={item.key} value={item.key}>
             {item.title}
           </option>

@@ -202,7 +202,7 @@ def planner_context(session, conversation, user):
     return list(reversed(context))
 
 
-def enqueue_assistant(session, conversation, user, body):
+def enqueue_assistant(session, conversation, user, body, *, commit=True):
     selected_plan = explicit_plan(body.model_dump(mode="json", exclude={"attachments"}))
     project_name = (
         requested_project_name(body.content, body.action)
@@ -393,6 +393,8 @@ def enqueue_assistant(session, conversation, user, body):
         retry_class="inspect",
         parameters={
             **body.model_dump(mode="json", exclude={"attachments"}),
+            "policy_mode": "chat" if getattr(body, "execution_mode", None) == "chat" else "work",
+            "policy_version": 1,
             "user_message_id": user.id,
             "model": conversation.model,
             "planner_context": planner_context(session, conversation, user),
@@ -400,7 +402,7 @@ def enqueue_assistant(session, conversation, user, body):
         },
         permissions=chat_permissions(
             snapshot,
-            ["manage_agents"]
+            ([] if getattr(body, "execution_mode", None) == "chat" else ["manage_agents"])
             + (["filesystem_read", "manage_models"] if images else [])
             + (["external_ai"] if body.coding and body.coding.external_ai else []),
         ),
@@ -414,7 +416,7 @@ def enqueue_assistant(session, conversation, user, body):
     user.metadata_json = {
         **user.metadata_json,
         "images": images,
-        "execution_mode": "orchestrator",
+        "execution_mode": "chat" if getattr(body, "execution_mode", None) == "chat" else "orchestrator",
     }
     from app.chat_attachments import link_attachments
 
@@ -431,7 +433,8 @@ def enqueue_assistant(session, conversation, user, body):
     conversation.updated_at = utcnow()
     if conversation.title == "New conversation":
         conversation.title = body.content[:80]
-    session.commit()
+    if commit:
+        session.commit()
     return run_dict(run)
 
 
@@ -616,8 +619,14 @@ class AssistantExecutor:
         transition(session, run, RunStatus.RUNNING, event_type="executor.started")
         session.commit()
         plan = explicit_plan(run.parameters)
+        if plan is None and run.parameters.get("policy_mode") == "chat":
+            plan = Plan(action="chat", reason="Answer in this conversation with the selected tools.")
         if plan is None:
             plan = asyncio.run(self.plan(session, run))
+        if plan is not None:
+            from app.chat_policy import constrain_plan
+
+            plan = constrain_plan(plan, run.parameters)
         if plan and plan.action in {"video.generate", "image.generate_video"}:
             from app.video import capabilities
 

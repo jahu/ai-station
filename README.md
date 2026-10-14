@@ -1,6 +1,10 @@
 # AI Station
 
-**Next implementation milestone (planned, not deployed):** a conversation-first
+**Conversation entry:** type immediately at `/` or `/chat`; the first Send creates
+the conversation. Chat supports replies and media tools; Work adds scoped project,
+coding and agent actions. See [first-send contracts](docs/first-send.md).
+
+**Implementation roadmap:** a conversation-first
 entry with Chat/Work, simple model and verified reasoning selection, separate
 System/Settings, and longer local video/avatars. Start with the
 [implementation brief and model handoff](docs/plans/2026-10-chat-work-media.md).

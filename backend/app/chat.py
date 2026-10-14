@@ -1,5 +1,7 @@
 """Conversation intent, immutable run context, and inspectable message history."""
 
+import hashlib
+import json
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -8,8 +10,15 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.assistant import AssistantInputs, assistant_needs_provider, enqueue_assistant, task_results
+from app.assistant import (
+    AssistantInputs,
+    assistant_needs_provider,
+    enqueue_assistant,
+    explicit_plan,
+    task_results,
+)
 from app.chat_attachments import TextAttachment, link_attachments, message_content, save_attachments
+from app.chat_policy import POLICY_VERSION, policy_mode, validate_chat_scope
 from app.chat_providers import BUILTIN_KEY, chat_permissions, snapshot_provider
 from app.conversation_summary import (
     enqueue_summary,
@@ -20,7 +29,7 @@ from app.conversation_summary import (
     uncovered_text,
 )
 from app.db import session_scope, utcnow
-from app.models import Conversation, MemoryEntry, Message, ModelFile, Run, Task
+from app.models import ChatTurnRequest, Conversation, MemoryEntry, Message, ModelFile, Run, Setting, Task
 from app.runs import create_run, create_task, run_dict
 from app.serialize import conversation_dict, iso, message_dict
 from app.state import TERMINAL
@@ -31,7 +40,7 @@ DB = Annotated[Session, Depends(session_scope)]
 
 class ConversationBody(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    execution_mode: Literal["local", "orchestrator"] = "local"
+    execution_mode: Literal["local", "orchestrator", "chat", "work"] = "local"
     title: str = Field(default="New conversation", min_length=1, max_length=300)
     provider: str = Field(default=BUILTIN_KEY, min_length=1, max_length=80)
     model: str = Field(min_length=1, max_length=200)
@@ -44,7 +53,7 @@ class MessageBody(AssistantInputs):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     content: str = Field(min_length=1, max_length=32000)
     attachments: list[TextAttachment] = Field(default_factory=list, max_length=4)
-    execution_mode: Literal["auto", "local", "orchestrator"] = "auto"
+    execution_mode: Literal["auto", "local", "orchestrator", "chat", "work"] = "auto"
 
     @model_validator(mode="after")
     def validate_context(self):
@@ -83,6 +92,7 @@ def conversation_view(session, row):
     return {
         **conversation_dict(row),
         "model_label": label,
+        "settings_version": row.settings_version,
         "provider_name": provider.name if provider else row.provider,
         "provider_location": provider.location if provider else "local",
     }
@@ -125,6 +135,7 @@ def edit_conversation(conversation_id: UUID, body: ConversationBody, session: DB
     for key, value in body.model_dump().items():
         setattr(row, key, value)
     row.updated_at = utcnow()
+    row.settings_version += 1
     session.commit()
     return conversation_view(session, row)
 
@@ -293,6 +304,8 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
         parameters={
             "web_search": web_search,
             "execution_mode": "local",
+            "policy_mode": policy_mode(user.metadata_json.get("execution_mode", "local")),
+            "policy_version": POLICY_VERSION,
             **snapshot,
             "model": row.model,
             "temperature": row.temperature,
@@ -331,10 +344,29 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
 
 @router.post("/conversations/{conversation_id}/messages", status_code=202)
 def send(conversation_id: UUID, body: MessageBody, session: DB):
+    return submit_message(conversation_id, body, session)
+
+
+def submit_message(conversation_id, body, session, *, commit=True):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
+    mode = turn_execution_mode(row, body)
+    if mode == "chat":
+        validate_chat_scope(body)
+    use_assistant = (
+        mode in {"orchestrator", "work"}
+        or mode == "chat"
+        and (
+            body.action not in {"auto", "chat"}
+            or body.image_artifact_ids
+            or body.audio_artifact_id
+            or explicit_plan(body.model_dump(mode="json", exclude={"attachments"})) is not None
+        )
+    )
+    if mode in {"chat", "work"}:
+        body = body.model_copy(update={"execution_mode": mode})
     # Deterministic host inspection/runtime control does not contact an LLM.
-    if turn_execution_mode(row, body) != "orchestrator" or assistant_needs_provider(body):
+    if not use_assistant or assistant_needs_provider(body):
         snapshot_provider(session, row)  # Validate the selected provider before attachments.
     user = Message(
         conversation_id=row.id,
@@ -352,23 +384,17 @@ def send(conversation_id: UUID, body: MessageBody, session: DB):
         user.metadata_json = {**user.metadata_json, "web_search": search_options}
     session.add(user)
     session.flush()
-    if body.attachments:
-        user.metadata_json = {
-            **user.metadata_json,
-            "attachments": save_attachments(session, user, body.attachments),
-        }
-    mode = turn_execution_mode(row, body)
     user.metadata_json = {
         **user.metadata_json,
         "execution_mode": mode,
         "execution_mode_override": body.execution_mode,
     }
-    if mode == "orchestrator":
-        return enqueue_assistant(session, row, user, body)
-    if (
+    if use_assistant:
+        result = enqueue_assistant(session, row, user, body, commit=False)
+    elif (
         body.image_artifact_ids
         or body.audio_artifact_id
-        or body.action != "auto"
+        or body.action not in {"auto", "chat"}
         or body.coding
         or body.commit
         or body.publish
@@ -376,7 +402,128 @@ def send(conversation_id: UUID, body: MessageBody, session: DB):
         or body.stop
     ):
         raise HTTPException(422, "Select Platform assistant for this turn to use capability actions")
-    return enqueue(session, row, user=user)
+    else:
+        result = enqueue(session, row, user=user, commit=False)
+    if body.attachments:
+        user.metadata_json = {
+            **user.metadata_json,
+            "attachments": save_attachments(session, user, body.attachments),
+        }
+        link_attachments(session, user, session.get(Run, result["id"]))
+    if commit:
+        session.commit()
+    return result
+
+
+class TurnBody(MessageBody):
+    client_request_id: UUID
+    conversation_id: UUID | None = None
+    selection: ConversationBody | None = None
+    expected_settings_version: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def selection_scope(self):
+        if self.conversation_id is None and self.selection is None:
+            raise ValueError("Select a model for the new conversation")
+        if self.conversation_id is not None and self.selection is not None:
+            raise ValueError("Save conversation settings before sending")
+        if self.conversation_id is not None and self.expected_settings_version is None:
+            raise ValueError("Include the current conversation settings version")
+        return self
+
+
+@router.post("/turns", status_code=202)
+def accept_turn(body: TurnBody, session: DB):
+    digest = hashlib.sha256(
+        json.dumps(body.model_dump(mode="json"), sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    receipt = session.get(ChatTurnRequest, str(body.client_request_id))
+    if receipt:
+        if receipt.payload_hash != digest:
+            raise HTTPException(409, "This request ID already belongs to a different message")
+        return turn_receipt(session, receipt)
+    if body.conversation_id:
+        row = conversation(session, body.conversation_id)
+        if row.settings_version != body.expected_settings_version:
+            raise HTTPException(409, "Conversation settings changed; refresh before sending")
+    else:
+        selection = body.selection
+        snapshot_provider(session, Conversation(provider=selection.provider, model=selection.model))
+        row = Conversation(**selection.model_dump())
+        session.add(row)
+        session.flush()
+    message = MessageBody.model_validate({key: getattr(body, key) for key in MessageBody.model_fields})
+    result = submit_message(row.id, message, session, commit=False)
+    session.flush()
+    user = session.scalar(select(Message).where(Message.run_id == result["id"], Message.role == "user"))
+    receipt = ChatTurnRequest(
+        id=str(body.client_request_id),
+        payload_hash=digest,
+        conversation_id=row.id,
+        user_message_id=user.id,
+        task_id=result["task_id"],
+        run_id=result["id"],
+    )
+    session.add(receipt)
+    if body.conversation_id is None:
+        saved = session.get(Setting, "conversation_preferences")
+        previous = ChatPreferences.model_validate(saved.value if saved else {})
+        values = previous.model_copy(
+            update={
+                "version": previous.version + 1,
+                "mode": policy_mode(row.execution_mode),
+                "provider": row.provider,
+                "model": row.model,
+            }
+        ).model_dump()
+        if saved is None:
+            session.add(Setting(key="conversation_preferences", value=values))
+        else:
+            saved.value = values
+    session.commit()
+    return turn_receipt(session, receipt)
+
+
+def turn_receipt(session, receipt):
+    return {
+        "conversation_id": receipt.conversation_id,
+        "user_message_id": receipt.user_message_id,
+        "task_id": receipt.task_id,
+        "run": run_dict(session.get(Run, receipt.run_id)),
+    }
+
+
+class ChatPreferences(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    version: int = Field(default=0, ge=0)
+    mode: Literal["chat", "work"] = "chat"
+    provider: str = Field(default=BUILTIN_KEY, min_length=1, max_length=80)
+    model: str = Field(default="", max_length=200)
+    send_key: Literal["enter", "ctrl-enter"] = "enter"
+
+
+@router.get("/preferences")
+def preferences(session: DB):
+    row = session.get(Setting, "conversation_preferences")
+    return ChatPreferences.model_validate(row.value if row else {}).model_dump()
+
+
+@router.put("/preferences")
+def save_preferences(body: ChatPreferences, session: DB):
+    row = session.get(Setting, "conversation_preferences")
+    current = ChatPreferences.model_validate(row.value if row else {})
+    if current.version != body.version:
+        raise HTTPException(409, "Preferences changed; refresh before saving")
+    if body.model:
+        snapshot_provider(session, Conversation(provider=body.provider, model=body.model))
+    values = body.model_copy(update={"version": current.version + 1}).model_dump()
+    if row is None:
+        row = Setting(key="conversation_preferences", value=values)
+        session.add(row)
+    else:
+        row.value = values
+    session.commit()
+    return values
 
 
 @router.post("/conversations/{conversation_id}/regenerate", status_code=202)
@@ -391,7 +538,8 @@ def regenerate(conversation_id: UUID, session: DB):
     )
     if user is None:
         raise HTTPException(409, "There is no user message to regenerate")
-    if user.metadata_json.get("execution_mode", row.execution_mode) == "orchestrator":
+    source_run = session.get(Run, user.run_id) if user.run_id else None
+    if source_run and source_run.executor_type == "orchestrator":
         raise HTTPException(409, "Send a new instruction to repeat an assistant action explicitly")
     responses = list(
         session.scalars(

@@ -2,13 +2,18 @@
 
 ## Next priority: conversation-first entry and useful long media
 
+The [first increment](first-send.md) implements immediate first Send, durable
+idempotency, settings revisions, remembered new-conversation selection and visible
+server-enforced Chat/Work modes. The shared-shell/model-picker refinement,
+System/Settings split, verified reasoning and longer media remain next increments.
+
 User direction on 2026-10-14 is captured in the
 [implementation brief and handoff](plans/2026-10-chat-work-media.md): immediate
 first Send, explicit Chat/Work with media tools, unified model/verified reasoning
 selection, distinct System/Settings, and longer Wan/whole-speech EchoMimic output.
 The brief defines nine ordered increments and acceptance gates for GPT-6.1-Sol.
-**Planning only:** no implementation, new long-media smoke or deployment is claimed
-by these documents. Existing unfinished Memory and create-project-and-code work
+Remaining increments are planned; no new long-media success is claimed. Existing
+unfinished Memory and create-project-and-code work
 is preserved separately; its integration point is explicit in the handoff.
 
 Coding supports checked removal of selected source files, explicit Deleted

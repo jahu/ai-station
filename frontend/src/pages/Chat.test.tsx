@@ -26,28 +26,44 @@ const builtin = {
   error: null,
 };
 
-it("creates a conversation with explicit local model settings", async () => {
-  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
-    ok: true,
-    json: async () =>
-      path.endsWith("/chat/providers")
-        ? [builtin]
-        : path.includes("/chat/providers/")
-          ? builtin
-          : path.endsWith("/llama")
-            ? { models: [], instances: [] }
-            : path.endsWith("/hardware")
-              ? { gpus: [] }
-              : options?.method === "POST"
-                ? { id: "new" }
-                : [],
-  }));
-  vi.stubGlobal("fetch", fetch);
-  const cache = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+it("sends the first prompt without creating an empty conversation", async () => {
+  const writes: { path: string; body: Record<string, unknown> }[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        writes.push({ path, body: JSON.parse(String(init.body)) });
+        return { ok: true, json: async () => ({ conversation_id: "new" }) };
+      }
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/chat/providers")
+            ? [builtin]
+            : path.includes("/chat/providers/")
+              ? builtin
+              : path.endsWith("/preferences")
+                ? {
+                    version: 0,
+                    mode: "chat",
+                    provider: builtin.key,
+                    model: "",
+                    send_key: "enter",
+                  }
+                : path.endsWith("/llama")
+                  ? { models: [], instances: [] }
+                  : path.endsWith("/hardware")
+                    ? { gpus: [] }
+                    : [],
+      };
+    }),
+  );
   render(
-    <QueryClientProvider client={cache}>
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
       <MemoryRouter initialEntries={["/chat"]}>
         <Routes>
           <Route path="/chat" element={<Chat />} />
@@ -56,36 +72,37 @@ it("creates a conversation with explicit local model settings", async () => {
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  await screen.findByLabelText("Model");
-  const advanced = screen
-    .getByText("Advanced settings")
-    .closest("details") as HTMLDetailsElement;
-  expect(advanced.open).toBe(false);
-  fireEvent.click(screen.getByText("Advanced settings"));
-  expect(screen.getByLabelText("Mode local")).toBeTruthy();
-  expect(screen.getByLabelText("Conversation title")).toBeTruthy();
+  const message = await screen.findByRole("textbox", { name: "Message" });
   expect(
-    screen.getByLabelText("Provider local-openai-compatible"),
-  ).toBeTruthy();
-  expect(screen.getByLabelText("Temperature")).toBeTruthy();
-  expect(screen.getByLabelText("Maximum tokens")).toBeTruthy();
-  fireEvent.change(screen.getByLabelText("System prompt"), {
-    target: { value: "Explain clearly" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Create conversation" }));
+    screen.queryByRole("button", { name: "Create conversation" }),
+  ).toBeNull();
+  expect(writes).toHaveLength(0);
+  fireEvent.change(message, { target: { value: "Explain this clearly" } });
+  await vi.waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Send message",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
   await screen.findByRole("heading", { name: "Created chat" });
-  expect(fetch).toHaveBeenCalledWith(
-    "/api/chat/conversations",
-    expect.objectContaining({
-      body: expect.stringContaining('"system_prompt":"Explain clearly"'),
+  expect(writes).toHaveLength(1);
+  expect(writes[0]).toEqual({
+    path: "/api/chat/turns",
+    body: expect.objectContaining({
+      content: "Explain this clearly",
+      execution_mode: "chat",
+      client_request_id: expect.any(String),
+      selection: {
+        provider: builtin.key,
+        model: "test-model",
+        execution_mode: "chat",
+      },
     }),
-  );
-  expect(fetch).toHaveBeenCalledWith(
-    "/api/chat/conversations",
-    expect.objectContaining({
-      body: expect.stringContaining('"provider":"local-openai-compatible"'),
-    }),
-  );
+  });
 });
 
 it("moves through conversation messages with arrow keys", async () => {
@@ -431,19 +448,14 @@ it("overrides this turn without sending or rewriting conversation settings", asy
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  const auto = await screen.findByLabelText("Turn auto");
-  expect(screen.queryByRole("combobox", { name: "Action" })).toBeNull();
-  const list = auto.closest(".turn-choice-list") as HTMLElement;
-  fireEvent.keyDown(list, { key: "End" });
-  fireEvent.keyDown(list, { key: "Enter" });
-  expect(
-    (
-      screen
-        .getByLabelText("Turn orchestrator")
-        .querySelector("input") as HTMLInputElement
-    ).checked,
-  ).toBe(true);
-  expect(await screen.findByRole("combobox", { name: "Action" })).toBeTruthy();
+  const work = await screen.findByRole("button", { name: "Work" });
+  const action = screen.getByRole("combobox", { name: "Action" });
+  expect(action.querySelector('option[value="coding.local"]')).toBeNull();
+  fireEvent.click(work);
+  expect(work.getAttribute("aria-pressed")).toBe("true");
+  expect(action.querySelector('option[value="coding.local"]')).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Chat" }));
+  expect(action.querySelector('option[value="coding.local"]')).toBeNull();
 });
 
 it.each(["image.generate", "image.generate_video"])(
@@ -527,7 +539,7 @@ it.each(["image.generate", "image.generate_video"])(
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await vi.waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0]).toEqual({
-      path: "/api/chat/conversations/research/messages",
+      path: "/api/chat/turns",
       body: expect.objectContaining({
         action,
         web_search: { enabled: true, query: "example.com brand" },
@@ -632,7 +644,7 @@ it("continues coding a created project with local scope without starting work on
   expect(writes[0].body).toEqual(
     expect.objectContaining({
       action: "coding.local",
-      execution_mode: "orchestrator",
+      execution_mode: "work",
       coding: expect.objectContaining({
         project_id: project.id,
         expected_updated_at: project.updated_at,
@@ -642,4 +654,66 @@ it("continues coding a created project with local scope without starting work on
       }),
     }),
   );
+});
+
+it("retries an uncertain first Send with the same request identity and preserved draft", async () => {
+  const posted: Record<string, unknown>[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        posted.push(JSON.parse(String(init.body)));
+        if (posted.length === 1) throw new Error("Response lost");
+        return { ok: true, json: async () => ({ conversation_id: "resumed" }) };
+      }
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/chat/providers")
+            ? [builtin]
+            : path.includes("/chat/providers/")
+              ? builtin
+              : path.endsWith("/preferences")
+                ? {
+                    version: 0,
+                    mode: "chat",
+                    provider: builtin.key,
+                    model: "",
+                    send_key: "enter",
+                  }
+                : path.endsWith("/llama")
+                  ? { models: [], instances: [] }
+                  : path.endsWith("/hardware")
+                    ? { gpus: [] }
+                    : [],
+      };
+    }),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/chat"]}>
+        <Routes>
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/chat/resumed" element={<h1>Resumed conversation</h1>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const message = await screen.findByRole("textbox", { name: "Message" });
+  fireEvent.change(message, { target: { value: "Keep this instruction" } });
+  const send = screen.getByRole("button", { name: "Send message" });
+  await vi.waitFor(() =>
+    expect((send as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.click(send);
+  await screen.findByText("Response lost");
+  expect((message as HTMLTextAreaElement).value).toBe("Keep this instruction");
+  fireEvent.click(send);
+  await screen.findByRole("heading", { name: "Resumed conversation" });
+  expect(posted).toHaveLength(2);
+  expect(posted[0].client_request_id).toBe(posted[1].client_request_id);
 });

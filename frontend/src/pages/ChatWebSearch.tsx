@@ -15,12 +15,14 @@ export function WebSearchControl({
   busy,
   onToggle,
   onQuery,
+  compact = false,
 }: {
   enabled: boolean;
   query: string;
   busy: boolean;
   onToggle: (enabled: boolean) => void;
   onQuery: (query: string) => void;
+  compact?: boolean;
 }) {
   const labelId = useId();
   const items = ["web_search"] as const;
@@ -39,10 +41,9 @@ export function WebSearchControl({
   };
   return (
     <div className="chat-web-search">
-      <p id={labelId} className="dashboard-note">
-        Arrow keys choose the search toggle while the list is focused. Space or
-        Enter selects it. Enter does not send. History and attachments stay
-        local. There is no inspectable search-toggle Run.
+      <p id={labelId} className={compact ? "sr-only" : "dashboard-note"}>
+        Search public information. Only this turn's query is shared with search
+        engines; conversation history and attachments stay private.
       </p>
       <div
         ref={listRef}
