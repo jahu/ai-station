@@ -283,3 +283,10 @@ already depends on it. The stopped conversation's consumers are canceled while
 the other conversation keeps its model prerequisite. Newly submitted consumers
 cannot attach to a startup already being canceled. Native cancellation and
 process inspection continue through the existing worker/Runner contracts.
+
+Work can explicitly bind a conversation to an existing owned coding Task through
+`ChatWorkContext`. This selection is metadata only and version-checked; it never
+moves the Task's original conversation/history, grants external-provider consent,
+or launches work. Follow-up Runs retain the same Task/worktree and record the
+conversation that submitted that turn. Existing conversations without an explicit
+binding retain their original automatic task context.

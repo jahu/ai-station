@@ -4992,3 +4992,58 @@ section:has(> .memory-grid) > .dashboard-note {
   margin: 5px 0 0;
   overflow-wrap: anywhere;
 }
+
+.work-task-picker {
+  position: relative;
+  flex-shrink: 0;
+  margin-bottom: 0.75rem;
+}
+.work-task-picker > .work-context-card {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  width: min(680px, 100%);
+  max-height: 55dvh;
+  overflow-y: auto;
+  box-shadow: 0 16px 40px #0008;
+}
+.work-task-picker input {
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 6px;
+  background: #101113;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.work-task-options {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.65rem 0;
+}
+.work-task-options > .row {
+  min-width: 0;
+  gap: 0.75rem;
+}
+.work-task-options .button {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-start;
+  white-space: normal;
+  text-align: left;
+}
+.work-task-options .button > span {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.work-task-options .button .muted {
+  font-size: 0.8rem;
+  font-weight: normal;
+}
+.work-task-options a {
+  flex: none;
+  font-size: 0.8rem;
+}

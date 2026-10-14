@@ -154,6 +154,14 @@ class Conversation(Base):
     messages: Mapped[list[Message]] = relationship(back_populates="conversation")
 
 
+class ChatWorkContext(Base):
+    __tablename__ = "chat_work_contexts"
+
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"), primary_key=True)
+    task_id: Mapped[str | None] = mapped_column(ForeignKey("tasks.id"), nullable=True)
+    selected_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+
+
 class ChatTurnRequest(Base):
     __tablename__ = "chat_turn_requests"
 

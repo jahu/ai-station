@@ -242,3 +242,111 @@ def test_stop_serializes_with_in_flight_child_publication(scope):
                 capability="coding.local",
                 executor_type="local_proposal",
             )
+
+
+def choose_task(client, scope, cid, version=1, **updates):
+    return client.put(
+        f"/api/chat/conversations/{cid}/work-context",
+        json={
+            "task_id": scope["task_id"],
+            "expected_run_id": scope["source_id"],
+            "expected_settings_version": version,
+            **updates,
+        },
+    )
+
+
+def separate_conversation():
+    with session_factory()() as s:
+        row = Conversation(model="plain", execution_mode="work")
+        s.add(row)
+        s.commit()
+        return row.id
+
+
+def test_explicit_selection_continues_existing_task_without_moving_its_original_history(scope):
+    cid = separate_conversation()
+    with TestClient(app) as client:
+        assert client.get(f"/api/chat/conversations/{cid}").json()["work_context"] is None
+        selected = choose_task(client, scope, cid)
+        assert selected.status_code == 200, selected.text
+        assert selected.json()["settings_version"] == 2
+        assert selected.json()["work_context"]["task_id"] == scope["task_id"]
+        with session_factory()() as s:
+            assert s.get(Task, scope["task_id"]).conversation_id == scope["conversation_id"]
+            assert len(list(s.scalars(select(Run)))) == 2  # selection queues nothing
+        values = body(scope, conversation_id=cid, expected_settings_version=2)
+        reply = client.post("/api/chat/turns", json=values)
+        assert reply.status_code == 202, reply.text
+        run = reply.json()["run"]
+        assert run["task_id"] == scope["task_id"] and run["conversation_id"] == cid
+        assert run["parameters"]["worktree_id"] == scope["worktree_id"]
+        assert client.post("/api/chat/turns", json=values).json()["run"]["id"] == run["id"]
+        assert (
+            client.post(f"/api/chat/conversations/{cid}/tasks/{scope['task_id']}/cancel").status_code == 200
+        )
+        assert client.get("/api/runs/" + run["id"]).json()["status"] == "canceled"
+
+
+def test_selection_rejects_stale_conversation_or_proposal_and_removed_workspace(scope):
+    cid = separate_conversation()
+    with TestClient(app) as client:
+        assert choose_task(client, scope, cid, version=99).status_code == 409
+        assert choose_task(client, scope, cid, expected_run_id=str(uuid4())).status_code == 409
+        with session_factory()() as s:
+            from app.db import utcnow
+
+            s.get(Worktree, scope["worktree_id"]).removed_at = utcnow()
+            s.commit()
+        assert choose_task(client, scope, cid).status_code == 409
+        assert client.get(f"/api/chat/conversations/{cid}").json()["settings_version"] == 1
+
+
+def test_selection_grants_no_external_provider_consent(scope):
+    cid = separate_conversation()
+    with session_factory()() as s:
+        s.get(Run, scope["source_id"]).executor_type = "cursor_proposal"
+        s.commit()
+    with TestClient(app) as client:
+        selected = choose_task(client, scope, cid)
+        assert selected.status_code == 200 and selected.json()["work_context"]["external"]
+        response = client.post(
+            "/api/chat/turns", json=body(scope, conversation_id=cid, expected_settings_version=2)
+        )
+        assert response.status_code == 422, response.text
+        assert "sharing" in response.text
+        with session_factory()() as s:
+            assert len(list(s.scalars(select(Run)))) == 2
+
+
+def test_general_work_selection_is_persistent_and_prevents_implicit_continuation(scope):
+    with TestClient(app) as client:
+        selected = choose_task(client, scope, scope["conversation_id"], task_id=None, expected_run_id=None)
+        assert selected.status_code == 200 and selected.json()["work_context"] is None
+        assert (
+            client.get(f"/api/chat/conversations/{scope['conversation_id']}").json()["work_context"] is None
+        )
+        response = client.post("/api/chat/turns", json=body(scope, expected_settings_version=2))
+        assert response.status_code == 422
+
+
+def test_coding_task_search_matches_project_and_escapes_sql_wildcards(scope):
+    with TestClient(app) as client:
+        assert client.get("/api/coding/sessions?q=Example").json()[0]["id"] == scope["task_id"]
+        assert client.get("/api/coding/sessions?q=Build").json()[0]["id"] == scope["task_id"]
+        assert client.get("/api/coding/sessions?q=%25").json() == []
+        assert client.get("/api/coding/sessions?q=missing").json() == []
+
+
+def test_context_migration_preserves_existing_conversation_task_and_runs(scope):
+    from alembic import command
+    from app.db import alembic_config
+    from app.models import ChatWorkContext
+
+    command.downgrade(alembic_config(), "0021")
+    command.upgrade(alembic_config(), "head")
+    with session_factory()() as s:
+        assert s.get(Conversation, scope["conversation_id"])
+        assert s.get(Task, scope["task_id"]).conversation_id == scope["conversation_id"]
+        assert s.get(Run, scope["source_id"]).parameters["worktree_id"] == scope["worktree_id"]
+        assert list(s.scalars(select(ChatWorkContext))) == []

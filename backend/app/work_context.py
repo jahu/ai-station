@@ -5,20 +5,27 @@ from sqlalchemy import select
 
 from app.coding_sessions import PROPOSALS, Followup, enqueue_followup
 from app.db import utcnow
-from app.models import Message, Project, Run, Task, Worktree
+from app.models import ChatWorkContext, Message, ModelFile, Project, Run, Task, Worktree
 from app.state import TERMINAL
 
 
 def project_context(session, conversation_id):
-    source = session.scalar(
-        select(Run)
-        .join(Task)
-        .where(Task.conversation_id == conversation_id, Run.executor_type.in_(PROPOSALS))
-        .order_by(Run.created_at.desc(), Run.id.desc())
-        .limit(1)
+    binding = session.get(ChatWorkContext, conversation_id)
+    if binding is not None and binding.task_id is None:
+        return None
+    query = select(Run).join(Task).where(Run.executor_type.in_(PROPOSALS))
+    query = (
+        query.where(Task.id == binding.task_id)
+        if binding
+        else query.where(Task.conversation_id == conversation_id)
     )
+    source = session.scalar(query.order_by(Run.created_at.desc(), Run.id.desc()).limit(1))
     if source is None:
         return None
+    return context_of(session, source)
+
+
+def context_of(session, source):
     task = session.get(Task, source.task_id)
     project = session.get(Project, task.project_id)
     worktree = session.get(Worktree, source.parameters.get("worktree_id", ""))
@@ -35,6 +42,15 @@ def project_context(session, conversation_id):
         reason = "Wait for this project's active work to finish."
     elif source.status != "succeeded" and not safe_failure:
         reason = "Inspect the previous execution before continuing."
+    model_key = source.parameters.get("model", "")
+    model = (
+        session.get(ModelFile, model_key.removeprefix("llamacpp:"))
+        if model_key.startswith("llamacpp:")
+        else None
+    )
+    model_label = (
+        model.filename if model else source.parameters.get("model_selection", {}).get("name", model_key)
+    )
     return {
         "task_id": task.id,
         "project_id": task.project_id,
@@ -42,7 +58,8 @@ def project_context(session, conversation_id):
         "title": task.title,
         "expected_run_id": source.id,
         "executor": source.executor_type.removesuffix("_proposal"),
-        "model": source.parameters.get("model", ""),
+        "model": model_key,
+        "model_label": model_label,
         "external": source.executor_type != "local_proposal",
         "ready": reason is None,
         "reason": reason,
@@ -52,7 +69,15 @@ def project_context(session, conversation_id):
 def enqueue_continuation(session, conversation, user, body):
     scope = body.continuation
     task = session.get(Task, str(scope.task_id))
-    if not task or task.conversation_id != conversation.id:
+    binding = session.get(ChatWorkContext, conversation.id)
+    allowed = (
+        binding.task_id
+        if binding is not None
+        else task.id
+        if task and task.conversation_id == conversation.id
+        else None
+    )
+    if not task or allowed != task.id:
         raise HTTPException(422, "Choose a coding task belonging to this conversation")
     if (
         body.execution_mode not in {"work", "orchestrator"}
@@ -82,6 +107,7 @@ def enqueue_continuation(session, conversation, user, body):
         task.id,
         Followup(prompt=body.content, expected_run_id=scope.expected_run_id, external_ai=scope.external_ai),
         commit=False,
+        conversation_id=conversation.id,
     )
     user.run_id = result["id"]
     user.metadata_json = {**user.metadata_json, "work_task_id": task.id}

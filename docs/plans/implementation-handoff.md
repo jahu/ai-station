@@ -82,3 +82,11 @@ backup the idle application's SQLite DB and preserve original record IDs. Keep a
 healthy native Runner when its code is unchanged; upgrade this project's user
 service when native code changes. No drivers, model downloads, external runtimes
 or unrelated infrastructure changes are authorized by routine development.
+
+2026-10-15 continuation increment: explicit existing-task selection in Work is
+implemented on `feat/work-task-selection`, pending validation/review/deployment.
+The picker searches task/project names, pages existing sessions and selects a
+preserved owned workspace without execution. Migration 0022 stores the binding;
+Task ownership/history is not moved. Normal follow-up validation, source-version
+checks and per-turn external consent remain enforced. Blank-entry task selection
+and broader orchestrated workflows remain separate increments.
