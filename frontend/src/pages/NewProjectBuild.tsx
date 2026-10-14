@@ -59,7 +59,7 @@ export function NewProjectBuild({
                     ...value,
                     executor,
                     external_ai: false,
-                    model: "",
+                    model: executor === "local" ? "auto" : "",
                     max_repair_attempts: 0,
                   })
                 }
@@ -103,10 +103,22 @@ export function NewProjectBuild({
           </label>
         </>
       ) : (
-        <p className="muted">
-          Local coding uses the local model selected for this conversation. No
-          external AI is used.
-        </p>
+        <label>
+          Coding model
+          <select
+            value={value.model || ""}
+            disabled={busy}
+            onChange={(event) =>
+              onChange({ ...value, model: event.target.value })
+            }
+          >
+            <option value="auto">Auto · local model with 100k+ context</option>
+            <option value="">Use the conversation model</option>
+          </select>
+          <small className="muted">
+            Auto selects an installed long-context GGUF and keeps coding local.
+          </small>
+        </label>
       )}
     </section>
   );

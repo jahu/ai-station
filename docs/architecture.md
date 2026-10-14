@@ -20,6 +20,10 @@ increments. Atomic first Send, server-enforced Chat/Work, selection-only local
 autoload, the [shared conversation shell](conversation-shell.md), the
 [unified model catalog](model-catalog.md) and distinct System/Settings are delivered.
 [Qualified thinking](chat-thinking.md), session drafts and searchable history are also delivered.
+[Automatic local coding routing](coding-auto-model.md) uses installed GGUF/context
+observations and worker-owned runtime preparation. Auto requires 100k+ actual
+context at coding dispatch, records the chosen model and never grants external AI.
+
 [Contextual Work](contextual-work.md) reuses coding Tasks/worktrees with durable
 Task Stop. [Long-media jobs](long-media.md) add durable segmented video/full-speech
 avatar plans, existing RunDependency edges, owned native execution and a typed CPU

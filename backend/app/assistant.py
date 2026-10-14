@@ -248,7 +248,12 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
             if not conversation.model.strip():
                 raise HTTPException(422, "Choose a local conversation model before starting coding")
             try:
-                model_endpoint(conversation.model, session)
+                if scope.model == "auto":
+                    from app.coding_model_routing import select_coding_model
+
+                    select_coding_model(session)
+                else:
+                    model_endpoint(conversation.model, session)
             except ProviderError as exc:
                 raise HTTPException(409, str(exc)) from exc
     project_name = (
@@ -741,7 +746,9 @@ class AssistantExecutor:
                     "coding_request": {
                         "scope": scope.model_dump(),
                         "prompt": prompt,
-                        "model": params["model"],
+                        "model": "auto"
+                        if scope.executor == "local" and scope.model == "auto"
+                        else params["model"],
                     },
                 }
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
@@ -938,7 +945,9 @@ class AssistantExecutor:
                     for key, value in params["coding"].items()
                     if key not in {"external_ai", "executor", "model"}
                 }
-                body = LocalCodingTask(**scope, prompt=params["content"], model=params["model"])
+                body = LocalCodingTask(
+                    **scope, prompt=params["content"], model=params["coding"].get("model") or params["model"]
+                )
                 child = enqueue_coding_task(
                     session, body, provider="local", task=run.task, parent_run_id=run.id
                 )
