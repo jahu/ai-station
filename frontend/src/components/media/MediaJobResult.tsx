@@ -123,6 +123,21 @@ export default function MediaJobResult({
           error ?? current.error ?? artifact.error ?? stop.error ?? resume.error
         }
       />
+      {!job?.final_artifact_id && job?.preview_artifact_id && (
+        <div className="media-partial-preview">
+          <p className="muted">Latest completed segment · partial preview</p>
+          <video
+            controls
+            preload="metadata"
+            aria-label="Latest completed segment"
+            src={`/api/artifacts/${job.preview_artifact_id}/file`}
+          />
+          <small className="muted">
+            The full film is still being assembled. Finished segments are
+            retained for Resume.
+          </small>
+        </div>
+      )}
       {artifact.data && (
         <>
           <video

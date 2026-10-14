@@ -68,3 +68,9 @@ Stop controls operate on the complete media Task.
 
 [Owned motion checkpoints](wan-motion-context.md) now avoid MP4/VAE re-encoding
 between Wan windows while preserving the same timeline and legacy compatibility.
+
+Saved job URLs now restore the request's portrait/voice or scene inputs, prompt,
+quality, dimensions and duration. A running job can show its latest successful
+segment as a labeled partial preview; this does not replace final verification.
+The same preview is available in the conversation job card. Reopening or inspecting
+an input starts no new workload.

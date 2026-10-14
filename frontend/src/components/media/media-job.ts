@@ -1,7 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api";
 
+export type MediaRequest = {
+  image_artifact_id?: string | null;
+  audio_artifact_id?: string;
+  speech_text?: string | null;
+  prompt?: string;
+  negative_prompt?: string;
+  size?: number;
+  width?: number;
+  height?: number;
+  steps?: number;
+  seed?: number;
+  gpu?: string;
+  duration_seconds?: number;
+  composition_mode?: "continuous" | "shots";
+};
 export type MediaJob = {
+  request?: MediaRequest;
+  preview_artifact_id?: string | null;
   task_id: string;
   revision: number;
   status: string;
