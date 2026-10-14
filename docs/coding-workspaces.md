@@ -17,3 +17,15 @@ Disposable-repository integration tests cover actual Git/venv setup, setup cance
 A real Codex two-turn test passed against synthetic temporary source files: the agent selected source paths, created a file, added another file on the next instruction and preserved the first result in the same worktree. No private repository source was sent. This does not claim real Cursor exploration acceptance; that path has fake-CLI integration coverage. The real opt-in test is `test_real_codex_workspace_followup` in `backend/tests/test_projects.py`, with `AI_STATION_REAL_CODEX_TESTS=1` and an `AI_STATION_CODING_WORKSPACE_EVIDENCE` output path.
 
 Auto currently follows the saved project executor preference and the selected provider's default model. It is a deterministic default, not an LLM-based task/model classifier. Project environments are created offline. Package installation is the explicit **Install project dependencies** Run, not an implicit step of creation or validation. The bounded editing contract still applies: at most ten ordinary UTF-8 source paths and 64 KB of context/review per turn, with the same bound on cumulative uncommitted changes. Unique snippet replacements are applied in order, each matching exactly once, at most twenty per file. Existing branches and settings are available for advanced use.
+
+## Continue through the platform composer
+
+The next increment adds **Continue in Work** to a Coding session. It opens a
+new draft with `work_task=<Task UUID>`; read-only context checks show the current
+project, executor/model and workspace state. Opening this draft creates no
+conversation or Run. First Send validates the latest proposal, atomically creates
+the conversation/binding and queues a follow-up on the existing Task/worktree.
+Receipts prevent a repeated first Send from duplicating the coding action. External
+source sharing is confirmed for this specific follow-up, and conversation model/
+Thinking settings never replace the task's saved coding model. Choosing general
+Chat/Work clears the draft scope. Coding Stop uses the existing task-wide endpoint.

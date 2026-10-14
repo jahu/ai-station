@@ -93,6 +93,14 @@ def detail(task_id: UUID, session: DB):
     return {**summary(session, task, runs), "runs": [redact_obj(run_dict(r)) for r in runs]}
 
 
+@router.get("/sessions/{task_id}/work-context")
+def work_draft_context(task_id: UUID, session: DB):
+    from app.work_context import context_of, selected_source
+
+    _, source = selected_source(session, task_id)
+    return context_of(session, source)
+
+
 class Followup(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     prompt: str = Field(min_length=1, max_length=4000)

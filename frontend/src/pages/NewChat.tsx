@@ -1,5 +1,7 @@
 import { useChatDraft, chatRequestId, clearChatRequest } from "./chat-draft";
 import { useEffect, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Button } from "../components/ui/button";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api";
 import { ErrorNotice } from "../components/common";
@@ -13,6 +15,19 @@ import TextAttachments, { type TextAttachment } from "./TextAttachments";
 import { WebSearchControl } from "./ChatWebSearch";
 import ChatModeSwitch, { type ChatMode } from "./ChatModeSwitch";
 import type { ChatProviderInfo } from "./ChatProviders";
+
+type WorkDraft = {
+  task_id: string;
+  project_name: string;
+  title: string;
+  expected_run_id: string;
+  executor: string;
+  model: string;
+  model_label?: string;
+  external: boolean;
+  ready: boolean;
+  reason: string | null;
+};
 
 type Preferences = {
   version: number;
@@ -35,6 +50,33 @@ export default function NewChat({
   onAccepted: (id: string) => void;
 }) {
   const cache = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const workTaskId = params.get("work_task");
+  const workspace = useQuery({
+    queryKey: ["work-draft", workTaskId],
+    enabled: !!workTaskId,
+    queryFn: () =>
+      api<WorkDraft>(`/coding/sessions/${workTaskId}/work-context`),
+  });
+  useEffect(() => {
+    if (!workTaskId || !workspace.data || params.get("work_run")) return;
+    const values = new URLSearchParams(params);
+    values.set("work_run", workspace.data.expected_run_id);
+    setParams(values, { replace: true });
+  }, [workTaskId, workspace.data, params, setParams]);
+  const expectedWorkRun = params.get("work_run");
+  const [shareCode, setShareCode] = useState(false);
+  const localProvider = providers.find(
+    (item) => item.key === "local-openai-compatible",
+  );
+  const activeProvider = workTaskId ? localProvider : provider;
+  const clearWorkScope = (next: ChatMode) => {
+    const values = new URLSearchParams(params);
+    values.delete("work_task");
+    values.delete("work_run");
+    values.set("mode", next);
+    setParams(values);
+  };
   const preferences = useQuery({
     queryKey: ["chat-preferences"],
     queryFn: () => api<Preferences>("/chat/preferences"),
@@ -42,7 +84,14 @@ export default function NewChat({
   const initialized = useRef(false);
   const pendingRequest = useRef<{ body: string; id: string } | null>(null);
   const [chosenMode, setMode] = useState<ChatMode | null>(null);
-  const mode = chosenMode ?? preferences.data?.mode ?? "chat";
+  const mode = workTaskId
+    ? "work"
+    : (chosenMode ??
+      (params.get("mode") === "work"
+        ? "work"
+        : params.get("mode") === "chat"
+          ? "chat"
+          : (preferences.data?.mode ?? "chat")));
   const [selection, setSelection] = useState<{
     provider: string;
     model: string;
@@ -60,7 +109,13 @@ export default function NewChat({
   const [webEnabled, setWebEnabled] = useState(false);
   const [webQuery, setWebQuery] = useState("");
   useEffect(() => {
-    if (initialized.current || !preferences.data || !providers.length) return;
+    if (
+      workTaskId ||
+      initialized.current ||
+      !preferences.data ||
+      !providers.length
+    )
+      return;
     initialized.current = true;
     const saved = preferences.data;
     if (
@@ -69,13 +124,18 @@ export default function NewChat({
     ) {
       onProviderChange(saved.provider);
     }
-  }, [preferences.data, providers, onProviderChange]);
-  const model =
+  }, [preferences.data, providers, onProviderChange, workTaskId]);
+  const conversationModel =
     selection && selection.provider === provider?.key
       ? selection.model
       : preferences.data?.provider === provider?.key && preferences.data?.model
         ? preferences.data.model
         : provider?.default_model || provider?.models?.[0] || "";
+  const model = workTaskId
+    ? workspace.data?.executor === "local"
+      ? workspace.data.model
+      : localProvider?.default_model || "local"
+    : conversationModel;
   const thinking = useThinking(
     model,
     mode === "chat" &&
@@ -86,13 +146,20 @@ export default function NewChat({
   const send = useMutation({
     mutationFn: async () => {
       submittedDraft.current = draft;
+      const providerVersion = workTaskId
+        ? activeProvider?.updated_at
+        : (selection?.version ?? provider?.updated_at);
       const values = {
-        selection: { execution_mode: mode, provider: provider?.key, model },
-        ...(selection?.version || provider?.updated_at
-          ? {
-              expected_provider_version:
-                selection?.version ?? provider?.updated_at,
-            }
+        selection: {
+          execution_mode: mode,
+          provider: activeProvider?.key ?? "local-openai-compatible",
+          model,
+          ...(workTaskId && workspace.data
+            ? { title: workspace.data.title.slice(0, 300) }
+            : {}),
+        },
+        ...(providerVersion
+          ? { expected_provider_version: providerVersion }
           : {}),
         execution_mode: mode,
         ...(thinking.enabled
@@ -101,6 +168,15 @@ export default function NewChat({
         content: draft.trim(),
         attachments,
         ...options,
+        ...(workTaskId && workspace.data
+          ? {
+              continuation: {
+                task_id: workspace.data.task_id,
+                expected_run_id: expectedWorkRun,
+                external_ai: shareCode,
+              },
+            }
+          : {}),
         web_search: { enabled: webEnabled, query: webQuery },
       };
       const body = JSON.stringify(values);
@@ -124,12 +200,22 @@ export default function NewChat({
       onAccepted(receipt.conversation_id);
     },
   });
-  const busy = send.isPending || uploading || preferences.isPending;
+  const busy =
+    send.isPending ||
+    uploading ||
+    preferences.isPending ||
+    (!!workTaskId && workspace.isPending);
   const canSend =
     !!draft.trim() &&
     !!model &&
-    !!provider?.enabled &&
-    (provider.secret_source === "none" || provider.secret_present) &&
+    (workTaskId
+      ? !!workspace.data?.ready &&
+        !!expectedWorkRun &&
+        workspace.data.expected_run_id === expectedWorkRun &&
+        draft.trim().length <= 4000 &&
+        (!workspace.data.external || shareCode)
+      : !!provider?.enabled &&
+        (provider.secret_source === "none" || provider.secret_present)) &&
     !busy &&
     (options.action !== "project.create_code" ||
       (!!options.new_project?.name.trim() &&
@@ -137,40 +223,106 @@ export default function NewChat({
           options.new_project.external_ai)));
   return (
     <section className="new-chat" aria-label="New conversation">
-      <h1>What would you like to do?</h1>
+      <h1>{workTaskId ? "Continue in Work" : "What would you like to do?"}</h1>
       <p className="muted">
-        {mode === "chat"
-          ? "Ask, explore or create something."
-          : "Describe your goal. Work with projects, code and agents."}
+        {workTaskId
+          ? "Keep building in the same workspace."
+          : mode === "chat"
+            ? "Ask, explore or create something."
+            : "Describe your goal. Work with projects, code and agents."}
       </p>
       <div className="new-chat-controls">
         <ChatModeSwitch
           value={mode}
           disabled={send.isPending}
           onChange={(next) => {
+            if (workTaskId) {
+              if (next === "work") return;
+              clearWorkScope(next);
+              return;
+            }
             setMode(next);
             setOptions(emptyOptions);
           }}
         />
-        <UnifiedModelPicker
-          providerKey={selection?.provider ?? provider?.key ?? ""}
-          modelKey={model}
-          label={selection?.label}
-          location={selection?.location ?? provider?.location}
-          busy={send.isPending}
-          onSelect={(choice) => {
-            onProviderChange(choice.provider_key);
-            setSelection({
-              provider: choice.provider_key,
-              model: choice.model_key,
-              version: choice.config_version,
-              label: choice.display_name,
-              location: choice.location,
-            });
-          }}
-        />
+        {workTaskId ? (
+          <p className="muted">
+            Task model:{" "}
+            <strong>
+              {workspace.data?.model_label ||
+                workspace.data?.model ||
+                "Loading workspace…"}
+            </strong>
+          </p>
+        ) : (
+          <UnifiedModelPicker
+            providerKey={selection?.provider ?? provider?.key ?? ""}
+            modelKey={model}
+            label={selection?.label}
+            location={selection?.location ?? provider?.location}
+            busy={send.isPending}
+            onSelect={(choice) => {
+              onProviderChange(choice.provider_key);
+              setSelection({
+                provider: choice.provider_key,
+                model: choice.model_key,
+                version: choice.config_version,
+                label: choice.display_name,
+                location: choice.location,
+              });
+            }}
+          />
+        )}
       </div>
-      {thinking.available && (
+      {workTaskId && workspace.data && (
+        <section
+          className="work-context-card"
+          aria-label="Selected coding task"
+        >
+          <strong>{workspace.data.project_name}</strong>
+          <p>{workspace.data.title}</p>
+          <p className="muted">
+            {workspace.data.executor === "local"
+              ? "Local AI"
+              : workspace.data.executor}{" "}
+            · Same branch and workspace
+          </p>
+          <div className="row">
+            <Link to={`/coding/${workspace.data.task_id}`}>Open workspace</Link>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={() => clearWorkScope("work")}
+            >
+              General Work
+            </Button>
+          </div>
+          {expectedWorkRun &&
+            workspace.data.expected_run_id !== expectedWorkRun && (
+              <p className="notice">
+                The coding task changed since this draft opened. Open its
+                workspace to continue from the latest result.
+              </p>
+            )}
+          {workspace.data.reason && (
+            <p className="notice">{workspace.data.reason}</p>
+          )}
+          {workspace.data.external && (
+            <label className="work-context-consent">
+              <input
+                type="checkbox"
+                checked={shareCode}
+                disabled={busy}
+                onChange={(event) => setShareCode(event.target.checked)}
+              />
+              Share this prompt and relevant source with{" "}
+              {workspace.data.executor}.
+            </label>
+          )}
+        </section>
+      )}
+      {thinking.available && !workTaskId && (
         <ChatThinking
           value={thinking.enabled}
           busy={send.isPending}
@@ -194,67 +346,73 @@ export default function NewChat({
         sendLabel="Send message"
         autoFocus
         placeholder={
-          mode === "chat"
-            ? "Ask a question or describe what to create…"
-            : "What would you like to build or change?"
+          workTaskId
+            ? "Describe the next change in this project…"
+            : mode === "chat"
+              ? "Ask a question or describe what to create…"
+              : "What would you like to build or change?"
         }
         tools={
-          <>
-            <AssistantActions
-              value={options}
-              onChange={(value) => {
-                setOptions(value);
-                if (
-                  ![
-                    "auto",
-                    "chat",
-                    "image.generate",
-                    "image.generate_video",
-                  ].includes(value.action) ||
-                  value.image_artifact_ids.length ||
-                  value.audio_artifact_id
-                )
-                  setWebEnabled(false);
-              }}
-              allowWork={mode === "work"}
-              busy={busy || attachments.length > 0}
-              onUploading={setUploading}
-            />
-            {options.action !== "project.create_code" &&
-              !options.image_artifact_ids.length &&
-              !options.audio_artifact_id && (
-                <TextAttachments
-                  attachments={attachments}
-                  onChange={setAttachments}
-                  busy={send.isPending}
-                  onReading={setUploading}
-                />
-              )}
-          </>
+          workTaskId ? undefined : (
+            <>
+              <AssistantActions
+                value={options}
+                onChange={(value) => {
+                  setOptions(value);
+                  if (
+                    ![
+                      "auto",
+                      "chat",
+                      "image.generate",
+                      "image.generate_video",
+                    ].includes(value.action) ||
+                    value.image_artifact_ids.length ||
+                    value.audio_artifact_id
+                  )
+                    setWebEnabled(false);
+                }}
+                allowWork={mode === "work"}
+                busy={busy || attachments.length > 0}
+                onUploading={setUploading}
+              />
+              {options.action !== "project.create_code" &&
+                !options.image_artifact_ids.length &&
+                !options.audio_artifact_id && (
+                  <TextAttachments
+                    attachments={attachments}
+                    onChange={setAttachments}
+                    busy={send.isPending}
+                    onReading={setUploading}
+                  />
+                )}
+            </>
+          )
         }
         controls={
-          <>
-            {[
-              "auto",
-              "chat",
-              "image.generate",
-              "image.generate_video",
-            ].includes(options.action) &&
-              !options.image_artifact_ids.length &&
-              !options.audio_artifact_id && (
-                <WebSearchControl
-                  compact
-                  enabled={webEnabled}
-                  query={webQuery}
-                  busy={busy}
-                  onToggle={setWebEnabled}
-                  onQuery={setWebQuery}
-                />
-              )}
-          </>
+          workTaskId ? undefined : (
+            <>
+              {[
+                "auto",
+                "chat",
+                "image.generate",
+                "image.generate_video",
+              ].includes(options.action) &&
+                !options.image_artifact_ids.length &&
+                !options.audio_artifact_id && (
+                  <WebSearchControl
+                    compact
+                    enabled={webEnabled}
+                    query={webQuery}
+                    busy={busy}
+                    onToggle={setWebEnabled}
+                    onQuery={setWebQuery}
+                  />
+                )}
+            </>
+          )
         }
       />
-      {provider?.location === "external" && (
+      {!workTaskId && provider?.location === "external" && (
         <p className="notice">
           External AI · Your message and selected attachments will be sent to{" "}
           {provider.name}.
@@ -263,7 +421,7 @@ export default function NewChat({
       {!model && (
         <p className="muted">Choose an available model to send your message.</p>
       )}
-      <ErrorNotice error={send.error ?? preferences.error} />
+      <ErrorNotice error={send.error ?? preferences.error ?? workspace.error} />
     </section>
   );
 }

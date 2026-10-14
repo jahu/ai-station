@@ -340,3 +340,9 @@ sessions by task/project name. Select one to continue in its preserved worktree
 with the same agent and model. Selection starts nothing; the next Send continues
 that task. **General Work** detaches this choice. Existing Coding history stays
 available, and an external agent still requires explicit sharing consent.
+
+A Coding session's **Continue in Work** opens the main composer with that task
+selected. Opening it creates no conversation or Run; the first Send binds a new
+conversation and continues the same worktree atomically. The selected proposal
+version stays pinned in the draft URL, and stale drafts cannot silently submit
+against newer task results. External agents require fresh sharing consent.
