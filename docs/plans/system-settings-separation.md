@@ -1,6 +1,9 @@
 # Separate System from Settings
 
-Status: planned, 2026-10-14. See the [delivery brief](2026-10-chat-work-media.md).
+Status: **delivered in PR #270**, 2026-10-14. See [current Settings behavior](../settings.md)
+and the [delivery brief](2026-10-chat-work-media.md). The root cause below is the
+historical baseline, and this specification remains the regression contract.
+Do not create another Settings implementation.
 
 ## Root cause and decision
 

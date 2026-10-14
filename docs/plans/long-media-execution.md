@@ -98,6 +98,24 @@ Keep the existing short-clip endpoints/requests compatible. Never accept both a
 contradictory `frames` value and new duration silently. A shared normalized plan
 is used by `/api/video`, `/api/avatars` and assistant dispatch.
 
+Proposed common read/control contract, additive to existing short-Run URLs:
+
+| Proposed operation | Contract |
+| --- | --- |
+| `GET /api/media/jobs/{task_id}` | Validated media Task only; current revision, selected stage attempts, aggregate state, completed/total segments, current stage, partial/final artifact IDs and explicit resume eligibility/reason |
+| `GET /api/media/jobs/{task_id}/stages` | Cursor-paged bounded stage details/events; do not return an unbounded graph in each poll |
+| `POST /api/media/jobs/{task_id}/cancel` | Expected plan revision; transactional cancellation intent plus existing owned-Run cancel requests; no inference or process wait in the handler |
+| `POST /api/media/jobs/{task_id}/resume` | Expected revision and UUID request receipt; validate reusable completion, enqueue missing attempts/dependencies, return the selected new revision; no inline inference |
+
+These routes are proposed, not operational. A duplicate accepted resume returns the
+same revision/attempt IDs; a reused UUID with different input or a stale revision is
+409. Keep historical failure/cancellation visible. Aggregate state is derived from
+the selected plan revision: preparing, queued/waiting resources, generating, composing,
+verifying, succeeded, failed, cancel_requested, canceled or interrupted. No new Run
+state machine is needed. Planner success never sets aggregate `succeeded`; only an
+adopted verified final artifact does. Search, Chat and dedicated workspaces consume
+one projection; do not poll different chains and disagree about job completion.
+
 Persist a versioned, strictly validated `MediaPlan` in Task metadata plus a JSON
 plan artifact. Fields:
 
@@ -223,6 +241,12 @@ installed preview path only after proving checkpoint compatibility. New weights
 are a separate explicit decision, not an automatic download or hidden fallback.
 
 Canonical audio determines time:
+
+Use integer/rational math: for S samples at sample rate R and frame rate P/Q,
+the full-recording target is `N = ceil(S * P / (R * Q))`. Audio remains exactly S
+samples; the video padding is less than one output frame. Plan an audio boundary
+at video frame F from the absolute rational `F * R * Q / P`, consistently rounded
+and clamped to `[0,S]`. Never independently round each chunk's duration and sum it.
 
 1. Validate/decode the complete PCM WAV, preserve its sample count/rate, and derive
    frame count using rational 25 fps timing. If using typed text, finish the TTS

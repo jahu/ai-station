@@ -45,5 +45,6 @@ submit no real workload. Actual deployment/local inference acceptance is recorde
 separately under `data/acceptance/chat-first-turn-20261014`.
 
 This is the first increment of the [conversation and long-media plan](plans/2026-10-chat-work-media.md).
-The next increments refine the shared conversation shell/model picker, split
-System/Settings and qualify reasoning/long-media execution.
+System/Settings is now [separate](settings.md); local selection and first-use
+loading are [delivered](chat-model-selection.md). The next increments refine the
+shared conversation shell/unified model picker and qualify reasoning/long media.
