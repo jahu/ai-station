@@ -1,5 +1,12 @@
 # Platform assistant
 
+**Next UX/policy design:** [Chat and Work](plans/chat-work-experience.md), with
+an immediate first-message composer, shared tools/artifacts and scoped Work
+continuation. Its [delivery brief](plans/2026-10-chat-work-media.md) explicitly
+supersedes the create-conversation-first UX and plans bounded media actions in
+Chat. The rest of this document describes the existing implementation until those
+increments land; neither the mode rename nor its expanded Chat tools is deployed.
+
 The default AI Station screen is a conversation that operates the workstation. The existing workspaces remain direct entry points and detailed inspectors. Ordinary questions, image references, coding requests, agent definitions and media results belong in the same persistent conversation.
 
 ## Execution contract

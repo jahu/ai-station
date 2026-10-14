@@ -1,5 +1,11 @@
 # Local avatar video
 
+**Planned, not implemented:** [full-speech and longer media](plans/long-media-execution.md)
+replaces the short-prefix UX with complete recording/script coverage, bounded
+motion-continuation windows and a single audio timeline. It records the installed
+flash/preview pipeline mismatch and required compatibility/quality tests. Current
+short-clip acceptance below does not establish long-avatar support.
+
 Avatars and Video expose the same concrete capability: EchoMimic V3 portrait animation driven by an existing speech recording. This is not a text-to-video model. The default assistant can also dispatch it when a portrait and WAV are attached, or when the avatar action is selected.
 
 `avatar.animate` creates an ordinary Task/Run through `echomimic` and the shared HostMediaExecutor. It reserves one discovered GPU, can evict idle AI Station-owned LLMs, streams logs, cancels only its owned process group, and preserves uncertain work for inspection. Outputs are MP4 video Artifacts with the portrait and audio as parents; Library, Avatars results and the assistant inspect that shared lineage in both directions. Inputs reuse the validated image and PCM WAV upload endpoints. The initial controls bound area to 256/384/512 squared, 17–81 frames at 25 fps, 4–30 steps and an explicit seed. The source aspect ratio and shorter audio duration are preserved by the installed pipeline.

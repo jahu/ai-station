@@ -1,5 +1,16 @@
 # Full-product acceptance ledger
 
+## Next priority: conversation-first entry and useful long media
+
+User direction on 2026-10-14 is captured in the
+[implementation brief and handoff](plans/2026-10-chat-work-media.md): immediate
+first Send, explicit Chat/Work with media tools, unified model/verified reasoning
+selection, distinct System/Settings, and longer Wan/whole-speech EchoMimic output.
+The brief defines nine ordered increments and acceptance gates for GPT-6.1-Sol.
+**Planning only:** no implementation, new long-media smoke or deployment is claimed
+by these documents. Existing unfinished Memory and create-project-and-code work
+is preserved separately; its integration point is explicit in the handoff.
+
 Coding supports checked removal of selected source files, explicit Deleted
 review labels, cumulative follow-up patches and separate reviewed commits.
 Repairs cannot introduce deletions. See [source removal](coding-file-removal.md)
