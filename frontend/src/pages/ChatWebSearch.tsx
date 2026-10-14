@@ -63,7 +63,7 @@ export function WebSearchControl({
             onClick={() => onToggle(!enabled)}
           >
             <Globe size={16} />
-            <span>Search the web</span>
+            <span>{compact ? "Web search" : "Search the web"}</span>
             <span className="chip">{enabled ? "ON" : "OFF"}</span>
           </button>
         </div>

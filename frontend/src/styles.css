@@ -1346,6 +1346,64 @@ main:focus-visible {
   align-items: start;
 }
 
+.chat-conversation-layout {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.chat-conversation-layout .chat-entry-history {
+  width: 100%;
+  max-width: none;
+}
+.conversation-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 560px;
+  height: calc(100dvh - 170px);
+}
+.conversation-shell > .chat-heading,
+.conversation-shell > .chat-settings-panel,
+.conversation-shell > .chat-composer {
+  flex-shrink: 0;
+}
+.conversation-shell .chat-transcript {
+  flex: 1;
+  max-height: none;
+  min-height: 160px;
+  overscroll-behavior: contain;
+  scroll-padding-bottom: 20px;
+}
+.conversation-shell .chat-composer {
+  background: transparent;
+  padding: 12px 20px;
+}
+.conversation-shell .shared-chat-composer > textarea {
+  min-height: 72px;
+}
+.conversation-shell .new-chat-tools[open] {
+  max-height: 40dvh;
+  overflow: auto;
+}
+.chat-jump-latest {
+  position: sticky;
+  bottom: 8px;
+  display: flex;
+  margin: 0 auto;
+  box-shadow: 0 4px 16px #0004;
+}
+@media (max-width: 600px) {
+  .conversation-shell {
+    height: calc(100dvh - 140px);
+    min-height: 500px;
+  }
+  .conversation-shell .chat-heading,
+  .conversation-shell .chat-transcript {
+    padding: 16px;
+  }
+  .conversation-shell .chat-composer {
+    padding: 10px;
+  }
+}
+
 .project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -4627,12 +4685,37 @@ section:has(> .memory-grid) > .dashboard-note {
   display: none;
 }
 .new-chat-footer .chat-web-search {
-  flex: 1;
-  min-width: 0;
+  flex: 1 1 180px;
+  min-width: min(180px, 100%);
+}
+.new-chat-footer .web-search-choice-list {
+  width: fit-content;
+  max-width: 100%;
 }
 .new-chat-footer .web-search-toggle {
   width: fit-content;
   padding: 10px 12px;
+}
+@media (max-width: 600px) {
+  .new-chat-footer {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+  }
+  .new-chat-footer > .chat-mode-switch {
+    grid-column: 1 / -1;
+  }
+  .new-chat-footer .chat-web-search {
+    min-width: 0;
+    margin: 0;
+  }
+  .new-chat-footer .web-search-toggle {
+    max-width: 100%;
+    padding: 8px 6px;
+    gap: 5px;
+    white-space: nowrap;
+  }
 }
 
 .settings-navigation {
