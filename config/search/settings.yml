@@ -1,6 +1,6 @@
 use_default_settings:
   engines:
-    keep_only: [brave, bing, duckduckgo]
+    keep_only: [bing, yahoo]
 server:
   limiter: false
   image_proxy: false
@@ -11,3 +11,9 @@ search:
 outgoing:
   request_timeout: 7.0
   max_request_timeout: 10.0
+engines:
+  # keep_only does not enable engines disabled in SearXNG's defaults.
+  - name: bing
+    disabled: false
+  - name: yahoo
+    disabled: false
