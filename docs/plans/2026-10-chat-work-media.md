@@ -3,7 +3,8 @@
 Status: **in progress**. Decision date: 2026-10-14.
 The [first-send increment](../first-send.md), [System/Settings split](../settings.md)
 and [selection-only local model loading](../chat-model-selection.md) are delivered.
-The complete conversation shell, unified catalog, verified reasoning and long
+The shared conversation shell, unified catalog, qualified local thinking and
+session draft text are now delivered. The remaining automatic routing, contextual Work and long
 media remain unfinished. Read the [updated implementation handoff](implementation-handoff.md)
 before starting: the historical baseline and paused worktrees below are not the
 current release.

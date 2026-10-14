@@ -1506,6 +1506,19 @@ main:focus-visible {
 .chat-history .dashboard-note {
   padding: 4px 0 8px;
 }
+.chat-history-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #151719;
+  color: #e7e9e8;
+}
+.chat-history-search input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 .chat-conversations {
   display: flex;
   flex-direction: column;
@@ -4773,6 +4786,10 @@ section:has(> .memory-grid) > .dashboard-note {
   margin-top: 12px;
   max-height: 300px;
   overflow-y: auto;
+}
+.chat-entry-history .chat-history {
+  max-height: none;
+  overflow: visible;
 }
 .new-chat-tools > summary {
   display: inline-flex;
