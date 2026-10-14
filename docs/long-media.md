@@ -52,7 +52,11 @@ A real 60-second 1280×704 continuous Wan job passed on this workstation:
 MP4 decode/timing validation and request replay. Evidence is recorded in
 `data/acceptance/long-media-20261014/real-result.json`. This was a four-step draft
 on one GPU; it does not qualify simultaneous two-GPU generation, all quality
-profiles or image-conditioned long output. Full-avatar hardware acceptance is next.
+profiles or image-conditioned long output. A real six-window, 14.2707-second recorded-speech avatar also passed complete
+sample accounting, exact 357-frame/14.28-second video validation and actual browser
+playback at desktop/mobile sizes. It used the 256-pixel, four-step draft profile;
+this does not qualify every portrait, lip-sync quality or 30/60-second avatar profile.
+Evidence is in `data/acceptance/conversational-media-20261015/live-avatar-result.json`.
 
 The longer-term design, including 120/300-second profiles, selected excerpts,
 measured parallel admission and broader quality gates, remains in
@@ -61,3 +65,6 @@ measured parallel admission and broader quality gates, remains in
 The [main conversation](conversational-media.md) now uses these same jobs for
 explicit video durations and whole-speech avatars. Both conversation and workspace
 Stop controls operate on the complete media Task.
+
+[Owned motion checkpoints](wan-motion-context.md) now avoid MP4/VAE re-encoding
+between Wan windows while preserving the same timeline and legacy compatibility.

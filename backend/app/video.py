@@ -98,8 +98,41 @@ class VideoExecutor(HostMediaExecutor):
     artifact_type = "video"
     mime_type = "video/mp4"
 
+    def output_metadata(self, output):
+        import json
+
+        from app.config import get_settings
+        from app.paths import safe_join
+
+        report = safe_join(get_settings().data_dir, output).with_suffix(".json")
+        if not report.is_file():
+            return {}
+        if report.stat().st_size > 8192:
+            raise ValueError("Native video report exceeds its bounded metadata budget")
+        return json.loads(report.read_text())
+
+    def on_success(self, session, run, artifact):
+        motion = artifact.metadata_json.get("motion_context")
+        if motion:
+            from app.artifacts import adopt_existing
+
+            context = adopt_existing(
+                session,
+                relative_path=motion["relative_path"],
+                artifact_type="document",
+                mime_type="application/octet-stream",
+                original_filename="wan-motion.safetensors",
+                run_id=run.id,
+                parent_artifact_ids=[artifact.id],
+                metadata={"internal_media": True, "role": "wan_motion", "context_frames": 17},
+            )
+            if context.sha256 != motion["sha256"] or context.size_bytes != motion["size_bytes"]:
+                raise ValueError("Native motion checkpoint observation changed")
+            artifact.metadata_json = {**artifact.metadata_json, "motion_context_artifact_id": context.id}
+
     def _start(self, runner, run, allocated, output):
         continuation = None
+        motion = None
         if run.parameters.get("previous_video_run_id"):
             from sqlalchemy import select
 
@@ -119,6 +152,11 @@ class VideoExecutor(HostMediaExecutor):
                 )
                 if not artifact or artifact.trashed_at is not None:
                     raise ValueError("Successful prior motion context is unavailable")
+                motion = artifact.metadata_json.get("motion_context")
+                if motion:
+                    context = session.get(Artifact, artifact.metadata_json.get("motion_context_artifact_id"))
+                    if not context or context.trashed_at is not None or context.run_id != previous.id:
+                        raise ValueError("Restore the preceding motion checkpoint before continuing")
                 continuation = {
                     "relative_path": artifact.relative_path,
                     "sha256": artifact.sha256,
@@ -144,6 +182,11 @@ class VideoExecutor(HostMediaExecutor):
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
                 **({"continuation": continuation} if continuation else {}),
+                **(
+                    {"motion_context": {k: motion[k] for k in ("relative_path", "sha256", "size_bytes")}}
+                    if motion
+                    else {}
+                ),
                 **{key: run.parameters[key] for key in keys},
                 **({"image_relative": None} if continuation else {}),
                 **(
