@@ -5,6 +5,22 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current priority override — 2026-10-15
+
+Read [agent-first product direction](agent-first-product.md) before choosing work.
+The user explicitly deprioritized large-project IDE development and expanding
+Cursor/Codex integrations. Keep their services/records intact. Next implement a
+typed isolated local Python execution tool for agents and an XLSX/CSV result flow,
+then agent-oriented workspace/results and website acceptance, then recurring typed
+price observations with scoped real email delivery. Container isolation now serves
+agent scripts; full AI Station self-suite acceptance is deferred as a product goal.
+Coding navigation changes follow working replacement views and preserve old tasks.
+
+PR #323 is merged/deployed at `8a04874`; local release evidence is under
+`data/acceptance/self-development-validation-20261015`. Its component preparation,
+source isolation and installer fixes remain useful shared agent infrastructure.
+Earlier self-development prioritization below is superseded by this decision.
+
 ## Latest active work
 
 PR #322 is merged and deployed as `35ab4a4`. Final code passed 1576 Python tests

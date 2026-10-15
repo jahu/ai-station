@@ -1,5 +1,11 @@
 # AI Station
 
+Current direction: [agents that can execute local code](docs/plans/agent-first-product.md).
+Chat and Agents lead the experience; existing Coding/Git services supply isolated
+workspaces and inspectable results. Standalone IDE expansion and further external
+coding CLI integrations are deferred. Spreadsheet execution and conditional email
+are planned capabilities, not yet qualified as operational.
+
 **Conversation entry:** type immediately at `/` or `/chat`; the first Send creates
 the conversation. Chat supports replies and media tools; Work adds scoped project,
 coding and agent actions. See [first-send contracts](docs/first-send.md).

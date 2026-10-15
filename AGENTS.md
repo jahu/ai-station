@@ -1,5 +1,7 @@
 # AI Station contributor guidance
 
+Product priorities follow `docs/plans/agent-first-product.md` (user decision, 2026-10-15): focus on useful persistent agents with local code execution; defer standalone IDE/Coding expansion and further Cursor/Codex integration work. Reuse and preserve existing coding services, projects and records.
+
 Read `docs/architecture.md`, `docs/security-model.md`, and `README.md` before changing execution boundaries.
 
 - Preserve the modular monolith: Docker control plane, native user-level Host Runner, typed HTTP over a private Unix socket.

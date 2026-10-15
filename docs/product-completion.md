@@ -1,3 +1,10 @@
+> Current priority override (2026-10-15): [agent-first product plan](plans/agent-first-product.md).
+> Deliver local agent code/data execution, agent-oriented results and website
+> workflows, followed by real price observations and scoped email delivery.
+> Standalone IDE expansion, further Cursor/Codex integrations and full self-development
+> acceptance are deferred. The detailed entries below preserve implementation
+> history; deferred items are outside this milestone, not newly completed.
+
 Node coding projects now use the existing dependency Run to create missing npm
 lockfiles offline from verified public-registry metadata, then install checked
 packages and run saved sandboxed build/test commands. Existing locks remain
