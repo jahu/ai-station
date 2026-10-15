@@ -38,6 +38,9 @@ function mount() {
         <Routes>
           <Route path="/memory/:id" element={<MemoryDetail />} />
           <Route path="/memory" element={<h1>Memory list</h1>} />
+          <Route path="/agents/:id" element={<h1>Agent definition</h1>} />
+          <Route path="/projects/:id" element={<h1>Project details</h1>} />
+          <Route path="/runs" element={<h1>Tagged Runs</h1>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -92,6 +95,96 @@ it("requires confirmation before deletion and handles the empty 204 response", a
   await waitFor(() =>
     expect(fetch.mock.calls.filter((call) => call[1])).toHaveLength(1),
   );
+});
+
+it("opens tagged agent Runs from agent-scoped memory without Enable or Run now", async () => {
+  const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method
+        ? { id: "unexpected" }
+        : {
+            ...entry,
+            scope: "agent",
+            scope_id: "agentone",
+            memory_type: "observation",
+            content: "Workstation was healthy",
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  expect(
+    (
+      await screen.findByRole("link", { name: "Open agent agentone" })
+    ).getAttribute("href"),
+  ).toBe("/agents/agentone");
+  expect(
+    screen
+      .getByRole("link", { name: "View agent runs agentone" })
+      .getAttribute("href"),
+  ).toBe("/runs?agent_id=agentone");
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  fireEvent.click(
+    screen.getByRole("link", { name: "View agent runs agentone" }),
+  );
+  await screen.findByRole("heading", { name: "Tagged Runs" });
+  expect(
+    fetch.mock.calls.filter(([, options]) => options?.method === "POST"),
+  ).toHaveLength(0);
+});
+
+it("opens tagged project Runs from project-scoped memory without starting a coding Run", async () => {
+  const fetch = vi.fn(async (_path: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () =>
+      options?.method
+        ? { id: "unexpected" }
+        : {
+            ...entry,
+            scope: "project",
+            scope_id: "project-1",
+            memory_type: "project_context",
+            content: "Use the owned worktree",
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  expect(
+    (
+      await screen.findByRole("link", { name: "Open project project-1" })
+    ).getAttribute("href"),
+  ).toBe("/projects/project-1");
+  expect(
+    screen
+      .getByRole("link", { name: "View project runs project-1" })
+      .getAttribute("href"),
+  ).toBe("/runs?project_id=project-1");
+  expect(screen.queryByRole("link", { name: /Scoped project/ })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Enable/i })).toBeNull();
+  expect(screen.queryByRole("button", { name: /Run now/i })).toBeNull();
+  fireEvent.click(
+    screen.getByRole("link", { name: "View project runs project-1" }),
+  );
+  await screen.findByRole("heading", { name: "Tagged Runs" });
+  expect(
+    fetch.mock.calls.filter(([, options]) => options?.method === "POST"),
+  ).toHaveLength(0);
+});
+
+it("keeps tagged Runs off global memory", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => entry,
+    })),
+  );
+  mount();
+  await screen.findByDisplayValue(entry.content);
+  expect(screen.queryByRole("link", { name: /Open agent/ })).toBeNull();
+  expect(screen.queryByRole("link", { name: /Open project/ })).toBeNull();
+  expect(screen.queryByRole("link", { name: /View .* runs/ })).toBeNull();
 });
 
 it("moves through Memory entries with arrow keys", async () => {

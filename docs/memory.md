@@ -40,3 +40,7 @@ scope exclusion, revoked grants, target mismatch, immutable observed context,
 restart persistence, provenance and model-argument rejection. Desktop/mobile
 production-frontend previews used mocked APIs and made no writes. No real model
 inference is claimed for this feature.
+
+Project- and agent-scoped memory provenance provides **Open project/agent** and
+**View runs**, linking to the existing scope-filtered run history. Global memory
+has no project/agent actions. See [scope navigation](memory-scope-navigation.md).
