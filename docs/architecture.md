@@ -433,3 +433,10 @@ queued and active-stage GPU state to the conversation and media workspace.
 setup with a bound Local coding workflow. A reviewed project-free local agent may
 provision one app-owned project; later executions reuse its registered identity
 and create fresh worktrees. Original definition snapshots remain immutable.
+## Data inputs
+
+[CSV/XLSX input previews](data-inputs.md) use the artifact store and the ordinary
+worker queue. Trusted bounded read-only parsers operate on verified app-owned
+bytes in a control-plane worker, without host access, network or user code.
+Generated Python execution remains the separate isolated native-runner container
+boundary; metadata inspection does not grant that permission.

@@ -30,6 +30,7 @@ from app.config import get_settings
 from app.connectors import router as connector_router
 from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
+from app.data_inputs import router as data_inputs_router
 from app.db import migrate, session_factory, session_scope, utcnow
 from app.embeddings import router as embedding_router
 from app.events import event_dict, list_events
@@ -84,7 +85,13 @@ async def local_requests(request: Request, call_next):
     if not valid_host(request.headers.get("host", "")):
         return JSONResponse({"detail": "Invalid host header"}, status_code=400)
     if (
-        request.url.path in {"/api/images/uploads", "/api/audio/uploads", "/api/audio/transcription/uploads"}
+        request.url.path
+        in {
+            "/api/images/uploads",
+            "/api/audio/uploads",
+            "/api/audio/transcription/uploads",
+            "/api/data/uploads",
+        }
         and request.method == "POST"
     ):
         length = request.headers.get("content-length", "")
@@ -362,6 +369,7 @@ app.include_router(coding_sessions_router)
 app.include_router(publication_router)
 app.include_router(library_router)
 app.include_router(project_setup_router)
+app.include_router(data_inputs_router)
 app.include_router(project_router)
 app.include_router(maintenance_router)
 app.include_router(memory_router)

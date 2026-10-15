@@ -16,6 +16,7 @@ import {
   Image as ImageIcon,
 } from "lucide-react";
 import LibraryActions from "./LibraryActions";
+import DataPreview from "./DataPreview";
 import { api, type Artifact } from "../api";
 import { ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
@@ -163,14 +164,22 @@ export function Library() {
       const audio =
         /\.wav$/i.test(file.name) ||
         ["audio/wav", "audio/x-wav"].includes(file.type);
-      if (!audio && !/\.(png|jpe?g|webp)$/i.test(file.name))
-        throw new Error("Import PNG, JPEG, WebP or PCM WAV files.");
+      const dataFile = /\.(csv|xlsx)$/i.test(file.name);
+      if (!audio && !dataFile && !/\.(png|jpe?g|webp)$/i.test(file.name))
+        throw new Error("Import PNG, JPEG, WebP, PCM WAV, CSV or XLSX files.");
       const body = new FormData();
       body.append("file", file);
-      return api<Artifact>(audio ? "/audio/uploads" : "/images/uploads", {
-        method: "POST",
-        body,
-      });
+      return api<Artifact>(
+        dataFile
+          ? "/data/uploads"
+          : audio
+            ? "/audio/uploads"
+            : "/images/uploads",
+        {
+          method: "POST",
+          body,
+        },
+      );
     },
     onSuccess: (artifact) => {
       void cache.invalidateQueries({ queryKey: ["library"] });
@@ -193,7 +202,7 @@ export function Library() {
               ref={input}
               hidden
               type="file"
-              accept="image/png,image/jpeg,image/webp,audio/wav,.wav"
+              accept="image/png,image/jpeg,image/webp,audio/wav,.wav,.csv,.xlsx"
               aria-label="Import artifact"
               onChange={(event) => {
                 const file = event.target.files?.[0];
@@ -310,7 +319,7 @@ export function Library() {
                 ? "Try another name, note or type filter."
                 : view === "trash"
                   ? "Artifacts you move to Trash will appear here."
-                  : "Drop an image or WAV here, import a file, or create something new."}
+                  : "Drop an image, WAV, CSV or XLSX here, or import a file."}
             </p>
             {view !== "trash" && !term && (
               <div>
@@ -375,6 +384,7 @@ export function ArtifactDetail() {
         a && (
           <div className="image-workspace">
             <section className="panel artifact-preview">
+              {a.metadata.data_input === true && <DataPreview artifact={a} />}
               {a.type === "image" && (
                 <img
                   src={`/api/artifacts/${a.id}/file`}
