@@ -256,3 +256,18 @@ preserves earlier check history and refreshes the visible artifact/check result.
 Implement it with trusted project commands/policies, owned worktree/active-Run
 guards, clear provenance, Stop and conservative recovery. Do not fake Run/source
 records in production or regenerate the qualified React site just to test export.
+
+## Current active increment: repeat Coding checks
+
+PRs #314/#315 are merged and the combined `71203e7` release is deployed. Original
+IDs and the original checkout WIP are preserved. The production API/worker/native
+Runner passed a real saved React test/build/export, with ZIP visible in Library.
+No new inference was performed. Evidence is in
+`data/acceptance/coding-drafts-20261015/production-export-result.json`.
+
+Continue `feat/coding-rerun-checks` in `.tools/coding-rerun-checks` using
+[coding-rerun-checks.md](../coding-rerun-checks.md). This increment is planned,
+not implemented. It must repeat an existing Coding validation on the same Task,
+without model inference, automatic repair or dependency installation, with
+history, race/ownership guards and fresh manual Stop semantics. Then continue
+the broader product workstreams; the platform goal is still active.
