@@ -1391,10 +1391,14 @@ main:focus-visible {
   margin: 0 auto;
   box-shadow: 0 4px 16px #0004;
 }
-@media (max-width: 600px) {
+@media (max-width: 600px), (max-height: 750px) {
   .conversation-shell {
-    height: calc(100dvh - 140px);
-    min-height: 500px;
+    height: auto;
+    min-height: calc(100dvh - 140px);
+  }
+  .conversation-shell .chat-transcript {
+    flex: none;
+    height: clamp(240px, 45dvh, 440px);
   }
   .conversation-shell .chat-heading,
   .conversation-shell .chat-transcript {
@@ -1558,9 +1562,15 @@ main:focus-visible {
 .chat-heading {
   padding: 20px 24px;
   display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 16px;
   border-bottom: 1px solid #2a2d32;
+}
+.chat-heading > div {
+  min-width: 0;
+  flex: 1 1 180px;
 }
 .chat-heading h2 {
   margin: 0 0 8px;
