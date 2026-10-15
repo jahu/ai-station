@@ -34,3 +34,20 @@ configured local servers and owned llama.cpp. Those routes accept one bounded
 user message with JSON output, reuse existing forwarding/cancellation/identity
 checks and do not relax ordinary Chat or vision limits. Local review records
 source file count, bytes and policy.
+
+## Acceptance case
+
+Normal integration edits a >100 KB disposable source file using fake inference,
+runs configured checks and commits the reviewed result while preserving the
+original checkout/index. Typed route tests exercise actual Runner API validation
+and fake upstream forwarding for configured and owned runtimes. External source
+discovery keeps its empty bootstrap context; the final source selection remains
+validated. Full checks are required after that compatibility fix.
+
+Post-deployment opt-in acceptance will reuse the owned QA Work task and a new
+controlled synthetic text fixture of >100 KB, edit one marker locally, run normal
+Node tests/build and inspect the result at desktop/mobile sizes. The fixture has
+long harmless whitespace to qualify source transport/editing without repeating
+the already-qualified 110029-token GPU stress test. Do not describe it as a
+complex real-code or long-context reasoning benchmark. Evidence is stored under
+`data/acceptance/local-coding-source-context-20261015`.

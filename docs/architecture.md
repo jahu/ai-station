@@ -383,7 +383,7 @@ dependency stages. See [check reruns](coding-rerun-checks.md).
 
 ### Bounded cumulative coding review
 
-Source discovery excludes only untracked reserved root validation/dependency scratch directories at the Git scan. Model context and local review are separate contracts: ten selected files at 32,000 bytes each / 64,000 combined versus 200 review files at 256,000 bytes each / 2 MiB combined. The Runner computes the projected task-base diff before applying a proposal, bounds base blobs and the encoded 1 MiB report, then rechecks source snapshots and task branch/HEAD. Reviewed commit verifies the same broader snapshots using its private index. This permits generated lockfiles and multi-turn projects without increasing source sent to providers. See [coding continuation review](coding-continuation-review.md).
+Source discovery excludes only untracked reserved root validation/dependency scratch directories at the Git scan. External model context and local review are separate contracts: ten selected files at 32,000 bytes each / 64,000 combined versus 200 review files at 256,000 bytes each / 2 MiB combined. Local AI uses the separate larger source policy below. The Runner computes the projected task-base diff before applying a proposal, bounds base blobs and the encoded 1 MiB report, then rechecks source snapshots and task branch/HEAD. Reviewed commit verifies the same broader snapshots using its private index. This permits generated lockfiles and multi-turn projects without increasing source sent to providers. See [coding continuation review](coding-continuation-review.md).
 
 [Local source context](local-coding-source-context.md) is a native Local AI policy,
 separate from external source sharing: ten paths / 256000 bytes combined, bounded
