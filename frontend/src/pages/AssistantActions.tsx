@@ -1,3 +1,4 @@
+import RecordingButton from "../components/media/RecordingButton";
 import { TRANSCRIPTION_AUDIO_ACCEPT } from "../recording-formats";
 import { TranscriptResult } from "./Transcription";
 import GithubSnapshotResult, {
@@ -674,6 +675,31 @@ export default function AssistantActions({
       stop: instanceId ? { instance_id: instanceId } : null,
     });
   }
+  async function attachAudio(file: File, rejectOnError = false) {
+    onUploading(true);
+    setError(null);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const artifact = await api<Artifact>(
+        recordingInput ? "/audio/transcription/uploads" : "/audio/uploads",
+        {
+          method: "POST",
+          body,
+        },
+      );
+      onChange({
+        ...value,
+        audio_artifact_id: artifact.id,
+        upscale_result: false,
+      });
+    } catch (error) {
+      setError(error as Error);
+      if (rejectOnError) throw error;
+    } finally {
+      onUploading(false);
+    }
+  }
   function resetAction(action: string) {
     if (["audio.transcribe", "audio.analyze"].includes(action)) {
       onChange({
@@ -885,704 +911,703 @@ export default function AssistantActions({
     }
   }
   return (
-    <fieldset disabled={busy} className="assistant-actions image-form">
-      <div>
-        <ActionChoiceList
-          value={value.action}
-          disabled={busy}
-          allowWork={allowWork}
-          onChange={resetAction}
-        />
-      </div>
-      {value.audio_artifact_id &&
-        value.image_artifact_ids.length === 1 &&
-        ["auto", "avatar.animate"].includes(value.action) && (
-          <label>
-            Words to say (optional)
-            <textarea
-              value={value.speech_text ?? ""}
-              maxLength={1000}
-              rows={3}
-              onChange={(event) =>
-                onChange({
-                  ...value,
-                  speech_text: event.target.value.trim()
-                    ? event.target.value
-                    : null,
-                })
-              }
-              placeholder="Leave empty to animate the recording, or type Polish text using its voice."
-            />
-          </label>
-        )}
-      {!value.audio_artifact_id &&
-        !value.coding &&
-        ["auto", "image.generate", "image.edit", "image.recompose"].includes(
-          value.action,
-        ) && (
-          <label className="image-workflow-option">
-            <input
-              type="checkbox"
-              checked={value.upscale_result ?? false}
-              onChange={(event) =>
-                onChange({ ...value, upscale_result: event.target.checked })
-              }
-            />
-            <span>
-              Upscale image result 4×
-              <small>After generation or editing; keeps both images.</small>
-            </span>
-          </label>
-        )}
-      {!value.action.startsWith("coding.") &&
-        !value.action.startsWith("runtime.") &&
-        value.action !== "system.inspect" &&
-        value.action !== "github.inspect" &&
-        value.action !== "image.generate_video" &&
-        value.action !== "project.create" &&
-        value.action !== "project.create_code" && (
-          <div className="assistant-attachment-toolbar">
-            {!["audio.transcribe", "audio.analyze"].includes(value.action) && (
-              <>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => imageInput.current?.click()}
-                  disabled={
-                    value.image_artifact_ids.length >=
-                    (value.action === "image.describe" ? 4 : 8)
-                  }
-                >
-                  <ImagePlus size={15} /> Add images
-                </Button>
-                <LibraryPicker
-                  kind="image"
-                  existing={value.image_artifact_ids}
-                  limit={8 - value.image_artifact_ids.length}
-                  busy={busy}
-                  onSelect={(items) =>
-                    onChange({
-                      ...value,
-                      image_artifact_ids: [
-                        ...value.image_artifact_ids,
-                        ...items.map((a) => a.id),
-                      ],
-                    })
-                  }
-                />
-              </>
-            )}
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => voiceInput.current?.click()}
-            >
-              <Mic size={15} />{" "}
-              {recordingInput
-                ? value.audio_artifact_id
-                  ? "Replace recording"
-                  : "Add recording"
-                : value.audio_artifact_id
-                  ? "Replace voice"
-                  : "Add voice"}
-            </Button>
-            <LibraryPicker
-              kind="audio"
-              audioMode={recordingInput ? "transcription" : "voice"}
-              existing={
-                value.audio_artifact_id ? [value.audio_artifact_id] : []
-              }
-              limit={1}
-              busy={busy}
-              onSelect={(items) =>
-                onChange({
-                  ...value,
-                  audio_artifact_id: items[0].id,
-                  upscale_result: false,
-                })
-              }
-            />
-          </div>
-        )}
-      <input
-        ref={voiceInput}
-        hidden
-        aria-label={
-          recordingInput
-            ? "Recording · WAV, MP3, M4A, Ogg, WebM or FLAC"
-            : "Voice reference · WAV"
-        }
-        type="file"
-        accept={recordingInput ? TRANSCRIPTION_AUDIO_ACCEPT : "audio/wav,.wav"}
-        onChange={async (event) => {
-          const file = event.target.files?.[0];
-          event.target.value = "";
-          if (!file) return;
-          onUploading(true);
-          setError(null);
-          try {
-            const body = new FormData();
-            body.append("file", file);
-            const artifact = await api<Artifact>(
-              recordingInput
-                ? "/audio/transcription/uploads"
-                : "/audio/uploads",
-              {
-                method: "POST",
-                body,
-              },
-            );
-            onChange({
-              ...value,
-              audio_artifact_id: artifact.id,
-              upscale_result: false,
-            });
-          } catch (error) {
-            setError(error as Error);
-          } finally {
-            onUploading(false);
-          }
-        }}
-      />
-      {value.audio_artifact_id && (
-        <div className="assistant-voice-reference">
-          <span>
-            <Mic size={16} /> {recordingInput ? "Recording" : "Voice reference"}
-          </span>
-          <audio
-            controls
-            preload="metadata"
-            src={`/api/artifacts/${value.audio_artifact_id}/file`}
-            aria-label="Voice reference preview"
-          />
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Remove voice reference"
-            onClick={() =>
-              onChange({ ...value, audio_artifact_id: null, speech_text: null })
-            }
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
-      {((!value.action.startsWith("coding.") &&
-        !value.action.startsWith("runtime.") &&
-        value.action !== "image.generate_video" &&
-        value.action !== "project.create" &&
-        value.action !== "project.create_code" &&
-        value.action !== "github.inspect") ||
-        value.image_artifact_ids.length > 0) && (
-        <div
-          className="assistant-reference-area"
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => {
-            e.preventDefault();
-            void upload(Array.from(e.dataTransfer.files));
-          }}
-        >
-          <input
-            ref={imageInput}
-            hidden
-            aria-label="Image references"
-            type="file"
-            multiple
-            accept="image/png,image/jpeg,image/webp"
-            onChange={(e) => {
-              const files = Array.from(e.target.files ?? []);
-              e.target.value = "";
-              void upload(files);
-            }}
-          />
-          <p className="muted">
-            Drop images here. Order matters — for example, person first,
-            clothing second. Use the arrows to reorder.
-          </p>
-          <ImageReferenceStrip
-            ids={value.image_artifact_ids}
-            busy={busy}
-            onChange={(image_artifact_ids) =>
-              onChange({
-                ...value,
-                image_artifact_ids,
-                speech_text:
-                  image_artifact_ids.length === 1 ? value.speech_text : null,
-              })
-            }
+    <>
+      <fieldset disabled={busy} className="assistant-actions image-form">
+        <div>
+          <ActionChoiceList
+            value={value.action}
+            disabled={busy}
+            allowWork={allowWork}
+            onChange={resetAction}
           />
         </div>
-      )}
-      {value.action === "github.inspect" && (
-        <label>
-          GitHub repository
-          <select
-            aria-label="GitHub repository"
-            value={value.github?.connector_id ?? ""}
-            onChange={(event) => {
-              const selected = repositories.data?.find(
-                (row) => row.id === event.target.value,
-              );
-              onChange({
-                ...value,
-                github: selected
-                  ? {
-                      connector_id: selected.id,
-                      expected_updated_at: selected.updated_at,
+        {value.audio_artifact_id &&
+          value.image_artifact_ids.length === 1 &&
+          ["auto", "avatar.animate"].includes(value.action) && (
+            <label>
+              Words to say (optional)
+              <textarea
+                value={value.speech_text ?? ""}
+                maxLength={1000}
+                rows={3}
+                onChange={(event) =>
+                  onChange({
+                    ...value,
+                    speech_text: event.target.value.trim()
+                      ? event.target.value
+                      : null,
+                  })
+                }
+                placeholder="Leave empty to animate the recording, or type Polish text using its voice."
+              />
+            </label>
+          )}
+        {!value.audio_artifact_id &&
+          !value.coding &&
+          ["auto", "image.generate", "image.edit", "image.recompose"].includes(
+            value.action,
+          ) && (
+            <label className="image-workflow-option">
+              <input
+                type="checkbox"
+                checked={value.upscale_result ?? false}
+                onChange={(event) =>
+                  onChange({ ...value, upscale_result: event.target.checked })
+                }
+              />
+              <span>
+                Upscale image result 4×
+                <small>After generation or editing; keeps both images.</small>
+              </span>
+            </label>
+          )}
+        {!value.action.startsWith("coding.") &&
+          !value.action.startsWith("runtime.") &&
+          value.action !== "system.inspect" &&
+          value.action !== "github.inspect" &&
+          value.action !== "image.generate_video" &&
+          value.action !== "project.create" &&
+          value.action !== "project.create_code" && (
+            <div className="assistant-attachment-toolbar">
+              {!["audio.transcribe", "audio.analyze"].includes(
+                value.action,
+              ) && (
+                <>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => imageInput.current?.click()}
+                    disabled={
+                      value.image_artifact_ids.length >=
+                      (value.action === "image.describe" ? 4 : 8)
                     }
-                  : null,
-              });
-            }}
-          >
-            <option value="">Choose a connected repository</option>
-            {repositories.data
-              ?.filter((row) => row.kind === "github" && row.enabled)
-              .map((row) => (
-                <option key={row.id} value={row.id}>
-                  {row.name} · {row.repository}
-                </option>
-              ))}
-          </select>
-          <span className="muted">
-            Reads issue and PR titles through your host GitHub login. No source
-            files or account data are sent to an AI provider.{" "}
-            <Link to="/settings/integrations">Connect a repository</Link>
-          </span>
-          <ErrorNotice error={repositories.error} />
-        </label>
-      )}
-      {value.action === "video.generate" && (
-        <label>
-          Video length
-          <select
-            value={value.media?.duration_seconds ?? "preview"}
-            disabled={busy}
-            onChange={(event) =>
-              onChange({
-                ...value,
-                media:
-                  event.target.value === "preview"
-                    ? null
-                    : {
-                        duration_seconds: Number(event.target.value),
-                        composition_mode: "continuous",
-                      },
-              })
-            }
-          >
-            <option value="preview">
-              Short preview · or describe the duration
-            </option>
-            <option value="15">15 seconds</option>
-            <option value="30">30 seconds</option>
-            <option value="60">60 seconds</option>
-          </select>
-        </label>
-      )}
-      {value.action === "project.create_code" && (
-        <NewProjectBuild
-          busy={busy}
-          value={value.new_project ?? newProjectScope}
-          onChange={(new_project) => onChange({ ...value, new_project })}
+                  >
+                    <ImagePlus size={15} /> Add images
+                  </Button>
+                  <LibraryPicker
+                    kind="image"
+                    existing={value.image_artifact_ids}
+                    limit={8 - value.image_artifact_ids.length}
+                    busy={busy}
+                    onSelect={(items) =>
+                      onChange({
+                        ...value,
+                        image_artifact_ids: [
+                          ...value.image_artifact_ids,
+                          ...items.map((a) => a.id),
+                        ],
+                      })
+                    }
+                  />
+                </>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => voiceInput.current?.click()}
+              >
+                <Mic size={15} />{" "}
+                {recordingInput
+                  ? value.audio_artifact_id
+                    ? "Replace recording"
+                    : "Add recording"
+                  : value.audio_artifact_id
+                    ? "Replace voice"
+                    : "Add voice"}
+              </Button>
+              <LibraryPicker
+                kind="audio"
+                audioMode={recordingInput ? "transcription" : "voice"}
+                existing={
+                  value.audio_artifact_id ? [value.audio_artifact_id] : []
+                }
+                limit={1}
+                busy={busy}
+                onSelect={(items) =>
+                  onChange({
+                    ...value,
+                    audio_artifact_id: items[0].id,
+                    upscale_result: false,
+                  })
+                }
+              />
+            </div>
+          )}
+        <input
+          ref={voiceInput}
+          hidden
+          aria-label={
+            recordingInput
+              ? "Recording · WAV, MP3, M4A, Ogg, WebM or FLAC"
+              : "Voice reference · WAV"
+          }
+          type="file"
+          accept={
+            recordingInput ? TRANSCRIPTION_AUDIO_ACCEPT : "audio/wav,.wav"
+          }
+          onChange={async (event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file) return;
+            await attachAudio(file);
+          }}
         />
-      )}
-      {value.action === "coding.commit" && (
-        <details open className="assistant-coding-scope">
-          <summary>Reviewed commit</summary>
-          <p className="muted">
-            Only proposals from this conversation can be committed. The model
-            cannot grant Git write permission.
-          </p>
-          <div>
-            <span>Proposal</span>
-            <ProposalChoiceList
-              proposals={proposals.map((run) => ({
-                id: run.id,
-                title: `${run.summary || run.capability} · ${run.id.slice(0, 8)}`,
-                detail: run.executor_type,
-              }))}
-              value={commitSourceId}
-              disabled={busy}
-              onChange={(id) => {
-                setCommitSourceId(id);
-                setCommit(id, commitMessage, reviewed);
-              }}
+        {value.audio_artifact_id && (
+          <div className="assistant-voice-reference">
+            <span>
+              <Mic size={16} />{" "}
+              {recordingInput ? "Recording" : "Voice reference"}
+            </span>
+            <audio
+              controls
+              preload="metadata"
+              src={`/api/artifacts/${value.audio_artifact_id}/file`}
+              aria-label="Voice reference preview"
             />
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Remove voice reference"
+              onClick={() =>
+                onChange({
+                  ...value,
+                  audio_artifact_id: null,
+                  speech_text: null,
+                })
+              }
+            >
+              <X size={16} />
+            </button>
           </div>
-          {!proposals.length && (
-            <p className="notice">
-              Finish a coding task in this conversation and review its diff
-              first.
-            </p>
-          )}
-          <label>
-            Commit message
-            <input
-              maxLength={2000}
-              value={commitMessage}
-              onChange={(event) => {
-                setCommitMessage(event.target.value);
-                setCommit(commitSourceId, event.target.value, reviewed);
-              }}
-            />
-          </label>
-          <ReviewChoiceList
-            checked={reviewed}
-            disabled={busy}
-            onChange={(next) => {
-              setReviewed(next);
-              setCommit(commitSourceId, commitMessage, next);
+        )}
+        {((!value.action.startsWith("coding.") &&
+          !value.action.startsWith("runtime.") &&
+          value.action !== "image.generate_video" &&
+          value.action !== "project.create" &&
+          value.action !== "project.create_code" &&
+          value.action !== "github.inspect") ||
+          value.image_artifact_ids.length > 0) && (
+          <div
+            className="assistant-reference-area"
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              void upload(Array.from(e.dataTransfer.files));
             }}
           >
-            I reviewed the diff and validation results.
-          </ReviewChoiceList>
-        </details>
-      )}
-      {value.action === "coding.publish" && (
-        <details open className="assistant-coding-scope">
-          <summary>GitHub publication</summary>
-          <p className="muted">
-            Approve the exact repository, commit and draft PR. This never
-            merges. Enable task-branch push and integration PRs in the project
-            first.
-          </p>
-          <div>
-            <span>Reviewed commit</span>
-            <CommitChoiceList
-              commits={commits.map((run) => ({
-                id: run.id,
-                title: String(
-                  (run.metadata?.git_commit as { commit?: string })?.commit ??
-                    run.id,
-                ).slice(0, 12),
-                detail: run.executor_type,
-              }))}
-              value={publishSourceId}
-              disabled={busy}
-              onChange={(id) => {
-                setPublishSourceId(id);
-                setPublishApproved(false);
-                setPublish(id, publishTitle, publishBody, false);
-              }}
-            />
-          </div>
-          {!commits.length && (
-            <p className="notice">
-              Commit reviewed changes in this conversation before publishing.
-            </p>
-          )}
-          <ErrorNotice error={preview.error} />
-          {preview.data?.blocked_reason && (
-            <p className="notice">{preview.data.blocked_reason}</p>
-          )}
-          {preview.data &&
-            !preview.data.blocked_reason &&
-            !preview.data.github_cli_available && (
-              <p className="notice">
-                GitHub CLI is unavailable on the Host Runner.
-              </p>
-            )}
-          {preview.data && (
-            <p className="mono">
-              {preview.data.repository}
-              <br />
-              {preview.data.base}
-              <br />
-              {preview.data.commit}
-            </p>
-          )}
-          <label>
-            PR title
             <input
-              maxLength={200}
-              value={publishTitle}
-              onChange={(event) => {
-                setPublishTitle(event.target.value);
-                setPublish(
-                  publishSourceId,
-                  event.target.value,
-                  publishBody,
-                  publishApproved,
-                );
+              ref={imageInput}
+              hidden
+              aria-label="Image references"
+              type="file"
+              multiple
+              accept="image/png,image/jpeg,image/webp"
+              onChange={(e) => {
+                const files = Array.from(e.target.files ?? []);
+                e.target.value = "";
+                void upload(files);
               }}
             />
-          </label>
-          <label>
-            PR description
-            <textarea
-              rows={4}
-              maxLength={20000}
-              value={publishBody}
-              onChange={(event) => {
-                setPublishBody(event.target.value);
-                setPublish(
-                  publishSourceId,
-                  publishTitle,
-                  event.target.value,
-                  publishApproved,
-                );
-              }}
-            />
-          </label>
-          <PublicationChoiceList
-            checked={publishApproved}
-            disabled={!preview.data || !!preview.data.blocked_reason || busy}
-            onChange={(next) => {
-              setPublishApproved(next);
-              setPublish(publishSourceId, publishTitle, publishBody, next);
-            }}
-          >
-            I approve publishing this commit and PR text to the GitHub
-            repository shown above.
-          </PublicationChoiceList>
-        </details>
-      )}
-      {value.action === "runtime.load" && (
-        <details open className="assistant-coding-scope">
-          <summary>Owned llama.cpp load</summary>
-          <p className="muted">
-            Loads a discovered GGUF into an AI Station-owned runtime. External
-            Ollama or ComfyUI processes are not stopped. The model cannot choose
-            a file or GPUs.
-          </p>
-          <ErrorNotice error={catalog.error ?? hardware.error} />
-          <div>
-            <span>GGUF model</span>
-            <GgufChoiceList
-              models={catalog.data?.models ?? []}
-              value={value.load?.model_file_id ?? ""}
-              disabled={busy}
-              onChange={(id) => setLoad(id, selectedLoadGpus, loadContext)}
-            />
-          </div>
-          {!catalog.isPending && !catalog.data?.models.length && (
-            <p className="notice">
-              No language-model GGUFs are discovered yet. Scan model folders in
-              Models first.
+            <p className="muted">
+              Drop images here. Order matters — for example, person first,
+              clothing second. Use the arrows to reorder.
             </p>
-          )}
-          <fieldset>
-            <legend>GPUs</legend>
-            <GpuChoiceList
-              gpus={hardware.data?.gpus ?? []}
-              selected={selectedLoadGpus}
-              onChange={(next) => {
-                setLoadGpus(next);
-                setLoad(value.load?.model_file_id ?? "", next, loadContext);
-              }}
+            <ImageReferenceStrip
+              ids={value.image_artifact_ids}
+              busy={busy}
+              onChange={(image_artifact_ids) =>
+                onChange({
+                  ...value,
+                  image_artifact_ids,
+                  speech_text:
+                    image_artifact_ids.length === 1 ? value.speech_text : null,
+                })
+              }
             />
-            <small>
-              No cards selected uses CPU. Several cards split layers.
-            </small>
-          </fieldset>
+          </div>
+        )}
+        {value.action === "github.inspect" && (
           <label>
-            Context size
-            <input
-              type="number"
-              min={512}
-              max={262144}
-              step={256}
-              aria-label="Context size"
-              value={value.load?.context_size ?? loadContext}
+            GitHub repository
+            <select
+              aria-label="GitHub repository"
+              value={value.github?.connector_id ?? ""}
               onChange={(event) => {
-                const context = Number(event.target.value);
-                setLoadContext(context);
-                setLoad(
-                  value.load?.model_file_id ?? "",
-                  selectedLoadGpus,
-                  context,
+                const selected = repositories.data?.find(
+                  (row) => row.id === event.target.value,
                 );
+                onChange({
+                  ...value,
+                  github: selected
+                    ? {
+                        connector_id: selected.id,
+                        expected_updated_at: selected.updated_at,
+                      }
+                    : null,
+                });
               }}
-            />
+            >
+              <option value="">Choose a connected repository</option>
+              {repositories.data
+                ?.filter((row) => row.kind === "github" && row.enabled)
+                .map((row) => (
+                  <option key={row.id} value={row.id}>
+                    {row.name} · {row.repository}
+                  </option>
+                ))}
+            </select>
+            <span className="muted">
+              Reads issue and PR titles through your host GitHub login. No
+              source files or account data are sent to an AI provider.{" "}
+              <Link to="/settings/integrations">Connect a repository</Link>
+            </span>
+            <ErrorNotice error={repositories.error} />
           </label>
-        </details>
-      )}
-      {value.action === "runtime.stop" && (
-        <details open className="assistant-coding-scope">
-          <summary>Owned llama.cpp unload</summary>
-          <p className="muted">
-            Stops only the selected AI Station-owned instance after its
-            consumers finish. External runtimes are not touched.
-          </p>
-          <ErrorNotice error={catalog.error} />
-          <div>
-            <span>Runtime</span>
-            <RuntimeChoiceList
-              instances={ownedInstances}
-              value={value.stop?.instance_id ?? ""}
+        )}
+        {value.action === "video.generate" && (
+          <label>
+            Video length
+            <select
+              value={value.media?.duration_seconds ?? "preview"}
               disabled={busy}
-              onChange={setStop}
-            />
-          </div>
-          {!ownedInstances.length && (
-            <p className="notice">
-              No owned llama.cpp instance is loaded. External servers cannot be
-              unloaded here.
+              onChange={(event) =>
+                onChange({
+                  ...value,
+                  media:
+                    event.target.value === "preview"
+                      ? null
+                      : {
+                          duration_seconds: Number(event.target.value),
+                          composition_mode: "continuous",
+                        },
+                })
+              }
+            >
+              <option value="preview">
+                Short preview · or describe the duration
+              </option>
+              <option value="15">15 seconds</option>
+              <option value="30">30 seconds</option>
+              <option value="60">60 seconds</option>
+            </select>
+          </label>
+        )}
+        {value.action === "project.create_code" && (
+          <NewProjectBuild
+            busy={busy}
+            value={value.new_project ?? newProjectScope}
+            onChange={(new_project) => onChange({ ...value, new_project })}
+          />
+        )}
+        {value.action === "coding.commit" && (
+          <details open className="assistant-coding-scope">
+            <summary>Reviewed commit</summary>
+            <p className="muted">
+              Only proposals from this conversation can be committed. The model
+              cannot grant Git write permission.
             </p>
-          )}
-        </details>
-      )}
-      {codingTask && (
-        <details open className="assistant-coding-scope">
-          <summary>Coding scope</summary>
-          <div>
-            <span>Project</span>
-            <ProjectChoiceList
-              projects={projects.data ?? []}
-              value={projectId}
-              disabled={busy}
-              onChange={(id) => {
-                setProjectId(id);
-                setExternal(false);
-                setCodingModel("");
-                scope(
-                  id,
-                  files,
-                  false,
-                  value.action,
-                  explore,
-                  repairAttempts,
-                  "",
-                );
-              }}
-            />
-          </div>
-          {externalCoding && (
             <div>
-              <span>Model</span>
-              <CodingModelChoiceList
-                models={codingCatalog.data?.models ?? []}
-                value={codingModel}
+              <span>Proposal</span>
+              <ProposalChoiceList
+                proposals={proposals.map((run) => ({
+                  id: run.id,
+                  title: `${run.summary || run.capability} · ${run.id.slice(0, 8)}`,
+                  detail: run.executor_type,
+                }))}
+                value={commitSourceId}
                 disabled={busy}
                 onChange={(id) => {
-                  setCodingModel(id);
-                  scope(
-                    projectId,
-                    files,
-                    external,
-                    value.action,
-                    explore,
-                    repairAttempts,
-                    id,
-                  );
-                }}
-              />
-              <ErrorNotice error={codingCatalog.error} />
-              {codingCatalog.data?.notice && (
-                <small className="muted">{codingCatalog.data.notice}</small>
-              )}
-            </div>
-          )}
-          <ExploreChoiceList
-            checked={explore}
-            disabled={busy}
-            onChange={(next) => {
-              setExplore(next);
-              setExternal(false);
-              scope(projectId, files, false, value.action, next);
-            }}
-          >
-            {value.action === "coding.local"
-              ? "Let Local AI find the relevant files"
-              : "Let the agent find the relevant files"}
-          </ExploreChoiceList>
-          {value.action === "coding.local" && explore && (
-            <small>
-              Public URLs in the task are fetched automatically. Local AI may
-              GET further public pages and, when the Host Runner has search
-              configured, query the public web. Private and loopback addresses
-              are blocked. JavaScript is not executed; this is not a browser.
-            </small>
-          )}
-          {value.action === "coding.local" && (
-            <div>
-              <span>Automatic repair</span>
-              <RepairChoiceList
-                value={repairAttempts}
-                disabled={busy}
-                onChange={(attempts) => {
-                  setRepairAttempts(attempts);
-                  scope(
-                    projectId,
-                    files,
-                    false,
-                    value.action,
-                    explore,
-                    attempts,
-                  );
+                  setCommitSourceId(id);
+                  setCommit(id, commitMessage, reviewed);
                 }}
               />
             </div>
-          )}
-          {explore ? (
-            <p className="muted">
-              {value.action === "coding.local"
-                ? "Local source exploration in a new worktree. Review selected files and changes in the resulting Run."
-                : "Repository exploration in a new worktree. Cursor and Codex stay repository-only; they do not GET public pages."}
-            </p>
-          ) : (
-            <FileChoiceList
-              files={files}
-              label="Selected files"
-              onChange={(value) => {
-                setFiles(value);
-                setExternal(false);
-                scope(projectId, value, false);
-              }}
-            />
-          )}
-          {value.action === "coding.local" ? (
+            {!proposals.length && (
+              <p className="notice">
+                Finish a coding task in this conversation and review its diff
+                first.
+              </p>
+            )}
             <label>
-              Coding model
-              <select
-                value={localCodingAuto ? "auto" : "conversation"}
-                disabled={busy}
+              Commit message
+              <input
+                maxLength={2000}
+                value={commitMessage}
                 onChange={(event) => {
-                  const automatic = event.target.value === "auto";
-                  setLocalCodingAuto(automatic);
-                  scope(
-                    projectId,
-                    files,
-                    false,
-                    value.action,
-                    explore,
-                    repairAttempts,
-                    codingModel,
-                    automatic,
-                  );
+                  setCommitMessage(event.target.value);
+                  setCommit(commitSourceId, event.target.value, reviewed);
                 }}
-              >
-                <option value="auto">
-                  Auto · local model with 100k+ context
-                </option>
-                <option value="conversation">Use the conversation model</option>
-              </select>
-              <small className="muted">
-                Changes stay in an isolated worktree. Review the diff and
-                validation before committing.
-              </small>
+              />
             </label>
-          ) : (
-            <ConsentChoiceList
-              checked={external}
+            <ReviewChoiceList
+              checked={reviewed}
               disabled={busy}
               onChange={(next) => {
-                setExternal(next);
-                scope(projectId, files, next);
+                setReviewed(next);
+                setCommit(commitSourceId, commitMessage, next);
               }}
             >
-              Allow sending this instruction, project guidance and{" "}
-              {explore
-                ? "relevant source files found by the agent"
-                : "the selected files"}{" "}
-              to external {value.action === "coding.codex" ? "Codex" : "Cursor"}
-              .
-            </ConsentChoiceList>
-          )}
-          <ErrorNotice error={projects.error} />
-        </details>
+              I reviewed the diff and validation results.
+            </ReviewChoiceList>
+          </details>
+        )}
+        {value.action === "coding.publish" && (
+          <details open className="assistant-coding-scope">
+            <summary>GitHub publication</summary>
+            <p className="muted">
+              Approve the exact repository, commit and draft PR. This never
+              merges. Enable task-branch push and integration PRs in the project
+              first.
+            </p>
+            <div>
+              <span>Reviewed commit</span>
+              <CommitChoiceList
+                commits={commits.map((run) => ({
+                  id: run.id,
+                  title: String(
+                    (run.metadata?.git_commit as { commit?: string })?.commit ??
+                      run.id,
+                  ).slice(0, 12),
+                  detail: run.executor_type,
+                }))}
+                value={publishSourceId}
+                disabled={busy}
+                onChange={(id) => {
+                  setPublishSourceId(id);
+                  setPublishApproved(false);
+                  setPublish(id, publishTitle, publishBody, false);
+                }}
+              />
+            </div>
+            {!commits.length && (
+              <p className="notice">
+                Commit reviewed changes in this conversation before publishing.
+              </p>
+            )}
+            <ErrorNotice error={preview.error} />
+            {preview.data?.blocked_reason && (
+              <p className="notice">{preview.data.blocked_reason}</p>
+            )}
+            {preview.data &&
+              !preview.data.blocked_reason &&
+              !preview.data.github_cli_available && (
+                <p className="notice">
+                  GitHub CLI is unavailable on the Host Runner.
+                </p>
+              )}
+            {preview.data && (
+              <p className="mono">
+                {preview.data.repository}
+                <br />
+                {preview.data.base}
+                <br />
+                {preview.data.commit}
+              </p>
+            )}
+            <label>
+              PR title
+              <input
+                maxLength={200}
+                value={publishTitle}
+                onChange={(event) => {
+                  setPublishTitle(event.target.value);
+                  setPublish(
+                    publishSourceId,
+                    event.target.value,
+                    publishBody,
+                    publishApproved,
+                  );
+                }}
+              />
+            </label>
+            <label>
+              PR description
+              <textarea
+                rows={4}
+                maxLength={20000}
+                value={publishBody}
+                onChange={(event) => {
+                  setPublishBody(event.target.value);
+                  setPublish(
+                    publishSourceId,
+                    publishTitle,
+                    event.target.value,
+                    publishApproved,
+                  );
+                }}
+              />
+            </label>
+            <PublicationChoiceList
+              checked={publishApproved}
+              disabled={!preview.data || !!preview.data.blocked_reason || busy}
+              onChange={(next) => {
+                setPublishApproved(next);
+                setPublish(publishSourceId, publishTitle, publishBody, next);
+              }}
+            >
+              I approve publishing this commit and PR text to the GitHub
+              repository shown above.
+            </PublicationChoiceList>
+          </details>
+        )}
+        {value.action === "runtime.load" && (
+          <details open className="assistant-coding-scope">
+            <summary>Owned llama.cpp load</summary>
+            <p className="muted">
+              Loads a discovered GGUF into an AI Station-owned runtime. External
+              Ollama or ComfyUI processes are not stopped. The model cannot
+              choose a file or GPUs.
+            </p>
+            <ErrorNotice error={catalog.error ?? hardware.error} />
+            <div>
+              <span>GGUF model</span>
+              <GgufChoiceList
+                models={catalog.data?.models ?? []}
+                value={value.load?.model_file_id ?? ""}
+                disabled={busy}
+                onChange={(id) => setLoad(id, selectedLoadGpus, loadContext)}
+              />
+            </div>
+            {!catalog.isPending && !catalog.data?.models.length && (
+              <p className="notice">
+                No language-model GGUFs are discovered yet. Scan model folders
+                in Models first.
+              </p>
+            )}
+            <fieldset>
+              <legend>GPUs</legend>
+              <GpuChoiceList
+                gpus={hardware.data?.gpus ?? []}
+                selected={selectedLoadGpus}
+                onChange={(next) => {
+                  setLoadGpus(next);
+                  setLoad(value.load?.model_file_id ?? "", next, loadContext);
+                }}
+              />
+              <small>
+                No cards selected uses CPU. Several cards split layers.
+              </small>
+            </fieldset>
+            <label>
+              Context size
+              <input
+                type="number"
+                min={512}
+                max={262144}
+                step={256}
+                aria-label="Context size"
+                value={value.load?.context_size ?? loadContext}
+                onChange={(event) => {
+                  const context = Number(event.target.value);
+                  setLoadContext(context);
+                  setLoad(
+                    value.load?.model_file_id ?? "",
+                    selectedLoadGpus,
+                    context,
+                  );
+                }}
+              />
+            </label>
+          </details>
+        )}
+        {value.action === "runtime.stop" && (
+          <details open className="assistant-coding-scope">
+            <summary>Owned llama.cpp unload</summary>
+            <p className="muted">
+              Stops only the selected AI Station-owned instance after its
+              consumers finish. External runtimes are not touched.
+            </p>
+            <ErrorNotice error={catalog.error} />
+            <div>
+              <span>Runtime</span>
+              <RuntimeChoiceList
+                instances={ownedInstances}
+                value={value.stop?.instance_id ?? ""}
+                disabled={busy}
+                onChange={setStop}
+              />
+            </div>
+            {!ownedInstances.length && (
+              <p className="notice">
+                No owned llama.cpp instance is loaded. External servers cannot
+                be unloaded here.
+              </p>
+            )}
+          </details>
+        )}
+        {codingTask && (
+          <details open className="assistant-coding-scope">
+            <summary>Coding scope</summary>
+            <div>
+              <span>Project</span>
+              <ProjectChoiceList
+                projects={projects.data ?? []}
+                value={projectId}
+                disabled={busy}
+                onChange={(id) => {
+                  setProjectId(id);
+                  setExternal(false);
+                  setCodingModel("");
+                  scope(
+                    id,
+                    files,
+                    false,
+                    value.action,
+                    explore,
+                    repairAttempts,
+                    "",
+                  );
+                }}
+              />
+            </div>
+            {externalCoding && (
+              <div>
+                <span>Model</span>
+                <CodingModelChoiceList
+                  models={codingCatalog.data?.models ?? []}
+                  value={codingModel}
+                  disabled={busy}
+                  onChange={(id) => {
+                    setCodingModel(id);
+                    scope(
+                      projectId,
+                      files,
+                      external,
+                      value.action,
+                      explore,
+                      repairAttempts,
+                      id,
+                    );
+                  }}
+                />
+                <ErrorNotice error={codingCatalog.error} />
+                {codingCatalog.data?.notice && (
+                  <small className="muted">{codingCatalog.data.notice}</small>
+                )}
+              </div>
+            )}
+            <ExploreChoiceList
+              checked={explore}
+              disabled={busy}
+              onChange={(next) => {
+                setExplore(next);
+                setExternal(false);
+                scope(projectId, files, false, value.action, next);
+              }}
+            >
+              {value.action === "coding.local"
+                ? "Let Local AI find the relevant files"
+                : "Let the agent find the relevant files"}
+            </ExploreChoiceList>
+            {value.action === "coding.local" && explore && (
+              <small>
+                Public URLs in the task are fetched automatically. Local AI may
+                GET further public pages and, when the Host Runner has search
+                configured, query the public web. Private and loopback addresses
+                are blocked. JavaScript is not executed; this is not a browser.
+              </small>
+            )}
+            {value.action === "coding.local" && (
+              <div>
+                <span>Automatic repair</span>
+                <RepairChoiceList
+                  value={repairAttempts}
+                  disabled={busy}
+                  onChange={(attempts) => {
+                    setRepairAttempts(attempts);
+                    scope(
+                      projectId,
+                      files,
+                      false,
+                      value.action,
+                      explore,
+                      attempts,
+                    );
+                  }}
+                />
+              </div>
+            )}
+            {explore ? (
+              <p className="muted">
+                {value.action === "coding.local"
+                  ? "Local source exploration in a new worktree. Review selected files and changes in the resulting Run."
+                  : "Repository exploration in a new worktree. Cursor and Codex stay repository-only; they do not GET public pages."}
+              </p>
+            ) : (
+              <FileChoiceList
+                files={files}
+                label="Selected files"
+                onChange={(value) => {
+                  setFiles(value);
+                  setExternal(false);
+                  scope(projectId, value, false);
+                }}
+              />
+            )}
+            {value.action === "coding.local" ? (
+              <label>
+                Coding model
+                <select
+                  value={localCodingAuto ? "auto" : "conversation"}
+                  disabled={busy}
+                  onChange={(event) => {
+                    const automatic = event.target.value === "auto";
+                    setLocalCodingAuto(automatic);
+                    scope(
+                      projectId,
+                      files,
+                      false,
+                      value.action,
+                      explore,
+                      repairAttempts,
+                      codingModel,
+                      automatic,
+                    );
+                  }}
+                >
+                  <option value="auto">
+                    Auto · local model with 100k+ context
+                  </option>
+                  <option value="conversation">
+                    Use the conversation model
+                  </option>
+                </select>
+                <small className="muted">
+                  Changes stay in an isolated worktree. Review the diff and
+                  validation before committing.
+                </small>
+              </label>
+            ) : (
+              <ConsentChoiceList
+                checked={external}
+                disabled={busy}
+                onChange={(next) => {
+                  setExternal(next);
+                  scope(projectId, files, next);
+                }}
+              >
+                Allow sending this instruction, project guidance and{" "}
+                {explore
+                  ? "relevant source files found by the agent"
+                  : "the selected files"}{" "}
+                to external{" "}
+                {value.action === "coding.codex" ? "Codex" : "Cursor"}.
+              </ConsentChoiceList>
+            )}
+            <ErrorNotice error={projects.error} />
+          </details>
+        )}
+        <ErrorNotice error={error} />
+      </fieldset>
+      {recordingInput && (
+        <div className="assistant-recording-toolbar">
+          <RecordingButton
+            disabled={busy}
+            onBusy={onUploading}
+            onRecorded={(file) => attachAudio(file, true)}
+          />
+        </div>
       )}
-      <ErrorNotice error={error} />
-    </fieldset>
+    </>
   );
 }

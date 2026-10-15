@@ -1394,3 +1394,68 @@ it("keeps the recording and clears incompatible references when choosing an audi
     screen.getByLabelText("Recording · WAV, MP3, M4A, Ogg, WebM or FLAC"),
   ).toBeTruthy();
 });
+
+it("keeps microphone Finish enabled while the rest of the composer is busy", async () => {
+  const stop = vi.fn();
+  class Recorder {
+    static isTypeSupported = () => true;
+    state = "inactive";
+    mimeType = "audio/webm";
+    ondataavailable?: (event: { data: Blob }) => void;
+    onstop?: () => void;
+    start() {
+      this.state = "recording";
+    }
+    stop() {
+      this.state = "inactive";
+      this.ondataavailable?.({ data: new Blob(["audio"]) });
+      this.onstop?.();
+    }
+  }
+  vi.stubGlobal("MediaRecorder", Recorder);
+  vi.stubGlobal("navigator", {
+    mediaDevices: {
+      getUserMedia: async () => ({ getTracks: () => [{ stop }] }),
+    },
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ id: "captured-id" }),
+    })),
+  );
+  function Composer() {
+    const [value, setValue] = useState(emptyOptions);
+    const [busy, setBusy] = useState(false);
+    return (
+      <>
+        <AssistantActions
+          value={value}
+          onChange={setValue}
+          busy={busy}
+          onUploading={setBusy}
+        />
+        <output>{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Record audio" }));
+  const finish = await screen.findByRole("button", {
+    name: "Finish recording",
+  });
+  expect(finish.closest("fieldset[disabled]")).toBeNull();
+  expect(
+    screen.getByRole("combobox", { name: "Action" }).hasAttribute("disabled"),
+  ).toBe(true);
+  fireEvent.click(finish);
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toContain("captured-id"),
+  );
+  expect(stop).toHaveBeenCalled();
+});

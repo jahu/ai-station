@@ -322,3 +322,5 @@ verified completion gate TXT/SRT/JSON artifact publication.
 [Transcript conversation continuity](transcript-conversation-context.md) adds bounded, source-checked artifact references to the existing Chat, planner and summary snapshots. It grants no new tools or host access and preserves original message coverage offsets.
 
 [Recording questions](conversational-audio-analysis.md) publish an ordinary Chat child only after verified native CPU transcription. Both stages share the original Task, frozen provider/model selection and task-wide Stop; publication is transactional and idempotent. No additional execution engine or schema is introduced.
+
+[Chat recording](chat-recording.md) is browser-side capture and an ordinary artifact upload; no workload executes until Send. It reuses the existing typed local transcription and Chat graph, without another executor or database migration.
