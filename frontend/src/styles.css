@@ -5449,6 +5449,12 @@ section:has(> .memory-grid) > .dashboard-note {
 .video-scene-actions {
   gap: 2px;
 }
+.video-scene-cards > li > .row {
+  flex-wrap: wrap;
+}
+.video-scene-cards strong {
+  white-space: nowrap;
+}
 .video-scene-actions button {
   padding: 8px;
   min-height: 32px;
@@ -5465,9 +5471,12 @@ section:has(> .memory-grid) > .dashboard-note {
   align-items: center;
   gap: 8px;
   white-space: nowrap;
+  min-width: 0;
 }
 .media-composer .video-scene-duration input {
-  width: 76px;
+  width: 64px;
+  flex: 0 1 64px;
+  padding: 8px;
   display: inline-block;
   margin-right: 5px;
 }
