@@ -344,3 +344,9 @@ and Artifact provenance. Docker calls remain native-only. Unknown create or
 cleanup outcomes require inspection. Script-generated active documents are
 attachments, not trusted same-origin application pages. The agent tool remains
 unpublished until its workflow, permissions and user result flow are wired.
+
+Local coding agents without a linked project may provision an application-owned
+workspace using the existing typed project-creation executor. Its binding records
+the reviewed workflow, agent, Task, project and original deadline before coding
+can start. No existing host checkout is selected implicitly. See
+[managed agent workspaces](agent-workspaces.md).

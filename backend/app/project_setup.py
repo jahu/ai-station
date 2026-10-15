@@ -77,6 +77,14 @@ class ProjectSetupExecutor(NativeJobExecutor):
     permissions = ("workspace_write", "git_write")
     error_type = "ProjectSetupFailed"
 
+    def execute(self, session, run):
+        if "agent_workspace" in run.parameters and run.status not in {"cancel_requested", "canceled"}:
+            from app.agent_workspace import coding_deadline, reviewed_workspace
+
+            parent, definition, _ = reviewed_workspace(session, run)
+            coding_deadline(parent, definition)
+        return super().execute(session, run)
+
     def payload(self, run):
         return {
             "run_id": run.id,
@@ -92,6 +100,15 @@ class ProjectSetupExecutor(NativeJobExecutor):
         return runner.request("GET", f"/v1/projects/created/{run_id}")
 
     def finish(self, session, run, report):
+        with session.begin_nested():
+            return self._finish(session, run, report)
+
+    def _finish(self, session, run, report):
+        workspace = None
+        if "agent_workspace" in run.parameters:
+            from app.agent_workspace import reviewed_workspace
+
+            workspace = reviewed_workspace(session, run)
         if report["run_id"] != run.id or report["project_id"] != run.parameters["project_id"]:
             raise ValueError("Project creation ownership mismatch")
         settings = {**run.parameters["settings"], "default_branch": "main", "integration_branch": "develop"}
@@ -110,6 +127,11 @@ class ProjectSetupExecutor(NativeJobExecutor):
                 run_id=run.id,
                 metadata={"project_id": project.id},
             )
+        if workspace is not None:
+            from app.agent_workspace import finish_workspace
+
+            run.metadata_json = {**run.metadata_json, "project": report}
+            return finish_workspace(session, run, project, workspace)
         run.project_id = run.task.project_id = project.id
         run.metadata_json = {**run.metadata_json, "project": report}
         run.summary = "Project created with Git and a Python environment. Ready for coding."

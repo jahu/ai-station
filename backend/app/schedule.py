@@ -93,7 +93,7 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
                         session.get(Project, str(definition.project_id))
                     )
                 }
-                if coding_provider(definition.tools) is not None
+                if coding_provider(definition.tools) is not None and definition.project_id is not None
                 else {}
             ),
             "endpoint": endpoint,
@@ -207,6 +207,9 @@ def retry_workflow(session: Session, source: Run) -> str:
     if agent is None:
         raise ValueError("Agent not found")
     definition = AgentSettings.model_validate(source.parameters.get("definition") or {})
+    from app.agent_workspace import workspace_retry_definition
+
+    definition = workspace_retry_definition(session, source, definition)
     run_id = launch_agent(session, agent, triggered_by="retry", definition=definition)
     retry = session.get(Run, run_id)
     retry.metadata_json = {**retry.metadata_json, "retry_of": source.id}

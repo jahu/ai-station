@@ -876,8 +876,13 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           />
         </label>
         <div className="agent-wide">
-          <h3>Linked project</h3>
+          <h3>
+            {values.tools.includes("coding_local")
+              ? "Workspace"
+              : "Linked project"}
+          </h3>
           <AgentProjectList
+            automaticWorkspace={values.tools.includes("coding_local")}
             agentId={agent.id}
             projectId={values.project_id ?? null}
             projects={projects.data ?? []}

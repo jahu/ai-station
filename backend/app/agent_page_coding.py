@@ -15,7 +15,7 @@ from app.runs import create_run, mark_failed, transition
 from app.state import RunStatus
 
 
-def publish_page_coding(session, parent, definition):
+def publish_page_coding(session, parent, definition, *, deadline_at=None):
     if coding_provider(definition.tools) != "local" or set(definition.tools) != {
         "coding_local",
         "http_fetch",
@@ -29,7 +29,7 @@ def publish_page_coding(session, parent, definition):
         **parent.task.metadata_json,
         "agent_coding_definition": definition.model_dump(mode="json"),
     }
-    deadline = (utcnow() + timedelta(seconds=definition.maximum_runtime)).isoformat()
+    deadline = (deadline_at or (utcnow() + timedelta(seconds=definition.maximum_runtime))).isoformat()
     shared = {
         "definition": parent.parameters["definition"],
         "deadline_at": deadline,
