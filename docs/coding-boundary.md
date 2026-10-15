@@ -49,3 +49,35 @@ against the existing exploration request budget. They are never executed or
 coerced into a guessed operation. Unknown/disallowed tools, unsafe paths and
 invalid argument values still fail closed. This addresses the observed missing
 `tool: finish` in the real local Work continuation; it does not grant new tools.
+
+## Next increment: automatic preparation and checks for managed projects
+
+This is planned work, not an operational claim. Name-only projects currently save
+empty validation commands, and applying a coding proposal does not automatically
+install its newly declared dependencies. The next increment must close that full
+happy path for Coding, Work, continued tasks and persistent coding agents.
+
+Persist explicit automatic dependency/check policies on Projects with an Alembic
+migration. Existing registered projects and old snapshots retain their manual
+behavior. New managed-project UI defaults can enable the policies with concise
+public-registry/isolation disclosure; the creation request must carry the choice.
+Expose overrides in advanced settings. Freeze policy and project revision on Send
+and agent launch; untrusted model plans cannot grant installation/network access.
+
+Compose ordinary child Runs on the same Task: proposal → dependency preparation
+when required and authorized → validation → review. A dependency failure, Stop,
+expired deadline or uncertain recovery must prevent later execution. Preserve
+source proposal and dependency artifacts. Reuse the tested native installers and
+sandbox; do not introduce an arbitrary command endpoint or silently weaken checks.
+Manually configured test/lint/build argv remain authoritative. When automatic
+checks are explicitly enabled and none are saved, native bounded inspection may
+choose known checks from actual project manifests, such as npm run build/test;
+report the exact chosen commands and distinguish absent tests from passing tests.
+Do not silently report success for an app that was never built or tested.
+
+Acceptance must include frozen permissions/revisions, old-receipt compatibility,
+Stop across all descendants, failure gating, approval/recovery, and actual
+one-conversation creation/coding/dependency/build with a local long-context model
+in a disposable repository. Keep external-provider consent independent. The real
+React/Vite fixture qualification in #310 proves the installer/build boundary;
+it does not prove this automatic LLM-driven chain yet.
