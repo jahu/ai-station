@@ -249,7 +249,7 @@ export default function App() {
       </aside>
       <div className="workspace">
         <header className="topbar">
-          <div>
+          <div className="workspace-location">
             <span className="muted">Workspace</span>
             <span className="slash">/</span>
             {page}
@@ -257,7 +257,7 @@ export default function App() {
           <div className="row">
             <span className="private-label">
               <span className="status-dot" />
-              {sessionActive ? "Loopback session" : "Local control plane"}
+              {sessionActive ? "Operator session" : "Local control plane"}
             </span>
             {sessionActive ? (
               <Button

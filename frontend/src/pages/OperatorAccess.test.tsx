@@ -87,11 +87,11 @@ it("stores an operator password without displaying it later", async () => {
   });
   fireEvent.click(screen.getByRole("button", { name: "Store password" }));
   await waitFor(() => expect(configured).toBe(true));
-  await screen.findByText(/operator password stored/);
+  await screen.findByText(/Operator password stored/);
   expect(screen.queryByDisplayValue("operator-pass")).toBeNull();
 });
 
-it("describes idle timeout and cookie flags without offering LAN publish", async () => {
+it("describes device sessions and idle timeout", async () => {
   mount(
     vi.fn(async (path: string) => ({
       ok: true,
@@ -116,9 +116,7 @@ it("describes idle timeout and cookie flags without offering LAN publish", async
     })),
   );
   await screen.findByText("This workstation");
-  expect(
-    screen.getByText(/httpOnly, SameSite=strict, not Secure/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Each device has its own session/)).toBeTruthy();
   expect(
     screen.getByText(/30 minutes\s+idle or 12 hours from sign-in/),
   ).toBeTruthy();
@@ -148,9 +146,7 @@ it("does not offer a LAN bind control", async () => {
     screen.queryByRole("button", { name: /bind|publish|lan/i }),
   ).toBeNull();
   expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
-  expect(
-    screen.getByText(/authenticated LAN transport is unpublished/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Private network access is off/)).toBeTruthy();
 });
 
 it("signs out the loopback session without offering LAN publish", async () => {
@@ -285,7 +281,7 @@ it("moves through nodes with arrow keys", async () => {
   expect(second.tabIndex).toBe(-1);
   expect(screen.getByRole("region", { name: "Nodes" })).toBeTruthy();
   expect(
-    screen.getByText(/Authenticated LAN transport stays unpublished/),
+    screen.getByText(/Remote execution transport stays unpublished/),
   ).toBeTruthy();
   expect(
     screen.queryByRole("button", { name: /bind|publish|lan/i }),
@@ -302,4 +298,31 @@ it("moves through nodes with arrow keys", async () => {
     key: "Home",
   });
   expect(first.tabIndex).toBe(0);
+});
+
+it("shows the private phone URL and protects the password while LAN is active", async () => {
+  mount(
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path === "/api/nodes"
+          ? nodes
+          : {
+              ...status,
+              configured: true,
+              authenticated: true,
+              access_urls: ["http://192.168.20.5:8765"],
+              lan_bind_allowed: true,
+              password_removal_allowed: false,
+              lan_exposure: "private",
+              reason: "Private network access requires the operator password.",
+            },
+    })),
+  );
+  const link = await screen.findByRole("link", {
+    name: "http://192.168.20.5:8765",
+  });
+  expect(link.getAttribute("href")).toBe("http://192.168.20.5:8765");
+  expect(screen.queryByRole("button", { name: "Remove password" })).toBeNull();
+  expect(screen.getByText(/Use the same operator password/)).toBeTruthy();
 });

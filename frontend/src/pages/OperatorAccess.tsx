@@ -53,7 +53,7 @@ function NodeCards({
       </h3>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a node while the list is focused. Revoke stays on the
-        selected row. Authenticated LAN transport stays unpublished. There is no
+        selected row. Remote execution transport stays unpublished. There is no
         inspectable node Run.
       </p>
       <div
@@ -164,13 +164,11 @@ export default function OperatorAccess() {
   });
   return (
     <>
-      <section className="panel mt">
+      <section className="panel mt operator-access-panel">
         <div className="panel-heading">
           <div>
             <h2>Operator access</h2>
-            <p className="muted">
-              Idle and absolute loopback session · LAN stays unpublished
-            </p>
+            <p className="muted">Password and private network access</p>
           </div>
           <div className="row">
             {status.data?.configured ? (
@@ -190,94 +188,114 @@ export default function OperatorAccess() {
             />
           </div>
         </div>
-        <p>
-          {status.data?.reason ??
-            "The UI/API stays on loopback. LAN publish is not enabled."}
-        </p>
-        <p className="muted">
-          Bind host <code>{status.data?.bind_host ?? "127.0.0.1"}</code>
-          {" · "}
-          LAN exposure {status.data?.lan_exposure ?? "disabled"}
-          {status.data?.configured
-            ? " · operator password stored (hash only)"
-            : " · no operator password"}
-          {status.data?.session_required
-            ? status.data.authenticated
-              ? " · loopback session active"
-              : " · loopback session required"
-            : " · no session until a password is stored"}
-          . The session cookie is httpOnly, SameSite=strict, not Secure. It
-          expires after{" "}
-          {Math.round((status.data?.session_idle_seconds ?? 1800) / 60)} minutes
-          idle or{" "}
-          {Math.round((status.data?.session_max_age_seconds ?? 43200) / 3600)}{" "}
-          hours from sign-in. This password is never returned by the API. After
-          it is stored, the loopback UI and API require the session cookie;
-          health and login stay public. Non-loopback bind is refused even after
-          it is set, because authenticated LAN transport is unpublished.
-        </p>
-        <ErrorNotice
-          error={status.error ?? save.error ?? clear.error ?? logout.error}
-        />
-        <form
-          className="image-form mt"
-          onSubmit={(event) => {
-            event.preventDefault();
-            save.mutate();
-          }}
-        >
-          {status.data?.configured ? (
+        <div className="operator-access-body">
+          <p>
+            {status.data?.reason ??
+              "The UI/API stays on loopback. LAN publish is not enabled."}
+          </p>
+          {status.data?.access_urls?.length ? (
+            <div className="mt">
+              <h3>Open AI Station on another device</h3>
+              <p className="muted">
+                Use the same operator password on your phone or computer.
+              </p>
+              {status.data.access_urls.map((url) => (
+                <p key={url}>
+                  <a href={url} className="break-all">
+                    {url}
+                  </a>
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">
+              Private network access is off. Set a password first, then
+              configure the workstation's private address.
+            </p>
+          )}
+          <p className="muted">
+            {status.data?.configured
+              ? "Operator password stored (hash only)."
+              : "No operator password set."}{" "}
+            Each device has its own session. It expires after{" "}
+            {Math.round((status.data?.session_idle_seconds ?? 1800) / 60)}{" "}
+            minutes idle or{" "}
+            {Math.round((status.data?.session_max_age_seconds ?? 43200) / 3600)}{" "}
+            hours from sign-in. Changing the password signs out all other
+            devices.
+          </p>
+          {status.data?.access_urls?.some((url) =>
+            url.startsWith("http://"),
+          ) ? (
+            <p className="muted">
+              HTTP access is for your trusted home network. Use Tailscale for an
+              encrypted connection away from home.
+            </p>
+          ) : null}
+          <ErrorNotice
+            error={status.error ?? save.error ?? clear.error ?? logout.error}
+          />
+          <form
+            className="image-form mt"
+            onSubmit={(event) => {
+              event.preventDefault();
+              save.mutate();
+            }}
+          >
+            {status.data?.configured ? (
+              <label>
+                Current password
+                <input
+                  type="password"
+                  autoComplete="current-password"
+                  value={current}
+                  onChange={(event) => setCurrent(event.target.value)}
+                  minLength={1}
+                  maxLength={200}
+                />
+              </label>
+            ) : null}
             <label>
-              Current password
+              {status.data?.configured
+                ? "Replacement password"
+                : "Operator password"}
               <input
                 type="password"
-                autoComplete="current-password"
-                value={current}
-                onChange={(event) => setCurrent(event.target.value)}
-                minLength={1}
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                minLength={12}
                 maxLength={200}
+                required
               />
             </label>
-          ) : null}
-          <label>
-            {status.data?.configured
-              ? "Replacement password"
-              : "Operator password"}
-            <input
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              minLength={12}
-              maxLength={200}
-              required
-            />
-          </label>
-          <div className="row">
-            <Button
-              type="submit"
-              disabled={save.isPending || password.length < 12}
-            >
-              {save.isPending
-                ? "Saving…"
-                : status.data?.configured
-                  ? "Replace password"
-                  : "Store password"}
-            </Button>
-            {status.data?.configured ? (
+            <div className="row">
               <Button
-                type="button"
-                variant="secondary"
-                disabled={clear.isPending || !current}
-                onClick={() => clear.mutate()}
+                type="submit"
+                disabled={save.isPending || password.length < 12}
               >
-                {clear.isPending ? "Clearing…" : "Remove password"}
+                {save.isPending
+                  ? "Saving…"
+                  : status.data?.configured
+                    ? "Replace password"
+                    : "Store password"}
               </Button>
-            ) : null}
-          </div>
-        </form>
+              {status.data?.configured &&
+              status.data.password_removal_allowed !== false ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={clear.isPending || !current}
+                  onClick={() => clear.mutate()}
+                >
+                  {clear.isPending ? "Clearing…" : "Remove password"}
+                </Button>
+              ) : null}
+            </div>
+          </form>
+        </div>
       </section>
-      <section className="panel mt">
+      <section className="panel mt operator-access-panel">
         <div className="panel-heading">
           <div>
             <h2>Nodes</h2>
@@ -286,40 +304,42 @@ export default function OperatorAccess() {
             </p>
           </div>
         </div>
-        <p className="muted">{nodes.data?.summary}</p>
-        <ErrorNotice error={nodes.error ?? invite.error ?? revoke.error} />
-        {nodes.data?.items.length ? (
-          <NodeCards
-            items={nodes.data.items}
-            revokePending={revoke.isPending}
-            onRevoke={(id) => revoke.mutate(id)}
-          />
-        ) : null}
-        {issuedToken ? (
-          <p>
-            One-time invitation token (not stored in the list):{" "}
-            <code>{issuedToken}</code>
-          </p>
-        ) : null}
-        <form
-          className="image-form mt"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const fields = new FormData(event.currentTarget);
-            invite.mutate(String(fields.get("name") ?? "").trim());
-          }}
-        >
-          <label>
-            Remote node name
-            <input name="name" required maxLength={200} />
-          </label>
-          <Button
-            type="submit"
-            disabled={invite.isPending || !status.data?.configured}
+        <div className="operator-access-body">
+          <p className="muted">{nodes.data?.summary}</p>
+          <ErrorNotice error={nodes.error ?? invite.error ?? revoke.error} />
+          {nodes.data?.items.length ? (
+            <NodeCards
+              items={nodes.data.items}
+              revokePending={revoke.isPending}
+              onRevoke={(id) => revoke.mutate(id)}
+            />
+          ) : null}
+          {issuedToken ? (
+            <p>
+              One-time invitation token (not stored in the list):{" "}
+              <code>{issuedToken}</code>
+            </p>
+          ) : null}
+          <form
+            className="image-form mt"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const fields = new FormData(event.currentTarget);
+              invite.mutate(String(fields.get("name") ?? "").trim());
+            }}
           >
-            {invite.isPending ? "Issuing…" : "Issue invitation"}
-          </Button>
-        </form>
+            <label>
+              Remote node name
+              <input name="name" required maxLength={200} />
+            </label>
+            <Button
+              type="submit"
+              disabled={invite.isPending || !status.data?.configured}
+            >
+              {invite.isPending ? "Issuing…" : "Issue invitation"}
+            </Button>
+          </form>
+        </div>
       </section>
     </>
   );

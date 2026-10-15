@@ -5521,3 +5521,45 @@ section:has(> .memory-grid) > .dashboard-note {
 .media-scene-progress progress {
   width: 100%;
 }
+
+.operator-access-body {
+  display: grid;
+  gap: 18px;
+  padding: 22px;
+}
+.operator-access-body > p,
+.operator-access-body > .mt {
+  margin: 0;
+}
+.operator-access-body .row {
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .workspace-location .muted,
+  .workspace-location .slash {
+    display: none;
+  }
+  .topbar > .row {
+    flex-shrink: 0;
+  }
+  .operator-access-panel > .panel-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .operator-access-body {
+    padding: 16px;
+  }
+}
+
+.operator-login {
+  width: 100%;
+  max-width: 560px;
+  margin: 8vh auto;
+}
+.operator-login > .panel {
+  padding: 24px;
+}
+.operator-login .image-form > button {
+  min-height: 44px;
+  width: 100%;
+}

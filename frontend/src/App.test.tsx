@@ -217,7 +217,7 @@ it("signs out the loopback session from chrome without offering LAN publish", as
     </QueryClientProvider>,
   );
   const signOut = await screen.findByRole("button", { name: "Sign out" });
-  expect(screen.getByText("Loopback session")).toBeTruthy();
+  expect(screen.getByText("Operator session")).toBeTruthy();
   expect(
     screen.queryByRole("button", { name: /bind|publish|lan/i }),
   ).toBeNull();

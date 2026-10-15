@@ -1,4 +1,4 @@
-"""Authenticated node invitations on loopback. LAN transport stays unpublished."""
+"""Authenticated node identity records; remote execution transport stays unpublished."""
 
 from __future__ import annotations
 
@@ -74,9 +74,9 @@ def inventory(session: Session) -> dict:
         "lan_exposure": status["lan_exposure"],
         "lan_bind_allowed": False,
         "summary": (
-            "The local Host Runner is registered over its Unix socket. Remote invitations use a "
-            "one-time token accepted only on this loopback API. Authenticated LAN/node transport "
-            "is unpublished, so a registered remote still has no network path."
+            "The local Host Runner uses its private Unix socket. Invitations record remote node identities "
+            "through the operator-protected API. Remote execution transport stays unpublished; "
+            "registered nodes cannot run workloads yet."
         ),
     }
 

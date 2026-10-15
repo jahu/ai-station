@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Github, RefreshCw, ExternalLink } from "lucide-react";
 import { api } from "../api";
+import { randomId } from "../lib/random-id";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 
@@ -208,7 +209,7 @@ export function GithubConnectors({ rows }: { rows: Connector[] }) {
           kind: "github",
           repository: repository.trim(),
           name: repository.trim(),
-          key: `github-${crypto.randomUUID()}`,
+          key: `github-${randomId()}`,
         }),
       }),
     onSuccess: () => {

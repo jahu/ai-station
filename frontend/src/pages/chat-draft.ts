@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { randomId } from "../lib/random-id";
 
 const prefix = "ai-station:chat-draft:";
 const defaultMaxCharacters = 32000;
@@ -52,15 +54,14 @@ export function useChatDraft(
 const requestPrefix = "ai-station:chat-request:";
 
 export async function chatRequestId(scope: string, body: string) {
-  if (!crypto.subtle) return crypto.randomUUID();
-  const bytes = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(body),
-  );
+  const input = new TextEncoder().encode(body);
+  const bytes = crypto.subtle
+    ? await crypto.subtle.digest("SHA-256", input)
+    : sha256(input);
   const hash = Array.from(new Uint8Array(bytes), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
-  let id = crypto.randomUUID();
+  let id = randomId();
   try {
     const previous = JSON.parse(
       sessionStorage.getItem(requestPrefix + scope) || "null",
