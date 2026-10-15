@@ -5762,7 +5762,9 @@ section:has(> .memory-grid) > .dashboard-note {
   font-size: 12px;
 }
 .chat-heading .model-picker-trigger small {
-  display: none;
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
 }
 .chat-heading .model-picker-trigger > svg {
   width: 14px;
