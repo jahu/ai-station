@@ -33,6 +33,11 @@ admission includes GPU and host RAM. Longer output hardware qualification is
 recorded separately from normal fake-GPU/real-CPU integration tests. See
 [the media execution design](plans/long-media-execution.md) for subsequent profiles.
 
+[Named-project Work](named-project-work.md) resolves an explicit current-turn
+project change instruction into the existing typed Local Coding Auto scope.
+It freezes project identity/revision before enqueue, preserves explicit task
+selection and receipt replay, and performs no model inference to select a project.
+
 [Conversational media](conversational-media.md) exposes the same aggregate jobs
 in Chat/Work, with final-only artifact projection and task-wide Stop. Deterministic
 video/avatar actions do not require an LLM planner.

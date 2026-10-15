@@ -539,6 +539,9 @@ def submit_message(conversation_id, body, session, *, commit=True):
     body, result_reference = resolve_result_reference(session, row, body, mode)
     if mode == "chat":
         validate_chat_scope(body)
+    from app.project_reference import resolve_project_reference
+
+    body, project_reference = resolve_project_reference(session, body, mode)
     use_assistant = (
         mode in {"orchestrator", "work"}
         or mode == "chat"
@@ -562,6 +565,8 @@ def submit_message(conversation_id, body, session, *, commit=True):
     )
     if result_reference:
         user.metadata_json = {**user.metadata_json, "conversation_reference": result_reference}
+    if project_reference:
+        user.metadata_json = {**user.metadata_json, "project_reference": project_reference}
     if body.reasoning is not None:
         from app.chat_reasoning import certificate, validated_options
 

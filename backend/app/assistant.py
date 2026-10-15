@@ -183,6 +183,8 @@ class Plan(BaseModel):
 
 def assistant_needs_provider(body):
     plan = explicit_plan(body.model_dump(mode="json", exclude={"attachments"}))
+    if plan and plan.action == "coding.local" and body.coding and body.coding.model == "auto":
+        return False  # Auto uses its own qualified local provider, never the Chat model.
     return not plan or plan.action not in {
         "runtime.load",
         "runtime.stop",
@@ -1149,7 +1151,8 @@ class AssistantExecutor:
         run.project_id = child.project_id
         run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
         provider = "local AI" if local else "external " + provider.title()
-        message.content = f"Queued an isolated worktree and {provider} task. Coding and configured validation results will appear here."
+        project = session.get(Project, child.project_id)
+        message.content = f"Queued an isolated worktree and {provider} task for {project.name}. Coding and configured validation results will appear here."
 
     def conversation_source(self, session, run, source_id):
         source = session.get(Run, str(source_id))

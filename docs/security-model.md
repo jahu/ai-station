@@ -18,6 +18,13 @@ owned stages, while uncertain process ownership retains reservations for inspect
 See the [policy matrix](plans/chat-work-experience.md#4-chatwork-server-policy) and
 [composition boundary](plans/long-media-execution.md#7-cpu-composition-artifact-and-security-contract).
 
+An explicit registered project name and change instruction in Work may derive a
+local coding scope from that current turn only. Chat, quoted history/tool results,
+attachments, existing typed scopes and requested external providers cannot acquire
+this scope. Exact names and a frozen project policy revision are checked before
+ordinary owned worktree execution. No external sharing, commit or publication is
+inferred; see [named-project Work](named-project-work.md).
+
 > Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Local agents now have explicit activation, durable schedules, bounded context tools, GET of reviewed public pages, versioned Skills as instruction packs, sequential or gated workflow steps, optional bounded registry tool calling during the report, saved retry policies and in-app notices. Named HTTP GET connectors are operational; account browser automation and other connector kinds are not. Bounded Cursor file-edit proposals, review artifacts and separate validation Runs are operational. Other coding adapters remain inactive. See README for runnable commands and limitations.
 
 
