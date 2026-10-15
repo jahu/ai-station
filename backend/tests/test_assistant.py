@@ -977,6 +977,10 @@ def test_conversation_override_does_not_create_project():
     ],
 )
 def test_project_followup_is_not_silently_treated_as_a_name(monkeypatch, instruction):
+    monkeypatch.setattr(
+        "app.coding_model_routing.select_coding_model", lambda session: {"model": "qualified-fixture"}
+    )
+
     async def stream(self, **params):
         yield json.dumps({"action": "project.create", "reason": "Create a project"})
 
@@ -1021,7 +1025,10 @@ def test_project_build_rejects_unauthorized_or_mixed_requests_without_side_effec
         assert client.get("/api/projects").json() == [] and client.get("/api/runs").json() == []
 
 
-def test_work_first_send_project_build_is_idempotent_and_keeps_quoted_name():
+def test_work_first_send_project_build_is_idempotent_and_keeps_quoted_name(monkeypatch):
+    monkeypatch.setattr(
+        "app.coding_model_routing.select_coding_model", lambda session: {"model": "qualified-fixture"}
+    )
     from uuid import uuid4
 
     with TestClient(app) as client:
@@ -1040,4 +1047,44 @@ def test_work_first_send_project_build_is_idempotent_and_keeps_quoted_name():
         assert detail["active_run"]["executor_type"] == "project_setup"
         assert detail["active_run"]["parameters"]["settings"]["name"] == "Art and build Co"
         assert detail["active_run"]["parameters"]["coding_request"]["prompt"] == "build a website"
+        assert detail["active_run"]["parameters"]["coding_request"]["model"] == "auto"
+        assert detail["active_run"]["parameters"]["coding_request"]["scope"]["model"] == "auto"
         assert len(client.get("/api/runs").json()) == 2
+
+
+def test_natural_project_auto_does_not_fall_back_to_small_chat_model():
+    from uuid import uuid4
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/chat/turns",
+            json={
+                "client_request_id": str(uuid4()),
+                "selection": {"model": "small-chat-model", "execution_mode": "work"},
+                "execution_mode": "work",
+                "content": "Create project Calculator and build a tested calculator",
+            },
+        )
+        assert response.status_code == 409, response.text
+        assert client.get("/api/projects").json() == []
+        assert client.get("/api/runs").json() == []
+        assert client.get("/api/chat/conversations").json() == []
+
+
+def test_explicit_new_project_conversation_model_choice_stays_explicit():
+    with TestClient(app) as client:
+        cid = create(client)
+        response = client.post(
+            "/api/chat/conversations/" + cid + "/messages",
+            json={
+                "action": "project.create_code",
+                "new_project": {"name": "Explicit model", "model": ""},
+                "content": "Build a calculator",
+            },
+        )
+        assert response.status_code == 202, response.text
+        step()
+        request = client.get("/api/chat/conversations/" + cid).json()["active_run"]["parameters"][
+            "coding_request"
+        ]
+        assert request["model"] == "test" and request["scope"]["model"] == ""
