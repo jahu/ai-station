@@ -57,6 +57,9 @@ it("reopens task history and sends a guarded follow-up to the same conversation"
   );
   await screen.findByText("Homepage created");
   expect(screen.getByText("Build my homepage")).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "Continue in Work" }).getAttribute("href"),
+  ).toBe("/chat?work_task=task&work_run=proposal");
   const inspect = screen.getByRole("link", {
     name: "Inspect project project-1",
   });
@@ -463,4 +466,52 @@ it("moves through coding conversations with arrow keys", async () => {
     key: "Home",
   });
   expect(first.tabIndex).toBe(0);
+});
+
+it("stops the whole coding task while project preparation is running", async () => {
+  const writes: string[] = [];
+  const task = {
+    id: "task",
+    title: "Build site",
+    project_name: "Website",
+    status: "running",
+    active_run_id: "prepare",
+    latest_proposal_id: null,
+    runs: [
+      {
+        id: "prepare",
+        task_id: "task",
+        executor_type: "worktree_prepare",
+        status: "running",
+        parameters: {},
+        metadata: {},
+        created_at: "2026-10-15T00:00:00Z",
+      },
+    ],
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === "POST") writes.push(url);
+      return { ok: true, json: async () => task };
+    }),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/coding/task"]}>
+        <Routes>
+          <Route path="/coding/:id" element={<CodingSession />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByText("Build site");
+  fireEvent.click(screen.getByRole("button", { name: /Stop/ }));
+  await waitFor(() =>
+    expect(writes).toEqual(["/api/coding/sessions/task/cancel"]),
+  );
 });

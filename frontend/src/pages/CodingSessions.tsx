@@ -310,7 +310,7 @@ export default function CodingSession() {
     },
   });
   const cancel = useMutation({
-    mutationFn: () => api(`/runs/${active?.id}/cancel`, { method: "POST" }),
+    mutationFn: () => api(`/coding/sessions/${id}/cancel`, { method: "POST" }),
     onSuccess: () =>
       void cache.invalidateQueries({ queryKey: ["coding-session", id] }),
   });
@@ -320,12 +320,21 @@ export default function CodingSession() {
         eyebrow={q.data?.project_name ?? "CODING"}
         title={q.data?.title ?? "Coding conversation"}
         action={
-          <Button variant="secondary" asChild>
-            <Link to="/coding">
-              <Plus size={15} />
-              New conversation
-            </Link>
-          </Button>
+          <div className="row">
+            {latest && (
+              <Button variant="secondary" asChild>
+                <Link to={`/chat?work_task=${id}&work_run=${latest.id}`}>
+                  Continue in Work
+                </Link>
+              </Button>
+            )}
+            <Button variant="secondary" asChild>
+              <Link to="/coding">
+                <Plus size={15} />
+                New conversation
+              </Link>
+            </Button>
+          </div>
         }
       >
         Your instructions, the agent’s results and the same workspace across

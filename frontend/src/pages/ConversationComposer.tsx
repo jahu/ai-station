@@ -73,12 +73,14 @@ export default function ConversationComposer({
           submit();
         }}
       />
-      <details className="new-chat-tools">
-        <summary>
-          <Paperclip size={15} /> Attach files &amp; choose tools
-        </summary>
-        {tools}
-      </details>
+      {tools && (
+        <details className="new-chat-tools">
+          <summary>
+            <Paperclip size={15} /> Attach files &amp; choose tools
+          </summary>
+          {tools}
+        </details>
+      )}
       <div className="new-chat-footer">
         {controls}
         {sendButton ?? (
