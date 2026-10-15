@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.db import session_scope
 from app.host_media_executor import HostMediaExecutor
 from app.models import Artifact
+from app.motion_artifacts import MotionArtifacts
 from app.runs import create_run, create_task, run_dict
 
 router = APIRouter(prefix="/api/avatars")
@@ -88,14 +89,17 @@ def generate(body: AvatarRequest, session: Annotated[Session, Depends(session_sc
     return run_dict(run)
 
 
-class AvatarExecutor(HostMediaExecutor):
+class AvatarExecutor(MotionArtifacts, HostMediaExecutor):
     name = "echomimic"
     suffix = ".mp4"
     artifact_type = "video"
     mime_type = "video/mp4"
+    motion_role = "echo_motion"
+    motion_filename = "echo-motion.safetensors"
 
     def _start(self, runner, run, allocated, output):
         previous_reference = None
+        motion = None
         if run.parameters.get("previous_video_run_id"):
             from sqlalchemy import select
 
@@ -110,11 +114,19 @@ class AvatarExecutor(HostMediaExecutor):
                             Artifact.run_id == previous.id, Artifact.artifact_type == "video"
                         )
                     )
-                    if previous and previous.status == "succeeded" and previous.task_id == run.task_id
+                    if previous
+                    and previous.status == "succeeded"
+                    and previous.task_id == run.task_id
+                    and previous.executor_type == self.name
                     else None
                 )
                 if not artifact or artifact.trashed_at is not None:
                     raise ValueError("Successful preceding avatar motion is unavailable")
+                motion = artifact.metadata_json.get("motion_context")
+                if motion:
+                    context = session.get(Artifact, artifact.metadata_json.get("motion_context_artifact_id"))
+                    if not context or context.trashed_at is not None or context.run_id != previous.id:
+                        raise ValueError("Restore the preceding avatar motion checkpoint before continuing")
                 previous_reference = {
                     "relative_path": artifact.relative_path,
                     "sha256": artifact.sha256,
@@ -134,6 +146,15 @@ class AvatarExecutor(HostMediaExecutor):
                     else {}
                 ),
                 **({"previous_video": previous_reference} if previous_reference else {}),
+                **(
+                    {
+                        "motion_context": {
+                            key: motion[key] for key in ("relative_path", "sha256", "size_bytes")
+                        }
+                    }
+                    if motion
+                    else {}
+                ),
                 **{
                     key: run.parameters[key]
                     for key in (

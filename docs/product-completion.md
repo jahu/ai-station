@@ -100,3 +100,12 @@ the configured sandboxed validation. Independently repeated unittest validation
 passed and the original checkout's files were unchanged. Evidence:
 `data/acceptance/local-coding-auto-20261015/result.json`. This qualifies that
 concrete task/model profile, not every possible coding task.
+
+2026-10-15 real local Coding acceptance now covers a follow-up through the Work
+conversation on the same RVN 131072-token model and preserved task/worktree. Two
+observed format failures were fixed: unconstrained prose output and a missing
+exploration tool name. Constrained JSON and bounded unexecuted-operation correction
+completed the real follow-up, preserved the original add function, implemented
+multiply and passed sandboxed plus independent unittest/function checks. Failed
+attempts remain in history. Evidence:
+`data/acceptance/exploration-repair-20261015/real-retry-result.json`.

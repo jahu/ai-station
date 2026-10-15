@@ -441,3 +441,94 @@ def test_native_avatar_uses_absolute_audio_window_and_pads_only_final_tail(avata
         with wave.open(str(get_settings().data_dir / speech["relative_path"]), "rb") as sound:
             assert sound.getnframes() == 16000  # Canonical source is unchanged.
         assert window.endswith("audio-window.wav")
+
+
+def test_avatar_motion_checkpoint_is_a_hidden_general_artifact(session):
+    import hashlib
+
+    from app.artifacts import adopt_existing
+    from app.avatars import AvatarExecutor
+    from app.models import Artifact
+    from app.runs import create_run, create_task
+
+    root = get_settings().data_dir
+    (root / "artifacts").mkdir(parents=True, exist_ok=True)
+    raw = b"bounded native checkpoint fixture"
+    (root / "artifacts/echo.safetensors").write_bytes(raw)
+    (root / "artifacts/echo.mp4").write_bytes(b"native video fixture")
+    task = create_task(session, title="Avatar", prompt="", capability="avatar.animate")
+    run = create_run(session, task, run_type="video", capability="avatar.animate", executor_type="echomimic")
+    video = adopt_existing(
+        session,
+        relative_path="artifacts/echo.mp4",
+        artifact_type="video",
+        mime_type="video/mp4",
+        original_filename="echo.mp4",
+        run_id=run.id,
+        metadata={
+            "motion_context": {
+                "relative_path": "artifacts/echo.safetensors",
+                "sha256": hashlib.sha256(raw).hexdigest(),
+                "size_bytes": len(raw),
+                "context_frames": 17,
+            }
+        },
+    )
+    AvatarExecutor().on_success(session, run, video)
+    context = session.get(Artifact, video.metadata_json["motion_context_artifact_id"])
+    assert context.artifact_type == "document"
+    assert context.metadata_json["internal_media"] and context.metadata_json["role"] == "echo_motion"
+    assert context.parent_artifact_ids == [video.id] and context.run_id == run.id
+    assert context.original_filename == "echo-motion.safetensors"
+
+
+def test_avatar_motion_hash_failure_never_launches_a_process(avatar_bridge):
+    import hashlib
+    import json
+    import struct
+
+    from ai_station_runner.config import get_settings as runner_settings
+    from ai_station_runner.echo_motion import profile_key
+
+    with TestClient(app) as client:
+        portrait, audio = inputs(client)
+    settings = runner_settings()
+    root = settings.host_data_dir().resolve()
+    previous = root / "artifacts/previous.mp4"
+    previous.write_bytes(b"owned video")
+    motion = root / "artifacts/motion.safetensors"
+    length = 16 * 5 * 32 * 32 * 4
+    header = json.dumps(
+        {
+            "motion": {"dtype": "F32", "shape": [1, 16, 5, 32, 32], "data_offsets": [0, length]},
+            "__metadata__": {
+                "station.echo_profile": profile_key(settings.echomimic_dir, settings.echomimic_models)
+            },
+        }
+    ).encode()
+    motion.write_bytes(struct.pack("<Q", len(header)) + header + b"\0" * length)
+    body = {
+        "run_id": str(uuid4()),
+        "image_relative": portrait["relative_path"],
+        "audio_relative": audio["relative_path"],
+        "prompt": "Speaking",
+        "size": 256,
+        "gpu": 7,
+        "permissions": ["filesystem_read", "workspace_write"],
+        "audio_window": {"start_frame": 0},
+        "previous_video": {
+            "relative_path": "artifacts/previous.mp4",
+            "sha256": hashlib.sha256(previous.read_bytes()).hexdigest(),
+            "size_bytes": previous.stat().st_size,
+        },
+        "motion_context": {
+            "relative_path": "artifacts/motion.safetensors",
+            "sha256": "0" * 64,
+            "size_bytes": motion.stat().st_size,
+        },
+    }
+    calls_before = len(avatar_bridge)
+    with TestClient(host_app.app) as native:
+        response = native.post("/v1/runs/avatar", json=body)
+    assert response.status_code == 422 and "content changed" in response.text
+    assert len(avatar_bridge) == calls_before
