@@ -122,3 +122,13 @@ def test_transitive_source_cannot_bypass_the_registry_lock(tmp_path, group):
     (tmp_path / "package-lock.json").write_text(json.dumps(lock))
     with pytest.raises(GitError, match="URLs, VCS"):
         verify_lock(tmp_path, package_manifest(tmp_path))
+
+
+@pytest.mark.parametrize(
+    "version", ["^1.0.0-beta.52", "1.0.0+build.4", ">=1.0.0-alpha <2.0.0 || ^3.0.0", "next"]
+)
+def test_public_prerelease_ranges_remain_version_specs(tmp_path, version):
+    package, _ = files(tmp_path)
+    package["dependencies"]["@scope/example"] = version
+    (tmp_path / "package.json").write_text(json.dumps(package))
+    assert package_manifest(tmp_path)["groups"]["dependencies"]["@scope/example"] == version

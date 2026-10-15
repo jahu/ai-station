@@ -15,13 +15,32 @@ metadata and owned-group cancellation/time/output bounds. The report retains
 manifest hashes, packages, exit status and runtime version. Uncertain execution
 is inspected rather than repeated.
 
-Managed installs require an existing npm version 3 lockfile. Generating a lock
-through npm itself is not enabled: transitive Git/URL dependencies could otherwise
-be contacted before the resulting lock is checked. Project npm-shrinkwrap files
-are also refused because they override package-lock.json. A future controlled
-registry resolver may generate locks without that exposure. No postinstall hook
-or extra arbitrary shell operation is introduced. Trusted configured build/test argv
-use the selected Node runtime in the existing network-disabled validation sandbox.
+Existing npm v3 lockfiles are checked and never regenerated. When no lockfile
+exists, a bounded native resolver stages a copy of package.json in the owned
+scratch directory. It repeatedly runs npm's lock-only resolver with **network
+disabled**. A typed registry client fetches only canonical package metadata from
+registry.npmjs.org, pins a checked public IP while preserving TLS authority,
+refuses redirects and limits response/aggregate size. Only versions with checked
+public tarballs, SHA-512 integrity and safe installed dependency declarations enter
+the cache. Uninstalled development dependencies and package scripts are omitted
+from that metadata; root development dependencies are still reviewed and installed.
+
+Cache seeding is fixed adapter code and also runs with no network. Incomplete
+optional dependency metadata must be fetched before resolution is accepted; npm
+otherwise silently drops missing platform packages while reporting success.
+Intermediate locks stay inside this Run's staging directory. The complete lock
+passes the same source/integrity checks as an existing lock, then is created
+exclusively in the worktree, preserving any file created concurrently. Only then
+can ordinary npm ci execute. Metadata names, hashes, sizes and excluded-version
+counts are retained in the dependency report. The UI identifies generated locks.
+
+Resolution and installation share one deadline, process group, Stop and output
+bounds. Limits are 200 metadata packages, 8 MiB per response and 48 MiB total.
+Existing .npmrc, npm-shrinkwrap, workspaces and URL/Git/local sources remain
+unsupported. Offline resolution cannot contact transitive sources, run lifecycle
+scripts or gain network permissions. New lockfiles are inspectable project files;
+uncertain native execution is never automatically replayed. Trusted build/test argv
+still runs inside the network-disabled validation sandbox.
 
 Normal tests use fake runtimes and temporary repositories. An opt-in real Node/npm
 check qualifies dependency installation and build in a disposable owned worktree;
@@ -53,3 +72,15 @@ build. It verified the dependency worked, preinstall did not run, outside-worktr
 reads and Git metadata writes were denied, and the original checkout/index were
 unchanged. Evidence: `data/acceptance/node-project-dependencies-20261015/real-result.json`.
 Normal automated tests use fake runtimes and no npm downloads.
+
+The lock-generation increment additionally passed an actual no-lock installation
+of `is-odd` and its transitive `is-number` dependency, followed by a sandboxed build
+and the same file/Git/lifecycle checks. Evidence:
+`data/acceptance/node-lock-generation-20261015/real-result.json`.
+
+The final-source real React 19/Vite 7 check started without a lockfile, resolved
+platform/optional dependencies, installed the checked inventory with lifecycle
+scripts disabled and completed Vite's production build. It also passed outside
+read/Git write denial and original-checkout/index preservation. Evidence:
+`data/acceptance/node-lock-generation-20261015/real-react-result.json`. This
+qualifies that actual frontend build, not a claim that a coding model created it.

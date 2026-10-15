@@ -95,6 +95,9 @@ export function DependencyResults({ events }: { events: RunEvent[] }) {
                     ? " · npm registry · lifecycle scripts disabled"
                     : " · PyPI"
                   : " · offline vendor"}
+                {event.payload.lock_generated === true
+                  ? " · lockfile created offline"
+                  : ""}
               </p>
             </div>
             <Badge

@@ -29,9 +29,10 @@ TIMEOUT = 600
 OUTPUT_LIMIT = 2 * 1024 * 1024
 
 
-def execute_command(argv, workspace, env, *, deadline):
+def execute_command(argv, workspace, env, *, deadline, capture=False):
     started = time.monotonic()
     size = 0
+    output = {"stdout": bytearray(), "stderr": bytearray()}
     with subprocess.Popen(
         argv, cwd=workspace, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ) as proc:
@@ -56,10 +57,17 @@ def execute_command(argv, workspace, env, *, deadline):
                         selector.unregister(key.fileobj)
                     else:
                         size += len(chunk)
-                        key.data.write(chunk)
-                        key.data.flush()
+                        if capture:
+                            stream = "stdout" if key.fileobj is proc.stdout else "stderr"
+                            output[stream].extend(chunk)
+                        else:
+                            key.data.write(chunk)
+                            key.data.flush()
             code = proc.wait()
-    return {"exit_code": code, "duration_seconds": round(time.monotonic() - started, 3)}
+    result = {"exit_code": code, "duration_seconds": round(time.monotonic() - started, 3)}
+    if capture:
+        result.update({name: data.decode("utf-8", errors="replace") for name, data in output.items()})
+    return result
 
 
 def command_environment(scratch: Path) -> dict:
@@ -186,22 +194,33 @@ def install(run_id):
 
 def install_node(run_id, body, record, workspace, repository):
     from ai_station_runner.node_dependencies import confirm_registry, package_manifest, verify_lock
+    from ai_station_runner.node_lock import generate_lock
     from ai_station_runner.node_runtime import node_runtime, runtime_policy
 
     manifest = package_manifest(workspace)
     runtime = node_runtime(workspace)
+    deadline = time.monotonic() + TIMEOUT
     lock_exists = (workspace / "package-lock.json").exists() or (workspace / "package-lock.json").is_symlink()
-    if not lock_exists:
-        raise GitError(
-            "Node installs require a version 3 package-lock.json with public registry integrity pins"
-        )
-    lock_info = verify_lock(workspace, manifest)
+    lock_info = verify_lock(workspace, manifest) if lock_exists else None
     confirm_registry()
     scratch = Path(tempfile.mkdtemp(prefix=".ai-station-dependencies-", dir=workspace))
     for name in ("user.npmrc", "global.npmrc"):
         (scratch / name).touch(mode=0o600)
     env = runtime.environment(command_environment(scratch))
     versions = runtime.describe(env)
+    resolution = {"lock_generated": False}
+    if not lock_exists:
+        resolution = generate_lock(
+            workspace,
+            repository.common_dir,
+            runtime,
+            scratch,
+            env,
+            execute_command,
+            deadline=deadline,
+            policy_dir=directory(run_id),
+        )
+        lock_info = verify_lock(workspace, manifest)
     if (
         package_manifest(workspace)["package_sha256"] != manifest["package_sha256"]
         or verify_lock(workspace, manifest) != lock_info
@@ -219,7 +238,7 @@ def install_node(run_id, body, record, workspace, repository):
         validation_argv(policy, runtime.argv("ci", workspace, scratch)),
         workspace,
         env,
-        deadline=time.monotonic() + TIMEOUT,
+        deadline=deadline,
     )
     report = {
         "run_id": run_id,
@@ -236,6 +255,7 @@ def install_node(run_id, body, record, workspace, repository):
         **lock_info,
         **versions,
         "lifecycle_scripts": False,
+        **resolution,
         **result,
     }
     with (directory(run_id) / "report.json").open("x") as handle:

@@ -35,8 +35,30 @@ if sys.argv[1:]==['--version']:
  print('v22.0.0');raise SystemExit()
 assert stat.S_ISFIFO(os.fstat(0).st_mode), 'sandboxed commands require an EOF pipe'
 assert os.read(0,1)==b'', 'commands must not await interactive input'
-assert sys.argv[1].endswith('npm-cli.js')
 assert not {'NPM_TOKEN','NODE_AUTH_TOKEN','NODE_OPTIONS','AI_STATION_TEST_SECRET'}.intersection(os.environ)
+if sys.argv[1]=='-e':
+ data=json.loads(Path(sys.argv[-1]).read_text())
+ Path('metadata-proof.json').write_text(json.dumps(data))
+ raise SystemExit()
+assert sys.argv[1].endswith('npm-cli.js')
+if sys.argv[2]=='install':
+ assert '--offline' in sys.argv and '--package-lock-only' in sys.argv and '--ignore-scripts=true' in sys.argv
+ package=json.loads(Path('package.json').read_text())
+ if package.get('fixture_lock_wait'):
+  Path('npm-started.txt').write_text('owned offline resolver reached lock generation')
+  time.sleep(30)
+ if package.get('fixture_lock_error'):
+  print(json.dumps({'error':{'code':'ERESOLVE'}}));raise SystemExit(1)
+ names=list(package.get('dependencies',{}))
+ if names and not Path('metadata-proof.json').exists():
+  print(json.dumps({'error':{'code':'ENOTCACHED','summary':'request to https://registry.npmjs.org/'+names[0]+' failed: cache mode is only-if-cached'}}));raise SystemExit(1)
+ entries={'':package}
+ for name in names:
+  import base64
+  entries['node_modules/'+name]={'version':'1.0.0','resolved':'https://registry.npmjs.org/'+name+'/-/'+name.split('/')[-1]+'-1.0.0.tgz','integrity':'sha512-'+base64.b64encode(b'x'*64).decode()}
+ prefix=Path(next(a.split('=',1)[1] for a in sys.argv if a.startswith('--prefix=')))
+ (prefix/'package-lock.json').write_text(json.dumps({'lockfileVersion':3,'packages':entries}))
+ print('{}');raise SystemExit()
 if sys.argv[2]=='ci':
  assert '--ignore-scripts=true' in sys.argv
  assert '--registry=https://registry.npmjs.org' in sys.argv
@@ -69,6 +91,8 @@ Path('build-proof.txt').write_text('sandboxed configured Node build')
                 sys.executable,
                 "-c",
                 "from ai_station_runner import node_dependencies as dep; dep.confirm_registry=lambda:None; "
+                "from ai_station_runner import node_lock; "
+                "node_lock.fetch_metadata=lambda name, **kwargs: ({'name':name}, {'name':name,'metadata_sha256':'f'*64}); "
                 f"from ai_station_runner.dependency_job import install; install({run_id!r})",
             ]
         return original(**kwargs)
@@ -127,7 +151,7 @@ def test_owned_npm_report_and_configured_node_validation_preserve_checkout(
         assert not (repository / "node_modules").exists()
 
 
-@pytest.mark.parametrize("unsafe", ["npmrc", "shrinkwrap", "missing_lock", "url_peer", "symlink_modules"])
+@pytest.mark.parametrize("unsafe", ["npmrc", "shrinkwrap", "url_peer", "symlink_modules"])
 def test_npm_refuses_scope_overrides_before_runtime_install(
     repository, owned_runner, validation_sandbox, fake_node, unsafe
 ):
@@ -139,8 +163,6 @@ def test_npm_refuses_scope_overrides_before_runtime_install(
             (workspace / ".npmrc").write_text("registry=http://127.0.0.1")
         elif unsafe == "shrinkwrap":
             (workspace / "npm-shrinkwrap.json").write_text("{}")
-        elif unsafe == "missing_lock":
-            (workspace / "package-lock.json").unlink()
         elif unsafe == "url_peer":
             node_manifest(workspace, peerDependencies={"evil": "https://127.0.0.1/private.tgz"})
         else:
@@ -155,8 +177,9 @@ def test_npm_refuses_scope_overrides_before_runtime_install(
         assert not (workspace / "install-proof.json").exists()
 
 
+@pytest.mark.parametrize("during", ["install", "lock"])
 def test_stop_terminates_the_owned_npm_child_without_publishing_success(
-    repository, owned_runner, validation_sandbox, fake_node, monkeypatch
+    repository, owned_runner, validation_sandbox, fake_node, monkeypatch, during
 ):
     import time
 
@@ -167,7 +190,11 @@ def test_stop_terminates_the_owned_npm_child_without_publishing_success(
     with TestClient(app) as client:
         project, worktree = prepared_validation(client, repository, [])
         workspace = owned_runner.data_dir / worktree["relative_path"]
-        node_manifest(workspace, fixture_wait=True)
+        node_manifest(
+            workspace, **({"fixture_wait": True} if during == "install" else {"fixture_lock_wait": True})
+        )
+        if during == "lock":
+            (workspace / "package-lock.json").unlink()
         queued = enqueue_dependencies(client, project, worktree)
         assert queued.status_code == 202, queued.text
         run_id = queued.json()["id"]
@@ -194,3 +221,49 @@ def test_stop_terminates_the_owned_npm_child_without_publishing_success(
         assert "dependencies" not in run["metadata"]
         assert not owned_runner.inspect(run_id)["alive"]
         assert not (workspace / "install-proof.json").exists()
+
+
+@pytest.mark.parametrize("with_dependency", [False, True])
+def test_missing_lock_is_created_offline_with_metadata_provenance_before_install(
+    repository, owned_runner, validation_sandbox, fake_node, with_dependency
+):
+    index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, [])
+        workspace = owned_runner.data_dir / worktree["relative_path"]
+        node_manifest(workspace, dependencies={"demo": "^1.0.0"} if with_dependency else {})
+        original = (workspace / "package.json").read_bytes()
+        (workspace / "package-lock.json").unlink()
+        response = enqueue_dependencies(client, project, worktree)
+        assert response.status_code == 202
+        with session_factory()() as session:
+            tick(session, "offline-node-lock")
+        run = client.get("/api/runs/" + response.json()["id"]).json()
+        assert run["status"] == "succeeded", run
+        report = run["metadata"]["dependencies"]
+        assert report["lock_generated"] and len(report["registry_metadata"]) == int(with_dependency)
+        assert (workspace / "package-lock.json").is_file() and (workspace / "install-proof.json").is_file()
+        assert (workspace / "package.json").read_bytes() == original
+        assert (repository / ".git/index").read_bytes() == index
+        assert not (repository / "package-lock.json").exists()
+        if with_dependency:
+            assert report["registry_metadata"][0]["name"] == "demo"
+            assert len(report["registry_metadata"][0]["metadata_sha256"]) == 64
+
+
+def test_offline_resolution_failure_never_starts_install(
+    repository, owned_runner, validation_sandbox, fake_node
+):
+    with TestClient(app) as client:
+        project, worktree = prepared_validation(client, repository, [])
+        workspace = owned_runner.data_dir / worktree["relative_path"]
+        node_manifest(workspace, fixture_lock_error=True)
+        (workspace / "package-lock.json").unlink()
+        response = enqueue_dependencies(client, project, worktree)
+        assert response.status_code == 202
+        with session_factory()() as session:
+            tick(session, "offline-node-lock-failure")
+        run = client.get("/api/runs/" + response.json()["id"]).json()
+        assert run["status"] == "failed", run
+        assert not (workspace / "install-proof.json").exists()
+        assert not (workspace / "node_modules").exists()

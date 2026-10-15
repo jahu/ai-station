@@ -125,6 +125,7 @@ it("identifies npm results and disabled lifecycle scripts without a PyPI label",
       events={[
         event("dep-node", "dependencies.completed", {
           ecosystem: "node",
+          lock_generated: true,
           manifest: "package-lock.json",
           source: "npm",
           specifiers: ["is-number@7.0.0"],
@@ -139,6 +140,7 @@ it("identifies npm results and disabled lifecycle scripts without a PyPI label",
     screen.getByText(/npm registry · lifecycle scripts disabled/),
   ).toBeTruthy();
   expect(screen.queryByText(/PyPI/)).toBeNull();
+  expect(screen.getByText(/lockfile created offline/)).toBeTruthy();
   expect(
     screen.getByLabelText("Install package-lock.json dep-node"),
   ).toBeTruthy();

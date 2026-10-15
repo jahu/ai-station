@@ -302,9 +302,10 @@ export default function ProjectWorktrees({
         <code>vendor/</code> directory of wheels is used offline; otherwise the
         Run may download wheels from PyPI. Only binary wheels are installed.
         URLs, VCS refs and extra indexes are rejected. Git metadata stays
-        read-only. Node-only projects use a checked version 3 package-lock.json
-        and npm ci with lifecycle scripts disabled. Public-registry tarballs
-        need integrity pins; a configured Node/npm runtime is required.
+        read-only. For Node projects, a missing package-lock.json is created
+        offline from verified public npm metadata before installation. Existing
+        lockfiles are checked. Install scripts stay disabled; a configured
+        Node/npm runtime is required.
       </p>
       <p className="muted">
         Run saved validation executes the project's saved test, lint and build
