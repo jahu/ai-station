@@ -53,7 +53,7 @@ function NodeCards({
       </h3>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a node while the list is focused. Revoke stays on the
-        selected row. Authenticated LAN transport stays unpublished. There is no
+        selected row. Remote execution transport stays unpublished. There is no
         inspectable node Run.
       </p>
       <div
