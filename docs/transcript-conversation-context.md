@@ -33,3 +33,11 @@ context; UI provenance checks; one explicitly opted-in local-model follow-up on
 the already-approved recording. No cloud or GPU generation runs in normal tests.
 
 The first implementation passes fake-provider conversation and summary regression tests. Real local-model acceptance is a separate deployment check and is not implied by those tests.
+
+The shared conversation attachment validator now recognizes the transcription
+intent before applying voice-reference restrictions. This fixes the previous
+M4A 422 response in Chat while keeping synthesis/portrait inputs WAV-only. Tests
+cover explicit and deterministic Auto transcription in both Chat and Work.
+Actual M4A ingestion and owned CPU inference also passed in the isolated API;
+the follow-up fake provider received the actual checked transcript. This check
+makes no claim of a real conversational-model response.

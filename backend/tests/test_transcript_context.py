@@ -85,7 +85,20 @@ def test_followup_quotes_actual_same_conversation_transcript_and_records_provena
             assert message.metadata_json["transcript_sources"] == chat.parameters["transcript_sources"]
 
 
-@pytest.mark.parametrize("problem", ["trashed", "changed", "missing", "other_conversation", "ambiguous"])
+@pytest.mark.parametrize(
+    "problem",
+    [
+        "trashed",
+        "changed",
+        "missing",
+        "other_conversation",
+        "ambiguous",
+        "failed",
+        "canceled",
+        "wrong_producer",
+        "stopped_parent",
+    ],
+)
 def test_reference_never_uses_removed_changed_foreign_or_ambiguous_text(providers, problem):
     with TestClient(app) as client:
         cid, rid, mid, aid = seed(client)
@@ -102,6 +115,12 @@ def test_reference_never_uses_removed_changed_foreign_or_ambiguous_text(provider
                 path.write_text("Modified outside the reviewed execution")
             elif problem == "missing":
                 path.unlink()
+            elif problem in {"failed", "canceled"}:
+                run.status = problem
+            elif problem == "wrong_producer":
+                artifact.run_id = run.parent_run_id
+            elif problem == "stopped_parent":
+                session.get(Run, run.parent_run_id).status = "canceled"
             elif problem == "other_conversation":
                 other = Conversation(model="test")
                 session.add(other)
@@ -122,7 +141,7 @@ def test_reference_never_uses_removed_changed_foreign_or_ambiguous_text(provider
                 session.add(duplicate)
             session.flush()
             result = reference(session, message)
-            if problem == "other_conversation":
+            if problem in {"other_conversation", "failed", "canceled", "stopped_parent"}:
                 assert result is None
             else:
                 assert result and not result[1]["available"]
@@ -188,3 +207,46 @@ def test_summary_reads_source_without_changing_original_message_coverage(provide
         assert params["transcript_sources"][0]["run_id"] == rid
         source_chunk = next(piece for piece in params["source_chunks"] if piece["message_id"] == mid)
         assert source_chunk["total"] == original_length and source_chunk["end"] == original_length
+
+
+def test_planner_context_contains_checked_excerpt_without_granting_tools(providers):
+    from app.assistant import planner_context
+
+    with TestClient(app) as client:
+        cid, rid, _, _ = seed(client)
+        with session_factory()() as session:
+            user = Message(conversation_id=cid, role="user", content="Summarize it")
+            session.add(user)
+            session.flush()
+            context = planner_context(session, session.get(Conversation, cid), user)
+            assert "Hello" in str(context) and rid in str(context)
+            assert sum(len(item["content"]) for item in context) <= 4000 - len(user.content)
+            assert not providers
+
+
+@pytest.mark.parametrize("action", ["auto", "audio.transcribe"])
+@pytest.mark.parametrize("mode", ["chat", "work"])
+def test_compressed_audio_can_enter_conversation_transcription(providers, action, mode):
+    with TestClient(app) as client:
+        source = client.post(
+            "/api/audio/transcription/uploads",
+            files={"file": ("sample.m4a", b"\0\0\0\x18ftypM4A " + b"\0" * 20, "audio/mp4")},
+        ).json()
+        response = client.post(
+            "/api/chat/turns",
+            json={
+                "client_request_id": str(uuid4()),
+                "selection": {"model": "test", "execution_mode": mode},
+                "execution_mode": mode,
+                "action": action,
+                "content": "Przepisz to nagranie",
+                "audio_artifact_id": source["id"],
+            },
+        )
+        assert response.status_code == 202, response.text
+        work()
+        with session_factory()() as session:
+            child = session.scalar(select(Run).where(Run.parent_run_id == response.json()["run"]["id"]))
+            assert child.executor_type == "whisper_transcribe" and child.parameters["input_format"] == "mov"
+            assert set(child.effective_permissions) == {"filesystem_read", "workspace_write"}
+        assert not providers
