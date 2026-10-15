@@ -193,3 +193,21 @@ project and loaded Local Auto through owned llama.cpp. Exploration failed on
 attempt. Continue in `fix/coding-gitignore`, preserve its existing worktree and
 original failure, then requalify real tests/build after the reviewed fix.
 Evidence: `data/acceptance/coding-auto-project-checks-20261015`.
+
+## Root ignore fix delivered; current frontend increment
+
+PR #312 is merged as `b13ae5e`, deployed and native Runner source verified.
+1453 backend/Runner tests (five opt-in skips), 452 frontend tests, lint/types/format,
+Compose and Docker pass. Real Work continuation now passes local inference,
+automatic dependency installation, a real React rendering test and Vite build
+in the original owned worktree; original project files/index are preserved.
+Keep the initial failed attempt in history. Evidence is under
+`data/acceptance/coding-gitignore-20261015`.
+
+PR #313 (`feat/coding-task-progress`) adds a read-only stage summary in Coding.
+It distinguishes code completion from checks, missing tests, earlier failed
+attempts, install failures, approval and Stop. Backend/native code matches #312.
+Finish the final frontend checks, responsive browser review and Docker build,
+review the complete PR, merge to develop and apply the reviewed image when idle.
+Then continue practical Coding/Work usability, safe artifact/build inspection and
+the remaining product workstreams. The broad platform goal remains active.

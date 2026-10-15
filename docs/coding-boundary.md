@@ -100,3 +100,15 @@ Qualify the change with path-boundary regression cases, the full backend/Runner
 checks, frontend checks for corrected review copy, and a continuation of the
 failed real Work task. Retain its original failure rather than reporting it as a
 successful first attempt. No external inference or unrelated runtime changes.
+
+## Coding task progress
+
+The coding conversation should distinguish generated code from verified results.
+Show a compact, accessible task progress summary from its existing Run history:
+workspace, local model load when present, code, automatic dependencies and checks.
+Use the latest proposal's Run references so a failed older turn cannot mark a
+successful continuation as failed. All active task stages still block a ready
+verdict. Missing checks must say untested, failed installs/checks remain explicit,
+and Stop/approval states remain visible. Links open the underlying Runs; this
+view performs no inference, scheduling or Git operations. The expanded transcript
+and per-stage history remain available below it.

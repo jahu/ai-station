@@ -26,6 +26,7 @@ import {
 import { Button } from "../components/ui/button";
 import { terminal, time } from "../lib/utils";
 import CodingReview from "./CodingReview";
+import CodingTaskProgress from "./CodingTaskProgress";
 import GithubPublication from "./GithubPublication";
 import { ConsentChoiceList } from "./ConsentChoiceList";
 import { useListKeyboard } from "./useListKeyboard";
@@ -365,6 +366,7 @@ export default function CodingSession() {
       ) : (
         q.data && (
           <div className="coding-conversation">
+            <CodingTaskProgress runs={runs} />
             <div className="coding-turns">
               {!proposals.length && (
                 <div className="panel content-panel">

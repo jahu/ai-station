@@ -5250,3 +5250,96 @@ section:has(> .memory-grid) > .dashboard-note {
 .assistant-recording-toolbar {
   margin-top: 0.5rem;
 }
+
+.coding-progress {
+  margin-bottom: 24px;
+  padding: 22px;
+}
+.coding-progress-heading h2 {
+  font-size: 17px;
+  margin: 0 0 7px;
+}
+.coding-progress-heading p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.coding-progress-model {
+  font-size: 12px;
+  color: #b7c6ae;
+  overflow-wrap: anywhere;
+}
+.coding-progress-steps {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(125px, 1fr));
+  gap: 10px;
+}
+.coding-progress-steps li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid #394037;
+  border-radius: 10px;
+  color: #a3ad9d;
+}
+.coding-progress-steps li > svg {
+  flex-shrink: 0;
+}
+.coding-progress-steps li > div {
+  min-width: 0;
+}
+.coding-progress-steps strong {
+  display: block;
+  font-size: 12px;
+}
+.coding-progress-steps small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.coding-progress-steps [data-state="active"] {
+  border-color: #96b17d;
+  color: #dae8d0;
+  background: #293321;
+}
+.coding-progress-steps [data-state="succeeded"] > svg {
+  color: #9fba83;
+}
+.coding-progress-steps [data-state="failed"] {
+  border-color: #a55c53;
+  color: #efb1a8;
+}
+.coding-progress-inspect {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 4px;
+  color: inherit;
+}
+.coding-progress-inspect:focus-visible {
+  outline: 2px solid #b5cf99;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (max-width: 600px) {
+  .coding-progress-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .coding-progress-steps li {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .coding-progress-steps li > div {
+    order: 2;
+    flex-basis: 100%;
+  }
+  .coding-progress-steps strong {
+    overflow-wrap: anywhere;
+  }
+}
