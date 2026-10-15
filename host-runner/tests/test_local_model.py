@@ -274,3 +274,31 @@ def test_json_output_rejects_untyped_flags(flag):
 
     with pytest.raises(ValidationError):
         local_model.Completion(**BODY, json_output=flag)
+
+
+def test_typed_large_coding_route_forwards_json_without_relaxing_chat(monkeypatch):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        assert str(request.url) == ENDPOINT + "/chat/completions"
+        body = json.loads(request.content)
+        assert len(body["messages"][0]["content"]) == 150000
+        assert body["response_format"] == {"type": "json_object"}
+        return httpx.Response(200, headers={"Content-Type": "text/event-stream"}, content=b"data: [DONE]\n\n")
+
+    monkeypatch.setattr(
+        local_model, "upstream_client", lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    )
+    data = {**BODY, "json_output": True, "messages": [{"role": "user", "content": "x" * 150000}]}
+    with TestClient(app) as client:
+        assert client.post("/v1/llm/chat/completions", headers=HEADERS, json=data).status_code == 422
+        response = client.post("/v1/llm/coding/completions", headers=HEADERS, json=data)
+        assert response.status_code == 200 and "[DONE]" in response.text
+        assert (
+            client.post(
+                "/v1/llm/coding/completions", headers={"X-AI-Station-Endpoint": "http://other/v1"}, json=data
+            ).status_code
+            == 409
+        )
+    assert len(calls) == 1

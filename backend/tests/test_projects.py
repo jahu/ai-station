@@ -1714,6 +1714,60 @@ def test_local_coding_applies_unique_snippet_replacements(repository, owned_runn
     assert not (repository / "new.py").exists()
 
 
+def test_local_coding_large_source_uses_typed_context_and_reviewed_commit(
+    repository, owned_runner, local_coding_bridge
+):
+    original = "".join(f"# retain {n}\n" for n in range(12000)) + "ORIGINAL_LARGE_TARGET\n"
+    (repository / "README.md").write_text(original)
+    subprocess.run(["git", "-C", str(repository), "add", "README.md"], check=True)
+    subprocess.run(
+        ["git", "-C", str(repository), "commit", "-m", "Large ordinary source"],
+        check=True,
+        capture_output=True,
+    )
+    original_index = (repository / ".git/index").read_bytes()
+    local_coding_bridge["proposal"] = {
+        "summary": "Large source snippet",
+        "files": [
+            {
+                "path": "README.md",
+                "replacements": [{"old": "ORIGINAL_LARGE_TARGET", "new": "LOCAL_LARGE_CONTEXT_FIXED"}],
+            },
+            {"path": "new.py", "content": "print(42)\n"},
+        ],
+    }
+    with TestClient(app) as client:
+        project = register(client, repository, test_commands=[["true"]])
+        run_id = prepare_local_coding(client, project)
+        with session_factory()() as session:
+            tick(session, "local-large-proposal")
+        run = client.get(f"/api/runs/{run_id}").json()
+        assert run["status"] == "succeeded", run
+        target, payload = local_coding_bridge["requests"][0]
+        assert target == "/v1/llm/coding/completions"
+        assert "ORIGINAL_LARGE_TARGET" in payload["messages"][0]["content"]
+        assert len(payload["messages"][0]["content"].encode()) > 100000
+        with session_factory()() as session:
+            tick(session, "local-large-checks")
+        assert client.get(f"/api/runs/{run['metadata']['validation_run_id']}").json()["status"] == "succeeded"
+        accepted = client.post(
+            f"/api/coding/runs/{run_id}/commit",
+            json={"reviewed": True, "message": "Accept large file snippet"},
+        )
+        assert accepted.status_code == 202, accepted.text
+        with session_factory()() as session:
+            tick(session, "local-large-commit")
+        result = client.get(f"/api/runs/{accepted.json()['id']}").json()
+        assert result["status"] == "succeeded", result
+        tree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        workspace = owned_runner.data_dir / tree["relative_path"]
+        assert (workspace / "README.md").read_text() == original.replace(
+            "ORIGINAL_LARGE_TARGET", "LOCAL_LARGE_CONTEXT_FIXED"
+        )
+        assert (repository / "README.md").read_text() == original
+        assert (repository / ".git/index").read_bytes() == original_index
+
+
 def test_local_coding_can_complete_multi_file_output_beyond_old_budget(
     repository, owned_runner, local_coding_bridge
 ):

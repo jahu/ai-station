@@ -93,6 +93,24 @@ class Completion(BaseModel):
         return self
 
 
+class CodingMessage(ChatMessage):
+    role: Literal["user"]
+    content: str = Field(max_length=350100)
+
+
+class CodingCompletion(Completion):
+    """Single bounded text-only source proposal; ordinary Chat limits stay intact."""
+
+    messages: list[CodingMessage] = Field(min_length=1, max_length=1)
+    json_output: Literal[True] = True
+
+    @model_validator(mode="after")
+    def bound_context(self):
+        if len(self.messages[0].content.encode()) > 350100 or self.reasoning is not None:
+            raise ValueError("Coding context exceeds its bounded text-only policy")
+        return self
+
+
 @router.get("/models")
 async def models(expected: ExpectedEndpoint):
     url = endpoint(expected)
@@ -147,6 +165,11 @@ async def completion(body: Completion, expected: ExpectedEndpoint, incoming: Req
     url = endpoint(expected)
     client = upstream_client()
     return await forward_completion(body, incoming, url, client, headers())
+
+
+@router.post("/coding/completions")
+async def coding_completion(body: CodingCompletion, expected: ExpectedEndpoint, incoming: Request):
+    return await completion(body, expected, incoming)
 
 
 async def forward_completion(body, incoming, url, client, request_headers):

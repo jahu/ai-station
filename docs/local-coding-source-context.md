@@ -28,3 +28,9 @@ Normal fake-inference tests must cover large-file snippet edit, context serializ
 selection/proposal aggregate limits, immutable hashes and unchanged external
 contracts. Run full checks; review a PR to develop. Reuse the owned QA task only
 if real acceptance needs new evidence; do not generate another site unnecessarily.
+
+Large proposals use separate private text-only `coding/completions` routes for
+configured local servers and owned llama.cpp. Those routes accept one bounded
+user message with JSON output, reuse existing forwarding/cancellation/identity
+checks and do not relax ordinary Chat or vision limits. Local review records
+source file count, bytes and policy.

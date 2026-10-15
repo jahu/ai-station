@@ -18,7 +18,11 @@ from ai_station_runner.local_coding_runs import directory, load_request
 
 def collect_proposal(body, selected, references=None):
     message = proposal_prompt(
-        prompt=body.prompt, selected=selected, guidance=body.guidance, references=references
+        prompt=body.prompt,
+        selected=selected,
+        guidance=body.guidance,
+        references=references,
+        local_context=True,
     )
     return collect_completion(body, message, max_tokens=8192)
 
@@ -46,6 +50,11 @@ def collect_completion(body, message, *, max_tokens=2048):
         "stream": True,
         "json_output": True,
     }
+    route = (
+        "/coding/completions"
+        if len(payload["messages"][0]["content"].encode()) > 100000
+        else "/chat/completions"
+    )
     content, buffer, size = [], b"", 0
     done, finished = False, False
     started = time.monotonic()
@@ -55,7 +64,7 @@ def collect_completion(body, message, *, max_tokens=2048):
     with httpx.Client(
         transport=transport, timeout=httpx.Timeout(300, connect=10), trust_env=False, follow_redirects=False
     ) as client:
-        with client.stream("POST", target + "/chat/completions", headers=headers, json=payload) as response:
+        with client.stream("POST", target + route, headers=headers, json=payload) as response:
             response.raise_for_status()
             if "text/event-stream" not in response.headers.get("content-type", ""):
                 raise ValueError("Local coding requires a streaming response")
@@ -130,6 +139,7 @@ def execute(run_id):
                 body.guidance,
                 lambda message: collect_completion(body, message)[0],
                 web=True,
+                local_context=True,
             )
             references[:] = public_http.proposal_references(observations)
             return selected, observations

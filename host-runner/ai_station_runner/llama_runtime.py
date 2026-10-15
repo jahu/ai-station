@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from ai_station_runner.config import _split, get_settings
-from ai_station_runner.local_model import forward_completion
+from ai_station_runner.local_model import CodingCompletion, forward_completion
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.telemetry import collect
 from ai_station_runner.vision_messages import VisionCompletion
@@ -442,3 +442,9 @@ async def completion(instance_id: UUID, body: VisionCompletion, incoming: Reques
         follow_redirects=False,
     )
     return await forward_completion(body, incoming, "http://llama/v1", client, {})
+
+
+@router.post("/{instance_id}/coding/completions")
+async def coding_completion(instance_id: UUID, body: CodingCompletion, incoming: Request):
+    # Reuse the exact owned-runtime identity, private transport and disconnect handling.
+    return await completion(instance_id, body, incoming)
