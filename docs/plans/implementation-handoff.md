@@ -415,3 +415,10 @@ remains in `data/acceptance/media-resource-wait-fairness-20261015`. Deploy only 
 full checks pass, using the prepared idle-only owned Runner restart, a verified
 SQLite backup, and post-start exact source/image/persistence checks. The broader
 platform goal remains active; this PR is not a claim of full-product completion.
+
+
+## Current owner request: private phone access (2026-10-15)
+
+Follow [private network access](../private-network-access.md) and the owner’s updated [agent-first priorities](agent-first-product.md). PR #326 adds an explicit additional private IPv4 listener while preserving localhost, a password-required startup guard, exact Host/Origin validation, independent device sessions and a persistent login budget. Settings exposes the configured URL. Real browser qualification covers both listener addresses and narrow phone layouts; keep failed QA attempts in the evidence instead of claiming them passed. Tailscale is not installed/enrolled; the HTTPS allowlist and activation instructions are preparation, not real worldwide access acceptance.
+
+Worktree `.tools/private-network-access`, branch `feat/private-network-access`. Evidence is under `data/acceptance/private-network-access-20261015`. Preserve the user’s newly stored operator password, root WIP and current owned model runtime. Before rollout, finish local checks and full-diff review, back up the existing database and verify deployment ownership/idle workloads. After rollout, resume the Python-capable agent vertical slice; PR #325 is the isolated executor foundation, not a complete spreadsheet agent.
