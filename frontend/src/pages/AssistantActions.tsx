@@ -1,3 +1,4 @@
+import { TranscriptResult } from "./Transcription";
 import GithubSnapshotResult, {
   type GithubSnapshot,
 } from "./GithubSnapshotResult";
@@ -98,6 +99,7 @@ type TaskStep = {
 };
 export type ActionResult = {
   github_snapshots?: GithubSnapshot[];
+  transcriptions?: Run[];
   media_job?: MediaJob;
   steps?: TaskStep[];
   artifacts?: Artifact[];
@@ -207,6 +209,9 @@ export function AssistantResults({
           )}
         </div>
       ))}
+      {result.transcriptions?.map((run) => (
+        <TranscriptResult key={run.id} run={run} />
+      ))}
       {result.github_snapshots?.map((snapshot) => (
         <GithubSnapshotResult key={snapshot.run_id} value={snapshot} />
       ))}
@@ -276,6 +281,9 @@ export function AssistantResults({
         {result.artifacts
           ?.filter(
             (artifact) =>
+              !result.transcriptions?.some(
+                (run) => run.id === artifact.run_id,
+              ) &&
               !result.github_snapshots?.some(
                 (snapshot) => snapshot.artifact_id === artifact.id,
               ),
@@ -912,39 +920,49 @@ export default function AssistantActions({
         value.action !== "project.create" &&
         value.action !== "project.create_code" && (
           <div className="assistant-attachment-toolbar">
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => imageInput.current?.click()}
-              disabled={
-                value.image_artifact_ids.length >=
-                (value.action === "image.describe" ? 4 : 8)
-              }
-            >
-              <ImagePlus size={15} /> Add images
-            </Button>
-            <LibraryPicker
-              kind="image"
-              existing={value.image_artifact_ids}
-              limit={8 - value.image_artifact_ids.length}
-              busy={busy}
-              onSelect={(items) =>
-                onChange({
-                  ...value,
-                  image_artifact_ids: [
-                    ...value.image_artifact_ids,
-                    ...items.map((a) => a.id),
-                  ],
-                })
-              }
-            />
+            {value.action !== "audio.transcribe" && (
+              <>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => imageInput.current?.click()}
+                  disabled={
+                    value.image_artifact_ids.length >=
+                    (value.action === "image.describe" ? 4 : 8)
+                  }
+                >
+                  <ImagePlus size={15} /> Add images
+                </Button>
+                <LibraryPicker
+                  kind="image"
+                  existing={value.image_artifact_ids}
+                  limit={8 - value.image_artifact_ids.length}
+                  busy={busy}
+                  onSelect={(items) =>
+                    onChange({
+                      ...value,
+                      image_artifact_ids: [
+                        ...value.image_artifact_ids,
+                        ...items.map((a) => a.id),
+                      ],
+                    })
+                  }
+                />
+              </>
+            )}
             <Button
               type="button"
               variant="ghost"
               onClick={() => voiceInput.current?.click()}
             >
               <Mic size={15} />{" "}
-              {value.audio_artifact_id ? "Replace voice" : "Add voice"}
+              {value.action === "audio.transcribe"
+                ? value.audio_artifact_id
+                  ? "Replace recording"
+                  : "Add recording"
+                : value.audio_artifact_id
+                  ? "Replace voice"
+                  : "Add voice"}
             </Button>
             <LibraryPicker
               kind="audio"
@@ -978,10 +996,15 @@ export default function AssistantActions({
           try {
             const body = new FormData();
             body.append("file", file);
-            const artifact = await api<Artifact>("/audio/uploads", {
-              method: "POST",
-              body,
-            });
+            const artifact = await api<Artifact>(
+              value.action === "audio.transcribe"
+                ? "/audio/transcription/uploads"
+                : "/audio/uploads",
+              {
+                method: "POST",
+                body,
+              },
+            );
             onChange({
               ...value,
               audio_artifact_id: artifact.id,
@@ -997,7 +1020,10 @@ export default function AssistantActions({
       {value.audio_artifact_id && (
         <div className="assistant-voice-reference">
           <span>
-            <Mic size={16} /> Voice reference
+            <Mic size={16} />{" "}
+            {value.action === "audio.transcribe"
+              ? "Recording"
+              : "Voice reference"}
           </span>
           <audio
             controls

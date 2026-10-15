@@ -36,6 +36,7 @@ Action = Literal[
     "image.upscale",
     "image.generate_video",
     "audio.speech",
+    "audio.transcribe",
     "avatar.animate",
     "video.generate",
     "agent.create",
@@ -141,6 +142,7 @@ class AssistantInputs(BaseModel):
         "image.upscale",
         "image.generate_video",
         "audio.speech",
+        "audio.transcribe",
         "avatar.animate",
         "video.generate",
         "agent.create",
@@ -184,6 +186,7 @@ def assistant_needs_provider(body):
         "runtime.stop",
         "system.inspect",
         "github.inspect",
+        "audio.transcribe",
         "image.describe",
         "project.create",
         "project.create_code",
@@ -505,6 +508,7 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
             snapshot,
             ([] if getattr(body, "execution_mode", None) == "chat" else ["manage_agents"])
             + (["network_read", "github_read"] if body.github else [])
+            + (["filesystem_read", "workspace_write"] if body.audio_artifact_id else [])
             + (["filesystem_read", "manage_models"] if images else [])
             + (
                 ["external_ai"]
@@ -550,6 +554,16 @@ def explicit_plan(params):
         return Plan(action=action, reason="Using your selected action.")
     if params.get("github"):
         return Plan(action="github.inspect", reason="Read the GitHub repository you selected for this turn.")
+    if (
+        params.get("audio_artifact_id")
+        and not params.get("image_artifact_ids")
+        and re.search(
+            r"transcrib|transkry|przepisz|zapisz.*(?:nagran|audio)|co (?:m[oó]wi|słychać)",
+            params["content"],
+            re.I,
+        )
+    ):
+        return Plan(action="audio.transcribe", reason="Transcribe the recording you attached locally.")
     if project_build_request(params):
         return Plan(
             action="project.create_code",
@@ -707,6 +721,7 @@ coding.commit: only if the user already selected this action with a reviewed com
 coding.publish: only if the user already selected this action with GitHub approval; never invent approval or repository;
 runtime.load: only if the user already selected this action with a discovered GGUF and GPUs; never invent model IDs;
 runtime.stop: only if the user already selected this action with an owned instance; never stop external runtimes;
+audio.transcribe: transcribe the attached WAV recording locally on CPU;
 audio.speech: read the user message aloud in Polish with the attached WAV voice reference;
 avatar.animate: animate one attached portrait using one attached speech WAV;
 video.generate: generate a silent local Wan scene video, with at most one optional first-frame image and no audio;
@@ -879,8 +894,26 @@ class AssistantExecutor:
                         child = create_video_run(session, request, task=run.task, parent_run_id=run.id)
                         run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                         message.content = "Generating your scene locally with Wan 2.2. The video will appear here and in Library."
+        elif plan.action == "audio.transcribe":
+            from app.transcription import TranscriptionRequest, create_transcription_run
+
+            if images or not params.get("audio_artifact_id"):
+                message.content = "Attach one WAV recording to transcribe. No portrait is needed."
+            else:
+                try:
+                    child = create_transcription_run(
+                        session,
+                        TranscriptionRequest(audio_artifact_id=params["audio_artifact_id"]),
+                        task=run.task,
+                        parent_run_id=run.id,
+                    )
+                except HTTPException as exc:
+                    message.content = str(exc.detail)
+                else:
+                    run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                    message.content = "Transcribing your recording locally on CPU. Timestamped text and subtitles will appear here."
         elif params.get("audio_artifact_id") and plan.action != "audio.speech":
-            message.content = "Choose Speech to read your message with this voice reference. Audio transcription is not enabled."
+            message.content = "Choose Speech to read your message with this voice reference. Choose Transcribe recording to turn a recording into text."
         elif plan.action == "audio.speech":
             from app.audio import SpeechRequest, create_audio_run
 
@@ -1311,6 +1344,11 @@ def task_results(session, message, run):
             artifact_dict(artifact)
             for artifact in artifacts
             if not artifact.metadata_json.get("internal_media")
+        ],
+        "transcriptions": [
+            run_dict(step)
+            for step in steps
+            if step.executor_type == "whisper_transcribe" and step.status == "succeeded"
         ],
         "github_snapshots": [
             step.metadata_json["github_snapshot"]

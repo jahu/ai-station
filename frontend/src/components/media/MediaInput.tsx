@@ -8,6 +8,8 @@ import { useListKeyboard } from "../../pages/useListKeyboard";
 
 type Props = {
   kind: "image" | "audio";
+  uploadEndpoint?: string;
+  maxAudioSeconds?: number;
   label: string;
   hint: string;
   value: string;
@@ -17,6 +19,8 @@ type Props = {
 };
 export default function MediaInput({
   kind,
+  uploadEndpoint,
+  maxAudioSeconds = 60,
   label,
   hint,
   value,
@@ -43,7 +47,8 @@ export default function MediaInput({
       const body = new FormData();
       body.append("file", file);
       return api<Artifact>(
-        kind === "image" ? "/images/uploads" : "/audio/uploads",
+        uploadEndpoint ??
+          (kind === "image" ? "/images/uploads" : "/audio/uploads"),
         { method: "POST", body },
       );
     },
@@ -64,7 +69,10 @@ export default function MediaInput({
         a.type === kind &&
         (kind !== "image" ||
           ["image/png", "image/jpeg"].includes(a.mime_type)) &&
-        (kind !== "audio" || a.mime_type === "audio/wav") &&
+        (kind !== "audio" ||
+          (a.mime_type === "audio/wav" &&
+            (a.metadata?.duration_seconds === undefined ||
+              a.metadata.duration_seconds <= maxAudioSeconds))) &&
         `${a.title ?? ""} ${a.original_filename}`
           .toLowerCase()
           .includes(search.toLowerCase()),

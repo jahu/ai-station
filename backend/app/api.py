@@ -63,6 +63,7 @@ from app.runtime_registry import router as runtime_router
 from app.skills import router as skill_router
 from app.state import TERMINAL, InvalidTransition, RunStatus
 from app.telemetry_store import history
+from app.transcription import router as transcription_router
 from app.video import router as video_router
 
 DB = Annotated[Session, Depends(session_scope)]
@@ -82,7 +83,10 @@ app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1
 
 @app.middleware("http")
 async def local_requests(request: Request, call_next):
-    if request.url.path in {"/api/images/uploads", "/api/audio/uploads"} and request.method == "POST":
+    if (
+        request.url.path in {"/api/images/uploads", "/api/audio/uploads", "/api/audio/transcription/uploads"}
+        and request.method == "POST"
+    ):
         length = request.headers.get("content-length", "")
         if not length.isdigit():
             return JSONResponse({"detail": "A Content-Length is required for uploads"}, status_code=411)
@@ -346,6 +350,7 @@ app.include_router(chat_reasoning_router)
 app.include_router(chat_provider_router)
 app.include_router(connector_router)
 app.include_router(audio_router)
+app.include_router(transcription_router)
 app.include_router(avatar_router)
 app.include_router(video_router)
 app.include_router(media_jobs_router)
