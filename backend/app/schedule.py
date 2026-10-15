@@ -6,7 +6,7 @@ from croniter import croniter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.agent_coding_policy import coding_provider, external_coding
+from app.agent_coding_policy import auto_local_coding, coding_provider, external_coding
 from app.agent_schema import AgentSettings
 from app.agent_tools import agent_tool, effective_permissions
 from app.db import utcnow
@@ -60,7 +60,13 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         steps = planned_steps(definition)
     except SkillError as exc:
         raise ValueError(str(exc)) from exc
-    endpoint = "" if external_coding(definition.tools) else model_endpoint(definition.model, session)
+    if auto_local_coding(definition.tools, definition.model):
+        from app.coding_model_routing import select_coding_model
+
+        select_coding_model(session)
+        endpoint = ""
+    else:
+        endpoint = "" if external_coding(definition.tools) else model_endpoint(definition.model, session)
     task = create_task(
         session,
         title=agent.name,

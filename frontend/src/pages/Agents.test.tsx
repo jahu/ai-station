@@ -2845,3 +2845,76 @@ it("selects one external coding provider with disclosure and a reviewed permissi
     fetch.mock.calls.every(([, options]) => options?.method !== "POST"),
   ).toBe(true);
 });
+
+it("selects Auto Local Coding without starting a model or agent", async () => {
+  const agent = {
+    id: "draft",
+    name: "Auto builder",
+    description: "",
+    goal: "Build a calculator",
+    system_prompt: "",
+    model: "local",
+    tools: ["coding_local"],
+    skills: [],
+    project_id: "project",
+    maximum_runtime: 600,
+    output_expectation: "",
+    enabled: false,
+    updated_at: "2026-10-15T00:00:00Z",
+    trigger: "manual",
+    cron_expr: "",
+    interval_seconds: null,
+    run_at: null,
+    workflow_mode: "sequential",
+    tool_calling: "none",
+    retry_policy: { mode: "none" },
+    notification_policy: {},
+    require_approval: false,
+    runs: [],
+    effective_permissions: [],
+  };
+  const writes: Record<string, unknown>[] = [];
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => {
+    if (options?.method === "PUT") {
+      const body = JSON.parse(String(options.body));
+      writes.push(body);
+      return { ok: true, json: async () => ({ ...agent, ...body }) };
+    }
+    const value = url.endsWith("/agents/draft")
+      ? agent
+      : url.endsWith("/chat/provider")
+        ? { models: ["local"], default_model: "local" }
+        : url.endsWith("/llama")
+          ? { models: [], instances: [] }
+          : url.endsWith("/agents/tools")
+            ? [
+                {
+                  name: "coding_local",
+                  description: "Local coding",
+                  operational: true,
+                  required_permissions: ["workspace_write"],
+                },
+              ]
+            : url.includes("/projects?")
+              ? [{ id: "project", name: "Example project" }]
+              : [];
+    return { ok: true, json: async () => value };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  const choice = await screen.findByRole("combobox", {
+    name: "Coding model policy",
+  });
+  fireEvent.change(choice, { target: { value: "auto" } });
+  expect(writes).toHaveLength(0);
+  fireEvent.click(screen.getByRole("button", { name: "Save definition" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({
+    model: "auto",
+    tools: ["coding_local"],
+    enabled: false,
+  });
+  expect(
+    fetch.mock.calls.every(([, options]) => options?.method !== "POST"),
+  ).toBe(true);
+});
