@@ -298,14 +298,16 @@ export default function ProjectWorktrees({
       <p className="muted">
         Install project dependencies creates or reuses the worktree Python
         environment and installs from <code>requirements.txt</code> or{" "}
-        <code>pyproject.toml</code> project.dependencies. A local{" "}
-        <code>vendor/</code> directory of wheels is used offline; otherwise the
-        Run may download wheels from PyPI. Only binary wheels are installed.
-        URLs, VCS refs and extra indexes are rejected. Git metadata stays
-        read-only. For Node projects, a missing package-lock.json is created
-        offline from verified public npm metadata before installation. Existing
-        lockfiles are checked. Install scripts stay disabled; a configured
-        Node/npm runtime is required.
+        <code>pyproject.toml</code> project.dependencies, or the manifest
+        selected in Validation environment. A configured frontend folder is
+        prepared in its own dependency Run. A local <code>vendor/</code>{" "}
+        directory of wheels is used offline; otherwise the Run may download
+        wheels from PyPI. Only binary wheels are installed. URLs, VCS refs and
+        extra indexes are rejected. Git metadata stays read-only. For Node
+        projects, a missing package-lock.json is created offline from verified
+        public npm metadata before installation. Existing lockfiles are checked.
+        Install scripts stay disabled; a configured Node/npm runtime is
+        required.
       </p>
       <p className="muted">
         Run saved validation executes the project's saved test, lint and build

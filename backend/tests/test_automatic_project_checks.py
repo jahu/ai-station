@@ -15,7 +15,7 @@ from test_node_project_runs import fake_node  # noqa: F401
 from test_projects import owned_runner, prepared_validation, repository, validation_sandbox  # noqa: F401
 
 
-def source_proposal(client, repository, owned_runner, *, automatic=True):
+def source_proposal(client, repository, owned_runner, *, automatic=True, environment=None):
     project, tree = prepared_validation(client, repository, [])
     workspace = owned_runner.data_dir / tree["relative_path"]
     (workspace / "package.json").write_text(
@@ -24,6 +24,7 @@ def source_proposal(client, repository, owned_runner, *, automatic=True):
     with session_factory()() as session:
         row = session.get(Project, project["id"])
         row.auto_install_dependencies = row.auto_validate = automatic
+        row.validation_environment = environment
         prep = session.get(Run, tree["run_id"])
         source = create_run(
             session,
@@ -252,3 +253,42 @@ def test_lost_planning_worker_interrupts_without_publishing_or_replaying(
             assert plan.status == "interrupted"
             assert "dependency_run_ids" not in source.metadata_json
             assert "validation_run_id" not in source.metadata_json
+
+
+def test_component_plan_freezes_distinct_dependency_snapshots_and_validation_environment(
+    repository,
+    owned_runner,
+    validation_sandbox,
+):
+    environment = {
+        "python_manifest": "requirements-dev.lock",
+        "node_directory": "frontend",
+        "python_source_roots": ["backend"],
+        "timeout_seconds": 1800,
+    }
+    with TestClient(app) as client:
+        source_id, workspace = source_proposal(client, repository, owned_runner, environment=environment)
+        (workspace / "requirements-dev.lock").write_text("pytest==8.3.5\n")
+        (workspace / "pyproject.toml").write_text('[tool.pytest.ini_options]\ntestpaths=["backend/tests"]\n')
+        (workspace / "backend/tests").mkdir(parents=True)
+        (workspace / "backend/tests/test_probe.py").write_text("def test_ok(): assert True\n")
+        (workspace / "frontend").mkdir()
+        (workspace / "frontend/package.json").write_text('{"scripts":{"build":"vite build"}}')
+        with session_factory()() as session:
+            source = session.get(Run, source_id)
+            plan_id = source.metadata_json["project_plan_run_id"]
+            assert tick(session, "component-plan") == plan_id
+            session.refresh(source)
+            assert session.get(Run, plan_id).status == "succeeded"
+            python, node = [session.get(Run, rid) for rid in source.metadata_json["dependency_run_ids"]]
+            assert python.parameters["python_manifest"] == "requirements-dev.lock"
+            assert python.parameters["manifest_snapshot"]["requirements-dev.lock"]
+            assert node.parameters["directory"] == "frontend"
+            assert (
+                node.parameters["manifest_snapshot"]["package.json"]
+                != python.parameters["manifest_snapshot"]["package.json"]
+            )
+            validation = session.get(Run, source.metadata_json["validation_run_id"])
+            assert validation.parameters["validation_environment"] == environment
+            assert validation.parameters["node_manifest_snapshot"] == node.parameters["manifest_snapshot"]
+            assert validation.parameters["manifest_snapshot"] == python.parameters["manifest_snapshot"]

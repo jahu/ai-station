@@ -335,3 +335,48 @@ it("creates a project using only a name and waits for setup", async () => {
     }),
   );
 });
+
+it("saves a reviewed component environment only on explicit registration", async () => {
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ id: "saved" }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(<NewProject />, "/projects/new");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Connect existing repository" }),
+  );
+  fireEvent.change(screen.getByLabelText("Project name"), {
+    target: { value: "Monorepo" },
+  });
+  fireEvent.change(screen.getByLabelText(/Repository path on host/), {
+    target: { value: "/repos/mono" },
+  });
+  fireEvent.click(screen.getByText("Validation environment"));
+  fireEvent.click(screen.getByLabelText("Use a custom validation environment"));
+  fireEvent.change(screen.getByLabelText("Python dependency manifest"), {
+    target: { value: "requirements-dev.lock" },
+  });
+  fireEvent.change(screen.getByLabelText("Frontend package folder"), {
+    target: { value: "frontend" },
+  });
+  fireEvent.change(
+    screen.getByLabelText("Python source folders (comma separated)"),
+    { target: { value: "backend, host-runner" } },
+  );
+  fireEvent.change(screen.getByLabelText("Validation time limit (minutes)"), {
+    target: { value: "60" },
+  });
+  expect(fetch).not.toHaveBeenCalled();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Validate and register" }),
+  );
+  await screen.findByRole("heading", { name: "Registered repository" });
+  const [, request] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+  expect(JSON.parse(request.body as string).validation_environment).toEqual({
+    python_manifest: "requirements-dev.lock",
+    node_directory: "frontend",
+    python_source_roots: ["backend", "host-runner"],
+    timeout_seconds: 3600,
+  });
+});

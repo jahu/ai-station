@@ -87,3 +87,33 @@ def test_pypi_hosts_must_resolve_to_public_addresses(monkeypatch):
     )
     with pytest.raises(ValueError, match="non-public"):
         confirm_public_indexes()
+
+
+def test_installer_does_not_import_project_pip_module(tmp_path):
+    import subprocess
+    import venv
+
+    from ai_station_runner.dependency_manifest import pip_plan
+
+    workspace = tmp_path / "project"
+    workspace.mkdir()
+    runtime = tmp_path / "runtime"
+    venv.EnvBuilder(with_pip=True).create(runtime)
+    marker = workspace / "project-code-ran"
+    (workspace / "pip.py").write_text(
+        "from pathlib import Path\n"
+        + f"Path({str(marker)!r}).write_text('unexpected project execution')\n"
+        + "raise SystemExit(37)\n"
+    )
+    argv = pip_plan(workspace, runtime / "bin/python", ["example-package==1.0"])["argv"]
+    # Probe the actual interpreter/module prefix without installing or networking.
+    result = subprocess.run(
+        argv[: argv.index("install")] + ["--version"],
+        cwd=workspace,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    assert result.returncode == 0, result.stderr
+    assert str(runtime) in result.stdout
+    assert not marker.exists(), "Dependency preparation executed project source instead of trusted pip"

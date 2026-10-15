@@ -75,8 +75,24 @@ def parse_pyproject(text: str) -> list[str]:
     return parse_requirements("\n".join(values))
 
 
-def load_specifiers(workspace: Path) -> tuple[str, list[str]]:
+def load_specifiers(workspace: Path, *, manifest: str | None = None) -> tuple[str, list[str]]:
     workspace = workspace.resolve(strict=True)
+    if manifest is not None:
+        if manifest not in {
+            "requirements.txt",
+            "pyproject.toml",
+            "requirements.lock",
+            "requirements-dev.lock",
+        }:
+            raise GitError("Unsupported Python dependency manifest")
+        path = _regular_file(workspace, workspace / manifest)
+        if path.stat().st_size > MAX_MANIFEST:
+            raise GitError("Dependency manifest exceeds its size limit")
+        text = path.read_text()
+        specifiers = parse_pyproject(text) if manifest == "pyproject.toml" else parse_requirements(text)
+        if not specifiers:
+            raise GitError("No installable Python dependencies are declared")
+        return manifest, specifiers
     requirements = workspace / "requirements.txt"
     pyproject = workspace / "pyproject.toml"
     if requirements.exists():
@@ -123,6 +139,7 @@ def pip_plan(workspace: Path, python: Path, specifiers: list[str]) -> dict:
     source = "vendor" if vendor is not None else "pypi"
     argv = [
         str(python),
+        "-I",
         "-m",
         "pip",
         "install",

@@ -58,7 +58,9 @@ def missing_package(output):
     return package_name(unquote(url.path.removeprefix("/")))
 
 
-def generate_lock(workspace, common_dir, runtime, scratch, env, execute, *, deadline, policy_dir):
+def generate_lock(
+    workspace, common_dir, runtime, scratch, env, execute, *, deadline, policy_dir, policy_workspace=None
+):
     sources = []
     fetched = set()
     total = 0
@@ -78,7 +80,9 @@ def generate_lock(workspace, common_dir, runtime, scratch, env, execute, *, dead
             policy,
             workspace,
             common_dir,
-            runtime_policy(dependency_policy(workspace, common_dir, network=False), runtime),
+            runtime_policy(
+                dependency_policy(policy_workspace or workspace, common_dir, network=False), runtime
+            ),
         )
         return execute(validation_argv(policy, argv), workspace, env, deadline=deadline, capture=True)
 

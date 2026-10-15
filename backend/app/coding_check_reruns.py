@@ -10,9 +10,11 @@ from sqlalchemy import select, update
 from app.db import utcnow
 from app.events import append_event
 from app.models import Project, Run, Worktree
+from app.project_checks import PlanManifest
 from app.runs import create_run
 from app.state import TERMINAL
 from app.task_control import lock_task
+from app.validation_environment import ValidationEnvironment
 from app.worktree_expiry import refresh_expiry
 
 PERMISSIONS = ["filesystem_read", "workspace_write", "git_read", "shell_project_commands"]
@@ -38,16 +40,9 @@ class RecordedCommand(BaseModel):
 class RecordedChecks(BaseModel):
     model_config = ConfigDict(extra="forbid")
     commands: list[RecordedCommand] = Field(min_length=1, max_length=60)
-    manifest_snapshot: (
-        Annotated[
-            dict[
-                Literal["requirements.txt", "pyproject.toml", "package.json"],
-                Annotated[str, Field(pattern=r"^[a-f0-9]{64}$")] | None,
-            ],
-            Field(min_length=3, max_length=3),
-        ]
-        | None
-    ) = None
+    manifest_snapshot: PlanManifest | None = None
+    node_manifest_snapshot: PlanManifest | None = None
+    validation_environment: ValidationEnvironment | None = None
 
     @model_validator(mode="after")
     def bounded(self):
@@ -135,7 +130,10 @@ def enqueue_check_rerun(session, source_id, expected_validation_id):
         snapshot = RecordedChecks.model_validate(
             {
                 "commands": previous.parameters.get("commands"),
-                "manifest_snapshot": previous.parameters.get("manifest_snapshot"),
+                **{
+                    key: previous.parameters.get(key)
+                    for key in ("manifest_snapshot", "node_manifest_snapshot", "validation_environment")
+                },
             }
         ).model_dump(mode="json", exclude_none=True)
     except ValidationError as exc:

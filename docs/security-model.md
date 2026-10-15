@@ -322,3 +322,11 @@ JSON output, no images or reasoning controls, at most 350100 UTF-8 bytes includi
 controller suffix. It reuses endpoint allowlisting or owned-runtime identity,
 private transport, streaming limits and disconnect cancellation. Ordinary Chat
 and vision message limits remain unchanged. No external CLI uses this route.
+
+
+Component validation retains the existing owned-worktree sandbox. Dependency
+installation alone may read the public `/etc/os-release`,
+`/etc/debian_version` and `/etc/mime.types` files when present: pip reads distribution/MIME metadata even
+for offline wheel installation. This grants neither `/etc` traversal/read access
+in general nor host `/proc`, home or shared temporary-directory access. Python
+installer module loading is isolated from project `pip.py` and `PYTHONPATH`.

@@ -7,6 +7,33 @@ slices. The live release/image/backup record is
 
 ## Latest active work
 
+PR #322 is merged and deployed as `35ab4a4`. Final code passed 1576 Python tests
+(five opt-in skips), 488 UI tests, lint/format/types/build, Docker/Compose and
+actual saved-scene/Stop/restoration inspection at 1440/390/320. Real production
+graph/receipt/Stop checks canceled every QA stage before owned worker restart;
+no storyboard GPU dispatch or model eviction occurred. The same restored 27B
+runtime remains ready. Evidence: `data/acceptance/video-storyboard-20261015`.
+
+Active work is `fix/self-development-validation` in `.tools/self-development-validation`.
+The component-environment implementation adds explicit development locks, nested
+Node preparation, owned Python source imports and bounded validation deadlines to
+existing project Runs. A disposable real Cursor-sandbox probe passed offline pip,
+nested npm installation/build and owned-source import while preserving the original
+checkout. It also exposed and fixed project `pip.py` shadowing and missing exact
+public OS/MIME metadata reads. PR #323 passed 1597 Python tests (five opt-in skips), 489 UI tests, Ruff, frontend
+format/lint/types/build, Docker/Compose, disposable migration round-trip and
+compiled browser checks at 1440/390/320. The final UI toggle correction preserves
+identical backend/Runner source to the full-suite head. Review/deployment state is
+recorded with the release record above; do not assume a restart from this document. Evidence is under
+`data/acceptance/self-development-validation-20261015`.
+
+Full AI Station self-suite execution remains the next increment: the native
+sandbox denies host process observations needed by process-ownership tests. Use a
+controlled container target with a private PID namespace instead of granting host
+`/proc` or broad temporary access. The real Self project still has syntax-only
+commands. Preserve root WIP; current production Runner remains on #321 until a
+reviewed release is deployed. Earlier sections below are historical.
+
 PR #321 is merged/deployed as `3783ba6`: GPU-wait queue fairness and startup native
 source compatibility. Verification passed 1567 backend/Runner tests (five opt-in
 skips), Ruff, Docker/Compose and actual desktop/mobile persistence checks. Actual

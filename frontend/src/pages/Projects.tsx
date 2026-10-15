@@ -19,6 +19,10 @@ import { Button } from "../components/ui/button";
 import ProjectAgents from "./ProjectAgents";
 import ProjectCodingSessions from "./ProjectCodingSessions";
 import ProjectWorktrees from "./ProjectWorktrees";
+import {
+  ProjectValidationEnvironment,
+  type ValidationEnvironment,
+} from "./ProjectValidationEnvironment";
 import { terminal } from "../lib/utils";
 import { useListKeyboard } from "./useListKeyboard";
 
@@ -35,6 +39,7 @@ interface Project {
   build_commands: string[][];
   auto_install_dependencies?: boolean;
   auto_validate?: boolean;
+  validation_environment?: ValidationEnvironment | null;
   agent_rules: string;
   pr_policy: Record<string, boolean>;
   updated_at: string;
@@ -191,6 +196,9 @@ function ProjectForm({
     project?.auto_install_dependencies ?? false,
   );
   const [autoChecks, setAutoChecks] = useState(project?.auto_validate ?? false);
+  const [environment, setEnvironment] = useState<ValidationEnvironment | null>(
+    project?.validation_environment ?? null,
+  );
   const [rules, setRules] = useState(project?.agent_rules ?? "");
   const [policy, setPolicy] = useState({
     ...policyDefaults,
@@ -215,6 +223,13 @@ function ProjectForm({
           build_commands: parseCommands(build),
           auto_install_dependencies: autoDeps,
           auto_validate: autoChecks,
+          validation_environment: environment
+            ? {
+                ...environment,
+                python_source_roots:
+                  environment.python_source_roots.filter(Boolean),
+              }
+            : null,
           agent_rules: rules,
           pr_policy: policy,
           ...(project
@@ -319,7 +334,7 @@ function ProjectForm({
               These trusted commands can run in a prepared worktree. Saving does
               not execute them. Use one JSON argument array per line.
             </p>
-            <label className="agent-tool">
+            <label className="project-checkbox">
               <input
                 type="checkbox"
                 checked={autoDeps}
@@ -327,7 +342,7 @@ function ProjectForm({
               />{" "}
               Prepare public package dependencies after Coding
             </label>
-            <label className="agent-tool">
+            <label className="project-checkbox">
               <input
                 type="checkbox"
                 checked={autoChecks}
@@ -374,6 +389,10 @@ function ProjectForm({
             </label>
           </div>
         </details>
+        <ProjectValidationEnvironment
+          value={environment}
+          onChange={setEnvironment}
+        />
         <details>
           <summary>Git workflow policy</summary>
           <div className="project-form-section">

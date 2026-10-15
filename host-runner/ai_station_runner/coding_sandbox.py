@@ -75,6 +75,12 @@ def dependency_policy(workspace: Path, git_common_dir: Path, *, network: bool) -
     policy = validation_policy(workspace, git_common_dir)
     sandbox = policy["sandbox"]
     sandbox["networkAccess"] = bool(network)
+    # pip reads distro/MIME metadata even for offline vendor installation.
+    # Grant only public OS release files, never all /etc or host process data.
+    release_paths = [
+        path for path in ("/etc/os-release", "/etc/debian_version", "/etc/mime.types") if Path(path).is_file()
+    ]
+    sandbox["hardcodedReadPaths"] = list(dict.fromkeys([*sandbox["hardcodedReadPaths"], *release_paths]))
     if network:
         extra = [path for path in NETWORK_READ_PATHS if Path(path).exists()]
         sandbox["hardcodedReadPaths"] = list(dict.fromkeys([*sandbox["hardcodedReadPaths"], *extra]))

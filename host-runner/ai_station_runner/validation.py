@@ -15,6 +15,7 @@ from ai_station_runner.config import get_settings
 from ai_station_runner.gitops import GitError
 from ai_station_runner.processes import ProcessNotOwned
 from ai_station_runner.project_manifests import ManifestSnapshot
+from ai_station_runner.validation_environment import ValidationEnvironment
 from ai_station_runner.worktrees import inspect_worktree, owned_path
 
 PERMISSIONS = {"filesystem_read", "workspace_write", "git_read", "shell_project_commands"}
@@ -44,11 +45,20 @@ class ValidationRequest(BaseModel):
     commands: list[ValidationCommand] = Field(min_length=1, max_length=60)
     permissions: list[str] = Field(max_length=4)
     manifest_snapshot: ManifestSnapshot | None = None
+    node_manifest_snapshot: ManifestSnapshot | None = None
+    validation_environment: ValidationEnvironment | None = None
 
     @model_validator(mode="after")
     def bounded_request(self):
         if sum(len(arg) for cmd in self.commands for arg in cmd.argv) > 32000:
             raise ValueError("Project commands exceed the 32,000 character limit")
+        if self.validation_environment:
+            if self.manifest_snapshot is None:
+                raise ValueError("Configured validation requires frozen manifests")
+            if self.validation_environment.node_directory and self.node_manifest_snapshot is None:
+                raise ValueError("Component validation requires frozen Node manifests")
+        elif self.node_manifest_snapshot is not None:
+            raise ValueError("Node component manifests require a validation environment")
         return self
 
 
