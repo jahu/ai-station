@@ -183,3 +183,13 @@ confirmed stream completion remain mandatory before any worktree write. Failed
 proposal decoding must clearly report that no files were applied. This fixes the
 unconstrained-output gap observed by the 2026-10-15 real Work follow-up test.
 Upstream support: [llama.cpp JSON response format](https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md#post-v1chatcompletions-openai-compatible-chat-completions-api).
+
+## Resource waiting and interactive work
+
+A resource-blocked independent-shot batch defers its GPU-demanding Runs for two
+worker heartbeats. The generic claim predicate applies the server-authored
+`resource_wait_until` deadline in both candidate selection and conditional update;
+CPU/control work and other Tasks remain eligible. An owned GPU release clears
+its Task marker within the existing resource transaction, and explicit media
+resume resets it. Task Stop is serialized with deferral. The requeue event retains
+the chosen deadline for audit. See [queue fairness](media-resource-wait-fairness.md).

@@ -59,6 +59,7 @@ from ai_station_runner.publication_reconcile import ReconcileRequest, reconcile_
 from ai_station_runner.reviewed_commits import CommitRequest, commit_report, start_commit
 from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
+from ai_station_runner.source_identity import SOURCE_FINGERPRINT
 from ai_station_runner.station_image import inspect_station_image
 from ai_station_runner.telemetry import collect
 from ai_station_runner.transcription import TranscriptionRequest
@@ -353,6 +354,7 @@ def health():
     return {
         "status": "ok",
         "version": __version__,
+        "source_fingerprint": SOURCE_FINGERPRINT,
         "runner_id": get_settings().runner_id,
         "data_dir": str(_data().resolve()),
     }

@@ -9,7 +9,7 @@ from app.db import utcnow
 from app.events import append_event
 from app.models import Run
 from app.permissions import require
-from app.resources import release_run_locks, reserve_gpu, reserve_memory
+from app.resources import RESOURCE_WAIT_KEY, release_run_locks, reserve_gpu, reserve_memory
 from app.runner_client import RunnerClient, RunnerError
 from app.runs import mark_failed, transition
 from app.state import RunStatus
@@ -45,6 +45,11 @@ class HostMediaExecutor:
         allocated = reserve_gpu(session, run, indexes) if self.requires_gpu and memory_ready else None
         if not memory_ready or self.requires_gpu and allocated is None:
             release_run_locks(session, run.id)
+            from app.media_admission import defer_media_task
+
+            if not defer_media_task(session, run):
+                self._cancel_before_dispatch(session, run)
+                return "done"
             transition(
                 session,
                 run,
@@ -52,16 +57,23 @@ class HostMediaExecutor:
                 event_type="run.interrupted",
                 payload={"reason": "GPU busy" if memory_ready else "Waiting for available host RAM"},
             )
-            transition(session, run, RunStatus.QUEUED, event_type="run.requeued", payload={})
+            wait_until = run.task.metadata_json.get(RESOURCE_WAIT_KEY)
+            transition(
+                session,
+                run,
+                RunStatus.QUEUED,
+                event_type="run.requeued",
+                payload={"resource_wait_until": wait_until} if wait_until else {},
+            )
             run.queued_at = utcnow()
             run.finished_at = None
             run.worker_id = None
             run.lease_expires_at = None
-            if memory_ready and run.requested_gpu != "none":
+            if run.status == "queued" and memory_ready and run.requested_gpu != "none":
                 from app.llama import evict_idle_models
 
                 evict_idle_models(session, run, indexes)
-            return "requeued"
+            return "requeued" if run.status == "queued" else "done"
         output = f"artifacts/{run.id[:2]}/{run.id[2:4]}/{run.id}{self.suffix}"
         # Durable before sending: even a lost response may hide a live process.
         run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}

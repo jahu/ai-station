@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.db import utcnow
-from app.models import ResourceLock, Run
+from app.models import ResourceLock, Run, Task
+from app.task_control import lock_task
 
 
 class ResourceBusy(Exception):
@@ -15,6 +16,19 @@ class ResourceBusy(Exception):
 
 class ResourceUnknown(Exception):
     pass
+
+
+RESOURCE_WAIT_KEY = "resource_wait_until"
+
+
+def resource_ready_condition(now):
+    waiting = (
+        select(Task.id)
+        .where(Task.id == Run.task_id, Task.metadata_json[RESOURCE_WAIT_KEY].as_string() > now.isoformat())
+        .correlate(Run)
+        .exists()
+    )
+    return or_(Run.requested_gpu.is_(None), Run.requested_gpu.in_(("none", "")), ~waiting)
 
 
 def active_locks(session: Session) -> set[str]:
@@ -70,6 +84,15 @@ def release_run_locks(session: Session, run_id: str) -> None:
     now = utcnow()
     for row in rows:
         row.released_at = now
+    if any(row.resource_key.startswith("gpu:") for row in rows):
+        owner = session.get(Run, run_id)
+        task = session.get(Task, owner.task_id) if owner is not None else None
+        if task is not None:
+            lock_task(session, task)
+            if RESOURCE_WAIT_KEY in task.metadata_json:
+                task.metadata_json = {
+                    key: value for key, value in task.metadata_json.items() if key != RESOURCE_WAIT_KEY
+                }
     session.flush()
 
 

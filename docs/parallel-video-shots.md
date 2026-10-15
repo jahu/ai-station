@@ -37,3 +37,18 @@ Out-of-order completion requires ordered final lineage as well as ordered decode
 frames. Latest partial preview follows actual completion time among selected
 successful attempts, not the largest segment number. Historical failed attempts
 and reused independent shot artifacts remain intact on resume.
+
+## Delivered verification — PR #320
+
+Merged/deployed as `37570af`. Full checks passed: 1555 backend/Runner tests,
+five explicit opt-in skips, 483 UI tests, lint/format/types/build, Docker/Compose.
+Private candidate production UI passed actual 1440/390 rendering with explicitly
+synthetic two-device progress. Actual production graph/receipt/Stop acceptance
+paused only an idle owned worker, published three independent queued shots plus
+composition, verified only composition dependencies, then canceled all four before
+restoring three fresh worker slots. No test generation or model eviction occurred;
+the existing 27B runtime remained ready. Evidence:
+`data/acceptance/parallel-video-shots-20261015/review.json`.
+
+The next [queue fairness fix](media-resource-wait-fairness.md) prevents resource
+waiting in a large shot batch from hiding new interactive CPU work.

@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.db import utcnow
 from app.events import append_event
 from app.models import Agent, Run, RunDependency, Task
+from app.resources import resource_ready_condition
 from app.state import TERMINAL, InvalidTransition, RunStatus, assert_transition
 
 
@@ -155,7 +156,7 @@ def claim_next(session: Session, worker_id: str) -> Run | None:
     )
     candidate = session.scalar(
         select(Run)
-        .where(Run.status == RunStatus.QUEUED.value, Run.id.not_in(blocked))
+        .where(Run.status == RunStatus.QUEUED.value, Run.id.not_in(blocked), resource_ready_condition(now))
         .order_by(Run.queued_at, Run.created_at)
         .limit(1)
     )
@@ -164,7 +165,7 @@ def claim_next(session: Session, worker_id: str) -> Run | None:
     lease = now + timedelta(seconds=settings.lease_seconds)
     result = session.execute(
         update(Run)
-        .where(Run.id == candidate.id, Run.status == RunStatus.QUEUED.value)
+        .where(Run.id == candidate.id, Run.status == RunStatus.QUEUED.value, resource_ready_condition(now))
         .values(
             status=RunStatus.CLAIMED.value,
             worker_id=worker_id,
