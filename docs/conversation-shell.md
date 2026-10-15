@@ -1,5 +1,13 @@
 # One composer for entry and continuing conversations
 
+On narrow or short viewports, the conversation uses normal page height with a
+bounded, independently scrollable transcript. The composer remains reachable by
+page scrolling instead of overflowing a fixed-height clipped panel. Header actions
+wrap without stretching or crossing the panel edge. Real browser checks cover
+1440×1000, 390×844, 320×568, 768×1024 and 1280×600, including clicking the visible
+Stop control and checking the task cancellation result. Evidence:
+`data/acceptance/mobile-conversation-controls-20261015`.
+
 The immediate entry and existing conversations now reuse `ConversationComposer`:
 the same message field, Enter/Ctrl/Command+Enter and IME behavior, collapsed
 attachment/tool menu and compact footer. Shift+Enter keeps multiline input;
