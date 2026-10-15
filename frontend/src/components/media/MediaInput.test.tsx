@@ -68,3 +68,56 @@ it("moves through inline Library files with arrow keys", async () => {
   fireEvent.click(first);
   expect(onChange).toHaveBeenCalledWith("voiceone");
 });
+
+it("offers compressed recordings only in transcription mode", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => [
+        {
+          id: "compressed",
+          type: "audio",
+          mime_type: "audio/mp4",
+          original_filename: "meeting.m4a",
+          metadata: {},
+        },
+        {
+          id: "long-wave",
+          type: "audio",
+          mime_type: "audio/wav",
+          original_filename: "long.wav",
+          metadata: { duration_seconds: 120 },
+        },
+      ],
+    })),
+  );
+  const onChange = vi.fn();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MediaInput
+        kind="audio"
+        audioMode="transcription"
+        maxAudioSeconds={300}
+        label="Recording"
+        hint="Recordings"
+        value=""
+        onChange={onChange}
+        disabled={false}
+        onBusy={vi.fn()}
+      />
+    </QueryClientProvider>,
+  );
+  expect(
+    screen.getByLabelText("Upload speech").getAttribute("accept"),
+  ).toContain(".m4a");
+  fireEvent.click(screen.getByRole("button", { name: "Choose from Library" }));
+  const compressed = await screen.findByRole("button", {
+    name: "Choose meeting.m4a compress",
+  });
+  expect(
+    screen.getByRole("button", { name: "Choose long.wav long-wav" }),
+  ).toBeTruthy();
+  fireEvent.click(compressed);
+  expect(onChange).toHaveBeenCalledWith("compressed");
+});

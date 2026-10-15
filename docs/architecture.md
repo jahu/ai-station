@@ -316,5 +316,5 @@ Local agent workflows can now gather [reviewed GitHub snapshots](agent-github-re
 and conversation action using the shared Task/Run infrastructure. Audio remains
 inside application storage; model files remain external references. Whisper's
 optional Python environment does not change the control-plane image or existing
-speech/video runtimes. Immutable source/model checks, bounded PCM decoding and
+speech/video runtimes. Immutable source/model checks, bounded offline audio decoding and
 verified completion gate TXT/SRT/JSON artifact publication.

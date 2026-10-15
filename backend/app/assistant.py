@@ -898,7 +898,7 @@ class AssistantExecutor:
             from app.transcription import TranscriptionRequest, create_transcription_run
 
             if images or not params.get("audio_artifact_id"):
-                message.content = "Attach one WAV recording to transcribe. No portrait is needed."
+                message.content = "Attach one audio recording to transcribe. No portrait is needed."
             else:
                 try:
                     child = create_transcription_run(

@@ -1,3 +1,7 @@
+import {
+  TRANSCRIPTION_AUDIO_TYPES,
+  TRANSCRIPTION_AUDIO_ACCEPT,
+} from "../../recording-formats";
 import { useId, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AudioLines, ImagePlus, Library, Upload, X } from "lucide-react";
@@ -10,6 +14,7 @@ type Props = {
   kind: "image" | "audio";
   uploadEndpoint?: string;
   maxAudioSeconds?: number;
+  audioMode?: "voice" | "transcription";
   label: string;
   hint: string;
   value: string;
@@ -21,6 +26,7 @@ export default function MediaInput({
   kind,
   uploadEndpoint,
   maxAudioSeconds = 60,
+  audioMode = "voice",
   label,
   hint,
   value,
@@ -63,6 +69,8 @@ export default function MediaInput({
   const Icon = kind === "image" ? ImagePlus : AudioLines;
   const headingId = useId();
   const labelId = useId();
+  const audioTypes =
+    audioMode === "transcription" ? TRANSCRIPTION_AUDIO_TYPES : ["audio/wav"];
   const available =
     library.data?.filter(
       (a) =>
@@ -70,7 +78,7 @@ export default function MediaInput({
         (kind !== "image" ||
           ["image/png", "image/jpeg"].includes(a.mime_type)) &&
         (kind !== "audio" ||
-          (a.mime_type === "audio/wav" &&
+          (audioTypes.includes(a.mime_type) &&
             (a.metadata?.duration_seconds === undefined ||
               a.metadata.duration_seconds <= maxAudioSeconds))) &&
         `${a.title ?? ""} ${a.original_filename}`
@@ -153,7 +161,11 @@ export default function MediaInput({
             type="file"
             aria-label={kind === "image" ? "Upload portrait" : "Upload speech"}
             accept={
-              kind === "image" ? "image/png,image/jpeg" : "audio/wav,.wav"
+              kind === "image"
+                ? "image/png,image/jpeg"
+                : audioMode === "transcription"
+                  ? TRANSCRIPTION_AUDIO_ACCEPT
+                  : "audio/wav,.wav"
             }
             disabled={disabled}
             onChange={(event) => {
@@ -193,8 +205,13 @@ export default function MediaInput({
             <p className="muted">Loading your Library…</p>
           ) : !available.length ? (
             <p className="muted">
-              No matching {kind === "image" ? "portraits" : "WAV recordings"}.
-              Upload one above.
+              No matching{" "}
+              {kind === "image"
+                ? "portraits"
+                : audioMode === "transcription"
+                  ? "recordings"
+                  : "WAV recordings"}
+              . Upload one above.
             </p>
           ) : (
             <section aria-labelledby={headingId}>

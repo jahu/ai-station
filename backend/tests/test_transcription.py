@@ -26,7 +26,11 @@ def fake(monkeypatch, mode="ok"):
 
     def request(self, method, path, payload=None):
         if path == "/v1/transcription/capabilities":
-            return {"available": True, "profile_sha256": "a" * 64}
+            return {
+                "available": True,
+                "profile_sha256": "a" * 64,
+                "formats": ["wav", "mp3", "mov", "ogg", "matroska", "flac"],
+            }
         if path == "/v1/runs/transcription":
             rid = payload["run_id"]
             assert set(payload["permissions"]) == {"filesystem_read", "workspace_write"}
@@ -40,6 +44,8 @@ def fake(monkeypatch, mode="ok"):
                 "text": "Hello",
                 "segments": [{"start": 0, "end": 1, "text": "Hello"}],
             }
+            if mode == "format_mismatch":
+                reports[rid]["input_format"] = "mp3"
             if mode == "mismatch":
                 reports[rid]["source_sha256"] = "bad"
             if mode == "cancel":
@@ -104,7 +110,13 @@ def test_full_worker_lifecycle_with_timestamped_portable_artifacts(monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "mode,status", [("cancel", "canceled"), ("uncertain", "interrupted"), ("mismatch", "failed")]
+    "mode,status",
+    [
+        ("cancel", "canceled"),
+        ("uncertain", "interrupted"),
+        ("mismatch", "failed"),
+        ("format_mismatch", "failed"),
+    ],
 )
 def test_failed_canceled_uncertain_never_publish_transcript(monkeypatch, mode, status):
     fake(monkeypatch, mode)
@@ -222,3 +234,45 @@ def test_stale_transcription_is_inspected_without_replay(monkeypatch, alive):
             assert session.scalar(select(func.count()).select_from(Run)) == 1
             session.commit()
         assert client.get("/api/artifacts?run_id=" + submitted["id"]).json() == []
+
+
+@pytest.mark.parametrize(
+    "suffix,mime,content",
+    [
+        ("mp3", "audio/mpeg", b"ID3" + b"\0" * 20),
+        ("m4a", "audio/mp4", b"\0\0\0\x18ftypM4A " + b"\0" * 20),
+        ("ogg", "audio/ogg", b"OggS" + b"\0" * 30),
+    ],
+)
+def test_compressed_upload_is_pending_until_worker_validation(monkeypatch, suffix, mime, content):
+    fake(monkeypatch)
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/audio/transcription/uploads", files={"file": ("input." + suffix, content, mime)}
+        )
+        assert response.status_code == 201, response.text
+        artifact = response.json()
+        assert artifact["mime_type"] == mime
+        assert artifact["relative_path"].endswith("." + suffix)
+        assert artifact["metadata"]["duration_validation"] == "pending_transcription"
+        assert "duration_seconds" not in artifact["metadata"]
+        assert (
+            client.post("/api/audio/uploads", files={"file": ("input." + suffix, content, mime)}).status_code
+            == 422
+        )
+
+
+def test_older_runner_rejects_new_formats_before_enqueue(monkeypatch):
+    def request(self, method, path, payload=None):
+        assert path == "/v1/transcription/capabilities"
+        return {"available": True, "profile_sha256": "a" * 64}
+
+    monkeypatch.setattr(RunnerClient, "request", request)
+    with TestClient(app) as client:
+        artifact = client.post(
+            "/api/audio/transcription/uploads",
+            files={"file": ("input.mp3", b"ID3" + b"\0" * 30, "audio/mpeg")},
+        ).json()
+        response = client.post("/api/audio/transcription/runs", json={"audio_artifact_id": artifact["id"]})
+        assert response.status_code == 409, response.text
+        assert "Update the Host Runner" in response.json()["detail"]

@@ -219,13 +219,14 @@ export default function Transcription() {
             <MediaInput
               kind="audio"
               label="Recording"
-              hint="16-bit PCM WAV · up to 5 minutes · 20 MB"
+              hint="WAV, MP3, M4A, Ogg, WebM or FLAC · 5 min · 20 MB"
               value={selectedSource}
               onChange={setSource}
               disabled={busy || uploading}
               onBusy={setUploading}
               uploadEndpoint="/audio/transcription/uploads"
               maxAudioSeconds={300}
+              audioMode="transcription"
             />
             <label>
               Spoken language
