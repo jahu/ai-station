@@ -354,6 +354,8 @@ def enqueue(
     if type(reserve_context) is not int or not 0 <= reserve_context <= 20000:
         raise ValueError("Invalid reserved conversation context")
     snapshot = dict(frozen_provider) if frozen_provider is not None else snapshot_provider(session, row)
+    from app.web_search import conversation_query_context
+
     web_search = user.metadata_json.get("web_search")
     summary = latest_summary(session, row.id)
     summary_entry = summary_memory(session, summary)
@@ -470,6 +472,11 @@ def enqueue(
         execution_target="container",
         parameters={
             "web_search": web_search,
+            **(
+                {"web_search_context": conversation_query_context(session, row.id, user)}
+                if web_search and web_search.get("contextual")
+                else {}
+            ),
             "execution_mode": "local",
             "policy_mode": policy_mode(user.metadata_json.get("execution_mode", "local")),
             "policy_version": POLICY_VERSION,
@@ -767,6 +774,7 @@ class ChatPreferences(BaseModel):
     provider: str = Field(default=BUILTIN_KEY, min_length=1, max_length=80)
     model: str = Field(default="", max_length=200)
     send_key: Literal["enter", "ctrl-enter"] = "enter"
+    web_search_enabled: bool = True
 
 
 @router.get("/preferences")
@@ -783,7 +791,10 @@ def save_preferences(body: ChatPreferences, session: DB):
         raise HTTPException(409, "Preferences changed; refresh before saving")
     if body.model:
         snapshot_provider(session, Conversation(provider=body.provider, model=body.model))
-    values = body.model_copy(update={"version": current.version + 1}).model_dump()
+    updates = {"version": current.version + 1}
+    if "web_search_enabled" not in body.model_fields_set:
+        updates["web_search_enabled"] = current.web_search_enabled
+    values = body.model_copy(update=updates).model_dump()
     if row is None:
         row = Setting(key="conversation_preferences", value=values)
         session.add(row)

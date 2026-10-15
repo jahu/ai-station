@@ -4,6 +4,7 @@ import { useListKeyboard } from "./useListKeyboard";
 
 export type WebSources = {
   query: string;
+  original_query?: string;
   queries?: string[];
   searched_at: string;
   partial: boolean;
@@ -43,8 +44,8 @@ export function WebSearchControl({
   return (
     <div className="chat-web-search">
       <p id={labelId} className={compact ? "sr-only" : "dashboard-note"}>
-        Search public information. Only this turn's query is shared with search
-        engines; conversation history and attachments stay private.
+        Search public information. A short query may use the recent conversation
+        to understand follow-up questions. Attachments and memory are excluded.
       </p>
       <div
         ref={listRef}
@@ -79,12 +80,13 @@ export function WebSearchControl({
               value={query}
               disabled={busy}
               onChange={(e) => onQuery(e.target.value)}
-              placeholder="Use my message as the search query"
+              placeholder="Understand my question and its context"
             />
           </label>
           <p className="muted">
-            Only this query is sent to search engines. Conversation history and
-            attachments stay local.
+            Enter an exact query to keep conversation context out of search.
+            Otherwise, a short query is prepared from recent messages; the full
+            conversation and attachments are not sent to search engines.
           </p>
         </div>
       )}
@@ -115,6 +117,9 @@ export function SearchSources({ result }: { result: WebSources }) {
             {new Date(result.searched_at).toLocaleString()}
           </time>
         </p>
+        {result.original_query && (
+          <p className="muted">Follow-up: {result.original_query}</p>
+        )}
         {(result.queries?.length ?? 0) > 1 && (
           <p className="muted">
             Refined search: {result.queries?.slice(1).join(" · ")}

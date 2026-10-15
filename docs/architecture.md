@@ -440,3 +440,13 @@ worker queue. Trusted bounded read-only parsers operate on verified app-owned
 bytes in a control-plane worker, without host access, network or user code.
 Generated Python execution remains the separate isolated native-runner container
 boundary; metadata inspection does not grant that permission.
+
+## Context-aware Chat search
+
+Ordinary Chat enables its visible search switch by default, with a versioned
+operator preference for opt-out. HTTP APIs still require per-request selection.
+Work tasks retain their explicit network scopes. The worker resolves automatic
+follow-up subjects from a frozen, bounded ordinary-text window before retrieval;
+manual queries bypass resolution. Only the short query reaches SearXNG. Actual
+queries, original follow-ups and source artifacts remain auditable; cancellation
+and failed resolution stop retrieval. See [web search](web-search.md).
