@@ -105,7 +105,7 @@ it("sends the first prompt without creating an empty conversation", async () => 
   });
 });
 
-it("moves through conversation messages with arrow keys", async () => {
+it("moves through messages and identifies a resolved previous image", async () => {
   const conversation = {
     id: "conv",
     title: "Planning",
@@ -131,7 +131,14 @@ it("moves through conversation messages with arrow keys", async () => {
         run_id: null,
         run_status: null,
         error_message: "",
-        metadata: {},
+        metadata: {
+          images: [{ id: "source-image", name: "landscape.png" }],
+          conversation_reference: {
+            artifact_id: "source-image",
+            message_id: "earlier-message",
+            run_id: "source-run",
+          },
+        },
       },
       {
         id: "asst-two",
@@ -181,6 +188,13 @@ it("moves through conversation messages with arrow keys", async () => {
   const inspect = await screen.findByRole("link", {
     name: "Inspect run Local AI asst-two",
   });
+  expect(screen.getByText(/Using the previous image result/)).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect referenced image user-one" })
+      .getAttribute("href"),
+  ).toBe("/runs/source-run");
+  expect(screen.getByAltText("Reference 1: landscape.png")).toBeTruthy();
   const copy = screen.getByRole("button", { name: "Copy Local AI asst-two" });
   const articles = screen.getAllByRole("article");
   expect(screen.getByRole("region", { name: "Messages" })).toBeTruthy();

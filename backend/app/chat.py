@@ -465,6 +465,9 @@ def submit_message(conversation_id, body, session, *, commit=True):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
     mode = turn_execution_mode(row, body)
+    from app.conversation_media import resolve_result_reference
+
+    body, result_reference = resolve_result_reference(session, row, body, mode)
     if mode == "chat":
         validate_chat_scope(body)
     use_assistant = (
@@ -488,6 +491,8 @@ def submit_message(conversation_id, body, session, *, commit=True):
         content=message_content(body.content, body.attachments),
         metadata_json={"user_text": body.content} if body.attachments else {},
     )
+    if result_reference:
+        user.metadata_json = {**user.metadata_json, "conversation_reference": result_reference}
     if body.reasoning is not None:
         from app.chat_reasoning import certificate, validated_options
 
