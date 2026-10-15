@@ -655,9 +655,44 @@ function MemoryEditor({ entry }: { entry?: Entry }) {
           {entry.source_message_id && (
             <code>Message {entry.source_message_id}</code>
           )}
-          {entry.scope === "project" && (
-            <Link to={`/projects/${entry.scope_id}`}>Scoped project</Link>
-          )}
+          {entry.scope === "agent" && entry.scope_id ? (
+            <p className="muted">
+              <Link
+                className="text-link"
+                to={`/agents/${encodeURIComponent(entry.scope_id)}`}
+                aria-label={`Open agent ${entry.scope_id.slice(0, 8)}`}
+              >
+                Open agent
+              </Link>
+              {" · "}
+              <Link
+                className="text-link"
+                to={`/runs?agent_id=${encodeURIComponent(entry.scope_id)}`}
+                aria-label={`View agent runs ${entry.scope_id.slice(0, 8)}`}
+              >
+                View runs
+              </Link>
+            </p>
+          ) : null}
+          {entry.scope === "project" && entry.scope_id ? (
+            <p className="muted">
+              <Link
+                className="text-link"
+                to={`/projects/${encodeURIComponent(entry.scope_id)}`}
+                aria-label={`Open project ${entry.scope_id}`}
+              >
+                Open project
+              </Link>
+              {" · "}
+              <Link
+                className="text-link"
+                to={`/runs?project_id=${encodeURIComponent(entry.scope_id)}`}
+                aria-label={`View project runs ${entry.scope_id}`}
+              >
+                View runs
+              </Link>
+            </p>
+          ) : null}
           {entry.scope === "conversation" && (
             <Link to={`/chat/${entry.scope_id}`}>Scoped conversation</Link>
           )}

@@ -305,3 +305,13 @@ PR #317 is deployed and real-tested; see the delivered section in
 [coding continuation](../coding-continuation-review.md). Continue in
 `.tools/coding-source-windows` on `feat/local-coding-source-context`, following
 [the bounded local context plan](../local-coding-source-context.md).
+
+
+## Current: finish preserved Memory scope navigation
+
+PR #318 is merged/deployed and qualified: full 1547-test suite plus actual
+110 KB synthetic local Work edit, Node/build and desktop/mobile acceptance.
+See [delivered evidence](../local-coding-source-context.md#delivered-acceptance--pr-318).
+Continue in `.tools/memory-scope-navigation`, `feat/memory-scope-navigation`,
+following [scope navigation](../memory-scope-navigation.md). Root WIP stays
+untouched; only its focused frontend change was ported.

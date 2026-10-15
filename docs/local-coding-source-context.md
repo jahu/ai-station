@@ -51,3 +51,17 @@ long harmless whitespace to qualify source transport/editing without repeating
 the already-qualified 110029-token GPU stress test. Do not describe it as a
 complex real-code or long-context reasoning benchmark. Evidence is stored under
 `data/acceptance/local-coding-source-context-20261015`.
+
+## Delivered acceptance — PR #318
+
+Merged as `dc13440`, deployed, and verified against the exact reviewed image.
+Full corrected checks passed: 1547 backend/Runner tests, five explicit opt-in
+skips, Ruff, Docker and both Compose configurations. Native source and all
+original database IDs were verified after restart. The same production Work task
+and owned 27B runtime completed a unique snippet edit of a 110037-byte synthetic
+source file through the new Coding bridge; original checkout/index, other source,
+lockfile and 1864 prior scratch files were unchanged. Node tests and Vite build
+passed, a new build ZIP was saved, receipt replay created no duplicate, and
+desktop/mobile browser acceptance passed. This is transport/edit/workflow
+qualification, separate from the already recorded long-context reasoning tests.
+Evidence: `data/acceptance/local-coding-source-context-20261015/review.json`.
