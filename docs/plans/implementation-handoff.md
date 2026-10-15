@@ -292,4 +292,8 @@ internal untracked scratch files and a 32265-byte generated lockfile in the QA
 worktree collide with the current selected-context limits during cumulative
 review/commit. Fix source scanning and separate bounded review from inference
 context, with report-size preflight and the existing path/write protections.
-This increment is not implemented yet. Preserve old scratch data and root WIP.
+Implementation is on PR #317. Focused native and follow-up integration tests pass,
+including generated locks, 15-file commit, tracked credential rejection and encoded
+report preflight before writes. Full backend/Runner checks and deployment acceptance
+are pending; do not report production acceptance until evidence is recorded in
+`data/acceptance/coding-continuation-review-20261015`. Preserve scratch data and root WIP.
