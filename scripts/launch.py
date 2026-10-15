@@ -126,12 +126,14 @@ def main() -> None:
         signal.signal(signal.SIGTERM, shutdown)
         signal.signal(signal.SIGINT, shutdown)
         try:
-            reusable_runner = runner_health(env)
+            runner_health(env)
             if not args.no_build:
                 # One shared image; Docker build works even when the optional
                 # buildx plugin is absent from a workstation's Compose install.
                 subprocess.run(["docker", "build", "-t", "ai-station:local", str(ROOT)], env=env, check=True)
-            if not reusable_runner:
+            # Building can take minutes; the preflight Runner may have exited
+            # or been replaced. Recheck before reusing it.
+            if not runner_health(env):
                 proc = subprocess.Popen([sys.executable, "-m", "ai_station_runner.main"], env=env)
                 deadline = time.monotonic() + 20
                 while not runner_health(env):
