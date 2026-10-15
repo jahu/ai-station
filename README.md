@@ -475,3 +475,8 @@ Video **Shots** can run independent windows on free GPUs when sufficient host RA
 is available. The shared result shows active/queued shots and actual devices;
 Stop covers the entire film. Continuous motion keeps its required ordering.
 See [shot scheduling and verification](docs/parallel-video-shots.md).
+
+**Library data files:** Import or drop a CSV/XLSX (up to 16 MiB) to keep the original
+and inspect a bounded table preview. Sheet counts, formula warnings, Stop and
+preview Run history remain visible. This is read-only inspection; AI analysis and
+transformations are a separate workflow. See [data inputs](docs/data-inputs.md).

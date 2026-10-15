@@ -6114,3 +6114,53 @@ section:has(> .memory-grid) > .dashboard-note {
     order: 3;
   }
 }
+
+.data-preview {
+  min-width: 0;
+  width: 100%;
+  text-align: left;
+  padding: 20px;
+}
+.data-preview > .row h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.data-preview > p {
+  margin: 14px 0;
+  line-height: 1.6;
+}
+.data-preview > .text-link {
+  display: inline-block;
+  margin: 16px 12px;
+}
+.data-preview-table {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 16px 0;
+}
+.data-preview-table table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 12px;
+}
+.data-preview-table th,
+.data-preview-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  max-width: 280px;
+  min-width: 80px;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+.data-preview-table th {
+  color: var(--muted);
+  text-align: left;
+  font-weight: 500;
+  background: #ffffff04;
+}
+.data-preview-table tr:last-child td,
+.data-preview-table tr:last-child th {
+  border-bottom: 0;
+}
