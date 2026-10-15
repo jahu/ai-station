@@ -1,5 +1,5 @@
 import { ArrowUp, Paperclip } from "lucide-react";
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { Button } from "../components/ui/button";
 
 export default function ConversationComposer({
@@ -33,6 +33,14 @@ export default function ConversationComposer({
   sendLabel?: string;
   permissionNote?: ReactNode;
 }) {
+  const textarea = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const field = textarea.current;
+    if (!field) return;
+    // Reset first so deleting text and sending also shrink the composer.
+    field.style.height = "auto";
+    field.style.height = `${field.scrollHeight}px`;
+  }, [value]);
   const submit = () => {
     if (canSend && !busy) onSend();
   };
@@ -55,9 +63,10 @@ export default function ConversationComposer({
         Message
       </label>
       <textarea
+        ref={textarea}
         id={id}
         autoFocus={autoFocus}
-        rows={3}
+        rows={1}
         maxLength={32000}
         value={value}
         placeholder={placeholder}
@@ -79,7 +88,8 @@ export default function ConversationComposer({
       {tools && (
         <details className="new-chat-tools">
           <summary>
-            <Paperclip size={15} /> Attach files &amp; choose tools
+            <Paperclip size={16} aria-hidden="true" />
+            <span>Attach files &amp; choose tools</span>
           </summary>
           {tools}
         </details>

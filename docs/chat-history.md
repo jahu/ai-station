@@ -1,9 +1,9 @@
 # Searchable conversation history
 
-Recent conversations remains collapsed beside the shared Chat composer. Open it
-to search conversation titles and persisted message text, or **Load older
-conversations** past the initial 100. Search is read-only and includes older
-conversations even when they have not been loaded in the current UI.
+Conversation history stays visible beside the transcript on desktop and opens
+as a drawer on phones. Search conversation titles and persisted message text, or
+**Load older conversations** past the initial 100. Search is read-only and includes
+older conversations even when they have not been loaded in the current UI.
 
 The existing `GET /api/chat/conversations` array response stays compatible. It
 accepts optional `q` (200 characters) and the paired `before` / `before_id`
