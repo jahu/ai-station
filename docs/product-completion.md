@@ -1,3 +1,8 @@
+Node coding projects now use the existing dependency Run to create missing npm
+lockfiles offline from verified public-registry metadata, then install checked
+packages and run saved sandboxed build/test commands. Existing locks remain
+unchanged. See [Node project dependencies](node-project-dependencies.md).
+
 # Full-product acceptance ledger
 
 Local coding agents can explicitly read reviewed public pages before creating

@@ -350,3 +350,9 @@ and SHA-512 integrity. Runtime selection is host configuration; HTTP cannot supp
 commands or runtime paths. Lifecycle scripts are disabled during installation.
 Saved build/test argv use the same configured runtime with network access disabled.
 See [Node project dependencies](node-project-dependencies.md).
+
+Missing npm lockfiles are resolved in an owned staging directory by a network-disabled
+npm process. A typed public-registry metadata client primes its bounded cache;
+only checked source/integrity records enter it. Complete optional dependency
+coverage and final lock validation gate exclusive worktree publication and npm ci.
+There is no caller-selected registry URL or additional execution architecture.

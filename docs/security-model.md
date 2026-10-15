@@ -275,3 +275,10 @@ uses worktree-local HOME/cache/config. Node/npm runtime files and the system Ope
 configuration are read-only grants. Trusted configured build commands run with
 network access disabled and Git metadata read-only. No arbitrary npm command API
 or system runtime installation is introduced. See [details](node-project-dependencies.md).
+
+Missing npm locks use an offline resolver with no network grant. Only the native
+typed registry client fetches package-name-derived public metadata, with checked
+IP/TLS authority, no redirects and bounded responses. Versions with unsafe sources
+or missing SHA-512 pins never enter the cache. Staged lockfiles are checked before
+exclusive publication; existing user locks are never removed or rewritten. The
+shared dependency deadline, ownership, Stop and recovery apply to every phase.

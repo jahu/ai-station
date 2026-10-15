@@ -131,3 +131,20 @@ assuming an older milestone mentioned above is still running. The original root
 checkout's Memory WIP remains preserved separately; local `develop` is checked
 out in the owned `.tools/chat-reasoning` worktree and should be fast-forwarded
 only when tracked-clean and inactive. Never reset the root checkout to deploy.
+
+
+## Node projects — 2026-10-15
+
+- #308 delivers reviewed public-page context before Local coding.
+- #309 delivers checked npm v3 dependency installation, configured Node/npm
+  runtime diagnostics, sandboxed Node validation and a project-local installer.
+- The current missing-lock increment stages offline npm resolution and primes
+  only checked public-registry metadata through a typed pinned-IP/TLS client.
+  Missing optional package metadata is filled before success; the final checked
+  lock is exclusively published without overwriting existing project files.
+  Actual no-lock is-odd/transitive and React 19/Vite 7 builds passed, including
+  lifecycle/file/Git boundaries. See [Node dependencies](../node-project-dependencies.md).
+
+Use the central deployment JSON for the actual active release and retain the
+original root Memory WIP. The missing-lock increment is not delivered until its
+full checks, reviewed PR to develop and deployment verification are recorded.

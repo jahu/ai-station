@@ -13,7 +13,9 @@ from ai_station_runner.public_http import public_addresses
 
 REGISTRY = "https://registry.npmjs.org"
 PACKAGE = re.compile(r"^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$")
-VERSION = re.compile(r"^[0-9vVxX*^~<>=|+., -]+$")
+# Permit normal prerelease/build identifiers without admitting URL, Git, local
+# path, alias or workspace source syntax. npm validates the range semantics.
+VERSION = re.compile(r"^[0-9vVxX*^~<>=][A-Za-z0-9.*^~<>=|+ -]*$")
 GROUPS = ("dependencies", "devDependencies", "optionalDependencies", "peerDependencies")
 UNSUPPORTED = ("workspaces", "overrides", "resolutions", "bundledDependencies", "bundleDependencies")
 
@@ -118,37 +120,41 @@ def verify_lock(workspace: Path, manifest):
         # npm may resolve missing edges even during ci; validate transitive
         # declarations before it can contact a VCS, URL or local source.
         declarations(metadata)
-        version = metadata.get("version")
-        resolved = metadata.get("resolved")
-        if (
-            not isinstance(version, str)
-            or not re.fullmatch(r"[0-9][A-Za-z0-9.+-]{0,199}", version)
-            or not isinstance(resolved, str)
-        ):
-            raise GitError("Each npm package needs a pinned version and registry tarball")
-        parsed = urlsplit(resolved)
-        expected = f"/{name}/-/{name.split('/')[-1]}-{version}.tgz"
-        if (
-            len(resolved) > 2048
-            or parsed.scheme != "https"
-            or parsed.netloc != "registry.npmjs.org"
-            or parsed.query
-            or parsed.fragment
-            or unquote(parsed.path) != expected
-        ):
-            raise GitError("Every npm tarball must come from its canonical public registry URL")
-        integrity = metadata.get("integrity", "")
-        try:
-            valid = (
-                isinstance(integrity, str)
-                and integrity.startswith("sha512-")
-                and len(base64.b64decode(integrity[7:], validate=True)) == 64
-            )
-        except ValueError:
-            valid = False
-        if not valid:
-            raise GitError("Every npm tarball needs a SHA-512 integrity digest")
+        verify_package(name, metadata)
     return {"lock_sha256": digest, "package_count": len(packages) - 1}
+
+
+def verify_package(name, metadata):
+    version = metadata.get("version")
+    resolved = metadata.get("resolved")
+    if (
+        not isinstance(version, str)
+        or not re.fullmatch(r"[0-9][A-Za-z0-9.+-]{0,199}", version)
+        or not isinstance(resolved, str)
+    ):
+        raise GitError("Each npm package needs a pinned version and registry tarball")
+    parsed = urlsplit(resolved)
+    expected = f"/{name}/-/{name.split('/')[-1]}-{version}.tgz"
+    if (
+        len(resolved) > 2048
+        or parsed.scheme != "https"
+        or parsed.netloc != "registry.npmjs.org"
+        or parsed.query
+        or parsed.fragment
+        or unquote(parsed.path) != expected
+    ):
+        raise GitError("Every npm tarball must come from its canonical public registry URL")
+    integrity = metadata.get("integrity", "")
+    try:
+        valid = (
+            isinstance(integrity, str)
+            and integrity.startswith("sha512-")
+            and len(base64.b64decode(integrity[7:], validate=True)) == 64
+        )
+    except ValueError:
+        valid = False
+    if not valid:
+        raise GitError("Every npm tarball needs a SHA-512 integrity digest")
 
 
 def confirm_registry():

@@ -397,9 +397,10 @@ explicit project/agent controls remain available. See [named-project Work](docs/
 
 ### JavaScript and TypeScript project dependencies
 
-On an owned coding worktree containing package.json and an npm version 3
-package-lock.json, **Install project dependencies** installs checked public-registry
-packages with lifecycle scripts disabled. **Run saved validation** then runs the
+On an owned coding worktree containing package.json, **Install project dependencies**
+creates a missing lockfile offline from verified public npm metadata, checks the
+complete npm v3 lock and installs public-registry packages with lifecycle scripts
+disabled. Existing lockfiles are preserved. **Run saved validation** then runs the
 project’s configured npm/node checks in the network-disabled sandbox. Configure
 `AI_STATION_NODE_PREFIX` for an existing Node 22+ distribution; see
 [Node project setup](docs/node-project-dependencies.md) for the optional project-local
