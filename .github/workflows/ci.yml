@@ -36,3 +36,4 @@ jobs:
       - run: docker compose config --quiet
       - run: docker compose -f compose.yaml -f compose.dev.yaml config --quiet
       - run: docker build -t ai-station:ci .
+      - run: docker build -f python-executor/Dockerfile -t ai-station-python:ci .

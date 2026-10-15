@@ -56,6 +56,7 @@ from ai_station_runner.publication import (
     start_publication,
 )
 from ai_station_runner.publication_reconcile import ReconcileRequest, reconcile_report, start_reconcile
+from ai_station_runner.python_runs import PythonRequest
 from ai_station_runner.reviewed_commits import CommitRequest, commit_report, start_commit
 from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
@@ -922,4 +923,33 @@ def transcription_report(run_id: UUID):
     try:
         return report(manager(), str(run_id))
     except (ValueError, OSError, ProcessNotOwned) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/python/capabilities")
+def python_capabilities():
+    from ai_station_runner.python_runs import capabilities
+
+    return capabilities()
+
+
+@app.post("/v1/runs/python")
+def python_run(body: PythonRequest):
+    from ai_station_runner.python_runs import start_python
+
+    try:
+        return {**start_python(manager(), body), "runner_id": get_settings().runner_id}
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, RuntimeError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/runs/python/{run_id}/report")
+def python_report_endpoint(run_id: UUID):
+    from ai_station_runner.python_runs import python_report
+
+    try:
+        return python_report(manager(), str(run_id))
+    except (ValueError, RuntimeError, ProcessNotOwned, OSError) as exc:
         raise HTTPException(409, str(exc)) from exc

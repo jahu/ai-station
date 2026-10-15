@@ -330,3 +330,17 @@ installation alone may read the public `/etc/os-release`,
 for offline wheel installation. This grants neither `/etc` traversal/read access
 in general nor host `/proc`, home or shared temporary-directory access. Python
 installer module loading is isolated from project `pip.py` and `PYTHONPATH`.
+
+
+## Agent Python workload boundary
+
+The [typed Python executor](agent-python-execution.md) requires the separate
+`python_execute` grant. It snapshots a hash-pinned script from an owned worktree
+under the existing worktree mutation lock and only selected stored input files.
+The optional pinned workload image runs without networking or host-writable
+mounts, with a private process namespace and bounded tmpfs outputs. A strict
+protocol exports only required regular files; source and outputs retain hashes
+and Artifact provenance. Docker calls remain native-only. Unknown create or
+cleanup outcomes require inspection. Script-generated active documents are
+attachments, not trusted same-origin application pages. The agent tool remains
+unpublished until its workflow, permissions and user result flow are wired.
