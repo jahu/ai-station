@@ -24,6 +24,7 @@ from app.commit_executor import ReviewedCommitExecutor
 from app.config import get_settings
 from app.connectors import HttpConnectorExecutor
 from app.cursor_executor import CursorProposalExecutor
+from app.data_agents import DataGenerateExecutor, DataResultExecutor
 from app.data_inputs import DataInspectionExecutor
 from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
@@ -298,6 +299,8 @@ EXECUTORS = {
     "python": PythonExecutor(),
     "project_setup": ProjectSetupExecutor(),
     "data_inspection": DataInspectionExecutor(),
+    "agent_data_generate": DataGenerateExecutor(),
+    "agent_data_result": DataResultExecutor(),
     "fake": FakeExecutor(),
     "orchestrator": AssistantExecutor(),
     "station_snapshot": StationSnapshotExecutor(),

@@ -1,6 +1,11 @@
 """Explicit provider selection for the shared isolated agent coding workflow."""
 
-CODING_TOOLS = {"coding_local": "local", "coding_cursor": "cursor", "coding_codex": "codex"}
+CODING_TOOLS = {
+    "coding_local": "local",
+    "coding_cursor": "cursor",
+    "coding_codex": "codex",
+    "python_data": "local",
+}
 
 
 def coding_provider(tools):

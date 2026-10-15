@@ -120,6 +120,11 @@ def finish_workspace(session, run, project, context):
         execution_target="container",
         parameters={
             "definition": derived,
+            **(
+                {"data_inputs": parent.parameters["data_inputs"]}
+                if "data_inputs" in parent.parameters
+                else {}
+            ),
             "workspace_source_run_id": run.id,
             "workspace_root_run_id": parent.id,
             "agent_coding_deadline": deadline.isoformat(),
@@ -172,6 +177,7 @@ def validate_workspace_binding(session, run):
         or source.parameters.get("agent_coding_deadline") != root.parameters.get("agent_coding_deadline")
         or not set(run.effective_permissions) <= set(root.effective_permissions)
         or run.parameters.get("skill_snapshots") != (root.parameters.get("skill_snapshots") or [])
+        or run.parameters.get("data_inputs") != root.parameters.get("data_inputs")
     ):
         raise ValueError("Agent workspace binding changed after verified project creation")
 

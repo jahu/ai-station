@@ -67,6 +67,12 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         endpoint = ""
     else:
         endpoint = "" if external_coding(definition.tools) else model_endpoint(definition.model, session)
+    data_inputs = None
+    if "python_data" in definition.tools:
+        from app.data_agents import freeze_inputs, require_runtime
+
+        require_runtime()
+        data_inputs = freeze_inputs(session, definition.data)
     task = create_task(
         session,
         title=agent.name,
@@ -87,6 +93,7 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         execution_target="container",
         parameters={
             "definition": definition.model_dump(mode="json"),
+            **({"data_inputs": data_inputs} if data_inputs is not None else {}),
             **(
                 {
                     "coding_project_policy": project_check_policy(
@@ -163,6 +170,15 @@ def workflow_retryable(session: Session, source: Run) -> bool:
         return True
     if source.status != RunStatus.SUCCEEDED.value:
         return False
+    if source.parameters.get("definition", {}).get("tools") == ["python_data"]:
+        latest = session.scalar(
+            select(Run)
+            .where(Run.task_id == source.task_id, Run.executor_type == "agent_data_result")
+            .order_by(Run.created_at.desc(), Run.id.desc())
+            .limit(1)
+        )
+        if latest is not None and latest.metadata_json.get("data_result") and latest.status == "succeeded":
+            return False
     children = (
         session.scalars(select(Run).where(Run.task_id == source.task_id, Run.id != source.id))
         if coding_provider(source.parameters.get("definition", {}).get("tools", [])) is not None

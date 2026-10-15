@@ -240,6 +240,7 @@ class Agent(Base):
     search_query: Mapped[str] = mapped_column(String(500), default="")
     fetch_urls: Mapped[list] = mapped_column(JSON, default=list)
     github: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     tools: Mapped[list] = mapped_column(JSON, default=list)
     skills: Mapped[list] = mapped_column(JSON, default=list)
     memory_scope: Mapped[str] = mapped_column(String(40), default="agent")

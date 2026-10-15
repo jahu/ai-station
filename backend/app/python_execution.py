@@ -33,6 +33,7 @@ class PythonParameters(BaseModel):
     worktree_id: UUID
     script_relative: str = Field(min_length=1, max_length=200)
     script_sha256: str = Field(pattern=r"^[a-f0-9]{64}$")
+    script_artifact_id: UUID | None = None
     input_artifact_ids: list[UUID] = Field(default_factory=list, max_length=8)
     expected_outputs: list[str] = Field(min_length=1, max_length=8)
     maximum_runtime: int = Field(default=120, ge=1, le=600, strict=True)
@@ -139,6 +140,13 @@ class PythonExecutor(NativeJobExecutor):
     permissions = PERMISSIONS
     error_type = "PythonExecutionFailed"
 
+    def execute(self, session, run):
+        if "agent_data" in run.parameters and run.status not in {"cancel_requested", "canceled"}:
+            from app.data_agents import validate_python_dispatch
+
+            validate_python_dispatch(session, run)
+        return super().execute(session, run)
+
     def payload(self, run):
         return {
             "run_id": run.id,
@@ -154,6 +162,11 @@ class PythonExecutor(NativeJobExecutor):
                     "maximum_runtime",
                 )
             },
+            **(
+                {"script_artifact_id": run.parameters["script_artifact_id"]}
+                if run.parameters.get("script_artifact_id")
+                else {}
+            ),
             "permissions": run.effective_permissions,
         }
 
@@ -280,4 +293,8 @@ class PythonExecutor(NativeJobExecutor):
                 "PythonProgramFailed",
                 report.get("error") or f"Python exited with code {report['exit_code']}",
             )
+        if "agent_data" in run.parameters:
+            from app.data_agents import queue_result
+
+            queue_result(session, run)
         return "done"

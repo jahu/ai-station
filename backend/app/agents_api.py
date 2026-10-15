@@ -25,9 +25,12 @@ router = APIRouter(prefix="/api/agents", tags=["agents"])
 DB = Annotated[Session, Depends(session_scope)]
 
 
-def definition_dict(agent):
+def definition_dict(agent, session=None):
+    from app.data_agents import data_readiness
+
     return {
         **agent_dict(agent),
+        "data_readiness": data_readiness(session, agent.data) if "python_data" in agent.tools else None,
         "created_at": agent.created_at.isoformat(),
         "updated_at": agent.updated_at.isoformat(),
         "effective_permissions": effective_permissions([name for name in agent.tools if name in AGENT_TOOLS]),
@@ -45,6 +48,16 @@ def get_agent(session, agent_id):
 def validate_target(body, session):
     if body.project_id and session.get(Project, str(body.project_id)) is None:
         raise HTTPException(422, "Project does not exist")
+    if "python_data" in body.tools and body.enabled:
+        if body.model != "auto" and not body.model.startswith("llamacpp:"):
+            raise HTTPException(409, "Choose Auto or an installed llama.cpp model for data coding")
+        from app.data_agents import freeze_inputs, require_runtime
+
+        try:
+            require_runtime()
+            freeze_inputs(session, body.data)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
     if body.github is not None:
         from app.agent_github import reviewed_connector
 
@@ -70,8 +83,8 @@ def apply_settings(agent, body):
     for key, value in body.model_dump().items():
         if key == "project_id" and value is not None:
             value = str(value)
-        if key == "github" and value is not None:
-            value = body.github.model_dump(mode="json")
+        if key in {"github", "data"} and value is not None:
+            value = getattr(body, key).model_dump(mode="json")
         setattr(agent, key, value)
     agent.retry_policy = body.retry_policy.model_dump()
     agent.notification_policy = body.notification_policy.model_dump()
@@ -81,7 +94,16 @@ def apply_settings(agent, body):
 
 @router.get("/tools")
 def tools():
-    return [asdict(agent_tool(name)) for name in AGENT_TOOLS]
+    from app.data_agents import runtime_capability
+
+    capability = runtime_capability()
+    return [
+        {
+            **asdict(agent_tool(name)),
+            **({"operational": capability["available"]} if name == "python_data" else {}),
+        }
+        for name in AGENT_TOOLS
+    ]
 
 
 @router.get("")
@@ -94,7 +116,7 @@ def agents(
     statement = select(Agent).order_by(Agent.name, Agent.id).limit(limit).offset(offset)
     if project_id is not None:
         statement = statement.where(Agent.project_id == str(project_id))
-    return [definition_dict(agent) for agent in session.scalars(statement)]
+    return [definition_dict(agent, session) for agent in session.scalars(statement)]
 
 
 @router.post("", status_code=201)
@@ -104,7 +126,7 @@ def create(body: AgentSettings, session: DB):
     apply_settings(agent, body)
     session.add(agent)
     session.commit()
-    return definition_dict(agent)
+    return definition_dict(agent, session)
 
 
 class DraftBody(BaseModel):
@@ -118,7 +140,7 @@ def draft(body: DraftBody, session: DB):
     agent = draft_agent(body.instruction, model=body.model)
     session.add(agent)
     session.commit()
-    return definition_dict(agent)
+    return definition_dict(agent, session)
 
 
 class VersionBody(BaseModel):
@@ -141,7 +163,7 @@ def detail(agent_id: UUID, session: DB):
     runs = session.scalars(
         select(Run).where(Run.agent_id == agent.id).order_by(Run.created_at.desc()).limit(100)
     )
-    return {**definition_dict(agent), "runs": [run_public(session, run) for run in runs]}
+    return {**definition_dict(agent, session), "runs": [run_public(session, run) for run in runs]}
 
 
 @router.put("/{agent_id}")
@@ -154,7 +176,7 @@ def edit(agent_id: UUID, body: AgentUpdate, session: DB):
     validate_target(settings, session)
     apply_settings(agent, settings)
     session.commit()
-    return definition_dict(agent)
+    return definition_dict(agent, session)
 
 
 class EnableBody(VersionBody):
@@ -178,7 +200,7 @@ def set_enabled(agent_id: UUID, body: EnableBody, session: DB):
     agent.next_run_at = compute_next(agent) if body.enabled else None
     agent.updated_at = utcnow()
     session.commit()
-    return definition_dict(agent)
+    return definition_dict(agent, session)
 
 
 @router.post("/{agent_id}/run", status_code=202)
@@ -204,4 +226,4 @@ def duplicate(agent_id: UUID, body: VersionBody, session: DB):
     apply_settings(copy, settings)
     session.add(copy)
     session.commit()
-    return definition_dict(copy)
+    return definition_dict(copy, session)

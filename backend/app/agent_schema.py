@@ -58,6 +58,19 @@ class AgentGithubScope(BaseModel):
         return value
 
 
+class AgentDataScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    input_artifact_ids: list[UUID] = Field(min_length=1, max_length=8)
+    max_repairs: int = Field(default=1, ge=0, le=2, strict=True)
+
+    @field_validator("input_artifact_ids")
+    @classmethod
+    def unique_inputs(cls, values):
+        if len(set(values)) != len(values):
+            raise ValueError("Data inputs must be unique")
+        return values
+
+
 class AgentSettings(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     name: str = Field(min_length=1, max_length=200)
@@ -68,6 +81,7 @@ class AgentSettings(BaseModel):
     provider: Literal["local-openai-compatible"] = "local-openai-compatible"
     model: str = Field(default="", max_length=200)
     github: AgentGithubScope | None = None
+    data: AgentDataScope | None = None
     search_query: str = Field(default="", max_length=500)
     fetch_urls: list[str] = Field(default_factory=list, max_length=3)
     tools: list[str] = Field(default_factory=list, max_length=8)
@@ -107,6 +121,10 @@ class AgentSettings(BaseModel):
             raise ValueError(
                 "External coding requires its explicit external-coding permission profile; local agents cannot inherit it"
             )
+        if self.data is not None and self.tools != ["python_data"]:
+            raise ValueError("Data inputs belong to an exclusive local Python data agent")
+        if self.enabled and self.tools == ["python_data"] and self.data is None:
+            raise ValueError("Select data files before enabling the Python agent")
         self.skills = list(dict.fromkeys(self.skills))
         if self.skills:
             from app.agent_tools import effective_permissions
