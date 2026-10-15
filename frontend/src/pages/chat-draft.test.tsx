@@ -121,3 +121,28 @@ it("keeps a newer draft when an earlier Send is accepted", () => {
   const restored = renderHook(() => useChatDraft("one"));
   expect(restored.result.current.value).toBe("My next prompt");
 });
+
+it("retains retry receipts over LAN HTTP without subtle or randomUUID", async () => {
+  const source = crypto;
+  vi.stubGlobal("crypto", {
+    getRandomValues: source.getRandomValues.bind(source),
+  });
+  try {
+    const { chatRequestId, clearChatRequest } = await import("./chat-draft");
+    const first = await chatRequestId("lan", "abc");
+    expect(first).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(
+      JSON.parse(sessionStorage.getItem("ai-station:chat-request:lan")!).hash,
+    ).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    vi.resetModules();
+    const reloaded = await import("./chat-draft");
+    expect(await reloaded.chatRequestId("lan", "abc")).toBe(first);
+    expect(await reloaded.chatRequestId("lan", "different")).not.toBe(first);
+    clearChatRequest("lan");
+    expect(await chatRequestId("lan", "abc")).not.toBe(first);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});

@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
+import { randomId } from "../../lib/random-id";
 
 import type { SceneDraft } from "./video-scenes";
 
@@ -133,7 +134,7 @@ export default function VideoSceneEditor({
         disabled={scenes.length >= 20}
         onClick={() => {
           const scene = {
-            key: crypto.randomUUID(),
+            key: randomId(),
             prompt: "",
             duration_seconds: 5,
           };

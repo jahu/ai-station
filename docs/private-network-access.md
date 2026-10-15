@@ -31,3 +31,14 @@ Tailscale is not installed or enabled by AI Station. Once the owner has installe
 4. Open that HTTPS address on the enrolled phone and sign in with the AI Station operator password. The cookie is Secure for the explicitly configured HTTPS authority.
 
 See the official [Serve instructions](https://tailscale.com/docs/features/tailscale-serve) and [CLI reference](https://tailscale.com/docs/reference/tailscale-cli/serve). Tailscale grants control over which devices reach the service; AI Station still requires its own password. No public router port is needed. Actual phone/LTE and Serve integration must be verified after enrollment; configuring an origin is not evidence of a real remote smoke test.
+
+## Browser compatibility on private HTTP
+
+Browser `crypto.randomUUID()` and `crypto.subtle` require a secure context; a
+private HTTP IP address does not qualify. Client identifiers therefore use native
+UUIDs when available and otherwise version-4 UUIDs from `crypto.getRandomValues()`.
+Chat receipt hashes have a pinned pure-JavaScript SHA-256 fallback, preserving
+retry identity across reloads without storing the request body in the receipt.
+Video scene and GitHub connector identifiers reuse the same helper. See the
+browser documentation for [secure UUIDs](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID)
+and [random bytes on HTTP](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues).
