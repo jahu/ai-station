@@ -50,6 +50,8 @@ import {
   Archive,
   Copy,
   History,
+  Ellipsis,
+  Sparkles,
   MessageSquare,
   Plus,
   Settings2,
@@ -213,7 +215,7 @@ function ConversationHistory({
         <strong>Your conversations</strong>
         <MessageSquare size={16} aria-hidden="true" />
       </div>
-      <Button asChild>
+      <Button variant="secondary" asChild>
         <Link to={newTo} onClick={onNew}>
           <Plus size={15} aria-hidden="true" />
           New conversation
@@ -267,7 +269,7 @@ function ConversationHistory({
                   <Link
                     className={row.id === currentId ? "selected" : ""}
                     onClick={onOpen}
-                    title={row.title}
+                    title={`${row.title} · ${row.model_label ?? row.model} · ${time(row.updated_at)}`}
                     to={`/chat/${row.id}`}
                     aria-label={`Inspect ${row.title} ${row.id.slice(0, 8)}`}
                     {...itemProps(i, row.id)}
@@ -788,12 +790,20 @@ function Transcript({
               aria-label={`Message ${speaker} ${shortId}`}
               {...itemProps(i, message.id)}
             >
-              <div className="row spread">
+              <div className="row spread message-heading">
                 <strong>
+                  {message.role === "assistant" && (
+                    <Sparkles size={16} aria-hidden="true" />
+                  )}
                   {speaker}
                   {message.metadata.superseded ? " · Previous response" : ""}
                 </strong>
-                <small className="muted">{time(message.created_at)}</small>
+                <time
+                  className="message-timestamp"
+                  dateTime={message.created_at}
+                >
+                  {time(message.created_at)}
+                </time>
               </div>
               {message.metadata.reasoning_text && (
                 <details className="message-thinking">
@@ -912,7 +922,17 @@ function Transcript({
               ) : null}
               {message.role === "assistant" && (
                 <div className="message-actions">
-                  {message.run_status && <Badge status={message.run_status} />}{" "}
+                  {message.run_status && (
+                    <span
+                      className={
+                        message.run_status === "succeeded"
+                          ? "sr-only"
+                          : undefined
+                      }
+                    >
+                      <Badge status={message.run_status} />
+                    </span>
+                  )}
                   {message.metadata.partial && message.content && (
                     <span className="muted">Partial response</span>
                   )}
@@ -921,13 +941,16 @@ function Transcript({
                       to={`/runs/${message.run_id}`}
                       tabIndex={current ? 0 : -1}
                       aria-label={`Inspect run ${speaker} ${shortId}`}
+                      title="Response details and execution history"
+                      className="icon-button"
                     >
-                      Inspect run
+                      <Ellipsis size={17} aria-hidden="true" />
                     </Link>
                   )}
                   <button
                     className="icon-button"
                     aria-label={`Copy ${speaker} ${shortId}`}
+                    title="Copy response"
                     tabIndex={current ? 0 : -1}
                     disabled={!message.content}
                     onClick={() => {
@@ -1518,8 +1541,8 @@ function ConversationView({
                     ? "Describe what your new project should do…"
                     : options.action === "project.create"
                       ? "Name your project — for example Weather Station"
-                      : "Describe your task — or attach reference images…"
-                : "Ask your local model…"
+                      : "Message AI Station…"
+                : "Message AI Station…"
             }
             tools={
               <>

@@ -50,3 +50,22 @@ isolated database and a deterministic fake provider over private LAN HTTP; they
 exercise Send, streaming, persisted reload, history navigation, settings and
 keyboard dismissal. Screenshots and results live under
 `data/acceptance/chat-focused-ux-20261015/`; this is not a real-model inference test.
+
+## Reading-first refinement — 2026-10-15
+
+The transcript uses a wider central reading column with larger type, restrained
+speaker labels and quiet Copy/response-details actions. Successful execution
+badges are retained for assistive technology; active, failed and partial states
+stay visible. Full execution details are one labelled link away. Timestamps stay
+in the semantic transcript and appear on desktop hover or keyboard focus.
+History rows emphasize titles; their hover text retains model and update time.
+
+The shared composer starts as one line, expands with multiline input and shrinks
+when text is cleared or sent. Attachment/tool forms keep their full width when
+opened. Short screens give the remaining viewport to the scrollable transcript;
+they no longer inherit a fixed-height message area from the older layout.
+
+Qualification evidence for this refinement is stored under
+`data/acceptance/chat-reading-ux-20261015/`. It uses a fake provider with the real
+API and worker, not real model inference. No execution boundary or data schema
+changes are part of this refinement.

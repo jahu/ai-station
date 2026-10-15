@@ -5631,7 +5631,7 @@ section:has(> .memory-grid) > .dashboard-note {
 }
 .chat-entry-layout {
   display: grid;
-  grid-template-columns: 256px minmax(0, 1fr);
+  grid-template-columns: 272px minmax(0, 1fr);
   gap: 0;
   height: 100%;
   min-height: 0;
@@ -5649,7 +5649,7 @@ section:has(> .memory-grid) > .dashboard-note {
   height: 100%;
   max-height: none;
   padding: 24px 14px;
-  gap: 16px;
+  gap: 12px;
   overflow-y: auto;
 }
 .chat-history-heading {
@@ -5692,7 +5692,7 @@ section:has(> .memory-grid) > .dashboard-note {
   gap: 3px;
 }
 .chat-history .chat-conversations a {
-  padding: 12px 10px;
+  padding: 13px 12px;
   color: #adb4bb;
   border-radius: 9px;
 }
@@ -5718,6 +5718,7 @@ section:has(> .memory-grid) > .dashboard-note {
   text-overflow: ellipsis;
 }
 .chat-history small {
+  display: none;
   font-size: 10px;
   opacity: 0.7;
   white-space: nowrap;
@@ -5736,18 +5737,29 @@ section:has(> .memory-grid) > .dashboard-note {
   min-height: 0;
 }
 .chat-heading {
-  padding: 18px 64px 18px 28px;
+  padding: 14px 64px 14px 28px;
+  min-height: 68px;
   gap: 10px;
   border-bottom: 1px solid #ffffff08;
   align-items: center;
 }
+.chat-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
 .chat-heading h2 {
-  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
   font-weight: 500;
-  margin: 0 0 5px;
-  color: #d6dadd;
+  margin: 0;
+  color: var(--muted);
 }
 .chat-heading .model-picker {
+  order: -1;
+  flex-shrink: 0;
   width: fit-content;
   max-width: 100%;
 }
@@ -5779,7 +5791,7 @@ section:has(> .memory-grid) > .dashboard-note {
 .chat-options-trigger {
   position: absolute;
   right: 22px;
-  top: 22px;
+  top: 15px;
 }
 .chat-options-dialog {
   position: fixed;
@@ -5813,10 +5825,12 @@ section:has(> .memory-grid) > .dashboard-note {
   flex: 1;
   height: auto;
   min-height: 0;
-  padding: 28px max(28px, calc((100% - 760px) / 2));
+  padding: 40px max(32px, calc((100% - 780px) / 2));
+  scrollbar-width: thin;
+  scrollbar-color: #34383d transparent;
 }
 .chat-message {
-  margin-bottom: 32px;
+  margin-bottom: 36px;
 }
 .chat-message[aria-current="true"] {
   outline: none;
@@ -5832,7 +5846,7 @@ section:has(> .memory-grid) > .dashboard-note {
   background: #24272a;
   border: 0;
   border-radius: 18px 18px 5px 18px;
-  padding: 14px 20px;
+  padding: 12px 20px;
 }
 .chat-message.user > .row > strong {
   display: none;
@@ -5840,13 +5854,49 @@ section:has(> .memory-grid) > .dashboard-note {
 .chat-message.user > .row {
   justify-content: flex-end;
 }
-.chat-message > .row small {
-  color: #727b82;
+.message-heading {
+  margin-bottom: 12px;
+}
+.message-heading > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 500;
+  color: #c3cbd0;
+}
+.message-heading > strong > svg {
+  color: #b9f48a;
+}
+.message-timestamp {
+  color: var(--muted);
   font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.chat-message:hover .message-timestamp,
+.chat-message:focus-within .message-timestamp {
+  opacity: 1;
+}
+.chat-message.user > .message-heading {
+  margin: 0;
+  height: 0;
+  overflow: hidden;
+}
+.chat-message.user:focus-within > .message-heading {
+  height: auto;
+  margin-bottom: 6px;
+}
+.chat-message .message-actions .icon-button {
+  width: 32px;
+  height: 32px;
+}
+.chat-message .message-actions {
+  gap: 4px;
+  margin-top: 10px;
 }
 .chat-message .markdown {
-  font-size: 15px;
-  line-height: 1.85;
+  font-size: 16px;
+  line-height: 1.8;
 }
 .chat-message .message-actions {
   opacity: 0.65;
@@ -5866,8 +5916,8 @@ section:has(> .memory-grid) > .dashboard-note {
   box-shadow: 0 6px 28px #0002;
 }
 .conversation-shell .shared-chat-composer > textarea {
-  min-height: 56px;
-  max-height: 25dvh;
+  min-height: 40px;
+  max-height: min(200px, 25dvh);
   font-size: 15px;
 }
 .conversation-shell .new-chat-tools {
@@ -5875,7 +5925,7 @@ section:has(> .memory-grid) > .dashboard-note {
 }
 .chat-main .new-chat {
   width: min(760px, calc(100% - 56px));
-  margin: clamp(36px, 18dvh, 160px) auto 32px;
+  margin: clamp(36px, 22dvh, 190px) auto 32px;
 }
 .chat-main .new-chat h1 {
   font-size: clamp(28px, 3vw, 40px);
@@ -5934,18 +5984,22 @@ section:has(> .memory-grid) > .dashboard-note {
     flex-shrink: 0;
   }
   .conversation-shell .chat-heading {
-    padding: 16px 54px;
-    min-height: 76px;
+    padding: 14px 82px 14px 54px;
+    min-height: 64px;
   }
   .chat-heading > div {
     flex-basis: 130px;
   }
   .chat-heading h2 {
-    font-size: 12px;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
   .chat-options-trigger {
     right: 12px;
-    top: 20px;
+    top: 15px;
   }
   .conversation-shell .chat-transcript {
     padding: 22px 18px;
@@ -6041,8 +6095,8 @@ section:has(> .memory-grid) > .dashboard-note {
   }
   .conversation-app .chat-heading > .button {
     position: absolute;
-    right: 10px;
-    top: 48px;
+    right: 44px;
+    top: 16px;
     padding: 5px;
   }
   .chat-main .new-chat {
@@ -6058,8 +6112,7 @@ section:has(> .memory-grid) > .dashboard-note {
     overflow-y: auto;
   }
   .conversation-shell .shared-chat-composer > textarea {
-    height: 54px;
-    min-height: 44px;
+    min-height: 40px;
   }
   .conversation-shell .new-chat-footer {
     display: flex;
@@ -6163,4 +6216,126 @@ section:has(> .memory-grid) > .dashboard-note {
 .data-preview-table tr:last-child td,
 .data-preview-table tr:last-child th {
   border-bottom: 0;
+}
+
+/* Keep writing controls compact so conversation, rather than configuration,
+   remains the main surface. Expanded tools keep their full form width. */
+.chat-main {
+  border: 0;
+  background: #101214;
+}
+.chat-transcript:focus-within {
+  outline: none;
+}
+.chat-message:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.chat-main .shared-chat-composer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px 12px;
+  padding: 14px 18px;
+  background: #1c1f22;
+  border-color: #34383d;
+  border-radius: 22px;
+}
+.chat-main .shared-chat-composer > textarea {
+  grid-column: 1 / -1;
+  min-height: 40px;
+  max-height: min(200px, 25dvh);
+  resize: none;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.chat-main .shared-chat-composer > .muted {
+  grid-column: 1 / -1;
+}
+.chat-main .shared-chat-composer .new-chat-tools {
+  min-width: 0;
+  margin: 0;
+}
+.chat-main .shared-chat-composer .new-chat-tools > summary {
+  padding: 8px 0;
+  font-size: 11px;
+  color: #adb7bf;
+}
+.chat-main .shared-chat-composer .new-chat-tools[open] {
+  grid-column: 1 / -1;
+  max-height: 35dvh;
+  overflow-y: auto;
+}
+.chat-main .shared-chat-composer .new-chat-tools[open] + .new-chat-footer {
+  grid-column: 1 / -1;
+}
+.chat-main .shared-chat-composer .new-chat-footer {
+  margin: 0;
+  min-width: 0;
+  gap: 8px;
+}
+.chat-main .shared-chat-composer .new-chat-footer > button:last-child {
+  width: 36px;
+  height: 36px;
+  padding: 8px;
+  gap: 0;
+  font-size: 0;
+  border-radius: 50%;
+}
+.chat-main .shared-chat-composer .new-chat-footer > button:last-child svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+.chat-main .new-chat-controls {
+  margin-bottom: 20px;
+}
+.chat-main .new-chat-controls .model-picker-trigger {
+  background: transparent;
+  border-color: transparent;
+}
+.chat-main .new-chat .shared-chat-composer {
+  text-align: left;
+}
+@media (max-width: 1000px) {
+  .chat-main .shared-chat-composer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .chat-main .shared-chat-composer > .new-chat-footer {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 600px), (max-height: 750px) {
+  .conversation-shell .chat-transcript {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+  }
+}
+@media (max-width: 600px) {
+  .chat-message .markdown {
+    font-size: 15px;
+    line-height: 1.75;
+  }
+  .chat-message {
+    margin-bottom: 28px;
+  }
+  .message-timestamp {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .chat-main .shared-chat-composer {
+    gap: 4px;
+    padding: 10px 14px;
+  }
+  .chat-main .shared-chat-composer .new-chat-tools > summary {
+    padding: 4px 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .message-timestamp {
+    transition: none;
+  }
 }
