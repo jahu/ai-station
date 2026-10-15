@@ -8,9 +8,9 @@ const tools = [
     required_permissions: ["workspace_write"],
   },
 ];
-it("blocks coding activation until its project is explicitly selected", () => {
+it("allows Local coding activation with an automatic workspace or an explicit project", () => {
   const agent = { enabled: false, model: "local", tools: ["coding_local"] };
-  expect(activationBlock(agent, tools).reason).toMatch(/choose the project/i);
+  expect(activationBlock(agent, tools).blocked).toBe(false);
   expect(
     activationBlock({ ...agent, project_id: "project" }, tools).blocked,
   ).toBe(false);
