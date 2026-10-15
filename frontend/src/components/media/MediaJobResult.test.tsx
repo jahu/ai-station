@@ -9,7 +9,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
   sessionStorage.clear();
 });
-function mount(status = "generating", preview?: string) {
+function mount(
+  status = "generating",
+  preview?: string,
+  overrides: Partial<MediaJob> = {},
+) {
   const writes: { url: string; body?: Record<string, unknown> }[] = [];
   const job: MediaJob = {
     task_id: "task",
@@ -25,6 +29,7 @@ function mount(status = "generating", preview?: string) {
     active_run_ids: ["segment"],
     resume_allowed: status === "failed",
     error_message: status === "failed" ? "A segment failed" : "",
+    ...overrides,
   };
   vi.stubGlobal(
     "fetch",
@@ -94,4 +99,57 @@ it("shows one labeled partial preview without presenting it as the final movie",
     screen.getByText("Latest completed segment · partial preview"),
   ).toBeTruthy();
   expect(screen.queryByLabelText("Generated full video")).toBeNull();
+});
+
+it("shows simultaneous shot counts and actual devices without starting work on inspection", async () => {
+  const writes = mount("generating", undefined, {
+    mode: "shots",
+    running_segments: 2,
+    queued_segments: 1,
+    active_segments: [
+      { run_id: "first", index: 0, status: "running", gpu: "2" },
+      { run_id: "second", index: 1, status: "running", gpu: "7" },
+    ],
+  });
+  expect(screen.getByText("2 shots running · 1 queued")).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "Shot 1" }).getAttribute("href"),
+  ).toBe("/runs/first");
+  expect(
+    screen.getByRole("link", { name: "Shot 2" }).getAttribute("href"),
+  ).toBe("/runs/second");
+  expect(screen.getByText("GPU 2")).toBeTruthy();
+  expect(screen.getByText("GPU 7")).toBeTruthy();
+  expect(screen.queryByLabelText("Generated full video")).toBeNull();
+  fireEvent.click(screen.getByRole("link", { name: "Shot 2" }));
+  expect(writes).toHaveLength(0);
+});
+
+it("keeps resource waiting separate from generating and never invents a GPU", () => {
+  mount("queued", undefined, {
+    mode: "shots",
+    running_segments: 0,
+    queued_segments: 3,
+    active_segments: [],
+  });
+  expect(
+    screen.getByText("Waiting for available resources · 3 queued"),
+  ).toBeTruthy();
+  expect(screen.queryByLabelText("Active shots")).toBeNull();
+  expect(screen.queryByText(/GPU/)).toBeNull();
+});
+
+it("shows preparing and stopping shot state without calling it generation", () => {
+  mount("cancel_requested", undefined, {
+    mode: "shots",
+    running_segments: 0,
+    queued_segments: 0,
+    active_segments: [
+      { run_id: "first", index: 0, status: "cancel_requested", gpu: "7" },
+    ],
+  });
+  expect(screen.getByText("Stopping active shots…")).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Stop film" }).hasAttribute("disabled"),
+  ).toBe(true);
 });

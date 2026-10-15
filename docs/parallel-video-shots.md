@@ -28,5 +28,12 @@ failed-gap resume, cancellation of all active/queued stages, receipt replay and
 continuous dependency preservation. Run full backend/frontend checks and build.
 Real GPU speed/parallelism requires separate measured hardware acceptance; do not
 repeat the already-qualified 92-minute 60-second generation merely for this graph
-change. A production admission/Stop check must ensure owned model resources are
-held before submitting any test that is intended to remain queued.
+change. A production graph/Stop check must pause only the idle owned worker before
+publication and cancel all queued test stages before restarting it. Occupied GPUs
+alone are insufficient: existing idle-model eviction may free them. This check
+proves real publication/Stop without inference, not hardware parallel generation.
+
+Out-of-order completion requires ordered final lineage as well as ordered decoded
+frames. Latest partial preview follows actual completion time among selected
+successful attempts, not the largest segment number. Historical failed attempts
+and reused independent shot artifacts remain intact on resume.

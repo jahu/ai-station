@@ -49,6 +49,16 @@ export default function MediaJobResult({
     },
   });
   const busy = jobBusy(job);
+  const runningShots = job?.running_segments ?? 0;
+  const activeShots = job?.active_segments ?? [];
+  const shotSummary =
+    job?.status === "cancel_requested"
+      ? "Stopping active shots…"
+      : runningShots > 0
+        ? `${runningShots} ${runningShots === 1 ? "shot running" : "shots running"}`
+        : activeShots.length
+          ? "Preparing shots…"
+          : "Waiting for available resources";
   return (
     <section className="panel media-job-result" aria-label="Media job">
       <div className="row spread">
@@ -90,6 +100,33 @@ export default function MediaJobResult({
                     : `${job.completed_segments} of ${job.total_segments} segments complete`}
             </p>
           </div>
+          {job.kind === "video" &&
+          job.mode === "shots" &&
+          busy &&
+          (job.active_segments?.length || (job.queued_segments ?? 0) > 0) ? (
+            <section aria-label="Shot progress">
+              <p className="muted">
+                {shotSummary}
+                {(job.queued_segments ?? 0) > 0 &&
+                  ` · ${job.queued_segments} queued`}
+              </p>
+              {!!job.active_segments?.length && (
+                <ul className="media-shot-list" aria-label="Active shots">
+                  {job.active_segments.map((stage) => (
+                    <li className="row" key={stage.run_id}>
+                      <Link className="text-link" to={`/runs/${stage.run_id}`}>
+                        Shot {stage.index + 1}
+                      </Link>
+                      {stage.gpu != null && (
+                        <span className="muted">GPU {stage.gpu}</span>
+                      )}
+                      <Badge status={stage.status} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          ) : null}
           <div className="row">
             {busy && (
               <Button

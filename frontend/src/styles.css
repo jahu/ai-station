@@ -5409,3 +5409,11 @@ section:has(> .memory-grid) > .dashboard-note {
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
+
+.media-shot-list {
+  display: grid;
+  gap: 0.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0;
+}

@@ -17,7 +17,10 @@ A completed speech WAV is reused when resuming the avatar planner.
 Wan continuation conditions the next native window on seventeen preceding frames.
 The overlapped frames are removed from the final timeline; each remaining frame is
 newly generated. Shot mode intentionally starts fresh windows. Continuous windows
-are sequential; two GPUs do not imply simultaneous execution of dependent stages.
+are sequential. Independent shot windows have no inter-shot dependency and can
+use separately available GPUs when existing host RAM/GPU reservations admit them.
+An explicit GPU choice stays on that device; one-GPU/low-RAM execution stays
+serial. See [independent shot scheduling](parallel-video-shots.md).
 Profile size/mtime observations protect Wan jobs from changed model files.
 
 Avatar windows use absolute sample/frame positions at 25 fps. They retain the
@@ -74,3 +77,11 @@ quality, dimensions and duration. A running job can show its latest successful
 segment as a labeled partial preview; this does not replace final verification.
 The same preview is available in the conversation job card. Reopening or inspecting
 an input starts no new workload.
+
+Shot progress shows actual running/queued counts and allocated GPU IDs. Final
+composition and artifact lineage retain timeline order when completion is out of
+order. Partial preview follows the last completed selected attempt; resume reuses
+successful independent shots after a failed gap. Normal tests use fake GPU work
+with real CPU MP4 composition, including simultaneous owned processes, Stop,
+explicit-device/one-device/RAM serialization and ordered decoded frames. This
+does not claim real simultaneous GPU generation on this workstation.
