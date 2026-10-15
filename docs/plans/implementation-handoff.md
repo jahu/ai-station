@@ -7,6 +7,21 @@ slices. The live release/image/backup record is
 
 ## Latest active work
 
+PR #322 is merged and deployed as `35ab4a4`. Final code passed 1576 Python tests
+(five opt-in skips), 488 UI tests, lint/format/types/build, Docker/Compose and
+actual saved-scene/Stop/restoration inspection at 1440/390/320. Real production
+graph/receipt/Stop checks canceled every QA stage before owned worker restart;
+no storyboard GPU dispatch or model eviction occurred. The same restored 27B
+runtime remains ready. Evidence: `data/acceptance/video-storyboard-20261015`.
+
+Next work is `fix/self-development-validation` in `.tools/self-development-validation`,
+following [the verified gap](../self-development-validation.md). Its current commit
+contains analysis only; no implementation or full self-validation success is
+claimed. The real registered Self project still has syntax-only commands; do not
+silently relabel them as full tests. Preserve root WIP and use existing isolated
+execution/dependency boundaries. Current production/native Runner needs no restart
+while implementing this increment. Earlier sections below are historical.
+
 PR #321 is merged/deployed as `3783ba6`: GPU-wait queue fairness and startup native
 source compatibility. Verification passed 1567 backend/Runner tests (five opt-in
 skips), Ruff, Docker/Compose and actual desktop/mobile persistence checks. Actual
