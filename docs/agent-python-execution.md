@@ -62,3 +62,25 @@ Configure `AI_STATION_PYTHON_IMAGE=ai-station-python:local` for the native Runne
 No model, driver or external runtime installation is involved. The image is never
 pulled automatically by a workload request. Availability is observed through
 `GET /v1/python/capabilities`; typed dispatch/report use `/v1/runs/python`.
+
+## Verified acceptance — PR #325
+
+Local checks on runtime revision `1fa430c` passed: 1,630 Python tests, five explicit
+opt-in skips, Ruff lint and format; both Compose configurations and the production
+control-plane image also passed. Frontend runtime is unchanged from the qualified
+PR #323 UI. The optional Python image was built and executed, not merely mocked.
+
+Real acceptance used a disposable Git repository and synthetic CSV/XLSX: the
+native wrapper computed the expected total, with offline/read-only isolation,
+Stop, deadline and missing-output cleanup. A separate real backend worker used a
+private `0600` Unix socket to dispatch the container, persisted ordinary Run events,
+registered source/input/output lineage and downloaded the expected CSV. The
+original checkout and input hashes were preserved. Evidence:
+`data/acceptance/agent-python-execution-20261015/`.
+
+An earlier full-suite attempt with `/dev/shm` as pytest's temporary root failed an
+existing native sandbox test because that location is absent in its isolated
+namespace. That attempt remains failed evidence. The same test and full suite
+passed with the normal temporary directory; no isolation or assertion was relaxed.
+Agent model generation and spreadsheet upload/results UI are still subsequent
+implementation work, not covered by these executor acceptance results.
