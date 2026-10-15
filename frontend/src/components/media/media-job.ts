@@ -15,6 +15,7 @@ export type MediaRequest = {
   gpu?: string;
   duration_seconds?: number;
   composition_mode?: "continuous" | "shots";
+  scenes?: { prompt: string; duration_seconds: number }[] | null;
 };
 export type MediaJob = {
   request?: MediaRequest;
@@ -24,6 +25,14 @@ export type MediaJob = {
   status: string;
   kind: string;
   mode: string;
+  scenes?: {
+    index: number;
+    prompt: string;
+    duration_seconds: number;
+    status: string;
+    completed_segments: number;
+    total_segments: number;
+  }[];
   duration_seconds: number | null;
   completed_segments: number;
   total_segments: number;

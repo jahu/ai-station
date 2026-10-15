@@ -18,6 +18,11 @@ import MediaResult from "../components/media/MediaResult";
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import Avatars from "./Avatars";
+import VideoSceneEditor from "../components/media/VideoSceneEditor";
+import {
+  scenePlanError,
+  type SceneDraft,
+} from "../components/media/video-scenes";
 
 export default function Video() {
   const [search, setSearch] = useSearchParams();
@@ -98,6 +103,23 @@ function VideoForm({
   const [compositionMode, setCompositionMode] = useState<
     "continuous" | "shots"
   >(initialRequest?.composition_mode ?? "continuous");
+  const [scenePlanning, setScenePlanning] = useState(
+    !!initialRequest?.scenes?.length,
+  );
+  const [scenes, setScenes] = useState<SceneDraft[]>(
+    () =>
+      initialRequest?.scenes?.map((scene, index) => ({
+        ...scene,
+        key: `saved-${index}`,
+      })) ?? [{ key: "first", prompt: "", duration_seconds: 5 }],
+  );
+  const planningScenes =
+    duration.endsWith("s") && compositionMode === "shots" && scenePlanning;
+  const totalSceneSeconds = scenes.reduce(
+    (total, scene) => total + scene.duration_seconds,
+    0,
+  );
+  const sceneError = planningScenes ? scenePlanError(prompt, scenes) : "";
   const [steps, setSteps] = useState(initialRequest?.steps ?? 20);
   const [seed, setSeed] = useState(initialRequest?.seed ?? 43);
   const [gpu, setGpu] = useState(initialRequest?.gpu ?? "auto");
@@ -128,8 +150,18 @@ function VideoForm({
       if (duration.endsWith("s")) {
         const body = {
           ...values,
-          duration_seconds: Number(duration.slice(0, -1)),
+          duration_seconds: planningScenes
+            ? totalSceneSeconds
+            : Number(duration.slice(0, -1)),
           composition_mode: compositionMode,
+          ...(planningScenes
+            ? {
+                scenes: scenes.map(({ prompt, duration_seconds }) => ({
+                  prompt,
+                  duration_seconds,
+                })),
+              }
+            : {}),
         };
         const key = await chatRequestId("video-job", JSON.stringify(body));
         return api<MediaJob>("/media/jobs/video", {
@@ -204,6 +236,7 @@ function VideoForm({
               !busy &&
               !uploading &&
               capability.data?.available &&
+              !sceneError &&
               prompt.trim() &&
               (mode !== "animate" || image)
             )
@@ -250,13 +283,20 @@ function VideoForm({
             )}
             <label className="media-text-label">
               <span>
-                Scene and motion <small>{prompt.length} / 2000</small>
+                {planningScenes
+                  ? "Shared style and setting"
+                  : "Scene and motion"}{" "}
+                <small>{prompt.length} / 2000</small>
               </span>
               <textarea
-                aria-label="Scene and motion"
+                aria-label={
+                  planningScenes
+                    ? "Shared style and setting"
+                    : "Scene and motion"
+                }
                 required
                 maxLength={2000}
-                rows={6}
+                rows={planningScenes ? 3 : 6}
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 placeholder="A cinematic shot of a forest at dawn. Mist drifts between the trees as the camera slowly moves forward…"
@@ -266,6 +306,7 @@ function VideoForm({
               <label>
                 Format
                 <select
+                  aria-label="Format"
                   value={resolution}
                   onChange={(event) => setResolution(event.target.value)}
                 >
@@ -283,29 +324,41 @@ function VideoForm({
               </label>
               <label>
                 Duration
-                <select
-                  value={duration}
-                  onChange={(event) => setDuration(event.target.value)}
-                >
-                  <option value={33}>1.4 seconds</option>
-                  <option value={49}>2 seconds</option>
-                  <option value={81}>3.4 seconds</option>
-                  {duration.endsWith("s") &&
-                    !["15s", "30s", "60s"].includes(duration) && (
-                      <option value={duration}>
-                        {duration.slice(0, -1)} seconds
-                      </option>
-                    )}
-                  <option value="15s">15 seconds</option>
-                  <option value="30s">30 seconds</option>
-                  <option value="60s">1 minute</option>
-                </select>
+                {planningScenes ? (
+                  <output
+                    className="video-scene-total"
+                    aria-label="Planned duration"
+                  >
+                    {totalSceneSeconds} seconds · planned
+                  </output>
+                ) : (
+                  <select
+                    aria-label="Duration"
+                    value={duration}
+                    onChange={(event) => setDuration(event.target.value)}
+                  >
+                    <option value={33}>1.4 seconds</option>
+                    <option value={49}>2 seconds</option>
+                    <option value={81}>3.4 seconds</option>
+                    {duration.endsWith("s") &&
+                      !["15s", "30s", "60s"].includes(duration) && (
+                        <option value={duration}>
+                          {duration.slice(0, -1)} seconds
+                        </option>
+                      )}
+                    <option value="15s">15 seconds</option>
+                    <option value="30s">30 seconds</option>
+                    <option value="60s">1 minute</option>
+                  </select>
+                )}
               </label>
             </div>
             {duration.endsWith("s") && (
               <label>
                 Composition
                 <select
+                  aria-label="Composition"
+                  aria-describedby="video-composition-help"
                   value={compositionMode}
                   onChange={(event) =>
                     setCompositionMode(
@@ -316,11 +369,38 @@ function VideoForm({
                   <option value="continuous">One continuous scene</option>
                   <option value="shots">Sequence of shots</option>
                 </select>
-                <small className="muted">
+                <small className="muted" id="video-composition-help">
                   Long videos render in resumable segments, then become one
                   checked MP4.
                 </small>
               </label>
+            )}
+            {duration.endsWith("s") && compositionMode === "shots" && (
+              <>
+                <label className="video-scene-opt-in">
+                  <input
+                    type="checkbox"
+                    checked={scenePlanning}
+                    onChange={(event) => setScenePlanning(event.target.checked)}
+                  />
+                  Plan individual scenes
+                </label>
+                {planningScenes && (
+                  <>
+                    <VideoSceneEditor
+                      scenes={scenes}
+                      onChange={setScenes}
+                      error={sceneError}
+                    />
+                    {jobId && !busy && (
+                      <p className="muted">
+                        Generate video creates a new film with these changes.
+                        Resume unfinished work continues the saved plan.
+                      </p>
+                    )}
+                  </>
+                )}
+              </>
             )}
             <details className="media-advanced">
               <summary>
@@ -378,6 +458,7 @@ function VideoForm({
               disabled={
                 !capability.data?.available ||
                 !prompt.trim() ||
+                !!sceneError ||
                 (mode === "animate" && !image) ||
                 busy ||
                 uploading

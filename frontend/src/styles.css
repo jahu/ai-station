@@ -5417,3 +5417,107 @@ section:has(> .memory-grid) > .dashboard-note {
   padding: 0;
   margin: 0.75rem 0;
 }
+
+.video-scene-editor {
+  margin: 18px 0;
+  min-width: 0;
+}
+.video-scene-editor h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.video-scene-cards,
+.media-scene-progress ol {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.video-scene-cards > li,
+.media-scene-progress li {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: #141619;
+  min-width: 0;
+}
+.video-scene-cards textarea {
+  margin-top: 8px;
+  width: 100%;
+  resize: vertical;
+}
+.video-scene-actions {
+  gap: 2px;
+}
+.video-scene-cards > li > .row {
+  flex-wrap: wrap;
+}
+.video-scene-cards strong {
+  white-space: nowrap;
+}
+.video-scene-actions button {
+  padding: 8px;
+  min-height: 32px;
+}
+.media-composer .video-scene-duration {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+.video-scene-duration > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  min-width: 0;
+}
+.media-composer .video-scene-duration input {
+  width: 64px;
+  flex: 0 1 64px;
+  padding: 8px;
+  display: inline-block;
+  margin-right: 5px;
+}
+.media-composer .video-scene-opt-in {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.media-composer .video-scene-opt-in:has(input:checked) {
+  border-color: #526346;
+  background: #1c231a;
+}
+.media-composer .video-scene-opt-in input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
+.video-scene-total {
+  display: block;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.media-scene-progress {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 12px;
+}
+.media-scene-progress summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.media-scene-progress p {
+  overflow-wrap: anywhere;
+}
+.media-scene-progress progress {
+  width: 100%;
+}

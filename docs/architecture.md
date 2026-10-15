@@ -38,6 +38,11 @@ admission includes GPU and host RAM. Longer output hardware qualification is
 recorded separately from normal fake-GPU/real-CPU integration tests. See
 [the media execution design](plans/long-media-execution.md) for subsequent profiles.
 
+[Explicit video scenes](video-storyboard.md) partition the same independent-shot
+graph at scene boundaries. Per-stage prompts and scene identity, deterministic
+seeds, ordered composition/lineage and existing Stop/resume/resource admission
+stay within the media capability; the native API and database schema are unchanged.
+
 [Named-project Work](named-project-work.md) resolves an explicit current-turn
 project change instruction into the existing typed Local Coding Auto scope.
 It freezes project identity/revision before enqueue, preserves explicit task

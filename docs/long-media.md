@@ -85,3 +85,11 @@ successful independent shots after a failed gap. Normal tests use fake GPU work
 with real CPU MP4 composition, including simultaneous owned processes, Stop,
 explicit-device/one-device/RAM serialization and ordered decoded frames. This
 does not claim real simultaneous GPU generation on this workstation.
+
+A real 30-second avatar at the normal 384-pixel/eight-step settings subsequently
+completed twelve windows plus composition in about 35 minutes. Full independent
+decode, exact audio/video timing, all sampled joins, complete desktop playback
+and mobile final playback passed. Appearance/hand artifacts remain visible with
+the full-body QA input; broader close-up lip-sync/identity quality is separate.
+See [the exact qualification](long-avatar-qualification.md) and local evidence
+under `data/acceptance/long-avatar-default-20261015`.

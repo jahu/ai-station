@@ -39,7 +39,7 @@ class MediaTimeline(BaseModel):
         return self
 
 
-def timeline(*, frames, fps, seed, mode="shots"):
+def timeline(*, frames, fps, seed, mode="shots", scene_frames=None):
     segments = []
     position = 0
     if (
@@ -54,9 +54,22 @@ def timeline(*, frames, fps, seed, mode="shots"):
         or not 0 <= seed <= 2147483647
     ):
         raise ValueError("Invalid bounded media timing or seed")
+    if scene_frames is not None and (
+        mode != "shots"
+        or not 1 <= len(scene_frames) <= 20
+        or any(type(count) is not int or count < 1 for count in scene_frames)
+        or sum(scene_frames) != frames
+    ):
+        raise ValueError("Invalid independent scene timing")
+    boundaries = []
+    boundary = 0
+    for count in scene_frames or [frames]:
+        boundary += count
+        boundaries.append(boundary)
     while position < frames:
         first = 17 if mode == "continuous" and segments else 0
-        count = min(81 - first, frames - position)
+        next_boundary = next(end for end in boundaries if end > position)
+        count = min(81 - first, next_boundary - position)
         generated = next(n for n in (17, 33, 49, 65, 81) if n >= count + first)
         index = len(segments)
         derived = int.from_bytes(hashlib.sha256(f"{seed}:{index}".encode()).digest()[:4], "big") % 2147483648

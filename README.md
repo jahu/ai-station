@@ -326,6 +326,11 @@ work; the checked final MP4 appears in Library. Existing short previews remain.
 See [long-media execution](docs/long-media.md) for requirements, architecture
 and the distinction between integration and hardware verification.
 
+For a deliberate shot sequence, choose **Sequence of shots → Plan individual
+scenes**. Describe each scene, set its duration, and reorder or remove it. The
+shared instructions apply to every scene; the total is calculated automatically.
+Saved jobs retain the scene plan and show its progress. See [storyboards](docs/video-storyboard.md).
+
 Coding now defaults to **Auto · local long-context model**, selecting an installed
 GGUF with observed 100k+ context and preserving the user's GPU allocation. Choose
 a model to override it; selection performs no inference. Work and Create project

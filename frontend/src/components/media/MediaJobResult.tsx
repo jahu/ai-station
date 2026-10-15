@@ -127,6 +127,36 @@ export default function MediaJobResult({
               )}
             </section>
           ) : null}
+          {!!job.scenes?.length && (
+            <details className="media-scene-progress">
+              <summary>
+                {
+                  job.scenes.filter((scene) => scene.status === "succeeded")
+                    .length
+                }{" "}
+                of {job.scenes.length}{" "}
+                {job.scenes.length === 1 ? "scene" : "scenes"} ready
+              </summary>
+              <ol aria-label="Scene progress">
+                {job.scenes.map((scene) => (
+                  <li key={scene.index}>
+                    <div className="row spread">
+                      <strong>
+                        Scene {scene.index + 1} · {scene.duration_seconds}s
+                      </strong>
+                      <Badge status={scene.status} />
+                    </div>
+                    <p>{scene.prompt}</p>
+                    <progress
+                      aria-label={`Scene ${scene.index + 1} progress`}
+                      max={scene.total_segments || 1}
+                      value={scene.completed_segments}
+                    />
+                  </li>
+                ))}
+              </ol>
+            </details>
+          )}
           <div className="row">
             {busy && (
               <Button

@@ -5,6 +5,29 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Latest active work
+
+PR #321 is merged/deployed as `3783ba6`: GPU-wait queue fairness and startup native
+source compatibility. Verification passed 1567 backend/Runner tests (five opt-in
+skips), Ruff, Docker/Compose and actual desktop/mobile persistence checks. Actual
+native observation confirmed the same ready 27B container and 131072 context after
+that deployment. Evidence: `data/acceptance/runner-source-compatibility-20261015`.
+
+PR #322 (`feat/video-storyboard`, `.tools/video-storyboard`) is ready for final
+review/merge/deployment after 1576 backend/Runner tests (five opt-in skips), Ruff,
+488 UI tests, final format/lint/types/build, Docker/Compose and private compiled
+browser checks at 1440/390/320. Native source is unchanged from #321. See
+[the scene plan](../video-storyboard.md); evidence is in
+`data/acceptance/video-storyboard-20261015`. Preserve original root WIP.
+
+The real 30-second 384-pixel/eight-step avatar is complete. Full decode and
+browser playback passed; sampled joins are continuous, while appearance/hand
+artifacts remain visible with the full-body QA input. Scope and remaining visual
+qualification are in [the acceptance record](../long-avatar-qualification.md),
+with local evidence under `data/acceptance/long-avatar-default-20261015`. The
+original owned 27B preset is restored at actual 131072 context on both GPUs.
+The station is idle again; retain its healthy native service for the #322 rollout.
+
 ## Delivered conversation work
 
 - #269: immediate first Send, transactional `/api/chat/turns`, UUID receipts,

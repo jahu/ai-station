@@ -26,16 +26,35 @@ router = APIRouter(prefix="/api/media/jobs", tags=["media jobs"])
 DB = Annotated[Session, Depends(session_scope)]
 
 
+class VideoScene(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    prompt: str = Field(min_length=1, max_length=1000)
+    duration_seconds: StrictInt = Field(ge=1, le=60)
+
+
 class LongVideoRequest(VideoRequest):
     client_request_id: UUID
     duration_seconds: StrictInt = Field(default=15, ge=1, le=60)
     composition_mode: Literal["continuous", "shots"] = "continuous"
+    scenes: list[VideoScene] | None = Field(default=None, min_length=1, max_length=20)
 
     @model_validator(mode="after")
     def no_frames(self):
         if "frames" in self.model_fields_set:
             raise ValueError("Choose duration or short-clip frames, not both")
+        if self.scenes is not None:
+            if self.composition_mode != "shots":
+                raise ValueError("Individual scenes require an independent shot sequence")
+            if sum(scene.duration_seconds for scene in self.scenes) != self.duration_seconds:
+                raise ValueError("Scene durations must add up to the requested film duration")
+            if any(len(self.prompt + "\n\n" + scene.prompt) > 2000 for scene in self.scenes):
+                raise ValueError("Shared instructions and each scene must fit 2000 characters together")
         return self
+
+
+def video_request(body):
+    # Preserve receipt identity for requests saved before storyboards existed.
+    return body.model_dump(mode="json", exclude={"frames"} | ({"scenes"} if body.scenes is None else set()))
 
 
 def job(session, task_id):
@@ -48,7 +67,7 @@ def job(session, task_id):
 def publish_video(session, body, *, task=None, parent_run_id=None):
     prior = session.get(Task, str(body.client_request_id)) if task is None else None
     if prior:
-        expected = body.model_dump(mode="json", exclude={"frames"})
+        expected = video_request(body)
         if prior.metadata_json.get("media_plan", {}).get("request") != expected:
             raise HTTPException(409, "Request ID already belongs to a different media job")
         return job_view(session, prior)
@@ -68,16 +87,29 @@ def publish_video(session, body, *, task=None, parent_run_id=None):
     observed_profile = capabilities()
     reservation = observed_profile.get("memory_estimate_mib", 16384)
     timing = timeline(
-        frames=duration_frames(body.duration_seconds, 24), fps=24, seed=body.seed, mode=body.composition_mode
+        frames=duration_frames(body.duration_seconds, 24),
+        fps=24,
+        seed=body.seed,
+        mode=body.composition_mode,
+        scene_frames=[scene.duration_seconds * 24 for scene in body.scenes] if body.scenes else None,
     )
+    scene_index = 0
+    scene_end = body.scenes[0].duration_seconds * 24 if body.scenes else 0
     runs = []
     previous = None
     for segment in timing.segments:
+        if body.scenes:
+            while segment.start_frame >= scene_end:
+                scene_index += 1
+                scene_end += body.scenes[scene_index].duration_seconds * 24
         settings = VideoRequest.model_validate(
             {
                 **body.model_dump(
-                    exclude={"duration_seconds", "composition_mode", "frames", "client_request_id"}
+                    exclude={"duration_seconds", "composition_mode", "frames", "client_request_id", "scenes"}
                 ),
+                "prompt": body.prompt + "\n\n" + body.scenes[scene_index].prompt
+                if body.scenes
+                else body.prompt,
                 "frames": segment.generated_frames,
                 "seed": segment.seed,
             }
@@ -91,6 +123,8 @@ def publish_video(session, body, *, task=None, parent_run_id=None):
             "internal_media": True,
             "profile_observation": observed_profile.get("profile_observation"),
         }
+        if body.scenes:
+            run.parameters = {**run.parameters, "scene_index": scene_index}
         if previous and body.composition_mode == "continuous":
             run.parameters = {**run.parameters, "previous_video_run_id": previous.id}
             depend_on(session, run, previous)
@@ -111,6 +145,11 @@ def publish_video(session, body, *, task=None, parent_run_id=None):
             "height": body.height,
             "backend": "wan2.2-5b",
             "composition_mode": body.composition_mode,
+            **(
+                {"prompt": body.prompt, "scenes": [scene.model_dump() for scene in body.scenes]}
+                if body.scenes
+                else {}
+            ),
         },
         permissions=["filesystem_read", "workspace_write"],
         retry_class="inspect",
@@ -129,7 +168,7 @@ def publish_video(session, body, *, task=None, parent_run_id=None):
             "timing": timing.model_dump(mode="json"),
             "segment_run_ids": [r.id for r in runs],
             "compose_run_id": compose.id,
-            "request": body.model_dump(mode="json", exclude={"frames"}),
+            "request": video_request(body),
             "final_artifact_id": None,
         },
     }
@@ -208,6 +247,7 @@ def job_view(session, task):
         "revision": plan["revision"],
         "kind": plan["kind"],
         "mode": plan["mode"],
+        "scenes": scene_progress(plan, stages),
         "status": status,
         "duration_seconds": plan["timing"]["target_frames"] / plan["timing"]["fps"],
         "completed_segments": sum(stages[rid].status == "succeeded" for rid in plan["segment_run_ids"]),
@@ -224,6 +264,40 @@ def job_view(session, task):
         "resume_allowed": not active and status in {"failed", "canceled"},
         "error_message": next((r.error_message for r in stages.values() if r.error_message), ""),
     }
+
+
+def scene_progress(plan, stages):
+    result = []
+    for index, scene in enumerate(plan["request"].get("scenes") or []):
+        selected = [
+            stages[rid]
+            for rid in plan["segment_run_ids"]
+            if stages[rid].parameters.get("scene_index") == index
+        ]
+        states = {run.status for run in selected}
+        status = (
+            "succeeded"
+            if states == {"succeeded"}
+            else "failed"
+            if states & {"failed", "interrupted"}
+            else "cancel_requested"
+            if "cancel_requested" in states
+            else "canceled"
+            if "canceled" in states
+            else "running"
+            if states & {"running", "preparing", "claimed"}
+            else "queued"
+        )
+        result.append(
+            {
+                **scene,
+                "index": index,
+                "status": status,
+                "completed_segments": sum(r.status == "succeeded" for r in selected),
+                "total_segments": len(selected),
+            }
+        )
+    return result
 
 
 @router.post("/video", status_code=202)
