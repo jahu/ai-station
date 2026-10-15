@@ -49,3 +49,8 @@ the checked TXT source's Run/artifact/hash provenance; raw audio was not sent to
 the conversational model and no cloud provider was used. The desktop/mobile
 browser displayed that actual answer with a working Inspect source link and no
 page errors, overflow or workload-starting writes on inspection.
+
+The frozen implementation passed the full Python suite (1259 passed, 5 explicit
+opt-in skips) and all 430 frontend tests, plus lint, formatting, TypeScript,
+production build, Compose validation and image build. Native Runner code is
+identical to the previous verified release; rollout can retain that service.
