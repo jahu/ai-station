@@ -47,7 +47,7 @@ function LoginForm() {
     },
   });
   return (
-    <main id="main" tabIndex={-1} className="workspace">
+    <main id="main" tabIndex={-1} className="operator-login">
       <PageTitle eyebrow="YOUR AI WORKSTATION" title="Unlock this workstation.">
         Enter your operator password to continue. Your conversations, agents and
         artifacts are available after sign-in. Sessions expire after 30 minutes
@@ -96,7 +96,7 @@ export default function OperatorGate({ children }: { children: ReactNode }) {
   }
   if (status.error) {
     return (
-      <main id="main" tabIndex={-1} className="workspace">
+      <main id="main" tabIndex={-1} className="operator-login">
         <ErrorNotice error={status.error} />
       </main>
     );
