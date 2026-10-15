@@ -171,7 +171,11 @@ async def test_provider_caps_results_and_sends_only_query(monkeypatch):
         requests.append(request)
         rows = [{"title": "<b>Unsafe</b>", "url": "http://localhost/", "content": "private"}]
         rows += [
-            {"title": "<b>Source</b>", "url": f"https://example.com/{i}", "content": "x" * 1000}
+            {
+                "title": "<b>Source</b>",
+                "url": f"https://example.com/{i}",
+                "content": "public query " + "x" * 1000,
+            }
             for i in range(10)
         ]
         return httpx.Response(200, json={"results": rows, "unresponsive_engines": [["engine", "timeout"]]})
@@ -372,3 +376,170 @@ def test_search_does_not_silently_override_other_actions(monkeypatch):
         assert detail["active_run"] is None
         assert "Turn it off for this action" in detail["messages"][-1]["content"]
         assert detail["messages"][-1]["metadata"].get("agent_id") is None
+
+
+@pytest.mark.asyncio
+async def test_specific_question_drops_generic_first_noun_results_and_ranks_all_candidates(monkeypatch):
+    query = "aktor grajacy niepelnosprawnego syna w breaking bad zmarl jaka byla przyczyna"
+    monkeypatch.setenv("AI_STATION_WEB_SEARCH_URL", "http://search:8080")
+    clear_settings_cache()
+    original = httpx.AsyncClient
+    rows = [
+        {
+            "title": "Aktor Wikipedia",
+            "url": f"https://example.com/generic/{i}",
+            "content": "Definicja slowa aktor",
+        }
+        for i in range(6)
+    ]
+    rows += [
+        {
+            "title": "Breaking Bad actor report",
+            "url": "https://example.org/report",
+            "content": "Breaking Bad cast news",
+        }
+    ]
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kw: original(
+            **kw, transport=httpx.MockTransport(lambda request: httpx.Response(200, json={"results": rows}))
+        ),
+    )
+    result = await web_search.search(query)
+    assert [row["url"] for row in result["sources"]] == ["https://example.org/report"]
+    assert result["sources"][0]["id"] == 1
+
+
+def test_empty_search_rewrites_only_reviewed_query_with_selected_model_and_persists_attempts(monkeypatch):
+    query = "aktor grajacy niepelnosprawnego syna w breakig bad zmarl jaka byla przyczyna"
+    rewritten = "Breaking Bad actor disabled son death cause"
+    queries, model_calls = [], []
+
+    async def search(value):
+        queries.append(value)
+        return {**RESULT, "query": value, "sources": [] if len(queries) == 1 else RESULT["sources"]}
+
+    async def stream(self, **params):
+        model_calls.append(params)
+        if params.get("json_output"):
+            yield '{"query": "' + rewritten + '"}'
+        else:
+            yield "A response based on the retrieved sources."
+
+    monkeypatch.setattr(web_search, "search", search)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        route = conversation(client)
+        client.post(route + "/messages", json={"content": "PRIVATE HISTORY MUST NOT BECOME A SEARCH QUERY"})
+        step()
+        model_calls.clear()
+        queued = client.post(route + "/messages", json={"content": query, "web_search": {"enabled": True}})
+        step()
+        run = client.get("/api/runs/" + queued.json()["id"]).json()
+        assert run["status"] == "succeeded", run
+        result = run["metadata"]["web_search"]
+        assert queries == [query, rewritten] and result["queries"] == queries and result["query"] == query
+        assert len(model_calls) == 2
+        assert len(model_calls[0]["messages"]) == 2
+        assert model_calls[0]["messages"][-1]["content"] == query
+        assert "PRIVATE HISTORY" not in str(model_calls[0]["messages"])
+        assert model_calls[0]["max_tokens"] == 256
+        assert "tool.query_rewritten" in client.get("/api/runs/" + run["id"] + "/stream").text
+
+
+@pytest.mark.parametrize("reply", ['{"query":""}', "not json", '{"query":"same","commands":["bad"]}'])
+def test_invalid_rewrite_and_irrelevant_sources_do_not_produce_a_factual_answer(monkeypatch, reply):
+    queries, calls = [], []
+
+    async def search(query):
+        queries.append(query)
+        return {**RESULT, "sources": []}
+
+    async def stream(self, **params):
+        assert params.get("json_output"), "No final answer without relevant sources"
+        calls.append(params)
+        yield reply
+
+    monkeypatch.setattr(web_search, "search", search)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        route = conversation(client)
+        queued = client.post(
+            route + "/messages",
+            json={"content": "A detailed question without matching sources", "web_search": {"enabled": True}},
+        )
+        step()
+        run = client.get("/api/runs/" + queued.json()["id"]).json()
+        assert run["status"] == "failed" and "no relevant sources" in run["error_message"]
+        assert len(queries) == len(calls) == 1
+        assert client.get(route).json()["messages"][-1]["content"] == ""
+
+
+@pytest.mark.parametrize("fast", [False, True])
+def test_stop_during_query_rewrite_closes_model_and_never_retries_search(monkeypatch, fast):
+    queries, closed = [], []
+    run_id = None
+
+    async def search(query):
+        queries.append(query)
+        return {**RESULT, "sources": []}
+
+    async def stream(self, **params):
+        try:
+            with session_factory()() as session:
+                request_cancel(session, session.get(Run, run_id))
+                session.commit()
+            if fast:
+                yield '{"query":"A rewritten public query"}'
+            else:
+                await asyncio.Future()
+                yield "never"
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr(web_search, "search", search)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        route = conversation(client)
+        queued = client.post(
+            route + "/messages",
+            json={
+                "content": "A detailed question with missing search results",
+                "web_search": {"enabled": True},
+            },
+        )
+        run_id = queued.json()["id"]
+        step()
+        assert client.get("/api/runs/" + run_id).json()["status"] == "canceled"
+        assert len(queries) == 1 and closed == [True]
+
+
+@pytest.mark.asyncio
+async def test_unrelated_results_are_rejected_for_short_queries_too(monkeypatch):
+    monkeypatch.setenv("AI_STATION_WEB_SEARCH_URL", "http://search:8080")
+    clear_settings_cache()
+    original = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kw: original(
+            **kw,
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(
+                    200,
+                    json={
+                        "results": [
+                            {
+                                "title": "Aktor Wikipedia",
+                                "url": "https://example.com/actor",
+                                "content": "Definition of actor",
+                            }
+                        ]
+                    },
+                )
+            ),
+        ),
+    )
+    result = await web_search.search("galaxy telescope")
+    assert result["sources"] == []
