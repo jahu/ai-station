@@ -1310,3 +1310,87 @@ it("shows the immutable GitHub result for this task without a live connector que
   expect(screen.queryByText("github-overview.json")).toBeNull();
   expect(fetch).not.toHaveBeenCalled();
 });
+
+it("accepts an M4A recording in Auto without a voice-cloning setup", async () => {
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ id: "recording-id" }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  function Composer() {
+    const [value, setValue] = useState(emptyOptions);
+    return (
+      <>
+        <AssistantActions
+          value={value}
+          onChange={setValue}
+          busy={false}
+          onUploading={() => {}}
+        />
+        <output>{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  expect(screen.getByRole("button", { name: "Add recording" })).toBeTruthy();
+  const input = screen.getByLabelText(
+    "Recording · WAV, MP3, M4A, Ogg, WebM or FLAC",
+  );
+  expect(input.getAttribute("accept")).toContain(".m4a");
+  fireEvent.change(input, {
+    target: {
+      files: [new File(["audio"], "meeting.m4a", { type: "audio/mp4" })],
+    },
+  });
+  await waitFor(() =>
+    expect(screen.getByRole("status").textContent).toContain("recording-id"),
+  );
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/audio/transcription/uploads",
+    expect.objectContaining({ method: "POST" }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Replace recording" }),
+  ).toBeTruthy();
+});
+
+it("keeps the recording and clears incompatible references when choosing an audio question", () => {
+  function Composer() {
+    const [value, setValue] = useState<AssistantOptions>({
+      ...emptyOptions,
+      image_artifact_ids: ["portrait"],
+      audio_artifact_id: "recording-id",
+      speech_text: "Read aloud",
+    });
+    return (
+      <>
+        <AssistantActions
+          value={value}
+          onChange={setValue}
+          busy={false}
+          onUploading={() => {}}
+        />
+        <output>{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer />
+    </QueryClientProvider>,
+  );
+  chooseAction("audio.analyze");
+  const options = JSON.parse(screen.getByRole("status").textContent ?? "{}");
+  expect(options.action).toBe("audio.analyze");
+  expect(options.audio_artifact_id).toBe("recording-id");
+  expect(options.image_artifact_ids).toEqual([]);
+  expect(options.speech_text).toBeNull();
+  expect(screen.queryByAltText("Reference 1")).toBeNull();
+  expect(
+    screen.getByLabelText("Recording · WAV, MP3, M4A, Ogg, WebM or FLAC"),
+  ).toBeTruthy();
+});

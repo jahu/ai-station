@@ -378,6 +378,8 @@ export default function NewChat({
               />
               {options.action !== "project.create_code" &&
                 options.action !== "github.inspect" &&
+                options.action !== "audio.transcribe" &&
+                options.action !== "audio.analyze" &&
                 !options.image_artifact_ids.length &&
                 !options.audio_artifact_id && (
                   <TextAttachments

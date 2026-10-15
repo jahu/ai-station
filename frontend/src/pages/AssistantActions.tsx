@@ -559,6 +559,9 @@ export default function AssistantActions({
     enabled: value.action === "github.inspect",
   });
   const [error, setError] = useState<Error | null>(null);
+  const recordingInput =
+    ["audio.transcribe", "audio.analyze"].includes(value.action) ||
+    (value.action === "auto" && !value.image_artifact_ids.length);
   const imageInput = useRef<HTMLInputElement>(null);
   const voiceInput = useRef<HTMLInputElement>(null);
   const [projectId, setProjectId] = useState(value.coding?.project_id ?? "");
@@ -672,6 +675,24 @@ export default function AssistantActions({
     });
   }
   function resetAction(action: string) {
+    if (["audio.transcribe", "audio.analyze"].includes(action)) {
+      onChange({
+        ...value,
+        action,
+        image_artifact_ids: [],
+        coding: null,
+        new_project: null,
+        commit: null,
+        publish: null,
+        load: null,
+        stop: null,
+        media: null,
+        github: null,
+        upscale_result: false,
+        speech_text: null,
+      });
+      return;
+    }
     if (action === "project.create_code") {
       onChange({
         action,
@@ -921,7 +942,7 @@ export default function AssistantActions({
         value.action !== "project.create" &&
         value.action !== "project.create_code" && (
           <div className="assistant-attachment-toolbar">
-            {value.action !== "audio.transcribe" && (
+            {!["audio.transcribe", "audio.analyze"].includes(value.action) && (
               <>
                 <Button
                   type="button"
@@ -957,7 +978,7 @@ export default function AssistantActions({
               onClick={() => voiceInput.current?.click()}
             >
               <Mic size={15} />{" "}
-              {value.action === "audio.transcribe"
+              {recordingInput
                 ? value.audio_artifact_id
                   ? "Replace recording"
                   : "Add recording"
@@ -967,9 +988,7 @@ export default function AssistantActions({
             </Button>
             <LibraryPicker
               kind="audio"
-              audioMode={
-                value.action === "audio.transcribe" ? "transcription" : "voice"
-              }
+              audioMode={recordingInput ? "transcription" : "voice"}
               existing={
                 value.audio_artifact_id ? [value.audio_artifact_id] : []
               }
@@ -989,16 +1008,12 @@ export default function AssistantActions({
         ref={voiceInput}
         hidden
         aria-label={
-          value.action === "audio.transcribe"
+          recordingInput
             ? "Recording · WAV, MP3, M4A, Ogg, WebM or FLAC"
             : "Voice reference · WAV"
         }
         type="file"
-        accept={
-          value.action === "audio.transcribe"
-            ? TRANSCRIPTION_AUDIO_ACCEPT
-            : "audio/wav,.wav"
-        }
+        accept={recordingInput ? TRANSCRIPTION_AUDIO_ACCEPT : "audio/wav,.wav"}
         onChange={async (event) => {
           const file = event.target.files?.[0];
           event.target.value = "";
@@ -1009,7 +1024,7 @@ export default function AssistantActions({
             const body = new FormData();
             body.append("file", file);
             const artifact = await api<Artifact>(
-              value.action === "audio.transcribe"
+              recordingInput
                 ? "/audio/transcription/uploads"
                 : "/audio/uploads",
               {
@@ -1032,10 +1047,7 @@ export default function AssistantActions({
       {value.audio_artifact_id && (
         <div className="assistant-voice-reference">
           <span>
-            <Mic size={16} />{" "}
-            {value.action === "audio.transcribe"
-              ? "Recording"
-              : "Voice reference"}
+            <Mic size={16} /> {recordingInput ? "Recording" : "Voice reference"}
           </span>
           <audio
             controls

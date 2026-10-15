@@ -1383,6 +1383,8 @@ function ConversationView({
                   options.action.startsWith("runtime.") ||
                   options.action === "system.inspect" ||
                   options.action === "github.inspect" ||
+                  options.action === "audio.transcribe" ||
+                  options.action === "audio.analyze" ||
                   options.action === "image.generate_video" ||
                   options.action === "project.create" ||
                   options.action === "project.create_code"

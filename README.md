@@ -372,3 +372,5 @@ Whisper runtime/model; see [setup and execution contracts](docs/audio-transcript
 Transcription also accepts MP3, M4A, Ogg, WebM and FLAC, including selection from Library. Compressed duration is verified by the native job; speech and portrait voice references remain short WAV recordings.
 
 After transcribing, ask Chat to summarize or translate that recording. It reads the stored, checked transcript in the recent conversation context and shows an Inspect source link; rolling summaries preserve source provenance. See [transcript continuity](docs/transcript-conversation-context.md).
+
+Attach a recording directly in Chat Auto and ask for a summary, translation or an answer about it. AI Station transcribes it locally on CPU, then replies with the selected model on the same Task. The original recording and TXT/SRT/JSON remain available even if the response model fails. Choose **Transcribe recording** for text only, without an LLM. See [recording questions](docs/conversational-audio-analysis.md).

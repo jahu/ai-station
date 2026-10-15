@@ -37,8 +37,8 @@ def recording(data):
         return {"input_format": fmt, "duration_validation": "pending_transcription"}
     result = wav_metadata(data, max_seconds=300)
     with wave.open(io.BytesIO(data), "rb") as source:
-        if source.getsampwidth() != 2:
-            raise ValueError("Use 16-bit PCM WAV for transcription")
+        if source.getsampwidth() not in {1, 2, 3, 4}:
+            raise ValueError("Use 8–32 bit PCM WAV for transcription")
     return result
 
 
@@ -254,4 +254,8 @@ class TranscriptionExecutor(NativeJobExecutor):
         run.allocated_resources = {**run.allocated_resources, "cpu_threads": 2, "gpu": "none"}
         run.summary = f"Transcribed {report['duration_seconds']:.1f}s locally ({report['language']})."
         transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
+        if run.parameters.get("answer_after_transcription") is True:
+            from app.audio_analysis import publish_answer
+
+            publish_answer(session, run)
         return "done"

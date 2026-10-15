@@ -37,6 +37,7 @@ Action = Literal[
     "image.generate_video",
     "audio.speech",
     "audio.transcribe",
+    "audio.analyze",
     "avatar.animate",
     "video.generate",
     "agent.create",
@@ -143,6 +144,7 @@ class AssistantInputs(BaseModel):
         "image.generate_video",
         "audio.speech",
         "audio.transcribe",
+        "audio.analyze",
         "avatar.animate",
         "video.generate",
         "agent.create",
@@ -469,7 +471,10 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         audio = session.get(Artifact, str(body.audio_artifact_id))
         from app.recordings import FORMATS
 
-        transcribing = selected_plan is not None and selected_plan.action == "audio.transcribe"
+        transcribing = selected_plan is not None and selected_plan.action in {
+            "audio.transcribe",
+            "audio.analyze",
+        }
         allowed_audio = {item[0] for item in FORMATS.values()} if transcribing else {"audio/wav"}
         if audio is None or audio.artifact_type != "audio" or audio.mime_type not in allowed_audio:
             raise HTTPException(
@@ -515,6 +520,17 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
             "policy_version": 1,
             "user_message_id": user.id,
             "model": conversation.model,
+            **(
+                {
+                    "audio_answer_settings": {
+                        "model": conversation.model,
+                        "temperature": conversation.temperature,
+                        "max_tokens": conversation.max_tokens,
+                    }
+                }
+                if body.audio_artifact_id
+                else {}
+            ),
             "planner_context": planner_context(session, conversation, user),
             **snapshot,
         },
@@ -571,6 +587,25 @@ def explicit_plan(params):
     if (
         params.get("audio_artifact_id")
         and not params.get("image_artifact_ids")
+        and re.match(r"^(powiedz|przeczytaj|speak|read aloud)\b", params["content"].strip(), re.I)
+    ):
+        return Plan(action="audio.speech", reason="Read your message using the attached voice reference.")
+    if (
+        params.get("audio_artifact_id")
+        and not params.get("image_artifact_ids")
+        and re.search(
+            r"\b(?:stre[śs][ćc]|podsumuj|summari[sz]e|przet[łl]umacz|translate|wyja[śs]nij|explain|przeanalizuj|analy[sz]e)\b",
+            params["content"],
+            re.I,
+        )
+    ):
+        return Plan(
+            action="audio.analyze",
+            reason="Transcribe locally, then answer your question with the selected model.",
+        )
+    if (
+        params.get("audio_artifact_id")
+        and not params.get("image_artifact_ids")
         and re.search(
             r"transcrib|transkry|przepisz|zapisz.*(?:nagran|audio)|co (?:m[oó]wi|słychać)",
             params["content"],
@@ -578,6 +613,11 @@ def explicit_plan(params):
         )
     ):
         return Plan(action="audio.transcribe", reason="Transcribe the recording you attached locally.")
+    if params.get("audio_artifact_id") and not params.get("image_artifact_ids"):
+        return Plan(
+            action="audio.analyze",
+            reason="Use the attached recording as source for the selected model's answer.",
+        )
     if project_build_request(params):
         return Plan(
             action="project.create_code",
@@ -735,7 +775,8 @@ coding.commit: only if the user already selected this action with a reviewed com
 coding.publish: only if the user already selected this action with GitHub approval; never invent approval or repository;
 runtime.load: only if the user already selected this action with a discovered GGUF and GPUs; never invent model IDs;
 runtime.stop: only if the user already selected this action with an owned instance; never stop external runtimes;
-audio.transcribe: transcribe the attached WAV recording locally on CPU;
+audio.transcribe: transcribe the attached recording locally on CPU;
+audio.analyze: transcribe the attached recording locally, then summarize, translate or answer the user's question with the selected model;
 audio.speech: read the user message aloud in Polish with the attached WAV voice reference;
 avatar.animate: animate one attached portrait using one attached speech WAV;
 video.generate: generate a silent local Wan scene video, with at most one optional first-frame image and no audio;
@@ -908,7 +949,7 @@ class AssistantExecutor:
                         child = create_video_run(session, request, task=run.task, parent_run_id=run.id)
                         run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                         message.content = "Generating your scene locally with Wan 2.2. The video will appear here and in Library."
-        elif plan.action == "audio.transcribe":
+        elif plan.action in {"audio.transcribe", "audio.analyze"}:
             from app.transcription import TranscriptionRequest, create_transcription_run
 
             if images or not params.get("audio_artifact_id"):
@@ -924,8 +965,14 @@ class AssistantExecutor:
                 except HTTPException as exc:
                     message.content = str(exc.detail)
                 else:
+                    if plan.action == "audio.analyze":
+                        child.parameters = {**child.parameters, "answer_after_transcription": True}
                     run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
-                    message.content = "Transcribing your recording locally on CPU. Timestamped text and subtitles will appear here."
+                    message.content = (
+                        "Transcribing locally, then preparing your answer with the selected model. The transcript and reply will appear here."
+                        if plan.action == "audio.analyze"
+                        else "Transcribing your recording locally on CPU. Timestamped text and subtitles will appear here."
+                    )
         elif params.get("audio_artifact_id") and plan.action != "audio.speech":
             message.content = "Choose Speech to read your message with this voice reference. Choose Transcribe recording to turn a recording into text."
         elif plan.action == "audio.speech":
