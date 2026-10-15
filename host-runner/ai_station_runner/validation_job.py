@@ -11,6 +11,7 @@ import tempfile
 import time
 from pathlib import Path
 
+from ai_station_runner.build_archive import capture_build
 from ai_station_runner.coding_sandbox import validation_argv, validation_policy, write_policy
 from ai_station_runner.gitinspect import Repository
 from ai_station_runner.project_manifests import verify_manifests
@@ -125,6 +126,12 @@ def validate(run_id):
         "succeeded": all(result["exit_code"] == 0 for result in results),
         "scratch_relative": str(scratch.relative_to(workspace)),
     }
+    build_path = request_path(run_id, "build.zip")
+    exported = capture_build(workspace, build_path, results)
+    if exported is not None:
+        if exported["status"] == "ready":
+            exported["relative_path"] = f"runtime/validation/{run_id}.build.zip"
+        report["build_export"] = exported
     path = request_path(run_id, "report.json")
     with path.open("x") as handle:
         os.chmod(path, 0o600)

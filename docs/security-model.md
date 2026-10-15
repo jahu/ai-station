@@ -292,3 +292,13 @@ canonical bounded manifests and only read/Git permissions. Fixed preset argv,
 manifest hashes and dependency prerequisites gate isolated execution. Each child
 records its permissions; public registry access is confined to existing typed
 installers. Stop/deadlines/recovery and reviewed-commit gates cover all stages.
+
+## Build output capture
+
+Untrusted `dist` output is archived as data after all project commands pass.
+Descriptor-relative no-follow reads, file/directory identity and change checks,
+entry/depth/time/size limits and exclusive publication reject links, credential
+paths and concurrent changes. Output is outside the writable sandbox; native
+report ownership and backend ZIP/hash/path checks precede registration. Stop
+prevents artifact publication. ZIP delivery remains attachment + nosniff, and the
+UI never evaluates generated HTML/JS. See [build artifacts](coding-build-artifacts.md).

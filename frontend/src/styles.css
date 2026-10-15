@@ -5343,3 +5343,44 @@ section:has(> .memory-grid) > .dashboard-note {
     overflow-wrap: anywhere;
   }
 }
+
+.coding-build-artifact {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid #394037;
+}
+.coding-build-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.coding-build-heading > svg {
+  flex-shrink: 0;
+  color: #b5cf99;
+}
+.coding-build-heading strong {
+  display: block;
+  font-size: 14px;
+}
+.coding-build-heading small {
+  display: block;
+  color: #a8b39e;
+  font-size: 12px;
+  margin-top: 5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.coding-build-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.coding-build-unavailable {
+  margin-top: 16px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}

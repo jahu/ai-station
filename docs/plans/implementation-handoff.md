@@ -226,3 +226,10 @@ Continue `feat/coding-build-artifacts` in `.tools/coding-build-artifacts` using
 Artifacts and a Download build/Library action, keeping untrusted HTML as data.
 Do not regenerate the already-qualified React site merely to test exporting it.
 The broad platform goal remains active; no final product completion is claimed.
+
+Build artifact implementation is now in `feat/coding-build-artifacts`: bounded
+no-follow ZIP capture in native validation, checked ordinary Artifact registration
+and Download build/Library UI. Focused native/backend tests pass (43); complete
+required full checks, real sandboxed export using the existing QA React site,
+responsive UI review, PR review/merge and deployment before marking delivered.
+No new inference is needed to qualify exporting the existing site.

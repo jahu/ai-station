@@ -53,7 +53,13 @@ class ValidationRequest(BaseModel):
 
 
 def request_path(run_id: str, suffix: str = "json") -> Path:
-    if str(UUID(run_id)) != run_id or suffix not in {"json", "lock", "policy.json", "report.json"}:
+    if str(UUID(run_id)) != run_id or suffix not in {
+        "json",
+        "lock",
+        "policy.json",
+        "report.json",
+        "build.zip",
+    }:
         raise GitError("Canonical validation owner required")
     return owned_path(f"runtime/validation/{run_id}.{suffix}")
 

@@ -2,6 +2,7 @@ import { CheckCircle2, Circle, CircleAlert, LoaderCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Run } from "../api";
 import { terminal } from "../lib/utils";
+import CodingBuildArtifact from "./CodingBuildArtifact";
 
 type Step = { label: string; runs: Run[]; missing: string };
 const proposals = new Set([
@@ -212,6 +213,7 @@ export default function CodingTaskProgress({ runs }: { runs: Run[] }) {
           );
         })}
       </ol>
+      <CodingBuildArtifact run={checks.at(-1)} />
     </section>
   );
 }
