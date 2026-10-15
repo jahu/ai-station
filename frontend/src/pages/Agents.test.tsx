@@ -2751,3 +2751,97 @@ it("shows the coding workflow and hides report-only controls for a coding agent"
     true,
   );
 });
+
+it("selects one external coding provider with disclosure and a reviewed permission profile", async () => {
+  const agent = {
+    id: "draft",
+    name: "External builder",
+    description: "",
+    goal: "Build a calculator",
+    system_prompt: "",
+    model: "local",
+    tools: ["coding_local"],
+    permission_profile: "agent_local",
+    skills: [],
+    project_id: "project",
+    maximum_runtime: 600,
+    output_expectation: "",
+    enabled: false,
+    updated_at: "2026-10-15T00:00:00Z",
+    trigger: "manual",
+    cron_expr: "",
+    interval_seconds: null,
+    run_at: null,
+    workflow_mode: "sequential",
+    tool_calling: "none",
+    retry_policy: { mode: "none" },
+    notification_policy: {},
+    require_approval: false,
+    runs: [],
+    effective_permissions: [],
+    definition_warnings: [],
+  };
+  const writes: Record<string, unknown>[] = [];
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => {
+    if (options?.method === "PUT") {
+      const body = JSON.parse(String(options.body));
+      writes.push(body);
+      return { ok: true, json: async () => ({ ...agent, ...body }) };
+    }
+    const value = url.endsWith("/agents/draft")
+      ? agent
+      : url.endsWith("/chat/provider")
+        ? { models: ["local"], default_model: "local" }
+        : url.endsWith("/llama")
+          ? { models: [], instances: [] }
+          : url.endsWith("/agents/tools")
+            ? ["coding_local", "coding_cursor", "coding_codex"].map((name) => ({
+                name,
+                description: name,
+                operational: true,
+                required_permissions:
+                  name === "coding_local"
+                    ? ["workspace_write"]
+                    : ["workspace_write", "external_ai"],
+              }))
+            : url.includes("/projects?")
+              ? [{ id: "project", name: "Example project" }]
+              : [];
+    return { ok: true, json: async () => value };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount(true);
+  await screen.findByRole("heading", { name: "External builder" });
+  fireEvent.click(
+    screen.getByLabelText("Tool coding_cursor").querySelector("input")!,
+  );
+  expect(
+    screen.getByText(/EXTERNAL coding uses the selected CLI/),
+  ).toBeTruthy();
+  expect(
+    (
+      screen
+        .getByLabelText("Tool coding_local")
+        .querySelector("input") as HTMLInputElement
+    ).checked,
+  ).toBe(false);
+  expect(
+    (
+      screen
+        .getByLabelText("Tool coding_cursor")
+        .querySelector("input") as HTMLInputElement
+    ).checked,
+  ).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Save definition" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({
+    tools: ["coding_cursor"],
+    model: "",
+    permission_profile: "agent_external_coding",
+    require_approval: true,
+    enabled: false,
+  });
+  expect(
+    fetch.mock.calls.every(([, options]) => options?.method !== "POST"),
+  ).toBe(true);
+});

@@ -118,6 +118,21 @@ for key, label in [
     )
 
 
+for _provider in ("cursor", "codex"):
+    _name = "coding_" + _provider
+    AGENT_TOOLS[_name] = ToolSpec(
+        name=_name,
+        description=f"Use external {_provider.title()} to change the linked project in a fresh owned worktree. Sends the goal, reviewed guidance and bounded project source to the external provider. Existing CLI login only. Preserves proposals and configured validation for review; never commits, publishes or edits the original checkout. Select alone with the explicit external coding permission profile.",
+        risk_level="high",
+        required_permissions=(*AGENT_TOOLS["coding_local"].required_permissions, "external_ai"),
+        timeout=3600,
+        execution_target="host",
+        operational=True,
+        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        output_schema={"type": "object"},
+    )
+
+
 def effective_permissions(tools):
     return sorted({permission for name in tools for permission in AGENT_TOOLS[name].required_permissions})
 

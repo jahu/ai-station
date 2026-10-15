@@ -51,16 +51,16 @@ def enqueue_coding_task(
         raise HTTPException(409, "Project settings changed. Reload before starting a coding task.")
     active = select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL))
     if workflow_parent is not None:
+        from app.agent_coding_policy import coding_provider
         from app.permissions import require
 
         if (
-            provider != "local"
-            or task is None
+            task is None
             or workflow_parent.task_id != task.id
             or workflow_parent.id != parent_run_id
             or workflow_parent.executor_type != "agent_workflow"
             or workflow_parent.project_id != project.id
-            or "coding_local" not in workflow_parent.parameters.get("definition", {}).get("tools", [])
+            or coding_provider(workflow_parent.parameters.get("definition", {}).get("tools", [])) != provider
         ):
             raise ValueError("Coding requires the exact authorized agent workflow")
         for permission in (
@@ -72,6 +72,10 @@ def enqueue_coding_task(
             "shell_project_commands",
         ):
             require(workflow_parent.effective_permissions, permission)
+        if not local:
+            if workflow_parent.parameters["definition"].get("permission_profile") != "agent_external_coding":
+                raise ValueError("External agent coding requires its explicit permission profile")
+            require(workflow_parent.effective_permissions, "external_ai")
         active = active.where(Run.id != workflow_parent.id)
     if session.scalar(active.limit(1)):
         raise HTTPException(409, "This project already has an active Run")

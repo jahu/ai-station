@@ -122,12 +122,15 @@ def worktree_dict(worktree: Worktree) -> dict:
 
 
 def agent_dict(agent: Agent) -> dict:
+    from app.agent_coding_policy import external_coding
+
     return {
         "id": agent.id,
         "name": agent.name,
         "description": agent.description,
         "goal": agent.goal,
         "system_prompt": agent.system_prompt,
+        "execution_location": "external" if external_coding(agent.tools) else "local",
         "runtime": agent.runtime,
         "provider": agent.provider,
         "model": agent.model,

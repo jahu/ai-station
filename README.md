@@ -378,3 +378,5 @@ Attach a recording directly in Chat Auto and ask for a summary, translation or a
 In Chat's **Attach files & choose tools**, **Record audio** records from your browser microphone. Finish attaches a preview; write your question and press Send. Cancel releases the microphone, and a failed attachment can be retried without recording again. See [Chat recording](docs/chat-recording.md).
 
 Conversation history offers **Active** and **Archived** views. Archive an idle conversation from its header; messages, tasks, files and memory stay intact. Restore from the same detail to continue. See [conversation archive](docs/conversation-archive.md).
+
+Persistent coding agents can explicitly use **Local AI**, **Codex** or **Cursor**. External choices disclose project-source sharing, require the external-coding permission profile and default new drafts to approval before each Run. They use existing CLI logins and models; no local LLM is loaded for external coding. Changes stay in owned worktrees for review. See [agent coding providers](docs/agent-coding-providers.md).
