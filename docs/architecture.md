@@ -303,3 +303,7 @@ checkpoints as hidden general document Artifacts. Their in-process adapter prese
 the existing portrait identity reference and shared seventeen-frame prefix through
 flow-scheduler steps. Installed models/runtime source are unchanged. Legacy clips
 without checkpoints use the existing pixel path. See [Echo motion](echo-motion-context.md).
+
+GitHub repository snapshots use the same [connector registry](connectors.md) and
+ordinary native Run contract. Only fixed GET projections run through the existing
+host gh session; connector metadata and snapshots never expose credential values.

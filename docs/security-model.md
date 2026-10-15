@@ -214,3 +214,15 @@ UUID, PID, basename and reported memory leave the Runner; command lines and
 environments are never read. Live polling is separate from permanent telemetry
 sampling. Unavailable/partial data remain explicit. This grants no process
 ownership or cancellation capability.
+
+## GitHub read connector
+
+GitHub refresh Runs require `network_read` and `github_read`. Their private native
+request fixes a validated github.com repository and the overview operation. The
+Runner launches only the packaged job with argv, and that job invokes fixed gh
+GET endpoints with bounded projections and a deadline. It reuses the existing host
+authenticated session without copying credentials into app data or containers.
+Upstream stderr is suppressed; raw response bodies are not placed in logs.
+Only successful owned completion admits a matching bounded snapshot. Displayed
+repository/issue/PR links are validated against the selected repository. This
+connector grants no Git write, account browser, external-AI or messaging capability.

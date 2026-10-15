@@ -25,6 +25,7 @@ from app.connectors import HttpConnectorExecutor
 from app.cursor_executor import CursorProposalExecutor
 from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
+from app.github_connector import GithubReadExecutor
 from app.llama import LlamaExecutor, LlamaHealthExecutor
 from app.local_coding import LocalProposalExecutor
 from app.maintenance import SqliteBackupExecutor
@@ -321,6 +322,7 @@ EXECUTORS = {
     "agent_workflow": AgentWorkflowExecutor(),
     "agent_tool": AgentToolExecutor(),
     "http_connector": HttpConnectorExecutor(),
+    "github_read": GithubReadExecutor(),
     "memory_embed": MemoryEmbedExecutor(),
     "sqlite_backup": SqliteBackupExecutor(),
     "runtime_observation": RuntimeObservationExecutor(),

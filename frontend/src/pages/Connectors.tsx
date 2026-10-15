@@ -5,12 +5,14 @@ import { api } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import { useListKeyboard } from "./useListKeyboard";
+import { GithubConnectors } from "./GithubConnectors";
 
 type ConnectorInfo = {
   id: string;
   key: string;
   name: string;
   kind: string;
+  repository: string;
   url: string;
   method: string;
   status: string;
@@ -185,6 +187,8 @@ export default function Connectors() {
   const connectors = useQuery({
     queryKey: ["connectors"],
     queryFn: () => api<ConnectorInfo[]>("/connectors"),
+    refetchInterval: (query) =>
+      query.state.data?.some((row) => row.status === "checking") ? 2000 : false,
   });
   const kinds = useQuery({
     queryKey: ["connector-kinds"],
@@ -214,21 +218,19 @@ export default function Connectors() {
   });
   const unavailable = kinds.data?.filter((item) => !item.operational) ?? [];
   return (
-    <section className="panel mt">
+    <section className="panel mt connectors-workspace">
       <div className="panel-heading">
         <div>
           <h2>Connectors</h2>
           <p className="muted">
-            Named HTTP GET endpoints · secret references, never plaintext keys
+            GitHub repositories and reviewed HTTP endpoints
           </p>
         </div>
       </div>
       <p className="muted">
-        Only reviewed public <code>http</code>/<code>https</code> GET is
-        operational. Browser, GitHub, email, calendar and social adapters are
-        listed so they stay visibly unavailable. A health check is an ordinary
-        Run with a JSON artifact. Paste a secret only to store it; it is never
-        shown again.
+        Connect a GitHub repository or add a reviewed public HTTP endpoint.
+        Refreshes are inspectable Runs with stored snapshots. GitHub uses your
+        existing host login; HTTP secrets stay write-only.
       </p>
       <ErrorNotice
         error={
@@ -239,10 +241,18 @@ export default function Connectors() {
           remove.error
         }
       />
-      {unavailable.length > 0 && <UnavailableCards items={unavailable} />}
-      {!!connectors.data?.length && (
+      {kinds.data?.some(
+        (item) => item.kind === "github" && item.operational,
+      ) && (
+        <GithubConnectors
+          rows={connectors.data?.filter((row) => row.kind === "github") ?? []}
+        />
+      )}
+      {!!connectors.data?.some((row) => row.kind === "http") && (
         <ConnectorCards
-          connectors={connectors.data}
+          connectors={
+            connectors.data?.filter((row) => row.kind === "http") ?? []
+          }
           checkPending={check.isPending}
           removePending={remove.isPending}
           onCheck={(id) => check.mutate(id)}
@@ -321,6 +331,12 @@ export default function Connectors() {
           {create.isPending ? "Saving…" : "Add connector"}
         </Button>
       </form>
+      {unavailable.length > 0 && (
+        <details className="connector-unavailable mt">
+          <summary>Other integrations</summary>
+          <UnavailableCards items={unavailable} />
+        </details>
+      )}
     </section>
   );
 }

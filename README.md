@@ -352,3 +352,8 @@ source exploration. The private bridge accepts only a strict boolean for this
 format; it does not expose arbitrary provider options or schemas. Complete stream
 termination, selected-path checks and source hashes remain required before files
 can change. Malformed output reports that no proposal was applied.
+
+GitHub repository snapshots are available in Connectors: enter `owner/repository`,
+then Refresh repository. AI Station reuses the host gh login, shows open issues
+and PRs in place, and retains a JSON snapshot with Run history. No token copying
+is required. See [connector contracts](docs/connectors.md).
