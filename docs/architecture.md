@@ -1,5 +1,10 @@
 # Architecture
 
+[Reviewed-page coding](agent-page-coding.md) composes existing public HTTP context
+Runs with Local Coding. A dependency-gated metadata stage verifies immutable
+source artifacts and publishes the normal coding chain on the same Task, with a
+shared deadline and existing approval, Stop and conservative recovery contracts.
+
 ## Planned conversation and long-media milestone — 2026-10-14
 
 The [first-send increment](first-send.md) now adds transactional turn receipts and
@@ -141,7 +146,7 @@ The [Memory workspace](memory.md) exposes durable scoped entries with validated 
 
 ## Named connectors
 
-[HTTP GET connectors](connectors.md) persist a reviewed public URL and optional secret reference. A user-requested health check is an ordinary Run with `network_read`, cancellation and a JSON artifact. Public-page Browser is a separately permissioned agent tool; GitHub, email, calendar and social connector adapters remain unavailable.
+[HTTP GET connectors](connectors.md) persist a reviewed public URL and optional secret reference. A user-requested health check is an ordinary Run with `network_read`, cancellation and a JSON artifact. Public-page Browser is a separately permissioned agent tool; GitHub repository snapshots also support reviewed read-only account access; email, calendar and social adapters remain unavailable.
 
 ## Runtime observations
 

@@ -12,7 +12,7 @@ from app.models import Project
 from app.skills import skill_prompt, verify_snapshots
 
 
-def publish_coding(session, parent, definition):
+def publish_coding(session, parent, definition, *, context="", deadline_at=None, context_sources=None):
     provider = coding_provider(definition.tools)
     if provider is None or not definition.project_id:
         raise ValueError("Select one coding provider and choose its project")
@@ -23,7 +23,10 @@ def publish_coding(session, parent, definition):
         raise HTTPException(422, "The coding agent's project is no longer available")
     snapshots = verify_snapshots(parent.parameters.get("skill_snapshots") or [])
     with session.begin_nested():
-        deadline = (utcnow() + timedelta(seconds=definition.maximum_runtime)).isoformat()
+        deadline = deadline_at or (utcnow() + timedelta(seconds=definition.maximum_runtime))
+        if deadline <= utcnow():
+            raise ValueError("Agent runtime limit exceeded before coding publication")
+        deadline = deadline.isoformat()
         parent.task.metadata_json = {
             **parent.task.metadata_json,
             "agent_coding_definition": definition.model_dump(mode="json"),
@@ -49,6 +52,10 @@ def publish_coding(session, parent, definition):
         guidance = definition.system_prompt + "\n" + request["guidance"]
         if snapshots:
             guidance += "\n" + skill_prompt(snapshots)
+        if context:
+            if provider != "local" or len(context) > 10000:
+                raise ValueError("Reviewed page context must be bounded and use Local coding")
+            guidance += "\n" + context
         if len(guidance) > 16000:
             raise ValueError("Agent and project guidance exceed the coding context limit")
         preparation.parameters = {
@@ -56,6 +63,7 @@ def publish_coding(session, parent, definition):
             request_key: {
                 **request,
                 "guidance": guidance,
+                **({"context_sources": context_sources} if context_sources else {}),
                 "agent_coding_deadline": deadline,
             },
         }

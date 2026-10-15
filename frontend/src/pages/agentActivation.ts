@@ -88,7 +88,11 @@ export function activationBlock(
         "Choose the project this coding agent may modify before enabling.",
     };
   }
-  if (coding.length && names.length !== 1) {
+  const localPages =
+    coding.length === 1 &&
+    coding[0] === "coding_local" &&
+    names.every((name) => ["coding_local", "http_fetch"].includes(name));
+  if (coding.length && names.length !== 1 && !localPages) {
     return {
       blocked: true,
       reason: external

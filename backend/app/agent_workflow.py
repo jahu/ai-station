@@ -37,7 +37,12 @@ STEP_KEYS = CONTEXT_STEPS | {"report"}
 
 def planned_steps(definition: AgentSettings) -> list[dict]:
     if coding_provider(definition.tools) is not None:
-        return [{"key": definition.tools[0], "gate": "none"}]
+        return [
+            {"key": name, "gate": "none"}
+            for name in (
+                ["http_fetch", "coding_local"] if "http_fetch" in definition.tools else definition.tools
+            )
+        ]
     steps = []
     for name in definition.tools:
         if name in RETENTION_TOOLS:
@@ -209,6 +214,10 @@ def publish_steps(session, parent: Run) -> list[Run]:
 
         github_target = reviewed_connector(session, definition.github)
     if coding_provider(definition.tools) is not None:
+        if "http_fetch" in definition.tools:
+            from app.agent_page_coding import publish_page_coding
+
+            return publish_page_coding(session, parent, definition)
         from app.agent_coding import publish_coding
 
         return [publish_coding(session, parent, definition)]

@@ -1,5 +1,12 @@
 # Security model
 
+Local coding agents may explicitly combine coding with reviewed public HTTP GET.
+The linked project and URLs are part of the activated definition. Public text is
+bounded and quoted as untrusted data; source Run identity, definition and artifact
+hash are checked before worktree publication. Failures and Stop prevent later
+stages. External coding remains exclusive and cannot inherit this sharing scope.
+See [reviewed-page coding](agent-page-coding.md).
+
 ## Planned Chat/Work and long-media boundaries
 
 [First Send](first-send.md) implements explicit Chat/Work turn policy. Chat rejects
@@ -25,7 +32,7 @@ this scope. Exact names and a frozen project policy revision are checked before
 ordinary owned worktree execution. No external sharing, commit or publication is
 inferred; see [named-project Work](named-project-work.md).
 
-> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Local agents now have explicit activation, durable schedules, bounded context tools, GET of reviewed public pages, versioned Skills as instruction packs, sequential or gated workflow steps, optional bounded registry tool calling during the report, saved retry policies and in-app notices. Named HTTP GET connectors are operational; account browser automation and other connector kinds are not. Bounded Cursor file-edit proposals, review artifacts and separate validation Runs are operational. Other coding adapters remain inactive. See README for runnable commands and limitations.
+> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Local agents now have explicit activation, durable schedules, bounded context tools, GET of reviewed public pages, versioned Skills as instruction packs, sequential or gated workflow steps, optional bounded registry tool calling during the report, saved retry policies and in-app notices. Named HTTP GET connectors are operational; account browser automation and other connector kinds are not. Bounded Local AI, Cursor and Codex file-edit proposals, review artifacts and separate validation Runs are operational. Claude Code remains inactive. See README for runnable commands and limitations.
 
 
 AI Station is a single-user workstation application. The default network exposure is loopback only. When an operator password hash is stored, loopback API requests require a session cookie except health, login status, login and logout. A non-loopback bind is refused even after that hash exists because LAN/node transport is unpublished. Do not publish port 8765 on a LAN or the public internet.

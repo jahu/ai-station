@@ -8,6 +8,41 @@ const catalog = ["coding_local", "coding_cursor", "coding_codex"].map(
     required_permissions: [],
   }),
 );
+it("allows Local coding with reviewed pages and blocks missing URLs or external sharing", () => {
+  const tools = [
+    ...catalog,
+    {
+      name: "http_fetch",
+      description: "Reviewed pages",
+      operational: true,
+      required_permissions: ["network_read"],
+    },
+  ];
+  const agent = {
+    enabled: false,
+    model: "auto",
+    tools: ["coding_local", "http_fetch"],
+    project_id: "project",
+    fetch_urls: ["https://example.com/"],
+  };
+  expect(activationBlock(agent, tools)).toEqual({
+    blocked: false,
+    reason: null,
+  });
+  expect(activationBlock({ ...agent, fetch_urls: [] }, tools).blocked).toBe(
+    true,
+  );
+  expect(
+    activationBlock(
+      {
+        ...agent,
+        tools: ["coding_cursor", "http_fetch"],
+        permission_profile: "agent_external_coding",
+      },
+      tools,
+    ).blocked,
+  ).toBe(true);
+});
 it("enables a reviewed external coding scope without selecting a local model", () => {
   for (const tool of ["coding_cursor", "coding_codex"]) {
     expect(

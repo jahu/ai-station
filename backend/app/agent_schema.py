@@ -96,7 +96,9 @@ class AgentSettings(BaseModel):
             raise ValueError("Unknown agent tool")
         if set(self.tools).intersection(CODING_TOOLS):
             if not coding_provider(self.tools) or self.tool_calling != "none":
-                raise ValueError("Coding is a project workflow; select it alone without report tool calling")
+                raise ValueError(
+                    "Select one coding provider; only Local coding may add reviewed HTTP fetch, without report tool calling"
+                )
             if len(self.goal) > 10000:
                 raise ValueError("Coding goals must be at most 10000 characters")
             if self.enabled and not self.project_id:
