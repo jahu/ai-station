@@ -41,6 +41,7 @@ from app.project_dependencies import ProjectDependenciesExecutor
 from app.project_setup import ProjectSetupExecutor
 from app.providers import ProviderError, stream_chat
 from app.publication import GithubPublicationExecutor, PublicationReconcileExecutor
+from app.python_execution import PythonExecutor
 from app.resources import release_run_locks
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import mark_failed, touch_lease, transition
@@ -293,6 +294,7 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 EXECUTORS = {
     "browser": BrowserExecutor(),
+    "python": PythonExecutor(),
     "project_setup": ProjectSetupExecutor(),
     "fake": FakeExecutor(),
     "orchestrator": AssistantExecutor(),

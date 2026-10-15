@@ -15,6 +15,7 @@ PROFILES: dict[str, list[str]] = {
         "git_read",
         "git_write",
         "shell_project_commands",
+        "python_execute",
     ],
     "coding_external": [
         "filesystem_read",

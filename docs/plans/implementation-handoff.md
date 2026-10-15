@@ -21,7 +21,24 @@ PR #323 is merged/deployed at `8a04874`; local release evidence is under
 source isolation and installer fixes remain useful shared agent infrastructure.
 Earlier self-development prioritization below is superseded by this decision.
 
-## Latest active work
+## Active agent Python execution increment
+
+`feat/agent-python-execution` in `.tools/agent-python-execution` implements the
+[execution contract](../agent-python-execution.md). Native API/schema, frozen
+worktree/input snapshots, optional CPU image, bounded container protocol,
+Stop/cleanup and source/output/report Artifact adoption are implemented. A real
+isolated disposable test passed CSV/XLSX processing, network denial, read-only
+inputs, required-output failure, Stop and deadline cleanup with the original
+repository untouched. Focused executor tests pass; full regression/review is
+pending. Local evidence: `data/acceptance/agent-python-execution-20261015`.
+
+This is the execution component, not a completed user-facing spreadsheet agent.
+Next wire local script generation, automatic managed workspace setup, declared
+input upload/inspection and results into agent workflows/UI. Do not publish an
+operational agent tool or remove Coding navigation before those paths work.
+Current deployed release remains `8a04874`; it needs no restart for this work yet.
+
+## Earlier work (historical)
 
 PR #322 is merged and deployed as `35ab4a4`. Final code passed 1576 Python tests
 (five opt-in skips), 488 UI tests, lint/format/types/build, Docker/Compose and

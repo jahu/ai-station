@@ -102,7 +102,9 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
         session.refresh(run)
         if run.status not in INSPECT_STATUSES or run.lease_expires_at is None or run.lease_expires_at >= now:
             continue  # A live worker renewed its lease while inspection ran.
-        if info.get("reachable") is False and run.execution_target == "host":
+        if info.get("reachable") is False and (
+            run.execution_target == "host" or run.executor_type == "python"
+        ):
             # A dispatch can succeed before its response/pid is persisted. Keep
             # reservations and retry inspection; never repeat an uncertain send.
             from app.runs import touch_lease
