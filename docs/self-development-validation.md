@@ -80,3 +80,15 @@ were preserved. The first attempts exposed the isolated installer's need to read
 exact public OS/MIME metadata files; those failures are preserved alongside the
 successful rerun in local acceptance evidence. This is component execution
 qualification, not the full AI Station self-suite.
+
+
+Local release qualification for PR #323: 1597 backend/Runner tests passed with
+five opt-in skips; 489 UI tests and frontend format/lint/typecheck/build passed.
+Both Compose configurations and the application image built successfully. A
+0025→0026 migration and downgrade/upgrade round trip preserved an existing project
+in a disposable database. The compiled advanced settings saved and restored the
+component configuration at 1440, 390 and 320 pixels without horizontal overflow.
+Real native acceptance covered both an existing npm lock and generation of a
+missing component lock; no external AI, user repository or GPU workload was used.
+Deployment identity and backups remain recorded in the central local release
+record, separately from this validation evidence.

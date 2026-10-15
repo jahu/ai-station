@@ -20,8 +20,11 @@ Node preparation, owned Python source imports and bounded validation deadlines t
 existing project Runs. A disposable real Cursor-sandbox probe passed offline pip,
 nested npm installation/build and owned-source import while preserving the original
 checkout. It also exposed and fixed project `pip.py` shadowing and missing exact
-public OS/MIME metadata reads. Full regression/review is pending; this increment
-is not yet merged/deployed. Evidence is under
+public OS/MIME metadata reads. PR #323 passed 1597 Python tests (five opt-in skips), 489 UI tests, Ruff, frontend
+format/lint/types/build, Docker/Compose, disposable migration round-trip and
+compiled browser checks at 1440/390/320. The final UI toggle correction preserves
+identical backend/Runner source to the full-suite head. Review/deployment state is
+recorded with the release record above; do not assume a restart from this document. Evidence is under
 `data/acceptance/self-development-validation-20261015`.
 
 Full AI Station self-suite execution remains the next increment: the native
