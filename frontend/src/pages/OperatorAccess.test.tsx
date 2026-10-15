@@ -281,7 +281,7 @@ it("moves through nodes with arrow keys", async () => {
   expect(second.tabIndex).toBe(-1);
   expect(screen.getByRole("region", { name: "Nodes" })).toBeTruthy();
   expect(
-    screen.getByText(/Authenticated LAN transport stays unpublished/),
+    screen.getByText(/Remote execution transport stays unpublished/),
   ).toBeTruthy();
   expect(
     screen.queryByRole("button", { name: /bind|publish|lan/i }),
