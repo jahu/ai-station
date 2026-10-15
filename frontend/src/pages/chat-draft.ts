@@ -1,9 +1,9 @@
 import { useRef, useState } from "react";
 
 const prefix = "ai-station:chat-draft:";
-const maxCharacters = 32000;
+const defaultMaxCharacters = 32000;
 
-function read(scope: string) {
+function read(scope: string, maxCharacters: number) {
   try {
     const value = sessionStorage.getItem(prefix + scope);
     return value && value.length <= maxCharacters ? value : "";
@@ -20,10 +20,13 @@ export function clearChatDraft(scope: string) {
   }
 }
 
-export function useChatDraft(scope: string) {
-  const [value, setValue] = useState(() => read(scope));
+export function useChatDraft(
+  scope: string,
+  maxCharacters = defaultMaxCharacters,
+) {
+  const [value, setValue] = useState(() => read(scope, maxCharacters));
   const current = useRef(value);
-  const [restored, setRestored] = useState(() => !!read(scope));
+  const [restored, setRestored] = useState(() => !!read(scope, maxCharacters));
   const update = (text: string) => {
     const next = text.slice(0, maxCharacters);
     current.current = next;

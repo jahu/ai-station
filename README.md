@@ -423,3 +423,8 @@ progress and Coding/Work review. The archive records its validation/project
 provenance. Other output directories, unsafe links and oversized builds report
 that export is unavailable; actual command results stay visible. Generated
 HTML/JavaScript is downloaded as data. See [build artifacts](docs/coding-build-artifacts.md).
+
+Coding also keeps unsent follow-up text separately for each task in the current
+browser tab. Refresh or switching conversations restores the draft; **Discard
+draft** clears only that text. Ctrl/Cmd+Enter sends when the normal Send action
+is allowed, including external-agent consent. See [Coding conversations](docs/coding-workspaces.md).

@@ -233,3 +233,26 @@ and Download build/Library UI. Focused native/backend tests pass (43); complete
 required full checks, real sandboxed export using the existing QA React site,
 responsive UI review, PR review/merge and deployment before marking delivered.
 No new inference is needed to qualify exporting the existing site.
+
+## Build output reviewed; Coding draft delivery
+
+PR #314 is merged as `f08f859`: build ZIP Artifacts, native child draining, checked
+registration and Coding/Work Download build + Library links. Required checks
+passed on `f2ce119`: 1497 backend/Runner tests (five opt-in skips), 466 UI tests,
+format/lint/types/build, Docker/Compose, real sandboxed React validation/export
+without new inference, and desktop/mobile download/Library inspection.
+Deployment is pending the combined Coding draft increment.
+
+`feat/coding-conversation-drafts` adds task-scoped unsent text, refresh/navigation
+restore, guarded Ctrl/Cmd+Enter, isolated consent and preservation of newer edits
+during pending Send. 472 frontend tests and responsive browser checks passed;
+Send was intercepted in browser qualification, so no extra coding execution is
+claimed. Merge the reviewed UI PR and deploy the combined image once, restarting
+the own native Runner for #314. Preserve root Memory WIP and all original data.
+
+Next practical gap: re-run checks on an existing Coding turn without invoking a
+model. Projects can validate worktrees, but Coding lacks a same-Task action that
+preserves earlier check history and refreshes the visible artifact/check result.
+Implement it with trusted project commands/policies, owned worktree/active-Run
+guards, clear provenance, Stop and conservative recovery. Do not fake Run/source
+records in production or regenerate the qualified React site just to test export.

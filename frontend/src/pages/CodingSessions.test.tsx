@@ -12,6 +12,7 @@ import CodingSession, { CodingHistory, CodingNav } from "./CodingSessions";
 
 afterEach(() => {
   cleanup();
+  sessionStorage.clear();
   vi.unstubAllGlobals();
 });
 it("reopens task history and sends a guarded follow-up to the same conversation", async () => {

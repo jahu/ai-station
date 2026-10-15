@@ -30,6 +30,7 @@ import CodingTaskProgress from "./CodingTaskProgress";
 import GithubPublication from "./GithubPublication";
 import { ConsentChoiceList } from "./ConsentChoiceList";
 import { useListKeyboard } from "./useListKeyboard";
+import { useChatDraft } from "./chat-draft";
 
 type SessionRow = {
   id: string;
@@ -271,8 +272,16 @@ export function CodingNav() {
 }
 export default function CodingSession() {
   const { id } = useParams();
+  return <CodingConversation key={id} id={id} />;
+}
+
+function CodingConversation({ id }: { id?: string }) {
   const cache = useQueryClient();
-  const [prompt, setPrompt] = useState("");
+  const draft = useChatDraft(`coding:${id}`, 4000);
+  const prompt = draft.value;
+  const submitted = useRef("");
+  const helpId = useId();
+  const reply = useRef<HTMLTextAreaElement>(null);
   const [external, setExternal] = useState(false);
   const q = useQuery({
     queryKey: ["coding-session", id],
@@ -293,8 +302,9 @@ export default function CodingSession() {
   const active = [...runs].reverse().find((r) => !terminal.has(r.status));
   const isExternal = latest?.metadata?.execution_location === "external";
   const send = useMutation({
-    mutationFn: () =>
-      api<Run>(`/coding/sessions/${id}/messages`, {
+    mutationFn: () => {
+      submitted.current = prompt;
+      return api<Run>(`/coding/sessions/${id}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -302,14 +312,21 @@ export default function CodingSession() {
           expected_run_id: latest?.id,
           external_ai: external,
         }),
-      }),
+      });
+    },
     onSuccess: () => {
-      setPrompt("");
+      draft.accept(submitted.current);
       setExternal(false);
       void cache.invalidateQueries({ queryKey: ["coding-session", id] });
       void cache.invalidateQueries({ queryKey: ["coding-sessions"] });
     },
   });
+  const canSend =
+    !!latest &&
+    !active &&
+    !!prompt.trim() &&
+    !send.isPending &&
+    (!isExternal || external);
   const cancel = useMutation({
     mutationFn: () => api(`/coding/sessions/${id}/cancel`, { method: "POST" }),
     onSuccess: () =>
@@ -460,7 +477,7 @@ export default function CodingSession() {
               className="panel coding-reply"
               onSubmit={(e) => {
                 e.preventDefault();
-                send.mutate();
+                if (canSend) send.mutate();
               }}
             >
               <div className="row spread">
@@ -480,14 +497,48 @@ export default function CodingSession() {
                 )}
               </div>
               <textarea
+                ref={reply}
                 aria-label="Follow-up instruction"
+                aria-describedby={helpId}
                 value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
+                onChange={(e) => draft.update(e.target.value)}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    (event.ctrlKey || event.metaKey) &&
+                    !event.nativeEvent.isComposing
+                  ) {
+                    event.preventDefault();
+                    if (canSend) event.currentTarget.form?.requestSubmit();
+                  }
+                }}
                 maxLength={4000}
                 rows={3}
                 placeholder="What should we change or build next?"
                 disabled={!!active || !latest}
               />
+              <div className="coding-draft-help">
+                <small id={helpId} className="muted">
+                  Drafts stay in this tab · Ctrl/⌘ + Enter to send
+                </small>
+                {!!prompt && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => {
+                      draft.update("");
+                      reply.current?.focus();
+                    }}
+                  >
+                    Discard draft
+                  </Button>
+                )}
+              </div>
+              {draft.restored && (
+                <p className="muted" role="status">
+                  Unsent draft restored.
+                </p>
+              )}
               {isExternal && (
                 <ConsentChoiceList
                   checked={external}
@@ -508,15 +559,7 @@ export default function CodingSession() {
                 <small className="muted">
                   Same project · same workspace · history preserved
                 </small>
-                <Button
-                  disabled={
-                    !!active ||
-                    !latest ||
-                    !prompt.trim() ||
-                    send.isPending ||
-                    (isExternal && !external)
-                  }
-                >
+                <Button disabled={!canSend}>
                   <Send size={14} />
                   {send.isPending ? "Sending…" : "Send"}
                 </Button>
