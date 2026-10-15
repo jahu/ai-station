@@ -679,6 +679,7 @@ export default function AssistantActions({
     if (action === "image.describe") {
       onChange({
         ...value,
+        github: undefined,
         action,
         upscale_result: false,
         speech_text: null,
@@ -784,6 +785,7 @@ export default function AssistantActions({
     const selected = parseFilePaths(paths);
     onChange({
       ...value,
+      github: undefined,
       action,
       media: action === "video.generate" ? value.media : null,
       commit: null,

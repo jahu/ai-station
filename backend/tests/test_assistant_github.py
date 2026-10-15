@@ -111,3 +111,48 @@ def test_connector_change_while_queued_never_dispatches_to_new_repository():
         assert "changed" in detail["messages"][-1]["content"]
         with session_factory()() as session:
             assert session.scalar(select(Run).where(Run.parent_run_id == parent["id"])) is None
+
+
+def test_selected_github_scope_is_not_replaced_by_an_image_reference():
+    with TestClient(app) as client:
+        cid, _, scope = setup(client)
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages", json={"content": "Upscale it", "github": scope}
+        )
+        assert response.status_code == 202, response.text
+        assert response.json()["parameters"]["image_artifact_ids"] == []
+        work()
+        with session_factory()() as session:
+            child = session.scalar(select(Run).where(Run.parent_run_id == response.json()["id"]))
+            assert child.executor_type == "github_read"
+
+
+def test_model_plan_cannot_grant_github_access(monkeypatch):
+    async def stream(self, **params):
+        yield '{"action":"github.inspect","reason":"Read account"}'
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        cid, _, _ = setup(client)
+        response = client.post(f"/api/chat/conversations/{cid}/messages", json={"content": "What is new?"})
+        assert response.status_code == 202
+        work()
+        view = client.get(f"/api/chat/conversations/{cid}").json()
+        assert "Choose a GitHub repository" in view["messages"][-1]["content"]
+        with session_factory()() as session:
+            runs = list(session.scalars(select(Run)))
+            assert len(runs) == 1 and "github_read" not in runs[0].effective_permissions
+
+
+def test_task_stop_cancels_queued_read_without_gh_dispatch():
+    with TestClient(app) as client:
+        cid, _, scope = setup(client)
+        parent = client.post(
+            f"/api/chat/conversations/{cid}/messages", json={"content": "Read repo", "github": scope}
+        ).json()
+        work()
+        response = client.post(f"/api/chat/conversations/{cid}/tasks/{parent['task_id']}/cancel")
+        assert response.status_code == 200, response.text
+        with session_factory()() as session:
+            child = session.scalar(select(Run).where(Run.parent_run_id == parent["id"]))
+            assert child.status == "canceled" and not child.metadata_json.get("dispatch_attempted")

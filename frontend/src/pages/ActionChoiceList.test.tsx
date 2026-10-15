@@ -26,7 +26,9 @@ it("offers every action in a compact control and explains the selected action", 
     name: "Action",
   }) as HTMLSelectElement;
   expect(action.value).toBe("auto");
-  expect(screen.getAllByRole("option")).toHaveLength(22);
+  expect(
+    screen.getByRole("option", { name: "Read GitHub repository" }),
+  ).toBeTruthy();
   expect(screen.queryByRole("radio")).toBeNull();
   fireEvent.change(action, { target: { value: "image.edit" } });
   expect(action.value).toBe("image.edit");
@@ -59,4 +61,17 @@ it("explains local automatic vision loading when images are inspected", () => {
     target: { value: "image.describe" },
   });
   expect(screen.getByText(/reads their contents locally/)).toBeTruthy();
+});
+
+it("allows the read-only GitHub tool in Chat without publishing Work actions", () => {
+  render(
+    <ActionChoiceList value="auto" onChange={() => {}} allowWork={false} />,
+  );
+  expect(
+    screen.getByRole("option", { name: "Read GitHub repository" }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("option", { name: "Publish reviewed commit to GitHub" }),
+  ).toBeNull();
+  expect(screen.queryByRole("option", { name: "Create agent" })).toBeNull();
 });

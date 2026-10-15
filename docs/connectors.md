@@ -43,3 +43,25 @@ request replay, invalid target/permissions, secret-safe errors and snapshot hist
 An opt-in actual API/worker/native read of `jahu/ai-station` passed on 2026-10-15;
 evidence: `data/acceptance/github-read-20261015/real-result.json`. It performed
 only fixed GET requests and stored/retrieved the JSON artifact.
+
+## Read from a conversation
+
+Chat and Work → Tools → Read GitHub repository lets the user choose one enabled
+connector for this turn. The picker reads metadata only; Send publishes the normal
+GitHub read as a child Run in that conversation's Task. The resulting issue/PR
+cards come from that Run's immutable snapshot, rather than a later live connector
+refresh. A queued request fails safely if its selected connector version changes.
+Switching tools clears GitHub selection, and other media/research/coding scopes
+cannot be combined into this read. Task-wide Stop also cancels the queued child.
+
+The action is deterministic and does not contact the selected model or load one.
+Repository credentials, titles and snapshot data are not sent to an AI provider.
+A model-proposed GitHub action without user-selected scope asks for selection and
+cannot create an account read. Effective `network_read` and `github_read` are
+checked again at dispatch. Existing first-Send receipts retain their old hash
+semantics when no GitHub scope is provided.
+
+An actual isolated conversation API → worker → native gh GET run passed with a
+same-Task child, stored inline snapshot and unchanged receipt replay on 2026-10-15;
+evidence: `data/acceptance/chat-github-20261015/real-result.json`. This test did
+not perform model inference or GitHub writes.

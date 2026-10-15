@@ -42,6 +42,7 @@ def resolve_result_reference(session, conversation, body, mode):
                 "audio_artifact_id",
                 "attachments",
                 "coding",
+                "github",
                 "new_project",
                 "continuation",
                 "commit",

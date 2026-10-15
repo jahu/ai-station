@@ -767,6 +767,9 @@ function Transcript({
                     ? (artifact) =>
                         setOptions((previous) => ({
                           ...previous,
+                          ...(previous.github
+                            ? { github: undefined, action: "auto" }
+                            : {}),
                           ...(artifact.type === "image"
                             ? {
                                 image_artifact_ids: [
