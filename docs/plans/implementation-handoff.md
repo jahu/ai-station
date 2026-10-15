@@ -271,3 +271,11 @@ not implemented. It must repeat an existing Coding validation on the same Task,
 without model inference, automatic repair or dependency installation, with
 history, race/ownership guards and fresh manual Stop semantics. Then continue
 the broader product workstreams; the platform goal is still active.
+
+Check reruns are implemented in `feat/coding-rerun-checks` (not yet merged or
+deployed): atomic expected-validation/source/project guards, same-Task frozen
+check snapshots, fresh manual Stop semantics and a manual-only flag preventing
+automatic LLM repair. Coding progress and Coding/Work review expose the action
+and preserve the current draft. Focused backend tests pass (22). Complete full
+checks, real sandbox/browser acceptance, PR review/merge and deployment before
+marking delivered. Reuse the qualified QA React task without new inference.

@@ -373,3 +373,10 @@ within its owned native process and existing worktree lock. The worker verifies
 report identity, size/hash and ZIP members before registering an ordinary archive
 Artifact. Coding/Work link to its download and Library provenance. No server or
 HTML execution is added. See [the contract](coding-build-artifacts.md).
+
+## Repeating Coding checks
+
+The typed Coding check action enqueues another ordinary `project_validation` Run
+on the same Task/worktree. It freezes the previous validation's recorded commands
+and manifest snapshot, preserves earlier history and creates no inference or
+dependency stages. See [check reruns](coding-rerun-checks.md).

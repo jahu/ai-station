@@ -428,3 +428,9 @@ Coding also keeps unsent follow-up text separately for each task in the current
 browser tab. Refresh or switching conversations restores the draft; **Discard
 draft** clears only that text. Ctrl/Cmd+Enter sends when the normal Send action
 is allowed, including external-agent consent. See [Coding conversations](docs/coding-workspaces.md).
+
+**Run checks again** in Coding/Work repeats a completed turn's recorded test,
+lint and build commands in the same owned workspace. It preserves earlier
+results and may produce a new downloadable build. It does not call a model,
+install dependencies or automatically repair failed tests. Inspect an uncertain
+previous process before repeating it. See [check reruns](docs/coding-rerun-checks.md).

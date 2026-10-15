@@ -101,6 +101,20 @@ def work_draft_context(task_id: UUID, session: DB):
     return context_of(session, source)
 
 
+class CheckRerun(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    expected_validation_run_id: UUID
+
+
+@router.post("/runs/{source_id}/checks", status_code=202)
+def repeat_checks(source_id: UUID, body: CheckRerun, session: DB):
+    from app.coding_check_reruns import enqueue_check_rerun
+
+    run = enqueue_check_rerun(session, str(source_id), str(body.expected_validation_run_id))
+    session.commit()
+    return run_dict(run)
+
+
 class Followup(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     prompt: str = Field(min_length=1, max_length=4000)

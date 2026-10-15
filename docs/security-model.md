@@ -302,3 +302,12 @@ paths and concurrent changes. Output is outside the writable sandbox; native
 report ownership and backend ZIP/hash/path checks precede registration. Stop
 prevents artifact publication. ZIP delivery remains attachment + nosniff, and the
 UI never evaluates generated HTML/JS. See [build artifacts](coding-build-artifacts.md).
+
+## Manual Coding check repeats
+
+A check repeat accepts only the expected prior validation UUID, with atomic stale
+request/project guards, latest-proposal ownership checks and confirmed process
+completion. It reuses fixed sandbox permissions and recorded commands, never
+model-supplied inputs. A manual-only flag prevents automatic LLM repair; an old
+agent deadline is not inherited by this fresh user intent. Existing Task Stop
+and native worktree locks still gate execution. See [the contract](coding-rerun-checks.md).

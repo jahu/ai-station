@@ -5396,3 +5396,16 @@ section:has(> .memory-grid) > .dashboard-note {
   font-size: 11px;
   line-height: 1.5;
 }
+
+.coding-repeat-checks {
+  margin-top: 18px;
+  display: grid;
+  gap: 9px;
+  justify-items: start;
+}
+.coding-repeat-checks p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}

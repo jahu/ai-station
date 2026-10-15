@@ -11,6 +11,7 @@ import { useListKeyboard } from "./useListKeyboard";
 import { ReviewChoiceList } from "./ReviewChoiceList";
 import { ValidationResults } from "./ProjectResults";
 import CodingBuildArtifact from "./CodingBuildArtifact";
+import RepeatCodingChecks from "./RepeatCodingChecks";
 
 type Review = {
   exploration?: {
@@ -100,6 +101,7 @@ export default function CodingReview({
           )}
           {typeof validation === "string" ? (
             <ValidationActions
+              key={validation}
               run={run}
               validationId={validation}
               onQueued={onQueued}
@@ -454,6 +456,7 @@ function ValidationActions({
       <ErrorNotice error={validation.error || events.error || repair.error} />
       <ValidationResults events={recorded} />
       <CodingBuildArtifact run={validation.data} />
+      <RepeatCodingChecks source={run} validation={validation.data} />
       {validation.data?.metadata?.repair_budget_exhausted === true && (
         <p className="notice">
           Automatic repair limit reached. Inspect the latest diff and failures
