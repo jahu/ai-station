@@ -131,3 +131,5 @@ or claim every spoken word is correct. Setup and exact verification scope are in
 [audio-transcription.md](audio-transcription.md).
 
 Recording questions now compose native CPU transcription and a selected-model answer on one Task/Send, retaining inspectable transcript artifacts on response failure. Verification is recorded in [conversational-audio-analysis.md](conversational-audio-analysis.md); this does not imply music generation or arbitrary audio understanding.
+
+Reversible conversation archiving separates active and archived history/search, keeps old detail URLs, and preserves all execution and memory records. See [archive contracts](conversation-archive.md).

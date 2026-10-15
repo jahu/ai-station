@@ -49,7 +49,10 @@ def overview(session: DB):
     ).all()
     agents = session.scalars(enabled.order_by(Agent.updated_at.desc(), Agent.id).limit(6)).all()
     conversations = session.scalars(
-        select(Conversation).order_by(Conversation.updated_at.desc(), Conversation.id).limit(5)
+        select(Conversation)
+        .where(Conversation.archived_at.is_(None))
+        .order_by(Conversation.updated_at.desc(), Conversation.id)
+        .limit(5)
     ).all()
     artifacts = session.scalars(
         select(Artifact)

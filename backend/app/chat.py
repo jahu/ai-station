@@ -110,7 +110,10 @@ def conversation_view(session, row):
     }
 
 
-def ensure_idle(session, conversation_id):
+def ensure_idle(session, conversation_id, *, allow_archived=False):
+    row = conversation(session, conversation_id)
+    if row.archived_at is not None and not allow_archived:
+        raise HTTPException(409, "Restore this archived conversation before continuing")
     active = session.scalar(
         select(Run).where(Run.conversation_id == conversation_id, Run.status.not_in(TERMINAL))
     )
@@ -124,6 +127,7 @@ def conversations(
     q: Annotated[str, Query(max_length=200)] = "",
     before: AwareDatetime | None = None,
     before_id: UUID | None = None,
+    archived: bool = False,
 ):
     from app.chat_providers import ensure_builtin
 
@@ -131,7 +135,9 @@ def conversations(
     session.commit()
     if (before is None) != (before_id is None):
         raise HTTPException(422, "History cursor requires both timestamp and conversation ID")
-    query = select(Conversation)
+    query = select(Conversation).where(
+        Conversation.archived_at.is_not(None) if archived else Conversation.archived_at.is_(None)
+    )
     if q.strip():
         text = q.strip()
         matching_message = (
@@ -177,6 +183,33 @@ def edit_conversation(conversation_id: UUID, body: ConversationBody, session: DB
     row.updated_at = utcnow()
     row.settings_version += 1
     session.commit()
+    return conversation_view(session, row)
+
+
+class ArchiveBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    archived: StrictBool
+    expected_settings_version: int = Field(ge=1)
+
+
+@router.put("/conversations/{conversation_id}/archive")
+def archive_conversation(conversation_id: UUID, body: ArchiveBody, session: DB):
+    row = conversation(session, conversation_id)
+    ensure_idle(session, row.id, allow_archived=True)
+    now = utcnow()
+    result = session.execute(
+        update(Conversation)
+        .where(Conversation.id == row.id, Conversation.settings_version == body.expected_settings_version)
+        .values(
+            archived_at=now if body.archived else None,
+            updated_at=now,
+            settings_version=Conversation.settings_version + 1,
+        )
+    )
+    if result.rowcount != 1:
+        raise HTTPException(409, "Conversation settings changed; reload before archiving or restoring")
+    session.commit()
+    session.refresh(row)
     return conversation_view(session, row)
 
 

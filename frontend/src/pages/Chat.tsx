@@ -61,6 +61,7 @@ type Conversation = {
   id: string;
   execution_mode?: "local" | "orchestrator" | "chat" | "work";
   settings_version?: number;
+  archived_at?: string | null;
   title: string;
   provider: string;
   provider_name?: string;
@@ -153,7 +154,11 @@ function ConversationHistory({
   hasMore,
   loadingMore,
   onMore,
+  archived,
+  onArchived,
 }: {
+  archived: boolean;
+  onArchived: (value: boolean) => void;
   conversations: Conversation[];
   currentId?: string;
   newTo: string;
@@ -180,6 +185,17 @@ function ConversationHistory({
           New conversation
         </Link>
       </Button>
+      <label className="chat-history-search">
+        <span>Conversation history</span>
+        <select
+          aria-label="Conversation history"
+          value={archived ? "archived" : "active"}
+          onChange={(event) => onArchived(event.target.value === "archived")}
+        >
+          <option value="active">Active conversations</option>
+          <option value="archived">Archived conversations</option>
+        </select>
+      </label>
       <label className="chat-history-search">
         <span className="sr-only">Search conversations</span>
         <input
@@ -256,13 +272,15 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
   const navigate = useNavigate();
   const [newDraftKey, setNewDraftKey] = useState(0);
   const [historySearch, setHistorySearch] = useState("");
+  const [historyArchived, setHistoryArchived] = useState(false);
   const historyQuery = useDeferredValue(historySearch.trim());
   const conversations = useInfiniteQuery({
-    queryKey: ["conversations", "history", historyQuery],
+    queryKey: ["conversations", "history", historyQuery, historyArchived],
     initialPageParam: null as { at: string; id: string } | null,
     queryFn: ({ pageParam }) => {
       const query = new URLSearchParams();
       if (historyQuery) query.set("q", historyQuery);
+      if (historyArchived) query.set("archived", "true");
       if (pageParam) {
         query.set("before", pageParam.at);
         query.set("before_id", pageParam.id);
@@ -341,6 +359,8 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
             currentId={id}
             newTo={assistant ? "/" : "/chat"}
             pending={conversations.isPending}
+            archived={historyArchived}
+            onArchived={setHistoryArchived}
             search={historySearch}
             onSearch={setHistorySearch}
             hasMore={conversations.hasNextPage}
@@ -964,6 +984,17 @@ function ConversationView({
     });
     void cache.invalidateQueries({ queryKey: ["conversations"] });
   };
+  const archive = useMutation({
+    mutationFn: () =>
+      api<Conversation>(`/chat/conversations/${conversation.id}/archive`, {
+        method: "PUT",
+        ...json({
+          archived: !conversation.archived_at,
+          expected_settings_version: conversation.settings_version ?? 1,
+        }),
+      }),
+    onSuccess: refresh,
+  });
   const gitContent = options.commit?.message || options.publish?.title || "";
   const runtimeReady =
     (options.action === "runtime.load" && !!options.load) ||
@@ -1087,6 +1118,8 @@ function ConversationView({
     onSuccess: refresh,
   });
   const busy =
+    !!conversation.archived_at ||
+    archive.isPending ||
     !!conversation.active_run ||
     send.isPending ||
     regenerate.isPending ||
@@ -1130,6 +1163,26 @@ function ConversationView({
             />
           )}
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={
+            archive.isPending ||
+            !!conversation.active_run ||
+            send.isPending ||
+            settings.isPending ||
+            regenerate.isPending ||
+            readingAttachment ||
+            selectingWork
+          }
+          onClick={() => archive.mutate()}
+        >
+          {archive.isPending
+            ? "Saving…"
+            : conversation.archived_at
+              ? "Restore conversation"
+              : "Archive conversation"}
+        </Button>
         {conversation.active_run && (
           <Link to={`/runs/${conversation.active_run.id}`}>
             <Badge status={conversation.active_run.status} />
@@ -1138,6 +1191,13 @@ function ConversationView({
           </Link>
         )}
       </div>
+      <ErrorNotice error={archive.error} />
+      {conversation.archived_at && (
+        <p className="dashboard-note">
+          Archived conversation. Messages, tasks and files are preserved.
+          Restore it to continue.
+        </p>
+      )}
       {thinking.available && !continuing && (
         <ChatThinking
           value={thinking.enabled}
@@ -1324,130 +1384,132 @@ function ConversationView({
             sending.
           </p>
         )}
-        <ConversationComposer
-          id="chat-draft"
-          value={draft}
-          onChange={setDraft}
-          onSend={() => send.mutate()}
-          canSend={canSend && contextReady}
-          busy={busy}
-          sendKey={preferences.data?.send_key}
-          placeholder={
-            assistantTurn
-              ? options.action === "image.generate_video"
-                ? "Describe the scene and motion…"
-                : options.action === "project.create_code"
-                  ? "Describe what your new project should do…"
-                  : options.action === "project.create"
-                    ? "Name your project — for example Weather Station"
-                    : "Describe your task — or attach reference images…"
-              : "Ask your local model…"
-          }
-          tools={
-            <>
-              {assistantTurn && (
-                <AssistantActions
-                  key={projectSelectionVersion}
-                  value={options}
-                  allowWork={turnMode === "work"}
-                  sources={messages.flatMap(
-                    (message) => message.coding_runs ?? [],
-                  )}
+        {!conversation.archived_at && (
+          <ConversationComposer
+            id="chat-draft"
+            value={draft}
+            onChange={setDraft}
+            onSend={() => send.mutate()}
+            canSend={canSend && contextReady}
+            busy={busy}
+            sendKey={preferences.data?.send_key}
+            placeholder={
+              assistantTurn
+                ? options.action === "image.generate_video"
+                  ? "Describe the scene and motion…"
+                  : options.action === "project.create_code"
+                    ? "Describe what your new project should do…"
+                    : options.action === "project.create"
+                      ? "Name your project — for example Weather Station"
+                      : "Describe your task — or attach reference images…"
+                : "Ask your local model…"
+            }
+            tools={
+              <>
+                {assistantTurn && (
+                  <AssistantActions
+                    key={projectSelectionVersion}
+                    value={options}
+                    allowWork={turnMode === "work"}
+                    sources={messages.flatMap(
+                      (message) => message.coding_runs ?? [],
+                    )}
+                    onChange={(next) => {
+                      setOptions(next);
+                      if (
+                        ![
+                          "auto",
+                          "chat",
+                          "image.generate",
+                          "image.generate_video",
+                        ].includes(next.action) ||
+                        next.image_artifact_ids.length ||
+                        next.audio_artifact_id ||
+                        next.coding ||
+                        next.commit ||
+                        next.publish ||
+                        next.load ||
+                        next.stop ||
+                        next.upscale_result
+                      )
+                        setWebEnabled(false);
+                    }}
+                    busy={busy || attachments.length > 0}
+                    onUploading={setReadingAttachment}
+                  />
+                )}
+                {(!assistantTurn ||
+                  !(
+                    options.action.startsWith("coding.") ||
+                    options.action.startsWith("runtime.") ||
+                    options.action === "system.inspect" ||
+                    options.action === "github.inspect" ||
+                    options.action === "audio.transcribe" ||
+                    options.action === "audio.analyze" ||
+                    options.action === "image.generate_video" ||
+                    options.action === "project.create" ||
+                    options.action === "project.create_code"
+                  ) ||
+                  attachments.length > 0) && (
+                  <TextAttachments
+                    attachments={attachments}
+                    onChange={setAttachments}
+                    busy={busy || options.image_artifact_ids.length > 0}
+                    onReading={setReadingAttachment}
+                  />
+                )}
+              </>
+            }
+            controls={
+              <>
+                <ChatModeSwitch
+                  value={turnMode}
+                  disabled={busy}
                   onChange={(next) => {
-                    setOptions(next);
-                    if (
-                      ![
-                        "auto",
-                        "chat",
-                        "image.generate",
-                        "image.generate_video",
-                      ].includes(next.action) ||
-                      next.image_artifact_ids.length ||
-                      next.audio_artifact_id ||
-                      next.coding ||
-                      next.commit ||
-                      next.publish ||
-                      next.load ||
-                      next.stop ||
-                      next.upscale_result
-                    )
-                      setWebEnabled(false);
+                    setTurnMode(next);
+                    saveWorkChoice(turnChoiceKey, next);
+                    setOptions(emptyOptions);
                   }}
-                  busy={busy || attachments.length > 0}
-                  onUploading={setReadingAttachment}
                 />
-              )}
-              {(!assistantTurn ||
-                !(
-                  options.action.startsWith("coding.") ||
-                  options.action.startsWith("runtime.") ||
-                  options.action === "system.inspect" ||
-                  options.action === "github.inspect" ||
-                  options.action === "audio.transcribe" ||
-                  options.action === "audio.analyze" ||
-                  options.action === "image.generate_video" ||
-                  options.action === "project.create" ||
-                  options.action === "project.create_code"
-                ) ||
-                attachments.length > 0) && (
-                <TextAttachments
-                  attachments={attachments}
-                  onChange={setAttachments}
-                  busy={busy || options.image_artifact_ids.length > 0}
-                  onReading={setReadingAttachment}
-                />
-              )}
-            </>
-          }
-          controls={
-            <>
-              <ChatModeSwitch
-                value={turnMode}
-                disabled={busy}
-                onChange={(next) => {
-                  setTurnMode(next);
-                  saveWorkChoice(turnChoiceKey, next);
-                  setOptions(emptyOptions);
-                }}
-              />
-              {(!assistantTurn ||
-                ([
-                  "auto",
-                  "chat",
-                  "image.generate",
-                  "image.generate_video",
-                ].includes(options.action) &&
-                  !options.image_artifact_ids.length &&
-                  !options.audio_artifact_id &&
-                  !options.coding &&
-                  !options.upscale_result)) && (
-                <WebSearchControl
-                  compact
-                  enabled={webEnabled}
-                  query={webQuery}
-                  busy={busy}
-                  onToggle={setWebEnabled}
-                  onQuery={setWebQuery}
-                />
-              )}
-            </>
-          }
-          sendButton={
-            conversation.active_run ? (
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={
-                  stop.isPending ||
-                  conversation.active_run.status === "cancel_requested"
-                }
-                onClick={() => stop.mutate()}
-              >
-                <Square size={14} /> Stop
-              </Button>
-            ) : undefined
-          }
-        />
+                {(!assistantTurn ||
+                  ([
+                    "auto",
+                    "chat",
+                    "image.generate",
+                    "image.generate_video",
+                  ].includes(options.action) &&
+                    !options.image_artifact_ids.length &&
+                    !options.audio_artifact_id &&
+                    !options.coding &&
+                    !options.upscale_result)) && (
+                  <WebSearchControl
+                    compact
+                    enabled={webEnabled}
+                    query={webQuery}
+                    busy={busy}
+                    onToggle={setWebEnabled}
+                    onQuery={setWebQuery}
+                  />
+                )}
+              </>
+            }
+            sendButton={
+              conversation.active_run ? (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  disabled={
+                    stop.isPending ||
+                    conversation.active_run.status === "cancel_requested"
+                  }
+                  onClick={() => stop.mutate()}
+                >
+                  <Square size={14} /> Stop
+                </Button>
+              ) : undefined
+            }
+          />
+        )}
         {!!messages.length &&
           !busy &&
           !messages.filter((m) => m.role === "assistant").at(-1)?.metadata
