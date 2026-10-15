@@ -393,3 +393,14 @@ In the main **Work** conversation, type `W projekcie Pogoda: dodaj wykres` or
 `In project "Weather Station": fix the tests` to start an isolated Local Coding
 Auto task for a registered project. You can continue that task in the same chat;
 explicit project/agent controls remain available. See [named-project Work](docs/named-project-work.md).
+
+
+### JavaScript and TypeScript project dependencies
+
+On an owned coding worktree containing package.json and an npm version 3
+package-lock.json, **Install project dependencies** installs checked public-registry
+packages with lifecycle scripts disabled. **Run saved validation** then runs the
+project’s configured npm/node checks in the network-disabled sandbox. Configure
+`AI_STATION_NODE_PREFIX` for an existing Node 22+ distribution; see
+[Node project setup](docs/node-project-dependencies.md) for the optional project-local
+installer and tested security boundary. Python dependency installation is unchanged.

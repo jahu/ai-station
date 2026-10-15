@@ -87,6 +87,7 @@ def collect_diagnostics(settings) -> dict:
         command_version("claude"),
         command_version("git"),
         command_version("gh"),
+        _node(settings),
     ]
     for root in settings.model_roots.split(":"):
         if root.strip():
@@ -127,6 +128,22 @@ def _nvidia_toolkit() -> dict:
     if shutil.which("nvidia-container-cli"):
         return check("nvidia-container-cli", "available", shutil.which("nvidia-container-cli") or "")
     return check("nvidia-container-cli", "unavailable", "NVIDIA Container Toolkit CLI not found")
+
+
+def _node(settings) -> dict:
+    from ai_station_runner.gitops import GitError
+    from ai_station_runner.node_runtime import node_runtime
+
+    try:
+        runtime = node_runtime(settings.host_data_dir() / "worktrees", prefix=settings.node_prefix)
+        versions = runtime.describe(
+            {"HOME": str(runtime.node.parent), "PATH": "/usr/bin:/bin", "LANG": "C.UTF-8"}
+        )
+        return check(
+            "Node/npm", "available", f"Node {versions['node_version']} · npm {versions['npm_version']}"
+        )
+    except (OSError, ValueError, RuntimeError, GitError, subprocess.SubprocessError) as exc:
+        return check("Node/npm", "misconfigured" if settings.node_prefix else "unavailable", str(exc))
 
 
 def _cursor() -> dict:

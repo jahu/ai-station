@@ -750,9 +750,9 @@ export function ProjectDetail() {
               <p>
                 Commands, agent rules, and Git policy are saved configuration.
                 Worktree preparation creates an isolated branch. Declared Python
-                dependencies can be installed into that worktree environment.
-                Saved validation commands run inside a native sandbox with
-                read-only Git metadata and no network.
+                dependencies or locked public npm packages can be installed into
+                that worktree environment. Saved validation commands run inside
+                a native sandbox with read-only Git metadata and no network.
               </p>
               <p className="muted">
                 If another editor changes this project, reload the saved

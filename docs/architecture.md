@@ -340,3 +340,13 @@ verified completion gate TXT/SRT/JSON artifact publication.
 [Agent coding providers](agent-coding-providers.md) reuse the same worktree/proposal/validation chain for explicitly selected Local AI, Codex and Cursor tools. A frozen exclusive tool and permission profile bind the parent to one provider; no external fallback or separate coding executor architecture is added.
 
 [Auto Local Coding agents](agent-coding-auto.md) reuse the existing observed-fit/context router. Drafts and definition edits are metadata-only; enable/launch check candidate fit and post-approval coding dispatch records the actual local model. No separate inference engine or silent small-model/external fallback is introduced.
+
+
+## Node project dependency execution
+
+The existing project dependency executor also handles Node-only worktrees through
+the native runner. A checked npm v3 lockfile pins canonical public-registry tarballs
+and SHA-512 integrity. Runtime selection is host configuration; HTTP cannot supply
+commands or runtime paths. Lifecycle scripts are disabled during installation.
+Saved build/test argv use the same configured runtime with network access disabled.
+See [Node project dependencies](node-project-dependencies.md).

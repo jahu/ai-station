@@ -13,7 +13,14 @@ from pathlib import Path
 
 from ai_station_runner.coding_sandbox import dependency_policy, validation_argv, write_policy
 from ai_station_runner.dependencies import directory, load_request
-from ai_station_runner.dependency_manifest import confirm_public_indexes, load_specifiers, pip_plan
+from ai_station_runner.dependency_manifest import (
+    MAX_MANIFEST,
+    _regular_file,
+    confirm_public_indexes,
+    load_specifiers,
+    parse_pyproject,
+    pip_plan,
+)
 from ai_station_runner.gitinspect import Repository, git_environment
 from ai_station_runner.gitops import GitError
 from ai_station_runner.worktrees import load_manifest, owned_path
@@ -26,8 +33,11 @@ def execute_command(argv, workspace, env, *, deadline):
     started = time.monotonic()
     size = 0
     with subprocess.Popen(
-        argv, cwd=workspace, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        argv, cwd=workspace, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ) as proc:
+        # EOF on a pipe keeps this non-interactive. The native sandbox denies
+        # fstat on inherited host device descriptors; Node aborts on /dev/null.
+        proc.stdin.close()
         with selectors.DefaultSelector() as selector:
             selector.register(proc.stdout, selectors.EVENT_READ, sys.stdout.buffer)
             selector.register(proc.stderr, selectors.EVENT_READ, sys.stderr.buffer)
@@ -88,6 +98,19 @@ def _environment(python: Path) -> None:
         raise GitError("Python environment was not created")
 
 
+def node_project(workspace):
+    requirements, pyproject = workspace / "requirements.txt", workspace / "pyproject.toml"
+    if requirements.exists() or requirements.is_symlink():
+        return False
+    if pyproject.exists() or pyproject.is_symlink():
+        path = _regular_file(workspace, pyproject)
+        if path.stat().st_size > MAX_MANIFEST:
+            raise GitError("Python dependency manifest exceeds its size limit")
+        if parse_pyproject(path.read_text()):
+            return False
+    return (workspace / "package.json").exists() or (workspace / "package.json").is_symlink()
+
+
 def install(run_id):
     if os.getpid() != os.getpgrp():
         raise RuntimeError("Dependency install requires a separately owned process group")
@@ -112,6 +135,9 @@ def install(run_id):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError as exc:
         raise GitError("Worktree is in use; wait for the active operation") from exc
+    if node_project(workspace):
+        install_node(run_id, body, record, workspace, repository)
+        return
     venv = workspace / ".venv"
     python = venv / "bin/python"
     if venv.is_symlink():
@@ -156,6 +182,66 @@ def install(run_id):
         os.chmod(path, 0o600)
         json.dump(report, handle)
     print("Dependency report saved", flush=True)
+
+
+def install_node(run_id, body, record, workspace, repository):
+    from ai_station_runner.node_dependencies import confirm_registry, package_manifest, verify_lock
+    from ai_station_runner.node_runtime import node_runtime, runtime_policy
+
+    manifest = package_manifest(workspace)
+    runtime = node_runtime(workspace)
+    lock_exists = (workspace / "package-lock.json").exists() or (workspace / "package-lock.json").is_symlink()
+    if not lock_exists:
+        raise GitError(
+            "Node installs require a version 3 package-lock.json with public registry integrity pins"
+        )
+    lock_info = verify_lock(workspace, manifest)
+    confirm_registry()
+    scratch = Path(tempfile.mkdtemp(prefix=".ai-station-dependencies-", dir=workspace))
+    for name in ("user.npmrc", "global.npmrc"):
+        (scratch / name).touch(mode=0o600)
+    env = runtime.environment(command_environment(scratch))
+    versions = runtime.describe(env)
+    if (
+        package_manifest(workspace)["package_sha256"] != manifest["package_sha256"]
+        or verify_lock(workspace, manifest) != lock_info
+    ):
+        raise GitError("Node manifests changed during dependency preparation")
+    policy = directory(run_id) / "npm.policy.json"
+    write_policy(
+        policy,
+        workspace,
+        repository.common_dir,
+        runtime_policy(dependency_policy(workspace, repository.common_dir, network=True), runtime),
+    )
+    print("Managed npm ci: lifecycle scripts disabled", flush=True)
+    result = execute_command(
+        validation_argv(policy, runtime.argv("ci", workspace, scratch)),
+        workspace,
+        env,
+        deadline=time.monotonic() + TIMEOUT,
+    )
+    report = {
+        "run_id": run_id,
+        "project_id": str(body.project_id),
+        "worktree_run_id": str(body.worktree_run_id),
+        "ecosystem": "node",
+        "manifest": "package-lock.json",
+        "source": "npm",
+        "network": True,
+        "specifiers": manifest["specifiers"],
+        "environment": f"{record['relative_path']}/node_modules",
+        "scratch_relative": str(scratch.relative_to(workspace)),
+        "package_sha256": manifest["package_sha256"],
+        **lock_info,
+        **versions,
+        "lifecycle_scripts": False,
+        **result,
+    }
+    with (directory(run_id) / "report.json").open("x") as handle:
+        os.chmod(handle.name, 0o600)
+        json.dump(report, handle)
+    print("Node dependency report saved", flush=True)
 
 
 if __name__ == "__main__":

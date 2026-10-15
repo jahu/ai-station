@@ -11,7 +11,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from ai_station_runner.coding_sandbox import validation_argv, write_policy
+from ai_station_runner.coding_sandbox import validation_argv, validation_policy, write_policy
 from ai_station_runner.gitinspect import Repository
 from ai_station_runner.validation import load_request, request_path
 from ai_station_runner.worktrees import load_manifest, owned_path
@@ -24,8 +24,11 @@ def execute_command(argv, workspace, env, *, deadline):
     started = time.monotonic()
     size = 0
     with subprocess.Popen(
-        argv, cwd=workspace, env=env, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        argv, cwd=workspace, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ) as proc:
+        # EOF on a pipe keeps this non-interactive. The native sandbox denies
+        # fstat on inherited host device descriptors; Node aborts on /dev/null.
+        proc.stdin.close()
         with selectors.DefaultSelector() as selector:
             selector.register(proc.stdout, selectors.EVENT_READ, sys.stdout.buffer)
             selector.register(proc.stderr, selectors.EVENT_READ, sys.stderr.buffer)
@@ -92,8 +95,24 @@ def validate(run_id):
         # gets a fresh exclusive file outside the writable workspace; retain the
         # original request policy as audit evidence rather than reusing it.
         policy = request_path(run_id, "policy.json").with_name(f"{run_id}.{index}.policy.json")
-        write_policy(policy, workspace, repository.common_dir)
-        result = execute_command(validation_argv(policy, command.argv), workspace, env, deadline=deadline)
+        command_env = env
+        command_argv = command.argv
+        policy_body = validation_policy(workspace, repository.common_dir)
+        if command.argv[0] in {"node", "npm"}:
+            from ai_station_runner.node_runtime import node_runtime, runtime_policy
+
+            runtime = node_runtime(workspace)
+            command_env = runtime.environment(env)
+            policy_body = runtime_policy(policy_body, runtime)
+            command_argv = [
+                str(runtime.node),
+                *([str(runtime.npm)] if command.argv[0] == "npm" else []),
+                *command.argv[1:],
+            ]
+        write_policy(policy, workspace, repository.common_dir, policy_body)
+        result = execute_command(
+            validation_argv(policy, command_argv), workspace, command_env, deadline=deadline
+        )
         results.append({"kind": command.kind, "argv": command.argv, **result})
     report = {
         "run_id": run_id,

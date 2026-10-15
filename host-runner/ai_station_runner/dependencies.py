@@ -86,6 +86,7 @@ def start_dependencies(manager, body: DependencyRequest):
             "AI_STATION_DATA_HOST_PATH": str(settings.host_data_dir().resolve()),
             "AI_STATION_ALLOWED_ROOTS": ":".join(str(p.resolve()) for p in settings.roots()),
             "AI_STATION_MODEL_ROOTS": "",
+            "AI_STATION_NODE_PREFIX": settings.node_prefix,
         }
         return manager.start(
             run_id=run_id,
