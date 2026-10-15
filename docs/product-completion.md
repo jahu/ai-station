@@ -15,7 +15,7 @@ replay, frozen policy revisions, ambiguous names, Chat boundaries and Stop; actu
 desktop/mobile Send is verified without expensive inference. See
 [named-project Work](named-project-work.md).
 
-## Next priority: conversation-first entry and useful long media
+## Conversation-first entry and useful long media
 
 [Unified model catalog](model-catalog.md) now replaces separate happy-path model
 and provider selectors in entry, conversations and General settings. Selection is
@@ -44,11 +44,11 @@ User direction on 2026-10-14 is captured in the
 first Send, explicit Chat/Work with media tools, unified model/verified reasoning
 selection, distinct System/Settings, and longer Wan/whole-speech EchoMimic output.
 The brief defines nine ordered increments and acceptance gates for GPT-6.1-Sol.
-Durable long-media execution is implemented; exact real timing and visual qualification are tracked separately. Existing
-unfinished Memory and create-project-and-code work
-is preserved separately; its integration point is explicit in the handoff.
+Durable long-media execution is implemented; exact real timing and visual qualification are tracked separately. The original checkout files remain preserved. Name-only Work project creation,
+Coding checks/build exports and the focused Memory scope navigation have since
+been delivered through isolated reviewed branches; see the current handoff.
 The [current implementation handoff](plans/implementation-handoff.md) records
-the delivered PRs through #303 and remaining product workstreams. Original checkout WIP is still preserved separately.
+the latest delivered increments and remaining product workstreams. Original checkout WIP is still preserved separately.
 
 Coding supports checked removal of selected source files, explicit Deleted
 review labels, cumulative follow-up patches and separate reviewed commits.
@@ -74,7 +74,7 @@ The target is the complete AI Station vision, reconfirmed on 2026-10-13. An impl
 | --- | --- | --- |
 | Shared execution | Durable Tasks, Runs, events/SSE, artifacts, worker leases, recovery, scheduling, approvals and resource locks | Extended reliability under sustained concurrent use; end-to-end acceptance for every enabled adapter |
 | Chat and assistant | Streaming compatible providers, selectable stored GGUFs/owned llama.cpp, local/external disclosure, conversation history, summaries, text/PDF attachments, opt-in web search, typed image/coding/agent/runtime actions, live workstation inspection, bounded planner context, Generate/Edit/Recompose → Upscale, Generate → Video and search → visual brief → image workflows and inline results | Broader multi-step orchestration and practical vision-task acceptance; explicit same-conversation image-result follow-ups now reuse provenance-bound sources (installed 9B pixel inspection verified) |
-| Coding and Git | Name-only managed projects, persistent coding sessions, owned worktrees, local/Cursor/Codex bounded proposals, exploration, validation, local repair, cumulative diffs, dependency installation, reviewed commits and approved draft PR publication | Claude adapter; broader practical coding-task acceptance and fit verification across installed models (27B IQ2_XS long context and basic Coding now verified) |
+| Coding and Git | Name-only managed projects, persistent coding sessions, owned worktrees, local/Cursor/Codex bounded proposals, exploration, validation, local repair, cumulative diffs, dependency installation, reviewed commits and approved draft PR publication | Claude adapter; broader practical coding-task acceptance and fit verification across installed models (27B IQ2_XS long context, React Work, generated-lock continuation and synthetic >100 KB local-source editing now verified) |
 | Images and Library | Existing photo pipeline adapter, Generate/Edit/Recompose/Upscale, uploads, thumbnails, annotations, reversible Trash, source/derived lineage and reuse in workspaces/chat | Real acceptance for all modes/backends with supported model selection |
 | Audio, video and avatars | Wan text/image video, CPU Whisper transcription of WAV/MP3/M4A/Ogg/WebM/FLAC, Chatterbox speech and EchoMimic portrait animation adapters, typed speech → avatar workflows, inline workspaces and artifact playback | Music and broader media runtime/model selection |
 | Agents and workflows | Disabled natural-language drafts, explicit activation, durable schedules, child-Run workflows, approvals, retries, notices, Skills, telemetry/scoped-memory/public-search/reviewed-GET and optional isolated public-page Browser tools and inspectable reports and project-scoped Local coding workflows, plus reviewed GitHub reads with local reports | Additional real tools and broader recurring workflows; actual scheduled telemetry/memory reports are verified |
@@ -86,9 +86,9 @@ The target is the complete AI Station vision, reconfirmed on 2026-10-13. An impl
 
 ## Current work
 
-[Cursor review](cursor-review.md) records the concrete regressions, fixes and delivery order. Automatic destructive worktree expiry is disabled and SQLite authentication waits no longer freeze the UI. Current changes simplify Chat without removing advanced settings or explicit grants.
+[Cursor review](cursor-review.md) records the concrete regressions, fixes and delivery order. Automatic destructive worktree expiry is disabled and SQLite authentication waits no longer freeze the UI. Conversation-first entry, the shared model catalog and retained Coding/Work continuity are delivered. The current handoff identifies the next implementation increment.
 
-The original checkout contains preserved unfinished Memory changes; they are not silently included in deployed releases. Work continues on isolated feature/fix branches, reviewed and locally verified before squash merging into `develop`. `main` and `master` are never deployment targets for autonomous development.
+The original checkout WIP remains untouched. Its focused Memory scope navigation was ported, simplified, tested and delivered in PR #319; the original files were preserved. Work continues on isolated feature/fix branches, reviewed and locally verified before squash merging into `develop`. `main` and `master` are never deployment targets for autonomous development.
 
 The platform assistant remains the primary experience, with dedicated workspaces as direct entry points. Its execution model is described in [orchestrator.md](orchestrator.md). Real integrations remain visibly unavailable until implemented and verified; credentials or downloads are never invented to make an acceptance row appear complete.
 
@@ -159,3 +159,22 @@ build. Original checkout files and Git index are unchanged. This qualifies that
 concrete task/profile, not every website or coding instruction. Evidence:
 `data/acceptance/coding-gitignore-20261015/real-result.json` and
 `validation-events.json`.
+
+## Recent verified Coding and Memory delivery
+
+- [Continuation after builds](coding-continuation-review.md): actual 27B Work
+  follow-up, generated lock review, Node test/build/export, preserved history and
+  original checkout. PR #317 is delivered.
+- [Larger Local AI source context](local-coding-source-context.md): bounded local
+  snapshots/snippet edits, distinct private text-only completion routes and real
+  synthetic 110 KB source transport/edit through Work. PR #318 passed 1547
+  backend/Runner tests (five opt-in skips) and actual local/Node/build/browser
+  acceptance. This is separate from long-context reasoning qualification.
+- [Memory scope navigation](memory-scope-navigation.md): Open agent/project and
+  filtered run history, 480 UI tests and existing agent-memory navigation on
+  desktop/mobile with no workload requests. PR #319 is delivered.
+
+[Independent shot scheduling](parallel-video-shots.md) adds resource-admitted
+parallelism, ordered composition/lineage and active-device progress without
+weakening RAM reservations. Its verification distinguishes fake GPU/real CPU
+concurrency, actual hardware observations and real GPU qualification.

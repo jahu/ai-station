@@ -443,3 +443,8 @@ exploration supports bounded line windows and literal search in those files.
 Cursor/Codex retain their existing source-sharing limits. This uses the chosen
 local model and its actual context; it does not select a cloud provider. See
 [local source context](docs/local-coding-source-context.md).
+
+Video **Shots** can run independent windows on free GPUs when sufficient host RAM
+is available. The shared result shows active/queued shots and actual devices;
+Stop covers the entire film. Continuous motion keeps its required ordering.
+See [shot scheduling and verification](docs/parallel-video-shots.md).

@@ -90,9 +90,8 @@ def publish_video(session, body, *, task=None, parent_run_id=None):
             "internal_media": True,
             "profile_observation": observed_profile.get("profile_observation"),
         }
-        if previous:
-            if body.composition_mode == "continuous":
-                run.parameters = {**run.parameters, "previous_video_run_id": previous.id}
+        if previous and body.composition_mode == "continuous":
+            run.parameters = {**run.parameters, "previous_video_run_id": previous.id}
             depend_on(session, run, previous)
         runs.append(run)
         previous = run
@@ -138,8 +137,8 @@ def publish_video(session, body, *, task=None, parent_run_id=None):
 
 
 def preview_artifact(session, plan):
-    rows = session.execute(
-        select(Artifact.run_id, Artifact.id)
+    return session.scalar(
+        select(Artifact.id)
         .join(Run, Run.id == Artifact.run_id)
         .where(
             Artifact.run_id.in_(plan.get("segment_run_ids", [])),
@@ -147,9 +146,9 @@ def preview_artifact(session, plan):
             Artifact.trashed_at.is_(None),
             Run.status == "succeeded",
         )
-    ).all()
-    by_run = dict(rows)
-    return next((by_run[rid] for rid in reversed(plan.get("segment_run_ids", [])) if rid in by_run), None)
+        .order_by(Run.finished_at.desc(), Artifact.created_at.desc(), Artifact.id.desc())
+        .limit(1)
+    )
 
 
 def job_view(session, task):
@@ -176,6 +175,9 @@ def job_view(session, task):
             "duration_seconds": None,
             "completed_segments": 0,
             "total_segments": 0,
+            "running_segments": 0,
+            "queued_segments": 0,
+            "active_segments": [],
             "active_run_ids": active,
             "final_artifact_id": None,
             "resume_allowed": not active and bool(failed or task.metadata_json.get("stop_requested_at")),
@@ -209,6 +211,13 @@ def job_view(session, task):
         "duration_seconds": plan["timing"]["target_frames"] / plan["timing"]["fps"],
         "completed_segments": sum(stages[rid].status == "succeeded" for rid in plan["segment_run_ids"]),
         "total_segments": len(plan["segment_run_ids"]),
+        "running_segments": sum(stages[rid].status == "running" for rid in plan["segment_run_ids"]),
+        "queued_segments": sum(stages[rid].status == "queued" for rid in plan["segment_run_ids"]),
+        "active_segments": [
+            {"run_id": rid, "index": index, "status": stages[rid].status, "gpu": stages[rid].actual_gpu}
+            for index, rid in enumerate(plan["segment_run_ids"])
+            if stages[rid].status not in TERMINAL and stages[rid].status != "queued"
+        ],
         "active_run_ids": [r.id for r in active],
         "final_artifact_id": plan.get("final_artifact_id"),
         "resume_allowed": not active and status in {"failed", "canceled"},
@@ -329,14 +338,15 @@ class CompositionExecutor(HostMediaExecutor):
         plan = task.metadata_json["media_plan"]
         if run.id != plan["compose_run_id"]:
             raise ValueError("Stale composition revision")
-        artifact.parent_artifact_ids = [
-            a.id
+        sources = {
+            a.run_id: a.id
             for a in session.scalars(
                 select(Artifact).where(
                     Artifact.run_id.in_(run.parameters["stage_run_ids"]), Artifact.artifact_type == "video"
                 )
             )
-        ]
+        }
+        artifact.parent_artifact_ids = [sources[rid] for rid in run.parameters["stage_run_ids"]]
         if run.parameters.get("canonical_audio_id"):
             artifact.parent_artifact_ids = [
                 *artifact.parent_artifact_ids,
@@ -477,9 +487,8 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
                 parent_run_id=source.id,
                 retry_class="inspect",
             )
-            if previous:
-                if plan["mode"] == "continuous":
-                    run.parameters = {**run.parameters, "previous_video_run_id": previous.id}
+            if previous and plan["mode"] == "continuous":
+                run.parameters = {**run.parameters, "previous_video_run_id": previous.id}
                 depend_on(session, run, previous)
         new_ids.append(run.id)
         previous = run

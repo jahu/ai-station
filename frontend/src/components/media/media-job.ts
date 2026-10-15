@@ -27,6 +27,14 @@ export type MediaJob = {
   duration_seconds: number | null;
   completed_segments: number;
   total_segments: number;
+  running_segments?: number;
+  queued_segments?: number;
+  active_segments?: {
+    run_id: string;
+    index: number;
+    status: string;
+    gpu: string | null;
+  }[];
   final_artifact_id: string | null;
   active_run_ids: string[];
   resume_allowed: boolean;

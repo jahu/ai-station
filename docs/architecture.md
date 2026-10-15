@@ -390,3 +390,10 @@ separate from external source sharing: ten paths / 256000 bytes combined, bounde
 line-window exploration and hash-checked unique snippet edits for large files.
 A dedicated text-only Coding bridge reuses existing owned-runtime identity,
 streaming and disconnect contracts; ordinary Chat/vision limits are unchanged.
+
+[Independent video shots](parallel-video-shots.md) remove unnecessary motion
+dependencies only for shot-mode windows. GPU/host RAM admission and owned
+process/lease contracts remain unchanged; continuous video/avatars retain prior
+motion edges. Final composition and lineage use timeline order, while partial
+preview uses completion time. Shared job projection exposes current running,
+queued and active-stage GPU state to the conversation and media workspace.
