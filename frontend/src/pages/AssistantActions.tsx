@@ -1,3 +1,6 @@
+import GithubSnapshotResult, {
+  type GithubSnapshot,
+} from "./GithubSnapshotResult";
 import MediaJobResult from "../components/media/MediaJobResult";
 import type { MediaJob } from "../components/media/media-job";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
@@ -65,7 +68,9 @@ export type LoadScope = {
   cache_type?: "f16" | "q8_0";
 };
 export type StopScope = { instance_id: string };
+export type GithubScope = { connector_id: string; expected_updated_at: string };
 export type AssistantOptions = {
+  github?: GithubScope | null;
   action: string;
   image_artifact_ids: string[];
   audio_artifact_id?: string | null;
@@ -92,6 +97,7 @@ type TaskStep = {
   location: string;
 };
 export type ActionResult = {
+  github_snapshots?: GithubSnapshot[];
   media_job?: MediaJob;
   steps?: TaskStep[];
   artifacts?: Artifact[];
@@ -200,6 +206,9 @@ export function AssistantResults({
             <ImageStepRetry step={step} busy={busy} onQueued={onQueued} />
           )}
         </div>
+      ))}
+      {result.github_snapshots?.map((snapshot) => (
+        <GithubSnapshotResult key={snapshot.run_id} value={snapshot} />
       ))}
       {result.created_projects?.map((project) => (
         <section
@@ -518,6 +527,21 @@ export default function AssistantActions({
   sources?: Run[];
   allowWork?: boolean;
 }) {
+  const repositories = useQuery({
+    queryKey: ["connectors"],
+    queryFn: () =>
+      api<
+        {
+          id: string;
+          name: string;
+          kind: string;
+          enabled: boolean;
+          repository: string;
+          updated_at: string;
+        }[]
+      >("/connectors"),
+    enabled: value.action === "github.inspect",
+  });
   const [error, setError] = useState<Error | null>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const voiceInput = useRef<HTMLInputElement>(null);
@@ -674,6 +698,7 @@ export default function AssistantActions({
         "runtime.load",
         "runtime.stop",
         "system.inspect",
+        "github.inspect",
         "image.generate_video",
         "project.create",
       ].includes(action)
@@ -873,6 +898,7 @@ export default function AssistantActions({
       {!value.action.startsWith("coding.") &&
         !value.action.startsWith("runtime.") &&
         value.action !== "system.inspect" &&
+        value.action !== "github.inspect" &&
         value.action !== "image.generate_video" &&
         value.action !== "project.create" &&
         value.action !== "project.create_code" && (
@@ -986,7 +1012,8 @@ export default function AssistantActions({
         !value.action.startsWith("runtime.") &&
         value.action !== "image.generate_video" &&
         value.action !== "project.create" &&
-        value.action !== "project.create_code") ||
+        value.action !== "project.create_code" &&
+        value.action !== "github.inspect") ||
         value.image_artifact_ids.length > 0) && (
         <div
           className="assistant-reference-area"
@@ -1026,6 +1053,44 @@ export default function AssistantActions({
             }
           />
         </div>
+      )}
+      {value.action === "github.inspect" && (
+        <label>
+          GitHub repository
+          <select
+            aria-label="GitHub repository"
+            value={value.github?.connector_id ?? ""}
+            onChange={(event) => {
+              const selected = repositories.data?.find(
+                (row) => row.id === event.target.value,
+              );
+              onChange({
+                ...value,
+                github: selected
+                  ? {
+                      connector_id: selected.id,
+                      expected_updated_at: selected.updated_at,
+                    }
+                  : null,
+              });
+            }}
+          >
+            <option value="">Choose a connected repository</option>
+            {repositories.data
+              ?.filter((row) => row.kind === "github" && row.enabled)
+              .map((row) => (
+                <option key={row.id} value={row.id}>
+                  {row.name} · {row.repository}
+                </option>
+              ))}
+          </select>
+          <span className="muted">
+            Reads issue and PR titles through your host GitHub login. No source
+            files or account data are sent to an AI provider.{" "}
+            <Link to="/settings/integrations">Connect a repository</Link>
+          </span>
+          <ErrorNotice error={repositories.error} />
+        </label>
       )}
       {value.action === "video.generate" && (
         <label>

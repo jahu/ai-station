@@ -217,6 +217,7 @@ export default function NewChat({
       : !!provider?.enabled &&
         (provider.secret_source === "none" || provider.secret_present)) &&
     !busy &&
+    (options.action !== "github.inspect" || !!options.github) &&
     (options.action !== "project.create_code" ||
       (!!options.new_project?.name.trim() &&
         (options.new_project.executor === "local" ||
@@ -376,6 +377,7 @@ export default function NewChat({
                 onUploading={setUploading}
               />
               {options.action !== "project.create_code" &&
+                options.action !== "github.inspect" &&
                 !options.image_artifact_ids.length &&
                 !options.audio_artifact_id && (
                   <TextAttachments
