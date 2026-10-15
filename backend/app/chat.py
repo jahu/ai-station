@@ -40,7 +40,6 @@ from app.models import (
     Run,
     Setting,
     Task,
-    Worktree,
 )
 from app.runs import create_run, create_task, run_dict
 from app.serialize import conversation_dict, iso, message_dict
@@ -260,31 +259,12 @@ class WorkSelection(BaseModel):
 
 @router.put("/conversations/{conversation_id}/work-context")
 def choose_work_task(conversation_id: UUID, body: WorkSelection, session: DB):
-    from app.coding_sessions import PROPOSALS
-    from app.work_context import context_of
+    from app.work_context import context_of, selected_source
 
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
     if body.task_id:
-        task = session.get(Task, str(body.task_id))
-        if task is None:
-            raise HTTPException(404, "Coding task not found")
-        source = session.scalar(
-            select(Run)
-            .where(Run.task_id == task.id, Run.executor_type.in_(PROPOSALS))
-            .order_by(Run.created_at.desc(), Run.id.desc())
-            .limit(1)
-        )
-        if not source or source.id != str(body.expected_run_id):
-            raise HTTPException(409, "Coding task changed; reload before selecting")
-        worktree = session.get(Worktree, source.parameters.get("worktree_id", ""))
-        if (
-            not worktree
-            or not worktree.owned
-            or worktree.removed_at is not None
-            or worktree.project_id != task.project_id
-        ):
-            raise HTTPException(409, "The owned task workspace is unavailable")
+        task, source = selected_source(session, body.task_id, body.expected_run_id)
         selected = context_of(session, source)
     else:
         selected = None
@@ -620,10 +600,24 @@ def accept_turn(body: TurnBody, session: DB):
 
             if get_provider(session, selection.provider).updated_at != body.expected_provider_version:
                 raise HTTPException(409, "Provider configuration changed; choose the model again")
-        snapshot_provider(session, Conversation(provider=selection.provider, model=selection.model))
+        if body.continuation:
+            if selection.provider != BUILTIN_KEY or selection.execution_mode not in {"work", "orchestrator"}:
+                raise HTTPException(
+                    422, "Open the selected coding task in Work using local conversation settings"
+                )
+            from app.work_context import selected_source
+
+            selected_task, _ = selected_source(
+                session, body.continuation.task_id, body.continuation.expected_run_id
+            )
+        else:
+            snapshot_provider(session, Conversation(provider=selection.provider, model=selection.model))
         row = Conversation(**selection.model_dump())
         session.add(row)
         session.flush()
+        if body.continuation:
+            session.add(ChatWorkContext(conversation_id=row.id, task_id=selected_task.id))
+            session.flush()
     if body.conversation_id and body.expected_provider_version is not None:
         from app.chat_providers import get_provider
 

@@ -35,7 +35,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import {
   useInfiniteQuery,
   useMutation,
@@ -237,6 +237,7 @@ function ConversationHistory({
 
 export default function Chat({ assistant = false }: { assistant?: boolean }) {
   const { id } = useParams();
+  const location = useLocation();
   const cache = useQueryClient();
   const navigate = useNavigate();
   const [newDraftKey, setNewDraftKey] = useState(0);
@@ -343,7 +344,7 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
         <section className="chat-main panel">
           {!id ? (
             <NewChat
-              key={newDraftKey}
+              key={`${newDraftKey}:${location.search}`}
               providers={providers.data ?? []}
               provider={provider.data}
               onProviderChange={setProviderKey}

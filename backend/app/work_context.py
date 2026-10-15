@@ -25,6 +25,29 @@ def project_context(session, conversation_id):
     return context_of(session, source)
 
 
+def selected_source(session, task_id, expected_run_id=None):
+    task = session.get(Task, str(task_id))
+    if task is None:
+        raise HTTPException(404, "Coding task not found")
+    source = session.scalar(
+        select(Run)
+        .where(Run.task_id == task.id, Run.executor_type.in_(PROPOSALS))
+        .order_by(Run.created_at.desc(), Run.id.desc())
+        .limit(1)
+    )
+    if source is None or expected_run_id is not None and source.id != str(expected_run_id):
+        raise HTTPException(409, "Coding task changed; reload before selecting")
+    worktree = session.get(Worktree, source.parameters.get("worktree_id", ""))
+    if (
+        not worktree
+        or not worktree.owned
+        or worktree.removed_at is not None
+        or worktree.project_id != task.project_id
+    ):
+        raise HTTPException(409, "The owned task workspace is unavailable")
+    return task, source
+
+
 def context_of(session, source):
     task = session.get(Task, source.task_id)
     project = session.get(Project, task.project_id)

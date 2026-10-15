@@ -290,3 +290,10 @@ moves the Task's original conversation/history, grants external-provider consent
 or launches work. Follow-up Runs retain the same Task/worktree and record the
 conversation that submitted that turn. Existing conversations without an explicit
 binding retain their original automatic task context.
+
+A Coding session can stage its existing Task in the blank Work composer. The
+read-only draft context and pinned proposal version do not create database rows.
+First Send atomically binds the new conversation to that Task, enqueues its
+follow-up and records the existing chat turn receipt. Invalid scope/consent or a
+stale proposal rolls back the conversation and binding. Conversation model
+settings never replace the selected task's executor/model.

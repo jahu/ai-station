@@ -350,3 +350,69 @@ def test_context_migration_preserves_existing_conversation_task_and_runs(scope):
         assert s.get(Task, scope["task_id"]).conversation_id == scope["conversation_id"]
         assert s.get(Run, scope["source_id"]).parameters["worktree_id"] == scope["worktree_id"]
         assert list(s.scalars(select(ChatWorkContext))) == []
+
+
+def first_work_turn(scope, **updates):
+    values = body(scope)
+    values.pop("conversation_id")
+    values.pop("expected_settings_version")
+    values["selection"] = {"model": "plain", "provider": "local-openai-compatible", "execution_mode": "work"}
+    return {**values, **updates}
+
+
+def test_open_work_draft_is_read_only_and_first_send_binds_existing_task_atomically(scope):
+    from app.models import ChatWorkContext
+
+    with TestClient(app) as client:
+        draft = client.get(f"/api/coding/sessions/{scope['task_id']}/work-context")
+        assert draft.status_code == 200 and draft.json()["expected_run_id"] == scope["source_id"]
+        with session_factory()() as s:
+            assert len(list(s.scalars(select(Conversation)))) == 1
+            assert len(list(s.scalars(select(Run)))) == 2
+            assert list(s.scalars(select(ChatWorkContext))) == []
+        values = first_work_turn(scope)
+        first = client.post("/api/chat/turns", json=values)
+        assert first.status_code == 202, first.text
+        receipt = first.json()
+        cid = receipt["conversation_id"]
+        assert cid != scope["conversation_id"]
+        assert receipt["run"]["task_id"] == scope["task_id"]
+        assert receipt["run"]["conversation_id"] == cid
+        assert client.post("/api/chat/turns", json=values).json() == receipt
+        with session_factory()() as s:
+            assert s.get(ChatWorkContext, cid).task_id == scope["task_id"]
+            assert s.get(Task, scope["task_id"]).conversation_id == scope["conversation_id"]
+            assert len(list(s.scalars(select(Conversation)))) == 2
+            assert len(list(s.scalars(select(Run)))) == 3
+
+
+def test_failed_first_work_send_leaves_no_empty_conversation_or_binding(scope):
+    from app.models import ChatWorkContext
+
+    with session_factory()() as s:
+        source = s.get(Run, scope["source_id"])
+        source.executor_type = "cursor_proposal"
+        source.effective_permissions = [*source.effective_permissions, "external_ai"]
+        s.commit()
+    with TestClient(app) as client:
+        values = first_work_turn(scope)
+        failed = client.post("/api/chat/turns", json=values)
+        assert failed.status_code == 422 and "sharing" in failed.text
+        with session_factory()() as s:
+            assert len(list(s.scalars(select(Conversation)))) == 1
+            assert list(s.scalars(select(ChatWorkContext))) == []
+            assert len(list(s.scalars(select(Run)))) == 2
+        values["continuation"]["external_ai"] = True
+        assert client.post("/api/chat/turns", json=values).status_code == 202
+
+
+def test_stale_first_work_source_cannot_create_a_conversation(scope):
+    with TestClient(app) as client:
+        values = first_work_turn(
+            scope, continuation={"task_id": scope["task_id"], "expected_run_id": str(uuid4())}
+        )
+        response = client.post("/api/chat/turns", json=values)
+        assert response.status_code == 409
+        with session_factory()() as s:
+            assert len(list(s.scalars(select(Conversation)))) == 1
+            assert len(list(s.scalars(select(Run)))) == 2

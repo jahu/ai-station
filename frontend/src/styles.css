@@ -5047,3 +5047,8 @@ section:has(> .memory-grid) > .dashboard-note {
   flex: none;
   font-size: 0.8rem;
 }
+
+.new-chat > .work-context-card {
+  width: 100%;
+  margin-bottom: 16px;
+}
