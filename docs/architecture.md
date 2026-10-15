@@ -440,3 +440,13 @@ worker queue. Trusted bounded read-only parsers operate on verified app-owned
 bytes in a control-plane worker, without host access, network or user code.
 Generated Python execution remains the separate isolated native-runner container
 boundary; metadata inspection does not grant that permission.
+
+
+## Local data-agent execution
+
+[Python data agents](python-data-agents.md) reuse ordinary agent workflows,
+automatic private projects, owned worktree preparation and the existing offline
+Python executor. Local source generation and result verification are separate
+Runs; script, inputs, raw outputs and a literal CSV download are ordinary artifacts.
+The original workflow deadline, Task Stop and frozen definition cover repairs.
+No unrestricted filesystem or shell API is activated.

@@ -196,6 +196,8 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
             else "local"
         )
         tools = ["coding_" + chosen] + (["http_fetch"] if chosen == "local" and fetch_urls else [])
+    if not tools and re.search(r"\b(excel|xlsx|csv|spreadsheet|arkusz)", lowered):
+        tools = ["python_data"]
     notices = {
         "on_success": _has(lowered, ("notify on success", "powiadom o sukcesie")),
         "on_failure": _has(
@@ -218,7 +220,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         model=""
         if tools in (["coding_codex"], ["coding_cursor"])
         else "auto"
-        if "coding_local" in tools
+        if "coding_local" in tools or "python_data" in tools
         else model,
         provider="local-openai-compatible",
         runtime="openai-compatible",

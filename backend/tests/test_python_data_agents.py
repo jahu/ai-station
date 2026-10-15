@@ -27,13 +27,15 @@ def data_environment(repository, owned_runner, monkeypatch):
 
     model = "llamacpp:" + str(uuid4())
     with session_factory()() as session:
+        instance_id = str(uuid4())
         runtime = RuntimeInstance(
+            id=instance_id,
             runtime_key="llama.cpp",
             name="Fixture local model",
             ownership="managed",
-            endpoint="llamacpp:" + str(uuid4()),
+            endpoint="llamacpp:" + instance_id,
             status="ready",
-            metadata_json={"context_size": 131072},
+            metadata_json={"context_size": 131072, "model_file_id": model.removeprefix("llamacpp:")},
         )
         session.add(runtime)
         session.commit()
@@ -72,7 +74,7 @@ def data_environment(repository, owned_runner, monkeypatch):
 
     def request(self, method, path, payload=None):
         if path == "/v1/python/capabilities":
-            return {"available": True}
+            return {"available": True, "artifact_source": True}
         if path == "/v1/llama/" + iid:
             return {"status": "ready", "alive": True, "n_ctx": 131072}
         if path == "/v1/runs/python" and method == "POST":
@@ -294,3 +296,80 @@ def test_literal_download_cells_do_not_activate_spreadsheet_formulas():
     assert DataResultExecutor.literal('=WEBSERVICE("https://example.com")').startswith("'=")
     assert DataResultExecutor.literal(" @SUM(A1)") == "' @SUM(A1)"
     assert DataResultExecutor.literal("-27.5") == "-27.5"
+
+
+@pytest.mark.parametrize("change", ["input", "script", "attempt", "owner"])
+def test_changed_scope_never_dispatches_python(data_environment, change):
+    with TestClient(app) as client:
+        _, parent, _, _ = create(client, data_environment)
+        for _ in range(10):
+            with session_factory()() as session:
+                target = session.scalar(
+                    select(Run).where(Run.executor_type == "python", Run.status == "queued")
+                )
+                if target:
+                    values = dict(target.parameters)
+                    if change == "input":
+                        values["inputs"] = [{**values["inputs"][0], "sha256": "f" * 64}]
+                    elif change == "script":
+                        values["script_sha256"] = "f" * 64
+                    elif change == "attempt":
+                        values["agent_data"] = {**values["agent_data"], "attempt": 2}
+                    else:
+                        target.agent_id = None
+                    target.parameters = values
+                    session.commit()
+                    rid = target.id
+                    break
+                tick(session, "scope-test")
+        else:
+            pytest.fail("Python was never queued")
+        rows = finish(client, parent)
+        assert not data_environment["jobs"], rows
+        with session_factory()() as session:
+            assert session.get(Run, rid).status in {"failed", "interrupted"}
+            assert not session.scalar(select(Run.id).where(Run.executor_type == "agent_data_result"))
+
+
+def test_factory_creates_disabled_data_draft_without_invented_input_scope():
+    from app.factory import draft_agent
+
+    row = draft_agent("Przeanalizuj plik Excel i policz sumę wydatków")
+    assert row.tools == ["python_data"] and row.model == "auto"
+    assert not row.enabled and row.data is None
+
+
+def test_data_scope_migration_preserves_existing_agent():
+    from alembic import command
+    from app.db import alembic_config, migrate, reset_engine
+    from app.factory import draft_agent
+
+    with session_factory()() as session:
+        agent = draft_agent("Existing agent", model="fixture-local")
+        session.add(agent)
+        session.commit()
+        aid = agent.id
+    reset_engine()
+    command.downgrade(alembic_config(), "0026")
+    migrate()
+    with session_factory()() as session:
+        row = session.get(Agent, aid)
+        assert row.name == "Existing agent" and row.model == "fixture-local"
+        assert row.data is None and not row.enabled
+
+
+@pytest.mark.parametrize("size", [4096, 100000])
+def test_unverified_short_context_never_generates_or_executes_code(data_environment, monkeypatch, size):
+    original = RunnerClient.request
+
+    def request(self, method, path, payload=None):
+        if path.startswith("/v1/llama/"):
+            return {"status": "ready", "alive": True, "n_ctx": size}
+        return original(self, method, path, payload)
+
+    monkeypatch.setattr(RunnerClient, "request", request)
+    with TestClient(app) as client:
+        _, parent, _, _ = create(client, data_environment)
+        rows = finish(client, parent)
+        assert not data_environment["calls"] and not data_environment["jobs"], rows
+        assert any(kind == "agent_data_generate" and status == "failed" for _, kind, status, _ in rows)

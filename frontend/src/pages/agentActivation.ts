@@ -38,6 +38,8 @@ export function activationBlock(
     model?: string | null;
     permission_profile?: string;
     tools?: string[];
+    data?: { input_artifact_ids: string[]; max_repairs: number } | null;
+    data_readiness?: { ready: boolean; reason: string } | null;
     skills?: string[];
     search_query?: string | null;
     fetch_urls?: string[] | null;
@@ -50,6 +52,25 @@ export function activationBlock(
   const coding = names.filter((name) =>
     ["coding_local", "coding_cursor", "coding_codex"].includes(name),
   );
+  if (names.includes("python_data")) {
+    if (
+      names.length !== 1 ||
+      !agent.data?.input_artifact_ids.length ||
+      !agent.data_readiness?.ready
+    )
+      return {
+        blocked: true,
+        reason:
+          agent.data_readiness?.reason ||
+          "Choose CSV/Excel inputs, wait for inspection and save the definition.",
+      };
+    if (agent.model !== "auto" && !agent.model?.startsWith("llamacpp:"))
+      return {
+        blocked: true,
+        reason:
+          "Choose Auto or an installed llama.cpp model for data analysis.",
+      };
+  }
   const external = coding.some((name) => name !== "coding_local");
   if (external !== (agent.permission_profile === "agent_external_coding")) {
     return {

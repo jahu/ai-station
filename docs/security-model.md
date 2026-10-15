@@ -350,3 +350,22 @@ workspace using the existing typed project-creation executor. Its binding record
 the reviewed workflow, agent, Task, project and original deadline before coding
 can start. No existing host checkout is selected implicitly. See
 [managed agent workspaces](agent-workspaces.md).
+
+
+## Scoped Python data agents
+
+A `python_data` definition records selected immutable CSV/XLSX artifact IDs and a
+bounded repair budget. Activation requires inspected input files and a Runner
+advertising installed offline Python execution with artifact-source support.
+Generated source remains an artifact until the typed Python request snapshots its
+UUID-derived path and frozen hash. The Runner creates only `analysis-<run-id>.py`
+in that project's ready owned worktree, under the existing snapshot lock and with
+exclusive creation. Existing files and earlier attempts are never overwritten;
+draft filesystem-write endpoints remain disabled.
+
+Model generation uses a managed llama.cpp instance with verified 100k+ actual
+context. Inputs/previews, definition, project, Task and every attempt's parent are
+bound before dispatch and result adoption. Python has no network, host credentials
+or arbitrary host mounts. Only confirmed program/output failures can consume the
+saved repair budget; cancellation and uncertain dispatch never replay. Final CSV
+downloads escape formula-like strings and retain source/output lineage.

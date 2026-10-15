@@ -312,3 +312,66 @@ def test_script_snapshot_excludes_concurrent_worktree_mutation(tmp_path):
                 pytest.fail("parallel snapshot obtained an exclusive worktree lock")
     with python_runs.snapshot_lock(wid):
         pass
+
+
+@pytest.mark.parametrize("mode", ["valid", "changed", "symlink", "existing", "foreign_path"])
+def test_artifact_source_is_fixed_verified_and_never_overwrites_user_files(tmp_path, monkeypatch, mode):
+    from ai_station_runner.gitops import GitError
+    from ai_station_runner.processes import ProcessNotOwned
+
+    aid, rid = uuid4(), uuid4()
+    values = {"run_id": rid, "script_artifact_id": aid, "script_relative": f"analysis-{rid}.py"}
+    if mode == "foreign_path":
+        with pytest.raises(ValidationError, match="Run-owned"):
+            request(**{**values, "script_relative": "README.py"})
+        return
+    body = request(**values)
+    clean = str(aid).replace("-", "")
+    source = tmp_path / f"artifacts/{clean[:2]}/{clean[2:4]}/{aid}.py"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"print(1)")
+    workspace = tmp_path / f"worktrees/{body.project_id}/{body.worktree_run_id}"
+    workspace.mkdir(parents=True)
+    target = workspace / body.script_relative
+    if mode == "changed":
+        source.write_bytes(b"changed")
+    if mode == "symlink":
+        original = tmp_path / "original.py"
+        original.write_bytes(source.read_bytes())
+        source.unlink()
+        source.symlink_to(original)
+    if mode == "existing":
+        target.write_bytes(b"user file")
+    monkeypatch.setattr(python_runs, "capabilities", lambda: {"available": True, "image_id": IMAGE})
+    monkeypatch.setattr(
+        python_runs,
+        "inspect_worktree",
+        lambda *a: {
+            "state": "ready",
+            "project_id": str(body.project_id),
+            "relative_path": str(workspace.relative_to(tmp_path)),
+        },
+    )
+    calls = []
+
+    class Manager:
+        def inspect(self, run_id):
+            raise ProcessNotOwned(run_id)
+
+        def start(self, **kwargs):
+            calls.append(kwargs)
+            return {"executor": "python"}
+
+    if mode == "valid":
+        assert python_runs.start_python(Manager(), body)["executor"] == "python"
+        assert target.read_bytes() == b"print(1)" and len(calls) == 1
+        assert (python_runs.directory(str(rid)) / "inputs/script.py").read_bytes() == source.read_bytes()
+        with pytest.raises(ValueError, match="Uncertain"):
+            python_runs.start_python(Manager(), body)
+        assert len(calls) == 1
+    else:
+        with pytest.raises((ValueError, OSError, GitError)):
+            python_runs.start_python(Manager(), body)
+        assert not calls
+        if mode == "existing":
+            assert target.read_bytes() == b"user file"

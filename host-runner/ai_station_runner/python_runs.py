@@ -106,7 +106,13 @@ def capabilities():
             or (config.get("Labels") or {}).get("ai-station.python.protocol") != "1"
         ):
             return unavailable
-        return {"available": True, "image_id": image["Id"], "protocol": 1, "network": False}
+        return {
+            "available": True,
+            "image_id": image["Id"],
+            "protocol": 1,
+            "network": False,
+            "artifact_source": True,
+        }
     except (OSError, RuntimeError, ValueError):
         return unavailable
 

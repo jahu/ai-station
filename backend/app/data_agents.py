@@ -36,8 +36,12 @@ def runtime_capability():
     try:
         value = RunnerClient(timeout=2).request("GET", "/v1/python/capabilities")
         return {
-            "available": value.get("available") is True,
-            "reason": (value.get("reason") or "Configure the offline Python image in Host Runner"),
+            "available": value.get("available") is True and value.get("artifact_source") is True,
+            "reason": (
+                "Update Host Runner for verified artifact sources"
+                if value.get("available") and not value.get("artifact_source")
+                else value.get("reason") or "Configure the offline Python image in Host Runner"
+            ),
         }
     except Exception:
         return {"available": False, "reason": "Host Runner Python runtime is unavailable"}
@@ -344,10 +348,18 @@ class DataGenerateExecutor:
                 raise ValueError("Choose Auto or an installed llama.cpp model with verified 100k+ context")
             instance = session.scalar(
                 select(RuntimeInstance).where(
-                    RuntimeInstance.endpoint == run.parameters["endpoint"], RuntimeInstance.status == "ready"
+                    RuntimeInstance.endpoint == run.parameters["endpoint"],
+                    RuntimeInstance.status == "ready",
+                    RuntimeInstance.ownership == "managed",
+                    RuntimeInstance.runtime_key == "llama.cpp",
                 )
             )
-            if instance is None or int(instance.metadata_json.get("context_size", 0)) < 100352:
+            if (
+                instance is None
+                or instance.endpoint != f"llamacpp:{instance.id}"
+                or instance.metadata_json.get("model_file_id") != model.removeprefix("llamacpp:")
+                or int(instance.metadata_json.get("context_size", 0)) < 100352
+            ):
                 raise ValueError("The selected model needs 100k+ actual context before code generation")
             info = RunnerClient().request("GET", "/v1/llama/" + instance.id)
             if (
@@ -385,6 +397,8 @@ class DataGenerateExecutor:
             if LocalAgentExecutor._canceled(session, run):
                 return "done"
             script = Script.model_validate_json(text).script
+            if len(script.encode()) > 32000:
+                raise ValueError("Generated Python source exceeds its byte limit")
             ast.parse(script, filename="analysis.py")
             # The exact source artifact precedes its only fixed workspace write.
             with tempfile.NamedTemporaryFile(mode="w+", suffix=".py") as handle:
@@ -667,6 +681,7 @@ class DataResultExecutor:
 
 def validate_python_dispatch(session, run):
     scope, definition, tree, deadline = context(session, run)
+    verify_inputs(session, scope["data_inputs"])
     generation = session.get(Run, run.parameters.get("generation_run_id"))
     script = (
         session.get(Artifact, generation.metadata_json.get("script_artifact_id", "")) if generation else None

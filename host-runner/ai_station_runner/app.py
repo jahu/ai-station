@@ -941,7 +941,7 @@ def python_run(body: PythonRequest):
         return {**start_python(manager(), body), "runner_id": get_settings().runner_id}
     except PermissionError as exc:
         raise HTTPException(403, str(exc)) from exc
-    except (ValueError, RuntimeError, OSError) as exc:
+    except (ValueError, RuntimeError, OSError, GitError) as exc:
         raise HTTPException(409, str(exc)) from exc
 
 
