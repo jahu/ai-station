@@ -87,7 +87,7 @@ def relevance(query, source):
     words = terms(query)
     matches = words & terms(source["title"] + " " + source["snippet"])
     # A multi-topic question must match more than its generic first noun.
-    if len(words) >= 4 and len(matches) < 2:
+    if (words and not matches) or (len(words) >= 4 and len(matches) < 2):
         return -1
     return len(matches)
 
@@ -309,9 +309,7 @@ async def context(session, run, message):
         session,
         run,
         query,
-        planner=rewrite_query
-        if len(terms(query)) >= 4 and not run.parameters.get("image_followup")
-        else None,
+        planner=rewrite_query if not run.parameters.get("image_followup") else None,
     )
     if result is None:
         return None

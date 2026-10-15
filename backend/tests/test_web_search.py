@@ -171,7 +171,11 @@ async def test_provider_caps_results_and_sends_only_query(monkeypatch):
         requests.append(request)
         rows = [{"title": "<b>Unsafe</b>", "url": "http://localhost/", "content": "private"}]
         rows += [
-            {"title": "<b>Source</b>", "url": f"https://example.com/{i}", "content": "x" * 1000}
+            {
+                "title": "<b>Source</b>",
+                "url": f"https://example.com/{i}",
+                "content": "public query " + "x" * 1000,
+            }
             for i in range(10)
         ]
         return httpx.Response(200, json={"results": rows, "unresponsive_engines": [["engine", "timeout"]]})
@@ -509,3 +513,33 @@ def test_stop_during_query_rewrite_closes_model_and_never_retries_search(monkeyp
         step()
         assert client.get("/api/runs/" + run_id).json()["status"] == "canceled"
         assert len(queries) == 1 and closed == [True]
+
+
+@pytest.mark.asyncio
+async def test_unrelated_results_are_rejected_for_short_queries_too(monkeypatch):
+    monkeypatch.setenv("AI_STATION_WEB_SEARCH_URL", "http://search:8080")
+    clear_settings_cache()
+    original = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx,
+        "AsyncClient",
+        lambda **kw: original(
+            **kw,
+            transport=httpx.MockTransport(
+                lambda request: httpx.Response(
+                    200,
+                    json={
+                        "results": [
+                            {
+                                "title": "Aktor Wikipedia",
+                                "url": "https://example.com/actor",
+                                "content": "Definition of actor",
+                            }
+                        ]
+                    },
+                )
+            ),
+        ),
+    )
+    result = await web_search.search("galaxy telescope")
+    assert result["sources"] == []
