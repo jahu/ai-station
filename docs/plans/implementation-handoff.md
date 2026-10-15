@@ -327,3 +327,13 @@ Evidence: `data/acceptance/memory-scope-navigation-20261015/review.json`.
 Continue `.tools/parallel-video-shots`, `feat/parallel-video-shots`, following
 [the parallel shot plan](../parallel-video-shots.md). Preserve conservative RAM
 admission and current 27B runtime; do not claim unexecuted multi-GPU smoke tests.
+
+
+## Current: media resource wait fairness
+
+PR #320 is merged/deployed and verified (see delivered evidence in
+[parallel video shots](../parallel-video-shots.md)). Continue in
+`.tools/media-resource-wait-fairness`, `fix/media-resource-wait-fairness`, following
+[the regression and plan](../media-resource-wait-fairness.md). The focused test
+currently fails as expected: after one resource rejection, another old shot is
+claimed ahead of new CPU work. Preserve Native/Frontend source and resource locks.
