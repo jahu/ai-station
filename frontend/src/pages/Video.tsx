@@ -18,10 +18,11 @@ import MediaResult from "../components/media/MediaResult";
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import Avatars from "./Avatars";
-import VideoSceneEditor, {
+import VideoSceneEditor from "../components/media/VideoSceneEditor";
+import {
   scenePlanError,
   type SceneDraft,
-} from "../components/media/VideoSceneEditor";
+} from "../components/media/video-scenes";
 
 export default function Video() {
   const [search, setSearch] = useSearchParams();
@@ -291,7 +292,7 @@ function VideoForm({
                 aria-label="Scene and motion"
                 required
                 maxLength={2000}
-                rows={6}
+                rows={planningScenes ? 3 : 6}
                 value={prompt}
                 onChange={(event) => setPrompt(event.target.value)}
                 placeholder="A cinematic shot of a forest at dawn. Mist drifts between the trees as the camera slowly moves forward…"

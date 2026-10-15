@@ -107,6 +107,11 @@ it("edits, reorders and removes scenes, then sends only the ordered plan and cal
     target: { value: "4" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Move scene 2 earlier" }));
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      screen.getByLabelText("Scene 1 prompt"),
+    ),
+  );
   expect(
     (screen.getByLabelText("Scene 1 prompt") as HTMLTextAreaElement).value,
   ).toBe("Closing ocean");
