@@ -101,3 +101,5 @@ conversation replies keep their normal format. Plan parsing, scope/permission
 checks, cancellation and typed dispatch still gate every proposed action. A provider
 that rejects the requested format fails the planner rather than triggering fallback
 execution or a silent provider change.
+
+Direct image-result follow-ups now resolve a bounded, same-conversation source before enqueue; see [conversation media follow-ups](conversation-media-followup.md). The sent message exposes source provenance; ambiguous or unavailable results require explicit selection.
