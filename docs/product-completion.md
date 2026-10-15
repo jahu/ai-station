@@ -62,7 +62,7 @@ The target is the complete AI Station vision, reconfirmed on 2026-10-13. An impl
 | Coding and Git | Name-only managed projects, persistent coding sessions, owned worktrees, local/Cursor/Codex bounded proposals, exploration, validation, local repair, cumulative diffs, dependency installation, reviewed commits and approved draft PR publication | Claude adapter; broader practical coding-task acceptance and fit verification across installed models (27B IQ2_XS long context and basic Coding now verified) |
 | Images and Library | Existing photo pipeline adapter, Generate/Edit/Recompose/Upscale, uploads, thumbnails, annotations, reversible Trash, source/derived lineage and reuse in workspaces/chat | Real acceptance for all modes/backends with supported model selection |
 | Audio, video and avatars | Wan text/image video, Chatterbox speech and EchoMimic portrait animation adapters, typed speech → avatar workflows, inline workspaces and artifact playback | Music, transcription and broader media runtime/model selection |
-| Agents and workflows | Disabled natural-language drafts, explicit activation, durable schedules, child-Run workflows, approvals, retries, notices, Skills, telemetry/scoped-memory/public-search/reviewed-GET and optional isolated public-page Browser tools and inspectable reports and project-scoped Local coding workflows | Additional real tools and broader recurring workflows; actual scheduled telemetry/memory reports are verified |
+| Agents and workflows | Disabled natural-language drafts, explicit activation, durable schedules, child-Run workflows, approvals, retries, notices, Skills, telemetry/scoped-memory/public-search/reviewed-GET and optional isolated public-page Browser tools and inspectable reports and project-scoped Local coding workflows, plus reviewed GitHub reads with local reports | Additional real tools and broader recurring workflows; actual scheduled telemetry/memory reports are verified |
 | Memory | Provenance/scopes, FTS, pin/edit/disable/delete, manual/automatic summaries, agent/workflow observations, explicit linked-project memory retrieval and optional embeddings | End-to-end scope and retention acceptance; retain inspectable retrieval |
 | Models and runtimes | Read-only discovery, external observations, owned multi-GPU llama.cpp, loading/unloading, presets, reload/idle eviction, health and restart | Broader runtime adapters; hardware-backed fit/context acceptance for installed models |
 | Connectors | Typed registry, permissions, secret references, operational public HTTP GET and GitHub repository/issue/PR read snapshots (also in Chat/Work) | Further GitHub account actions, email/calendar/social providers, account browser automation and approvals for consequential actions |
@@ -116,3 +116,8 @@ qualify longer avatar visual-quality profiles. See [Echo motion](echo-motion-con
 [Conversational image follow-ups](conversation-media-followup.md) add explicit
 reuse of a completed same-conversation result for editing, upscale and animation.
 Normal coverage uses temporary images/fake completion, not an unexecuted GPU claim.
+
+2026-10-15: reviewed GitHub reports now support persistent agents. Two real
+interval workflows completed all eight Runs, saved scoped memories and retrieved
+the first report on the second execution. A final-source one-shot also passed.
+Agents were paused after acceptance; see [verification and limits](agent-github-reports.md).

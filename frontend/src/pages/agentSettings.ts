@@ -24,6 +24,7 @@ export type AgentSettingsInput = {
     on_failure?: boolean;
     on_approval?: boolean;
   };
+  github?: { connector_id: string; repository: string } | null;
   project_id?: string | null;
   enabled?: boolean;
 };
@@ -42,6 +43,7 @@ export function agentSettingsPayload(
     system_prompt: next.system_prompt ?? "",
     model: next.model ?? "",
     tools: next.tools ?? [],
+    ...(next.github !== undefined ? { github: next.github } : {}),
     search_query: next.search_query ?? "",
     fetch_urls: next.fetch_urls ?? [],
     skills: next.skills ?? [],

@@ -11,6 +11,17 @@ MAX_TOOL_ROUNDS = 4
 MAX_CALLS_PER_ROUND = 3
 
 AGENT_TOOLS = {
+    "github_read": ToolSpec(
+        name="github_read",
+        description="Read repository details and bounded open issue/PR titles from the explicitly reviewed GitHub connector, using the host gh session. Sends no source files or writes. The report uses only the selected local model.",
+        risk_level="low",
+        required_permissions=("network_read", "github_read"),
+        timeout=60,
+        execution_target="host",
+        operational=True,
+        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        output_schema={"type": "object"},
+    ),
     "coding_local": ToolSpec(
         name="coding_local",
         description="Build or change the linked project with the selected Local AI model in a fresh owned worktree. Runs repository exploration, proposal and configured validation; preserves the diff for review. Never commits, publishes or edits the original checkout. Select this tool alone.",

@@ -45,6 +45,13 @@ def get_agent(session, agent_id):
 def validate_target(body, session):
     if body.project_id and session.get(Project, str(body.project_id)) is None:
         raise HTTPException(422, "Project does not exist")
+    if body.github is not None:
+        from app.agent_github import reviewed_connector
+
+        try:
+            reviewed_connector(session, body.github)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
     if body.enabled:
         try:
             model_endpoint(body.model, session)
@@ -56,6 +63,8 @@ def apply_settings(agent, body):
     for key, value in body.model_dump().items():
         if key == "project_id" and value is not None:
             value = str(value)
+        if key == "github" and value is not None:
+            value = body.github.model_dump(mode="json")
         setattr(agent, key, value)
     agent.retry_policy = body.retry_policy.model_dump()
     agent.notification_policy = body.notification_policy.model_dump()

@@ -17,6 +17,7 @@ import {
 } from "./AgentExecutionHistory";
 import { AgentLatestReport } from "./AgentLatestReport";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
+import GithubAgentScope from "./GithubAgentScope";
 import { useListKeyboard } from "./useListKeyboard";
 import { activationBlock } from "./agentActivation";
 import { agentSettingsPayload } from "./agentSettings";
@@ -39,6 +40,7 @@ interface Agent {
   system_prompt: string;
   model: string;
   tools: string[];
+  github?: { connector_id: string; repository: string } | null;
   search_query: string;
   fetch_urls: string[];
   skills: string[];
@@ -97,19 +99,21 @@ const schedule = (agent: Agent) =>
         : "Manual";
 
 function toolTitle(tool: Tool) {
-  return tool.name === "coding_local"
-    ? "Local coding"
-    : tool.name === "remember_report"
-      ? "Remember reports"
-      : tool.name === "remember_workflow"
-        ? "Remember workflow observations"
-        : tool.name === "http_fetch"
-          ? "HTTP fetch"
-          : tool.name === "project_memory"
-            ? "Project memory"
-            : tool.name === "browser"
-              ? "Browse public pages"
-              : tool.name;
+  return tool.name === "github_read"
+    ? "GitHub repository"
+    : tool.name === "coding_local"
+      ? "Local coding"
+      : tool.name === "remember_report"
+        ? "Remember reports"
+        : tool.name === "remember_workflow"
+          ? "Remember workflow observations"
+          : tool.name === "http_fetch"
+            ? "HTTP fetch"
+            : tool.name === "project_memory"
+              ? "Project memory"
+              : tool.name === "browser"
+                ? "Browse public pages"
+                : tool.name;
 }
 
 function toggleValue(selected: string[], value: string, enabled: boolean) {
@@ -995,6 +999,16 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               it before enabling the agent.
             </p>
             <span className="chip">Network permission · search only</span>
+          </section>
+        )}
+        {values.tools.includes("github_read") && (
+          <section className="agent-wide agent-search-settings">
+            <h3>GitHub repository</h3>
+            <GithubAgentScope
+              value={values.github ?? null}
+              disabled={active || save.isPending}
+              onChange={(github) => update("github", github)}
+            />
           </section>
         )}
         {(values.tools.includes("http_fetch") ||

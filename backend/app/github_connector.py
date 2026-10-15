@@ -68,7 +68,7 @@ def saved_snapshot(session, row):
             Run.parameters["connector_id"].as_string() == row.id,
             Run.parameters["repository"].as_string() == row.config_json.get("repository"),
         )
-        .order_by(Run.created_at.desc(), Run.id.desc())
+        .order_by(Run.finished_at.desc(), Run.id.desc())
         .limit(1)
     )
     return run.metadata_json.get("github_snapshot") if run else None
@@ -80,6 +80,33 @@ class GithubReadExecutor(NativeJobExecutor):
     error_type = "GithubReadFailed"
 
     def payload(self, run):
+        if run.agent_id:
+            from datetime import datetime
+
+            from sqlalchemy.orm import object_session
+
+            from app.agent_github import reviewed_connector
+            from app.agent_schema import AgentSettings
+            from app.db import utcnow
+
+            definition = AgentSettings.model_validate(run.parameters["definition"])
+            if (
+                "github_read" not in definition.tools
+                or run.parameters.get("tool") != "github_read"
+                or definition.github is None
+            ):
+                raise ValueError("GitHub reading is not an approved agent step")
+            if (
+                run.parameters.get("connector_id") != str(definition.github.connector_id)
+                or run.parameters.get("repository") != definition.github.repository
+            ):
+                raise ValueError("GitHub workflow target differs from the reviewed scope")
+            if (datetime.fromisoformat(run.parameters["deadline_at"]) - utcnow()).total_seconds() < 65:
+                raise ValueError("Not enough agent runtime remains for a bounded GitHub read")
+            current = object_session(run)
+            if current is None:
+                raise ValueError("GitHub agent step must be persisted before dispatch")
+            reviewed_connector(current, definition.github)
         return {
             "run_id": run.id,
             "repository": repository_name(run.parameters["repository"]),
