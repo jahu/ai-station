@@ -145,7 +145,6 @@ it("preserves read-only detail when restoration fails", async () => {
 it("searches archived history without changing or restoring the conversation", async () => {
   const requests = mount({ archived: true });
   await screen.findByRole("button", { name: "Restore conversation" });
-  fireEvent.click(screen.getByText("Recent conversations", { exact: true }));
   fireEvent.change(
     screen.getByRole("combobox", { name: "Conversation history" }),
     { target: { value: "archived" } },
@@ -161,5 +160,30 @@ it("searches archived history without changing or restoring the conversation", a
       ),
     ).toBe(true),
   );
+  expect(requests.some((r) => r.method)).toBe(false);
+});
+
+it("keeps conversation controls out of the transcript and opens them without writes", async () => {
+  const requests = mount();
+  await screen.findByText("Keep this message");
+  expect(screen.queryByRole("button", { name: "Save settings" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Conversation options" }));
+  expect(
+    screen.getByRole("dialog", { name: "Conversation options" }),
+  ).toBeTruthy();
+  fireEvent.click(screen.getByText("Conversation settings", { exact: true }));
+  expect(screen.getByRole("button", { name: "Save settings" })).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Close conversation options" }),
+  );
+  expect(screen.queryByRole("dialog")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Recent conversations" }));
+  expect(
+    screen.getByRole("dialog", { name: "Recent conversations" }),
+  ).toBeTruthy();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Close conversation history" }),
+  );
+  expect(screen.queryByRole("dialog")).toBeNull();
   expect(requests.some((r) => r.method)).toBe(false);
 });

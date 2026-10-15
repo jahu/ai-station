@@ -28,6 +28,7 @@ import { AssistantAgentDraft } from "./AssistantAgentDraft";
 import TextAttachments, { type TextAttachment } from "./TextAttachments";
 import ConversationSummary, { type Summary } from "./ConversationSummary";
 import {
+  Fragment,
   useEffect,
   useDeferredValue,
   useId,
@@ -45,7 +46,17 @@ import {
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { Copy, MessageSquare, Plus, Square } from "lucide-react";
+import {
+  Archive,
+  Copy,
+  History,
+  MessageSquare,
+  Plus,
+  Settings2,
+  Square,
+  X,
+} from "lucide-react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { api, type Run } from "../api";
 import { Badge, Empty, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
@@ -143,6 +154,23 @@ const json = (body: unknown) => ({
   body: JSON.stringify(body),
 });
 
+function historyPeriod(value: string) {
+  const date = new Date(value);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const week = new Date(today);
+  week.setDate(week.getDate() - 7);
+  return date >= today
+    ? "Today"
+    : date >= yesterday
+      ? "Yesterday"
+      : date >= week
+        ? "Previous 7 days"
+        : "Earlier";
+}
+
 function ConversationHistory({
   conversations,
   currentId,
@@ -156,7 +184,9 @@ function ConversationHistory({
   onMore,
   archived,
   onArchived,
+  onOpen,
 }: {
+  onOpen?: () => void;
   archived: boolean;
   onArchived: (value: boolean) => void;
   conversations: Conversation[];
@@ -178,7 +208,11 @@ function ConversationHistory({
     { initialKey: currentId },
   );
   return (
-    <aside className="panel chat-history">
+    <aside className="chat-history" aria-label="Conversation history">
+      <div className="chat-history-heading">
+        <strong>Your conversations</strong>
+        <MessageSquare size={16} aria-hidden="true" />
+      </div>
       <Button asChild>
         <Link to={newTo} onClick={onNew}>
           <Plus size={15} aria-hidden="true" />
@@ -222,22 +256,31 @@ function ConversationHistory({
             onKeyDown={onKeyDown}
           >
             {conversations.map((row, i) => {
+              const period = historyPeriod(row.updated_at);
               return (
-                <Link
-                  className={row.id === currentId ? "selected" : ""}
-                  key={row.id}
-                  to={`/chat/${row.id}`}
-                  aria-label={`Inspect ${row.title} ${row.id.slice(0, 8)}`}
-                  {...itemProps(i, row.id)}
-                >
-                  <MessageSquare size={15} aria-hidden="true" />
-                  <span>
-                    <strong>{row.title}</strong>
-                    <small>
-                      {row.model_label ?? row.model} · {time(row.updated_at)}
-                    </small>
-                  </span>
-                </Link>
+                <Fragment key={row.id}>
+                  {(i === 0 ||
+                    historyPeriod(conversations[i - 1].updated_at) !==
+                      period) && (
+                    <h3 className="chat-history-period">{period}</h3>
+                  )}
+                  <Link
+                    className={row.id === currentId ? "selected" : ""}
+                    onClick={onOpen}
+                    title={row.title}
+                    to={`/chat/${row.id}`}
+                    aria-label={`Inspect ${row.title} ${row.id.slice(0, 8)}`}
+                    {...itemProps(i, row.id)}
+                  >
+                    <MessageSquare size={15} aria-hidden="true" />
+                    <span>
+                      <strong>{row.title}</strong>
+                      <small>
+                        {row.model_label ?? row.model} · {time(row.updated_at)}
+                      </small>
+                    </span>
+                  </Link>
+                </Fragment>
               );
             })}
           </div>
@@ -271,6 +314,7 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
   const cache = useQueryClient();
   const navigate = useNavigate();
   const [newDraftKey, setNewDraftKey] = useState(0);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [historySearch, setHistorySearch] = useState("");
   const [historyArchived, setHistoryArchived] = useState(false);
   const historyQuery = useDeferredValue(historySearch.trim());
@@ -339,8 +383,32 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
     });
     return () => source.close();
   }, [active?.id, id, cache]);
+  const history = () => (
+    <ConversationHistory
+      conversations={historyRows}
+      currentId={id}
+      newTo={assistant ? "/" : "/chat"}
+      pending={conversations.isPending}
+      archived={historyArchived}
+      onArchived={setHistoryArchived}
+      search={historySearch}
+      onSearch={setHistorySearch}
+      hasMore={conversations.hasNextPage}
+      loadingMore={conversations.isFetchingNextPage}
+      onMore={() => {
+        void conversations.fetchNextPage();
+      }}
+      onOpen={() => setHistoryOpen(false)}
+      onNew={() => {
+        setHistoryOpen(false);
+        clearChatDraft("new");
+        clearChatRequest("new");
+        setNewDraftKey((value) => value + 1);
+      }}
+    />
+  );
   return (
-    <>
+    <div className="chat-workspace-view">
       <ErrorNotice
         error={
           conversations.error ??
@@ -352,29 +420,35 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
       <div
         className={`chat-layout chat-entry-layout ${id ? "chat-conversation-layout" : ""}`}
       >
-        <details className="chat-entry-history">
-          <summary>Recent conversations</summary>
-          <ConversationHistory
-            conversations={historyRows}
-            currentId={id}
-            newTo={assistant ? "/" : "/chat"}
-            pending={conversations.isPending}
-            archived={historyArchived}
-            onArchived={setHistoryArchived}
-            search={historySearch}
-            onSearch={setHistorySearch}
-            hasMore={conversations.hasNextPage}
-            loadingMore={conversations.isFetchingNextPage}
-            onMore={() => {
-              void conversations.fetchNextPage();
-            }}
-            onNew={() => {
-              clearChatDraft("new");
-              clearChatRequest("new");
-              setNewDraftKey((value) => value + 1);
-            }}
-          />
-        </details>
+        <div className="chat-desktop-history">{history()}</div>
+        <Dialog.Root open={historyOpen} onOpenChange={setHistoryOpen}>
+          <Dialog.Trigger asChild>
+            <Button variant="ghost" className="chat-mobile-history">
+              <History size={17} />
+              Recent conversations
+            </Button>
+          </Dialog.Trigger>
+          <Dialog.Portal>
+            <Dialog.Overlay className="dialog-overlay" />
+            <Dialog.Content className="chat-history-drawer">
+              <div className="chat-drawer-heading">
+                <Dialog.Title>Recent conversations</Dialog.Title>
+                <Dialog.Close asChild>
+                  <Button
+                    variant="ghost"
+                    aria-label="Close conversation history"
+                  >
+                    <X size={18} />
+                  </Button>
+                </Dialog.Close>
+              </div>
+              <Dialog.Description className="sr-only">
+                Search and reopen your saved conversations, or start a new one.
+              </Dialog.Description>
+              {history()}
+            </Dialog.Content>
+          </Dialog.Portal>
+        </Dialog.Root>
         <section className="chat-main panel">
           {!id ? (
             <NewChat
@@ -397,7 +471,7 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
           )}
         </section>
       </div>
-    </>
+    </div>
   );
 }
 function SettingsForm({
@@ -1185,11 +1259,14 @@ function ConversationView({
           }
           onClick={() => archive.mutate()}
         >
-          {archive.isPending
-            ? "Saving…"
-            : conversation.archived_at
-              ? "Restore conversation"
-              : "Archive conversation"}
+          <Archive size={16} aria-hidden="true" />
+          <span className="chat-archive-label">
+            {archive.isPending
+              ? "Saving…"
+              : conversation.archived_at
+                ? "Restore conversation"
+                : "Archive conversation"}
+          </span>
         </Button>
         {conversation.active_run && (
           <Link to={`/runs/${conversation.active_run.id}`}>
@@ -1296,40 +1373,67 @@ function ConversationView({
           )}
         </section>
       )}
-      <details className="chat-settings-panel">
-        <summary>Conversation settings</summary>
-        <SettingsForm
-          key={conversation.updated_at}
-          defaults={conversation}
-          providers={providers}
-          provider={selected.data}
-          onProviderChange={(key) =>
-            settings.mutate({
-              provider: key,
-              model: conversation.model,
-              execution_mode: conversation.execution_mode,
-              title: conversation.title,
-              system_prompt: conversation.system_prompt,
-              temperature: conversation.temperature,
-              max_tokens: conversation.max_tokens,
-            })
-          }
-          models={models}
-          pending={busy || settings.isPending}
-          submit={(body) => settings.mutate(body)}
-          label="Save settings"
-        />
-      </details>
-      <details className="chat-settings-panel">
-        <summary>Memory &amp; context</summary>
-        <ConversationSummary
-          conversationId={conversation.id}
-          summary={conversation.summary}
-          autoSummary={conversation.auto_summary}
-          lastUpdate={conversation.summary_update}
-          busy={busy}
-        />
-      </details>
+      <Dialog.Root>
+        <Dialog.Trigger asChild>
+          <Button
+            variant="ghost"
+            className="chat-options-trigger"
+            aria-label="Conversation options"
+          >
+            <Settings2 size={17} />
+          </Button>
+        </Dialog.Trigger>
+        <Dialog.Portal>
+          <Dialog.Overlay className="dialog-overlay" />
+          <Dialog.Content className="chat-options-dialog">
+            <div className="chat-drawer-heading">
+              <Dialog.Title>Conversation options</Dialog.Title>
+              <Dialog.Close asChild>
+                <Button variant="ghost" aria-label="Close conversation options">
+                  <X size={18} />
+                </Button>
+              </Dialog.Close>
+            </div>
+            <Dialog.Description className="muted">
+              Manage this conversation’s settings and saved context.
+            </Dialog.Description>
+            <details className="chat-settings-panel">
+              <summary>Conversation settings</summary>
+              <SettingsForm
+                key={conversation.updated_at}
+                defaults={conversation}
+                providers={providers}
+                provider={selected.data}
+                onProviderChange={(key) =>
+                  settings.mutate({
+                    provider: key,
+                    model: conversation.model,
+                    execution_mode: conversation.execution_mode,
+                    title: conversation.title,
+                    system_prompt: conversation.system_prompt,
+                    temperature: conversation.temperature,
+                    max_tokens: conversation.max_tokens,
+                  })
+                }
+                models={models}
+                pending={busy || settings.isPending}
+                submit={(body) => settings.mutate(body)}
+                label="Save settings"
+              />
+            </details>
+            <details className="chat-settings-panel">
+              <summary>Memory &amp; context</summary>
+              <ConversationSummary
+                conversationId={conversation.id}
+                summary={conversation.summary}
+                autoSummary={conversation.auto_summary}
+                lastUpdate={conversation.summary_update}
+                busy={busy}
+              />
+            </details>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
       <Transcript
         messages={messages}
         orchestrator={orchestrator}

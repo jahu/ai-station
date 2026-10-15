@@ -234,7 +234,7 @@ export function CodingNav() {
   return (
     <div className="coding-nav">
       <div className="coding-nav-heading">
-        <NavLink to="/coding">
+        <NavLink to="/coding" title="Coding">
           <Code2 size={17} />
           Coding
         </NavLink>
