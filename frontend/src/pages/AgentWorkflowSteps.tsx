@@ -37,6 +37,15 @@ export function WorkflowStepCards({
   );
   const selected = workflow.steps[index];
   const active = tabIndex >= 0;
+  const pageCoding = workflow.steps.some(
+    (step) => step.capability === "agent.coding_context",
+  );
+  const pageCodingLabels: Record<string, string> = {
+    "agent.step": "Read reviewed pages",
+    "agent.coding_context": "Prepare coding context",
+    "coding.prepare": "Prepare isolated workspace",
+    "coding.local": "Implement changes",
+  };
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
     onKeyDown(event);
     if (event.key !== "Enter" || event.defaultPrevented) return;
@@ -81,7 +90,9 @@ export function WorkflowStepCards({
                   tabIndex={active && current ? 0 : -1}
                 >
                   <div>
-                    <strong>{step.key}</strong>
+                    <strong>
+                      {(pageCoding && pageCodingLabels[step.key]) || step.key}
+                    </strong>
                     <p>
                       {step.capability}
                       {step.gate === "approval" ? " · approval gate" : ""}
