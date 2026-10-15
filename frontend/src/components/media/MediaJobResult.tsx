@@ -97,7 +97,7 @@ export default function MediaJobResult({
                   ? "Generating speech and preparing its full timeline…"
                   : job.status === "succeeded"
                     ? "Your full video is ready."
-                    : `${job.completed_segments} of ${job.total_segments} segments complete`}
+                    : `${job.completed_segments} of ${job.total_segments} ${job.mode === "shots" ? "shots" : "segments"} complete`}
             </p>
           </div>
           {job.kind === "video" &&

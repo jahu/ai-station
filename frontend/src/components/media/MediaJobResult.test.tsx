@@ -104,6 +104,8 @@ it("shows one labeled partial preview without presenting it as the final movie",
 it("shows simultaneous shot counts and actual devices without starting work on inspection", async () => {
   const writes = mount("generating", undefined, {
     mode: "shots",
+    completed_segments: 0,
+    total_segments: 3,
     running_segments: 2,
     queued_segments: 1,
     active_segments: [
@@ -112,6 +114,7 @@ it("shows simultaneous shot counts and actual devices without starting work on i
     ],
   });
   expect(screen.getByText("2 shots running · 1 queued")).toBeTruthy();
+  expect(screen.getByText("0 of 3 shots complete")).toBeTruthy();
   expect(
     screen.getByRole("link", { name: "Shot 1" }).getAttribute("href"),
   ).toBe("/runs/first");
