@@ -5217,3 +5217,25 @@ section:has(> .memory-grid) > .dashboard-note {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+
+.recording-control {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.recording-state {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.recording-error {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+  color: var(--danger, #f87171);
+}
+
+.assistant-recording-toolbar {
+  margin-top: 0.5rem;
+}
