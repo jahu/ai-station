@@ -185,11 +185,29 @@ def enqueue_summary(session, row, snapshot, *, commit=True, parent_run_id=None, 
     pieces, covered, covered_offset = collect_segment(candidates, start_offset=start_offset)
     if not pieces or covered is None:
         raise HTTPException(409, "No older messages fit the next summary segment (48,000 characters)")
+    payload_messages = [_piece_payload(piece) for piece in pieces]
+    transcript_sources = []
+    transcript_budget = 20000
+    for piece, payload_message in zip(pieces, payload_messages, strict=True):
+        if piece["end"] != piece["total"]:
+            continue
+        from app.transcript_context import reference
+
+        current_size = len(
+            json.dumps(
+                {"previous_summary": memory.content if memory else "", "messages": payload_messages},
+                ensure_ascii=False,
+            )
+        )
+        quoted = reference(
+            session, piece["message"], budget=min(transcript_budget, max(0, (94000 - current_size) // 2))
+        )
+        if quoted:
+            payload_message["content"] += quoted[0]
+            transcript_sources.append(quoted[1])
+            transcript_budget -= len(quoted[0])
     payload = json.dumps(
-        {
-            "previous_summary": memory.content if memory else "",
-            "messages": [_piece_payload(piece) for piece in pieces],
-        },
+        {"previous_summary": memory.content if memory else "", "messages": payload_messages},
         ensure_ascii=False,
     )
     if len(payload) > 96000:
@@ -230,6 +248,7 @@ def enqueue_summary(session, row, snapshot, *, commit=True, parent_run_id=None, 
                 },
             ],
             "source_message_ids": [piece["message"].id for piece in pieces],
+            **({"transcript_sources": transcript_sources} if transcript_sources else {}),
             "source_chunks": [
                 {
                     "message_id": piece["message"].id,

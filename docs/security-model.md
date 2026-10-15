@@ -242,3 +242,5 @@ I/O and protocols, offline model loading, CPU-only threads and a hard deadline.
 Source/model integrity, process ownership and report timestamps are verified
 before transcript adoption. Audio instructions remain text, not executable tools.
 See [the transcription contract](audio-transcription.md).
+
+Follow-up transcript context is tied to a succeeded source turn and native child in the same conversation/Task. The primary TXT artifact must retain ownership, lineage and its recorded content hash. Unavailable or ambiguous sources are labeled instead of substituted. Snapshots quote source data without granting permissions; selected-provider external-AI rules still apply to later text replies. See [transcript context](transcript-conversation-context.md).

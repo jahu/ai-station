@@ -318,3 +318,5 @@ inside application storage; model files remain external references. Whisper's
 optional Python environment does not change the control-plane image or existing
 speech/video runtimes. Immutable source/model checks, bounded offline audio decoding and
 verified completion gate TXT/SRT/JSON artifact publication.
+
+[Transcript conversation continuity](transcript-conversation-context.md) adds bounded, source-checked artifact references to the existing Chat, planner and summary snapshots. It grants no new tools or host access and preserves original message coverage offsets.

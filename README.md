@@ -370,3 +370,5 @@ and Run history remain inspectable. Requires a separately configured offline
 Whisper runtime/model; see [setup and execution contracts](docs/audio-transcription.md).
 
 Transcription also accepts MP3, M4A, Ogg, WebM and FLAC, including selection from Library. Compressed duration is verified by the native job; speech and portrait voice references remain short WAV recordings.
+
+After transcribing, ask Chat to summarize or translate that recording. It reads the stored, checked transcript in the recent conversation context and shows an Inspect source link; rolling summaries preserve source provenance. See [transcript continuity](docs/transcript-conversation-context.md).

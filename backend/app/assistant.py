@@ -240,6 +240,11 @@ def planner_context(session, conversation, user):
         ):
             continue
         content = message.content[: min(1000, budget)]
+        from app.transcript_context import reference
+
+        quoted = reference(session, message, budget=min(1600, max(0, budget - len(content))))
+        if quoted:
+            content += quoted[0]
         if content:
             context.append({"role": message.role, "content": content})
             budget -= len(content)
@@ -462,8 +467,17 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         )
     if body.audio_artifact_id:
         audio = session.get(Artifact, str(body.audio_artifact_id))
-        if audio is None or audio.artifact_type != "audio" or audio.mime_type != "audio/wav":
-            raise HTTPException(422, "Attach an existing WAV voice reference")
+        from app.recordings import FORMATS
+
+        transcribing = selected_plan is not None and selected_plan.action == "audio.transcribe"
+        allowed_audio = {item[0] for item in FORMATS.values()} if transcribing else {"audio/wav"}
+        if audio is None or audio.artifact_type != "audio" or audio.mime_type not in allowed_audio:
+            raise HTTPException(
+                422,
+                "Attach an existing recording" if transcribing else "Attach an existing WAV voice reference",
+            )
+        if transcribing and (body.attachments or body.image_artifact_ids):
+            raise HTTPException(422, "Transcription needs one recording without image or text attachments")
         if body.attachments or (
             body.image_artifact_ids
             and (len(body.image_artifact_ids) != 1 or body.action not in {"auto", "avatar.animate"})
