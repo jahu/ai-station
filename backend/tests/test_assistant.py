@@ -124,6 +124,7 @@ def test_cancel_during_planner_closes_stream_and_never_dispatches(monkeypatch):
     closed = []
 
     async def stream(self, **params):
+        assert params["json_output"] is True
         try:
             with session_factory()() as session:
                 run = session.scalar(select(Run).where(Run.executor_type == "orchestrator"))

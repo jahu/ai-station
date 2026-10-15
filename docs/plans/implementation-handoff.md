@@ -1,6 +1,6 @@
 # Chat/Work and longer media: implementation handoff
 
-Updated 2026-10-14. Implementation is active: the earlier planning-only request and
+Updated 2026-10-15. Implementation is active: the earlier planning-only request and
 pause were explicitly superseded. Continue implementation; do not repeat delivered
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
@@ -30,33 +30,36 @@ The detailed original UX specifications remain in [chat-work experience](chat-wo
 and [delivery brief](2026-10-chat-work-media.md). They describe historical findings;
 those findings are not proof that delivered APIs/components remain absent.
 
-## Next implementation
+## Latest delivered increments
 
-1. **Contextual Work foundation is delivered:** [same-task continuation](../contextual-work.md)
-   now shows project/executor/model and reuses owned worktrees with task-wide Stop.
-   Next, extend explicit scope selection beyond the current conversation. Show the current project/task clearly, continue an existing
-   owned worktree from subsequent prompts, allow explicit scope changes, and retain
-   approvals/validation results. Do not infer permissions from conversation mode.
-   Replace the known project-build cancellation chain with transactionally bounded
-   task-graph Stop before advertising cancellation of arbitrary descendants.
-2. **Automatic model routing:** use installed modality/context/resource observations,
-   explicit provider/location policy and existing load/admission services. Never
-   silently fall back to external AI. Show the actual executor/model per result.
-3. **Long media:** follow [long-media contracts](long-media-execution.md): durable
-   plan revisions/unique stage operation keys, existing RunDependency edges, aggregate
-   job state, atomic Stop/resume, typed CPU composition with full decode/timing checks,
-   GPU plus system-RAM admission. Then qualify Wan continuous/shots and full-audio
-   avatar windows. The long-media branch now implements 5–60-second video and full-speech avatar
-   job APIs, deterministic timelines, CPU composition and Stop/resume. See
-   [implementation](../long-media.md). Real Wan acceptance is ongoing; do not
-   claim it or full-avatar quality qualified until evidence is complete.
-4. Broaden draft persistence to reviewed scope/attachment contracts if needed; keep
-   the current text-only restore explanation and receipt compatibility. Do not cache
-   credential values or large media request bodies in browser storage.
+- #278–279: paged/searchable history and same-task Work continuation.
+- #280–284: durable video/avatar media graphs, full recording timing, Stop/Resume,
+  CPU composition, Auto Local coding with verified 100k+ context, conversational
+  media progress and restored workspace inputs. Wan carries bounded raw motion.
+- #285–286: conversation task-wide Stop with shared startup protection, plus explicit
+  existing-task selection in Work without moving the task's original history.
+- #287–289: constrained Local Coding JSON and bounded correction of malformed
+  read-only exploration. Actual production follow-up succeeded in the same
+  RVN 131072-token task/worktree, preserving previous code and passing validation.
+- #288: Coding → Work opens a pinned draft; no conversation/Run exists until Send.
+- #290: avatar checkpoints retain bounded causal VAE history and flow-step prefix
+  preservation. The corrected real 5-second/256/4-step two-window test passed
+  complete audio/decode/frame checks and visual seam inspection. Earlier brightness
+  failures are preserved, not counted as successful visual qualification.
 
-The remaining Work/media stages must create ordinary Runs/artifacts, support owned
-cancellation/recovery and show partial/final outcomes in both Chat and dedicated tabs.
-Planner success means plan prepared, never film finished or code verified.
+## Next implementation and acceptance
+
+1. Complete the current planner JSON-format increment and verify selected-provider
+   planning through the normal API/worker path. Do not reproduce Coding JSON work.
+2. Apply reviewed releases using the central deployment record, preserving idle
+   data and native process ownership. A release can include several reviewed PRs;
+   retain a healthy Runner when native code is unchanged.
+3. Qualify longer avatar/continuous-media profiles only when those exact tests run;
+   a 5-second test does not qualify 30/60-second visual quality.
+4. Continue the remaining product workstreams in [product completion](../product-completion.md):
+   broader multi-step planning/tools, practical coding acceptance, additional media
+   runtimes, connectors, and safe node/operations capabilities. Keep unavailable
+   integrations explicit and preserve permissions/cancellation/recovery contracts.
 
 ## Preserved work and verification
 
