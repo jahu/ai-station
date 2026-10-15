@@ -332,8 +332,19 @@ admission and current 27B runtime; do not claim unexecuted multi-GPU smoke tests
 ## Current: media resource wait fairness
 
 PR #320 is merged/deployed and verified (see delivered evidence in
-[parallel video shots](../parallel-video-shots.md)). Continue in
-`.tools/media-resource-wait-fairness`, `fix/media-resource-wait-fairness`, following
-[the regression and plan](../media-resource-wait-fairness.md). The focused test
-currently fails as expected: after one resource rejection, another old shot is
-claimed ahead of new CPU work. Preserve Native/Frontend source and resource locks.
+[parallel video shots](../parallel-video-shots.md)). PR #321 now combines
+[resource wait fairness](../media-resource-wait-fairness.md) and
+[native source compatibility](../runner-source-compatibility.md) for one reviewed
+rollout. Both originally failing regressions are fixed: 35 queue/media tests and
+10 launcher/source/private-socket tests pass. Full combined checks are running on
+`bd897aa` in `.tools/runner-source-compatibility`; no full-suite success or rollout
+is claimed yet. The earlier standalone queue full run ended with signal 143 and
+no pytest terminal summary, and is not counted as passed. Frontend is unchanged
+from qualified #320. Preserve all root WIP, data and the current 27B runtime.
+
+Review/deployment evidence is under
+`data/acceptance/runner-source-compatibility-20261015`; queue regression evidence
+remains in `data/acceptance/media-resource-wait-fairness-20261015`. Deploy only after
+full checks pass, using the prepared idle-only owned Runner restart, a verified
+SQLite backup, and post-start exact source/image/persistence checks. The broader
+platform goal remains active; this PR is not a claim of full-product completion.
