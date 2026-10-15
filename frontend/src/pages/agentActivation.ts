@@ -32,6 +32,8 @@ export function isAgentSkillList(value: unknown): value is { id: string }[] {
 export function activationBlock(
   agent: {
     enabled: boolean;
+    github?: { connector_id: string; repository: string } | null;
+    maximum_runtime?: number;
     project_id?: string | null;
     model?: string | null;
     tools?: string[];
@@ -50,6 +52,16 @@ export function activationBlock(
     };
   }
   const names = agent.tools ?? [];
+  if (
+    names.includes("github_read") &&
+    (!agent.github || (agent.maximum_runtime ?? 600) < 70)
+  ) {
+    return {
+      blocked: true,
+      reason:
+        "Choose a GitHub repository and at least 70 seconds runtime before enabling.",
+    };
+  }
   if (names.includes("project_memory") && !agent.project_id) {
     return {
       blocked: true,

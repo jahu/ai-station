@@ -148,3 +148,53 @@ it("keeps the previous snapshot visible when the latest refresh fails", async ()
     screen.getByRole("link", { name: "Inspect refresh" }).getAttribute("href"),
   ).toBe("/runs/failed-run");
 });
+
+it("fetches the finished snapshot when refresh status changes before the next poll", async () => {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  let finished = false;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        snapshot: {
+          captured_at: "2026-10-15T12:00:00Z",
+          artifact_id: "snapshot",
+          project: {
+            name: "owner/repo",
+            description: finished ? "New observation" : "Old observation",
+            private: true,
+            default_branch: "develop",
+          },
+          issues: [],
+          pull_requests: [],
+        },
+      }),
+    })),
+  );
+  const tree = (status: string) => (
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <GithubConnectors
+          rows={[
+            {
+              id: "repo",
+              name: "Our project",
+              repository: "owner/repo",
+              status,
+              last_run_id: "same-refresh",
+              enabled: true,
+            },
+          ]}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+  const view = render(tree("checking"));
+  await screen.findByText("Old observation");
+  finished = true;
+  view.rerender(tree("ready"));
+  await screen.findByText("New observation");
+});

@@ -130,6 +130,7 @@ def agent_dict(agent: Agent) -> dict:
         "runtime": agent.runtime,
         "provider": agent.provider,
         "model": agent.model,
+        "github": agent.github,
         "tools": agent.tools,
         "search_query": agent.search_query,
         "fetch_urls": agent.fetch_urls,

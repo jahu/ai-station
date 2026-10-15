@@ -21,7 +21,15 @@ from app.runs import create_run, mark_failed, transition
 from app.state import ACTIVE, RunStatus
 
 CONTEXT_STEPS = frozenset(
-    {"system_snapshot", "memory_search", "project_memory", "web_search", "http_fetch", "browser"}
+    {
+        "system_snapshot",
+        "memory_search",
+        "project_memory",
+        "web_search",
+        "http_fetch",
+        "browser",
+        "github_read",
+    }
 )
 STEP_KEYS = CONTEXT_STEPS | {"report"}
 
@@ -64,7 +72,7 @@ def workflow_view(session, run: Run) -> dict | None:
         for child in session.scalars(
             select(Run).where(Run.parent_run_id == parent.id).order_by(Run.created_at, Run.id)
         )
-        if child.executor_type in {"agent_tool", "agent", "browser"}
+        if child.executor_type in {"agent_tool", "agent", "browser", "github_read"}
     ]
     definition = parent.parameters.get("definition") or {}
     if "coding_local" in definition.get("tools", []):
@@ -154,6 +162,10 @@ def sibling_context(session, run: Run) -> list[dict]:
             from app.paths import safe_join
 
             result = json.loads(safe_join(get_settings().data_dir, artifact.relative_path).read_text())
+        if tool == "github_read":
+            from app.agent_github import report_context
+
+            result = report_context(result)
         context.append({"tool": tool, "result": result})
     return context
 
@@ -190,6 +202,11 @@ class AgentWorkflowExecutor:
 
 def publish_steps(session, parent: Run) -> list[Run]:
     definition = AgentSettings.model_validate(parent.parameters["definition"])
+    github_target = None
+    if "github_read" in definition.tools:
+        from app.agent_github import reviewed_connector
+
+        github_target = reviewed_connector(session, definition.github)
     if "coding_local" in definition.tools:
         from app.agent_coding import publish_coding
 
@@ -218,9 +235,24 @@ def publish_steps(session, parent: Run) -> list[Run]:
             parent.task,
             run_type="agent",
             capability="agent.execute" if key == "report" else "agent.step",
-            executor_type="agent" if key == "report" else "browser" if key == "browser" else "agent_tool",
-            execution_target="host" if key == "browser" else "container",
+            executor_type="agent"
+            if key == "report"
+            else "browser"
+            if key == "browser"
+            else "github_read"
+            if key == "github_read"
+            else "agent_tool",
+            execution_target="host" if key in {"browser", "github_read"} else "container",
             parameters={
+                **(
+                    {
+                        "connector_id": str(definition.github.connector_id),
+                        "repository": definition.github.repository,
+                        "operation": "overview",
+                    }
+                    if key == "github_read" and definition.github
+                    else {}
+                ),
                 "definition": parent.parameters["definition"],
                 "endpoint": parent.parameters.get("endpoint"),
                 "skill_snapshots": parent.parameters.get("skill_snapshots") or [],
@@ -229,12 +261,20 @@ def publish_steps(session, parent: Run) -> list[Run]:
                 "step_index": index,
                 "deadline_at": deadline_at.isoformat(),
             },
-            permissions=list(parent.effective_permissions),
+            permissions=[p for p in parent.effective_permissions if p in {"network_read", "github_read"}]
+            if key == "github_read"
+            else list(parent.effective_permissions),
             retry_class="inspect",
             triggered_by=parent.triggered_by,
             agent_id=parent.agent_id,
             parent_run_id=parent.id,
         )
+        if key == "github_read":
+            github_target.status, github_target.last_run_id, github_target.updated_at = (
+                "checking",
+                child.id,
+                utcnow(),
+            )
         if previous is not None:
             depend_on(session, child, previous)
         if gate == "approval":

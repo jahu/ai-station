@@ -175,13 +175,17 @@ def get_connector(session: Session, connector_id: UUID) -> Connector:
     return row
 
 
-def active_check(session: Session, connector_id: str) -> Run | None:
+def active_check(session: Session, connector_id: str, *, excluding: str | None = None) -> Run | None:
     for run in session.scalars(
         select(Run).where(
             Run.executor_type.in_(["http_connector", "github_read"]), Run.status.not_in(TERMINAL)
         )
     ):
-        if run.parameters.get("connector_id") == connector_id:
+        if (
+            run.id != excluding
+            and run.status not in TERMINAL
+            and run.parameters.get("connector_id") == connector_id
+        ):
             return run
     return None
 
@@ -214,6 +218,8 @@ def sync_connector_from_run(session: Session, run: Run, status: str) -> None:
         row.status, row.health = "failed", "unhealthy"
     elif status == "canceled":
         row.status = "ready" if row.health == "healthy" else "unconfigured"
+    if active_check(session, row.id, excluding=run.id):
+        row.status = "checking"
     row.updated_at = utcnow()
 
 

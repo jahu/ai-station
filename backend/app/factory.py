@@ -157,6 +157,8 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
     trigger, cron_expr, interval, run_at = _schedule(lowered, text)
     name = text.strip().split(".")[0][:80] or "New agent"
     tools = []
+    if "github" in lowered:
+        tools.append("github_read")
     if any(word in lowered for word in ("gpu", "hardware", "workstation", "system", "stacji")):
         tools.append("system_snapshot")
     if _has(lowered, _REMEMBER_REPORTS):

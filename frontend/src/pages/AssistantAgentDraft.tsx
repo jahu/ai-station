@@ -1,3 +1,4 @@
+import GithubAgentScope from "./GithubAgentScope";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -52,6 +53,7 @@ type AgentDraft = {
     on_failure?: boolean;
     on_approval?: boolean;
   };
+  github?: { connector_id: string; repository: string } | null;
   search_query?: string;
   fetch_urls?: string[];
   project_id?: string | null;
@@ -876,6 +878,18 @@ export function AssistantAgentDraft({
                 />
               </dd>
             </div>
+            {agent.tools?.includes("github_read") ? (
+              <div>
+                <dt>Reviewed GitHub repository</dt>
+                <dd>
+                  <GithubAgentScope
+                    value={agent.github ?? null}
+                    disabled={busy || active || saveSettings.isPending}
+                    onChange={(github) => saveSettings.mutate({ github })}
+                  />
+                </dd>
+              </div>
+            ) : null}
             {agent.tools?.includes("web_search") ? (
               <div>
                 <dt>Public search query</dt>

@@ -5,7 +5,7 @@ from typing import Literal
 from uuid import UUID
 
 from croniter import croniter
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
 from app.agent_tools import AGENT_TOOLS, agent_tool
 from app.db import utcnow
@@ -44,6 +44,19 @@ class NotificationPolicy(BaseModel):
         return value
 
 
+class AgentGithubScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    connector_id: UUID
+    repository: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9-]{0,38}/[A-Za-z0-9_.-]{1,100}$", max_length=140)
+
+    @field_validator("repository")
+    @classmethod
+    def canonical_repository(cls, value):
+        if value.split("/")[1] in {".", ".."} or value.endswith(".git"):
+            raise ValueError("Choose a canonical GitHub repository")
+        return value
+
+
 class AgentSettings(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     name: str = Field(min_length=1, max_length=200)
@@ -53,6 +66,7 @@ class AgentSettings(BaseModel):
     runtime: Literal["openai-compatible"] = "openai-compatible"
     provider: Literal["local-openai-compatible"] = "local-openai-compatible"
     model: str = Field(default="", max_length=200)
+    github: AgentGithubScope | None = None
     search_query: str = Field(default="", max_length=500)
     fetch_urls: list[str] = Field(default_factory=list, max_length=3)
     tools: list[str] = Field(default_factory=list, max_length=8)
@@ -120,6 +134,8 @@ class AgentSettings(BaseModel):
         except ValueError as exc:
             raise ValueError(str(exc)) from exc
         if self.enabled:
+            if "github_read" in self.tools and (self.github is None or self.maximum_runtime < 70):
+                raise ValueError("GitHub reading needs a reviewed repository and at least 70 seconds runtime")
             if "project_memory" in self.tools and not self.project_id:
                 raise ValueError("Project memory requires an explicitly linked project before activation")
             if "web_search" in self.tools and not self.search_query:

@@ -38,7 +38,7 @@ type Snapshot = {
 function RepositoryCard({ row }: { row: Connector }) {
   const cache = useQueryClient();
   const query = useQuery({
-    queryKey: ["github-snapshot", row.id, row.last_run_id],
+    queryKey: ["github-snapshot", row.id, row.last_run_id, row.status],
     placeholderData: (previous) => previous,
     queryFn: () =>
       api<{
