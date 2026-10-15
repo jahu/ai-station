@@ -3490,3 +3490,51 @@ def test_chat_work_continues_coding_in_the_same_real_disposable_worktree(
         }
         assert client.post("/api/chat/turns", json=values).json()["run"]["id"] == second["id"]
         assert (repository / "README.md").read_text() == "Original repository\n"
+
+
+def test_local_agent_provisions_native_workspace_without_repository_configuration(repository, owned_runner):
+    """Real owned Git/environment/worktree setup; no model or external CLI is executed."""
+    from pathlib import Path
+
+    from app.agent_schema import AgentSettings
+    from test_agent_workspace import start
+
+    original_index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        agent, parent = start(client)
+        for label in ("publish", "create-project", "bind-workflow", "prepare-worktree"):
+            with session_factory()() as session:
+                assert tick(session, "managed-agent-" + label)
+        saved = client.get(f"/api/agents/{agent['id']}").json()
+        project = client.get(f"/api/projects/{saved['project_id']}").json()
+        repo = Path(project["repo_path"])
+        assert repo == owned_runner.data_dir / "projects" / project["id"]
+        assert (repo / ".venv/bin/python").is_file()
+        with session_factory()() as session:
+            from app.models import Run, Worktree
+
+            root = session.get(Run, parent["id"])
+            assert root.parameters["definition"]["project_id"] is None
+            tree = session.scalar(select(Worktree).where(Worktree.project_id == project["id"]))
+            assert tree.owned and (owned_runner.data_dir / tree.relative_path / ".git").is_file()
+            preparation = session.get(Run, tree.run_id)
+            assert preparation.status == "succeeded"
+            proposal = session.get(Run, preparation.metadata_json["coding_run_id"])
+            assert proposal.status == "queued" and proposal.agent_id == agent["id"]
+            assert proposal.parameters["agent_coding_deadline"] == root.parameters["agent_coding_deadline"]
+            request_cancel(session, root)
+            session.commit()
+            assert proposal.status == "canceled"
+        assert (
+            client.put(
+                f"/api/agents/{agent['id']}",
+                json={
+                    **{key: value for key, value in agent.items() if key in AgentSettings.model_fields},
+                    "expected_updated_at": agent["updated_at"],
+                },
+            ).status_code
+            == 409
+        )
+        assert subprocess.check_output(["git", "-C", str(repo), "status", "--porcelain"], text=True) == ""
+        assert (repository / "README.md").read_text() == "Original repository\n"
+        assert (repository / ".git/index").read_bytes() == original_index

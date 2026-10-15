@@ -81,7 +81,7 @@ export function activationBlock(
         "Choose the project whose memory this agent may read before enabling.",
     };
   }
-  if (coding.length && !agent.project_id) {
+  if (external && !agent.project_id) {
     return {
       blocked: true,
       reason:

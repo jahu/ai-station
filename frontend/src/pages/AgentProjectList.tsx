@@ -11,7 +11,9 @@ export function AgentProjectList({
   tabIndex = 0,
   disabled = false,
   onSave,
+  automaticWorkspace = false,
 }: {
+  automaticWorkspace?: boolean;
   agentId: string;
   projectId: string | null;
   projects: LinkedProject[];
@@ -21,7 +23,15 @@ export function AgentProjectList({
 }) {
   const shortId = agentId.slice(0, 8);
   const labelId = useId();
-  const items = [{ id: "", name: "No linked project" }, ...projects];
+  const items = [
+    {
+      id: "",
+      name: automaticWorkspace
+        ? "Create a private workspace automatically"
+        : "No linked project",
+    },
+    ...projects,
+  ];
   const saved = projectId ?? "";
   const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
     items,
@@ -45,10 +55,9 @@ export function AgentProjectList({
   return (
     <>
       <p id={labelId} className="dashboard-note">
-        Arrow keys choose a linked project while the list is focused. Space or
-        Enter selects it. That tags this agent’s Runs for filtering. It does not
-        grant coding, Git or repository access. There is no inspectable
-        project-link Run.
+        {automaticWorkspace
+          ? "AI Station creates a private workspace on the first Run. Code stays in isolated worktrees for review. You can optionally choose an existing project instead."
+          : "Arrow keys choose a linked project while the list is focused. Space or Enter selects it. That tags this agent’s Runs for filtering. It does not grant coding, Git or repository access. There is no inspectable project-link Run."}
       </p>
       <div
         ref={listRef}

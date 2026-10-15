@@ -742,6 +742,7 @@ export function AssistantAgentDraft({
               <dt>Linked project</dt>
               <dd>
                 <AgentProjectList
+                  automaticWorkspace={agent.tools.includes("coding_local")}
                   key={agent.updated_at}
                   agentId={agent.id}
                   projectId={agent.project_id ?? null}

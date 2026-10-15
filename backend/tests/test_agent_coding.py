@@ -44,10 +44,10 @@ def finish(session, run):
         transition(session, run, status, event_type="test.transition")
 
 
-def test_activation_requires_explicit_project_and_exclusive_tool():
+def test_activation_requires_exclusive_tool_and_explicit_external_project():
     client = TestClient(app)
     for extra in (
-        {"project_id": None},
+        {"project_id": None, "tools": ["coding_cursor"], "permission_profile": "agent_external_coding"},
         {"tools": ["coding_local", "system_snapshot"]},
         {"tool_calling": "bounded"},
     ):

@@ -37,7 +37,11 @@ STEP_KEYS = CONTEXT_STEPS | {"report"}
 
 def planned_steps(definition: AgentSettings) -> list[dict]:
     if coding_provider(definition.tools) is not None:
-        return [
+        return (
+            [{"key": "workspace.create", "gate": "none"}]
+            if coding_provider(definition.tools) == "local" and not definition.project_id
+            else []
+        ) + [
             {"key": name, "gate": "none"}
             for name in (
                 ["http_fetch", "coding_local"] if "http_fetch" in definition.tools else definition.tools
@@ -214,13 +218,20 @@ def publish_steps(session, parent: Run) -> list[Run]:
 
         github_target = reviewed_connector(session, definition.github)
     if coding_provider(definition.tools) is not None:
+        from app.agent_workspace import coding_deadline, publish_workspace, validate_workspace_binding
+
+        validate_workspace_binding(session, parent)
+        deadline = coding_deadline(parent, definition)
+        parent.parameters = {**parent.parameters, "agent_coding_deadline": deadline.isoformat()}
+        if coding_provider(definition.tools) == "local" and not definition.project_id:
+            return [publish_workspace(session, parent, definition, deadline)]
         if "http_fetch" in definition.tools:
             from app.agent_page_coding import publish_page_coding
 
-            return publish_page_coding(session, parent, definition)
+            return publish_page_coding(session, parent, definition, deadline_at=deadline)
         from app.agent_coding import publish_coding
 
-        return [publish_coding(session, parent, definition)]
+        return [publish_coding(session, parent, definition, deadline_at=deadline)]
     steps = parent.parameters.get("steps")
     if not isinstance(steps, list) or not steps:
         steps = planned_steps(definition)

@@ -101,7 +101,7 @@ class AgentSettings(BaseModel):
                 )
             if len(self.goal) > 10000:
                 raise ValueError("Coding goals must be at most 10000 characters")
-            if self.enabled and not self.project_id:
+            if self.enabled and external_coding(self.tools) and not self.project_id:
                 raise ValueError("Choose the project this coding agent may modify before enabling it")
         if external_coding(self.tools) != (self.permission_profile == "agent_external_coding"):
             raise ValueError(

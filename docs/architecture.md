@@ -426,3 +426,10 @@ process/lease contracts remain unchanged; continuous video/avatars retain prior
 motion edges. Final composition and lineage use timeline order, while partial
 preview uses completion time. Shared job projection exposes current running,
 queued and active-stage GPU state to the conversation and media workspace.
+
+## Automatic local-agent workspaces
+
+[Managed agent workspaces](agent-workspaces.md) compose the existing typed project
+setup with a bound Local coding workflow. A reviewed project-free local agent may
+provision one app-owned project; later executions reuse its registered identity
+and create fresh worktrees. Original definition snapshots remain immutable.

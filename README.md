@@ -1,5 +1,9 @@
 # AI Station
 
+Local coding agents can use an [automatic private workspace](docs/agent-workspaces.md):
+review the goal, model and tools, then enable. A project is created on the first Run;
+manual repository registration remains optional.
+
 Current direction: [agents that can execute local code](docs/plans/agent-first-product.md).
 Chat and Agents lead the experience; existing Coding/Git services supply isolated
 workspaces and inspectable results. Standalone IDE expansion and further external
@@ -9,8 +13,9 @@ are planned capabilities, not yet qualified as operational.
 **Conversation entry:** type immediately at `/` or `/chat`; the first Send creates
 the conversation. Chat supports replies and media tools; Work adds scoped project,
 coding and agent actions. See [first-send contracts](docs/first-send.md).
-Entry and saved conversations share a compact composer; history/tools/settings
-are collapsible and reading earlier messages preserves scroll during updates.
+Entry and saved conversations share a compact composer; desktop history stays
+visible, phone history opens in a drawer, and settings/context open in a dialog.
+Reading earlier messages preserves scroll during updates.
 See [conversation workspace behavior](docs/conversation-shell.md).
 
 In Work, **Create project & build** accepts a name and goal, creates the owned
