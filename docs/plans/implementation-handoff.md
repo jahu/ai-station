@@ -315,3 +315,15 @@ See [delivered evidence](../local-coding-source-context.md#delivered-acceptance-
 Continue in `.tools/memory-scope-navigation`, `feat/memory-scope-navigation`,
 following [scope navigation](../memory-scope-navigation.md). Root WIP stays
 untouched; only its focused frontend change was ported.
+
+
+## Current increment: independent video shots
+
+Memory scope navigation is delivered in #319 (`e10366c`): full 480-test frontend
+validation, Docker/Compose, identical qualified #318 backend/Runner, existing
+agent-memory → agent/filtered history browser acceptance at 1440/390, no writes.
+Evidence: `data/acceptance/memory-scope-navigation-20261015/review.json`.
+
+Continue `.tools/parallel-video-shots`, `feat/parallel-video-shots`, following
+[the parallel shot plan](../parallel-video-shots.md). Preserve conservative RAM
+admission and current 27B runtime; do not claim unexecuted multi-GPU smoke tests.
