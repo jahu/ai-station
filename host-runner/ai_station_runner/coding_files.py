@@ -213,8 +213,8 @@ def proposal_prompt(
     source_sizes = [len((item["content"] or "").encode()) for item in selected]
     limit = MAX_LOCAL_SOURCE if local_context else MAX_TOTAL
     if (
-        not 1 <= len(selected) <= 10
-        or max(source_sizes) > (MAX_LOCAL_SOURCE if local_context else MAX_FILE)
+        len(selected) > 10
+        or max(source_sizes, default=0) > (MAX_LOCAL_SOURCE if local_context else MAX_FILE)
         or sum(source_sizes) > limit
     ):
         raise ValueError("Selected context exceeds this provider source policy")

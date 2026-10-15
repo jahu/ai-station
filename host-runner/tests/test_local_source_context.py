@@ -168,3 +168,11 @@ def test_owned_coding_route_retains_identity_and_private_transport(monkeypatch, 
         monkeypatch.setattr(llama_runtime, "manifest", lambda _: {"desired": "stopped"})
         assert client.post(route + "/coding/completions", json=body).status_code == 409
     assert calls == [(identity, "http://llama/v1", {}, 150000)]
+
+
+def test_external_exploration_adapter_may_prepare_an_empty_context_placeholder():
+    # Cursor/Codex prepare their isolated provider workspace before replacing the
+    # placeholder prompt with a typed discovery operation. Actual selection still
+    # requires one to ten paths in read_selected; there is no source to disclose.
+    message = proposal_prompt(prompt="Task", selected=[], guidance="")
+    assert '"selected_files": []' in message
