@@ -24,6 +24,8 @@ It does not run a development server or execute generated HTML in the UI.
 - After all requested checks pass, detect only the fixed worktree-root `dist`
   directory when a successful `build` command was recorded. Other output layouts
   remain explicit unsupported states for this first increment.
+- Drain verified children of the owned validation session/group before capture,
+  so background helpers cannot keep writing after their parent command exits.
 - Capture output while the validation wrapper still owns the worktree lock.
   Produce a ZIP in its application-owned validation output area, with a derived
   UUID filename; never include source repositories, `.git`, credentials,

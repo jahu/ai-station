@@ -229,3 +229,36 @@ def test_stop_after_native_report_prevents_build_publication(
             tick(session, "stop-build-test")
         assert client.get("/api/runs/" + rid).json()["status"] == "canceled"
         assert not client.get("/api/artifacts", params={"run_id": rid}).json()
+
+
+def test_background_build_writer_is_drained_before_archive_capture(
+    repository, owned_runner, validation_sandbox
+):
+    child = (
+        "from pathlib import Path; import signal,time,sys; "
+        "signal.signal(signal.SIGTERM,lambda *args:(Path('dist/child-state.txt').write_text('stopped'),sys.exit(0))); "
+        "Path('dist/child-state.txt').write_text('running'); time.sleep(30)"
+    )
+    command = (
+        "from pathlib import Path; import subprocess,sys,time; Path('dist').mkdir(); "
+        "subprocess.Popen([sys.executable,'-c',"
+        + repr(child)
+        + "],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL); "
+        "exec(\"while not Path('dist/child-state.txt').exists(): time.sleep(.02)\")"
+    )
+    with TestClient(app) as client:
+        project, tree = prepared_validation(client, repository, [["/usr/bin/true"]])
+        with session_factory()() as session:
+            session.get(Project, project["id"]).build_commands = [["/usr/bin/python3", "-c", command]]
+            session.commit()
+        project = client.get("/api/projects/" + project["id"]).json()
+        response = enqueue_validation(client, project, tree)
+        assert response.status_code == 202, response.text
+        rid = response.json()["id"]
+        with session_factory()() as session:
+            tick(session, "background-build-test")
+        run = client.get("/api/runs/" + rid).json()
+        assert run["status"] == "succeeded", run
+        archive = client.get("/api/artifacts/" + run["metadata"]["build_artifact_id"] + "/file")
+        with zipfile.ZipFile(io.BytesIO(archive.content)) as output:
+            assert output.read("child-state.txt") == b"stopped"
