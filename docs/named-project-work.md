@@ -31,3 +31,10 @@ project name; only the current operator instruction can.
 The derived scope and source reference are persisted with the Run/user message.
 Turn receipt hashing still uses the original request, so replay after a project
 rename or server restart returns the same task without another worktree.
+
+Verification: 1332 backend/Runner tests passed with five explicit opt-in skips;
+449 frontend tests, lint, typecheck, formatting, production build, both Compose
+configurations and Docker build passed. Actual desktop/mobile browser Send used
+an isolated database and fixture model metadata to verify routing, visible project
+identity and Stop. No new coding inference or native worktree creation is claimed
+by that UI check. Evidence: `data/acceptance/named-project-work-20261015`.

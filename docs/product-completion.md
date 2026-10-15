@@ -1,5 +1,11 @@
 # Full-product acceptance ledger
 
+Named-project Work now resolves explicit Polish/English change instructions to
+registered projects and the existing Local Coding Auto flow. Tests cover receipt
+replay, frozen policy revisions, ambiguous names, Chat boundaries and Stop; actual
+desktop/mobile Send is verified without expensive inference. See
+[named-project Work](named-project-work.md).
+
 ## Next priority: conversation-first entry and useful long media
 
 [Unified model catalog](model-catalog.md) now replaces separate happy-path model
