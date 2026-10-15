@@ -289,7 +289,11 @@ function VideoForm({
                 <small>{prompt.length} / 2000</small>
               </span>
               <textarea
-                aria-label="Scene and motion"
+                aria-label={
+                  planningScenes
+                    ? "Shared style and setting"
+                    : "Scene and motion"
+                }
                 required
                 maxLength={2000}
                 rows={planningScenes ? 3 : 6}

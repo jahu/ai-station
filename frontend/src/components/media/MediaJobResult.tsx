@@ -134,7 +134,8 @@ export default function MediaJobResult({
                   job.scenes.filter((scene) => scene.status === "succeeded")
                     .length
                 }{" "}
-                of {job.scenes.length} scenes ready
+                of {job.scenes.length}{" "}
+                {job.scenes.length === 1 ? "scene" : "scenes"} ready
               </summary>
               <ol aria-label="Scene progress">
                 {job.scenes.map((scene) => (

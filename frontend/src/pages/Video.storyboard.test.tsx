@@ -197,7 +197,7 @@ it("rejects excessive total and combined prompts in place before a request", asy
   fireEvent.change(screen.getByLabelText("Scene 1 duration"), {
     target: { value: "2" },
   });
-  fireEvent.change(screen.getByLabelText("Scene and motion"), {
+  fireEvent.change(screen.getByLabelText("Shared style and setting"), {
     target: { value: "x".repeat(1999) },
   });
   expect(
