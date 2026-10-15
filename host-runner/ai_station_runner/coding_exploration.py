@@ -78,10 +78,26 @@ def explore(workspace, prompt, guidance, complete, *, web=False):
         f"You have at most {budget} requests. "
         "The final code proposal happens after selection.\n"
     )
+    corrections = 0
+    declared = {"list_files", "read_file", "search_files", "finish"}
+    if web:
+        declared.add("fetch_url")
+        if search:
+            declared.add("web_search")
     for step in range(budget):
-        message = instructions + json.dumps(
-            {"task": prompt, "guidance": guidance, "step": step + 1, "observations": observations},
-            ensure_ascii=False,
+        correction = (
+            "Controller correction: your previous operation had missing or extra keys and was not executed. "
+            'Include the tool name explicitly; file selection requires {"tool":"finish","files":["path"]}. '
+            if corrections
+            else ""
+        )
+        message = (
+            instructions
+            + correction
+            + json.dumps(
+                {"task": prompt, "guidance": guidance, "step": step + 1, "observations": observations},
+                ensure_ascii=False,
+            )
         )
         if len(message.encode()) > 100000:
             raise ValueError("Repository exploration exceeded its context budget")
@@ -146,7 +162,18 @@ def explore(workspace, prompt, guidance, complete, *, web=False):
         elif web and search and tool == "web_search" and set(action) == {"tool", "query"}:
             result = public_http.search_web(action["query"])
         else:
-            raise ValueError("Unsupported or malformed repository exploration operation")
+            if tool is not None and (not isinstance(tool, str) or tool not in declared):
+                raise ValueError("Unsupported or malformed repository exploration operation")
+            if corrections >= 2:
+                raise ValueError("Malformed repository exploration operation after two corrections")
+            corrections += 1
+            feedback = "Operation was not executed. Return exactly one declared operation with its required tool name and keys."
+            observations.append({"request": action, "result": {"error": feedback, "executed": False}})
+            print(
+                json.dumps({"event": "tool.failed", "tool": tool, "step": step + 1, "error": feedback}),
+                flush=True,
+            )
+            continue
         observations.append({"request": action, "result": result})
         print(
             json.dumps({"event": "tool.completed", "tool": tool, "step": step + 1, "result": result}),

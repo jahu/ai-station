@@ -211,3 +211,43 @@ def test_web_exploration_has_a_twelve_request_budget(workspace, monkeypatch):
     with pytest.raises(ValueError, match="12 requests"):
         explore(workspace, "Task", "", complete, web=True)
     assert len(calls) == 12
+
+
+def test_missing_finish_operation_is_corrected_without_guessing_or_writing(workspace, capsys):
+    replies = iter([{"files": ["app.py"]}, {"tool": "finish", "files": ["app.py"]}])
+    messages = []
+
+    def complete(message):
+        messages.append(message)
+        return json.dumps(next(replies))
+
+    selected, observations = explore(workspace, "Read app", "", complete)
+    assert selected[0]["path"] == "app.py"
+    assert len(messages) == 2 and "Operation was not executed" in messages[1]
+    assert observations[0]["result"]["executed"] is False
+    assert '"event": "tool.failed"' in capsys.readouterr().out
+    assert (workspace / "app.py").read_text().endswith("return 1\n")
+
+
+def test_malformed_declared_operation_gets_only_two_corrections(workspace):
+    calls = []
+
+    def complete(message):
+        calls.append(message)
+        return '{"tool":"read_file"}'
+
+    with pytest.raises(ValueError, match="two corrections"):
+        explore(workspace, "Task", "", complete)
+    assert len(calls) == 3
+
+
+def test_unknown_tool_fails_immediately_without_correction(workspace):
+    calls = []
+
+    def complete(message):
+        calls.append(message)
+        return '{"tool":"shell","command":"touch pwned"}'
+
+    with pytest.raises(ValueError, match="Unsupported"):
+        explore(workspace, "Task", "", complete)
+    assert len(calls) == 1 and not (workspace / "pwned").exists()
