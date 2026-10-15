@@ -1264,6 +1264,19 @@ it("shows the immutable GitHub result for this task without a live connector que
         <AssistantResults
           result={{
             steps: [],
+            artifacts: [
+              {
+                id: "github-file",
+                type: "json",
+                mime_type: "application/json",
+                original_filename: "github-overview.json",
+                metadata: {},
+                parent_artifact_ids: [],
+                size_bytes: 20,
+                created_at: "2026-10-15T12:00:00Z",
+                run_id: "github-run",
+              },
+            ],
             github_snapshots: [
               {
                 run_id: "github-run",
@@ -1291,5 +1304,9 @@ it("shows the immutable GitHub result for this task without a live connector que
   expect(
     screen.getByRole("link", { name: "#7 Add search" }).getAttribute("href"),
   ).toBe("https://github.com/owner/repo/issues/7");
+  expect(
+    screen.getAllByRole("link", { name: "Download snapshot" }),
+  ).toHaveLength(1);
+  expect(screen.queryByText("github-overview.json")).toBeNull();
   expect(fetch).not.toHaveBeenCalled();
 });

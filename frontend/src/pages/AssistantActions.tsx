@@ -273,123 +273,130 @@ export function AssistantResults({
         </div>
       ))}
       <div className="assistant-images">
-        {result.artifacts?.map((artifact) => (
-          <div key={artifact.id}>
-            {artifact.type === "image" && (
-              <a
-                href={`/api/artifacts/${artifact.id}/file`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <img
-                  src={`/api/artifacts/${artifact.id}/file`}
-                  alt={artifact.original_filename || "Generated image"}
-                />
-              </a>
-            )}
-            {artifact.type === "video" && (
-              <video
-                controls
-                preload="metadata"
-                src={`/api/artifacts/${artifact.id}/file`}
-                aria-label="Generated avatar video"
-                style={{ maxWidth: "100%" }}
-              />
-            )}
-            {artifact.type === "audio" && (
-              <audio
-                controls
-                preload="metadata"
-                src={`/api/artifacts/${artifact.id}/file`}
-                aria-label="Generated speech"
-              />
-            )}
-            <Link to={`/library/${artifact.id}`}>
-              {artifact.title || artifact.original_filename || artifact.type}
-            </Link>
-            <LibraryActions artifact={artifact} />
-            {onUse &&
-              (artifact.type === "image" ||
-                (artifact.type === "audio" &&
-                  artifact.mime_type === "audio/wav")) && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="assistant-reuse-result"
-                  disabled={
-                    busy ||
-                    inputs?.image_artifact_ids.includes(artifact.id) ||
-                    inputs?.audio_artifact_id === artifact.id ||
-                    (artifact.type === "image" &&
-                      (inputs?.image_artifact_ids.length ?? 0) >=
-                        (inputs?.action === "image.describe" ? 4 : 8))
-                  }
-                  onClick={() => onUse(artifact)}
+        {result.artifacts
+          ?.filter(
+            (artifact) =>
+              !result.github_snapshots?.some(
+                (snapshot) => snapshot.artifact_id === artifact.id,
+              ),
+          )
+          .map((artifact) => (
+            <div key={artifact.id}>
+              {artifact.type === "image" && (
+                <a
+                  href={`/api/artifacts/${artifact.id}/file`}
+                  target="_blank"
+                  rel="noreferrer"
                 >
-                  {inputs?.image_artifact_ids.includes(artifact.id) ||
-                  inputs?.audio_artifact_id === artifact.id
-                    ? "Added to next message"
-                    : artifact.type === "image"
-                      ? "Use as image reference"
-                      : "Use as voice reference"}
-                </Button>
+                  <img
+                    src={`/api/artifacts/${artifact.id}/file`}
+                    alt={artifact.original_filename || "Generated image"}
+                  />
+                </a>
               )}
-            {artifact.type === "image" && (
-              <div className="media-result-reuse">
-                {(
-                  [
-                    ["img2img", "Edit"],
-                    ["recompose", "Recompose"],
-                    ["upscale", "Upscale"],
-                  ] as const
-                ).map(([mode, label]) => (
-                  <Button key={mode} asChild variant="secondary">
-                    <Link
-                      to={`/images?mode=${mode}&input=${artifact.id}${
-                        artifact.run_id ? `&run=${artifact.run_id}` : ""
-                      }`}
-                      aria-label={`${label} ${artifact.id.slice(0, 8)}`}
-                    >
-                      {label}
-                    </Link>
-                  </Button>
-                ))}
-                <Button asChild variant="secondary">
-                  <Link
-                    to={`/avatars?image=${artifact.id}`}
-                    aria-label={`Use as portrait ${artifact.id.slice(0, 8)}`}
+              {artifact.type === "video" && (
+                <video
+                  controls
+                  preload="metadata"
+                  src={`/api/artifacts/${artifact.id}/file`}
+                  aria-label="Generated avatar video"
+                  style={{ maxWidth: "100%" }}
+                />
+              )}
+              {artifact.type === "audio" && (
+                <audio
+                  controls
+                  preload="metadata"
+                  src={`/api/artifacts/${artifact.id}/file`}
+                  aria-label="Generated speech"
+                />
+              )}
+              <Link to={`/library/${artifact.id}`}>
+                {artifact.title || artifact.original_filename || artifact.type}
+              </Link>
+              <LibraryActions artifact={artifact} />
+              {onUse &&
+                (artifact.type === "image" ||
+                  (artifact.type === "audio" &&
+                    artifact.mime_type === "audio/wav")) && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="assistant-reuse-result"
+                    disabled={
+                      busy ||
+                      inputs?.image_artifact_ids.includes(artifact.id) ||
+                      inputs?.audio_artifact_id === artifact.id ||
+                      (artifact.type === "image" &&
+                        (inputs?.image_artifact_ids.length ?? 0) >=
+                          (inputs?.action === "image.describe" ? 4 : 8))
+                    }
+                    onClick={() => onUse(artifact)}
                   >
-                    Use as portrait
-                  </Link>
-                </Button>
-              </div>
-            )}
-            {artifact.type === "audio" &&
-              artifact.mime_type === "audio/wav" && (
-                <div className="media-result-reuse">
-                  <Button asChild variant="secondary">
-                    <Link
-                      to={`/audio?input=${artifact.id}${
-                        artifact.run_id ? `&run=${artifact.run_id}` : ""
-                      }`}
-                      aria-label={`Use in Audio ${artifact.id.slice(0, 8)}`}
-                    >
-                      Use in Audio
-                    </Link>
+                    {inputs?.image_artifact_ids.includes(artifact.id) ||
+                    inputs?.audio_artifact_id === artifact.id
+                      ? "Added to next message"
+                      : artifact.type === "image"
+                        ? "Use as image reference"
+                        : "Use as voice reference"}
                   </Button>
+                )}
+              {artifact.type === "image" && (
+                <div className="media-result-reuse">
+                  {(
+                    [
+                      ["img2img", "Edit"],
+                      ["recompose", "Recompose"],
+                      ["upscale", "Upscale"],
+                    ] as const
+                  ).map(([mode, label]) => (
+                    <Button key={mode} asChild variant="secondary">
+                      <Link
+                        to={`/images?mode=${mode}&input=${artifact.id}${
+                          artifact.run_id ? `&run=${artifact.run_id}` : ""
+                        }`}
+                        aria-label={`${label} ${artifact.id.slice(0, 8)}`}
+                      >
+                        {label}
+                      </Link>
+                    </Button>
+                  ))}
                   <Button asChild variant="secondary">
                     <Link
-                      to={`/avatars?audio=${artifact.id}`}
-                      aria-label={`Use as speech ${artifact.id.slice(0, 8)}`}
+                      to={`/avatars?image=${artifact.id}`}
+                      aria-label={`Use as portrait ${artifact.id.slice(0, 8)}`}
                     >
-                      Use as speech
+                      Use as portrait
                     </Link>
                   </Button>
                 </div>
               )}
-            <ArtifactLineage artifactId={artifact.id} />
-          </div>
-        ))}
+              {artifact.type === "audio" &&
+                artifact.mime_type === "audio/wav" && (
+                  <div className="media-result-reuse">
+                    <Button asChild variant="secondary">
+                      <Link
+                        to={`/audio?input=${artifact.id}${
+                          artifact.run_id ? `&run=${artifact.run_id}` : ""
+                        }`}
+                        aria-label={`Use in Audio ${artifact.id.slice(0, 8)}`}
+                      >
+                        Use in Audio
+                      </Link>
+                    </Button>
+                    <Button asChild variant="secondary">
+                      <Link
+                        to={`/avatars?audio=${artifact.id}`}
+                        aria-label={`Use as speech ${artifact.id.slice(0, 8)}`}
+                      >
+                        Use as speech
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+              <ArtifactLineage artifactId={artifact.id} />
+            </div>
+          ))}
       </div>
     </div>
   );
