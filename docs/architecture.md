@@ -1,5 +1,14 @@
 # Architecture
 
+## Current product priority — agent-first
+
+The user's [2026-10-15 decision](plans/agent-first-product.md) makes persistent
+agents with local code execution the priority. Coding/Git/worktree services remain
+shared infrastructure; a standalone IDE-like workspace and expanded external coding
+CLI integrations are deferred. Next: isolated Python/data processing, agent results
+and website-building UX, then typed price observations and scoped email delivery.
+This is a priority change, not a claim that these workflows already work.
+
 [Component validation environments](self-development-validation.md) extend the
 existing frozen project preparation/dependency/check chain with development locks,
 a nested Node component, owned Python source roots and bounded check deadlines.
