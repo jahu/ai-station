@@ -10,7 +10,8 @@ from pydantic import ValidationError
 
 def checkpoint(path, **changes):
     shape = [1, 16, 5, 32, 32]
-    size = 16 * 5 * 32 * 32 * 4
+    groups = changes.get("shape", shape)[2]
+    size = 16 * groups * 32 * 32 * 4
     header = {
         "motion": {"dtype": "F32", "shape": shape, "data_offsets": [0, size]},
         "__metadata__": {"station.echo_profile": "a" * 64},
@@ -112,3 +113,12 @@ def test_flow_continuation_rejects_invalid_noise_levels(value):
     scheduler = type("FlowUniPCMultistepScheduler", (), {"sigmas": [value]})()
     with pytest.raises(ValueError):
         flow_sigma(scheduler, 0)
+
+
+def test_echo_history_accepts_a_full_native_window_and_rejects_unbounded_history(tmp_path):
+    full = checkpoint(tmp_path / "history.safetensors", shape=[1, 16, 21, 32, 32])
+    assert validate_checkpoint(full, 256, "a" * 64) == [1, 16, 21, 32, 32]
+    with pytest.raises(ValueError, match="temporal budget"):
+        validate_checkpoint(
+            checkpoint(tmp_path / "too-long.safetensors", shape=[1, 16, 22, 32, 32]), 256, "a" * 64
+        )

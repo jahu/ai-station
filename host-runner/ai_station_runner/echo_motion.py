@@ -6,7 +6,7 @@ import math
 import struct
 from pathlib import Path
 
-MAX_BYTES = 4 * 1024 * 1024
+MAX_BYTES = 8 * 1024 * 1024
 
 
 def profile_key(runtime, models):
@@ -21,7 +21,7 @@ def profile_key(runtime, models):
     observed = {
         key: {"size_bytes": path.stat().st_size, "mtime": path.stat().st_mtime} for key, path in paths.items()
     }
-    return hashlib.sha256(json.dumps({"version": 1, "files": observed}, sort_keys=True).encode()).hexdigest()
+    return hashlib.sha256(json.dumps({"version": 2, "files": observed}, sort_keys=True).encode()).hexdigest()
 
 
 def validate_checkpoint(path, size, profile):
@@ -33,11 +33,16 @@ def validate_checkpoint(path, size, profile):
         if not 0 < header_size <= 8192 or header_size + 8 > length:
             raise ValueError("Invalid avatar motion header")
         header = json.loads(source.read(header_size))
-    shape = [1, 16, 5, size // 8, size // 8]
-    payload = 16 * 5 * (size // 8) ** 2 * 4
     if not isinstance(header, dict) or set(header) != {"motion", "__metadata__"}:
         raise ValueError("Unexpected avatar motion tensors")
     tensor, metadata = header["motion"], header["__metadata__"]
+    if not isinstance(tensor, dict) or not isinstance(tensor.get("shape"), list) or len(tensor["shape"]) != 5:
+        raise ValueError("Invalid avatar motion tensor shape")
+    groups = tensor["shape"][2]
+    if type(groups) is not int or not 5 <= groups <= 21:
+        raise ValueError("Avatar motion history exceeds its temporal budget")
+    shape = [1, 16, groups, size // 8, size // 8]
+    payload = 16 * groups * (size // 8) ** 2 * 4
     if (
         not isinstance(tensor, dict)
         or not isinstance(metadata, dict)

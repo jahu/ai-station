@@ -5,8 +5,11 @@ The installed EchoMimic pipeline encodes the masked reference video in
 The current multi-window adapter carries seventeen decoded MP4 frames between
 windows. Repeated video decoding and VAE encoding can progressively damage detail.
 
-Full-recording jobs will preserve the last five temporal groups of the final
-Wan 2.1 latent tensor as an app-owned safetensors checkpoint. The next window
+Full-recording jobs will preserve the last twenty-one temporal groups of the final
+Wan 2.1 latent tensor as an app-owned safetensors checkpoint. Five groups supply the shared prefix;
+the preceding groups warm the causal VAE decoder. Without that history, decoding
+the identical prefix at a fresh decoder boundary changed its brightness in the
+first GPU acceptance tests. The next window
 keeps its seventeen-frame conditioning mask but substitutes that exact latent
 prefix after the existing masked-video preparation. Masked preparation uses the
 checkpoint's direct VAE-decoded floating-point frames, retaining the causal boundary
@@ -18,7 +21,7 @@ overlap from being regenerated with different lighting. Its original portrait st
 the CLIP identity reference. Installed EchoMimic code, models and input files are
 not modified; the adapter uses a per-process subclass.
 
-Checkpoints are bounded F32 tensors, shape `[1,16,5,size/8,size/8]`, with exactly
+Checkpoints are bounded F32 tensors, shape `[1,16,T,size/8,size/8]` with `5 ≤ T ≤ 21` and at most 8 MiB, with exactly
 one motion tensor and a model/config observation fingerprint. The native request
 checks canonical owned paths, extension, size, hash, shape and current profile
 before launching; the child checks hash/finiteness again. A checkpoint requires a

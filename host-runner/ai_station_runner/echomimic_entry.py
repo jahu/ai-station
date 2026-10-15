@@ -49,6 +49,8 @@ def main():
         if not torch.isfinite(motion).all():
             raise ValueError("Non-finite avatar motion checkpoint")
 
+    motion_prefix = motion[:, :, -5:] if motion is not None else None
+
     class OffloadedPipeline(base):
         def to(self, *args, **kwargs):
             if not getattr(self, "_station_offloaded", False):
@@ -62,7 +64,7 @@ def main():
                 self._station_motion_noise = latents[:, :, :5].clone()
                 skipped = int(arguments[arguments.index("--num_skip_start_steps") + 1])
                 sigma = flow_sigma(self.scheduler, skipped)
-                latents[:, :, :5] = (1 - sigma) * motion.to(
+                latents[:, :, :5] = (1 - sigma) * motion_prefix.to(
                     device=latents.device, dtype=latents.dtype
                 ) + sigma * self._station_motion_noise
             return latents
@@ -76,7 +78,7 @@ def main():
                         values = previous_callback(pipeline, index, timestep, values)
                     latents = values["latents"]
                     sigma = flow_sigma(self.scheduler, self.scheduler.step_index)
-                    latents[:, :, :5] = (1 - sigma) * motion.to(
+                    latents[:, :, :5] = (1 - sigma) * motion_prefix.to(
                         device=latents.device, dtype=latents.dtype
                     ) + sigma * self._station_motion_noise
                     return values
@@ -88,7 +90,11 @@ def main():
         def prepare_mask_latents(self, mask, masked_image, *args, **kwargs):
             if motion is not None:
                 device = kwargs.get("device", args[4] if len(args) > 4 else None)
-                decoded = self.vae.decode(motion.to(device=device, dtype=self.vae.dtype)).sample.clamp(-1, 1)
+                decoded = (
+                    self.vae.decode(motion.to(device=device, dtype=self.vae.dtype))
+                    .sample[:, :, -17:]
+                    .clamp(-1, 1)
+                )
                 if (
                     masked_image is None
                     or decoded.shape[:3] != (1, 3, 17)
@@ -101,15 +107,23 @@ def main():
             if motion is not None:
                 if (
                     masked is None
-                    or masked.shape[:2] != motion.shape[:2]
-                    or masked.shape[-2:] != motion.shape[-2:]
+                    or masked.shape[:2] != motion_prefix.shape[:2]
+                    or masked.shape[-2:] != motion_prefix.shape[-2:]
                     or masked.shape[2] < 5
                 ):
                     raise ValueError("Avatar masked latent shape changed")
-                masked[:, :, :5] = motion.to(device=masked.device, dtype=masked.dtype)
+                masked[:, :, :5] = motion_prefix.to(device=masked.device, dtype=masked.dtype)
             return mask, masked
 
         def decode_latents(self, latents):
+            import torch
+
+            history = (
+                motion[:, :, :-5].to(device=latents.device, dtype=latents.dtype)
+                if motion is not None
+                else None
+            )
+            combined = torch.cat([history, latents], dim=2) if history is not None else latents
             if options.motion_output:
                 import torch
                 from safetensors.torch import save_file
@@ -120,7 +134,7 @@ def main():
                     raise FileExistsError(path)
                 if profile_key(options.runtime_dir, model_root) != options.motion_profile:
                     raise ValueError("Avatar model/config observation changed during inference")
-                context = latents[:, :, -5:].detach().cpu().float().contiguous()
+                context = combined[:, :, -21:].detach().cpu().float().contiguous()
                 if not torch.isfinite(context).all():
                     raise ValueError("Non-finite generated avatar motion")
                 save_file(
@@ -131,7 +145,8 @@ def main():
                 validate_checkpoint(partial, size, options.motion_profile)
                 partial.chmod(0o600)
                 partial.replace(path)
-            return super().decode_latents(latents)
+            frames = super().decode_latents(combined)
+            return frames[:, :, history.shape[2] * 4 :] if history is not None else frames
 
     if options.previous_video:
         import hashlib
