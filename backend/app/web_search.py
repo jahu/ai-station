@@ -147,6 +147,11 @@ async def retrieve(session, run, query, planner):
     result = await search(query)
     if result["sources"] or planner is None:
         return result
+    session.refresh(run)
+    canceled = run.status == "cancel_requested"
+    session.commit()
+    if canceled:
+        return result
     append_event(session, run.id, "tool.query_rewrite_started", {"tool": "web_search"})
     session.commit()
     try:
@@ -154,6 +159,11 @@ async def retrieve(session, run, query, planner):
     except (ProviderError, TimeoutError, ValueError):
         append_event(session, run.id, "tool.query_rewrite_failed", {"tool": "web_search"})
         session.commit()
+        return result
+    session.refresh(run)
+    canceled = run.status == "cancel_requested"
+    session.commit()
+    if canceled:
         return result
     if rewritten.casefold() == query.casefold():
         return result
@@ -243,6 +253,12 @@ async def execute_search(session, run, query, *, deadline=None, planner=None):
             ready, _ = await asyncio.wait([pending], timeout=0.2)
             if ready:
                 result = pending.result()
+                session.refresh(run)
+                canceled = run.status == "cancel_requested"
+                session.commit()
+                if canceled:
+                    append_event(session, run.id, "tool.canceled", {"tool": "web_search"})
+                    return None
                 break
         with tempfile.NamedTemporaryFile(mode="w+", suffix=".json") as handle:
             json.dump(result, handle)

@@ -472,7 +472,8 @@ def test_invalid_rewrite_and_irrelevant_sources_do_not_produce_a_factual_answer(
         assert client.get(route).json()["messages"][-1]["content"] == ""
 
 
-def test_stop_during_query_rewrite_closes_model_and_never_retries_search(monkeypatch):
+@pytest.mark.parametrize("fast", [False, True])
+def test_stop_during_query_rewrite_closes_model_and_never_retries_search(monkeypatch, fast):
     queries, closed = [], []
     run_id = None
 
@@ -485,8 +486,11 @@ def test_stop_during_query_rewrite_closes_model_and_never_retries_search(monkeyp
             with session_factory()() as session:
                 request_cancel(session, session.get(Run, run_id))
                 session.commit()
-            await asyncio.Future()
-            yield "never"
+            if fast:
+                yield '{"query":"A rewritten public query"}'
+            else:
+                await asyncio.Future()
+                yield "never"
         finally:
             closed.append(True)
 
