@@ -87,9 +87,13 @@ export default function CodingTaskProgress({ runs }: { runs: Run[] }) {
       r.executor_type === "llama_load" &&
       (!latest || r.created_at >= latest.created_at),
   );
-  const stopped = [...workspace, latest, ...plan, ...dependencies, ...checks].some(
-    (r) => r?.status === "canceled",
-  );
+  const stopped = [
+    ...workspace,
+    latest,
+    ...plan,
+    ...dependencies,
+    ...checks,
+  ].some((r) => r?.status === "canceled");
   const notStarted =
     stopped || latest?.status === "failed" ? "Not run" : "Not started";
   const steps: Step[] = [
