@@ -380,3 +380,5 @@ In Chat's **Attach files & choose tools**, **Record audio** records from your br
 Conversation history offers **Active** and **Archived** views. Archive an idle conversation from its header; messages, tasks, files and memory stay intact. Restore from the same detail to continue. See [conversation archive](docs/conversation-archive.md).
 
 Persistent coding agents can explicitly use **Local AI**, **Codex** or **Cursor**. External choices disclose project-source sharing, require the external-coding permission profile and default new drafts to approval before each Run. They use existing CLI logins and models; no local LLM is loaded for external coding. Changes stay in owned worktrees for review. See [agent coding providers](docs/agent-coding-providers.md).
+
+New local coding-agent drafts default to **Auto Local Coding**. The agent editor also offers Auto or a specific local model; existing selections are preserved. Auto requires a fitting installed model with 100k+ context, and enabling it does not load a model before approval/execution. See [agent Auto coding](docs/agent-coding-auto.md).

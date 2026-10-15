@@ -52,11 +52,16 @@ def validate_target(body, session):
             reviewed_connector(session, body.github)
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from exc
-    from app.agent_coding_policy import external_coding
+    from app.agent_coding_policy import auto_local_coding, external_coding
 
     if body.enabled and not external_coding(body.tools):
         try:
-            model_endpoint(body.model, session)
+            if auto_local_coding(body.tools, body.model):
+                from app.coding_model_routing import select_coding_model
+
+                select_coding_model(session)
+            else:
+                model_endpoint(body.model, session)
         except ProviderError as exc:
             raise HTTPException(409, str(exc)) from exc
 

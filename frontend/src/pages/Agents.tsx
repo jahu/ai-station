@@ -39,7 +39,9 @@ const isExternalCoding = (tools: string[]) =>
 const agentModelLabel = (agent: { tools: string[]; model: string }) =>
   isExternalCoding(agent.tools)
     ? `${agent.tools[0] === "coding_codex" ? "Codex" : "Cursor"} · EXTERNAL · CLI default model`
-    : agent.model || "No model selected";
+    : isCoding(agent.tools) && agent.model === "auto"
+      ? "Auto Local Coding · 100k+ context"
+      : agent.model || "No model selected";
 
 type Trigger = "manual" | "interval" | "cron" | "datetime";
 interface Agent {
@@ -833,13 +835,37 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             Enable only after reviewing this project scope.
           </p>
         ) : (
-          <LlamaModels
-            value={values.model}
-            models={provider.data?.models ?? []}
-            onSelect={(model) => update("model", model)}
-            onBusy={setModelBusy}
-            busy={active || save.isPending}
-          />
+          <>
+            {isCoding(values.tools) && (
+              <label>
+                Coding model policy
+                <select
+                  aria-label="Coding model policy"
+                  disabled={modelBusy || active || save.isPending}
+                  value={values.model === "auto" ? "auto" : "explicit"}
+                  onChange={(event) =>
+                    update("model", event.target.value === "auto" ? "auto" : "")
+                  }
+                >
+                  <option value="auto">
+                    Auto · fitting local model with 100k+ context
+                  </option>
+                  <option value="explicit">
+                    Choose a specific local model
+                  </option>
+                </select>
+              </label>
+            )}
+            {(!isCoding(values.tools) || values.model !== "auto") && (
+              <LlamaModels
+                value={values.model}
+                models={provider.data?.models ?? []}
+                onSelect={(model) => update("model", model)}
+                onBusy={setModelBusy}
+                busy={active || save.isPending}
+              />
+            )}
+          </>
         )}
         <label className="agent-wide">
           Description
@@ -1153,7 +1179,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                     : "agent_local",
                   ...(addedCoding
                     ? {
-                        ...(isExternalCoding(selected) ? { model: "" } : {}),
+                        model: isExternalCoding(selected) ? "" : "auto",
                         tool_calling: "none" as const,
                         require_approval:
                           isExternalCoding(selected) ||

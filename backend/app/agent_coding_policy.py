@@ -11,3 +11,7 @@ def coding_provider(tools):
 
 def external_coding(tools):
     return coding_provider(tools) in {"cursor", "codex"}
+
+
+def auto_local_coding(tools, model):
+    return coding_provider(tools) == "local" and model == "auto"

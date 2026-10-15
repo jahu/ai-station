@@ -218,7 +218,11 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
             "Prefer local information. Do not invent tool results. "
             "Use the goal supplied with each execution."
         ),
-        model="" if tools in (["coding_codex"], ["coding_cursor"]) else model,
+        model=""
+        if tools in (["coding_codex"], ["coding_cursor"])
+        else "auto"
+        if tools == ["coding_local"]
+        else model,
         provider="local-openai-compatible",
         runtime="openai-compatible",
         execution_target="container",
