@@ -12,6 +12,10 @@ external provider. Local remains the default and cannot silently escalate or fal
 back. An external draft stays disabled; the factory defaults it to per-run approval.
 Only an explicitly reviewed/activated definition can publish a CLI coding child.
 
+Local coding may optionally combine with reviewed HTTP fetch; successful public
+page reads and source verification precede coding. Other report tools remain
+separate. See [coding from public references](agent-page-coding.md).
+
 No local response model is loaded for an external coding workflow. The CLI uses its
 existing authenticated installation and default model; the local model field stays
 exclusive to Local AI. Missing adapters fail with diagnostics, without installing

@@ -1,5 +1,10 @@
 # Architecture
 
+[Reviewed-page coding](agent-page-coding.md) composes existing public HTTP context
+Runs with Local Coding. A dependency-gated metadata stage verifies immutable
+source artifacts and publishes the normal coding chain on the same Task, with a
+shared deadline and existing approval, Stop and conservative recovery contracts.
+
 ## Planned conversation and long-media milestone — 2026-10-14
 
 The [first-send increment](first-send.md) now adds transactional turn receipts and

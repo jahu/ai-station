@@ -1167,10 +1167,21 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                     codingNames.includes(name) && !values.tools.includes(name),
                 );
                 const selected = addedCoding
-                  ? [addedCoding]
+                  ? [
+                      addedCoding,
+                      ...(addedCoding === "coding_local" &&
+                      names.includes("http_fetch")
+                        ? ["http_fetch"]
+                        : []),
+                    ]
                   : names.length === 1 && codingNames.includes(names[0])
                     ? names
-                    : names.filter((name) => !codingNames.includes(name));
+                    : names.includes("coding_local") &&
+                        names.every((name) =>
+                          ["coding_local", "http_fetch"].includes(name),
+                        )
+                      ? names
+                      : names.filter((name) => !codingNames.includes(name));
                 setValues((current) => ({
                   ...current,
                   tools: selected,

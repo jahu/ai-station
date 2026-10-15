@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agent_executor import LocalAgentExecutor
+from app.agent_page_coding import AgentPageCodingExecutor
 from app.agent_workflow import AgentToolExecutor, AgentWorkflowExecutor
 from app.artifacts import adopt_existing
 from app.assistant import AssistantExecutor
@@ -323,6 +324,7 @@ EXECUTORS = {
     "agent": LocalAgentExecutor(),
     "agent_workflow": AgentWorkflowExecutor(),
     "agent_tool": AgentToolExecutor(),
+    "agent_page_coding": AgentPageCodingExecutor(),
     "http_connector": HttpConnectorExecutor(),
     "github_read": GithubReadExecutor(),
     "memory_embed": MemoryEmbedExecutor(),

@@ -1,5 +1,12 @@
 # Security model
 
+Local coding agents may explicitly combine coding with reviewed public HTTP GET.
+The linked project and URLs are part of the activated definition. Public text is
+bounded and quoted as untrusted data; source Run identity, definition and artifact
+hash are checked before worktree publication. Failures and Stop prevent later
+stages. External coding remains exclusive and cannot inherit this sharing scope.
+See [reviewed-page coding](agent-page-coding.md).
+
 ## Planned Chat/Work and long-media boundaries
 
 [First Send](first-send.md) implements explicit Chat/Work turn policy. Chat rejects

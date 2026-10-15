@@ -184,13 +184,10 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         tools.append("browser")
     elif fetch_urls or any(word in lowered for word in ("fetch", "pobierz stron")):
         tools.append("http_fetch")
-    if (
-        re.search(
-            r"\b(coding agent|write code|build a website|implement features|agent koduj[aą]cy|pisz kod|tw[oó]rz stron[eę]|buduj stron[eę])\b",
-            lowered,
-        )
-        and not tools
-    ):
+    if re.search(
+        r"\b(coding agent|write code|(?:build(?:s|ing)?|creat(?:e|es|ing)|recreat(?:e|es|ing)|clon(?:e|es|ing)) (?:a )?(?:website|web app)|implement features|agent koduj[aą]cy|pisz kod|(?:tw[oó]rz|buduj|tworzy[łl]|tworzy|buduje) stron[eęy])\b",
+        lowered,
+    ) and (not tools or tools == ["http_fetch"]):
         chosen = (
             "codex"
             if re.search(r"\bcodex\b", lowered)
@@ -198,7 +195,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
             if re.search(r"\bcursor\b", lowered)
             else "local"
         )
-        tools = ["coding_" + chosen]
+        tools = ["coding_" + chosen] + (["http_fetch"] if chosen == "local" and fetch_urls else [])
     notices = {
         "on_success": _has(lowered, ("notify on success", "powiadom o sukcesie")),
         "on_failure": _has(
@@ -221,7 +218,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         model=""
         if tools in (["coding_codex"], ["coding_cursor"])
         else "auto"
-        if tools == ["coding_local"]
+        if "coding_local" in tools
         else model,
         provider="local-openai-compatible",
         runtime="openai-compatible",
