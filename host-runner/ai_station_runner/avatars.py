@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from PIL import Image, ImageOps
-from pydantic import BaseModel, ConfigDict, Field, StrictInt
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 
 from ai_station_runner.config import get_settings
 from ai_station_runner.media_inputs import MediaInput
@@ -26,6 +26,7 @@ class AvatarRequest(BaseModel):
     run_id: UUID
     audio_window: AudioWindow | None = None
     previous_video: MediaInput | None = None
+    motion_context: MediaInput | None = None
     image_relative: str = Field(max_length=500)
     audio_relative: str = Field(max_length=500)
     prompt: str = Field(min_length=1, max_length=2000)
@@ -35,6 +36,12 @@ class AvatarRequest(BaseModel):
     seed: int = Field(default=43, ge=0, le=2147483647)
     gpu: int = Field(ge=0)
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
+
+    @model_validator(mode="after")
+    def motion_scope(self):
+        if self.motion_context and (self.previous_video is None or self.audio_window is None):
+            raise ValueError("Avatar motion checkpoint needs a preceding full-job video window")
+        return self
 
 
 def owned(root, relative):
@@ -131,6 +138,25 @@ def start_avatar(manager, body):
         or previous.stat().st_size != body.previous_video.size_bytes
     ):
         raise HTTPException(422, "Choose a bounded owned preceding video segment")
+    motion = owned(root, body.motion_context.relative_path) if body.motion_context else None
+    from ai_station_runner.echo_motion import profile_key, validate_checkpoint
+
+    profile = profile_key(runtime, models) if body.audio_window is not None else None
+    if motion:
+        try:
+            if (
+                motion.suffix != ".safetensors"
+                or not motion.is_file()
+                or motion.stat().st_size != body.motion_context.size_bytes
+            ):
+                raise ValueError("Choose a bounded owned avatar motion checkpoint")
+            import hashlib
+
+            validate_checkpoint(motion, body.size, profile)
+            if hashlib.sha256(motion.read_bytes()).hexdigest() != body.motion_context.sha256:
+                raise ValueError("Avatar motion checkpoint content changed")
+        except (OSError, ValueError) as exc:
+            raise HTTPException(422, str(exc)) from exc
     output.parent.mkdir(parents=True, exist_ok=True)
     argv = [
         str(python),
@@ -170,6 +196,19 @@ def start_avatar(manager, body):
     ]
     if previous:
         argv.extend(["--previous-video", str(previous), "--previous-hash", body.previous_video.sha256])
+    if profile is not None:
+        argv.extend(
+            [
+                "--motion-output",
+                str(output.with_suffix(".safetensors")),
+                "--motion-profile",
+                profile,
+                "--motion-relative",
+                str(output.with_suffix(".safetensors").relative_to(root)),
+            ]
+        )
+    if motion:
+        argv.extend(["--motion-context", str(motion), "--motion-hash", body.motion_context.sha256])
     environment = {
         **os.environ,
         "HF_HUB_OFFLINE": "1",

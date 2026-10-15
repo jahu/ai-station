@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 from app.db import session_scope
 from app.host_media_executor import HostMediaExecutor
 from app.models import Artifact
+from app.motion_artifacts import MotionArtifacts
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, run_dict
 
@@ -92,43 +93,11 @@ def generate(body: VideoRequest, session: DB):
     return run_dict(run)
 
 
-class VideoExecutor(HostMediaExecutor):
+class VideoExecutor(MotionArtifacts, HostMediaExecutor):
     name = "wan_video"
     suffix = ".mp4"
     artifact_type = "video"
     mime_type = "video/mp4"
-
-    def output_metadata(self, output):
-        import json
-
-        from app.config import get_settings
-        from app.paths import safe_join
-
-        report = safe_join(get_settings().data_dir, output).with_suffix(".json")
-        if not report.is_file():
-            return {}
-        if report.stat().st_size > 8192:
-            raise ValueError("Native video report exceeds its bounded metadata budget")
-        return json.loads(report.read_text())
-
-    def on_success(self, session, run, artifact):
-        motion = artifact.metadata_json.get("motion_context")
-        if motion:
-            from app.artifacts import adopt_existing
-
-            context = adopt_existing(
-                session,
-                relative_path=motion["relative_path"],
-                artifact_type="document",
-                mime_type="application/octet-stream",
-                original_filename="wan-motion.safetensors",
-                run_id=run.id,
-                parent_artifact_ids=[artifact.id],
-                metadata={"internal_media": True, "role": "wan_motion", "context_frames": 17},
-            )
-            if context.sha256 != motion["sha256"] or context.size_bytes != motion["size_bytes"]:
-                raise ValueError("Native motion checkpoint observation changed")
-            artifact.metadata_json = {**artifact.metadata_json, "motion_context_artifact_id": context.id}
 
     def _start(self, runner, run, allocated, output):
         continuation = None

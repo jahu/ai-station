@@ -297,3 +297,9 @@ First Send atomically binds the new conversation to that Task, enqueues its
 follow-up and records the existing chat turn receipt. Invalid scope/consent or a
 stale proposal rolls back the conversation and binding. Conversation model
 settings never replace the selected task's executor/model.
+
+Full-recording EchoMimic jobs can carry bounded, model-observed safetensors motion
+checkpoints as hidden general document Artifacts. Their in-process adapter preserves
+the existing portrait identity reference and shared seventeen-frame prefix through
+flow-scheduler steps. Installed models/runtime source are unchanged. Legacy clips
+without checkpoints use the existing pixel path. See [Echo motion](echo-motion-context.md).
