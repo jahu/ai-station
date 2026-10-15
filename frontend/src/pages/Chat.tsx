@@ -1332,7 +1332,7 @@ function ConversationView({
         setClipboardError={setClipboardError}
         emptyHint={
           orchestrator
-            ? "Describe what you want done. Attach image references, create an agent or select a project for coding."
+            ? 'Describe what you want done. For coding, try: In project "My app": add a feature. You can also attach images or create an agent.'
             : conversation.provider_location === "external"
               ? "Send a message through the selected external provider. The secret value is never displayed."
               : "Send a message to the selected local provider."

@@ -382,3 +382,8 @@ Conversation history offers **Active** and **Archived** views. Archive an idle c
 Persistent coding agents can explicitly use **Local AI**, **Codex** or **Cursor**. External choices disclose project-source sharing, require the external-coding permission profile and default new drafts to approval before each Run. They use existing CLI logins and models; no local LLM is loaded for external coding. Changes stay in owned worktrees for review. See [agent coding providers](docs/agent-coding-providers.md).
 
 New local coding-agent drafts default to **Auto Local Coding**. The agent editor also offers Auto or a specific local model; existing selections are preserved. Auto requires a fitting installed model with 100k+ context, and enabling it does not load a model before approval/execution. See [agent Auto coding](docs/agent-coding-auto.md).
+
+In the main **Work** conversation, type `W projekcie Pogoda: dodaj wykres` or
+`In project "Weather Station": fix the tests` to start an isolated Local Coding
+Auto task for a registered project. You can continue that task in the same chat;
+explicit project/agent controls remain available. See [named-project Work](docs/named-project-work.md).
