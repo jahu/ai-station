@@ -12,6 +12,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, ValidationError, model_validator
 from sqlalchemy import select
 
+from app.assistant_github import GithubScope
 from app.chat_providers import BUILTIN_KEY, chat_permissions, completion_stream, snapshot_provider
 from app.db import utcnow
 from app.events import append_event
@@ -41,6 +42,7 @@ Action = Literal[
     "project.create",
     "project.create_code",
     "system.inspect",
+    "github.inspect",
     "coding.cursor",
     "coding.codex",
     "coding.local",
@@ -145,6 +147,7 @@ class AssistantInputs(BaseModel):
         "project.create",
         "project.create_code",
         "system.inspect",
+        "github.inspect",
         "coding.cursor",
         "coding.codex",
         "coding.local",
@@ -156,6 +159,7 @@ class AssistantInputs(BaseModel):
     audio_artifact_id: UUID | None = None
     continuation: ContinuationScope | None = None
     media: VideoScope | None = None
+    github: GithubScope | None = None
     coding: CodingScope | None = None
     new_project: ProjectBuildScope | None = None
     commit: CommitScope | None = None
@@ -179,6 +183,7 @@ def assistant_needs_provider(body):
         "runtime.load",
         "runtime.stop",
         "system.inspect",
+        "github.inspect",
         "image.describe",
         "project.create",
         "project.create_code",
@@ -241,6 +246,9 @@ def planner_context(session, conversation, user):
 
 
 def enqueue_assistant(session, conversation, user, body, *, commit=True):
+    from app.assistant_github import validate_scope
+
+    validate_scope(session, body)
     if body.media and (
         body.action not in {"auto", "video.generate"}
         or body.audio_artifact_id
@@ -496,6 +504,7 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         permissions=chat_permissions(
             snapshot,
             ([] if getattr(body, "execution_mode", None) == "chat" else ["manage_agents"])
+            + (["network_read", "github_read"] if body.github else [])
             + (["filesystem_read", "manage_models"] if images else [])
             + (
                 ["external_ai"]
@@ -539,6 +548,8 @@ def explicit_plan(params):
     action = params["action"]
     if action != "auto":
         return Plan(action=action, reason="Using your selected action.")
+    if params.get("github"):
+        return Plan(action="github.inspect", reason="Read the GitHub repository you selected for this turn.")
     if project_build_request(params):
         return Plan(
             action="project.create_code",
@@ -804,6 +815,19 @@ class AssistantExecutor:
                 child = enqueue_project(session, ProjectName(name=name), task=run.task, parent_run_id=run.id)
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                 message.content = "Creating your project with Git and a Python environment. Its folder and branch settings are managed by AI Station; you can start coding here when it is ready."
+        elif plan.action == "github.inspect":
+            if not params.get("github"):
+                message.content = "Choose a GitHub repository in Tools before reading account data."
+            else:
+                from app.assistant_github import dispatch
+
+                try:
+                    child = dispatch(session, run)
+                except HTTPException as exc:
+                    message.content = str(exc.detail)
+                else:
+                    run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                    message.content = "Reading the selected repository's open issues and pull requests. Its snapshot will appear here; no changes are made on GitHub."
         elif plan.action == "avatar.animate":
             from app.media_jobs import FullAvatarRequest, publish_avatar
 
@@ -1287,6 +1311,13 @@ def task_results(session, message, run):
             artifact_dict(artifact)
             for artifact in artifacts
             if not artifact.metadata_json.get("internal_media")
+        ],
+        "github_snapshots": [
+            step.metadata_json["github_snapshot"]
+            for step in steps
+            if step.executor_type == "github_read"
+            and step.status == "succeeded"
+            and step.metadata_json.get("github_snapshot")
         ],
         "coding_runs": [run_dict(step) for step in steps if step.executor_type in CODING_REVIEW_EXECUTORS],
         "created_projects": [

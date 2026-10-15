@@ -108,6 +108,7 @@ def enqueue_continuation(session, conversation, user, body):
         or any(
             (
                 body.coding,
+                body.github,
                 body.new_project,
                 body.commit,
                 body.publish,

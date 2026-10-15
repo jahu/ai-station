@@ -59,6 +59,12 @@ const ACTIONS = [
     detail: "Queues local EchoMimic. Needs a portrait and WAV.",
   },
   {
+    key: "github.inspect",
+    title: "Read GitHub repository",
+    detail:
+      "Read open issues and PRs using a connected repository. No changes or external AI sharing.",
+  },
+  {
     key: "system.inspect",
     title: "Inspect workstation",
     detail: "Read current GPU, CPU, RAM, storage and station activity.",
@@ -149,9 +155,12 @@ export function ActionChoiceList({
             allowWork ||
             ["auto", "chat"].includes(item.key) ||
             item.key.startsWith("image.") ||
-            ["audio.speech", "avatar.animate", "video.generate"].includes(
-              item.key,
-            ),
+            [
+              "audio.speech",
+              "avatar.animate",
+              "video.generate",
+              "github.inspect",
+            ].includes(item.key),
         ).map((item) => (
           <option key={item.key} value={item.key}>
             {item.title}

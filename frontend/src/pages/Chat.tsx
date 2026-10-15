@@ -767,6 +767,9 @@ function Transcript({
                     ? (artifact) =>
                         setOptions((previous) => ({
                           ...previous,
+                          ...(previous.github
+                            ? { github: undefined, action: "auto" }
+                            : {}),
                           ...(artifact.type === "image"
                             ? {
                                 image_artifact_ids: [
@@ -943,15 +946,17 @@ function ConversationView({
         !!options.new_project?.name.trim() &&
         (options.new_project.executor === "local" ||
           options.new_project.external_ai)
-      : assistantTurn && options.action === "system.inspect"
-        ? true
-        : assistantTurn && options.action.startsWith("runtime.")
-          ? runtimeReady
-          : assistantTurn &&
-              (options.action === "coding.commit" ||
-                options.action === "coding.publish")
-            ? gitReady
-            : !!draft.trim();
+      : assistantTurn && options.action === "github.inspect"
+        ? !!options.github
+        : assistantTurn && options.action === "system.inspect"
+          ? true
+          : assistantTurn && options.action.startsWith("runtime.")
+            ? runtimeReady
+            : assistantTurn &&
+                (options.action === "coding.commit" ||
+                  options.action === "coding.publish")
+              ? gitReady
+              : !!draft.trim();
   const thinking = useThinking(
     conversation.model,
     turnMode === "chat" &&
@@ -973,7 +978,9 @@ function ConversationView({
               ? "Unload the selected owned llama.cpp instance"
               : options.action === "system.inspect"
                 ? "Inspect current workstation telemetry and activity"
-                : ""),
+                : options.action === "github.inspect"
+                  ? "Read the selected GitHub repository"
+                  : ""),
         conversation_id: conversation.id,
         expected_settings_version: conversation.settings_version ?? 1,
         ...(selected.data?.updated_at
@@ -1344,6 +1351,7 @@ function ConversationView({
                   options.action.startsWith("coding.") ||
                   options.action.startsWith("runtime.") ||
                   options.action === "system.inspect" ||
+                  options.action === "github.inspect" ||
                   options.action === "image.generate_video" ||
                   options.action === "project.create" ||
                   options.action === "project.create_code"

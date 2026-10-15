@@ -103,3 +103,5 @@ that rejects the requested format fails the planner rather than triggering fallb
 execution or a silent provider change.
 
 Direct image-result follow-ups now resolve a bounded, same-conversation source before enqueue; see [conversation media follow-ups](conversation-media-followup.md). The sent message exposes source provenance; ambiguous or unavailable results require explicit selection.
+
+[GitHub repository reads](connectors.md#read-from-a-conversation) are explicit per-turn account tools in Chat/Work. The selected connector/version gates a normal native child Run and immutable inline snapshot; account data is not sent to the conversation model.

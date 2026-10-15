@@ -530,6 +530,7 @@ def submit_message(conversation_id, body, session, *, commit=True):
     elif (
         body.image_artifact_ids
         or body.audio_artifact_id
+        or body.github
         or body.action not in {"auto", "chat"}
         or body.coding
         or body.commit
@@ -580,6 +581,8 @@ def accept_turn(body: TurnBody, session: DB):
         payload.pop("continuation")
     if body.media is None:
         payload.pop("media")
+    if body.github is None:
+        payload.pop("github")
 
     def fingerprint(values):
         return hashlib.sha256(json.dumps(values, sort_keys=True, separators=(",", ":")).encode()).hexdigest()

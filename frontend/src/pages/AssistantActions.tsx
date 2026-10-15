@@ -1,3 +1,6 @@
+import GithubSnapshotResult, {
+  type GithubSnapshot,
+} from "./GithubSnapshotResult";
 import MediaJobResult from "../components/media/MediaJobResult";
 import type { MediaJob } from "../components/media/media-job";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
@@ -65,7 +68,9 @@ export type LoadScope = {
   cache_type?: "f16" | "q8_0";
 };
 export type StopScope = { instance_id: string };
+export type GithubScope = { connector_id: string; expected_updated_at: string };
 export type AssistantOptions = {
+  github?: GithubScope | null;
   action: string;
   image_artifact_ids: string[];
   audio_artifact_id?: string | null;
@@ -92,6 +97,7 @@ type TaskStep = {
   location: string;
 };
 export type ActionResult = {
+  github_snapshots?: GithubSnapshot[];
   media_job?: MediaJob;
   steps?: TaskStep[];
   artifacts?: Artifact[];
@@ -201,6 +207,9 @@ export function AssistantResults({
           )}
         </div>
       ))}
+      {result.github_snapshots?.map((snapshot) => (
+        <GithubSnapshotResult key={snapshot.run_id} value={snapshot} />
+      ))}
       {result.created_projects?.map((project) => (
         <section
           className="content-panel"
@@ -264,123 +273,130 @@ export function AssistantResults({
         </div>
       ))}
       <div className="assistant-images">
-        {result.artifacts?.map((artifact) => (
-          <div key={artifact.id}>
-            {artifact.type === "image" && (
-              <a
-                href={`/api/artifacts/${artifact.id}/file`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <img
-                  src={`/api/artifacts/${artifact.id}/file`}
-                  alt={artifact.original_filename || "Generated image"}
-                />
-              </a>
-            )}
-            {artifact.type === "video" && (
-              <video
-                controls
-                preload="metadata"
-                src={`/api/artifacts/${artifact.id}/file`}
-                aria-label="Generated avatar video"
-                style={{ maxWidth: "100%" }}
-              />
-            )}
-            {artifact.type === "audio" && (
-              <audio
-                controls
-                preload="metadata"
-                src={`/api/artifacts/${artifact.id}/file`}
-                aria-label="Generated speech"
-              />
-            )}
-            <Link to={`/library/${artifact.id}`}>
-              {artifact.title || artifact.original_filename || artifact.type}
-            </Link>
-            <LibraryActions artifact={artifact} />
-            {onUse &&
-              (artifact.type === "image" ||
-                (artifact.type === "audio" &&
-                  artifact.mime_type === "audio/wav")) && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="assistant-reuse-result"
-                  disabled={
-                    busy ||
-                    inputs?.image_artifact_ids.includes(artifact.id) ||
-                    inputs?.audio_artifact_id === artifact.id ||
-                    (artifact.type === "image" &&
-                      (inputs?.image_artifact_ids.length ?? 0) >=
-                        (inputs?.action === "image.describe" ? 4 : 8))
-                  }
-                  onClick={() => onUse(artifact)}
+        {result.artifacts
+          ?.filter(
+            (artifact) =>
+              !result.github_snapshots?.some(
+                (snapshot) => snapshot.artifact_id === artifact.id,
+              ),
+          )
+          .map((artifact) => (
+            <div key={artifact.id}>
+              {artifact.type === "image" && (
+                <a
+                  href={`/api/artifacts/${artifact.id}/file`}
+                  target="_blank"
+                  rel="noreferrer"
                 >
-                  {inputs?.image_artifact_ids.includes(artifact.id) ||
-                  inputs?.audio_artifact_id === artifact.id
-                    ? "Added to next message"
-                    : artifact.type === "image"
-                      ? "Use as image reference"
-                      : "Use as voice reference"}
-                </Button>
+                  <img
+                    src={`/api/artifacts/${artifact.id}/file`}
+                    alt={artifact.original_filename || "Generated image"}
+                  />
+                </a>
               )}
-            {artifact.type === "image" && (
-              <div className="media-result-reuse">
-                {(
-                  [
-                    ["img2img", "Edit"],
-                    ["recompose", "Recompose"],
-                    ["upscale", "Upscale"],
-                  ] as const
-                ).map(([mode, label]) => (
-                  <Button key={mode} asChild variant="secondary">
-                    <Link
-                      to={`/images?mode=${mode}&input=${artifact.id}${
-                        artifact.run_id ? `&run=${artifact.run_id}` : ""
-                      }`}
-                      aria-label={`${label} ${artifact.id.slice(0, 8)}`}
-                    >
-                      {label}
-                    </Link>
-                  </Button>
-                ))}
-                <Button asChild variant="secondary">
-                  <Link
-                    to={`/avatars?image=${artifact.id}`}
-                    aria-label={`Use as portrait ${artifact.id.slice(0, 8)}`}
+              {artifact.type === "video" && (
+                <video
+                  controls
+                  preload="metadata"
+                  src={`/api/artifacts/${artifact.id}/file`}
+                  aria-label="Generated avatar video"
+                  style={{ maxWidth: "100%" }}
+                />
+              )}
+              {artifact.type === "audio" && (
+                <audio
+                  controls
+                  preload="metadata"
+                  src={`/api/artifacts/${artifact.id}/file`}
+                  aria-label="Generated speech"
+                />
+              )}
+              <Link to={`/library/${artifact.id}`}>
+                {artifact.title || artifact.original_filename || artifact.type}
+              </Link>
+              <LibraryActions artifact={artifact} />
+              {onUse &&
+                (artifact.type === "image" ||
+                  (artifact.type === "audio" &&
+                    artifact.mime_type === "audio/wav")) && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="assistant-reuse-result"
+                    disabled={
+                      busy ||
+                      inputs?.image_artifact_ids.includes(artifact.id) ||
+                      inputs?.audio_artifact_id === artifact.id ||
+                      (artifact.type === "image" &&
+                        (inputs?.image_artifact_ids.length ?? 0) >=
+                          (inputs?.action === "image.describe" ? 4 : 8))
+                    }
+                    onClick={() => onUse(artifact)}
                   >
-                    Use as portrait
-                  </Link>
-                </Button>
-              </div>
-            )}
-            {artifact.type === "audio" &&
-              artifact.mime_type === "audio/wav" && (
-                <div className="media-result-reuse">
-                  <Button asChild variant="secondary">
-                    <Link
-                      to={`/audio?input=${artifact.id}${
-                        artifact.run_id ? `&run=${artifact.run_id}` : ""
-                      }`}
-                      aria-label={`Use in Audio ${artifact.id.slice(0, 8)}`}
-                    >
-                      Use in Audio
-                    </Link>
+                    {inputs?.image_artifact_ids.includes(artifact.id) ||
+                    inputs?.audio_artifact_id === artifact.id
+                      ? "Added to next message"
+                      : artifact.type === "image"
+                        ? "Use as image reference"
+                        : "Use as voice reference"}
                   </Button>
+                )}
+              {artifact.type === "image" && (
+                <div className="media-result-reuse">
+                  {(
+                    [
+                      ["img2img", "Edit"],
+                      ["recompose", "Recompose"],
+                      ["upscale", "Upscale"],
+                    ] as const
+                  ).map(([mode, label]) => (
+                    <Button key={mode} asChild variant="secondary">
+                      <Link
+                        to={`/images?mode=${mode}&input=${artifact.id}${
+                          artifact.run_id ? `&run=${artifact.run_id}` : ""
+                        }`}
+                        aria-label={`${label} ${artifact.id.slice(0, 8)}`}
+                      >
+                        {label}
+                      </Link>
+                    </Button>
+                  ))}
                   <Button asChild variant="secondary">
                     <Link
-                      to={`/avatars?audio=${artifact.id}`}
-                      aria-label={`Use as speech ${artifact.id.slice(0, 8)}`}
+                      to={`/avatars?image=${artifact.id}`}
+                      aria-label={`Use as portrait ${artifact.id.slice(0, 8)}`}
                     >
-                      Use as speech
+                      Use as portrait
                     </Link>
                   </Button>
                 </div>
               )}
-            <ArtifactLineage artifactId={artifact.id} />
-          </div>
-        ))}
+              {artifact.type === "audio" &&
+                artifact.mime_type === "audio/wav" && (
+                  <div className="media-result-reuse">
+                    <Button asChild variant="secondary">
+                      <Link
+                        to={`/audio?input=${artifact.id}${
+                          artifact.run_id ? `&run=${artifact.run_id}` : ""
+                        }`}
+                        aria-label={`Use in Audio ${artifact.id.slice(0, 8)}`}
+                      >
+                        Use in Audio
+                      </Link>
+                    </Button>
+                    <Button asChild variant="secondary">
+                      <Link
+                        to={`/avatars?audio=${artifact.id}`}
+                        aria-label={`Use as speech ${artifact.id.slice(0, 8)}`}
+                      >
+                        Use as speech
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+              <ArtifactLineage artifactId={artifact.id} />
+            </div>
+          ))}
       </div>
     </div>
   );
@@ -518,6 +534,21 @@ export default function AssistantActions({
   sources?: Run[];
   allowWork?: boolean;
 }) {
+  const repositories = useQuery({
+    queryKey: ["connectors"],
+    queryFn: () =>
+      api<
+        {
+          id: string;
+          name: string;
+          kind: string;
+          enabled: boolean;
+          repository: string;
+          updated_at: string;
+        }[]
+      >("/connectors"),
+    enabled: value.action === "github.inspect",
+  });
   const [error, setError] = useState<Error | null>(null);
   const imageInput = useRef<HTMLInputElement>(null);
   const voiceInput = useRef<HTMLInputElement>(null);
@@ -655,6 +686,7 @@ export default function AssistantActions({
     if (action === "image.describe") {
       onChange({
         ...value,
+        github: undefined,
         action,
         upscale_result: false,
         speech_text: null,
@@ -674,6 +706,7 @@ export default function AssistantActions({
         "runtime.load",
         "runtime.stop",
         "system.inspect",
+        "github.inspect",
         "image.generate_video",
         "project.create",
       ].includes(action)
@@ -759,6 +792,7 @@ export default function AssistantActions({
     const selected = parseFilePaths(paths);
     onChange({
       ...value,
+      github: undefined,
       action,
       media: action === "video.generate" ? value.media : null,
       commit: null,
@@ -873,6 +907,7 @@ export default function AssistantActions({
       {!value.action.startsWith("coding.") &&
         !value.action.startsWith("runtime.") &&
         value.action !== "system.inspect" &&
+        value.action !== "github.inspect" &&
         value.action !== "image.generate_video" &&
         value.action !== "project.create" &&
         value.action !== "project.create_code" && (
@@ -986,7 +1021,8 @@ export default function AssistantActions({
         !value.action.startsWith("runtime.") &&
         value.action !== "image.generate_video" &&
         value.action !== "project.create" &&
-        value.action !== "project.create_code") ||
+        value.action !== "project.create_code" &&
+        value.action !== "github.inspect") ||
         value.image_artifact_ids.length > 0) && (
         <div
           className="assistant-reference-area"
@@ -1026,6 +1062,44 @@ export default function AssistantActions({
             }
           />
         </div>
+      )}
+      {value.action === "github.inspect" && (
+        <label>
+          GitHub repository
+          <select
+            aria-label="GitHub repository"
+            value={value.github?.connector_id ?? ""}
+            onChange={(event) => {
+              const selected = repositories.data?.find(
+                (row) => row.id === event.target.value,
+              );
+              onChange({
+                ...value,
+                github: selected
+                  ? {
+                      connector_id: selected.id,
+                      expected_updated_at: selected.updated_at,
+                    }
+                  : null,
+              });
+            }}
+          >
+            <option value="">Choose a connected repository</option>
+            {repositories.data
+              ?.filter((row) => row.kind === "github" && row.enabled)
+              .map((row) => (
+                <option key={row.id} value={row.id}>
+                  {row.name} · {row.repository}
+                </option>
+              ))}
+          </select>
+          <span className="muted">
+            Reads issue and PR titles through your host GitHub login. No source
+            files or account data are sent to an AI provider.{" "}
+            <Link to="/settings/integrations">Connect a repository</Link>
+          </span>
+          <ErrorNotice error={repositories.error} />
+        </label>
       )}
       {value.action === "video.generate" && (
         <label>

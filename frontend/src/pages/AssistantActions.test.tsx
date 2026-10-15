@@ -1186,3 +1186,127 @@ it("shows a completed project and selects local continuation without enqueueing"
   expect(onProject).toHaveBeenCalledWith(project);
   expect(fetch).not.toHaveBeenCalled();
 });
+
+it("selects a GitHub repository without launching a refresh or sharing credentials", async () => {
+  const calls: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      expect(init?.method ?? "GET").toBe("GET");
+      calls.push(path);
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/connectors")
+            ? [
+                {
+                  id: "repo-id",
+                  kind: "github",
+                  name: "Our project",
+                  repository: "owner/repo",
+                  enabled: true,
+                  updated_at: "2026-10-15T12:00:00Z",
+                },
+              ]
+            : [],
+      };
+    }),
+  );
+  let chosen: AssistantOptions | undefined;
+  function Composer() {
+    const [value, setValue] = useState(emptyOptions);
+    return (
+      <AssistantActions
+        value={value}
+        onChange={(next) => {
+          chosen = next;
+          setValue(next);
+        }}
+        busy={false}
+        onUploading={() => {}}
+        allowWork={false}
+      />
+    );
+  }
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <Composer />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  chooseAction("github.inspect");
+  await screen.findByRole("option", { name: "Our project · owner/repo" });
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "GitHub repository" }),
+    { target: { value: "repo-id" } },
+  );
+  expect(chosen?.github).toEqual({
+    connector_id: "repo-id",
+    expected_updated_at: "2026-10-15T12:00:00Z",
+  });
+  expect(screen.queryByRole("button", { name: "Add images" })).toBeNull();
+  expect(calls.some((path) => path.endsWith("/check"))).toBe(false);
+  chooseAction("chat");
+  expect(chosen?.github).toBeUndefined();
+});
+
+it("shows the immutable GitHub result for this task without a live connector query", () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <AssistantResults
+          result={{
+            steps: [],
+            artifacts: [
+              {
+                id: "github-file",
+                type: "json",
+                mime_type: "application/json",
+                original_filename: "github-overview.json",
+                metadata: {},
+                parent_artifact_ids: [],
+                size_bytes: 20,
+                created_at: "2026-10-15T12:00:00Z",
+                run_id: "github-run",
+              },
+            ],
+            github_snapshots: [
+              {
+                run_id: "github-run",
+                repository: "owner/repo",
+                artifact_id: "github-file",
+                captured_at: "2026-10-15T12:00:00Z",
+                issues: [
+                  {
+                    number: 7,
+                    title: "Add search",
+                    url: "https://github.com/owner/repo/issues/7",
+                  },
+                ],
+                pull_requests: [],
+              },
+            ],
+          }}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    screen.getByRole("region", { name: "GitHub result owner/repo" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "#7 Add search" }).getAttribute("href"),
+  ).toBe("https://github.com/owner/repo/issues/7");
+  expect(
+    screen.getAllByRole("link", { name: "Download snapshot" }),
+  ).toHaveLength(1);
+  expect(screen.queryByText("github-overview.json")).toBeNull();
+  expect(fetch).not.toHaveBeenCalled();
+});

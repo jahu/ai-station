@@ -49,8 +49,7 @@ those findings are not proof that delivered APIs/components remain absent.
 
 ## Next implementation and acceptance
 
-1. Complete the current planner JSON-format increment and verify selected-provider
-   planning through the normal API/worker path. Do not reproduce Coding JSON work.
+1. Planner JSON formatting is delivered as #291; actual configured local qwen3:8b planning and response passed. Conversation image-result follow-ups are delivered as #292. GitHub read snapshots are delivered as #293; the Chat/Work tool integration is the current increment, with actual isolated native GH read acceptance.
 2. Apply reviewed releases using the central deployment record, preserving idle
    data and native process ownership. A release can include several reviewed PRs;
    retain a healthy Runner when native code is unchanged.
@@ -86,10 +85,6 @@ healthy native Runner when its code is unchanged; upgrade this project's user
 service when native code changes. No drivers, model downloads, external runtimes
 or unrelated infrastructure changes are authorized by routine development.
 
-2026-10-15 continuation increment: explicit existing-task selection in Work is
-implemented on `feat/work-task-selection`, pending validation/review/deployment.
-The picker searches task/project names, pages existing sessions and selects a
-preserved owned workspace without execution. Migration 0022 stores the binding;
-Task ownership/history is not moved. Normal follow-up validation, source-version
-checks and per-turn external consent remain enforced. Blank-entry task selection
-and broader orchestrated workflows remain separate increments.
+Existing-task selection and Coding → Work drafts are delivered (#286/#288);
+Migration 0022 stores bindings without moving original Task history. Do not redo
+those features or the now-verified same-task local Coding follow-up.
