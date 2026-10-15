@@ -1333,6 +1333,86 @@ def test_coding_followup_keeps_reviewed_deletion_and_executable_mode(repository,
         assert (repository / ".git/index").read_bytes() == original_index
 
 
+@pytest.mark.parametrize("blocked", [None, "tracked_hidden", "oversized_report"])
+def test_coding_followup_reviews_built_project_and_commits_only_reviewed_source(
+    repository, owned_runner, fake_cursor, blocked
+):
+    # Real Git/owned Runner, fake completion: no model or network usage.
+    binary = fake_cursor.read_text()
+    fake_cursor.write_text(
+        binary.replace("args=sys.argv", "args=sys.argv\nassert 'PRIVATE_LOCK_CONTENT' not in args[-1]")
+    )
+    original_index = (repository / ".git/index").read_bytes()
+    with TestClient(app) as client:
+        project, preparation, source = prepared_review(client, repository, files=[], explore=True)
+        assert source["status"] == "succeeded", source
+        with session_factory()() as session:
+            tick(session, "first-validate")
+        worktree = client.get(f"/api/projects/{project['id']}/worktrees").json()[0]
+        path = owned_runner.data_dir / worktree["relative_path"]
+        scratch = path / ".ai-station-validation-kept" / "cache"
+        scratch.mkdir(parents=True)
+        (scratch / "private.log").write_text("Retain owned execution data")
+        expected = {"README.md", "new.py", "more.py", "package-lock.json"}
+        (path / "package-lock.json").write_text('{"PRIVATE_LOCK_CONTENT":"' + "x" * 33000 + '"}')
+        for number in range(11):
+            name = f"earlier{number}.py"
+            (path / name).write_text(f"answer = {number}\n")
+            expected.add(name)
+        if blocked == "tracked_hidden":
+            # A credential added to the task index remains part of Git diff
+            # against HEAD; hidden tracked changes must never disappear.
+            (path / ".env").write_text("Never disclose this")
+            subprocess.run(["git", "-C", str(path), "add", "-f", ".env"], check=True)
+        elif blocked == "oversized_report":
+            for number in range(9):
+                (path / f"large{number}.txt").write_text("\x01" * 22000)
+        response = client.post(
+            f"/api/coding/sessions/{preparation['task_id']}/messages",
+            json={
+                "prompt": "SECOND_TURN add another file",
+                "expected_run_id": source["id"],
+                "external_ai": True,
+            },
+        )
+        assert response.status_code == 202, response.text
+        second_id = response.json()["id"]
+        with session_factory()() as session:
+            tick(session, "followup")
+        second = client.get(f"/api/runs/{second_id}").json()
+        if blocked:
+            assert second["status"] == "failed", second
+            assert not (path / "more.py").exists()
+            assert "validation_run_id" not in second["metadata"]
+            if blocked == "oversized_report":
+                assert "1 MiB" in second["error_message"]
+        else:
+            assert second["status"] == "succeeded", second
+            assert {item["path"] for item in second["metadata"]["coding_review"]["files"]} == expected
+            with session_factory()() as session:
+                tick(session, "followup-validate")
+            (path / "unreviewed.txt").write_text("Do not commit later edits")
+            accepted = client.post(
+                f"/api/coding/runs/{second_id}/commit",
+                json={"reviewed": True, "message": "Accept cumulative project"},
+            )
+            assert accepted.status_code == 202, accepted.text
+            with session_factory()() as session:
+                tick(session, "accept-followup")
+            result = client.get(f"/api/runs/{accepted.json()['id']}").json()
+            assert result["status"] == "succeeded", result
+            assert set(result["metadata"]["git_commit"]["files"]) == expected
+            tracked = subprocess.check_output(
+                ["git", "-C", str(path), "ls-tree", "-r", "--name-only", "HEAD"], text=True
+            )
+            assert set(tracked.splitlines()) == expected
+            assert (path / "unreviewed.txt").exists()
+        assert (scratch / "private.log").read_text() == "Retain owned execution data"
+        assert (repository / ".git/index").read_bytes() == original_index
+        assert (repository / "README.md").read_text() == "Original repository\n"
+        assert not (repository / "more.py").exists()
+
+
 def test_reviewed_commit_preserves_checkout_hooks_and_unreviewed_files(repository, owned_runner, fake_cursor):
     from ai_station_runner.worktrees import inspect_worktree
 

@@ -7,7 +7,7 @@ import os
 import subprocess
 import sys
 
-from ai_station_runner.coding_files import read_selected
+from ai_station_runner.coding_files import read_review_files
 from ai_station_runner.gitinspect import BASE_CONFIG, Repository, git_environment
 from ai_station_runner.reviewed_commits import directory, load_request
 from ai_station_runner.worktrees import load_manifest, owned_path, save_manifest
@@ -39,7 +39,7 @@ def execute(run_id):
             raise ValueError("Reviewed worktree or parent changed")
         if repo.read(["diff", "--cached", "--quiet"], check=False).returncode != 0:
             raise ValueError("Worktree index changed; inspect staged changes before committing")
-        files = read_selected(workspace, [item["path"] for item in review["files"]])
+        files = read_review_files(workspace, [item["path"] for item in review["files"]])
         for actual, expected in zip(files, review["files"], strict=True):
             deleted = expected.get("operation") == "delete"
             if (deleted and (expected["after_sha256"] is not None or actual["content"] is not None)) or (

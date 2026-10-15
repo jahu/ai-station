@@ -5,16 +5,13 @@ import json
 from ai_station_runner import public_http
 from ai_station_runner.coding_files import read_selected, selected_path
 from ai_station_runner.gitinspect import Repository
+from ai_station_runner.source_inventory import source_file_args
 
 
 def explore(workspace, prompt, guidance, complete, *, web=False):
     # The newly created worktree contains tracked source only. Git runs with the
     # existing helper/filter/network protections; no directory walk follows links.
-    names = (
-        Repository(workspace, shared_group=True)
-        .read(["ls-files", "--cached", "--others", "--exclude-standard", "-z"])
-        .stdout.split("\0")
-    )
+    names = Repository(workspace, shared_group=True).read(source_file_args(cached=True)).stdout.split("\0")
     paths = []
     for name in names:
         if not name:
