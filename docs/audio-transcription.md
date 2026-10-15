@@ -127,3 +127,13 @@ A header signature alone never marks compressed duration as verified: only a
 confirmed successful owned process updates that source's decoded duration and
 validation Run provenance. Old Runners without format capabilities reject new
 containers before enqueue; they can still accept compatible WAV Runs.
+
+Common-format acceptance (2026-10-15): all six WAV/MP3/M4A/Ogg/WebM/FLAC versions
+of the 14.27-second Polish sample completed actual API → worker → owned CPU
+inference and TXT/SRT/JSON artifact adoption. A compressed 301-second silent file
+failed with the explicit five-minute limit before inference; no transcript or
+verified source duration was published. Desktop/mobile browser checks displayed
+the actual M4A result, source playback, downloads and compressed Library inputs.
+The frozen-source Python suite passed 1241 tests with 5 opt-in skips; all 430
+frontend tests, lint, typecheck, format, build, Compose configs and image build
+passed. These samples do not qualify every codec profile or transcription accuracy.
