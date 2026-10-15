@@ -29,3 +29,14 @@ Receipts prevent a repeated first Send from duplicating the coding action. Exter
 source sharing is confirmed for this specific follow-up, and conversation model/
 Thinking settings never replace the task's saved coding model. Choosing general
 Chat/Work clears the draft scope. Coding Stop uses the existing task-wide endpoint.
+
+## Follow-up drafts and keyboard send
+
+Coding retains each task's unsent follow-up in browser tab session storage using
+the shared Chat draft mechanism (4000-character limit). Switching conversations
+restores their separate text and resets provider consent. Refresh restores text
+without queuing work. Discard draft clears only that task's draft. Accepted Send
+clears only the submitted text, preserving a newer edit made while sending; a
+failed request retains the draft. Ctrl/Cmd+Enter sends only when the normal Send
+action is allowed, including explicit external sharing consent. Plain Enter and
+IME composition remain normal editing. No execution or API permission changes.

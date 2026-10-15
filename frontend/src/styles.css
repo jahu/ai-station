@@ -5384,3 +5384,15 @@ section:has(> .memory-grid) > .dashboard-note {
   font-size: 12px;
   overflow-wrap: anywhere;
 }
+
+.coding-draft-help {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.coding-draft-help small {
+  font-size: 11px;
+  line-height: 1.5;
+}
