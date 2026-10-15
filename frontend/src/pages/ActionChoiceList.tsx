@@ -38,6 +38,11 @@ const ACTIONS = [
     detail: "Enlarge one image to four times its dimensions.",
   },
   {
+    key: "audio.transcribe",
+    title: "Transcribe recording",
+    detail: "Turn a WAV recording into timestamped text locally on CPU.",
+  },
+  {
     key: "audio.speech",
     title: "Speech · read this message in Polish",
     detail: "Queues local Chatterbox speech. Not transcription or music.",
@@ -157,6 +162,7 @@ export function ActionChoiceList({
             item.key.startsWith("image.") ||
             [
               "audio.speech",
+              "audio.transcribe",
               "avatar.animate",
               "video.generate",
               "github.inspect",

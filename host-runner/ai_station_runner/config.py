@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     photo_python: str = ""
     photo_script: str = ""
     sd_cli: str = ""
+    transcription_python: str = ""
+    transcription_model_dir: str = ""
     chatterbox_python: str = ""
     chatterbox_script: str = ""
     chatterbox_cache: str = ""

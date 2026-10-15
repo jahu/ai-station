@@ -60,6 +60,7 @@ from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.station_image import inspect_station_image
 from ai_station_runner.telemetry import collect
+from ai_station_runner.transcription import TranscriptionRequest
 from ai_station_runner.validation import ValidationRequest, start_validation, validation_report
 from ai_station_runner.video import VideoRequest, start_video
 from ai_station_runner.video import capabilities as video_capabilities
@@ -875,6 +876,35 @@ def github_read_run(body: GithubReadRequest):
 @app.get("/v1/runs/github-read/{run_id}/report")
 def github_read_report(run_id: UUID):
     from ai_station_runner.github_read import report
+
+    try:
+        return report(manager(), str(run_id))
+    except (ValueError, OSError, ProcessNotOwned) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/transcription/capabilities")
+def transcription_available():
+    from ai_station_runner.transcription import capabilities
+
+    return capabilities()
+
+
+@app.post("/v1/runs/transcription")
+def transcription_run(body: TranscriptionRequest):
+    from ai_station_runner.transcription import start
+
+    try:
+        return {**start(manager(), body), "runner_id": get_settings().runner_id}
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, OSError, ProcessNotOwned) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/runs/transcription/{run_id}/report")
+def transcription_report(run_id: UUID):
+    from ai_station_runner.transcription import report
 
     try:
         return report(manager(), str(run_id))

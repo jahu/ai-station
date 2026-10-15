@@ -309,3 +309,12 @@ ordinary native Run contract. Only fixed GET projections run through the existin
 host gh session; connector metadata and snapshots never expose credential values.
 
 Local agent workflows can now gather [reviewed GitHub snapshots](agent-github-reports.md) through the same native connector executor. The agent stores a resource identity, receives minimum child permissions, and passes only a bounded excerpt to its local report model. No extra execution engine or account-write integration is introduced.
+
+## Offline transcription
+
+[Audio transcription](audio-transcription.md) adds a CPU-only typed native executor
+and conversation action using the shared Task/Run infrastructure. Audio remains
+inside application storage; model files remain external references. Whisper's
+optional Python environment does not change the control-plane image or existing
+speech/video runtimes. Immutable source/model checks, bounded PCM decoding and
+verified completion gate TXT/SRT/JSON artifact publication.

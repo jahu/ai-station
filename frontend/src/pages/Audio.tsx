@@ -8,17 +8,54 @@ import { Button } from "../components/ui/button";
 import MediaInput from "../components/media/MediaInput";
 import MediaResult from "../components/media/MediaResult";
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
+import Transcription from "./Transcription";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 
 export default function Audio() {
-  const [search] = useSearchParams();
+  const [search, setSearch] = useSearchParams();
   // Remount when Library or a finished result chooses a different voice, not
   // when a generation Run is recorded in the URL.
+  const current = useMediaRun(search.get("run") ?? "");
+  const busy = mediaBusy(current.data);
   return (
-    <AudioForm
-      key={search.get("input") ?? ""}
-      initialInput={search.get("input")}
-    />
+    <>
+      <nav className="mode-tabs" aria-label="Audio mode">
+        <button
+          type="button"
+          disabled={busy}
+          className={search.get("mode") !== "transcribe" ? "active" : ""}
+          aria-pressed={search.get("mode") !== "transcribe"}
+          onClick={() => {
+            const next = new URLSearchParams();
+            if (search.get("input")) next.set("input", search.get("input")!);
+            setSearch(next);
+          }}
+        >
+          Create speech
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          className={search.get("mode") === "transcribe" ? "active" : ""}
+          aria-pressed={search.get("mode") === "transcribe"}
+          onClick={() => {
+            const next = new URLSearchParams({ mode: "transcribe" });
+            if (search.get("input")) next.set("input", search.get("input")!);
+            setSearch(next);
+          }}
+        >
+          Transcription
+        </button>
+      </nav>
+      {search.get("mode") === "transcribe" ? (
+        <Transcription key={search.get("input") ?? ""} />
+      ) : (
+        <AudioForm
+          key={search.get("input") ?? ""}
+          initialInput={search.get("input")}
+        />
+      )}
+    </>
   );
 }
 

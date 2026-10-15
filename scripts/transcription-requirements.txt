@@ -1,0 +1,4 @@
+# Install only into the separate optional transcription runtime.
+faster-whisper==1.2.1
+# PyAV 19 removed the metadata_errors argument used by faster-whisper 1.2.1.
+av==16.1.0

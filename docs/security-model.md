@@ -233,3 +233,11 @@ disabling or retargeting never silently redirects an enabled agent. Native child
 receive only the two required read permissions. GitHub context is bounded untrusted
 data, available only to the selected local report provider; models cannot request
 additional account reads or account writes. See [contracts](agent-github-reports.md).
+
+Offline transcription grants recording read and artifact write only. The owned
+native process accepts an immutable app-owned WAV descriptor and reviewed local
+model fingerprint, never a URL, shell or caller-selected model path. WAV decoding
+uses bounded samples, offline model loading, CPU-only threads and a hard deadline.
+Source/model integrity, process ownership and report timestamps are verified
+before transcript adoption. Audio instructions remain text, not executable tools.
+See [the transcription contract](audio-transcription.md).

@@ -47,6 +47,7 @@ from app.state import RunStatus
 from app.station_snapshot import StationSnapshotExecutor
 from app.summary_executor import SummaryExecutor
 from app.tools import get_tool
+from app.transcription import TranscriptionExecutor
 from app.validation_executor import ProjectValidationExecutor
 from app.video import VideoExecutor
 from app.worktree_executor import WorktreeExecutor
@@ -299,6 +300,7 @@ EXECUTORS = {
     "llama_health": LlamaHealthExecutor(),
     "photo_pipe": PhotoPipeExecutor(),
     "chatterbox": AudioExecutor(),
+    "whisper_transcribe": TranscriptionExecutor(),
     "echomimic": AvatarExecutor(),
     "wan_video": VideoExecutor(),
     CompositionExecutor.name: CompositionExecutor(),

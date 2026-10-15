@@ -32,7 +32,7 @@ def wav_metadata(data, *, max_seconds=60):
         with wave.open(io.BytesIO(data), "rb") as wav:
             rate, frames, channels = wav.getframerate(), wav.getnframes(), wav.getnchannels()
             if channels not in {1, 2} or not 8000 <= rate <= 96000 or not 0.1 <= frames / rate <= max_seconds:
-                raise ValueError("Use mono/stereo PCM WAV, 8000–96000 Hz, 0.1–60 seconds")
+                raise ValueError(f"Use mono/stereo PCM WAV, 8000–96000 Hz, 0.1–{max_seconds:g} seconds")
             if len(wav.readframes(frames)) != frames * channels * wav.getsampwidth():
                 raise ValueError("Truncated WAV")
             return {"sample_rate": rate, "channels": channels, "duration_seconds": frames / rate}
