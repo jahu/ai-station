@@ -1,0 +1,5 @@
+# Optional private UI/API listener. Native Runner and model ports remain private.
+services:
+  ai-station:
+    ports:
+      - "${AI_STATION_LAN_HOST:?Set a private IPv4 address}:${AI_STATION_PORT:-8765}:8765"

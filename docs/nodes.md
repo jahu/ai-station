@@ -1,22 +1,18 @@
 # Nodes and operator access
 
-The only registered execution node is this workstation's private Host Runner over a Unix socket. After an operator password is stored, the loopback UI and API require a session cookie. Remote node transport and a LAN listener stay unpublished.
+The only registered execution node is this workstation's private Host Runner over a Unix socket. After an operator password is stored, the loopback UI and API require a session cookie. Remote execution-node transport stays unpublished; optional private UI access is described in [LAN and Tailscale](private-network-access.md).
 
 ## Operator credential
 
 Settings can store a local operator password (`PUT /api/operator-auth`). It is hashed with PBKDF2-SHA256 (600,000 iterations) in the `operator_auth` setting. The API never returns the password, salt or hash. Replacing the credential (`PUT /api/operator-auth`) or clearing it (`POST /api/operator-auth/clear`) requires the current password.
 
-When that hash exists, loopback requests other than `GET /api/health`, `GET /api/operator-auth`, `POST /api/operator-auth/login` and `POST /api/operator-auth/logout` require the `ais_operator` cookie. Storing the password or a successful login issues an httpOnly `SameSite=strict` cookie (not `Secure`, because the UI is HTTP on 127.0.0.1; `Path=/`). Only the HMAC of the token is stored in `operator_session`. The cookie lasts 30 minutes of idle API use; authenticated requests refresh `last_seen_at` at most once a minute and re-issue that idle `Max-Age`. Sign-in also has a 12-hour absolute expiry that activity cannot extend. Idle or absolute expiry deletes the stored HMAC and clears the cookie. A single workstation session is replaced on each login. Logout and password removal delete it. `GET /api/operator-auth` reports idle/absolute limits and cookie flags; it never returns the token, salt or hash. When a loopback session is active, the workspace chrome exposes **Sign out** next to the private-control-plane label; Settings still has the same action. The session does not enable LAN publish.
+When that hash exists, loopback requests other than `GET /api/health`, `GET /api/operator-auth`, `POST /api/operator-auth/login` and `POST /api/operator-auth/logout` require the `ais_operator` cookie. Storing the password or a successful login issues an httpOnly `SameSite=strict` cookie (`Secure` on a configured HTTPS origin, otherwise HTTP; `Path=/`). Only HMAC material is stored, using `operator_session` for the first device and token-derived setting keys for further devices. The cookie lasts 30 minutes of idle API use; authenticated requests refresh `last_seen_at` at most once a minute and re-issue that idle `Max-Age`. Sign-in also has a 12-hour absolute expiry that activity cannot extend. Idle or absolute expiry deletes the stored HMAC and clears the cookie. Up to ten devices have independent sessions. Logout deletes only the current device session; password rotation or removal deletes all sessions. Password removal is blocked while private UI access is configured. `GET /api/operator-auth` reports idle/absolute limits and cookie flags; it never returns the token, salt or hash. When a loopback session is active, the workspace chrome exposes **Sign out** next to the private-control-plane label; Settings still has the same action. An additional private UI listener requires explicit configuration and the password.
 
 `POST /api/nodes/register` stays on the existing loopback API and still requires that session after a password is stored. It does not open a remote listener.
 
-## LAN bind
+## Private UI access
 
-`AI_STATION_BIND_HOST` is the host publish policy and defaults to `127.0.0.1`. Compose publishes `127.0.0.1:${AI_STATION_PORT:-8765}:8765`. A non-loopback value aborts process startup, whether or not the operator password exists. Authenticated LAN/node transport is not implemented, so a configured password does not open the port.
-
-Uvicorn inside the container still listens on all container interfaces so Docker can map that localhost publish. That internal bind is not host exposure. Do not set `AI_STATION_BIND_HOST=0.0.0.0` to “make Docker work”.
-
-`GET /api/operator-auth` reports `lan_bind_allowed: false`, `session_scope: loopback`, `session_required` when a password exists, `authenticated` for a valid cookie, and `lan_exposure` of `disabled` (loopback), `forbidden` (non-loopback without a password) or `unpublished` (password present, transport still off).
+See [LAN and Tailscale](private-network-access.md). UI access is separate from execution-node registration. The Runner remains on its private Unix socket.
 
 ## Node inventory and invitations
 

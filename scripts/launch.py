@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import fcntl
+import ipaddress
 import os
 import runpy
 import signal
@@ -98,9 +99,21 @@ def main() -> None:
     args = parser.parse_args()
     os.chdir(ROOT)
     env = configuration()
+    if env.get("AI_STATION_LAN_HOST"):
+        try:
+            address = ipaddress.IPv4Address(env["AI_STATION_LAN_HOST"])
+            networks = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "100.64.0.0/10")
+            if not any(address in ipaddress.ip_network(network) for network in networks):
+                raise ValueError("not private")
+        except ValueError:
+            raise RuntimeError("AI_STATION_LAN_HOST must be a specific private IPv4 address") from None
+    if args.dev and env.get("AI_STATION_LAN_HOST"):
+        raise RuntimeError("LAN access uses the production UI; Vite development stays on loopback")
     runtime = Path(env["AI_STATION_DATA_HOST_PATH"]) / "runtime"
     runtime.mkdir(exist_ok=True)
     compose = ["docker", "compose", "-f", str(ROOT / "compose.yaml")]
+    if env.get("AI_STATION_LAN_HOST"):
+        compose += ["-f", str(ROOT / "compose.lan.yaml")]
     if args.dev:
         compose += ["-f", str(ROOT / "compose.dev.yaml")]
 
@@ -147,6 +160,8 @@ def main() -> None:
             with httpx.Client(timeout=3) as client:
                 client.get(url).raise_for_status()
             print(f"\nAI Station is ready: {url}\nPress Ctrl+C to stop this deployment.\n", flush=True)
+            if env.get("AI_STATION_LAN_HOST"):
+                print(f"Private LAN: http://{env['AI_STATION_LAN_HOST']}:{port}", flush=True)
             while True:
                 if proc is not None and proc.poll() is not None:
                     raise RuntimeError("Host Runner exited unexpectedly")

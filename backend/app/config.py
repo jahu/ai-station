@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     database_url: str = ""
     runner_socket: str = Field(default_factory=default_runner_socket)
     bind_host: str = "127.0.0.1"
+    lan_host: str = ""
+    access_origins: str = ""
     port: int = 8765
     llm_base_url: str = "http://127.0.0.1:11434/v1"
     llm_transport: Literal["direct", "runner"] = "direct"

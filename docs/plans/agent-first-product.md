@@ -142,3 +142,7 @@ Task → Run → Events → Artifacts, limits, Stop, conservative recovery, hist
 real output. Mark implemented, fixture-tested and real-tested separately. Rebase
 future completion estimates on this explicit scope; do not obtain a claimed 100%
 by silently counting old requirements as completed.
+
+## Private access follow-up (2026-10-15)
+
+The owner requested home LAN access and future worldwide mobile access through Tailscale with an operator password. Deliver explicit private UI publishing, independent device sessions, exact Host/Origin validation and password-required startup first; keep execution-node and model transports unchanged. Document optional Tailscale Serve over HTTPS, without installing a system service, opening router ports or enabling public Funnel. Resume the Python-capable agent workflow afterward; this does not restore IDE priorities.

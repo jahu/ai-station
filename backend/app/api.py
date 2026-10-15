@@ -6,7 +6,6 @@ from contextlib import asynccontextmanager
 from datetime import timedelta
 from pathlib import Path
 from typing import Annotated, Literal
-from urllib.parse import urlsplit
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
@@ -16,7 +15,6 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.agents_api import router as agent_router
 from app.approvals import resolve_run_approval, run_public
@@ -50,6 +48,7 @@ from app.nodes import router as nodes_router
 from app.notices import router as notice_router
 from app.operator_auth import refresh_operator_cookie, refuse_non_loopback_bind, require_operator_session
 from app.operator_auth import router as operator_auth_router
+from app.private_access import valid_host, valid_origin
 from app.project_setup import router as project_setup_router
 from app.projects import router as project_router
 from app.providers import ProviderError
@@ -78,11 +77,12 @@ async def lifespan(_app):
 
 
 app = FastAPI(title="AI Station", version="0.1.0", lifespan=lifespan)
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1", "[::1]", "testserver"])
 
 
 @app.middleware("http")
 async def local_requests(request: Request, call_next):
+    if not valid_host(request.headers.get("host", "")):
+        return JSONResponse({"detail": "Invalid host header"}, status_code=400)
     if (
         request.url.path in {"/api/images/uploads", "/api/audio/uploads", "/api/audio/transcription/uploads"}
         and request.method == "POST"
@@ -94,7 +94,7 @@ async def local_requests(request: Request, call_next):
             return JSONResponse({"detail": "Uploads must be at most 20 MiB"}, status_code=413)
     if request.method not in {"GET", "HEAD", "OPTIONS"}:
         origin = request.headers.get("origin")
-        if origin and urlsplit(origin).hostname not in {"localhost", "127.0.0.1", "::1"}:
+        if origin and not valid_origin(origin):
             return JSONResponse({"detail": "Cross-origin writes are not allowed"}, status_code=403)
         if request.headers.get("sec-fetch-site") == "cross-site":
             return JSONResponse({"detail": "Cross-site writes are not allowed"}, status_code=403)
@@ -105,6 +105,8 @@ async def local_requests(request: Request, call_next):
         return gated
     response = await call_next(request)
     refresh_operator_cookie(request, response)
+    if request.url.path.startswith("/api/operator-auth"):
+        response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 

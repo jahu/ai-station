@@ -25,6 +25,8 @@ export type OperatorStatus = {
   lan_exposure: string;
   lan_bind_allowed: boolean;
   reason: string;
+  access_urls?: string[];
+  password_removal_allowed?: boolean;
 };
 
 const json = (method: string, body: unknown) => ({
@@ -46,13 +48,10 @@ function LoginForm() {
   });
   return (
     <main id="main" tabIndex={-1} className="workspace">
-      <PageTitle
-        eyebrow="OPERATOR / LOOPBACK SESSION"
-        title="Unlock this workstation."
-      >
-        An operator password is stored. LAN publish stays unpublished; this
-        login only gates the loopback UI. An idle session lasts 30 minutes, or
-        12 hours from sign-in, whichever comes first.
+      <PageTitle eyebrow="YOUR AI WORKSTATION" title="Unlock this workstation.">
+        Enter your operator password to continue. Your conversations, agents and
+        artifacts are available after sign-in. Sessions expire after 30 minutes
+        idle or 12 hours from sign-in.
       </PageTitle>
       <section className="panel">
         <ErrorNotice error={login.error} />

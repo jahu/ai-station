@@ -168,9 +168,7 @@ export default function OperatorAccess() {
         <div className="panel-heading">
           <div>
             <h2>Operator access</h2>
-            <p className="muted">
-              Idle and absolute loopback session · LAN stays unpublished
-            </p>
+            <p className="muted">Password and private network access</p>
           </div>
           <div className="row">
             {status.data?.configured ? (
@@ -194,28 +192,42 @@ export default function OperatorAccess() {
           {status.data?.reason ??
             "The UI/API stays on loopback. LAN publish is not enabled."}
         </p>
+        {status.data?.access_urls?.length ? (
+          <div className="mt">
+            <h3>Open AI Station on another device</h3>
+            <p className="muted">
+              Use the same operator password on your phone or computer.
+            </p>
+            {status.data.access_urls.map((url) => (
+              <p key={url}>
+                <a href={url} className="break-all">
+                  {url}
+                </a>
+              </p>
+            ))}
+          </div>
+        ) : (
+          <p className="muted">
+            Private network access is off. Set a password first, then configure
+            the workstation's private address.
+          </p>
+        )}
         <p className="muted">
-          Bind host <code>{status.data?.bind_host ?? "127.0.0.1"}</code>
-          {" · "}
-          LAN exposure {status.data?.lan_exposure ?? "disabled"}
           {status.data?.configured
-            ? " · operator password stored (hash only)"
-            : " · no operator password"}
-          {status.data?.session_required
-            ? status.data.authenticated
-              ? " · loopback session active"
-              : " · loopback session required"
-            : " · no session until a password is stored"}
-          . The session cookie is httpOnly, SameSite=strict, not Secure. It
-          expires after{" "}
+            ? "Operator password stored (hash only)."
+            : "No operator password set."}{" "}
+          Each device has its own session. It expires after{" "}
           {Math.round((status.data?.session_idle_seconds ?? 1800) / 60)} minutes
           idle or{" "}
           {Math.round((status.data?.session_max_age_seconds ?? 43200) / 3600)}{" "}
-          hours from sign-in. This password is never returned by the API. After
-          it is stored, the loopback UI and API require the session cookie;
-          health and login stay public. Non-loopback bind is refused even after
-          it is set, because authenticated LAN transport is unpublished.
+          hours from sign-in. Changing the password signs out all other devices.
         </p>
+        {status.data?.access_urls?.some((url) => url.startsWith("http://")) ? (
+          <p className="muted">
+            HTTP access is for your trusted home network. Use Tailscale for an
+            encrypted connection away from home.
+          </p>
+        ) : null}
         <ErrorNotice
           error={status.error ?? save.error ?? clear.error ?? logout.error}
         />
@@ -264,7 +276,8 @@ export default function OperatorAccess() {
                   ? "Replace password"
                   : "Store password"}
             </Button>
-            {status.data?.configured ? (
+            {status.data?.configured &&
+            status.data.password_removal_allowed !== false ? (
               <Button
                 type="button"
                 variant="secondary"

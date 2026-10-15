@@ -12,6 +12,9 @@ x-control-plane: &control-plane
   tmpfs:
     - /tmp:rw,noexec,nosuid,size=128m
   environment: &environment
+    AI_STATION_LAN_HOST: ${AI_STATION_LAN_HOST:-}
+    AI_STATION_ACCESS_ORIGINS: ${AI_STATION_ACCESS_ORIGINS:-}
+    AI_STATION_PORT: ${AI_STATION_PORT:-8765}
     AI_STATION_DATA_DIR: /data
     AI_STATION_RUNNER_SOCKET: /runner/runner.sock
     AI_STATION_LLM_BASE_URL: ${AI_STATION_LLM_CONTAINER_BASE_URL:-http://host.docker.internal:8080/v1}
