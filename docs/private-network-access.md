@@ -42,3 +42,34 @@ retry identity across reloads without storing the request body in the receipt.
 Video scene and GitHub connector identifiers reuse the same helper. See the
 browser documentation for [secure UUIDs](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID)
 and [random bytes on HTTP](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/getRandomValues).
+
+## Delivered acceptance — PR #326
+
+The development preview now serves both localhost and the explicitly configured
+home-network IPv4 address. The owner confirmed sign-in from another device and,
+after the private-HTTP UUID fix, successful Send after refreshing the page.
+Credentials, existing record identities and the owned 131,072-context model
+container were preserved; SQLite backups and integrity checks passed.
+
+Local verification: 1,651 Python tests passed with five explicit opt-in skips,
+Ruff lint/format; 493 frontend tests, format/lint/types and production build;
+production image plus normal, development and private Compose configurations.
+The backend suite ran in immutable `32324e2`; the final browser fix changes only
+frontend code/dependencies and documentation, with identical backend/Runner and
+deployment sources. Eight UUID/draft cases verify secure-byte fallback, a known
+SHA-256 vector and receipt reuse after reload.
+
+Real Chromium under the private HTTP IP (not localhost) confirmed that native
+`randomUUID` and `subtle` are absent, then sent messages through the real API and
+worker to a deterministic fake local provider at desktop/mobile widths. Responses
+streamed and survived page reload. Login/logout/settings also passed at
+1440/390/320 px. This is browser/API/worker acceptance, not a new real-model smoke.
+Evidence: `data/acceptance/private-network-access-20261015/` and
+`data/acceptance/private-chat-uuid-20261015/`.
+
+Earlier failed attempts remain in evidence: source identity changed under a
+mutable test checkout (resolved by the immutable run), a large history integration
+test exceeded its five-second budget (measured 5.28 seconds; bounded at 15 seconds
+with assertions intact), and an outdated node-copy assertion was corrected. No
+failed check was waived. Tailscale enrollment, HTTPS Serve and actual outside-home
+mobile acceptance remain future activation work.
