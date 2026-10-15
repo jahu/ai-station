@@ -41,3 +41,11 @@ cover explicit and deterministic Auto transcription in both Chat and Work.
 Actual M4A ingestion and owned CPU inference also passed in the isolated API;
 the follow-up fake provider received the actual checked transcript. This check
 makes no claim of a real conversational-model response.
+
+Real local acceptance (2026-10-15): an uploaded M4A completed actual native CPU
+Whisper inference, then the configured local `qwen3:8b` answered “To jest próba”
+when asked for the recording's first three words. Its queued Chat Run contained
+the checked TXT source's Run/artifact/hash provenance; raw audio was not sent to
+the conversational model and no cloud provider was used. The desktop/mobile
+browser displayed that actual answer with a working Inspect source link and no
+page errors, overflow or workload-starting writes on inspection.
