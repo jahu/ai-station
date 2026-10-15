@@ -91,8 +91,9 @@ export function activationBlock(
   if (coding.length && names.length !== 1) {
     return {
       blocked: true,
-      reason:
-        "Select one coding provider alone; reporting tools belong to a separate agent.",
+      reason: external
+        ? "Select one coding provider alone; reporting tools belong to a separate agent."
+        : "Select Local coding alone; reporting tools belong to a separate agent.",
     };
   }
   if (names.includes("web_search") && !(agent.search_query ?? "").trim()) {
