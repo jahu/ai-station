@@ -81,6 +81,15 @@ type Message = ActionResult & {
   run_status: string | null;
   error_message: string;
   metadata: {
+    transcript_sources?: {
+      source_message_id: string;
+      run_id?: string;
+      artifact_id?: string;
+      available: boolean;
+      included_characters?: number;
+      total_characters?: number;
+      truncated?: boolean;
+    }[];
     reasoning_text?: string;
     web_search?: WebSources;
     orchestration?: boolean;
@@ -726,6 +735,28 @@ function Transcript({
                       : "")}
                 </Markdown>
               </div>
+              {message.metadata.transcript_sources?.map((source) => (
+                <p className="muted" key={source.source_message_id}>
+                  {source.available
+                    ? "Using a stored transcript"
+                    : "Transcript source unavailable"}
+                  {source.truncated &&
+                    ` · excerpt ${source.included_characters} / ${source.total_characters} characters`}
+                  {source.run_id && (
+                    <>
+                      {" "}
+                      ·{" "}
+                      <Link
+                        to={`/runs/${source.run_id}`}
+                        tabIndex={current ? 0 : -1}
+                        aria-label={`Inspect transcript source ${source.run_id.slice(0, 8)}`}
+                      >
+                        Inspect source
+                      </Link>
+                    </>
+                  )}
+                </p>
+              ))}
               {message.metadata.conversation_reference && (
                 <p className="muted">
                   Using the previous image result ·{" "}

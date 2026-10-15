@@ -322,6 +322,8 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
         )
     )
     context = []
+    transcript_sources = []
+    transcript_budget = 20000
     budget = 56000
     for message in history:
         if (
@@ -340,15 +342,28 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
         if message.metadata_json.get("orchestration") and message.run_id:
             result = task_results(session, message, session.get(Run, message.run_id))
             content += "\nRecorded task results: " + str(result.get("steps", []))[:8000]
+            from app.transcript_context import reference
+
+            quoted = reference(
+                session, message, budget=min(transcript_budget, max(0, budget - len(content) - 2))
+            )
+            if quoted:
+                content += quoted[0]
+                transcript_sources.append(quoted[1])
+                transcript_budget -= len(quoted[0])
         if len(content) + 2 > budget:
             break
-        context.append({"role": message.role, "content": content})
+        context.append({"role": message.role, "content": content, "_message_id": message.id})
         budget -= len(content) + 2
     context.reverse()
     # A window may begin midway through a turn. Templates commonly require
     # user/assistant alternation after the optional system message.
     while context and context[0]["role"] == "assistant":
         context.pop(0)
+    retained_messages = {item.pop("_message_id") for item in context}
+    transcript_sources = [
+        source for source in transcript_sources if source["source_message_id"] in retained_messages
+    ]
     alternating = []
     for item in context:
         if alternating and alternating[-1]["role"] == item["role"]:
@@ -426,6 +441,7 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
             ),
             "messages": context,
             "memory_sources": memory_sources,
+            **({"transcript_sources": list(reversed(transcript_sources))} if transcript_sources else {}),
             "summary_source": {
                 "id": summary.id,
                 "memory_id": summary_entry.id,
@@ -442,7 +458,14 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
 
     prepare_consumer(session, run)
     response = Message(
-        conversation_id=row.id, role="assistant", content="", run_id=run.id, metadata_json={"partial": True}
+        conversation_id=row.id,
+        role="assistant",
+        content="",
+        run_id=run.id,
+        metadata_json={
+            "partial": True,
+            **({"transcript_sources": list(reversed(transcript_sources))} if transcript_sources else {}),
+        },
     )
     session.add(response)
     if user.run_id is None:

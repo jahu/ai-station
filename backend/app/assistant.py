@@ -240,6 +240,11 @@ def planner_context(session, conversation, user):
         ):
             continue
         content = message.content[: min(1000, budget)]
+        from app.transcript_context import reference
+
+        quoted = reference(session, message, budget=min(1600, max(0, budget - len(content))))
+        if quoted:
+            content += quoted[0]
         if content:
             context.append({"role": message.role, "content": content})
             budget -= len(content)

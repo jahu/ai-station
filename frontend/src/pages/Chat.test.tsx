@@ -148,7 +148,19 @@ it("moves through messages and identifies a resolved previous image", async () =
         run_id: "run-ai",
         run_status: "succeeded",
         error_message: "",
-        metadata: {},
+        metadata: {
+          transcript_sources: [
+            {
+              source_message_id: "transcript-message",
+              run_id: "transcript-run",
+              artifact_id: "transcript-text",
+              available: true,
+              truncated: true,
+              included_characters: 100,
+              total_characters: 900,
+            },
+          ],
+        },
       },
     ],
   };
@@ -189,6 +201,12 @@ it("moves through messages and identifies a resolved previous image", async () =
     name: "Inspect run Local AI asst-two",
   });
   expect(screen.getByText(/Using the previous image result/)).toBeTruthy();
+  expect(screen.getByText(/Using a stored transcript/)).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect transcript source transcri" })
+      .getAttribute("href"),
+  ).toBe("/runs/transcript-run");
   expect(
     screen
       .getByRole("link", { name: "Inspect referenced image user-one" })
