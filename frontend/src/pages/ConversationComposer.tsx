@@ -16,6 +16,7 @@ export default function ConversationComposer({
   controls,
   sendButton,
   sendLabel,
+  permissionNote,
 }: {
   id: string;
   value: string;
@@ -30,6 +31,7 @@ export default function ConversationComposer({
   controls?: ReactNode;
   sendButton?: ReactNode;
   sendLabel?: string;
+  permissionNote?: ReactNode;
 }) {
   const submit = () => {
     if (canSend && !busy) onSend();
@@ -73,6 +75,7 @@ export default function ConversationComposer({
           submit();
         }}
       />
+      {permissionNote && <p className="muted">{permissionNote}</p>}
       {tools && (
         <details className="new-chat-tools">
           <summary>

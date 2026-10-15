@@ -31,6 +31,11 @@ class ProjectValidationExecutor:
             "worktree_run_id": run.parameters["worktree_run_id"],
             "commands": run.parameters["commands"],
             "permissions": run.effective_permissions,
+            **(
+                {"manifest_snapshot": run.parameters["manifest_snapshot"]}
+                if "manifest_snapshot" in run.parameters
+                else {}
+            ),
         }
         run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}
         session.commit()

@@ -28,6 +28,12 @@ class ProjectDependenciesExecutor(NativeJobExecutor):
             "project_id": run.project_id,
             "worktree_run_id": run.parameters["worktree_run_id"],
             "permissions": run.effective_permissions,
+            **({"ecosystem": run.parameters["ecosystem"]} if "ecosystem" in run.parameters else {}),
+            **(
+                {"manifest_snapshot": run.parameters["manifest_snapshot"]}
+                if "manifest_snapshot" in run.parameters
+                else {}
+            ),
         }
 
     def start(self, runner, payload):

@@ -11,7 +11,7 @@ from app.agent_schema import AgentSettings
 from app.agent_tools import agent_tool, effective_permissions
 from app.db import utcnow
 from app.local_provider import model_endpoint
-from app.models import Agent, Run
+from app.models import Agent, Project, Run
 from app.providers import ProviderError
 from app.runs import create_run, create_task
 from app.state import TERMINAL
@@ -76,6 +76,8 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         agent_id=agent.id,
         project_id=agent.project_id,
     )
+    from app.project_checks import project_check_policy
+
     run = create_run(
         session,
         task,
@@ -85,6 +87,15 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         execution_target="container",
         parameters={
             "definition": definition.model_dump(mode="json"),
+            **(
+                {
+                    "coding_project_policy": project_check_policy(
+                        session.get(Project, str(definition.project_id))
+                    )
+                }
+                if coding_provider(definition.tools) is not None
+                else {}
+            ),
             "endpoint": endpoint,
             "skill_snapshots": skill_snapshots,
             "steps": steps,

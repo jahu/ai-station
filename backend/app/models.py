@@ -202,6 +202,8 @@ class Project(Base):
     test_commands: Mapped[list] = mapped_column(JSON, default=list)
     lint_commands: Mapped[list] = mapped_column(JSON, default=list)
     build_commands: Mapped[list] = mapped_column(JSON, default=list)
+    auto_install_dependencies: Mapped[bool] = mapped_column(Boolean, default=False)
+    auto_validate: Mapped[bool] = mapped_column(Boolean, default=False)
     agent_rules: Mapped[str] = mapped_column(Text, default="")
     pr_policy: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)

@@ -1065,6 +1065,14 @@ function ConversationView({
           ? { reasoning: { enabled: true, budget: 256 } }
           : {}),
         ...(assistantTurn ? options : {}),
+        ...(turnMode === "work"
+          ? {
+              project_defaults: {
+                auto_install_dependencies: true,
+                auto_validate: true,
+              },
+            }
+          : {}),
         web_search: { enabled: webEnabled, query: webQuery },
       };
       const body = JSON.stringify(values);
@@ -1386,6 +1394,11 @@ function ConversationView({
         )}
         {!conversation.archived_at && (
           <ConversationComposer
+            permissionNote={
+              turnMode === "work"
+                ? "New projects include public package preparation and isolated build/test checks. Advanced project settings can override this."
+                : undefined
+            }
             id="chat-draft"
             value={draft}
             onChange={setDraft}

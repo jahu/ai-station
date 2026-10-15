@@ -33,6 +33,8 @@ interface Project {
   test_commands: string[][];
   lint_commands: string[][];
   build_commands: string[][];
+  auto_install_dependencies?: boolean;
+  auto_validate?: boolean;
   agent_rules: string;
   pr_policy: Record<string, boolean>;
   updated_at: string;
@@ -185,6 +187,10 @@ function ProjectForm({
   const [build, setBuild] = useState(
     commandText(project?.build_commands ?? []),
   );
+  const [autoDeps, setAutoDeps] = useState(
+    project?.auto_install_dependencies ?? false,
+  );
+  const [autoChecks, setAutoChecks] = useState(project?.auto_validate ?? false);
   const [rules, setRules] = useState(project?.agent_rules ?? "");
   const [policy, setPolicy] = useState({
     ...policyDefaults,
@@ -207,6 +213,8 @@ function ProjectForm({
           test_commands: parseCommands(tests),
           lint_commands: parseCommands(lint),
           build_commands: parseCommands(build),
+          auto_install_dependencies: autoDeps,
+          auto_validate: autoChecks,
           agent_rules: rules,
           pr_policy: policy,
           ...(project
@@ -311,6 +319,22 @@ function ProjectForm({
               These trusted commands can run in a prepared worktree. Saving does
               not execute them. Use one JSON argument array per line.
             </p>
+            <label className="agent-tool">
+              <input
+                type="checkbox"
+                checked={autoDeps}
+                onChange={(event) => setAutoDeps(event.target.checked)}
+              />{" "}
+              Prepare public package dependencies after Coding
+            </label>
+            <label className="agent-tool">
+              <input
+                type="checkbox"
+                checked={autoChecks}
+                onChange={(event) => setAutoChecks(event.target.checked)}
+              />{" "}
+              Detect isolated project checks when no commands are saved
+            </label>
             <label>
               Test commands
               <textarea
@@ -501,7 +525,11 @@ export function NewProject() {
       api<Run>("/projects/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({
+          name,
+          auto_install_dependencies: true,
+          auto_validate: true,
+        }),
       }),
     onSuccess: (run) => setParams({ setup: run.id }),
   });
@@ -564,7 +592,9 @@ export function NewProject() {
               </label>
               <p className="muted">
                 A private local folder, Git history and a Python environment —
-                prepared automatically. No remote repository or downloads.
+                prepared automatically. Coding can prepare public package
+                dependencies and run isolated checks. No remote repository is
+                created.
               </p>
               <ErrorNotice error={create.error ?? setup.error} />
               {setup.data?.error_message && (

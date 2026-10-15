@@ -326,6 +326,12 @@ it("creates a project using only a name and waits for setup", async () => {
   await screen.findByRole("heading", { name: "Registered repository" });
   expect(fetch).toHaveBeenCalledWith(
     "/api/projects/create",
-    expect.objectContaining({ body: JSON.stringify({ name: "My idea" }) }),
+    expect.objectContaining({
+      body: JSON.stringify({
+        name: "My idea",
+        auto_install_dependencies: true,
+        auto_validate: true,
+      }),
+    }),
   );
 });

@@ -87,7 +87,22 @@ def enqueue_coding_task(
         project_id=project.id,
     )
     task.project_id = project.id
+    from app.project_checks import project_check_policy
+
+    policy = project_check_policy(project)
+    if workflow_parent is not None:
+        policy = workflow_parent.parameters.get("coding_project_policy") or {
+            "auto_install_dependencies": False,
+            "auto_validate": False,
+            "project_updated_at": "",
+        }
+        if (
+            policy.get("project_updated_at")
+            and policy["project_updated_at"] != project.updated_at.isoformat()
+        ):
+            raise HTTPException(409, "Coding agent project policy changed after launch")
     request = {
+        "project_check_policy": policy,
         "prompt": body.prompt,
         "files": body.files,
         "explore": body.explore,
@@ -195,13 +210,20 @@ def queue_proposal(session, preparation, worktree):
     preparation.summary = f"Prepared {worktree.branch}; {'Local AI' if local else 'External ' + provider.title()} proposal queued."
 
 
-def queue_validation(session, coding_run):
+def queue_validation(
+    session, coding_run, *, prepared=False, commands=None, manifest_snapshot=None, prerequisites=()
+):
     from app.task_control import stopped_task
 
     if stopped_task(session, coding_run.task):
         coding_run.metadata_json = {**coding_run.metadata_json, "validation_status": "canceled"}
         return
-    commands = coding_run.parameters["commands"]
+    if not prepared:
+        from app.project_checks import queue_project_checks
+
+        if queue_project_checks(session, coding_run):
+            return
+    commands = coding_run.parameters["commands"] if commands is None else commands
     if not commands:
         coding_run.metadata_json = {**coding_run.metadata_json, "validation_status": "not_configured"}
         return
@@ -219,6 +241,7 @@ def queue_validation(session, coding_run):
             "worktree_id": coding_run.parameters["worktree_id"],
             "worktree_run_id": coding_run.parameters["worktree_run_id"],
             "commands": commands,
+            **({"manifest_snapshot": manifest_snapshot} if manifest_snapshot is not None else {}),
             **(
                 {"agent_coding_deadline": coding_run.parameters["agent_coding_deadline"]}
                 if coding_run.parameters.get("agent_coding_deadline")
@@ -227,6 +250,10 @@ def queue_validation(session, coding_run):
         },
     )
     run.parent_run_id = coding_run.id
+    from app.dependencies import depend_on
+
+    for prerequisite in prerequisites:
+        depend_on(session, run, prerequisite)
     refresh_expiry(session, worktree_id=coding_run.parameters["worktree_id"])
     coding_run.metadata_json = {
         **coding_run.metadata_json,

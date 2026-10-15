@@ -47,6 +47,7 @@ from ai_station_runner.media_compose import ComposeRequest, start_composition
 from ai_station_runner.model_verify import VerifyModel, verify_model
 from ai_station_runner.photo import PhotoCommandError, build_photo_argv, device_for
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
+from ai_station_runner.project_plan import ProjectPlanRequest, inspect_project_plan
 from ai_station_runner.project_setup import ProjectSetup, setup_report, start_setup
 from ai_station_runner.publication import (
     PublicationRequest,
@@ -772,6 +773,16 @@ def coding_model_catalog(provider: str):
     if provider not in {"cursor", "codex"}:
         raise HTTPException(404, "Coding provider not found")
     return coding_models(provider)
+
+
+@app.post("/v1/worktrees/plan")
+def project_preparation_plan(body: ProjectPlanRequest):
+    try:
+        return inspect_project_plan(manager(), body)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (GitError, ValueError, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
 
 
 @app.post("/v1/runs/dependencies")

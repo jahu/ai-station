@@ -47,7 +47,18 @@ def enqueue_reviewed_commit(session, source, body: ReviewedCommit):
         raise HTTPException(403, str(exc)) from exc
     validation_id = source.metadata_json.get("validation_run_id")
     validation = session.get(Run, validation_id) if validation_id else None
-    if source.parameters.get("commands") and (validation is None or validation.status != "succeeded"):
+    plan_id = source.metadata_json.get("project_plan_run_id")
+    if plan_id:
+        plan = session.get(Run, plan_id)
+        if not plan or plan.status != "succeeded":
+            raise HTTPException(409, "Automatic project preparation must succeed before committing")
+        for dep_id in source.metadata_json.get("dependency_run_ids", []):
+            dependency = session.get(Run, dep_id)
+            if not dependency or dependency.status != "succeeded":
+                raise HTTPException(409, "Project dependencies must succeed before committing")
+    if (source.parameters.get("commands") or source.metadata_json.get("automatic_commands")) and (
+        validation is None or validation.status != "succeeded"
+    ):
         raise HTTPException(409, "Configured validation must pass before committing")
     if session.scalar(
         select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)

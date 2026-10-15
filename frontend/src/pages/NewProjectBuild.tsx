@@ -43,8 +43,37 @@ export function NewProjectBuild({
       <p className="muted">
         AI Station creates the folder, Git repository and Python environment.
         Describe what to build in your message; coding starts in an isolated
-        worktree.
+        worktree. Public package dependencies and isolated checks are prepared
+        when enabled.
       </p>
+      <details>
+        <summary>Project build defaults</summary>
+        <label className="agent-tool">
+          <input
+            type="checkbox"
+            disabled={busy}
+            checked={value.auto_install_dependencies ?? false}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                auto_install_dependencies: event.target.checked,
+              })
+            }
+          />{" "}
+          Prepare public package dependencies
+        </label>
+        <label className="agent-tool">
+          <input
+            type="checkbox"
+            disabled={busy}
+            checked={value.auto_validate ?? false}
+            onChange={(event) =>
+              onChange({ ...value, auto_validate: event.target.checked })
+            }
+          />{" "}
+          Detect isolated build and test checks
+        </label>
+      </details>
       <fieldset disabled={busy}>
         <legend>Coding agent</legend>
         <div className="project-build-agents">

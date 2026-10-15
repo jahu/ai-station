@@ -13,6 +13,7 @@ from pathlib import Path
 
 from ai_station_runner.coding_sandbox import validation_argv, validation_policy, write_policy
 from ai_station_runner.gitinspect import Repository
+from ai_station_runner.project_manifests import verify_manifests
 from ai_station_runner.validation import load_request, request_path
 from ai_station_runner.worktrees import load_manifest, owned_path
 
@@ -74,6 +75,7 @@ def validate(run_id):
     # Keep the descriptor alive for the full job. Direct runner requests cannot
     # validate the same worktree concurrently even with different Run IDs.
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    verify_manifests(workspace, body.manifest_snapshot)
     scratch = Path(tempfile.mkdtemp(prefix=".ai-station-validation-", dir=workspace))
     env = {
         "PATH": "/usr/local/bin:/usr/bin:/bin",
@@ -103,6 +105,7 @@ def validate(run_id):
 
             runtime = node_runtime(workspace)
             command_env = runtime.environment(env)
+            command_env["CI"] = "1"
             policy_body = runtime_policy(policy_body, runtime)
             command_argv = [
                 str(runtime.node),

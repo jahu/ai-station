@@ -148,3 +148,33 @@ only when tracked-clean and inactive. Never reset the root checkout to deploy.
 Use the central deployment JSON for the actual active release and retain the
 original root Memory WIP. The missing-lock increment is not delivered until its
 full checks, reviewed PR to develop and deployment verification are recorded.
+
+## Next active implementation: automatic managed-project checks
+
+#310 is merged into develop as 9aad0e7. Its reviewed source passed 1418 Python
+and 451 frontend tests, Compose/Docker, desktop/mobile UI, and actual no-lock
+React 19/Vite 7 installation plus production build with 67 checked packages.
+Evidence: data/acceptance/node-lock-generation-20261015. Read the central deployment
+record for the actual active release; original Memory WIP remains untouched.
+
+Continue in the owned feat/coding-auto-project-checks worktree. Implement the
+planned automatic preparation/check contract in docs/coding-boundary.md. The
+concrete gap is that new managed projects have empty validation commands and the
+coding proposal currently queues validation directly, without dependency setup.
+Use frozen explicit project policies, the same Task/child-Run graph, tested typed
+installers and saved-command authority. This increment is not implemented yet;
+do not mark the overall platform goal complete or claim LLM-generated React
+acceptance from the manually prepared #310 fixture.
+
+
+## Automatic project checks implementation in progress
+
+The feat/coding-auto-project-checks worktree implements migration 0025, persisted
+opt-in project policies, frozen Coding/Work/agent snapshots, bounded typed native
+planning and same-Task dependency/check gating. New managed UI defaults are
+explicit; existing/old snapshots remain manual. Actual React/Vite automatic
+plan→install→build passed with a synthetic coding source. Do not claim a real
+LLM-generated website from that evidence. Acceptance is under
+`data/acceptance/coding-auto-project-checks-20261015`. Complete full checks, browser
+review, PR to develop and deployment before marking this increment delivered;
+then perform the actual one-conversation local long-context coding smoke.

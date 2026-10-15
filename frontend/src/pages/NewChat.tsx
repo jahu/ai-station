@@ -168,6 +168,14 @@ export default function NewChat({
         content: draft.trim(),
         attachments,
         ...options,
+        ...(mode === "work"
+          ? {
+              project_defaults: {
+                auto_install_dependencies: true,
+                auto_validate: true,
+              },
+            }
+          : {}),
         ...(workTaskId && workspace.data
           ? {
               continuation: {
@@ -337,6 +345,11 @@ export default function NewChat({
         </p>
       )}
       <ConversationComposer
+        permissionNote={
+          mode === "work"
+            ? "New projects include public package preparation and isolated build/test checks. Advanced project settings can override this."
+            : undefined
+        }
         id="new-chat-message"
         value={draft}
         onChange={setDraft}

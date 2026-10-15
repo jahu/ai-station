@@ -356,3 +356,12 @@ npm process. A typed public-registry metadata client primes its bounded cache;
 only checked source/integrity records enter it. Complete optional dependency
 coverage and final lock validation gate exclusive worktree publication and npm ci.
 There is no caller-selected registry URL or additional execution architecture.
+
+
+## Automatic coding project preparation
+
+Explicit persisted project policies are snapshotted on Send and agent launch.
+The ordinary coding Task adds a read-only project-plan Run, serial typed
+Python/Node dependency Runs and dependency-gated isolated validation. Manifest
+hashes and source ownership bind the graph; manually configured argv remain
+trusted project configuration. See [project preparation](coding-boundary.md).

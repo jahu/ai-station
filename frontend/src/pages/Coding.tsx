@@ -24,6 +24,8 @@ type Project = {
   name: string;
   updated_at: string;
   preferred_executor?: string;
+  auto_install_dependencies?: boolean;
+  auto_validate?: boolean;
 };
 export default function Coding() {
   const navigate = useNavigate();
@@ -145,6 +147,13 @@ export default function Coding() {
                   }}
                 />
               </div>
+              {(project?.auto_install_dependencies ||
+                project?.auto_validate) && (
+                <p className="muted">
+                  This project prepares public dependencies and runs isolated
+                  checks according to its saved settings.
+                </p>
+              )}
               {!projects.data?.length && (
                 <p className="notice">
                   Start with a name — we’ll prepare the folder, Git repository

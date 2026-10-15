@@ -657,6 +657,8 @@ def accept_turn(body: TurnBody, session: DB):
         payload.pop("media")
     if body.github is None:
         payload.pop("github")
+    if body.project_defaults is None:
+        payload.pop("project_defaults")
 
     def fingerprint(values):
         return hashlib.sha256(json.dumps(values, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
@@ -665,6 +667,18 @@ def accept_turn(body: TurnBody, session: DB):
     receipt = session.get(ChatTurnRequest, str(body.client_request_id))
     if receipt:
         hashes = {digest}
+        scope = payload.get("new_project")
+        if (
+            isinstance(scope, dict)
+            and not scope.get("auto_install_dependencies")
+            and not scope.get("auto_validate")
+        ):
+            legacy = {
+                key: value
+                for key, value in scope.items()
+                if key not in {"auto_install_dependencies", "auto_validate"}
+            }
+            hashes.add(fingerprint({**payload, "new_project": legacy}))
         # Before #273, receipts did not include the optional new-project scope.
         if payload.get("new_project") is None:
             hashes.add(fingerprint({key: value for key, value in payload.items() if key != "new_project"}))

@@ -207,6 +207,7 @@ def test_legacy_receipt_replays_after_optional_scope_schema_extension(local):
         legacy.pop("continuation")
         legacy.pop("media")
         legacy.pop("github")
+        legacy.pop("project_defaults")
         legacy.pop("new_project")
         with session_factory()() as session:
             receipt = session.get(ChatTurnRequest, body["client_request_id"])
@@ -218,3 +219,13 @@ def test_legacy_receipt_replays_after_optional_scope_schema_extension(local):
         assert client.post("/api/chat/turns", json=body).json() == accepted.json()
         assert counts() == before
         assert client.post("/api/chat/turns", json={**body, "content": "Different goal"}).status_code == 409
+
+
+def test_chat_does_not_accept_project_automation_grants(local):
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/chat/turns",
+            json=turn(project_defaults={"auto_install_dependencies": True, "auto_validate": True}),
+        )
+        assert response.status_code == 422
+        assert counts()["Task"] == 0

@@ -405,3 +405,14 @@ project’s configured npm/node checks in the network-disabled sandbox. Configur
 `AI_STATION_NODE_PREFIX` for an existing Node 22+ distribution; see
 [Node project setup](docs/node-project-dependencies.md) for the optional project-local
 installer and tested security boundary. Python dependency installation is unchanged.
+
+
+### Coding projects that prepare and check themselves
+
+New projects created through the UI enable public package preparation and isolated
+checks. After Coding applies a proposal, the same Task detects root manifests,
+prepares declared Python/Node dependencies and runs saved commands or detected
+build/test presets. Existing projects retain their settings; enable these options
+under **Project settings → Validation commands and agent guidance**. Saved argv
+always take precedence. Missing tests, dependency failures and skipped checks are
+shown explicitly. See [automatic project checks](docs/coding-boundary.md).

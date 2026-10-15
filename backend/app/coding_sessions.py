@@ -167,11 +167,27 @@ def enqueue_followup(session, task_id, body, *, commit=True, conversation_id=Non
         + "\nCurrent instruction:\n"
         + body.prompt
     )
+    from app.models import Project
+    from app.project_checks import project_check_policy
+
+    project = session.get(Project, task.project_id)
+    if project is None:
+        raise HTTPException(409, "The task project is unavailable")
     parameters = {
         **source.parameters,
         "prompt": prompt,
         "user_prompt": body.prompt,
         "cumulative": True,
+        "project_check_policy": project_check_policy(project),
+        "commands": [
+            {"kind": kind, "argv": argv}
+            for kind, group in (
+                ("test", project.test_commands),
+                ("lint", project.lint_commands),
+                ("build", project.build_commands),
+            )
+            for argv in group
+        ],
         "repair_attempt": 0,
     }
     for key in (
