@@ -41,3 +41,11 @@ The installed Codex sandbox separately failed a read-only probe with `bwrap: loo
 
 
 Each validation command receives its own exclusive policy file outside the writable worktree. The installed native sandbox consumes this file at launch; the original request policy remains as audit evidence. Test/lint/build sequences therefore retain the same restrictions for every command, including commands after a failed check.
+
+Repository exploration may ask for at most two corrections when a local model
+returns a declared read-only operation with missing/extra keys, or omits the tool
+name. Invalid requests are recorded as failed tool events and feedback, and count
+against the existing exploration request budget. They are never executed or
+coerced into a guessed operation. Unknown/disallowed tools, unsafe paths and
+invalid argument values still fail closed. This addresses the observed missing
+`tool: finish` in the real local Work continuation; it does not grant new tools.
