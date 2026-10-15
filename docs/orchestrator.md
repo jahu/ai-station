@@ -93,3 +93,11 @@ card with Open project, Open Coding workspace and Continue here with Local AI.
 The latter only selects that project and local coding scope for the next prompt;
 it does not execute, grant external-AI consent or publish Git changes. Creation
 uses the existing cancellation, ownership and inspection recovery contract.
+
+Planner inference requests constrained JSON-object output through the provider
+abstraction. Owned/configured local Runner inference uses its strict boolean format
+switch; direct compatible providers use their JSON-object response format. Plain
+conversation replies keep their normal format. Plan parsing, scope/permission
+checks, cancellation and typed dispatch still gate every proposed action. A provider
+that rejects the requested format fails the planner rather than triggering fallback
+execution or a silent provider change.

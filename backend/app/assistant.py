@@ -1139,6 +1139,7 @@ class AssistantExecutor:
             session,
             {
                 **params,
+                "json_output": True,
                 "temperature": 0,
                 "max_tokens": 512,
                 "messages": [

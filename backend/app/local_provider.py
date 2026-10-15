@@ -122,6 +122,7 @@ class LocalChatProvider:
         tools: list[dict] | None = None,
         on_tool_calls=None,
         reasoning: dict | None = None,
+        json_output: bool = False,
     ):
         managed = model.startswith("llamacpp:")
         if reasoning is not None and not managed:
@@ -150,6 +151,13 @@ class LocalChatProvider:
             "max_tokens": max_tokens,
             "stream": True,
         }
+        if type(json_output) is not bool:
+            raise ProviderError("JSON output selection must be a boolean")
+        if json_output:
+            if use_runner:
+                body["json_output"] = True
+            else:
+                body["response_format"] = {"type": "json_object"}
         if tools is not None:
             body["tools"] = _validated_tools(tools)
             body["tool_choice"] = "auto"
