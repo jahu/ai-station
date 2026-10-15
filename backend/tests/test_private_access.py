@@ -187,3 +187,33 @@ def test_login_budget_is_persistent_and_ignores_forwarded_ips(monkeypatch):
     now = utcnow()
     monkeypatch.setattr("app.operator_auth.utcnow", lambda: now + timedelta(seconds=61))
     assert another.post("/api/operator-auth/login", json={"password": PASSWORD}).status_code == 200
+
+
+def test_activity_does_not_restore_old_cookie_after_password_rotation(monkeypatch):
+    desktop = setup()
+    before = desktop.cookies.get(COOKIE)
+    now = utcnow()
+    monkeypatch.setattr("app.operator_auth.utcnow", lambda: now + timedelta(minutes=2))
+    rotated = desktop.put(
+        "/api/operator-auth", json={"password": PASSWORD + "new", "current_password": PASSWORD}
+    )
+    assert rotated.status_code == 200
+    assert desktop.cookies.get(COOKIE) != before
+    assert desktop.get("/api/runs").status_code == 200
+    monkeypatch.setattr("app.operator_auth.utcnow", lambda: now + timedelta(minutes=4))
+    assert desktop.post("/api/operator-auth/logout").status_code == 200
+    assert desktop.cookies.get(COOKIE) is None
+    assert desktop.get("/api/runs").status_code == 401
+
+
+def test_expired_phone_session_does_not_expire_active_desktop(monkeypatch):
+    desktop = setup()
+    enable(monkeypatch)
+    phone = TestClient(app, base_url=LAN)
+    assert phone.post("/api/operator-auth/login", json={"password": PASSWORD}).status_code == 200
+    now = utcnow()
+    monkeypatch.setattr("app.operator_auth.utcnow", lambda: now + timedelta(minutes=20))
+    assert desktop.get("/api/runs").status_code == 200
+    monkeypatch.setattr("app.operator_auth.utcnow", lambda: now + timedelta(minutes=31))
+    assert phone.get("/api/runs").status_code == 401
+    assert desktop.get("/api/runs").status_code == 200

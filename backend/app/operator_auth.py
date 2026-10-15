@@ -373,6 +373,10 @@ def remember_activity(request: Request, session: Session, token: str) -> None:
 
 
 def refresh_operator_cookie(request: Request, response: Response) -> None:
+    # Login, logout and rotation own their cookie; activity must not restore
+    # the previous token after those handlers have replaced or removed it.
+    if any(value.startswith(COOKIE + "=") for value in response.headers.getlist("set-cookie")):
+        return
     refresh = getattr(request.state, "operator_cookie_refresh", None)
     if not isinstance(refresh, dict):
         return
@@ -437,6 +441,8 @@ def status(request: Request, response: Response, session: DB):
     body = public_status(session, token, authority=request.headers.get("host", ""))
     if token and not body["authenticated"]:
         response.delete_cookie(COOKIE, path=COOKIE_POLICY["path"])
+    if session.deleted:
+        session.commit()
     return body
 
 
@@ -504,4 +510,4 @@ def login(body: LoginBody, request: Request, response: Response, session: DB):
 def logout(request: Request, response: Response, session: DB):
     drop_session(session, response, request.cookies.get(COOKIE))
     session.commit()
-    return public_status(session)
+    return public_status(session, authority=request.headers.get("host", ""))
