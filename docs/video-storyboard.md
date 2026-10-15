@@ -29,3 +29,15 @@ seeds, dependencies, resume and final order with fake GPU work and real CPU
 composition. Run the full required checks and inspect desktop/mobile interaction.
 No new real generation is needed to prove this queue/composition extension;
 record any later real visual qualification separately.
+
+## Verification before deployment
+
+1576 backend/Runner tests passed (five explicit opt-in skips), plus Ruff. The
+29 focused media tests include real CPU composition/decode and fake GPU dispatch.
+Final UI source passed 488 tests, format/lint/types/build, Docker and both Compose
+configurations. The actual compiled candidate was inspected at 1440, 390 and
+320 pixels: editing/reordering/focus, calculated duration, saved restoration,
+active-control disabling and per-scene progress passed without page/API errors
+or internal/page overflow. API fixtures were explicitly synthetic; the candidate
+had no native socket and its private database retained zero Runs. No actual
+storyboard GPU inference is claimed. Evidence: `data/acceptance/video-storyboard-20261015`.

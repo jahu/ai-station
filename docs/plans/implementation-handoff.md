@@ -13,19 +13,20 @@ skips), Ruff, Docker/Compose and actual desktop/mobile persistence checks. Actua
 native observation confirmed the same ready 27B container and 131072 context after
 that deployment. Evidence: `data/acceptance/runner-source-compatibility-20261015`.
 
-Continue `feat/video-storyboard` in `.tools/video-storyboard`, following
-[the scene plan](../video-storyboard.md). Focused backend/media tests (29) and full
-UI checks (488 tests, format/lint/types/build) pass; full backend/image checks and
-browser qualification are next. No native/schema changes. Root WIP stays preserved.
+PR #322 (`feat/video-storyboard`, `.tools/video-storyboard`) is ready for final
+review/merge/deployment after 1576 backend/Runner tests (five opt-in skips), Ruff,
+488 UI tests, final format/lint/types/build, Docker/Compose and private compiled
+browser checks at 1440/390/320. Native source is unchanged from #321. See
+[the scene plan](../video-storyboard.md); evidence is in
+`data/acceptance/video-storyboard-20261015`. Preserve original root WIP.
 
-A real 30-second avatar at 384 pixels/eight steps is concurrently running through
-the normal production queue, following the separate qualification plan in
-`.tools/long-avatar-qualification/docs/long-avatar-qualification.md`. Evidence and
-saved receipt/progress are in `data/acceptance/long-avatar-default-20261015`.
-Do not deploy or restart its active worker/native service. Complete full decode,
-join and desktop/mobile playback inspection; do not claim success from progress.
-The QA input is repeated existing generated speech with a silent tail. Restore
-the saved owned 27B preset afterward only when other station work is idle.
+The real 30-second 384-pixel/eight-step avatar is complete. Full decode and
+browser playback passed; sampled joins are continuous, while appearance/hand
+artifacts remain visible with the full-body QA input. Scope and remaining visual
+qualification are in [the acceptance record](../long-avatar-qualification.md),
+with local evidence under `data/acceptance/long-avatar-default-20261015`. The
+original owned 27B preset is restored at actual 131072 context on both GPUs.
+The station is idle again; retain its healthy native service for the #322 rollout.
 
 ## Delivered conversation work
 
