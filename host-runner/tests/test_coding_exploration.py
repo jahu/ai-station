@@ -251,3 +251,29 @@ def test_unknown_tool_fails_immediately_without_correction(workspace):
     with pytest.raises(ValueError, match="Unsupported"):
         explore(workspace, "Task", "", complete)
     assert len(calls) == 1 and not (workspace / "pwned").exists()
+
+
+def test_explorer_can_select_root_gitignore_without_exposing_other_hidden_files(workspace, monkeypatch):
+    (workspace / ".gitignore").write_text("node_modules/\n")
+    monkeypatch.setattr(
+        "ai_station_runner.coding_exploration.Repository",
+        lambda *a, **k: SimpleNamespace(read=lambda _: SimpleNamespace(stdout=".gitignore\0.env\0app.py\0")),
+    )
+    actions = iter(
+        [
+            {"tool": "list_files", "prefix": "", "offset": 0},
+            {"tool": "finish", "files": [".gitignore", "new.js"]},
+        ]
+    )
+    messages = []
+
+    def complete(message):
+        messages.append(message)
+        return json.dumps(next(actions))
+
+    selected, trace = explore(workspace, "Create a website", "", complete)
+    assert trace[0]["result"]["files"] == [".gitignore", "app.py"]
+    assert selected[0]["path"] == ".gitignore" and selected[0]["content"] == "node_modules/\n"
+    assert selected[1]["content"] is None
+    assert "other hidden paths and credentials are excluded" in messages[0]
+    assert "SECRET" not in "".join(messages)

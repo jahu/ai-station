@@ -85,6 +85,22 @@ Manual project validation still uses explicitly saved commands. Automatic discov
 currently inspects root manifests and root/tests test files; nested workspace
 package managers and arbitrary script/command generation are not inferred.
 
+## Standard ignore file support — 2026-10-15
+
+Real Work acceptance exposed a path-policy mismatch: an otherwise valid React
+task selected the managed repository's root `.gitignore`, and exploration failed
+before code generation because all dotfiles were excluded. Permit that exact
+root text file through the common selected-file contract for all coding adapters.
+Other hidden paths, Git metadata, credentials, symlink/hardlink redirects and
+concurrent edits retain their existing checks. Selection, proposal application,
+diff and reviewed commit remain on the same owned task worktree. Describe the
+exception to the local explorer; do not silently grant arbitrary dotfile access.
+
+Qualify the change with path-boundary regression cases, the full backend/Runner
+checks, frontend checks for corrected review copy, and a continuation of the
+failed real Work task. Retain its original failure rather than reporting it as a
+successful first attempt. No external inference or unrelated runtime changes.
+
 ## Coding task progress
 
 The coding conversation should distinguish generated code from verified results.
