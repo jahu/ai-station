@@ -12,6 +12,9 @@ from pathlib import Path
 MAX_FILE = 32000
 MAX_TOTAL = 64000
 MAX_REPLACEMENTS = 20
+MAX_REVIEW_FILES = 200
+MAX_REVIEW_FILE = 256000
+MAX_REVIEW_TOTAL = 2 * 1024 * 1024
 
 
 def selected_path(workspace: Path, name: str) -> Path:
@@ -40,7 +43,18 @@ def selected_path(workspace: Path, name: str) -> Path:
 def read_selected(workspace: Path, names: list[str]) -> list[dict]:
     if not 1 <= len(names) <= 10 or len(set(names)) != len(names):
         raise ValueError("Select between one and ten unique file paths")
+    return _read_files(workspace, names, max_file=MAX_FILE, max_total=MAX_TOTAL)
+
+
+def read_review_files(workspace: Path, names: list[str]) -> list[dict]:
+    if not 1 <= len(names) <= MAX_REVIEW_FILES or len(set(names)) != len(names):
+        raise ValueError("Review requires between one and 200 unique ordinary paths")
+    return _read_files(workspace, names, max_file=MAX_REVIEW_FILE, max_total=MAX_REVIEW_TOTAL)
+
+
+def _read_files(workspace, names, *, max_file, max_total):
     files = []
+    total = 0
     for name in names:
         path = selected_path(workspace, name)
         if path.exists():
@@ -49,22 +63,29 @@ def read_selected(workspace: Path, names: list[str]) -> list[dict]:
                 info = os.fstat(handle.fileno())
                 if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
                     raise ValueError("Selected inputs must be regular files without hard links")
-                data = handle.read(MAX_FILE + 1)
-            if len(data) > MAX_FILE or b"\0" in data:
-                raise ValueError("Selected files must be UTF-8 text, at most 32,000 bytes each")
-            text = data.decode("utf-8")
+                data = handle.read(max_file + 1)
+                after = os.fstat(handle.fileno())
+                if (info.st_size, info.st_mtime_ns, info.st_ctime_ns) != (
+                    after.st_size,
+                    after.st_mtime_ns,
+                    after.st_ctime_ns,
+                ):
+                    raise ValueError("Source changed while reading")
+            if len(data) > max_file or b"\0" in data:
+                raise ValueError(f"Selected files must be UTF-8 text, at most {max_file:,} bytes each")
+            total += len(data)
+            if total > max_total:
+                raise ValueError(f"Selected source context exceeds {max_total:,} bytes")
             files.append(
                 {
                     "path": name,
-                    "content": text,
+                    "content": data.decode("utf-8"),
                     "sha256": hashlib.sha256(data).hexdigest(),
                     "mode": stat.S_IMODE(info.st_mode),
                 }
             )
         else:
             files.append({"path": name, "content": None, "sha256": None, "mode": 0o644})
-    if sum(len((item["content"] or "").encode()) for item in files) > MAX_TOTAL:
-        raise ValueError("Selected source context exceeds 64,000 bytes")
     return files
 
 

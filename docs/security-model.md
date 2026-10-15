@@ -311,3 +311,7 @@ completion. It reuses fixed sandbox permissions and recorded commands, never
 model-supplied inputs. A manual-only flag prevents automatic LLM repair; an old
 agent deadline is not inherited by this fresh user intent. Existing Task Stop
 and native worktree locks still gate execution. See [the contract](coding-rerun-checks.md).
+
+### Cumulative review does not grant model context or write access
+
+The local cumulative review/hash reader allows at most 200 files, 256,000 bytes per file and 2 MiB aggregate. It shares canonical path, credential/hidden-path, regular-file, UTF-8 and symlink/hardlink checks with the stricter model-context reader; root `.gitignore` remains the sole hidden-file exception. Only untracked root `.ai-station-validation-*/` and `.ai-station-dependencies-*/` directories are omitted by the Git inventory. Tracked paths, root files/symlinks and nested names are not exempt. No scratch files or Git configuration are changed. Selected model input/write scope remains ten files, 32,000 bytes each and 64,000 combined. Projected review is bounded before application (1 MiB encoded JSON), with fresh source and branch/HEAD checks before writes. Oversized output fails rather than truncating a review.

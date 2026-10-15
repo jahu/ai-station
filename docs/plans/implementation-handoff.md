@@ -279,3 +279,21 @@ automatic LLM repair. Coding progress and Coding/Work review expose the action
 and preserve the current draft. Focused backend tests pass (22). Complete full
 checks, real sandbox/browser acceptance, PR review/merge and deployment before
 marking delivered. Reuse the qualified QA React task without new inference.
+
+## Current active increment: Coding continuation after builds
+
+PR #316 is delivered as `94d1036`, with live same-Task Node test/build repetition
+and a new ZIP, no model/dependency Runs, retained history and unchanged original
+checkout. Evidence: `data/acceptance/coding-rerun-checks-20261015/production-result.json`.
+
+Continue `fix/coding-continuation-review` in `.tools/coding-continuation-review`.
+[The plan](../coding-continuation-review.md) records an actual blocker: 1155
+internal untracked scratch files and a 32265-byte generated lockfile in the QA
+worktree collide with the current selected-context limits during cumulative
+review/commit. Fix source scanning and separate bounded review from inference
+context, with report-size preflight and the existing path/write protections.
+Implementation is on PR #317. Focused native and follow-up integration tests pass,
+including generated locks, 15-file commit, tracked credential rejection and encoded
+report preflight before writes. Full backend/Runner checks and deployment acceptance
+are pending; do not report production acceptance until evidence is recorded in
+`data/acceptance/coding-continuation-review-20261015`. Preserve scratch data and root WIP.

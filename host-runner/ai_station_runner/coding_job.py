@@ -1,11 +1,10 @@
 """Shared selected-file proposal application for native coding providers."""
 
 import fcntl
-import hashlib
-import json
 import os
 
-from ai_station_runner.coding_files import apply_proposal, describe_change, parse_proposal, read_selected
+from ai_station_runner.coding_files import apply_proposal, parse_proposal, read_review_files, read_selected
+from ai_station_runner.coding_review import checked_report_bytes, projected_review
 from ai_station_runner.gitinspect import Repository
 from ai_station_runner.worktrees import load_manifest, owned_path
 
@@ -49,33 +48,13 @@ def execute_proposal(run_id, body, root, generate, *, location, discover=None):
         != record.get("head_commit", record["base_commit"])
     ):
         raise ValueError("Worktree changed during inference")
-    cumulative = getattr(body, "cumulative", False)
-    review_paths = [item["path"] for item in selected]
-    if cumulative:
-        dirty = repo.read(["diff", "--name-only", "-z", "HEAD"]).stdout
-        dirty += repo.read(["ls-files", "--others", "--exclude-standard", "-z"]).stdout
-        review_paths = list(dict.fromkeys([*review_paths, *filter(None, dirty.split("\0"))]))
-        read_selected(workspace, review_paths)  # Bound cumulative review before writing.
-    report = apply_proposal(workspace, selected, proposal)
-    if cumulative or getattr(body, "repair_source_run_id", None):
-        # Compare every scoped file with the task HEAD, so accepting a repair
-        # commits the complete reviewed result, including earlier replacements.
-        changes = []
-        for item in read_selected(workspace, review_paths):
-            blob = repo.read(["show", f"HEAD:{item['path']}"], check=False)
-            original = {**item, "content": None, "sha256": None}
-            if blob.returncode == 0:
-                mode = repo.read(["ls-tree", "HEAD", "--", item["path"]]).stdout.split()[0]
-                if mode not in {"100644", "100755"}:
-                    raise ValueError("Cumulative review requires ordinary source files")
-                original["content"] = blob.stdout
-                original["sha256"] = hashlib.sha256(blob.stdout.encode()).hexdigest()
-                original["mode"] = int(mode, 8) & 0o777
-            elif repo.read(["ls-tree", "HEAD", "--", item["path"]]).stdout:
-                raise ValueError("Could not read the task base for repair review")
-            if original["content"] != item["content"]:
-                changes.append(describe_change(original, item))
-        report["files"] = changes
+    cumulative = bool(getattr(body, "cumulative", False))
+    repair = bool(getattr(body, "repair_source_run_id", None))
+    changes, snapshots = projected_review(
+        repo, workspace, selected, proposal, cumulative=cumulative, repair=repair
+    )
+    report = {"summary": proposal["summary"], "files": changes, "review_status": "needs_review"}
+    if cumulative or repair:
         report["repair_source_run_id"] = str(getattr(body, "repair_source_run_id", ""))
     report.update(
         run_id=run_id,
@@ -88,10 +67,19 @@ def execute_proposal(run_id, body, root, generate, *, location, discover=None):
     )
     if exploration:
         report["exploration"] = exploration
+    encoded = checked_report_bytes(report)  # Reject oversized results before any proposal write.
+    if read_review_files(workspace, [item["path"] for item in snapshots]) != snapshots:
+        raise ValueError("Review files changed before proposal application")
+    if (
+        repo.read(["rev-parse", "HEAD"]).stdout.strip() != report["base_commit"]
+        or repo.branch() != record["branch"]
+    ):
+        raise ValueError("Worktree changed before proposal application")
+    apply_proposal(workspace, selected, proposal)
     path = root / "report.json"
-    with path.open("x") as handle:
+    with path.open("xb") as handle:
         os.chmod(path, 0o600)
-        json.dump(report, handle)
+        handle.write(encoded)
     print(
         f"Applied {len(report['files'])} file replacements; review and validation still required", flush=True
     )
