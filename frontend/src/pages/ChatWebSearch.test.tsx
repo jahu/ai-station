@@ -141,3 +141,22 @@ it("moves through search sources with arrow keys", () => {
   });
   expect(first.tabIndex).toBe(0);
 });
+
+it("keeps the default online composer compact while exposing exact-query options", () => {
+  render(
+    <WebSearchControl
+      compact
+      enabled
+      query=""
+      busy={false}
+      onToggle={() => {}}
+      onQuery={() => {}}
+    />,
+  );
+  expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true");
+  expect(screen.queryByLabelText("Search query")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Search options" }));
+  expect(screen.getByLabelText("Search query")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Search options" }));
+  expect(screen.queryByLabelText("Search query")).toBeNull();
+});

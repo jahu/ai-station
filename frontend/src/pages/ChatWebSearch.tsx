@@ -1,5 +1,5 @@
-import { useId, type KeyboardEvent } from "react";
-import { Globe, ExternalLink } from "lucide-react";
+import { useId, useState, type KeyboardEvent } from "react";
+import { Globe, ExternalLink, SlidersHorizontal } from "lucide-react";
 import { useListKeyboard } from "./useListKeyboard";
 
 export type WebSources = {
@@ -27,6 +27,8 @@ export function WebSearchControl({
   compact?: boolean;
 }) {
   const labelId = useId();
+  const queryId = useId();
+  const [queryOpen, setQueryOpen] = useState(false);
   const items = ["web_search"] as const;
   const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
     [...items],
@@ -47,31 +49,47 @@ export function WebSearchControl({
         Search public information. A short query may use the recent conversation
         to understand follow-up questions. Attachments and memory are excluded.
       </p>
-      <div
-        ref={listRef}
-        className="web-search-choice-list"
-        aria-labelledby={labelId}
-        onKeyDown={handleKey}
-      >
-        <div aria-label="Search web_search" {...itemProps(0, "web_search")}>
+      <div className="web-search-actions">
+        <div
+          ref={listRef}
+          className="web-search-choice-list"
+          aria-labelledby={labelId}
+          onKeyDown={handleKey}
+        >
+          <div aria-label="Search web_search" {...itemProps(0, "web_search")}>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={enabled}
+              aria-label="Search the web"
+              disabled={busy}
+              tabIndex={index === 0 ? 0 : -1}
+              className="web-search-toggle"
+              onClick={() => onToggle(!enabled)}
+            >
+              <Globe size={16} />
+              <span>{compact ? "Web search" : "Search the web"}</span>
+              <span className="chip">{enabled ? "ON" : "OFF"}</span>
+            </button>
+          </div>
+        </div>
+        {compact && enabled && (
           <button
             type="button"
-            role="switch"
-            aria-checked={enabled}
-            aria-label="Search the web"
+            className="web-search-options"
+            aria-label="Search options"
+            aria-expanded={queryOpen}
+            aria-controls={queryId}
+            title="Search options"
             disabled={busy}
-            tabIndex={index === 0 ? 0 : -1}
-            className="web-search-toggle"
-            onClick={() => onToggle(!enabled)}
+            onClick={() => setQueryOpen(!queryOpen)}
           >
-            <Globe size={16} />
-            <span>{compact ? "Web search" : "Search the web"}</span>
-            <span className="chip">{enabled ? "ON" : "OFF"}</span>
+            <SlidersHorizontal size={15} />
           </button>
-        </div>
+        )}
       </div>
-      {enabled && (
-        <div className="web-search-query">
+      {enabled && (!compact || queryOpen) && (
+        <div className="web-search-query" id={queryId}>
           <label>
             Search query <span className="muted">optional</span>
             <input

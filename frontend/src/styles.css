@@ -6339,3 +6339,27 @@ section:has(> .memory-grid) > .dashboard-note {
     transition: none;
   }
 }
+
+.web-search-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.web-search-options {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 8px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.web-search-options:hover,
+.web-search-options[aria-expanded="true"] {
+  color: var(--text);
+  border-color: var(--accent);
+}

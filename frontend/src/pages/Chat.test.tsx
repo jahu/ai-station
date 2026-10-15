@@ -555,6 +555,7 @@ it.each(["image.generate", "image.generate_video"])(
       name: "Search the web",
     });
     fireEvent.click(toggle);
+    fireEvent.click(screen.getByRole("button", { name: "Search options" }));
     fireEvent.change(screen.getByLabelText("Search query"), {
       target: { value: "example.com brand" },
     });
