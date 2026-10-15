@@ -146,7 +146,7 @@ The [Memory workspace](memory.md) exposes durable scoped entries with validated 
 
 ## Named connectors
 
-[HTTP GET connectors](connectors.md) persist a reviewed public URL and optional secret reference. A user-requested health check is an ordinary Run with `network_read`, cancellation and a JSON artifact. Public-page Browser is a separately permissioned agent tool; GitHub, email, calendar and social connector adapters remain unavailable.
+[HTTP GET connectors](connectors.md) persist a reviewed public URL and optional secret reference. A user-requested health check is an ordinary Run with `network_read`, cancellation and a JSON artifact. Public-page Browser is a separately permissioned agent tool; GitHub repository snapshots also support reviewed read-only account access; email, calendar and social adapters remain unavailable.
 
 ## Runtime observations
 

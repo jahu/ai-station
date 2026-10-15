@@ -281,3 +281,46 @@ def test_factory_drafts_local_website_from_reviewed_url_without_activation(instr
         assert draft["tools"] == ["coding_local", "http_fetch"]
         assert draft["model"] == "auto" and draft["fetch_urls"] == ["https://example.com/"]
         assert not draft["enabled"] and draft["project_id"] is None
+
+
+def test_auto_pages_preserve_fit_and_approval_without_loading_a_model(pages, monkeypatch):
+    from app.runner_client import RunnerClient
+    from test_coding_model_routing import candidate
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Auto cannot bind a literal conversation model")
+
+    monkeypatch.setattr("app.agents_api.model_endpoint", forbidden)
+    monkeypatch.setattr("app.schedule.model_endpoint", forbidden)
+    monkeypatch.setattr(
+        RunnerClient,
+        "hardware",
+        lambda _: {
+            "gpus": [{"index": 2, "memory_total_mib": 12288}, {"index": 7, "memory_total_mib": 12288}]
+        },
+    )
+    with TestClient(app) as client:
+        with session_factory()() as session:
+            model, _ = candidate(session)
+            model_id = model.id
+            session.commit()
+        _, parent = start(client, model="auto", require_approval=True)
+        assert parent["status"] == "waiting_for_approval" and parent["parameters"]["endpoint"] == ""
+        assert step() is None and pages == [] and children(parent["id"]) == []
+        response = client.post("/api/runs/" + parent["id"] + "/approval", json={"resolution": "granted"})
+        assert response.status_code == 200, response.text
+        step()
+        step()
+        step()
+        preparation = next(r for r in children(parent["id"]) if r.executor_type == "worktree_prepare")
+        request = preparation.parameters["local_coding"]
+        assert request["model"] == "llamacpp:" + model_id
+        assert request["model_selection"]["context_size"] >= 100000
+        assert request["model_selection"]["gpus"] == [2, 7]
+        assert request["model_selection"]["requested"] == "auto"
+        assert request["context_sources"][0]["urls"] == ["https://example.com/"]
+        with session_factory()() as session:
+            assert (
+                session.scalar(select(func.count()).select_from(Run).where(Run.executor_type == "llama_load"))
+                == 0
+            )

@@ -1,5 +1,9 @@
 # Full-product acceptance ledger
 
+Local coding agents can explicitly read reviewed public pages before creating
+their worktree/proposal. The same Task preserves fetched sources, approval,
+deadline, Stop and conservative recovery. See [reviewed-page coding](agent-page-coding.md).
+
 Named-project Work now resolves explicit Polish/English change instructions to
 registered projects and the existing Local Coding Auto flow. Tests cover receipt
 replay, frozen policy revisions, ambiguous names, Chat boundaries and Stop; actual

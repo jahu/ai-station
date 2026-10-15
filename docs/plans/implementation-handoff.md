@@ -106,3 +106,28 @@ Live #300 release is recorded in `data/acceptance/safety-redeploy-20261012/deplo
 - #303: natural create-project/build requests use the existing qualified 100k+ Auto Local Coding router rather than implicitly inheriting a small Chat model. Explicit model choices remain explicit.
 
 Local coding-agent drafts/editor also support the shared Auto policy; use [agent Auto coding](../agent-coding-auto.md) for enable/launch and approval contracts. Expensive integrations are not implied by fake-provider or metadata/UI acceptance. Current live release remains recorded in the central deployment JSON; inspect it before deployment.
+
+## Latest integration — 2026-10-15
+
+- #304: Local coding-agent drafts and the editor use the shared fitting 100k+
+  Auto policy, with approval before any model/worktree execution.
+- #305: positioned table scroll containers keep hidden table headers from
+  widening the mobile Runs page. All 16 workspaces passed desktop/mobile reads.
+- #306: explicit current-turn Polish/English named-project change instructions
+  resolve to Local Coding Auto. Scope revisions, Chat boundaries, receipt replay
+  and Stop are tested; UI Send passed without new inference.
+- #307: conversation header controls wrap without stretching/clipping. Narrow
+  and short windows use normal page height plus a bounded transcript; actual UI
+  Stop passed on five viewport sizes.
+- Current reviewed-page coding increment composes explicit public HTTP reads,
+  verified source artifacts and the normal isolated Local coding chain. Read
+  [the contract](../agent-page-coding.md) before changing its boundaries. Real
+  public HTTPS and browser setup/Stop passed; no new real coding inference is
+  implied by those checks. Final combined validation is recorded in
+  `data/acceptance/agent-page-coding-20261015`.
+
+Always read the central deployment JSON for the actual live release rather than
+assuming an older milestone mentioned above is still running. The original root
+checkout's Memory WIP remains preserved separately; local `develop` is checked
+out in the owned `.tools/chat-reasoning` worktree and should be fast-forwarded
+only when tracked-clean and inactive. Never reset the root checkout to deploy.

@@ -17,3 +17,15 @@ to reading and coding. Stop or failed reading prevents later publication.
 External coding providers retain their existing exclusive-tool and explicit
 source-sharing contract. This increment adds no arbitrary browsing, login,
 external-provider sharing, commit, push or deployment.
+
+Verification: the combined application passed 1351 Python tests with five opt-in
+skips and 450 frontend tests, plus lint/format/typecheck/build and Compose/Docker.
+A further test-only Auto/approval case was added and the full 20-case page-coding
+module passed; application source stayed identical to the full Python run.
+Actual browser draft/edit/enable/Run now and a real public HTTPS read completed
+source verification, ordinary coding preparation and Stop on desktop/mobile.
+No new coding-model inference or native worktree creation is claimed by that UI
+check. Recovery, source tampering, failed reads, deadlines, permission refusal and
+Stop boundaries use fake-provider/temporary-storage tests. Auto fit acceptance
+uses fixture GPU/model observations, not another physical GPU load. Evidence:
+`data/acceptance/agent-page-coding-20261015`.
