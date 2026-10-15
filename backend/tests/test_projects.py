@@ -3189,8 +3189,17 @@ def test_assistant_project_build_reuses_setup_worktree_and_coding(
         assert (repository / "README.md").read_text() == "Original repository\n"
 
 
+@pytest.fixture
+def qualified_project_coder(monkeypatch):
+    monkeypatch.setattr(
+        "app.coding_model_routing.select_coding_model",
+        lambda session: {"model": "fixture", "context_size": 131072, "context_verified": True, "gpus": []},
+    )
+
+
 @pytest.mark.parametrize("failure", ["cancel", "reject"])
 def test_assistant_project_build_does_not_publish_coding_after_setup_failure(
+    qualified_project_coder,
     repository,
     owned_runner,
     monkeypatch,
@@ -3231,7 +3240,9 @@ def test_assistant_project_build_does_not_publish_coding_after_setup_failure(
         assert not (owned_runner.data_dir / "projects" / setup["parameters"]["project_id"]).exists()
 
 
-def test_project_build_preserves_project_when_coding_model_disappears(repository, owned_runner, monkeypatch):
+def test_project_build_preserves_project_when_coding_model_disappears(
+    qualified_project_coder, repository, owned_runner, monkeypatch
+):
     from app.providers import ProviderError
 
     with TestClient(app) as client:
@@ -3265,7 +3276,7 @@ def test_project_build_preserves_project_when_coding_model_disappears(repository
 
 
 def test_stop_project_build_parent_after_setup_cancels_queued_coding_child(
-    repository, owned_runner, local_coding_bridge
+    qualified_project_coder, repository, owned_runner, local_coding_bridge
 ):
     with TestClient(app) as client:
         cid = client.post(

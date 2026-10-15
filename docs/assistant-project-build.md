@@ -38,3 +38,12 @@ Local/Cursor/Codex adapters cover setup, proposal, ownership, no replay, preflig
 failure preserving the project and setup-boundary cancellation. UI evidence is
 under `data/acceptance/work-project-build-20261014`. No real external-provider
 project build or new long-media smoke is claimed by this feature.
+
+Natural-language project creation now defaults to **Auto Local Coding**, matching
+the project-building form. It does not inherit a small Chat model as the coding
+model. The existing observed-fit/100k+ context router preflights a fitting candidate
+without starting a model on Send, then revalidates actual coding selection after
+successful project setup. An explicitly supplied scope with an empty
+model still means the deliberately chosen conversation model; external providers
+still require explicit sharing consent. Receipts retain the original request and
+replay without another project/model dispatch.
