@@ -1,5 +1,6 @@
 import { afterEach, expect, it } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import type { Run } from "../api";
 import CodingTaskProgress from "./CodingTaskProgress";
@@ -22,9 +23,11 @@ const run = (
   }) as Run;
 function show(runs: Run[]) {
   render(
-    <MemoryRouter>
-      <CodingTaskProgress runs={runs} />
-    </MemoryRouter>,
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <CodingTaskProgress runs={runs} />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
   return screen.getByRole("region", { name: "Task progress" });
 }

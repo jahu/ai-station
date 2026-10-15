@@ -63,6 +63,9 @@ export interface Run {
   error_type: string;
   error_message: string;
   worker_id: string | null;
+  runner_id?: string | null;
+  pid?: number | null;
+  process_group_id?: number | null;
   metadata?: Record<string, unknown>;
   approval?: {
     id: string;

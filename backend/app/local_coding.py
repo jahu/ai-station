@@ -171,6 +171,8 @@ def enqueue_local_repair(session, source_id):
 
 
 def queue_automatic_repair(session, validation):
+    if validation.parameters.get("manual_checks_only") is True:
+        return
     from app.task_control import stopped_task
 
     if stopped_task(session, validation.task):

@@ -109,6 +109,7 @@ workspace, local model load when present, code, automatic dependencies and check
 Use the latest proposal's Run references so a failed older turn cannot mark a
 successful continuation as failed. All active task stages still block a ready
 verdict. Missing checks must say untested, failed installs/checks remain explicit,
-and Stop/approval states remain visible. Links open the underlying Runs; this
-view performs no inference, scheduling or Git operations. The expanded transcript
+and Stop/approval states remain visible. Links open the underlying Runs. The explicit **Run checks again** action repeats
+recorded validation through the shared worker, without inference, dependency
+installation or Git operations; see [check reruns](coding-rerun-checks.md). The expanded transcript
 and per-stage history remain available below it.
