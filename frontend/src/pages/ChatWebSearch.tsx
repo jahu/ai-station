@@ -4,6 +4,7 @@ import { useListKeyboard } from "./useListKeyboard";
 
 export type WebSources = {
   query: string;
+  queries?: string[];
   searched_at: string;
   partial: boolean;
   sources: { id: number; title: string; url: string; snippet: string }[];
@@ -114,6 +115,11 @@ export function SearchSources({ result }: { result: WebSources }) {
             {new Date(result.searched_at).toLocaleString()}
           </time>
         </p>
+        {(result.queries?.length ?? 0) > 1 && (
+          <p className="muted">
+            Refined search: {result.queries?.slice(1).join(" · ")}
+          </p>
+        )}
         {result.sources.length ? (
           <>
             <p id={labelId} className="dashboard-note">
