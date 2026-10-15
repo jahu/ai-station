@@ -57,14 +57,16 @@ class ProjectDependenciesExecutor(NativeJobExecutor):
             )
         append_event(session, run.id, "dependencies.completed", report)
         run.metadata_json = {**run.metadata_json, "dependencies": report}
-        source = "local vendor wheels" if report["source"] == "vendor" else "PyPI"
+        node = report.get("ecosystem") == "node"
+        installer = "npm ci" if node else "pip install"
+        source = "npm registry" if node else "local vendor wheels" if report["source"] == "vendor" else "PyPI"
         if report.get("exit_code") != 0:
-            run.summary = f"pip install failed for {len(report['specifiers'])} requirement(s) from {report['manifest']}."
+            run.summary = f"{installer} failed for {len(report['specifiers'])} requirement(s) from {report['manifest']}."
             mark_failed(
                 session,
                 run,
                 "DependencyInstallFailed",
-                "pip install failed; inspect the dependency report",
+                f"{installer} failed; inspect the dependency report",
             )
             return "done"
         run.summary = (

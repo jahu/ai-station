@@ -91,7 +91,9 @@ export function DependencyResults({ events }: { events: RunEvent[] }) {
                 Exit {String(event.payload.exit_code)} ·{" "}
                 {String(event.payload.duration_seconds)} seconds
                 {event.payload.network === true
-                  ? " · PyPI"
+                  ? event.payload.ecosystem === "node"
+                    ? " · npm registry · lifecycle scripts disabled"
+                    : " · PyPI"
                   : " · offline vendor"}
               </p>
             </div>

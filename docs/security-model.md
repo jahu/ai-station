@@ -262,3 +262,16 @@ Follow-up transcript context is tied to a succeeded source turn and native child
 Recording analysis keeps raw audio in the owned native CPU process. Only the checked, bounded, quoted transcript reaches the explicitly selected response provider; external AI permission is frozen on Send. A changed or disabled provider fails closed. The new Chat child receives ordinary Chat permissions and cannot inherit native filesystem grants. PCM recording validation accepts 8–32-bit WAV with the existing channel, rate, sample, duration and byte limits; voice-reference limits are unchanged. See [recording questions](conversational-audio-analysis.md).
 
 Persistent external coding agents require the explicit `agent_external_coding` profile and an exclusive `coding_cursor` or `coding_codex` tool tied to one project. The profile name alone grants nothing; the reviewed Tool registry supplies bounded permissions, including `external_ai`. Publication rechecks the frozen provider/project/parent identity and effective grant. New factory drafts remain disabled and request approval before any worktree or CLI child. Native CLI ownership/cancellation and conservative recovery remain shared with manual Coding.
+
+
+## Managed Node dependencies
+
+Owned Node worktrees reuse dependency Runs, process-group ownership, cancellation,
+and stale-execution inspection. Validate root and transitive dependency sources,
+lockfile paths, SHA-512 pins, and canonical npm tarball URLs before invoking npm.
+Project .npmrc, npm-shrinkwrap, VCS/URL/local sources and workspace links are
+refused. Installation ignores lifecycle scripts, clears inherited credentials and
+uses worktree-local HOME/cache/config. Node/npm runtime files and the system OpenSSL
+configuration are read-only grants. Trusted configured build commands run with
+network access disabled and Git metadata read-only. No arbitrary npm command API
+or system runtime installation is introduced. See [details](node-project-dependencies.md).

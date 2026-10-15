@@ -118,3 +118,28 @@ it("moves through dependency installs with arrow keys", () => {
   expect(second.tabIndex).toBe(0);
   expect(document.activeElement).toBe(second);
 });
+
+it("identifies npm results and disabled lifecycle scripts without a PyPI label", () => {
+  render(
+    <DependencyResults
+      events={[
+        event("dep-node", "dependencies.completed", {
+          ecosystem: "node",
+          manifest: "package-lock.json",
+          source: "npm",
+          specifiers: ["is-number@7.0.0"],
+          exit_code: 0,
+          duration_seconds: 0.5,
+          network: true,
+        }),
+      ]}
+    />,
+  );
+  expect(
+    screen.getByText(/npm registry · lifecycle scripts disabled/),
+  ).toBeTruthy();
+  expect(screen.queryByText(/PyPI/)).toBeNull();
+  expect(
+    screen.getByLabelText("Install package-lock.json dep-node"),
+  ).toBeTruthy();
+});

@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     web_search_url: str = ""
     cancel_grace_seconds: float = 3.0
     runner_id: str = "local"
+    node_prefix: str = ""
 
     def host_data_dir(self) -> Path:
         return (self.data_host_path or self.data_dir).expanduser()
