@@ -334,7 +334,7 @@ function ProjectForm({
               These trusted commands can run in a prepared worktree. Saving does
               not execute them. Use one JSON argument array per line.
             </p>
-            <label className="agent-tool">
+            <label className="project-checkbox">
               <input
                 type="checkbox"
                 checked={autoDeps}
@@ -342,7 +342,7 @@ function ProjectForm({
               />{" "}
               Prepare public package dependencies after Coding
             </label>
-            <label className="agent-tool">
+            <label className="project-checkbox">
               <input
                 type="checkbox"
                 checked={autoChecks}

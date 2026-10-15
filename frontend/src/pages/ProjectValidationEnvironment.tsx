@@ -26,7 +26,7 @@ export function ProjectValidationEnvironment({
           dependencies. Paths are relative to the isolated worktree. Existing
           projects can keep automatic detection.
         </p>
-        <label className="agent-tool">
+        <label className="project-checkbox">
           <input
             type="checkbox"
             checked={value !== null}
