@@ -33,7 +33,7 @@ Durable long-media execution is implemented; exact real timing and visual qualif
 unfinished Memory and create-project-and-code work
 is preserved separately; its integration point is explicit in the handoff.
 The [current implementation handoff](plans/implementation-handoff.md) records
-the delivered PRs through #300 and remaining product workstreams. Original checkout WIP is still preserved separately.
+the delivered PRs through #303 and remaining product workstreams. Original checkout WIP is still preserved separately.
 
 Coding supports checked removal of selected source files, explicit Deleted
 review labels, cumulative follow-up patches and separate reviewed commits.
