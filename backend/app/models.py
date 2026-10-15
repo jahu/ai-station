@@ -148,6 +148,7 @@ class Conversation(Base):
     execution_mode: Mapped[str] = mapped_column(String(40), default="local")
     settings_version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     auto_summary: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    archived_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 

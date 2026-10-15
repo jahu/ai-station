@@ -33,7 +33,7 @@ Durable long-media execution is implemented; exact real timing and visual qualif
 unfinished Memory and create-project-and-code work
 is preserved separately; its integration point is explicit in the handoff.
 The [current implementation handoff](plans/implementation-handoff.md) records
-the delivered PRs through #291 and remaining product workstreams. Original checkout WIP is still preserved separately.
+the delivered PRs through #300 and remaining product workstreams. Original checkout WIP is still preserved separately.
 
 Coding supports checked removal of selected source files, explicit Deleted
 review labels, cumulative follow-up patches and separate reviewed commits.
@@ -131,3 +131,5 @@ or claim every spoken word is correct. Setup and exact verification scope are in
 [audio-transcription.md](audio-transcription.md).
 
 Recording questions now compose native CPU transcription and a selected-model answer on one Task/Send, retaining inspectable transcript artifacts on response failure. Verification is recorded in [conversational-audio-analysis.md](conversational-audio-analysis.md); this does not imply music generation or arbitrary audio understanding.
+
+Reversible conversation archiving separates active and archived history/search, keeps old detail URLs, and preserves all execution and memory records. See [archive contracts](conversation-archive.md).

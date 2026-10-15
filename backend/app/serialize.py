@@ -70,6 +70,7 @@ def conversation_dict(conversation: Conversation) -> dict:
         "max_tokens": conversation.max_tokens,
         "execution_mode": conversation.execution_mode,
         "auto_summary": conversation.auto_summary,
+        "archived_at": iso(conversation.archived_at),
         "created_at": iso(conversation.created_at),
         "updated_at": iso(conversation.updated_at),
     }

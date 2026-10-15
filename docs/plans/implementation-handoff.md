@@ -88,3 +88,13 @@ or unrelated infrastructure changes are authorized by routine development.
 Existing-task selection and Coding → Work drafts are delivered (#286/#288);
 Migration 0022 stores bindings without moving original Task history. Do not redo
 those features or the now-verified same-task local Coding follow-up.
+
+## Delivered recording workflows — 2026-10-15
+
+- #296: offline CPU transcription in Audio and Chat/Work with timestamped TXT/SRT/JSON, lineage, private process ownership and Stop.
+- #297: bounded WAV/MP3/M4A/Ogg/WebM/FLAC decoding in memory without external file/URL I/O.
+- #298: checked, bounded, quoted transcript context in later conversation turns and summaries; shared compressed-recording validation.
+- #299: one Send composes native transcription and the selected-model answer on one Task, freezing provider permissions and preserving transcript artifacts on model failure.
+- #300: browser microphone capture with Finish/Cancel, no implicit Send, device cleanup, bounds and retained-file upload retry.
+
+Live #300 release is recorded in `data/acceptance/safety-redeploy-20261012/deployment.json`. Normal API/worker acceptance passed actual CPU transcription plus local Qwen in one Send; Chromium capture was qualified with the approved sample as a fake microphone, not a physical-device test. Existing original-checkout Memory WIP remains untouched. The archive increment adds migration 0024; inspect current reviewed/merged head before deployment.

@@ -324,3 +324,5 @@ verified completion gate TXT/SRT/JSON artifact publication.
 [Recording questions](conversational-audio-analysis.md) publish an ordinary Chat child only after verified native CPU transcription. Both stages share the original Task, frozen provider/model selection and task-wide Stop; publication is transactional and idempotent. No additional execution engine or schema is introduced.
 
 [Chat recording](chat-recording.md) is browser-side capture and an ordinary artifact upload; no workload executes until Send. It reuses the existing typed local transcription and Chat graph, without another executor or database migration.
+
+[Conversation archive](conversation-archive.md) adds a reversible metadata lifecycle with migration 0024. Archived history remains inspectable, while idle/version guards prevent new execution until restoration. Related Tasks, Runs, artifacts and memory retain their original ownership.
