@@ -78,10 +78,9 @@ export default function CodingReview({
           </h2>
           <p className="mono">{review.branch}</p>
           <p>
-            Agent completion is not a correctness verdict. Review the changes
-            and validation before integrating this branch. Unique snippet
-            replacements and complete file rewrites both appear as ordinary
-            patches. File deletion is not allowed.
+            Review the diff and test results before saving these changes.
+            Deleted files are marked in the file list and included in the patch.
+            Your original checkout stays unchanged.
           </p>
           {Number(run.parameters?.max_repair_attempts ?? 0) > 0 && (
             <p className="muted">

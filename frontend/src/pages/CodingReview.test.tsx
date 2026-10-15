@@ -119,7 +119,9 @@ it("requires review acknowledgement and opens the queued commit", async () => {
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  expect(screen.getByText(/Unique snippet replacements/)).toBeTruthy();
+  expect(
+    screen.getByText(/Deleted files are marked in the file list/),
+  ).toBeTruthy();
   const button = screen.getByRole("button", {
     name: "Commit reviewed changes",
   });

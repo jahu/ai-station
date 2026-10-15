@@ -178,3 +178,18 @@ LLM-generated website from that evidence. Acceptance is under
 `data/acceptance/coding-auto-project-checks-20261015`. Complete full checks, browser
 review, PR to develop and deployment before marking this increment delivered;
 then perform the actual one-conversation local long-context coding smoke.
+
+## Automatic project checks delivered; practical acceptance follow-up
+
+PR #311 is merged as `642b166` and deployed from
+`.tools/ui-coding-auto-project-checks-20261015`. Migration 0025, 1436 Python
+tests (five explicit opt-in skips), 452 frontend tests, frontend lint/types/build,
+Compose and Docker passed. Browser checks passed all 16 live workspaces on
+desktop/mobile. Original database IDs are preserved.
+
+Actual Work task `0d0e7756-2498-4482-bf08-2e96fabfa89d` created a managed React
+project and loaded Local Auto through owned llama.cpp. Exploration failed on
+`.gitignore`; no generated website or successful validation is claimed for this
+attempt. Continue in `fix/coding-gitignore`, preserve its existing worktree and
+original failure, then requalify real tests/build after the reviewed fix.
+Evidence: `data/acceptance/coding-auto-project-checks-20261015`.
