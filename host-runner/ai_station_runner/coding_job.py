@@ -27,14 +27,15 @@ def execute_proposal(run_id, body, root, generate, *, location, discover=None):
     lock_path.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
     lock = lock_path.open("a")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    local_context = location == "local"  # Native adapter policy, never model-controlled.
     exploration = []
     if discover is not None:
         selected, exploration = discover(workspace)
     else:
-        selected = read_selected(workspace, body.files)
+        selected = read_selected(workspace, body.files, local_context=local_context)
     print(f"{location.upper()} proposal for {len(selected)} selected files; tools disabled", flush=True)
     text, provider = generate(selected)
-    proposal = parse_proposal(text, selected)
+    proposal = parse_proposal(text, selected, local_context=local_context)
     if getattr(body, "repair_source_run_id", None) and any(
         item["content"] is None for item in proposal["files"]
     ):
@@ -65,6 +66,12 @@ def execute_proposal(run_id, body, root, generate, *, location, discover=None):
         provider=provider,
         execution_location=location,
     )
+    if local_context:
+        report["source_context"] = {
+            "policy": "local-bounded",
+            "files": len(selected),
+            "bytes": sum(len((item["content"] or "").encode()) for item in selected),
+        }
     if exploration:
         report["exploration"] = exploration
     encoded = checked_report_bytes(report)  # Reject oversized results before any proposal write.
@@ -75,7 +82,7 @@ def execute_proposal(run_id, body, root, generate, *, location, discover=None):
         or repo.branch() != record["branch"]
     ):
         raise ValueError("Worktree changed before proposal application")
-    apply_proposal(workspace, selected, proposal)
+    apply_proposal(workspace, selected, proposal, local_context=local_context)
     path = root / "report.json"
     with path.open("xb") as handle:
         os.chmod(path, 0o600)

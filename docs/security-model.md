@@ -314,4 +314,11 @@ and native worktree locks still gate execution. See [the contract](coding-rerun-
 
 ### Cumulative review does not grant model context or write access
 
-The local cumulative review/hash reader allows at most 200 files, 256,000 bytes per file and 2 MiB aggregate. It shares canonical path, credential/hidden-path, regular-file, UTF-8 and symlink/hardlink checks with the stricter model-context reader; root `.gitignore` remains the sole hidden-file exception. Only untracked root `.ai-station-validation-*/` and `.ai-station-dependencies-*/` directories are omitted by the Git inventory. Tracked paths, root files/symlinks and nested names are not exempt. No scratch files or Git configuration are changed. Selected model input/write scope remains ten files, 32,000 bytes each and 64,000 combined. Projected review is bounded before application (1 MiB encoded JSON), with fresh source and branch/HEAD checks before writes. Oversized output fails rather than truncating a review.
+The local cumulative review/hash reader allows at most 200 files, 256,000 bytes per file and 2 MiB aggregate. It shares canonical path, credential/hidden-path, regular-file, UTF-8 and symlink/hardlink checks with the stricter model-context reader; root `.gitignore` remains the sole hidden-file exception. Only untracked root `.ai-station-validation-*/` and `.ai-station-dependencies-*/` directories are omitted by the Git inventory. Tracked paths, root files/symlinks and nested names are not exempt. No scratch files or Git configuration are changed. External selected model input/write scope remains ten files, 32,000 bytes each and 64,000 combined. Native Local AI separately supports ten paths and 256,000 bytes combined/per file, using snippet edits for existing large files; see [local source context](local-coding-source-context.md). Projected review is bounded before application (1 MiB encoded JSON), with fresh source and branch/HEAD checks before writes. Oversized output fails rather than truncating a review.
+
+Local source proposals exceeding the ordinary Chat bridge bound use a separate
+private typed `coding/completions` route. It accepts exactly one user text message,
+JSON output, no images or reasoning controls, at most 350100 UTF-8 bytes including
+controller suffix. It reuses endpoint allowlisting or owned-runtime identity,
+private transport, streaming limits and disconnect cancellation. Ordinary Chat
+and vision message limits remain unchanged. No external CLI uses this route.

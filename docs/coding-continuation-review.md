@@ -66,3 +66,14 @@ Do not repeat already-qualified expensive media jobs to fill waiting time:
 `docs/long-media.md` records a real 60-second Wan job and 14.2707-second avatar.
 The 60-second draft took about 92 minutes; it does not qualify other profiles.
 Continue the broader product goal after this blocking workflow issue is fixed.
+
+## Delivered verification — PR #317
+
+Merged as `fbdc6e4` and deployed. Full checks passed: 1532 backend/Runner tests,
+five explicit opt-in skips, Ruff, Docker build and both Compose configurations.
+Real production Work continuation on the existing React task used the owned
+RVN 27B / 131072-context model, changed App.js, passed the Node test and Vite build,
+and produced a ZIP containing the change. The 32265-byte lockfile was included in
+cumulative review; all 1155 prior scratch files and the original checkout/index
+were unchanged. Receipt replay did not duplicate work. Desktop/mobile browser
+acceptance passed. Evidence: `data/acceptance/coding-continuation-review-20261015`.

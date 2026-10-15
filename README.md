@@ -435,4 +435,11 @@ results and may produce a new downloadable build. It does not call a model,
 install dependencies or automatically repair failed tests. Inspect an uncertain
 previous process before repeating it. See [check reruns](docs/coding-rerun-checks.md).
 
-Coding continuation reviews the complete task diff independently of model context: up to 200 ordinary text files, 256,000 bytes per file and 2 MiB total. Generated lockfiles and changes from earlier prompts remain reviewable and committable. Reserved root execution scratch directories are excluded only when untracked; their data is retained. Each model proposal still selects at most ten files (32,000 bytes each, 64,000 combined). Oversized encoded reviews are rejected before applying edits. See [continuation review](docs/coding-continuation-review.md).
+Coding continuation reviews the complete task diff independently of model context: up to 200 ordinary text files, 256,000 bytes per file and 2 MiB total. Generated lockfiles and changes from earlier prompts remain reviewable and committable. Reserved root execution scratch directories are excluded only when untracked; their data is retained. External model proposals retain ten files (32,000 bytes each, 64,000 combined); the separate Local AI source policy is described below. Oversized encoded reviews are rejected before applying edits. See [continuation review](docs/coding-continuation-review.md).
+
+Local AI Coding can use up to 256,000 bytes of selected source across ten files,
+including a larger component edited with unique snippet replacements. Automatic
+exploration supports bounded line windows and literal search in those files.
+Cursor/Codex retain their existing source-sharing limits. This uses the chosen
+local model and its actual context; it does not select a cloud provider. See
+[local source context](docs/local-coding-source-context.md).

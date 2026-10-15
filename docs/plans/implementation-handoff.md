@@ -297,3 +297,11 @@ including generated locks, 15-file commit, tracked credential rejection and enco
 report preflight before writes. Full backend/Runner checks and deployment acceptance
 are pending; do not report production acceptance until evidence is recorded in
 `data/acceptance/coding-continuation-review-20261015`. Preserve scratch data and root WIP.
+
+
+## Next increment: larger Local Coding source context
+
+PR #317 is deployed and real-tested; see the delivered section in
+[coding continuation](../coding-continuation-review.md). Continue in
+`.tools/coding-source-windows` on `feat/local-coding-source-context`, following
+[the bounded local context plan](../local-coding-source-context.md).

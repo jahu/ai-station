@@ -277,3 +277,23 @@ def test_explorer_can_select_root_gitignore_without_exposing_other_hidden_files(
     assert selected[1]["content"] is None
     assert "other hidden paths and credentials are excluded" in messages[0]
     assert "SECRET" not in "".join(messages)
+
+
+def test_local_exploration_searches_and_pages_large_source_before_selection(workspace):
+    content = "".join(f"# retained line {i}\n" for i in range(7500)) + "target = 1\n"
+    (workspace / "app.py").write_text(content)
+    actions = iter(
+        [
+            {"tool": "search_files", "query": "target =", "prefix": ""},
+            {"tool": "read_file", "path": "app.py", "start_line": 7499, "max_lines": 3},
+            {"tool": "finish", "files": ["app.py"]},
+        ]
+    )
+    selected, trace = explore(
+        workspace, "Edit target", "", lambda _: json.dumps(next(actions)), local_context=True
+    )
+    assert trace[0]["result"]["matches"][0]["line"] == 7501
+    assert "target = 1" in trace[1]["result"]["content"] and trace[1]["result"]["truncated"]
+    assert selected[0]["content"] == content
+    with pytest.raises(ValueError):
+        explore(workspace, "Edit", "", lambda _: json.dumps({"tool": "finish", "files": ["app.py"]}))
