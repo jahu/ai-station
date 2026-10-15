@@ -1,12 +1,16 @@
 # One composer for entry and continuing conversations
 
-On narrow or short viewports, the conversation uses normal page height with a
-bounded, independently scrollable transcript. The composer remains reachable by
-page scrolling instead of overflowing a fixed-height clipped panel. Header actions
-wrap without stretching or crossing the panel edge. Real browser checks cover
-1440×1000, 390×844, 320×568, 768×1024 and 1280×600, including clicking the visible
-Stop control and checking the task cancellation result. Evidence:
-`data/acceptance/mobile-conversation-controls-20261015`.
+The current shell gives saved conversations a persistent left history panel on
+large screens, with search, date groups, archive filtering and older-history
+paging. The application navigation becomes a compact, expandable rail while in
+Chat; every dedicated workspace remains available. On phones, history opens as a
+keyboard-accessible drawer and the navigation is a separate disclosure.
+
+The saved conversation fills the available viewport. Only the transcript scrolls;
+the compact title/model header and composer remain visible. User messages are
+right-aligned, assistant answers use the readable central column, and advanced
+settings plus memory move into one labelled dialog. A focused message is outlined
+only during keyboard focus, rather than framing the latest answer permanently.
 
 The immediate entry and existing conversations now reuse `ConversationComposer`:
 the same message field, Enter/Ctrl/Command+Enter and IME behavior, collapsed
@@ -15,12 +19,6 @@ Enter in a tool input does not accidentally Send the conversation. An active tur
 shows Stop while allowing the next draft to be typed, without submitting it.
 Existing typed action scopes, turn receipts, cloud disclosure and model loading
 are unchanged. Generic regeneration still cannot repeat an orchestration action.
-
-Recent conversations are collapsed on both entry and saved conversation pages.
-The saved page uses its conversation title and model rather than an additional
-introductory heading. Settings and memory remain reachable in collapsed sections;
-the readable transcript and composer get the main workspace. Dedicated tabs and
-Coding session history remain available.
 
 The transcript follows new content only while the reader is near the bottom.
 Reading earlier messages preserves scroll position during updates; Jump to latest
@@ -41,3 +39,14 @@ provider/model catalog and verified reasoning have been delivered.
 retry identity. [Searchable history](chat-history.md) reaches older conversations
 with cursor paging. Richer contextual Work follow-ups remain a separate increment.
 It does not claim that long-media or those remaining features are delivered.
+
+## Focused Chat qualification — 2026-10-15
+
+This is a frontend-only layout change. Turn receipts, uploads, model selection,
+Chat/Work routing, streaming, Stop and existing execution permissions are retained.
+Normal frontend qualification covers format, lint, types, the complete UI suite
+and the production build. Chromium checks use the real API and worker against an
+isolated database and a deterministic fake provider over private LAN HTTP; they
+exercise Send, streaming, persisted reload, history navigation, settings and
+keyboard dismissal. Screenshots and results live under
+`data/acceptance/chat-focused-ux-20261015/`; this is not a real-model inference test.

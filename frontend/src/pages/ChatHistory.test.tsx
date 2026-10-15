@@ -77,7 +77,6 @@ it("loads older conversations with a cursor and searches saved message history",
     </QueryClientProvider>,
   );
   await screen.findByRole("link", { name: /Inspect Chat 99/ });
-  fireEvent.click(screen.getByText("Recent conversations"));
   fireEvent.click(
     screen.getByRole("button", { name: "Load older conversations" }),
   );

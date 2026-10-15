@@ -23,6 +23,7 @@ import {
   Images,
   Layers,
   LogOut,
+  PanelLeft,
   MessageSquare,
   Search,
   Settings2,
@@ -125,6 +126,11 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
   const firstPath = useRef(true);
+  const [navigationOpen, setNavigationOpen] = useState(false);
+  const isChat =
+    location.pathname === "/" ||
+    location.pathname === "/chat" ||
+    location.pathname.startsWith("/chat/");
   const cache = useQueryClient();
   const hardware = useHardware();
   const operator = useQuery({
@@ -151,6 +157,7 @@ export default function App() {
     )?.[1] ?? (location.pathname === "/" ? "Chat" : "Workspace");
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setNavigationOpen(false);
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setOpen((value) => !value);
@@ -167,11 +174,14 @@ export default function App() {
       firstPath.current = false;
       return;
     }
+    setNavigationOpen(false);
     document.getElementById("main")?.focus();
     setAnnouncement(`${page} workspace`);
   }, [location.pathname, page]);
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell ${isChat ? "conversation-app" : ""} ${navigationOpen ? "navigation-expanded" : ""}`}
+    >
       <a
         href="#main"
         className="skip-link"
@@ -202,7 +212,7 @@ export default function App() {
           <span>Go to workspace…</span>
           <kbd>Ctrl K</kbd>
         </button>
-        <nav aria-label="Main navigation">
+        <nav id="station-navigation" aria-label="Main navigation">
           {groups.map((group) => (
             <div className="nav-group" key={group.label}>
               {group.label && <div className="nav-label">{group.label}</div>}
@@ -210,7 +220,18 @@ export default function App() {
                 path === "/coding" ? (
                   <CodingNav key={path} />
                 ) : (
-                  <NavLink end={path === "/"} to={path} key={path}>
+                  <NavLink
+                    end={path === "/"}
+                    to={path}
+                    key={path}
+                    title={label}
+                    className={({ isActive }) =>
+                      isActive ||
+                      (path === "/chat" && location.pathname === "/")
+                        ? "active"
+                        : undefined
+                    }
+                  >
                     <Icon size={17} />
                     {label}
                     {path === "/" && <span className="nav-marker" />}
@@ -221,11 +242,11 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <NavLink to="/system">
+          <NavLink to="/system" title="System">
             <Terminal size={17} />
             System
           </NavLink>
-          <NavLink to="/settings">
+          <NavLink to="/settings" title="Settings">
             <Settings2 size={17} />
             Settings
           </NavLink>
@@ -247,9 +268,30 @@ export default function App() {
           </div>
         </div>
       </aside>
+      {isChat && navigationOpen && (
+        <button
+          className="station-navigation-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setNavigationOpen(false)}
+        />
+      )}
       <div className="workspace">
         <header className="topbar">
           <div className="workspace-location">
+            {isChat && (
+              <Button
+                variant="ghost"
+                className="station-navigation-toggle"
+                aria-label={
+                  navigationOpen ? "Collapse navigation" : "Expand navigation"
+                }
+                aria-expanded={navigationOpen}
+                aria-controls="station-navigation"
+                onClick={() => setNavigationOpen((value) => !value)}
+              >
+                <PanelLeft size={18} />
+              </Button>
+            )}
             <span className="muted">Workspace</span>
             <span className="slash">/</span>
             {page}
@@ -287,7 +329,11 @@ export default function App() {
         >
           {announcement}
         </div>
-        <main id="main" tabIndex={-1}>
+        <main
+          id="main"
+          tabIndex={-1}
+          className={isChat ? "conversation-main" : undefined}
+        >
           <Routes>
             <Route path="/" element={<Chat assistant />} />
             <Route path="/home" element={<Dashboard />} />
