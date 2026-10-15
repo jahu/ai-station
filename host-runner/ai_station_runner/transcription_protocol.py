@@ -69,18 +69,19 @@ def wav_info(data):
     try:
         with wave.open(io.BytesIO(data), "rb") as source:
             rate, frames, channels = source.getframerate(), source.getnframes(), source.getnchannels()
+            width = source.getsampwidth()
             if (
-                source.getsampwidth() != 2
+                width not in {1, 2, 3, 4}
                 or channels not in {1, 2}
                 or not 8000 <= rate <= 96000
                 or not 0.1 <= frames / rate <= MAX_SECONDS
             ):
-                raise ValueError("Use 16-bit PCM WAV, mono/stereo, 8000–96000 Hz, up to five minutes")
-            if len(source.readframes(frames)) != frames * channels * 2:
+                raise ValueError("Use 8–32 bit PCM WAV, mono/stereo, 8000–96000 Hz, up to five minutes")
+            if len(source.readframes(frames)) != frames * channels * width:
                 raise ValueError("Recording is truncated")
             return {"duration_seconds": frames / rate, "sample_rate": rate, "channels": channels}
     except (wave.Error, EOFError) as exc:
-        raise ValueError("Use a complete 16-bit PCM WAV recording") from exc
+        raise ValueError("Use a complete PCM WAV recording") from exc
 
 
 def validate_report(value, *, run_id, source_hash, profile_hash):

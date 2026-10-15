@@ -307,8 +307,20 @@ def stop_conversation_task(conversation_id: UUID, task_id: UUID, session: DB):
     return result
 
 
-def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
-    snapshot = snapshot_provider(session, row)
+def enqueue(
+    session,
+    row,
+    *,
+    user: Message,
+    parent_run_id=None,
+    commit=True,
+    frozen_provider=None,
+    reserve_context=0,
+    operation_key=None,
+):
+    if type(reserve_context) is not int or not 0 <= reserve_context <= 20000:
+        raise ValueError("Invalid reserved conversation context")
+    snapshot = dict(frozen_provider) if frozen_provider is not None else snapshot_provider(session, row)
     web_search = user.metadata_json.get("web_search")
     summary = latest_summary(session, row.id)
     summary_entry = summary_memory(session, summary)
@@ -324,7 +336,7 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
     context = []
     transcript_sources = []
     transcript_budget = 20000
-    budget = 56000
+    budget = 56000 - reserve_context
     for message in history:
         if (
             message.metadata_json.get("superseded")
@@ -420,6 +432,7 @@ def enqueue(session, row, *, user: Message, parent_run_id=None, commit=True):
         task,
         run_type="chat",
         capability="chat.completion",
+        operation_key=operation_key,
         executor_type="chat",
         execution_target="container",
         parameters={

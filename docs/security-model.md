@@ -244,3 +244,5 @@ before transcript adoption. Audio instructions remain text, not executable tools
 See [the transcription contract](audio-transcription.md).
 
 Follow-up transcript context is tied to a succeeded source turn and native child in the same conversation/Task. The primary TXT artifact must retain ownership, lineage and its recorded content hash. Unavailable or ambiguous sources are labeled instead of substituted. Snapshots quote source data without granting permissions; selected-provider external-AI rules still apply to later text replies. See [transcript context](transcript-conversation-context.md).
+
+Recording analysis keeps raw audio in the owned native CPU process. Only the checked, bounded, quoted transcript reaches the explicitly selected response provider; external AI permission is frozen on Send. A changed or disabled provider fails closed. The new Chat child receives ordinary Chat permissions and cannot inherit native filesystem grants. PCM recording validation accepts 8–32-bit WAV with the existing channel, rate, sample, duration and byte limits; voice-reference limits are unchanged. See [recording questions](conversational-audio-analysis.md).

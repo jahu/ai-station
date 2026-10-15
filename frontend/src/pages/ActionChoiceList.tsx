@@ -38,6 +38,12 @@ const ACTIONS = [
     detail: "Enlarge one image to four times its dimensions.",
   },
   {
+    key: "audio.analyze",
+    title: "Understand a recording",
+    detail:
+      "Transcribe locally, then summarize, translate or answer with your selected model.",
+  },
+  {
     key: "audio.transcribe",
     title: "Transcribe recording",
     detail: "Turn a WAV recording into timestamped text locally on CPU.",
@@ -163,6 +169,7 @@ export function ActionChoiceList({
             [
               "audio.speech",
               "audio.transcribe",
+              "audio.analyze",
               "avatar.animate",
               "video.generate",
               "github.inspect",

@@ -3,7 +3,7 @@
 Audio → Transcribe recording uses Whisper in a separate optional native Python
 runtime. Upload WAV, MP3, M4A, Ogg, WebM or FLAC audio (mono/stereo,
 8–96 kHz, 0.1–300 decoded seconds, maximum 20 MiB), or select it from Library.
-WAV inputs remain 16-bit PCM; compressed inputs are validated in the native Run. Select its language or let Whisper
+WAV inputs accept 8–32-bit PCM; compressed inputs are validated in the native Run. Select its language or let Whisper
 detect it. Send creates an ordinary Task and CPU-only host Run. The result has
 timestamped speech, copy, TXT/SRT/JSON downloads, original-recording provenance,
 Run inspection and a restorable `/audio?mode=transcribe&run=<uuid>` URL.
