@@ -148,3 +148,14 @@ or claim every spoken word is correct. Setup and exact verification scope are in
 Recording questions now compose native CPU transcription and a selected-model answer on one Task/Send, retaining inspectable transcript artifacts on response failure. Verification is recorded in [conversational-audio-analysis.md](conversational-audio-analysis.md); this does not imply music generation or arbitrary audio understanding.
 
 Reversible conversation archiving separates active and archived history/search, keeps old detail URLs, and preserves all execution and memory records. See [archive contracts](conversation-archive.md).
+
+2026-10-15 practical React Work acceptance now passes: one natural-language
+request created a managed project and selected Local Auto (RVN 27B IQ2_XS, owned
+llama.cpp, two GPUs, 131072 context). The first exploration failed on `.gitignore`;
+PR #312 fixed that exact root-file contract. A continuation in the same Task and
+worktree generated React source, installed checked public npm dependencies,
+passed a real Node test of the rendered heading and completed Vite's production
+build. Original checkout files and Git index are unchanged. This qualifies that
+concrete task/profile, not every website or coding instruction. Evidence:
+`data/acceptance/coding-gitignore-20261015/real-result.json` and
+`validation-events.json`.
