@@ -92,4 +92,6 @@ it("loads older conversations with a cursor and searches saved message history",
   );
   await screen.findByRole("link", { name: /Inspect Telescope decision/ });
   expect(screen.queryByRole("link", { name: /Inspect Chat 99/ })).toBeNull();
-});
+  // Rendering and querying 100+ accessible cards needs a bounded integration
+  // budget on the workstation while backend/media checks share its CPUs.
+}, 15_000);
