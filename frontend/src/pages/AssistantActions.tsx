@@ -1,3 +1,4 @@
+import { TRANSCRIPTION_AUDIO_ACCEPT } from "../recording-formats";
 import { TranscriptResult } from "./Transcription";
 import GithubSnapshotResult, {
   type GithubSnapshot,
@@ -966,6 +967,9 @@ export default function AssistantActions({
             </Button>
             <LibraryPicker
               kind="audio"
+              audioMode={
+                value.action === "audio.transcribe" ? "transcription" : "voice"
+              }
               existing={
                 value.audio_artifact_id ? [value.audio_artifact_id] : []
               }
@@ -984,9 +988,17 @@ export default function AssistantActions({
       <input
         ref={voiceInput}
         hidden
-        aria-label="Voice reference · WAV"
+        aria-label={
+          value.action === "audio.transcribe"
+            ? "Recording · WAV, MP3, M4A, Ogg, WebM or FLAC"
+            : "Voice reference · WAV"
+        }
         type="file"
-        accept="audio/wav,.wav"
+        accept={
+          value.action === "audio.transcribe"
+            ? TRANSCRIPTION_AUDIO_ACCEPT
+            : "audio/wav,.wav"
+        }
         onChange={async (event) => {
           const file = event.target.files?.[0];
           event.target.value = "";

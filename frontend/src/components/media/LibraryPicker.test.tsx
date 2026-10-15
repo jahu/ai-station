@@ -112,3 +112,73 @@ it("moves through Library picker artifacts with arrow keys", async () => {
   });
   expect(first.tabIndex).toBe(0);
 });
+
+it("keeps voice references short WAVs while transcription can reuse other recordings", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      json: async () => [
+        {
+          id: "short",
+          type: "audio",
+          mime_type: "audio/wav",
+          original_filename: "voice.wav",
+          metadata: { duration_seconds: 14 },
+        },
+        {
+          id: "long",
+          type: "audio",
+          mime_type: "audio/wav",
+          original_filename: "meeting.wav",
+          metadata: { duration_seconds: 120 },
+        },
+        {
+          id: "compressed",
+          type: "audio",
+          mime_type: "audio/mp4",
+          original_filename: "meeting.m4a",
+          metadata: {},
+        },
+      ],
+    })),
+  );
+  const mount = (mode: "voice" | "transcription") =>
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LibraryPicker
+          kind="audio"
+          audioMode={mode}
+          existing={[]}
+          limit={1}
+          busy={false}
+          onSelect={vi.fn()}
+        />
+      </QueryClientProvider>,
+    );
+  mount("voice");
+  fireEvent.click(screen.getByRole("button", { name: "Voice from Library" }));
+  await screen.findByRole("button", { name: "Choose voice.wav short" });
+  expect(
+    screen.queryByRole("button", { name: "Choose meeting.m4a compress" }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Choose meeting.wav long" }),
+  ).toBeNull();
+  cleanup();
+  mount("transcription");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Recordings from Library" }),
+  );
+  expect(
+    await screen.findByRole("dialog", { name: "Choose a recording" }),
+  ).toBeTruthy();
+  expect(
+    await screen.findByRole("button", {
+      name: "Choose meeting.m4a compress",
+    }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Choose meeting.wav long" }),
+  ).toBeTruthy();
+});

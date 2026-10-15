@@ -21,6 +21,7 @@ from app.db import session_scope
 from app.models import Artifact
 from app.native_job_executor import NativeJobExecutor
 from app.paths import safe_join
+from app.recordings import FORMATS, recording_format
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, run_dict, transition
 from app.serialize import artifact_dict
@@ -31,6 +32,9 @@ DB = Annotated[Session, Depends(session_scope)]
 
 
 def recording(data):
+    fmt = recording_format(data)
+    if fmt != "wav":
+        return {"input_format": fmt, "duration_validation": "pending_transcription"}
     result = wav_metadata(data, max_seconds=300)
     with wave.open(io.BytesIO(data), "rb") as source:
         if source.getsampwidth() != 2:
@@ -53,14 +57,14 @@ def upload(session: DB, file: Annotated[UploadFile, File()]):
         metadata = recording(data)
     except (ValueError, OSError) as exc:
         raise HTTPException(422, str(exc)) from exc
-    with tempfile.NamedTemporaryFile(suffix=".wav") as handle:
+    with tempfile.NamedTemporaryFile(suffix=FORMATS[recording_format(data)][1]) as handle:
         handle.write(data)
         handle.flush()
         artifact = register_file(
             session,
             source=Path(handle.name),
             artifact_type="audio",
-            mime_type="audio/wav",
+            mime_type=FORMATS[recording_format(data)][0],
             original_filename=Path(file.filename or "recording.wav").name[:300],
             run_id=None,
             metadata={**metadata, "source": "upload", "operation": "transcription.input"},
@@ -87,10 +91,10 @@ def create_transcription_run(session, body, *, task=None, parent_run_id=None):
     if (
         source is None
         or source.artifact_type != "audio"
-        or source.mime_type != "audio/wav"
+        or source.mime_type not in {value[0] for value in FORMATS.values()}
         or source.trashed_at
     ):
-        raise HTTPException(422, "Choose an available WAV recording")
+        raise HTTPException(422, "Choose an available audio recording")
     try:
         path = safe_join(get_settings().data_dir, source.relative_path)
         if path.stat().st_size > MAX_BYTES:
@@ -98,14 +102,19 @@ def create_transcription_run(session, body, *, task=None, parent_run_id=None):
         with path.open("rb") as handle:
             data = handle.read(MAX_BYTES + 1)
         recording(data)
+        fmt = recording_format(data)
+        if source.mime_type != FORMATS[fmt][0]:
+            raise ValueError("Recording format changed since submission")
         digest = hashlib.sha256(data).hexdigest()
         if source.sha256 != digest:
             raise ValueError("Recording changed since it was saved")
     except (ValueError, OSError) as exc:
-        raise HTTPException(422, "Recording is unavailable, changed or not a supported PCM WAV") from exc
+        raise HTTPException(422, "Recording is unavailable, changed or not a supported recording") from exc
     ready = capabilities()
     if not ready.get("available") or not ready.get("profile_sha256"):
         raise HTTPException(409, ready.get("reason", "Offline transcription is unavailable"))
+    if fmt not in ready.get("formats", ["wav"]):
+        raise HTTPException(409, "Update the Host Runner to transcribe this recording format")
     task = task or create_task(
         session,
         title=f"Transcribe {source.original_filename}"[:100],
@@ -127,6 +136,7 @@ def create_transcription_run(session, body, *, task=None, parent_run_id=None):
         parameters={
             "source": {"relative_path": source.relative_path, "sha256": digest, "size_bytes": len(data)},
             "language": body.language,
+            "input_format": fmt,
             "profile_sha256": ready["profile_sha256"],
             "parent_artifact_ids": [source.id],
         },
@@ -142,6 +152,8 @@ def checked_report(run, report):
         or len(json.dumps(report).encode()) > 512000
     ):
         raise ValueError("Transcript ownership or size differs from the request")
+    if report.get("input_format", "wav") != run.parameters.get("input_format", "wav"):
+        raise ValueError("Transcript recording format differs from the request")
     duration, segments, text = report.get("duration_seconds"), report.get("segments"), report.get("text")
     if type(duration) not in {int, float} or not math.isfinite(duration) or not 0.1 <= duration <= 300:
         raise ValueError("Invalid transcript duration")
@@ -200,6 +212,14 @@ class TranscriptionExecutor(NativeJobExecutor):
 
     def finish(self, session, run, report):
         checked_report(run, report)
+        source = session.get(Artifact, run.parameters["parent_artifact_ids"][0])
+        if source and source.sha256 == run.parameters["source"]["sha256"]:
+            source.metadata_json = {
+                **source.metadata_json,
+                "duration_seconds": report["duration_seconds"],
+                "duration_validation": "decoded",
+                "validated_by_run_id": run.id,
+            }
         srt = "\n\n".join(
             f"{i}\n{timestamp(s['start'])} --> {timestamp(s['end'])}\n{s['text']}"
             for i, s in enumerate(report["segments"], 1)

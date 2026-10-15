@@ -1,23 +1,22 @@
 """Separate optional CPU runtime. All model and audio inputs stay offline."""
 
 import hashlib
-import io
 import json
 import os
 import signal
 import sys
-import wave
 from pathlib import Path
 from uuid import UUID
 
+from ai_station_runner.recordings import RecordingRejected
 from ai_station_runner.security import resolve_child
-from ai_station_runner.transcription_protocol import audio_bytes, profile, validate_report, wav_info
+from ai_station_runner.transcription_protocol import audio_bytes, profile, validate_report
 
 
 def execute(run_id, data_root, model_root):
-    import av
-    import numpy as np
     from faster_whisper import WhisperModel
+
+    from ai_station_runner.transcription_decode import decode
 
     signal.alarm(600)
     root = resolve_child(Path(data_root), f"runtime/transcription/{UUID(run_id)}")
@@ -35,16 +34,7 @@ def execute(run_id, data_root, model_root):
         raise ValueError("Model manifest changed before loading")
     model_manifest = json.loads(model_bytes)
     data = audio_bytes(data_root, body["source"])
-    metadata = wav_info(data)
-    with wave.open(io.BytesIO(data), "rb") as source:
-        samples = np.frombuffer(source.readframes(source.getnframes()), dtype="<i2").astype(np.float32)
-    samples = samples.reshape(-1, metadata["channels"]).mean(axis=1) / 32768.0
-    if metadata["sample_rate"] != 16000:
-        frame = av.AudioFrame.from_ndarray(samples.reshape(1, -1), format="flt", layout="mono")
-        frame.sample_rate = metadata["sample_rate"]
-        resampler = av.AudioResampler(format="flt", layout="mono", rate=16000)
-        frames = resampler.resample(frame) + resampler.resample(None)
-        samples = np.concatenate([item.to_ndarray().reshape(-1) for item in frames])
+    samples, metadata = decode(data)
     model = WhisperModel(
         str(model_root),
         device="cpu",
@@ -70,6 +60,7 @@ def execute(run_id, data_root, model_root):
         if len(segments) > 2000 or sum(len(s["text"]) for s in segments) > 100000:
             raise ValueError("Transcript exceeds its limit")
     value = {
+        "input_format": metadata["input_format"],
         "model": str(model_manifest.get("model", "Whisper offline"))[:200],
         "model_revision": str(model_manifest.get("revision", ""))[:200],
         "run_id": run_id,
@@ -95,9 +86,12 @@ def execute(run_id, data_root, model_root):
 if __name__ == "__main__":
     try:
         execute(*sys.argv[1:])
+    except RecordingRejected as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
     except Exception:
         print(
-            "Local transcription failed; inspect the configured runtime, model and WAV recording.",
+            "Local transcription failed; inspect the configured runtime, model and recording.",
             file=sys.stderr,
         )
         sys.exit(1)

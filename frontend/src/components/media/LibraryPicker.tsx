@@ -1,3 +1,4 @@
+import { TRANSCRIPTION_AUDIO_TYPES } from "../../recording-formats";
 import { useEffect, useId, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -9,12 +10,14 @@ import { useListKeyboard } from "../../pages/useListKeyboard";
 
 export default function LibraryPicker({
   kind,
+  audioMode = "voice",
   existing,
   limit,
   busy,
   onSelect,
 }: {
   kind: "image" | "audio";
+  audioMode?: "voice" | "transcription";
   existing: string[];
   limit: number;
   busy: boolean;
@@ -41,7 +44,13 @@ export default function LibraryPicker({
   });
   const available = (query.data?.pages.flat() ?? []).filter((a) =>
     kind === "audio"
-      ? a.mime_type === "audio/wav"
+      ? (audioMode === "transcription"
+          ? TRANSCRIPTION_AUDIO_TYPES
+          : ["audio/wav"]
+        ).includes(a.mime_type) &&
+        (a.metadata?.duration_seconds === undefined ||
+          a.metadata.duration_seconds <=
+            (audioMode === "transcription" ? 300 : 60))
       : ["image/png", "image/jpeg", "image/webp"].includes(a.mime_type),
   );
   const headingId = useId();
@@ -65,7 +74,11 @@ export default function LibraryPicker({
       <Dialog.Trigger asChild>
         <Button type="button" variant="ghost" disabled={busy || limit < 1}>
           <Library size={15} />{" "}
-          {kind === "image" ? "Images from Library" : "Voice from Library"}
+          {kind === "image"
+            ? "Images from Library"
+            : audioMode === "transcription"
+              ? "Recordings from Library"
+              : "Voice from Library"}
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -75,7 +88,9 @@ export default function LibraryPicker({
             <Dialog.Title>
               {kind === "image"
                 ? "Choose image references"
-                : "Choose a voice recording"}
+                : audioMode === "transcription"
+                  ? "Choose a recording"
+                  : "Choose a voice recording"}
             </Dialog.Title>
             <Dialog.Close
               className="icon-button"
@@ -87,7 +102,9 @@ export default function LibraryPicker({
           <Dialog.Description>
             {kind === "image"
               ? "Select images in the order you want the assistant to use them. Existing files are reused without another upload."
-              : "Select a PCM WAV recording for speech or portrait animation."}
+              : audioMode === "transcription"
+                ? "Choose audio to transcribe locally. Duration is checked by the transcription job."
+                : "Select a PCM WAV recording for speech or portrait animation."}
           </Dialog.Description>
           <label className="model-search">
             <Search size={16} />

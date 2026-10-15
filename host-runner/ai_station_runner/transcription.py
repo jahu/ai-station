@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from ai_station_runner.config import get_settings
 from ai_station_runner.media_inputs import MediaInput
 from ai_station_runner.processes import ProcessNotOwned
+from ai_station_runner.recordings import FORMATS
 from ai_station_runner.security import resolve_child
 from ai_station_runner.transcription_protocol import audio_bytes, profile, validate_report
 
@@ -64,7 +65,13 @@ def capabilities():
         python, model = configured()
         if not runtime_ready(python, python.stat().st_mtime_ns):
             raise ValueError("Transcription runtime dependencies are unavailable")
-        return {"available": True, "device": "cpu", "profile_sha256": profile(model), "max_seconds": 300}
+        return {
+            "available": True,
+            "device": "cpu",
+            "profile_sha256": profile(model),
+            "max_seconds": 300,
+            "formats": list(FORMATS),
+        }
     except (ValueError, OSError, KeyError, TypeError):
         return {
             "available": False,

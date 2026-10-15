@@ -363,8 +363,10 @@ choose a connected repository and a local model, review the schedule, then enabl
 Reports, source snapshots and optional scoped memories remain inspectable. See
 [agent GitHub reports](docs/agent-github-reports.md).
 
-**Audio → Transcribe recording** turns a local WAV recording into timestamped text
+**Audio → Transcribe recording** turns a local recording into timestamped text
 and TXT/SRT/JSON artifacts on CPU. In the main Chat, attach a recording and choose
 **Transcribe recording** or ask “Przepisz to nagranie”. The source, transcript, Stop
 and Run history remain inspectable. Requires a separately configured offline
 Whisper runtime/model; see [setup and execution contracts](docs/audio-transcription.md).
+
+Transcription also accepts MP3, M4A, Ogg, WebM and FLAC, including selection from Library. Compressed duration is verified by the native job; speech and portrait voice references remain short WAV recordings.

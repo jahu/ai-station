@@ -1,8 +1,9 @@
 # Offline audio transcription
 
 Audio → Transcribe recording uses Whisper in a separate optional native Python
-runtime. Upload a 16-bit PCM WAV recording (mono/stereo, 8–96 kHz, 0.1–300 seconds,
-maximum 20 MiB), or select one from Library. Select its language or let Whisper
+runtime. Upload WAV, MP3, M4A, Ogg, WebM or FLAC audio (mono/stereo,
+8–96 kHz, 0.1–300 decoded seconds, maximum 20 MiB), or select it from Library.
+WAV inputs remain 16-bit PCM; compressed inputs are validated in the native Run. Select its language or let Whisper
 detect it. Send creates an ordinary Task and CPU-only host Run. The result has
 timestamped speech, copy, TXT/SRT/JSON downloads, original-recording provenance,
 Run inspection and a restorable `/audio?mode=transcribe&run=<uuid>` URL.
@@ -57,9 +58,13 @@ language, model-manifest fingerprint and two permissions (`filesystem_read`,
 is accepted. Canonical relative paths, source hashes and all model file hashes
 are checked at submission/dispatch and in the independent runtime.
 
-Only complete bounded PCM WAV data is accepted. Audio is decoded with the Python
-WAV reader into a bounded array; Whisper receives samples, never a caller's URL
-or a decoder playlist. Automatic downloads are disabled and the model is loaded
+Only bounded recordings with allowlisted signatures are accepted. The optional
+runtime opens an in-memory file with an explicit demuxer, pipe-only protocol
+allowlist and a callback that rejects every secondary file or URL. MOV external
+data references and absolute-path access are disabled. Frame/rate/channel,
+timestamp, sample-count and duration budgets bound decoding before inference.
+Whisper receives mono 16 kHz samples, never a caller URL or decoder playlist.
+Container timestamps preserve silence gaps; backwards/unsupported timelines fail. Automatic downloads are disabled and the model is loaded
 from its checked local directory with `local_files_only=True`. CPU int8, two
 threads, one model worker and a ten-minute hard process deadline bound execution.
 The bundled offline VAD reduces silent-region hallucinations; detected timestamps
@@ -92,3 +97,33 @@ final focused boundary/recovery checks passed separately after review fixes.
 Full frontend suite: 428 passed; final focused UI checks, lint, TypeScript,
 format, production build, Compose validation and Docker image build also passed.
 This is not a five-minute-recording or other-model hardware acceptance claim.
+
+## Common recording formats
+
+The same transcription Run/executor accepts MP3, M4A/MP4 audio, Ogg, WebM and FLAC
+in addition to WAV. The existing speech/portrait WAV-only contracts stay
+unchanged. Upload validation recognizes bounded signatures and stores no guessed
+duration for compressed input; actual duration is confirmed by the native job.
+
+The optional runtime decodes only an in-memory bounded recording with an explicit
+allowlisted demuxer, denied external-reference/network protocols and fixed stream
+selection. It resamples decoded audio to mono 16 kHz while bounding rate, channels,
+frames, decoded duration and memory. No caller URL or filesystem path is passed
+to a media decoder. Exceeding five minutes fails without a truncated successful
+transcript. TXT/SRT/JSON ownership, Stop and conservative recovery remain unchanged.
+
+Normal coverage uses signature fixtures, bounded-frame validation and fake
+runtimes. Real CPU-only acceptance converts the already-approved speech sample
+into the supported containers inside test-owned storage and verifies the actual
+model and saved artifacts. The Audio workspace and explicit transcription action
+in Chat advertise the same formats; voice-reference pickers continue
+to offer supported short WAVs only.
+
+Decoder configuration follows [FFmpeg's protocol allowlist](https://ffmpeg.org/ffmpeg-protocols.html)
+and [MOV external-reference controls](https://ffmpeg.org/ffmpeg-formats.html).
+The pinned runtime's PyAV `av.open` accepts file-like input and an `io_open`
+callback for secondary resources; this callback always denies access.
+A header signature alone never marks compressed duration as verified: only a
+confirmed successful owned process updates that source's decoded duration and
+validation Run provenance. Old Runners without format capabilities reject new
+containers before enqueue; they can still accept compatible WAV Runs.

@@ -7,6 +7,7 @@ import math
 import wave
 from pathlib import Path
 
+from ai_station_runner.recordings import recording_format
 from ai_station_runner.security import resolve_child
 
 MAX_BYTES = 20 * 1024 * 1024
@@ -57,7 +58,8 @@ def audio_bytes(root, source):
         data = handle.read(MAX_BYTES + 1)
     if hashlib.sha256(data).hexdigest() != source["sha256"]:
         raise ValueError("Recording changed since submission")
-    wav_info(data)
+    if recording_format(data) == "wav":
+        wav_info(data)
     return data
 
 
