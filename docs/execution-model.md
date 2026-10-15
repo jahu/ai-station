@@ -1,5 +1,10 @@
 # Execution model
 
+The [agent Python executor](agent-python-execution.md) uses ordinary container-target
+Runs dispatched by the native Runner. Source/input snapshots, bounded script logs,
+required output validation, exact container cleanup, task cancellation and
+conservative lease inspection are part of that same Run lifecycle.
+
 Planned extension: [conversation-first and long-media delivery](plans/2026-10-chat-work-media.md).
 The [long-media contract](plans/long-media-execution.md) reuses durable Run
 dependencies for bounded segments and CPU composition, adds idempotent stage

@@ -1,5 +1,11 @@
 # Architecture
 
+[Isolated Python execution](agent-python-execution.md) adds a typed, explicitly
+permissioned container executor behind the native Runner. It snapshots approved
+worktree code and input artifacts, uses no host-writable mounts or networking,
+and returns bounded verified output artifacts. Agent workflow/UI wiring remains
+separate acceptance; this executor alone does not enable spreadsheet agents.
+
 ## Current product priority — agent-first
 
 The user's [2026-10-15 decision](plans/agent-first-product.md) makes persistent
