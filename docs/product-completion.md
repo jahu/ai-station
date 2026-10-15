@@ -5,22 +5,19 @@
 [Unified model catalog](model-catalog.md) now replaces separate happy-path model
 and provider selectors in entry, conversations and General settings. Selection is
 metadata-only; provider discovery, location disclosure, version guards and old
-receipt replay are explicit. Automatic model routing/verified reasoning remain next.
+receipt replay are explicit. Auto Local Coding now selects observed fitting models with verified 100k+ context; owned-model thinking qualification is delivered. Broader task/model policies remain.
 
 [Conversation shell](conversation-shell.md) now shares entry/follow-up composition,
-collapses history and tools and preserves reading position during updates. Unified
-catalog, reasoning, persistent drafts and contextual Work continuity remain next.
+collapses history and tools and preserves reading position during updates. The unified catalog, qualified reasoning, persistent text drafts and contextual Work continuity are delivered; the implementation handoff records their acceptance.
 
 [Create project & build](assistant-project-build.md) now connects a Work name/goal
 to owned project setup and the existing isolated coding flow, with explicit
-external sharing. Shared conversational project context and task-wide graph Stop
-remain separate follow-up work.
+external sharing. Shared Work project/task context and task-wide graph Stop are delivered.
 
 The [first increment](first-send.md) implements immediate first Send, durable
 idempotency, settings revisions, remembered new-conversation selection and visible
 server-enforced Chat/Work modes. [System/Settings separation](settings.md) is also
-implemented. Shared-shell/model
-picker refinement, verified reasoning and longer media remain next increments.
+implemented. Shared-shell/model selection, verified reasoning and durable longer-media execution are delivered; longer visual-quality profiles remain separate acceptance.
 
 [Local model selection/autoload](chat-model-selection.md) now removes the mandatory
 first manual load. A real first-use 9B GGUF completed Chat on both discovered GPUs
@@ -32,13 +29,11 @@ User direction on 2026-10-14 is captured in the
 first Send, explicit Chat/Work with media tools, unified model/verified reasoning
 selection, distinct System/Settings, and longer Wan/whole-speech EchoMimic output.
 The brief defines nine ordered increments and acceptance gates for GPT-6.1-Sol.
-Remaining increments are planned; no new long-media success is claimed. Existing
+Durable long-media execution is implemented; exact real timing and visual qualification are tracked separately. Existing
 unfinished Memory and create-project-and-code work
 is preserved separately; its integration point is explicit in the handoff.
 The [current implementation handoff](plans/implementation-handoff.md) records
-`develop` f7387bf, the adapted uncommitted Work project-build branch and the
-remaining shell/catalog/reasoning/media gates. Planning does not merge that WIP
-or qualify longer GPU output.
+the delivered PRs through #291 and remaining product workstreams. Original checkout WIP is still preserved separately.
 
 Coding supports checked removal of selected source files, explicit Deleted
 review labels, cumulative follow-up patches and separate reviewed commits.
@@ -63,16 +58,16 @@ The target is the complete AI Station vision, reconfirmed on 2026-10-13. An impl
 | Workstream | Implemented | Remaining delivery and acceptance |
 | --- | --- | --- |
 | Shared execution | Durable Tasks, Runs, events/SSE, artifacts, worker leases, recovery, scheduling, approvals and resource locks | Extended reliability under sustained concurrent use; end-to-end acceptance for every enabled adapter |
-| Chat and assistant | Streaming compatible providers, selectable stored GGUFs/owned llama.cpp, local/external disclosure, conversation history, summaries, text/PDF attachments, opt-in web search, typed image/coding/agent/runtime actions, live workstation inspection, bounded planner context, Generate/Edit/Recompose → Upscale, Generate → Video and search → visual brief → image workflows and inline results | Broader multi-step orchestration, and practical vision-task acceptance (installed 9B pixel inspection verified) |
+| Chat and assistant | Streaming compatible providers, selectable stored GGUFs/owned llama.cpp, local/external disclosure, conversation history, summaries, text/PDF attachments, opt-in web search, typed image/coding/agent/runtime actions, live workstation inspection, bounded planner context, Generate/Edit/Recompose → Upscale, Generate → Video and search → visual brief → image workflows and inline results | Broader multi-step orchestration and practical vision-task acceptance; explicit same-conversation image-result follow-ups now reuse provenance-bound sources (installed 9B pixel inspection verified) |
 | Coding and Git | Name-only managed projects, persistent coding sessions, owned worktrees, local/Cursor/Codex bounded proposals, exploration, validation, local repair, cumulative diffs, dependency installation, reviewed commits and approved draft PR publication | Claude adapter; broader practical coding-task acceptance and fit verification across installed models (27B IQ2_XS long context and basic Coding now verified) |
 | Images and Library | Existing photo pipeline adapter, Generate/Edit/Recompose/Upscale, uploads, thumbnails, annotations, reversible Trash, source/derived lineage and reuse in workspaces/chat | Real acceptance for all modes/backends with supported model selection |
 | Audio, video and avatars | Wan text/image video, Chatterbox speech and EchoMimic portrait animation adapters, typed speech → avatar workflows, inline workspaces and artifact playback | Music, transcription and broader media runtime/model selection |
-| Agents and workflows | Disabled natural-language drafts, explicit activation, durable schedules, child-Run workflows, approvals, retries, notices, Skills, telemetry/scoped-memory/public-search/reviewed-GET and optional isolated public-page Browser tools and inspectable reports and project-scoped Local coding workflows | Additional real tools; real recurring-task acceptance |
+| Agents and workflows | Disabled natural-language drafts, explicit activation, durable schedules, child-Run workflows, approvals, retries, notices, Skills, telemetry/scoped-memory/public-search/reviewed-GET and optional isolated public-page Browser tools and inspectable reports and project-scoped Local coding workflows | Additional real tools and broader recurring workflows; actual scheduled telemetry/memory reports are verified |
 | Memory | Provenance/scopes, FTS, pin/edit/disable/delete, manual/automatic summaries, agent/workflow observations, explicit linked-project memory retrieval and optional embeddings | End-to-end scope and retention acceptance; retain inspectable retrieval |
 | Models and runtimes | Read-only discovery, external observations, owned multi-GPU llama.cpp, loading/unloading, presets, reload/idle eviction, health and restart | Broader runtime adapters; hardware-backed fit/context acceptance for installed models |
 | Connectors | Typed registry, permissions, secret references and operational public HTTP GET connectors | GitHub integration beyond coding publication, email/calendar/social providers, browser automation and approvals for consequential actions |
 | Nodes and operations | Portable Docker/native Runner, private socket, localhost session protection, invitation records, backup/check/download, inspectable deployment/lease health | Safe restore and rollout; authenticated LAN/node transport and target-aware remote execution |
-| UX | Dedicated workspaces, default platform assistant, command palette, keyboard/focus support, filters, inspectors and clear execution history | Compact conversation controls, simpler common paths, responsive/accessibility acceptance and user-facing wording |
+| UX | Dedicated workspaces, default platform assistant, command palette, keyboard/focus support, filters, inspectors and clear execution history | Broader responsive/accessibility acceptance and user-facing wording; compact composer/model catalog/contextual Work paths are delivered |
 
 ## Current work
 
@@ -109,3 +104,15 @@ completed the real follow-up, preserved the original add function, implemented
 multiply and passed sandboxed plus independent unittest/function checks. Failed
 attempts remain in history. Evidence:
 `data/acceptance/exploration-repair-20261015/real-retry-result.json`.
+
+2026-10-15: Work planner JSON formatting passed normal production API/worker
+acceptance using the configured local qwen3:8b model, parsed a chat plan and
+completed the reply without tool/file execution. Evidence:
+`data/acceptance/planner-json-20261015/real-planner-verified.json`. Avatar motion
+retains bounded causal VAE history; the real 5-second/256/4-step two-window test
+passed full audio/decode/timing checks and visual seam inspection. This does not
+qualify longer avatar visual-quality profiles. See [Echo motion](echo-motion-context.md).
+
+[Conversational image follow-ups](conversation-media-followup.md) add explicit
+reuse of a completed same-conversation result for editing, upscale and animation.
+Normal coverage uses temporary images/fake completion, not an unexecuted GPU claim.

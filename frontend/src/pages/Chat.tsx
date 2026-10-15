@@ -87,6 +87,11 @@ type Message = ActionResult & {
     routing_only?: boolean;
     agent_id?: string;
     images?: { id: string; name: string }[];
+    conversation_reference?: {
+      artifact_id: string;
+      message_id: string;
+      run_id: string;
+    };
     partial?: boolean;
     superseded?: boolean;
     user_text?: string;
@@ -721,6 +726,18 @@ function Transcript({
                       : "")}
                 </Markdown>
               </div>
+              {message.metadata.conversation_reference && (
+                <p className="muted">
+                  Using the previous image result ·{" "}
+                  <Link
+                    to={`/runs/${message.metadata.conversation_reference.run_id}`}
+                    tabIndex={current ? 0 : -1}
+                    aria-label={`Inspect referenced image ${shortId}`}
+                  >
+                    Inspect source
+                  </Link>
+                </p>
+              )}
               <div className="assistant-images">
                 {message.metadata.images?.map((image, imageIndex) => (
                   <img
