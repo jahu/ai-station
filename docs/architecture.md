@@ -307,3 +307,5 @@ without checkpoints use the existing pixel path. See [Echo motion](echo-motion-c
 GitHub repository snapshots use the same [connector registry](connectors.md) and
 ordinary native Run contract. Only fixed GET projections run through the existing
 host gh session; connector metadata and snapshots never expose credential values.
+
+Local agent workflows can now gather [reviewed GitHub snapshots](agent-github-reports.md) through the same native connector executor. The agent stores a resource identity, receives minimum child permissions, and passes only a bounded excerpt to its local report model. No extra execution engine or account-write integration is introduced.

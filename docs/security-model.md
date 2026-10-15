@@ -226,3 +226,10 @@ Upstream stderr is suppressed; raw response bodies are not placed in logs.
 Only successful owned completion admits a matching bounded snapshot. Displayed
 repository/issue/PR links are validated against the selected repository. This
 connector grants no Git write, account browser, external-AI or messaging capability.
+
+Agent GitHub scopes freeze a connector id and reviewed repository. Activation,
+workflow publication and native dispatch validate the target; connector deletion,
+disabling or retargeting never silently redirects an enabled agent. Native children
+receive only the two required read permissions. GitHub context is bounded untrusted
+data, available only to the selected local report provider; models cannot request
+additional account reads or account writes. See [contracts](agent-github-reports.md).

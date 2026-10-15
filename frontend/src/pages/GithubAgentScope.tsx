@@ -57,6 +57,11 @@ export default function GithubAgentScope({
           ))}
         </select>
       </label>
+      {value && (
+        <p className="mono" aria-label="Reviewed repository name">
+          {value.repository}
+        </p>
+      )}
       {value && !query.isPending && !current && (
         <p className="notice">
           The reviewed target {value.repository} is unavailable or changed.

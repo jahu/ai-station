@@ -357,3 +357,8 @@ GitHub repository snapshots are available in Connectors: enter `owner/repository
 then Refresh repository. AI Station reuses the host gh login, shows open issues
 and PRs in place, and retains a JSON snapshot with Run history. No token copying
 is required. See [connector contracts](docs/connectors.md).
+
+Agents can schedule read-only GitHub reports: select the GitHub repository tool,
+choose a connected repository and a local model, review the schedule, then enable.
+Reports, source snapshots and optional scoped memories remain inspectable. See
+[agent GitHub reports](docs/agent-github-reports.md).

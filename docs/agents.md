@@ -68,3 +68,5 @@ separate `project_memory_read` permission. A link alone grants no access. Reads
 remain within that snapshotted project, save exact context and provenance in an
 ordinary child Run and never promote entries into another scope. Model arguments
 cannot change the target. See [retrieval bounds and retention](memory.md#explicit-project-memory).
+
+[GitHub repository reports](agent-github-reports.md) use explicitly reviewed connector scopes, native read-only child Runs and bounded local-model context. Scope persistence is migrated in 0023; changed or disconnected targets stop execution.

@@ -72,3 +72,12 @@ it("keeps changed target visible and never silently follows the connector", asyn
   ).toBe("");
   expect(save).not.toHaveBeenCalled();
 });
+
+it("displays the complete saved repository outside the compact select", async () => {
+  repository();
+  show({ connector_id: "repo-id", repository: "owner/repo" });
+  await screen.findByRole("option", { name: "Our project · owner/repo" });
+  expect(screen.getByLabelText("Reviewed repository name").textContent).toBe(
+    "owner/repo",
+  );
+});
