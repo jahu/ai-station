@@ -36,3 +36,47 @@ isolated AI Station worktree and prove it uses changed worktree source. Preserve
 the original checkout/index and all user data. No merge/restart of the application
 is implied by a successful self-development task; deployment remains separately
 controlled. Do not mark the whole platform complete from this one increment.
+
+## Component environment increment
+
+Projects gain an optional advanced `validation_environment` (migration 0026):
+`python_manifest`, `node_directory`, `python_source_roots`, and a bounded
+`timeout_seconds` (60–7200, default 900). Select a root Python manifest explicitly
+when preparing both Python and a nested Node component. No arbitrary environment
+variables, shell strings, absolute paths, path aliases or host grants are accepted.
+Ordinary projects retain their existing detection and request/snapshot shapes.
+
+The existing read-only preparation Run snapshots the selected Python manifest and
+separate Node package manifests. Existing dependency Runs install selected Python
+requirements into the worktree venv and Node requirements in the configured
+component, using the existing public registry restrictions and disabled npm
+lifecycle scripts. Component installs reject ancestor npm configuration. Python's
+installer uses isolated module resolution (`-I`) so project `pip.py` cannot run as
+the installer. Scratch stays under the owned worktree and remains excluded from
+proposal review by the existing reserved-directory rules.
+
+Validation records the frozen environment and both snapshots. It checks hashes
+again before executing, sets Python source roots to this worktree, and uses the
+chosen job/command time limit. Manual worktree actions inspect and freeze manifests
+in their worker before dispatch; HTTP handlers only enqueue. Repeat checks retain
+recorded configuration and snapshots, without model inference or dependency setup.
+Editing project settings cannot change an active Run's configuration.
+
+This increment does **not** qualify the entire AI Station suite inside the native
+sandbox. A disposable installed-Cursor-sandbox probe confirmed that reading the
+host boot identity and enumerating `/proc` is denied; owned process tests need
+those observations. Unix socket creation inside the owned worktree is available.
+Do not grant host `/proc`, home or broad temporary-directory access to pass these
+tests. The next increment needs a controlled container validation target with its
+own process namespace and private temporary storage, behind the native Runner.
+Only that subsequent real full-suite execution can close self-development
+validation acceptance. The registered production Self project remains unchanged.
+
+
+A disposable real native-sandbox smoke passed selected development-lock offline
+wheel installation, nested real Node/npm installation and build, and Python import
+from the allocated source folder. Its original repository HEAD, index and checkout
+were preserved. The first attempts exposed the isolated installer's need to read
+exact public OS/MIME metadata files; those failures are preserved alongside the
+successful rerun in local acceptance evidence. This is component execution
+qualification, not the full AI Station self-suite.

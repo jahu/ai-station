@@ -16,6 +16,7 @@ from app.runner_client import RunnerClient, RunnerError
 from app.runs import create_run, create_task, run_dict
 from app.serialize import project_dict, worktree_dict
 from app.state import TERMINAL
+from app.validation_environment import ValidationEnvironment
 from app.worktree_expiry import pin_expiry, queue_worktree_removal, refresh_expiry
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -47,6 +48,7 @@ class ProjectSettings(BaseModel):
     build_commands: Commands = Field(default_factory=list)
     auto_install_dependencies: StrictBool = False
     auto_validate: StrictBool = False
+    validation_environment: ValidationEnvironment | None = None
     agent_rules: str = Field(default="", max_length=32000)
     pr_policy: PRPolicy = Field(default_factory=PRPolicy)
 
@@ -156,6 +158,8 @@ def update_project(project_id: UUID, body: ProjectUpdate, session: DB):
     if active:
         raise HTTPException(409, "Project settings cannot change while a project Run is active")
     for key, value in body.model_dump(exclude={"expected_updated_at"}).items():
+        if key == "validation_environment" and key not in body.model_fields_set:
+            continue
         setattr(project, key, value)
     project.updated_at = utcnow()
     session.commit()
@@ -287,6 +291,11 @@ def validate_project_worktree(project_id: UUID, worktree_id: UUID, body: Worktre
             "worktree_run_id": worktree.run_id,
             "commands": commands,
             "project_updated_at": project.updated_at.isoformat(),
+            **(
+                {"validation_environment": project.validation_environment}
+                if project.validation_environment
+                else {}
+            ),
         },
     )
     run.parent_run_id = worktree.run_id
@@ -341,9 +350,46 @@ def install_project_dependencies(project_id: UUID, worktree_id: UUID, body: Work
             "worktree_id": worktree.id,
             "worktree_run_id": worktree.run_id,
             "project_updated_at": project.updated_at.isoformat(),
+            **(
+                {"validation_environment": project.validation_environment}
+                if project.validation_environment
+                else {}
+            ),
         },
     )
     run.parent_run_id = worktree.run_id
+    environment = project.validation_environment
+    if environment:
+        selected = ValidationEnvironment.model_validate(environment)
+        run.parameters = {
+            **run.parameters,
+            "ecosystem": "python" if selected.python_manifest else "auto",
+            **({"python_manifest": selected.python_manifest} if selected.python_manifest else {}),
+        }
+        if selected.node_directory:
+            node_parameters = {
+                key: value for key, value in run.parameters.items() if key != "python_manifest"
+            }
+            node_parameters.update(ecosystem="node", directory=selected.node_directory)
+            if not selected.python_manifest and not selected.python_source_roots:
+                run.parameters = node_parameters
+            else:
+                from app.dependencies import depend_on
+
+                node_run = create_run(
+                    session,
+                    task,
+                    run_type="dependencies",
+                    capability="coding.dependencies",
+                    executor_type="project_dependencies",
+                    execution_target="host",
+                    permissions=run.effective_permissions,
+                    retry_class="inspect",
+                    parameters=node_parameters,
+                    parent_run_id=run.id,
+                )
+                depend_on(session, node_run, run)
+                run.metadata_json = {**run.metadata_json, "node_dependency_run_id": node_run.id}
     refresh_expiry(session, worktree_id=worktree.id)
     session.commit()
     return run_dict(run)

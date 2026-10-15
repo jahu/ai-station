@@ -101,6 +101,7 @@ def project_dict(project: Project) -> dict:
         "build_commands": project.build_commands,
         "auto_install_dependencies": project.auto_install_dependencies,
         "auto_validate": project.auto_validate,
+        "validation_environment": project.validation_environment,
         "agent_rules": project.agent_rules,
         "pr_policy": project.pr_policy,
         "created_at": iso(project.created_at),

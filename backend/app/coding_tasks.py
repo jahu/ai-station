@@ -211,7 +211,14 @@ def queue_proposal(session, preparation, worktree):
 
 
 def queue_validation(
-    session, coding_run, *, prepared=False, commands=None, manifest_snapshot=None, prerequisites=()
+    session,
+    coding_run,
+    *,
+    prepared=False,
+    commands=None,
+    manifest_snapshot=None,
+    node_manifest_snapshot=None,
+    prerequisites=(),
 ):
     from app.task_control import stopped_task
 
@@ -242,6 +249,20 @@ def queue_validation(
             "worktree_run_id": coding_run.parameters["worktree_run_id"],
             "commands": commands,
             **({"manifest_snapshot": manifest_snapshot} if manifest_snapshot is not None else {}),
+            **(
+                {"node_manifest_snapshot": node_manifest_snapshot}
+                if node_manifest_snapshot is not None
+                else {}
+            ),
+            **(
+                {
+                    "validation_environment": coding_run.parameters["project_check_policy"][
+                        "validation_environment"
+                    ]
+                }
+                if coding_run.parameters.get("project_check_policy", {}).get("validation_environment")
+                else {}
+            ),
             **(
                 {"agent_coding_deadline": coding_run.parameters["agent_coding_deadline"]}
                 if coding_run.parameters.get("agent_coding_deadline")

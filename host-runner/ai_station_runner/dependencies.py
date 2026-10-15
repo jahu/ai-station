@@ -7,13 +7,14 @@ import sys
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ai_station_runner.coding_sandbox import cursor_sandbox_binary
 from ai_station_runner.config import get_settings
 from ai_station_runner.gitops import GitError
 from ai_station_runner.processes import ProcessNotOwned
 from ai_station_runner.project_manifests import ManifestSnapshot
+from ai_station_runner.validation_environment import PythonManifest, relative_directory
 from ai_station_runner.worktrees import inspect_worktree, owned_path
 
 PERMISSIONS = {
@@ -33,6 +34,23 @@ class DependencyRequest(BaseModel):
     permissions: list[str] = Field(max_length=5)
     ecosystem: Literal["auto", "python", "node"] = "auto"
     manifest_snapshot: ManifestSnapshot | None = None
+    directory: str = "."
+    python_manifest: PythonManifest | None = None
+
+    @field_validator("directory")
+    @classmethod
+    def component_path(cls, value):
+        return relative_directory(value)
+
+    @model_validator(mode="after")
+    def frozen_component(self):
+        if (self.directory != "." or self.python_manifest is not None) and self.manifest_snapshot is None:
+            raise ValueError("Component dependency preparation requires a frozen manifest snapshot")
+        if self.python_manifest is not None and self.ecosystem != "python":
+            raise ValueError("A selected Python manifest requires the Python ecosystem")
+        if self.directory != "." and self.ecosystem != "node":
+            raise ValueError("Nested dependency components currently require the Node ecosystem")
+        return self
 
 
 def directory(run_id):

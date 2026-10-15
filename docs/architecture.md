@@ -1,5 +1,10 @@
 # Architecture
 
+[Component validation environments](self-development-validation.md) extend the
+existing frozen project preparation/dependency/check chain with development locks,
+a nested Node component, owned Python source roots and bounded check deadlines.
+No new host access or independent execution architecture is introduced.
+
 [Reviewed-page coding](agent-page-coding.md) composes existing public HTTP context
 Runs with Local Coding. A dependency-gated metadata stage verifies immutable
 source artifacts and publishes the normal coding chain on the same Task, with a

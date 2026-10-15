@@ -25,6 +25,10 @@ class ProjectValidationExecutor:
             if run.status == "cancel_requested":
                 transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
             return "done"
+        from app.project_checks import freeze_environment_manifests
+
+        if not freeze_environment_manifests(session, run):
+            return "done"
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})
         payload = {
             "run_id": run.id,
@@ -32,6 +36,11 @@ class ProjectValidationExecutor:
             "worktree_run_id": run.parameters["worktree_run_id"],
             "commands": run.parameters["commands"],
             "permissions": run.effective_permissions,
+            **{
+                key: run.parameters[key]
+                for key in ("validation_environment", "node_manifest_snapshot")
+                if key in run.parameters
+            },
             **(
                 {"manifest_snapshot": run.parameters["manifest_snapshot"]}
                 if "manifest_snapshot" in run.parameters

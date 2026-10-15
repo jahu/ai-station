@@ -14,13 +14,22 @@ graph/receipt/Stop checks canceled every QA stage before owned worker restart;
 no storyboard GPU dispatch or model eviction occurred. The same restored 27B
 runtime remains ready. Evidence: `data/acceptance/video-storyboard-20261015`.
 
-Next work is `fix/self-development-validation` in `.tools/self-development-validation`,
-following [the verified gap](../self-development-validation.md). Its current commit
-contains analysis only; no implementation or full self-validation success is
-claimed. The real registered Self project still has syntax-only commands; do not
-silently relabel them as full tests. Preserve root WIP and use existing isolated
-execution/dependency boundaries. Current production/native Runner needs no restart
-while implementing this increment. Earlier sections below are historical.
+Active work is `fix/self-development-validation` in `.tools/self-development-validation`.
+The component-environment implementation adds explicit development locks, nested
+Node preparation, owned Python source imports and bounded validation deadlines to
+existing project Runs. A disposable real Cursor-sandbox probe passed offline pip,
+nested npm installation/build and owned-source import while preserving the original
+checkout. It also exposed and fixed project `pip.py` shadowing and missing exact
+public OS/MIME metadata reads. Full regression/review is pending; this increment
+is not yet merged/deployed. Evidence is under
+`data/acceptance/self-development-validation-20261015`.
+
+Full AI Station self-suite execution remains the next increment: the native
+sandbox denies host process observations needed by process-ownership tests. Use a
+controlled container target with a private PID namespace instead of granting host
+`/proc` or broad temporary access. The real Self project still has syntax-only
+commands. Preserve root WIP; current production Runner remains on #321 until a
+reviewed release is deployed. Earlier sections below are historical.
 
 PR #321 is merged/deployed as `3783ba6`: GPU-wait queue fairness and startup native
 source compatibility. Verification passed 1567 backend/Runner tests (five opt-in

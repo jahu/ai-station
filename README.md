@@ -60,6 +60,10 @@ Development targets the [complete product vision](docs/product-completion.md). E
 
 The bounded Codex, Cursor and Local AI adapters are operational. Claude Code remains an inactive draft; reviewed changes can be committed to the owned task branch from Coding or the Platform assistant; approved task-branch pushes and draft GitHub PRs are available from successful commit Runs. Saved project validation and declared Python dependency installs run in prepared worktrees through the native sandbox.
 
+Advanced project settings support [component validation environments](docs/self-development-validation.md):
+a development dependency lock, frontend package folder, worktree Python source
+folders and a bounded validation deadline. Simple projects keep automatic detection.
+
 ## Prerequisites and installation
 
 Linux, Python 3.12+ with venv support, Git, and Docker Engine with Docker Compose. Docker must be usable by your current user. A GPU, installed models, and coding CLI credentials are not required to start the control plane or run tests. Node is provided by a project-scoped Docker container; no host Node installation is necessary.

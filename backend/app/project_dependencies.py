@@ -7,6 +7,7 @@ from pathlib import Path
 from app.artifacts import register_file
 from app.events import append_event
 from app.native_job_executor import NativeJobExecutor
+from app.permissions import require
 from app.runs import mark_failed, transition
 from app.state import RunStatus
 
@@ -22,15 +23,34 @@ class ProjectDependenciesExecutor(NativeJobExecutor):
     )
     error_type = "DependencyInstallFailed"
 
+    def execute(self, session, run):
+        from app.project_checks import freeze_environment_manifests
+
+        for permission in self.permissions:
+            require(run.effective_permissions, permission)
+        session.refresh(run)
+        if run.status == "cancel_requested":
+            return super().execute(session, run)
+        if not freeze_environment_manifests(session, run):
+            return "done"
+        return super().execute(session, run)
+
     def payload(self, run):
         return {
             "run_id": run.id,
             "project_id": run.project_id,
             "worktree_run_id": run.parameters["worktree_run_id"],
             "permissions": run.effective_permissions,
+            **{key: run.parameters[key] for key in ("directory", "python_manifest") if key in run.parameters},
             **({"ecosystem": run.parameters["ecosystem"]} if "ecosystem" in run.parameters else {}),
             **(
-                {"manifest_snapshot": run.parameters["manifest_snapshot"]}
+                {
+                    "manifest_snapshot": run.parameters.get(
+                        "node_manifest_snapshot", run.parameters["manifest_snapshot"]
+                    )
+                    if run.parameters.get("ecosystem") == "node"
+                    else run.parameters["manifest_snapshot"]
+                }
                 if "manifest_snapshot" in run.parameters
                 else {}
             ),

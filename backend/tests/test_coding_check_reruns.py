@@ -347,3 +347,44 @@ def test_already_committed_turn_can_repeat_its_recorded_checks(repository, owned
         with session_factory()() as session:
             assert tick(session, "check-committed-turn") == response.json()["id"]
         assert client.get("/api/runs/" + response.json()["id"]).json()["status"] == "succeeded"
+
+
+def test_repeat_preserves_environment_and_refuses_changed_component_manifests(
+    repository,
+    owned_runner,
+    validation_sandbox,
+):
+    from ai_station_runner.project_manifests import manifest_snapshot
+
+    with TestClient(app) as client:
+        proof = prepared_checks(client, repository, owned_runner)
+        workspace = proof["workspace"]
+        (workspace / "requirements-dev.lock").write_text("pytest==8.3.5\n")
+        (workspace / "frontend").mkdir()
+        (workspace / "frontend/package.json").write_text("{}")
+        environment = {
+            "python_manifest": "requirements-dev.lock",
+            "node_directory": "frontend",
+            "python_source_roots": [],
+            "timeout_seconds": 1800,
+        }
+        with session_factory()() as session:
+            previous = session.get(Run, proof["validation"])
+            previous.parameters = {
+                **previous.parameters,
+                "validation_environment": environment,
+                "manifest_snapshot": manifest_snapshot(workspace, python_manifest="requirements-dev.lock"),
+                "node_manifest_snapshot": manifest_snapshot(workspace / "frontend"),
+            }
+            session.commit()
+        response = repeat(client, proof)
+        assert response.status_code == 202, response.text
+        result = response.json()
+        assert result["parameters"]["validation_environment"] == environment
+        assert result["parameters"]["manifest_snapshot"]["requirements-dev.lock"]
+        assert result["parameters"]["node_manifest_snapshot"]["package.json"]
+        (workspace / "frontend/package.json").write_text('{"name":"changed"}')
+        with session_factory()() as session:
+            assert tick(session, "changed-component-checks") == result["id"]
+        assert client.get("/api/runs/" + result["id"]).json()["status"] == "failed"
+        assert (workspace / "check-count.txt").read_text() == "1"

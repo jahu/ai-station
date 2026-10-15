@@ -24,6 +24,7 @@ from ai_station_runner.dependency_manifest import (
 from ai_station_runner.gitinspect import Repository, git_environment
 from ai_station_runner.gitops import GitError
 from ai_station_runner.project_manifests import verify_manifests
+from ai_station_runner.validation_environment import component_directory
 from ai_station_runner.worktrees import load_manifest, owned_path
 
 TIMEOUT = 600
@@ -126,6 +127,7 @@ def install(run_id):
     body = load_request(run_id)
     record = load_manifest(str(body.worktree_run_id))
     workspace = owned_path(record["relative_path"])
+    worktree_root = workspace
     repository = Repository(workspace, shared_group=True)
     if (
         record["state"] != "ready"
@@ -144,9 +146,10 @@ def install(run_id):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError as exc:
         raise GitError("Worktree is in use; wait for the active operation") from exc
-    verify_manifests(workspace, body.manifest_snapshot)
+    workspace = component_directory(worktree_root, body.directory)
+    verify_manifests(workspace, body.manifest_snapshot, python_manifest=body.python_manifest)
     if body.ecosystem == "node" or body.ecosystem == "auto" and node_project(workspace):
-        install_node(run_id, body, record, workspace, repository)
+        install_node(run_id, body, record, workspace, repository, worktree_root=worktree_root)
         return
     venv = workspace / ".venv"
     python = venv / "bin/python"
@@ -155,18 +158,18 @@ def install(run_id):
     if venv.exists() and not python.exists():
         raise GitError("Incomplete worktree .venv; inspect instead of replacing it")
     _environment(python)
-    kind, specifiers = load_specifiers(workspace)
+    kind, specifiers = load_specifiers(workspace, manifest=body.python_manifest)
     plan = pip_plan(workspace, Path(".venv/bin/python"), specifiers)
     if plan["network"]:
         confirm_public_indexes()
-    scratch = Path(tempfile.mkdtemp(prefix=".ai-station-dependencies-", dir=workspace))
+    scratch = Path(tempfile.mkdtemp(prefix=".ai-station-dependencies-", dir=worktree_root))
     env = command_environment(scratch)
     policy_path = directory(run_id) / "policy.json"
     write_policy(
         policy_path,
-        workspace,
+        worktree_root,
         repository.common_dir,
-        dependency_policy(workspace, repository.common_dir, network=plan["network"]),
+        dependency_policy(worktree_root, repository.common_dir, network=plan["network"]),
     )
     print(f"Installing {len(plan['specifiers'])} requirements from {kind} ({plan['source']})", flush=True)
     result = execute_command(
@@ -183,8 +186,10 @@ def install(run_id):
         "source": plan["source"],
         "network": plan["network"],
         "specifiers": plan["specifiers"],
-        "environment": f"{record['relative_path']}/.venv",
-        "scratch_relative": str(scratch.relative_to(workspace)),
+        "environment": f"{record['relative_path']}"
+        + (f"/{body.directory}" if body.directory != "." else "")
+        + "/.venv",
+        "scratch_relative": str(scratch.relative_to(worktree_root)),
         **result,
     }
     path = directory(run_id) / "report.json"
@@ -194,21 +199,35 @@ def install(run_id):
     print("Dependency report saved", flush=True)
 
 
-def install_node(run_id, body, record, workspace, repository):
+def install_node(run_id, body, record, workspace, repository, *, worktree_root=None):
     from ai_station_runner.node_dependencies import confirm_registry, package_manifest, verify_lock
     from ai_station_runner.node_lock import generate_lock
     from ai_station_runner.node_runtime import node_runtime, runtime_policy
 
+    worktree_root = worktree_root or workspace
+    parent = workspace.parent
+    while parent.is_relative_to(worktree_root):
+        for name in (".npmrc", "npm-shrinkwrap.json"):
+            candidate = parent / name
+            if candidate.exists() or candidate.is_symlink():
+                raise GitError(
+                    "Ancestor npm configuration overrides are not supported for component installs"
+                )
+        if parent == worktree_root:
+            break
+        parent = parent.parent
     manifest = package_manifest(workspace)
-    runtime = node_runtime(workspace)
+    runtime = node_runtime(worktree_root)
     deadline = time.monotonic() + TIMEOUT
     lock_exists = (workspace / "package-lock.json").exists() or (workspace / "package-lock.json").is_symlink()
     lock_info = verify_lock(workspace, manifest) if lock_exists else None
     confirm_registry()
-    scratch = Path(tempfile.mkdtemp(prefix=".ai-station-dependencies-", dir=workspace))
+    scratch = Path(tempfile.mkdtemp(prefix=".ai-station-dependencies-", dir=worktree_root))
     for name in ("user.npmrc", "global.npmrc"):
         (scratch / name).touch(mode=0o600)
     env = runtime.environment(command_environment(scratch))
+    if workspace != worktree_root:
+        env["npm_config_workspaces"] = "false"
     versions = runtime.describe(env)
     resolution = {"lock_generated": False}
     if not lock_exists:
@@ -221,6 +240,7 @@ def install_node(run_id, body, record, workspace, repository):
             execute_command,
             deadline=deadline,
             policy_dir=directory(run_id),
+            **({"policy_workspace": worktree_root} if workspace != worktree_root else {}),
         )
         lock_info = verify_lock(workspace, manifest)
     if (
@@ -231,9 +251,9 @@ def install_node(run_id, body, record, workspace, repository):
     policy = directory(run_id) / "npm.policy.json"
     write_policy(
         policy,
-        workspace,
+        worktree_root,
         repository.common_dir,
-        runtime_policy(dependency_policy(workspace, repository.common_dir, network=True), runtime),
+        runtime_policy(dependency_policy(worktree_root, repository.common_dir, network=True), runtime),
     )
     print("Managed npm ci: lifecycle scripts disabled", flush=True)
     result = execute_command(
@@ -251,8 +271,11 @@ def install_node(run_id, body, record, workspace, repository):
         "source": "npm",
         "network": True,
         "specifiers": manifest["specifiers"],
-        "environment": f"{record['relative_path']}/node_modules",
-        "scratch_relative": str(scratch.relative_to(workspace)),
+        "environment": f"{record['relative_path']}"
+        + (f"/{body.directory}" if body.directory != "." else "")
+        + "/node_modules",
+        "directory": body.directory,
+        "scratch_relative": str(scratch.relative_to(worktree_root)),
         "package_sha256": manifest["package_sha256"],
         **lock_info,
         **versions,

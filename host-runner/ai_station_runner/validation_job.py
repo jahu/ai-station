@@ -17,13 +17,15 @@ from ai_station_runner.gitinspect import Repository
 from ai_station_runner.owned_children import stop_owned_children
 from ai_station_runner.project_manifests import verify_manifests
 from ai_station_runner.validation import load_request, request_path
+from ai_station_runner.validation_environment import component_directory
 from ai_station_runner.worktrees import load_manifest, owned_path
 
 TIMEOUT = 300
 OUTPUT_LIMIT = 2 * 1024 * 1024
 
 
-def execute_command(argv, workspace, env, *, deadline):
+def execute_command(argv, workspace, env, *, deadline, timeout=None):
+    timeout = TIMEOUT if timeout is None else timeout
     started = time.monotonic()
     size = 0
     with subprocess.Popen(
@@ -36,7 +38,7 @@ def execute_command(argv, workspace, env, *, deadline):
             selector.register(proc.stdout, selectors.EVENT_READ, sys.stdout.buffer)
             selector.register(proc.stderr, selectors.EVENT_READ, sys.stderr.buffer)
             while selector.get_map() or proc.poll() is None:
-                if time.monotonic() - started > TIMEOUT or time.monotonic() > deadline or size > OUTPUT_LIMIT:
+                if time.monotonic() - started > timeout or time.monotonic() > deadline or size > OUTPUT_LIMIT:
                     print("Validation exceeded time/output limit; inspect logs", file=sys.stderr, flush=True)
                     # The wrapper is a verified group leader. Kill its descendants
                     # as well, including a command that leaves inherited pipes open.
@@ -77,7 +79,16 @@ def validate(run_id):
     # Keep the descriptor alive for the full job. Direct runner requests cannot
     # validate the same worktree concurrently even with different Run IDs.
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    verify_manifests(workspace, body.manifest_snapshot)
+    environment = body.validation_environment
+    verify_manifests(
+        workspace,
+        body.manifest_snapshot,
+        python_manifest=environment.python_manifest if environment else None,
+    )
+    if environment and environment.node_directory:
+        verify_manifests(
+            component_directory(workspace, environment.node_directory), body.node_manifest_snapshot
+        )
     scratch = Path(tempfile.mkdtemp(prefix=".ai-station-validation-", dir=workspace))
     env = {
         "PATH": "/usr/local/bin:/usr/bin:/bin",
@@ -91,8 +102,12 @@ def validate(run_id):
         "PYTHONNOUSERSITE": "1",
         "PYTHONDONTWRITEBYTECODE": "1",
     }
+    if environment and environment.python_source_roots:
+        env["PYTHONPATH"] = os.pathsep.join(
+            str(component_directory(workspace, path)) for path in environment.python_source_roots
+        )
     results = []
-    deadline = time.monotonic() + 900
+    deadline = time.monotonic() + (environment.timeout_seconds if environment else 900)
     for index, command in enumerate(body.commands):
         print(f"Validation {index + 1}/{len(body.commands)}: {command.kind} {command.argv!r}", flush=True)
         # The native helper consumes its policy file on startup. Each command
@@ -116,7 +131,11 @@ def validate(run_id):
             ]
         write_policy(policy, workspace, repository.common_dir, policy_body)
         result = execute_command(
-            validation_argv(policy, command_argv), workspace, command_env, deadline=deadline
+            validation_argv(policy, command_argv),
+            workspace,
+            command_env,
+            deadline=deadline,
+            **({"timeout": environment.timeout_seconds} if environment else {}),
         )
         results.append({"kind": command.kind, "argv": command.argv, **result})
     report = {
