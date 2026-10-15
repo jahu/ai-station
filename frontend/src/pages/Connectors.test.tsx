@@ -159,6 +159,7 @@ it("moves through named connectors with arrow keys", async () => {
   expect(first.tabIndex).toBe(0);
   expect(second.tabIndex).toBe(-1);
   expect(screen.getByRole("region", { name: "Named connectors" })).toBeTruthy();
+  fireEvent.click(screen.getByText("Other integrations"));
   expect(
     screen.getByRole("region", { name: "Unavailable adapters" }),
   ).toBeTruthy();
@@ -217,6 +218,7 @@ it("moves through unpublished adapters with arrow keys", async () => {
   const second = screen.getByLabelText("Adapter github");
   expect(first.tabIndex).toBe(0);
   expect(second.tabIndex).toBe(-1);
+  fireEvent.click(screen.getByText("Other integrations"));
   expect(
     screen.getByRole("region", { name: "Unavailable adapters" }),
   ).toBeTruthy();

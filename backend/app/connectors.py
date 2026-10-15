@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 from app.artifacts import register_file
 from app.db import session_scope, utcnow
 from app.events import append_event
+from app.github_connector import repository_name
 from app.http_fetch import fetch_public, public_url
 from app.models import Connector, Run
 from app.paths import PathBoundaryError
@@ -53,9 +54,9 @@ KINDS = (
     },
     {
         "kind": "github",
-        "operational": False,
-        "capabilities": [],
-        "summary": "GitHub remains the existing publication adapter; it is not a general connector yet.",
+        "operational": True,
+        "capabilities": ["github.read"],
+        "summary": "Read repository details, open issues and PRs through the existing host gh session.",
     },
     {
         "kind": "email",
@@ -92,8 +93,9 @@ class ConnectorWrite(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     key: str = Field(min_length=2, max_length=80)
     name: str = Field(min_length=1, max_length=200)
-    kind: Literal["http"] = "http"
-    url: str = Field(min_length=8, max_length=2000)
+    kind: Literal["http", "github"] = "http"
+    url: str = Field(default="", max_length=2000)
+    repository: str = Field(default="", max_length=140)
     secret_ref: str = Field(default="", max_length=200)
     secret: str | None = Field(default=None, max_length=4096)
     enabled: StrictBool = True
@@ -102,7 +104,11 @@ class ConnectorWrite(BaseModel):
     def validate_connector(self):
         if not _KEY.fullmatch(self.key):
             raise ValueError("Choose a unique lowercase connector key")
-        if public_url(self.url) is None:
+        if self.kind == "github":
+            self.repository = repository_name(self.repository)
+            if self.url or self.secret or self.secret_ref:
+                raise ValueError("GitHub uses the host gh session; do not provide URLs or secrets")
+        elif public_url(self.url) is None or self.repository:
             raise ValueError("HTTP connectors require one public http(s) URL on port 80 or 443")
         try:
             self.secret_ref = parse_secret_ref(self.secret_ref)
@@ -117,6 +123,7 @@ class ConnectorPatch(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     name: str | None = Field(default=None, min_length=1, max_length=200)
     url: str | None = Field(default=None, min_length=8, max_length=2000)
+    repository: str | None = Field(default=None, max_length=140)
     secret_ref: str | None = Field(default=None, max_length=200)
     secret: str | None = Field(default=None, max_length=4096)
     clear_secret: StrictBool = False
@@ -124,6 +131,8 @@ class ConnectorPatch(BaseModel):
 
     @model_validator(mode="after")
     def validate_patch(self):
+        if self.repository is not None:
+            self.repository = repository_name(self.repository)
         if self.url is not None and public_url(self.url) is None:
             raise ValueError("HTTP connectors require one public http(s) URL on port 80 or 443")
         if self.secret is not None and not self.secret.strip():
@@ -146,6 +155,7 @@ def connector_dict(row: Connector) -> dict:
         "name": row.name,
         "kind": row.kind,
         "url": url,
+        "repository": row.config_json.get("repository", ""),
         "method": "GET",
         "capabilities": list(row.capabilities),
         "status": row.status,
@@ -167,7 +177,9 @@ def get_connector(session: Session, connector_id: UUID) -> Connector:
 
 def active_check(session: Session, connector_id: str) -> Run | None:
     for run in session.scalars(
-        select(Run).where(Run.executor_type == "http_connector", Run.status.not_in(TERMINAL))
+        select(Run).where(
+            Run.executor_type.in_(["http_connector", "github_read"]), Run.status.not_in(TERMINAL)
+        )
     ):
         if run.parameters.get("connector_id") == connector_id:
             return run
@@ -190,7 +202,7 @@ def apply_secret(row: Connector, *, secret_ref: str | None = None, secret: str |
 
 
 def sync_connector_from_run(session: Session, run: Run, status: str) -> None:
-    if run.executor_type != "http_connector":
+    if run.executor_type not in {"http_connector", "github_read"}:
         return
     connector_id = (run.parameters or {}).get("connector_id")
     row = session.get(Connector, connector_id) if connector_id else None
@@ -232,7 +244,9 @@ def create(body: ConnectorWrite, session: DB):
         status="unconfigured",
         health="unknown",
         capabilities=list(spec["capabilities"]),
-        config_json={"url": body.url, "method": "GET"},
+        config_json={"repository": body.repository}
+        if body.kind == "github"
+        else {"url": body.url, "method": "GET"},
         enabled=body.enabled,
     )
     session.add(row)
@@ -252,6 +266,13 @@ def edit(connector_id: UUID, body: ConnectorPatch, session: DB):
     row = get_connector(session, connector_id)
     if active_check(session, row.id):
         raise HTTPException(409, "Cancel or finish the health check before editing this connector")
+    if row.kind == "github" and any(value is not None for value in (body.url, body.secret, body.secret_ref)):
+        raise HTTPException(422, "GitHub uses the host gh session; do not provide URLs or secrets")
+    if body.repository is not None:
+        if row.kind != "github":
+            raise HTTPException(422, "Repository applies only to GitHub connectors")
+        row.config_json = {"repository": body.repository}
+        row.last_run_id, row.status, row.health = None, "unconfigured", "unknown"
     if body.name is not None:
         row.name = body.name
     if body.url is not None:
@@ -278,6 +299,10 @@ def remove(connector_id: UUID, session: DB):
 def check(connector_id: UUID, session: DB):
     row = get_connector(session, connector_id)
     kind_spec(row.kind)
+    if row.kind == "github":
+        from app.github_connector import enqueue
+
+        return enqueue(session, row)
     if not row.enabled:
         raise HTTPException(409, "Enable the connector before checking it")
     url = public_url((row.config_json or {}).get("url"))
@@ -428,3 +453,19 @@ async def _check(session, run):
     )
     session.commit()
     return result
+
+
+@router.get("/{connector_id}/snapshot")
+def snapshot(connector_id: UUID, session: DB):
+    from app.github_connector import saved_snapshot
+
+    row = get_connector(session, connector_id)
+    if row.kind != "github":
+        raise HTTPException(422, "Snapshots apply to GitHub connectors")
+    latest = session.get(Run, row.last_run_id) if row.last_run_id else None
+    error = latest.error_message if latest and latest.parameters.get("connector_id") == row.id else ""
+    return {
+        "connector": connector_dict(row),
+        "snapshot": saved_snapshot(session, row),
+        "refresh_error": error,
+    }

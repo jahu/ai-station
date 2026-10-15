@@ -28,6 +28,7 @@ from ai_station_runner.dependencies import DependencyRequest, dependency_report,
 from ai_station_runner.diagnostics import collect_diagnostics
 from ai_station_runner.discovery import scan
 from ai_station_runner.fsops import list_dir, read_file, search_files, write_file
+from ai_station_runner.github_read import GithubReadRequest
 from ai_station_runner.gitinspect import diff, status, validate_repo
 from ai_station_runner.gitops import (
     GitError,
@@ -857,3 +858,25 @@ def compose_media(body: ComposeRequest):
         return {**start_composition(manager(), body), "runner_id": get_settings().runner_id}
     except PathBoundaryError as exc:
         raise HTTPException(403, str(exc)) from exc
+
+
+@app.post("/v1/runs/github-read")
+def github_read_run(body: GithubReadRequest):
+    from ai_station_runner.github_read import start
+
+    try:
+        return {**start(manager(), body), "runner_id": get_settings().runner_id}
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, OSError, ProcessNotOwned) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/runs/github-read/{run_id}/report")
+def github_read_report(run_id: UUID):
+    from ai_station_runner.github_read import report
+
+    try:
+        return report(manager(), str(run_id))
+    except (ValueError, OSError, ProcessNotOwned) as exc:
+        raise HTTPException(409, str(exc)) from exc

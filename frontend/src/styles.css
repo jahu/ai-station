@@ -1046,12 +1046,12 @@ main:focus-visible {
   .nav-marker {
     display: none;
   }
-  nav a,
+  .sidebar nav a,
   .sidebar-bottom > a {
     font-size: 0;
     padding: 13px;
   }
-  nav a svg,
+  .sidebar nav a svg,
   .sidebar-bottom > a svg {
     flex-shrink: 0;
   }
@@ -5051,4 +5051,73 @@ section:has(> .memory-grid) > .dashboard-note {
 .new-chat > .work-context-card {
   width: 100%;
   margin-bottom: 16px;
+}
+
+.connectors-workspace {
+  padding: 24px;
+}
+.connectors-workspace > .panel-heading,
+.github-connectors > .panel-heading {
+  padding: 0 0 16px;
+}
+.github-repository-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #141619;
+}
+.github-repository-card .row {
+  flex-wrap: wrap;
+}
+.github-repository-card .row > div {
+  min-width: 0;
+}
+.github-repository-lists {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 16px;
+}
+.github-entry-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+  display: grid;
+  gap: 10px;
+}
+.github-entry-list a {
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.github-repository-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+.github-connect-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  margin: 20px 0 32px;
+}
+.github-connect-form button {
+  min-height: 40px;
+}
+.connector-unavailable > summary {
+  color: var(--muted);
+  cursor: pointer;
+  padding: 16px 0;
+}
+@media (max-width: 700px) {
+  .connectors-workspace {
+    padding: 16px;
+  }
+  .connectors-workspace .field-pair,
+  .github-repository-lists,
+  .github-connect-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .github-repository-card {
+    padding: 16px;
+  }
 }
