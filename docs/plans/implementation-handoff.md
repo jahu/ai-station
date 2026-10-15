@@ -211,3 +211,18 @@ Finish the final frontend checks, responsive browser review and Docker build,
 review the complete PR, merge to develop and apply the reviewed image when idle.
 Then continue practical Coding/Work usability, safe artifact/build inspection and
 the remaining product workstreams. The broad platform goal remains active.
+
+## Current active increment: Coding build artifacts
+
+PR #313 is merged as `ffed73d` and deployed from
+`.tools/ui-coding-task-progress-20261015`; the healthy identical-source native
+Runner was retained. Final checks: 463 frontend tests, format/lint/types/build,
+Docker/Compose, desktop/mobile browser review, all 16 live workspaces and the
+actual successful Coding task. Backend/Runner matches #312's 1453 passing tests
+(five opt-in skips). Original database IDs and root Memory WIP are preserved.
+
+Continue `feat/coding-build-artifacts` in `.tools/coding-build-artifacts` using
+[coding-build-artifacts.md](../coding-build-artifacts.md). Deliver normal build
+Artifacts and a Download build/Library action, keeping untrusted HTML as data.
+Do not regenerate the already-qualified React site merely to test exporting it.
+The broad platform goal remains active; no final product completion is claimed.
