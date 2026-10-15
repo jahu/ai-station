@@ -16,6 +16,7 @@ from app.host_media_executor import HostMediaExecutor
 from app.media_plan import duration_frames, timeline
 from app.models import Artifact, Run, Task
 from app.paths import safe_join
+from app.resources import RESOURCE_WAIT_KEY
 from app.runs import create_run, run_dict
 from app.state import TERMINAL
 from app.task_control import cancel_task, lock_task
@@ -523,6 +524,7 @@ def save_resume(session, task, plan, updated, receipts, key, body):
         **task.metadata_json,
         "media_revisions": [*task.metadata_json.get("media_revisions", []), plan],
         "media_plan": updated,
+        RESOURCE_WAIT_KEY: None,
     }
     result = job_view(session, task)
     task.metadata_json = {
