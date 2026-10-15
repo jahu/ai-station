@@ -75,6 +75,13 @@ cp .env.example .env
 
 Open **http://127.0.0.1:8765**. Startup builds one application image, starts or reuses a compatible native runner, checks health, and supervises the deployment in the foreground. Ctrl+C stops the containers and the runner started by this invocation. It does not remove data or touch other Docker projects. A pre-existing Compose deployment is never taken over for cleanup. `./scripts/start.sh --no-build` reuses an already built image.
 
+An existing Host Runner must report the same native source identity as the
+checkout being started. Older or different sources stop startup before building
+the image; inspect active Runs and restart the Runner's owning service from the
+intended checkout. The launcher never replaces that service automatically.
+Control-plane-only updates can reuse identical native sources across checkouts.
+See [Runner compatibility](docs/runner-source-compatibility.md).
+
 Bootstrap installs Python dependencies only in `.venv`. It never installs drivers, changes CUDA, downloads AI models, or modifies existing AI software.
 
 ## Configuration and persistence

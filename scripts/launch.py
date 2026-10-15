@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import fcntl
 import os
+import runpy
 import signal
 import subprocess
 import sys
@@ -58,7 +59,19 @@ def runner_health(env: dict) -> bool:
         return False
     if body.get("data_dir") != env["AI_STATION_DATA_HOST_PATH"]:
         raise RuntimeError("The existing Host Runner uses a different data directory")
-    return body.get("status") == "ok"
+    if body.get("status") != "ok":
+        return False
+    # Read this checkout, not a potentially older editable package in the venv.
+    expected = runpy.run_path(str(ROOT / "host-runner/ai_station_runner/source_identity.py"))[
+        "SOURCE_FINGERPRINT"
+    ]
+    if body.get("source_fingerprint") != expected:
+        raise RuntimeError(
+            "The existing Host Runner source differs from this checkout or has no source identity. "
+            "Inspect active Runs, then restart its owning service from this checkout. "
+            "No existing Runner or workload was stopped."
+        )
+    return True
 
 
 def data_preserving_compose_down(compose: list[str]) -> list[str]:
@@ -113,11 +126,12 @@ def main() -> None:
         signal.signal(signal.SIGTERM, shutdown)
         signal.signal(signal.SIGINT, shutdown)
         try:
+            reusable_runner = runner_health(env)
             if not args.no_build:
                 # One shared image; Docker build works even when the optional
                 # buildx plugin is absent from a workstation's Compose install.
                 subprocess.run(["docker", "build", "-t", "ai-station:local", str(ROOT)], env=env, check=True)
-            if not runner_health(env):
+            if not reusable_runner:
                 proc = subprocess.Popen([sys.executable, "-m", "ai_station_runner.main"], env=env)
                 deadline = time.monotonic() + 20
                 while not runner_health(env):

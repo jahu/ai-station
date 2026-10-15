@@ -1,10 +1,13 @@
 import os
+import runpy
 import stat
 import subprocess
 import sys
 import time
+from pathlib import Path
 
 import httpx
+from ai_station_runner.source_identity import SOURCE_FINGERPRINT
 
 
 def test_runner_socket_is_private_and_second_runner_cannot_replace_it(tmp_path):
@@ -30,7 +33,11 @@ def test_runner_socket_is_private_and_second_runner_cannot_replace_it(tmp_path):
         with httpx.Client(
             transport=httpx.HTTPTransport(uds=str(socket_path)), base_url="http://runner"
         ) as client:
-            assert client.get("/health").json()["status"] == "ok"
+            health = client.get("/health").json()
+            assert health["status"] == "ok"
+            assert health["source_fingerprint"] == SOURCE_FINGERPRINT
+            launcher = runpy.run_path(str(Path(__file__).parents[2] / "scripts/launch.py"))
+            assert launcher["runner_health"](env)
             duplicate = subprocess.run(
                 [sys.executable, "-m", "ai_station_runner.main"], env=env, capture_output=True, timeout=10
             )

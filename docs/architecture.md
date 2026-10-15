@@ -109,6 +109,10 @@ preserve the same claim, permission, cancellation and recovery contracts. See
 
 The Host Runner does not expose an arbitrary shell. Photo, Git, coding CLIs, cancellation, telemetry, and discovery are separate validated operations.
 
+The launcher verifies the Runner's startup-captured native source identity before
+reusing it. A healthy process with different or legacy source cannot silently
+serve a newer control plane. See [local compatibility](runner-source-compatibility.md).
+
 SQLite backups are explicit Task/Run copies (`VACUUM INTO` plus integrity check). A successful copy can be re-checked in place. The Host Runner can inspect `ai-station:local` versus running compose containers without building or retagging; restore and image rollout stay unpublished. See [operations](operations.md).
 
 ## Networking
