@@ -336,9 +336,10 @@ PR #320 is merged/deployed and verified (see delivered evidence in
 [resource wait fairness](../media-resource-wait-fairness.md) and
 [native source compatibility](../runner-source-compatibility.md) for one reviewed
 rollout. Both originally failing regressions are fixed: 35 queue/media tests and
-10 launcher/source/private-socket tests pass. Full combined checks are running on
-`bd897aa` in `.tools/runner-source-compatibility`; no full-suite success or rollout
-is claimed yet. The earlier standalone queue full run ended with signal 143 and
+10 launcher/source/private-socket tests pass. Full combined checks on `bd897aa`
+passed: 1567 tests, five explicit opt-in skips, Ruff lint/format. Docker image and
+both Compose configurations passed. Later changes are documentation-only;
+rollout is pending. The earlier standalone queue full run ended with signal 143 and
 no pytest terminal summary, and is not counted as passed. Frontend is unchanged
 from qualified #320. Preserve all root WIP, data and the current 27B runtime.
 

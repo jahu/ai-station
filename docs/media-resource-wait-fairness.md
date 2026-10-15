@@ -31,3 +31,13 @@ post-completion Task lock or worker-side timer process is introduced.
 
 The existing `run.requeued` event retains the resource eligibility deadline, so
 the decision remains inspectable after the transient Task marker is cleared.
+
+## Verification before rollout
+
+Combined PR #321 also adds [native compatibility](runner-source-compatibility.md).
+Its reviewed implementation passed 1567 backend/Runner tests (five opt-in skips),
+Ruff lint/format, Docker build and both Compose configurations. The 35 focused
+queue/media tests include fake GPU ownership and real CPU composition. No real
+GPU-generation acceptance is claimed for this queue change. Frontend is identical
+to #320's qualified 483-test source; an actual existing canceled media Task is
+used for desktop/mobile persistence inspection after deployment.
