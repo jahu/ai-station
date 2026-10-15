@@ -301,6 +301,7 @@ function VideoForm({
               <label>
                 Format
                 <select
+                  aria-label="Format"
                   value={resolution}
                   onChange={(event) => setResolution(event.target.value)}
                 >
@@ -327,6 +328,7 @@ function VideoForm({
                   </output>
                 ) : (
                   <select
+                    aria-label="Duration"
                     value={duration}
                     onChange={(event) => setDuration(event.target.value)}
                   >
@@ -379,11 +381,19 @@ function VideoForm({
                   Plan individual scenes
                 </label>
                 {planningScenes && (
-                  <VideoSceneEditor
-                    scenes={scenes}
-                    onChange={setScenes}
-                    error={sceneError}
-                  />
+                  <>
+                    <VideoSceneEditor
+                      scenes={scenes}
+                      onChange={setScenes}
+                      error={sceneError}
+                    />
+                    {jobId && !busy && (
+                      <p className="muted">
+                        Generate video creates a new film with these changes.
+                        Resume unfinished work continues the saved plan.
+                      </p>
+                    )}
+                  </>
                 )}
               </>
             )}
