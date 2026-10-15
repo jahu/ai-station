@@ -4,7 +4,8 @@ from datetime import timedelta
 
 from fastapi import HTTPException
 
-from app.coding_tasks import enqueue_coding_task
+from app.agent_coding_policy import coding_provider
+from app.coding_tasks import CodingTask, enqueue_coding_task
 from app.db import utcnow
 from app.local_coding import LocalCodingTask
 from app.models import Project
@@ -12,8 +13,9 @@ from app.skills import skill_prompt, verify_snapshots
 
 
 def publish_coding(session, parent, definition):
-    if definition.tools != ["coding_local"] or not definition.project_id:
-        raise ValueError("Select Local coding alone and choose its project")
+    provider = coding_provider(definition.tools)
+    if provider is None or not definition.project_id:
+        raise ValueError("Select one coding provider and choose its project")
     if parent.project_id != str(definition.project_id):
         raise ValueError("The agent cannot change its authorized project")
     project = session.get(Project, parent.project_id)
@@ -26,21 +28,23 @@ def publish_coding(session, parent, definition):
             **parent.task.metadata_json,
             "agent_coding_definition": definition.model_dump(mode="json"),
         }
+        body_type = LocalCodingTask if provider == "local" else CodingTask
+        request_key = "local_coding" if provider == "local" else provider
         preparation = enqueue_coding_task(
             session,
-            LocalCodingTask(
+            body_type(
                 project_id=project.id,
                 expected_updated_at=project.updated_at,
                 prompt=definition.goal,
-                model=definition.model,
+                model=definition.model if provider == "local" else "",
                 explore=True,
             ),
-            provider="local",
+            provider=provider,
             task=parent.task,
             parent_run_id=parent.id,
             workflow_parent=parent,
         )
-        request = preparation.parameters["local_coding"]
+        request = preparation.parameters[request_key]
         preparation.parameters = {**preparation.parameters, "agent_coding_deadline": deadline}
         guidance = definition.system_prompt + "\n" + request["guidance"]
         if snapshots:
@@ -49,7 +53,7 @@ def publish_coding(session, parent, definition):
             raise ValueError("Agent and project guidance exceed the coding context limit")
         preparation.parameters = {
             **preparation.parameters,
-            "local_coding": {
+            request_key: {
                 **request,
                 "guidance": guidance,
                 "agent_coding_deadline": deadline,

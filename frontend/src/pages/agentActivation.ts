@@ -36,6 +36,7 @@ export function activationBlock(
     maximum_runtime?: number;
     project_id?: string | null;
     model?: string | null;
+    permission_profile?: string;
     tools?: string[];
     skills?: string[];
     search_query?: string | null;
@@ -45,13 +46,24 @@ export function activationBlock(
   skillsCatalog?: unknown,
 ): { blocked: boolean; reason: string | null } {
   if (agent.enabled) return { blocked: false, reason: null };
-  if (!(agent.model ?? "").trim()) {
+  const names = agent.tools ?? [];
+  const coding = names.filter((name) =>
+    ["coding_local", "coding_cursor", "coding_codex"].includes(name),
+  );
+  const external = coding.some((name) => name !== "coding_local");
+  if (external !== (agent.permission_profile === "agent_external_coding")) {
+    return {
+      blocked: true,
+      reason:
+        "Review and save the explicit external-coding permission profile before enabling.",
+    };
+  }
+  if (!external && !(agent.model ?? "").trim()) {
     return {
       blocked: true,
       reason: "Select a local model before enabling.",
     };
   }
-  const names = agent.tools ?? [];
   if (
     names.includes("github_read") &&
     (!agent.github || (agent.maximum_runtime ?? 600) < 70)
@@ -69,18 +81,19 @@ export function activationBlock(
         "Choose the project whose memory this agent may read before enabling.",
     };
   }
-  if (names.includes("coding_local") && !agent.project_id) {
+  if (coding.length && !agent.project_id) {
     return {
       blocked: true,
       reason:
         "Choose the project this coding agent may modify before enabling.",
     };
   }
-  if (names.includes("coding_local") && names.length !== 1) {
+  if (coding.length && names.length !== 1) {
     return {
       blocked: true,
-      reason:
-        "Select Local coding alone; reporting tools belong to a separate agent.",
+      reason: external
+        ? "Select one coding provider alone; reporting tools belong to a separate agent."
+        : "Select Local coding alone; reporting tools belong to a separate agent.",
     };
   }
   if (names.includes("web_search") && !(agent.search_query ?? "").trim()) {

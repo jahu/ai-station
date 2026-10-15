@@ -168,9 +168,12 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
     if any(word in lowered for word in ("memory", "remember", "pamię", "pamie")):
         tools.append("memory_search")
     search_query = _search_query(text)
-    if search_query or any(
-        word in lowered
-        for word in ("search", "web", "internet", "news", "szukaj", "wiadomości", "wiadomosci")
+    if (
+        search_query
+        or re.search(r"\bweb\b", lowered)
+        or any(
+            word in lowered for word in ("search", "internet", "news", "szukaj", "wiadomości", "wiadomosci")
+        )
     ):
         tools.append("web_search")
     fetch_urls = prompt_public_urls(text)
@@ -188,7 +191,14 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         )
         and not tools
     ):
-        tools = ["coding_local"]
+        chosen = (
+            "codex"
+            if re.search(r"\bcodex\b", lowered)
+            else "cursor"
+            if re.search(r"\bcursor\b", lowered)
+            else "local"
+        )
+        tools = ["coding_" + chosen]
     notices = {
         "on_success": _has(lowered, ("notify on success", "powiadom o sukcesie")),
         "on_failure": _has(
@@ -208,7 +218,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
             "Prefer local information. Do not invent tool results. "
             "Use the goal supplied with each execution."
         ),
-        model=model,
+        model="" if tools in (["coding_codex"], ["coding_cursor"]) else model,
         provider="local-openai-compatible",
         runtime="openai-compatible",
         execution_target="container",
@@ -222,9 +232,11 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         cron_expr=cron_expr,
         interval_seconds=interval,
         run_at=run_at,
-        permission_profile="agent_local",
+        permission_profile="agent_external_coding"
+        if tools in (["coding_codex"], ["coding_cursor"])
+        else "agent_local",
         enabled=False,
-        require_approval=_has(lowered, _APPROVAL),
+        require_approval=_has(lowered, _APPROVAL) or tools in (["coding_codex"], ["coding_cursor"]),
         workflow_mode="gated" if _has(lowered, _GATED) else "sequential",
         tool_calling="bounded" if _has(lowered, _TOOL_CALLING) else "none",
         output_expectation="A short report the user can inspect in Runs.",

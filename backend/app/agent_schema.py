@@ -7,6 +7,7 @@ from uuid import UUID
 from croniter import croniter
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
+from app.agent_coding_policy import CODING_TOOLS, coding_provider, external_coding
 from app.agent_tools import AGENT_TOOLS, agent_tool
 from app.db import utcnow
 from app.http_fetch import reviewed_urls
@@ -76,7 +77,7 @@ class AgentSettings(BaseModel):
     cron_expr: str = Field(default="", max_length=120)
     interval_seconds: int | None = Field(default=None, ge=60, le=31536000)
     run_at: datetime | None = None
-    permission_profile: Literal["agent_local"] = "agent_local"
+    permission_profile: Literal["agent_local", "agent_external_coding"] = "agent_local"
     project_id: UUID | None = None
     execution_target: Literal["container"] = "container"
     maximum_runtime: int = Field(default=600, ge=5, le=3600)
@@ -93,15 +94,17 @@ class AgentSettings(BaseModel):
         self.tools = list(dict.fromkeys(self.tools))
         if any(tool not in AGENT_TOOLS for tool in self.tools):
             raise ValueError("Unknown agent tool")
-        if "coding_local" in self.tools:
-            if self.tools != ["coding_local"] or self.tool_calling != "none":
-                raise ValueError(
-                    "Local coding is a project workflow; select it alone without report tool calling"
-                )
+        if set(self.tools).intersection(CODING_TOOLS):
+            if not coding_provider(self.tools) or self.tool_calling != "none":
+                raise ValueError("Coding is a project workflow; select it alone without report tool calling")
             if len(self.goal) > 10000:
-                raise ValueError("Local coding goals must be at most 10000 characters")
+                raise ValueError("Coding goals must be at most 10000 characters")
             if self.enabled and not self.project_id:
                 raise ValueError("Choose the project this coding agent may modify before enabling it")
+        if external_coding(self.tools) != (self.permission_profile == "agent_external_coding"):
+            raise ValueError(
+                "External coding requires its explicit external-coding permission profile; local agents cannot inherit it"
+            )
         self.skills = list(dict.fromkeys(self.skills))
         if self.skills:
             from app.agent_tools import effective_permissions
@@ -142,7 +145,7 @@ class AgentSettings(BaseModel):
                 raise ValueError("web_search requires an explicit public search query before activation")
             if {"http_fetch", "browser"}.intersection(self.tools) and not self.fetch_urls:
                 raise ValueError("Page tools require 1 to 3 explicit public URLs before activation")
-            if not self.model:
+            if not self.model and not external_coding(self.tools):
                 raise ValueError("Select a local model before enabling the agent")
             unavailable = [name for name in self.tools if not agent_tool(name).operational]
             if unavailable:

@@ -70,3 +70,7 @@ ordinary child Run and never promote entries into another scope. Model arguments
 cannot change the target. See [retrieval bounds and retention](memory.md#explicit-project-memory).
 
 [GitHub repository reports](agent-github-reports.md) use explicitly reviewed connector scopes, native read-only child Runs and bounded local-model context. Scope persistence is migrated in 0023; changed or disconnected targets stop execution.
+
+## External coding providers
+
+Coding agents can select Codex or Cursor as an exclusive project tool. Review the external-coding profile and source-sharing disclosure before activation. New external factory drafts require approval before each execution. The CLI uses its existing login/default model; the Local AI model selector applies only to Local coding. No autonomous commit, push or merge is introduced. See [contracts and verification](agent-coding-providers.md).

@@ -6,6 +6,7 @@ PROFILES: dict[str, list[str]] = {
     "read_only": ["filesystem_read", "git_read"],
     "agent_minimal": ["filesystem_read"],
     "agent_local": [],
+    "agent_external_coding": [],  # Grants come from the explicitly reviewed coding tool.
     "agent_research": ["filesystem_read", "network_read"],
     "image_generation": ["filesystem_read", "workspace_write"],
     "coding_standard": [

@@ -31,6 +31,16 @@ import {
   WorkflowModeChoiceList,
 } from "./AgentPolicyLists";
 
+const codingNames = ["coding_local", "coding_cursor", "coding_codex"];
+const isCoding = (tools: string[]) =>
+  tools.some((name) => codingNames.includes(name));
+const isExternalCoding = (tools: string[]) =>
+  tools.some((name) => ["coding_cursor", "coding_codex"].includes(name));
+const agentModelLabel = (agent: { tools: string[]; model: string }) =>
+  isExternalCoding(agent.tools)
+    ? `${agent.tools[0] === "coding_codex" ? "Codex" : "Cursor"} · EXTERNAL · CLI default model`
+    : agent.model || "No model selected";
+
 type Trigger = "manual" | "interval" | "cron" | "datetime";
 interface Agent {
   id: string;
@@ -40,6 +50,7 @@ interface Agent {
   system_prompt: string;
   model: string;
   tools: string[];
+  permission_profile?: "agent_local" | "agent_external_coding";
   github?: { connector_id: string; repository: string } | null;
   search_query: string;
   fetch_urls: string[];
@@ -101,19 +112,23 @@ const schedule = (agent: Agent) =>
 function toolTitle(tool: Tool) {
   return tool.name === "github_read"
     ? "GitHub repository"
-    : tool.name === "coding_local"
-      ? "Local coding"
-      : tool.name === "remember_report"
-        ? "Remember reports"
-        : tool.name === "remember_workflow"
-          ? "Remember workflow observations"
-          : tool.name === "http_fetch"
-            ? "HTTP fetch"
-            : tool.name === "project_memory"
-              ? "Project memory"
-              : tool.name === "browser"
-                ? "Browse public pages"
-                : tool.name;
+    : tool.name === "coding_cursor"
+      ? "Cursor coding · EXTERNAL"
+      : tool.name === "coding_codex"
+        ? "Codex coding · EXTERNAL"
+        : tool.name === "coding_local"
+          ? "Local coding"
+          : tool.name === "remember_report"
+            ? "Remember reports"
+            : tool.name === "remember_workflow"
+              ? "Remember workflow observations"
+              : tool.name === "http_fetch"
+                ? "HTTP fetch"
+                : tool.name === "project_memory"
+                  ? "Project memory"
+                  : tool.name === "browser"
+                    ? "Browse public pages"
+                    : tool.name;
 }
 
 function toggleValue(selected: string[], value: string, enabled: boolean) {
@@ -341,7 +356,9 @@ function AgentCards({
               }}
             >
               <div className="row">
-                <span className="tiny-tag">LOCAL</span>
+                <span className="tiny-tag">
+                  {isExternalCoding(agent.tools) ? "EXTERNAL" : "LOCAL"}
+                </span>
                 <span className="tiny-tag">
                   {agent.enabled ? "Enabled" : "Paused / draft"}
                 </span>
@@ -358,7 +375,7 @@ function AgentCards({
               </h2>
               <p className="agent-goal">{agent.goal}</p>
               <p className="muted">
-                {schedule(agent)} · {agent.model || "No model selected"}
+                {schedule(agent)} · {agentModelLabel(agent)}
               </p>
               <p>Last: {agent.last_status || "Never run"}</p>
               <small className="muted">Next: {time(agent.next_run_at)}</small>
@@ -418,7 +435,7 @@ export function Agents() {
   });
   return (
     <>
-      <PageTitle eyebrow="AUTOMATION / LOCAL AGENTS" title="Agents">
+      <PageTitle eyebrow="AUTOMATION / AGENTS" title="Agents">
         Persistent instructions, explicit tools, and a history for every
         execution.
       </PageTitle>
@@ -584,7 +601,11 @@ export function AgentDetail() {
   return (
     <>
       <PageTitle
-        eyebrow="AGENT / LOCAL EXECUTION"
+        eyebrow={
+          isExternalCoding(agent.tools)
+            ? "AGENT / EXTERNAL CODING"
+            : "AGENT / LOCAL EXECUTION"
+        }
         title={agent.name}
         action={
           <Link className="button secondary" to="/agents">
@@ -593,7 +614,7 @@ export function AgentDetail() {
         }
       >
         {agent.enabled ? "Enabled" : "Paused / draft"} · {schedule(agent)} ·{" "}
-        {agent.model || "No model selected"}
+        {agentModelLabel(agent)}
         {agent.skills?.length ? ` · Skills: ${agent.skills.join(", ")}` : ""}
       </PageTitle>
       <section className="panel agent-form">
@@ -629,8 +650,8 @@ export function AgentDetail() {
           {agent.require_approval
             ? " Each workflow waits for an explicit approval before any step is published. Approve and queue or Deny stays here and does not call Run now."
             : ""}
-          {agent.tools.includes("coding_local")
-            ? " Local coding explores the linked project in a fresh worktree, prepares changes and runs configured checks. Results stay in Coding for review; it never commits or publishes."
+          {isCoding(agent.tools)
+            ? " Coding explores the linked project in a fresh worktree, prepares changes and runs configured checks. Results stay in Coding for review; it never commits or publishes."
             : agent.workflow_mode === "gated"
               ? " Gated mode parks the report after context tools so you can inspect those artifacts first."
               : " Sequential mode runs saved context tools then the report, each as its own Run."}
@@ -690,10 +711,8 @@ export function AgentDetail() {
       <AgentEditor key={agent.id} agent={agent} active={active} />
       {agent.runs?.length ? (
         <>
-          {!agent.tools.includes("coding_local") && (
-            <AgentLatestReport runs={agent.runs} />
-          )}
-          {agent.tools.includes("coding_local") && agent.runs?.[0]?.task_id && (
+          {!isCoding(agent.tools) && <AgentLatestReport runs={agent.runs} />}
+          {isCoding(agent.tools) && agent.runs?.[0]?.task_id && (
             <Link
               className="button secondary"
               to={`/coding/${agent.runs[0].task_id}`}
@@ -806,13 +825,22 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             onChange={(e) => update("name", e.target.value)}
           />
         </label>
-        <LlamaModels
-          value={values.model}
-          models={provider.data?.models ?? []}
-          onSelect={(model) => update("model", model)}
-          onBusy={setModelBusy}
-          busy={active || save.isPending}
-        />
+        {isExternalCoding(values.tools) ? (
+          <p className="notice">
+            EXTERNAL coding uses the selected CLI's default model and existing
+            login. Your goal, guidance and relevant project files are shared
+            with {values.tools[0] === "coding_codex" ? "Codex" : "Cursor"}.
+            Enable only after reviewing this project scope.
+          </p>
+        ) : (
+          <LlamaModels
+            value={values.model}
+            models={provider.data?.models ?? []}
+            onSelect={(model) => update("model", model)}
+            onBusy={setModelBusy}
+            busy={active || save.isPending}
+          />
+        )}
         <label className="agent-wide">
           Description
           <input
@@ -835,7 +863,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           Goal
           <textarea
             required
-            maxLength={values.tools.includes("coding_local") ? 10000 : 16000}
+            maxLength={isCoding(values.tools) ? 10000 : 16000}
             rows={3}
             value={values.goal}
             onChange={(e) => update("goal", e.target.value)}
@@ -915,7 +943,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             onChange={(e) => update("maximum_runtime", Number(e.target.value))}
           />
         </label>
-        {!values.tools.includes("coding_local") && (
+        {!isCoding(values.tools) && (
           <label className="agent-wide">
             Expected output
             <textarea
@@ -941,7 +969,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             only after a successful report. Bounded tool calling is extra
             registry calls during the report, not a shell or browser.
           </p>
-          {!values.tools.includes("coding_local") && (
+          {!isCoding(values.tools) && (
             <ToolCallingChoiceList
               mode={values.tool_calling ?? "none"}
               onChange={(mode) => update("tool_calling", mode)}
@@ -1088,10 +1116,12 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         </div>
         <div className="agent-wide">
           <h3>Tools</h3>
-          {values.tools.includes("coding_local") && (
+          {isCoding(values.tools) && (
             <p className="notice">
-              Local coding uses the goal as its task and the selected local
-              model. Each execution has an isolated branch, diff and validation
+              {isExternalCoding(values.tools)
+                ? "External coding uses the goal as its task and the selected CLI."
+                : "Local coding uses the goal as its task and the selected local model."}{" "}
+              Each execution has an isolated branch, diff and validation
               results. Gated mode asks before starting. No automatic commit or
               publication.
             </p>
@@ -1106,16 +1136,31 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               tools={tools.data}
               selected={values.tools}
               onChange={(names) => {
-                const addedCoding =
-                  names.includes("coding_local") &&
-                  !values.tools.includes("coding_local");
-                const selected =
-                  addedCoding ||
-                  (names.length === 1 && names[0] === "coding_local")
-                    ? ["coding_local"]
-                    : names.filter((name) => name !== "coding_local");
-                update("tools", selected);
-                if (addedCoding) update("tool_calling", "none");
+                const addedCoding = names.find(
+                  (name) =>
+                    codingNames.includes(name) && !values.tools.includes(name),
+                );
+                const selected = addedCoding
+                  ? [addedCoding]
+                  : names.length === 1 && codingNames.includes(names[0])
+                    ? names
+                    : names.filter((name) => !codingNames.includes(name));
+                setValues((current) => ({
+                  ...current,
+                  tools: selected,
+                  permission_profile: isExternalCoding(selected)
+                    ? "agent_external_coding"
+                    : "agent_local",
+                  ...(addedCoding
+                    ? {
+                        ...(isExternalCoding(selected) ? { model: "" } : {}),
+                        tool_calling: "none" as const,
+                        require_approval:
+                          isExternalCoding(selected) ||
+                          current.require_approval,
+                      }
+                    : {}),
+                }));
               }}
             />
           )}

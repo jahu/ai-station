@@ -6,6 +6,7 @@ from croniter import croniter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.agent_coding_policy import coding_provider, external_coding
 from app.agent_schema import AgentSettings
 from app.agent_tools import agent_tool, effective_permissions
 from app.db import utcnow
@@ -43,7 +44,9 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
     definition = definition or AgentSettings.model_validate(
         {key: getattr(agent, key) for key in AgentSettings.model_fields} | {"enabled": False}
     )
-    if not definition.model or any(not agent_tool(name).operational for name in definition.tools):
+    if (not definition.model and not external_coding(definition.tools)) or any(
+        not agent_tool(name).operational for name in definition.tools
+    ):
         raise ValueError("Agent model or tools are not operational")
     if "web_search" in definition.tools and not definition.search_query:
         raise ValueError("web_search requires an explicit public search query")
@@ -57,7 +60,7 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         steps = planned_steps(definition)
     except SkillError as exc:
         raise ValueError(str(exc)) from exc
-    endpoint = model_endpoint(definition.model, session)
+    endpoint = "" if external_coding(definition.tools) else model_endpoint(definition.model, session)
     task = create_task(
         session,
         title=agent.name,
@@ -84,11 +87,15 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         retry_class="inspect",
         triggered_by=triggered_by,
     )
+    run.metadata_json = {
+        **run.metadata_json,
+        "execution_location": "external" if external_coding(definition.tools) else "local",
+    }
     now = utcnow()
     agent.last_run_at = now
     if (
         definition.require_approval
-        or "coding_local" in definition.tools
+        or coding_provider(definition.tools) is not None
         and definition.workflow_mode == "gated"
     ):
         from app.approvals import request_run_approval
@@ -107,6 +114,16 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
                 "workflow_mode": definition.workflow_mode,
                 "steps": [step["key"] for step in steps],
                 "triggered_by": triggered_by,
+                **(
+                    {
+                        "project_id": agent.project_id,
+                        "execution_location": "external",
+                        "coding_provider": coding_provider(definition.tools),
+                        "source_scope": "Goal, reviewed guidance and relevant source from the linked project are shared with the selected external coding provider.",
+                    }
+                    if external_coding(definition.tools)
+                    else {}
+                ),
             },
         )
     else:
@@ -131,7 +148,7 @@ def workflow_retryable(session: Session, source: Run) -> bool:
         return False
     children = (
         session.scalars(select(Run).where(Run.task_id == source.task_id, Run.id != source.id))
-        if "coding_local" in source.parameters.get("definition", {}).get("tools", [])
+        if coding_provider(source.parameters.get("definition", {}).get("tools", [])) is not None
         else session.scalars(select(Run).where(Run.parent_run_id == source.id))
     )
     return any(child.status in {RunStatus.FAILED.value, RunStatus.INTERRUPTED.value} for child in children)

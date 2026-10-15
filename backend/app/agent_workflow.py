@@ -10,6 +10,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
+from app.agent_coding_policy import coding_provider
 from app.agent_schema import AgentSettings
 from app.agent_tools import RETENTION_TOOLS, WORKFLOW_MEMORY_TOOLS, agent_tool
 from app.artifacts import register_file
@@ -35,8 +36,8 @@ STEP_KEYS = CONTEXT_STEPS | {"report"}
 
 
 def planned_steps(definition: AgentSettings) -> list[dict]:
-    if "coding_local" in definition.tools:
-        return [{"key": "coding_local", "gate": "none"}]
+    if coding_provider(definition.tools) is not None:
+        return [{"key": definition.tools[0], "gate": "none"}]
     steps = []
     for name in definition.tools:
         if name in RETENTION_TOOLS:
@@ -75,7 +76,7 @@ def workflow_view(session, run: Run) -> dict | None:
         if child.executor_type in {"agent_tool", "agent", "browser", "github_read"}
     ]
     definition = parent.parameters.get("definition") or {}
-    if "coding_local" in definition.get("tools", []):
+    if coding_provider(definition.get("tools", [])) is not None:
         children = list(
             session.scalars(
                 select(Run)
@@ -91,7 +92,7 @@ def workflow_view(session, run: Run) -> dict | None:
             {
                 "run_id": child.id,
                 "key": child.capability
-                if "coding_local" in definition.get("tools", [])
+                if coding_provider(definition.get("tools", [])) is not None
                 else child.parameters.get("tool") or "report",
                 "gate": child.parameters.get("gate", "none"),
                 "status": child.status,
@@ -114,7 +115,7 @@ def active_workflow_child(session, run: Run) -> Run | None:
         for child in session.scalars(select(Run).where(Run.parent_run_id == parent.id))
         if child.status in ACTIVE
     ]
-    if "coding_local" in parent.parameters.get("definition", {}).get("tools", []):
+    if coding_provider(parent.parameters.get("definition", {}).get("tools", [])) is not None:
         children = list(
             session.scalars(
                 select(Run).where(Run.task_id == parent.task_id, Run.id != parent.id, Run.status.in_(ACTIVE))
@@ -207,7 +208,7 @@ def publish_steps(session, parent: Run) -> list[Run]:
         from app.agent_github import reviewed_connector
 
         github_target = reviewed_connector(session, definition.github)
-    if "coding_local" in definition.tools:
+    if coding_provider(definition.tools) is not None:
         from app.agent_coding import publish_coding
 
         return [publish_coding(session, parent, definition)]

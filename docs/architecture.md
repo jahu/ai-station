@@ -326,3 +326,5 @@ verified completion gate TXT/SRT/JSON artifact publication.
 [Chat recording](chat-recording.md) is browser-side capture and an ordinary artifact upload; no workload executes until Send. It reuses the existing typed local transcription and Chat graph, without another executor or database migration.
 
 [Conversation archive](conversation-archive.md) adds a reversible metadata lifecycle with migration 0024. Archived history remains inspectable, while idle/version guards prevent new execution until restoration. Related Tasks, Runs, artifacts and memory retain their original ownership.
+
+[Agent coding providers](agent-coding-providers.md) reuse the same worktree/proposal/validation chain for explicitly selected Local AI, Codex and Cursor tools. A frozen exclusive tool and permission profile bind the parent to one provider; no external fallback or separate coding executor architecture is added.
