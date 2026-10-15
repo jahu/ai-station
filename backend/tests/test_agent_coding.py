@@ -233,7 +233,7 @@ def test_deadline_heartbeat_requests_owned_run_cancellation(monkeypatch):
         preparation = session.scalar(select(Run).where(Run.parent_run_id == parent["id"]))
         preparation.parameters = {
             **preparation.parameters,
-            "agent_coding_deadline": (utcnow() + timedelta(seconds=0.1)).isoformat(),
+            "agent_coding_deadline": (utcnow() + timedelta(minutes=1)).isoformat(),
         }
         session.commit()
 
@@ -241,6 +241,12 @@ def test_deadline_heartbeat_requests_owned_run_cancellation(monkeypatch):
             def execute(self, session, run):
                 transition(session, run, RunStatus.PREPARING, event_type="test.preparing")
                 transition(session, run, RunStatus.RUNNING, event_type="test.running")
+                # Exercise expiry while executing, rather than racing the
+                # queue's pre-dispatch deadline guard on busy build machines.
+                run.parameters = {
+                    **run.parameters,
+                    "agent_coding_deadline": (utcnow() + timedelta(seconds=0.1)).isoformat(),
+                }
                 session.commit()
                 deadline = time.monotonic() + 3
                 while time.monotonic() < deadline:
