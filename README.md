@@ -416,3 +416,10 @@ build/test presets. Existing projects retain their settings; enable these option
 under **Project settings → Validation commands and agent guidance**. Saved argv
 always take precedence. Missing tests, dependency failures and skipped checks are
 shown explicitly. See [automatic project checks](docs/coding-boundary.md).
+
+Successful checks with a build command now capture a bounded root `dist` output
+as a ZIP Artifact. **Download build** and **View in Library** appear in Coding
+progress and Coding/Work review. The archive records its validation/project
+provenance. Other output directories, unsafe links and oversized builds report
+that export is unavailable; actual command results stay visible. Generated
+HTML/JavaScript is downloaded as data. See [build artifacts](docs/coding-build-artifacts.md).

@@ -11,8 +11,10 @@ import tempfile
 import time
 from pathlib import Path
 
+from ai_station_runner.build_archive import capture_build
 from ai_station_runner.coding_sandbox import validation_argv, validation_policy, write_policy
 from ai_station_runner.gitinspect import Repository
+from ai_station_runner.owned_children import stop_owned_children
 from ai_station_runner.project_manifests import verify_manifests
 from ai_station_runner.validation import load_request, request_path
 from ai_station_runner.worktrees import load_manifest, owned_path
@@ -125,6 +127,18 @@ def validate(run_id):
         "succeeded": all(result["exit_code"] == 0 for result in results),
         "scratch_relative": str(scratch.relative_to(workspace)),
     }
+    build_path = request_path(run_id, "build.zip")
+    if all(result["exit_code"] == 0 for result in results) and any(
+        result["kind"] == "build" for result in results
+    ):
+        # A command can exit while a background helper retains workspace access.
+        # Drain only this wrapper's verified session/group before reading output.
+        stop_owned_children()
+    exported = capture_build(workspace, build_path, results)
+    if exported is not None:
+        if exported["status"] == "ready":
+            exported["relative_path"] = f"runtime/validation/{run_id}.build.zip"
+        report["build_export"] = exported
     path = request_path(run_id, "report.json")
     with path.open("x") as handle:
         os.chmod(path, 0o600)

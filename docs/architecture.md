@@ -365,3 +365,11 @@ The ordinary coding Task adds a read-only project-plan Run, serial typed
 Python/Node dependency Runs and dependency-gated isolated validation. Manifest
 hashes and source ownership bind the graph; manually configured argv remain
 trusted project configuration. See [project preparation](coding-boundary.md).
+
+## Coding build artifacts
+
+Successful project validation can capture bounded root `dist` output as a ZIP
+within its owned native process and existing worktree lock. The worker verifies
+report identity, size/hash and ZIP members before registering an ordinary archive
+Artifact. Coding/Work link to its download and Library provenance. No server or
+HTML execution is added. See [the contract](coding-build-artifacts.md).

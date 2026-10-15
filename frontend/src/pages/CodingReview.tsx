@@ -10,6 +10,7 @@ import rehypeHighlight from "rehype-highlight";
 import { useListKeyboard } from "./useListKeyboard";
 import { ReviewChoiceList } from "./ReviewChoiceList";
 import { ValidationResults } from "./ProjectResults";
+import CodingBuildArtifact from "./CodingBuildArtifact";
 
 type Review = {
   exploration?: {
@@ -452,6 +453,7 @@ function ValidationActions({
       </p>
       <ErrorNotice error={validation.error || events.error || repair.error} />
       <ValidationResults events={recorded} />
+      <CodingBuildArtifact run={validation.data} />
       {validation.data?.metadata?.repair_budget_exhausted === true && (
         <p className="notice">
           Automatic repair limit reached. Inspect the latest diff and failures

@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 from app.artifacts import register_file
+from app.build_artifacts import register_build
 from app.events import append_event
 from app.permissions import require
 from app.runner_client import RunnerClient, RunnerError
@@ -128,6 +129,7 @@ class ProjectValidationExecutor:
                 run_id=run.id,
                 metadata={"project_id": run.project_id},
             )
+        register_build(session, run, report)
         for index, result in enumerate(report["commands"]):
             append_event(session, run.id, "validation.completed", {"index": index, **result})
         run.metadata_json = {**run.metadata_json, "validation": report}
