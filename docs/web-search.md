@@ -8,15 +8,27 @@ A private SearXNG container provides the JSON search API without account credent
 
 References: [SearXNG Search API](https://docs.searxng.org/dev/search_api.html), [server configuration](https://docs.searxng.org/admin/settings/settings_server.html), [container installation](https://docs.searxng.org/admin/installation-docker.html). Search engines can throttle requests; such failures remain visible. Normal tests use fake HTTP results and never access the internet.
 
-The default profile explicitly enables Bing and Yahoo in `config/search/settings.yml`.
-Listing an engine under `keep_only` does not override its upstream disabled flag.
-On 2026-10-14 the previous profile returned no sources: Brave was rate-limited,
-DuckDuckGo required CAPTCHA, and Bing remained disabled by the pinned defaults.
-The replacement profile returned 11 and 17 results for two deliberate public
-queries in an isolated instance of the same pinned image, from Bing/Yahoo with
-no engine failures. No CAPTCHA or provider access controls are bypassed. This
-is current availability evidence; future provider failures remain visible and
-the operator-configured `AI_STATION_WEB_SEARCH_URL` override is unchanged.
+The default profile explicitly enables Yahoo in `config/search/settings.yml`.
+`keep_only` does not override an upstream disabled flag, so it is enabled explicitly.
+On 2026-10-15, an actual user question about a Breaking Bad cast member reproduced
+Bing returning dictionary/ranking pages for just “aktor”, and unrelated results
+for an English multiword query. Those responses had no engine error. Bing was
+removed from the default profile; Yahoo returned relevant article results for a
+concise English query in the same pinned SearXNG image. This is availability
+and relevance evidence for those queries, not a permanent provider guarantee.
+
+Results are checked against query terms, ranked before the five-source limit and
+multi-topic queries reject matches to just one generic word. This is a lexical
+relevance check, not verification of the truth or completeness of article text.
+If a Chat search returns no usable sources, the selected, permission-bound model
+may rewrite only the explicitly approved query once into concise search keywords.
+The rewrite receives no history, memory, attachments or source instructions; it
+has a 30-second/256-token/300-character bound and cannot call tools. The original
+query and actual retry are recorded in events, the artifact and source details.
+No final factual completion runs if relevant sources are still missing. Stop
+closes both search and rewrite inference; there is no background retry loop.
+Search-informed image briefs keep their separately reviewed short query.
+The operator-configured `AI_STATION_WEB_SEARCH_URL` override remains supported.
 
 ## Verification
 
