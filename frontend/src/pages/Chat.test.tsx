@@ -856,3 +856,74 @@ it.each(["wan_video", "project_setup", "orchestrator", "local_chat"])(
     );
   },
 );
+
+it("keeps project automation out of a Chat follow-up", async () => {
+  const writes: Record<string, unknown>[] = [];
+  const conversation = {
+    id: "plain",
+    title: "Plain chat",
+    provider: builtin.key,
+    model: "test-model",
+    execution_mode: "chat",
+    system_prompt: "",
+    temperature: 0.7,
+    max_tokens: 300,
+    settings_version: 1,
+    messages: [],
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        writes.push(JSON.parse(String(init.body)));
+        return { ok: true, json: async () => ({ conversation_id: "plain" }) };
+      }
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/chat/providers")
+            ? [builtin]
+            : path.includes("/chat/providers/")
+              ? builtin
+              : path.endsWith("/llama")
+                ? { models: [], instances: [] }
+                : path.endsWith("/hardware")
+                  ? { gpus: [] }
+                  : path.endsWith("/chat/conversations")
+                    ? [conversation]
+                    : path.includes("/chat/conversations/")
+                      ? conversation
+                      : [],
+      };
+    }),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter initialEntries={["/chat/plain"]}>
+        <Routes>
+          <Route path="/chat/:id" element={<Chat />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.change(await screen.findByRole("textbox", { name: "Message" }), {
+    target: { value: "A normal follow-up" },
+  });
+  await vi.waitFor(() =>
+    expect(
+      (screen.getByRole("button", { name: "Send" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Send" }));
+  await vi.waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0].execution_mode).toBe("chat");
+  expect(writes[0].project_defaults).toBeUndefined();
+  expect(
+    screen.queryByText(/New projects include public package preparation/),
+  ).toBeNull();
+});

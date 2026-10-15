@@ -282,3 +282,13 @@ IP/TLS authority, no redirects and bounded responses. Versions with unsafe sourc
 or missing SHA-512 pins never enter the cache. Staged lockfiles are checked before
 exclusive publication; existing user locks are never removed or rewritten. The
 shared dependency deadline, ownership, Stop and recovery apply to every phase.
+
+
+Automatic Coding dependency/check policies are explicit project configuration,
+not model output. Migration 0025 preserves manual defaults for existing projects.
+New managed-project requests carry disclosed choices; old receipts/snapshots keep
+their permissions. The read-only planning RPC requires a ready owned worktree,
+canonical bounded manifests and only read/Git permissions. Fixed preset argv,
+manifest hashes and dependency prerequisites gate isolated execution. Each child
+records its permissions; public registry access is confined to existing typed
+installers. Stop/deadlines/recovery and reviewed-commit gates cover all stages.

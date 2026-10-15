@@ -55,7 +55,7 @@ def project_build_request(params):
             raise HTTPException(
                 422, "Choose Create project & build and explicitly allow sharing with Cursor/Codex"
             )
-        scope = {"name": name, "model": "auto"}
+        scope = {"name": name, "model": "auto", **(params.get("project_defaults") or {})}
     try:
         scope = ProjectBuildScope.model_validate(scope)
     except ValidationError as exc:

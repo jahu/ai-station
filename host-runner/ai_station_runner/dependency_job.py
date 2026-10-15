@@ -23,6 +23,7 @@ from ai_station_runner.dependency_manifest import (
 )
 from ai_station_runner.gitinspect import Repository, git_environment
 from ai_station_runner.gitops import GitError
+from ai_station_runner.project_manifests import verify_manifests
 from ai_station_runner.worktrees import load_manifest, owned_path
 
 TIMEOUT = 600
@@ -143,7 +144,8 @@ def install(run_id):
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError as exc:
         raise GitError("Worktree is in use; wait for the active operation") from exc
-    if node_project(workspace):
+    verify_manifests(workspace, body.manifest_snapshot)
+    if body.ecosystem == "node" or body.ecosystem == "auto" and node_project(workspace):
         install_node(run_id, body, record, workspace, repository)
         return
     venv = workspace / ".venv"

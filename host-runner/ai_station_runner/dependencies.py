@@ -4,6 +4,7 @@ import fcntl
 import json
 import os
 import sys
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -12,6 +13,7 @@ from ai_station_runner.coding_sandbox import cursor_sandbox_binary
 from ai_station_runner.config import get_settings
 from ai_station_runner.gitops import GitError
 from ai_station_runner.processes import ProcessNotOwned
+from ai_station_runner.project_manifests import ManifestSnapshot
 from ai_station_runner.worktrees import inspect_worktree, owned_path
 
 PERMISSIONS = {
@@ -29,6 +31,8 @@ class DependencyRequest(BaseModel):
     project_id: UUID
     worktree_run_id: UUID
     permissions: list[str] = Field(max_length=5)
+    ecosystem: Literal["auto", "python", "node"] = "auto"
+    manifest_snapshot: ManifestSnapshot | None = None
 
 
 def directory(run_id):

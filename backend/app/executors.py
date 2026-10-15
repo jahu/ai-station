@@ -36,6 +36,7 @@ from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
 from app.paths import safe_join, validate_relative
 from app.photo_executor import PhotoPipeExecutor
+from app.project_checks import ProjectPlanExecutor
 from app.project_dependencies import ProjectDependenciesExecutor
 from app.project_setup import ProjectSetupExecutor
 from app.providers import ProviderError, stream_chat
@@ -316,6 +317,7 @@ EXECUTORS = {
     "worktree_remove": WorktreeRemoveExecutor(),
     "project_validation": ProjectValidationExecutor(),
     "project_dependencies": ProjectDependenciesExecutor(),
+    "project_plan": ProjectPlanExecutor(),
     "cursor_proposal": CursorProposalExecutor(),
     "codex_proposal": CodexProposalExecutor(),
     "local_proposal": LocalProposalExecutor(),

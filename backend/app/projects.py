@@ -45,6 +45,8 @@ class ProjectSettings(BaseModel):
     test_commands: Commands = Field(default_factory=list)
     lint_commands: Commands = Field(default_factory=list)
     build_commands: Commands = Field(default_factory=list)
+    auto_install_dependencies: StrictBool = False
+    auto_validate: StrictBool = False
     agent_rules: str = Field(default="", max_length=32000)
     pr_policy: PRPolicy = Field(default_factory=PRPolicy)
 

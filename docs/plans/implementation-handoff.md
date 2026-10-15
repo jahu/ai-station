@@ -165,3 +165,16 @@ Use frozen explicit project policies, the same Task/child-Run graph, tested type
 installers and saved-command authority. This increment is not implemented yet;
 do not mark the overall platform goal complete or claim LLM-generated React
 acceptance from the manually prepared #310 fixture.
+
+
+## Automatic project checks implementation in progress
+
+The feat/coding-auto-project-checks worktree implements migration 0025, persisted
+opt-in project policies, frozen Coding/Work/agent snapshots, bounded typed native
+planning and same-Task dependency/check gating. New managed UI defaults are
+explicit; existing/old snapshots remain manual. Actual React/Vite automatic
+plan→install→build passed with a synthetic coding source. Do not claim a real
+LLM-generated website from that evidence. Acceptance is under
+`data/acceptance/coding-auto-project-checks-20261015`. Complete full checks, browser
+review, PR to develop and deployment before marking this increment delivered;
+then perform the actual one-conversation local long-context coding smoke.

@@ -7,7 +7,7 @@ from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 from sqlalchemy.orm import Session
 
 from app.artifacts import register_file
@@ -21,8 +21,13 @@ from app.state import RunStatus
 router = APIRouter(prefix="/api/projects")
 
 
-class ProjectName(BaseModel):
+class ProjectAutomation(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    auto_install_dependencies: StrictBool = False
+    auto_validate: StrictBool = False
+
+
+class ProjectName(ProjectAutomation):
     name: str = Field(min_length=1, max_length=200)
 
     @field_validator("name")
@@ -54,7 +59,15 @@ def enqueue_project(session, body: ProjectName, *, task=None, parent_run_id=None
         execution_target="host",
         permissions=["workspace_write", "git_write"],
         retry_class="inspect",
-        parameters={"project_id": str(uuid4()), "settings": ProjectSettings(name=body.name).model_dump()},
+        parameters={
+            "project_id": str(uuid4()),
+            "settings": ProjectSettings(
+                name=body.name,
+                preferred_executor="local",
+                auto_install_dependencies=body.auto_install_dependencies,
+                auto_validate=body.auto_validate,
+            ).model_dump(),
+        },
         parent_run_id=parent_run_id,
     )
     return run

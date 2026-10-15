@@ -91,6 +91,13 @@ export default function CodingReview({
               validation commands.
             </p>
           )}
+          {typeof run.metadata?.project_plan_run_id === "string" && (
+            <p className="muted">
+              <Link to={`/runs/${run.metadata.project_plan_run_id}`}>
+                Project preparation and detected checks →
+              </Link>
+            </p>
+          )}
           {typeof validation === "string" ? (
             <ValidationActions
               run={run}
@@ -99,10 +106,16 @@ export default function CodingReview({
             />
           ) : (
             <p className="notice">
-              No validation commands were configured. This proposal has not been
-              tested.
+              No completed validation is available yet. This proposal has not
+              been tested.
             </p>
           )}
+          {Array.isArray(run.metadata?.check_warnings) &&
+            run.metadata.check_warnings.map((warning, index) => (
+              <p className="notice" key={index}>
+                {String(warning)}
+              </p>
+            ))}
           {typeof run.metadata?.repair_source_run_id === "string" && (
             <p className="muted">
               This review includes all changes from the task base, including the

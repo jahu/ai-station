@@ -19,6 +19,7 @@ from app.events import append_event
 from app.llama import LoadModel
 from app.models import Artifact, Conversation, Message, Project, Run, RuntimeInstance
 from app.project_build import ProjectBuildScope, project_build_request
+from app.project_setup import ProjectAutomation
 from app.providers import ProviderError
 from app.publication import PublishBody
 from app.reviewed_commits import ReviewedCommit
@@ -166,6 +167,7 @@ class AssistantInputs(BaseModel):
     github: GithubScope | None = None
     coding: CodingScope | None = None
     new_project: ProjectBuildScope | None = None
+    project_defaults: ProjectAutomation | None = None
     commit: CommitScope | None = None
     publish: PublishScope | None = None
     load: LoadModel | None = None
@@ -884,7 +886,12 @@ class AssistantExecutor:
             if name is None:
                 message.content = "Choose Create project and enter its name, for example Weather Station."
             else:
-                child = enqueue_project(session, ProjectName(name=name), task=run.task, parent_run_id=run.id)
+                child = enqueue_project(
+                    session,
+                    ProjectName(name=name, **(run.parameters.get("project_defaults") or {})),
+                    task=run.task,
+                    parent_run_id=run.id,
+                )
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                 message.content = "Creating your project with Git and a Python environment. Its folder and branch settings are managed by AI Station; you can start coding here when it is ready."
         elif plan.action == "github.inspect":

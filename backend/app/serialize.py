@@ -99,6 +99,8 @@ def project_dict(project: Project) -> dict:
         "test_commands": project.test_commands,
         "lint_commands": project.lint_commands,
         "build_commands": project.build_commands,
+        "auto_install_dependencies": project.auto_install_dependencies,
+        "auto_validate": project.auto_validate,
         "agent_rules": project.agent_rules,
         "pr_policy": project.pr_policy,
         "created_at": iso(project.created_at),
