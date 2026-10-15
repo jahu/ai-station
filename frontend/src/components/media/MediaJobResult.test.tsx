@@ -156,3 +156,38 @@ it("shows preparing and stopping shot state without calling it generation", () =
     screen.getByRole("button", { name: "Stop film" }).hasAttribute("disabled"),
   ).toBe(true);
 });
+
+it("keeps scene readiness separate from final video and inspection starts no work", () => {
+  const writes = mount("generating", undefined, {
+    mode: "shots",
+    scenes: [
+      {
+        index: 0,
+        prompt: "Opening forest",
+        duration_seconds: 2,
+        status: "succeeded",
+        completed_segments: 1,
+        total_segments: 1,
+      },
+      {
+        index: 1,
+        prompt: "Closing ocean",
+        duration_seconds: 4,
+        status: "running",
+        completed_segments: 1,
+        total_segments: 2,
+      },
+    ],
+  });
+  fireEvent.click(screen.getByText("1 of 2 scenes ready"));
+  expect(screen.getByLabelText("Scene progress")).toBeTruthy();
+  expect(screen.getByText("Opening forest")).toBeTruthy();
+  expect(screen.getByLabelText("Scene 2 progress").getAttribute("value")).toBe(
+    "1",
+  );
+  expect(screen.getByLabelText("Scene 2 progress").getAttribute("max")).toBe(
+    "2",
+  );
+  expect(screen.queryByLabelText("Generated full video")).toBeNull();
+  expect(writes).toHaveLength(0);
+});

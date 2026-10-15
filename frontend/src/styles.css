@@ -5417,3 +5417,80 @@ section:has(> .memory-grid) > .dashboard-note {
   padding: 0;
   margin: 0.75rem 0;
 }
+
+.video-scene-editor {
+  margin: 18px 0;
+  min-width: 0;
+}
+.video-scene-editor h3 {
+  margin: 0;
+  font-size: 14px;
+}
+.video-scene-cards,
+.media-scene-progress ol {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.video-scene-cards > li,
+.media-scene-progress li {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  background: #141619;
+  min-width: 0;
+}
+.video-scene-cards textarea {
+  margin-top: 8px;
+  width: 100%;
+  resize: vertical;
+}
+.video-scene-actions {
+  gap: 2px;
+}
+.video-scene-actions button {
+  padding: 8px;
+  min-height: 32px;
+}
+.video-scene-duration {
+  display: flex !important;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+.video-scene-duration input {
+  width: 76px;
+  display: inline-block;
+  margin-right: 5px;
+}
+.video-scene-opt-in {
+  display: flex !important;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+}
+.video-scene-opt-in input {
+  width: auto;
+}
+.video-scene-total {
+  display: block;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.media-scene-progress {
+  width: 100%;
+  min-width: 0;
+  margin-bottom: 12px;
+}
+.media-scene-progress summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.media-scene-progress p {
+  overflow-wrap: anywhere;
+}
+.media-scene-progress progress {
+  width: 100%;
+}
