@@ -131,9 +131,6 @@ export interface Status {
     id: string;
     status: string;
     worker_id: string | null;
-    runner_id?: string | null;
-    pid?: number | null;
-    process_group_id?: number | null;
     executor_type: string;
     retry_class: string;
     lease_expires_at: string | null;

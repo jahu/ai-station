@@ -85,9 +85,9 @@ it("disables duplicate requests while pending and keeps retry errors in place", 
   fireEvent.click(screen.getByRole("button", { name: "Run checks again" }));
   expect(
     (
-      screen.getByRole("button", {
+      (await screen.findByRole("button", {
         name: "Queuing checks…",
-      }) as HTMLButtonElement
+      })) as HTMLButtonElement
     ).disabled,
   ).toBe(true);
   finish({
