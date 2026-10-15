@@ -18,12 +18,19 @@ def selected_path(workspace: Path, name: str) -> Path:
     if (
         not isinstance(name, str)
         or len(name) > 300
-        or not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_./ -]*", name)
-        or any(part in {"", ".", ".."} or part.startswith(".") for part in name.split("/"))
+        or (
+            name != ".gitignore"
+            and (
+                not re.fullmatch(r"[A-Za-z0-9_][A-Za-z0-9_./ -]*", name)
+                or any(part in {"", ".", ".."} or part.startswith(".") for part in name.split("/"))
+            )
+        )
         or any(word in name.lower() for word in ("credential", "secret", "id_rsa", "id_ed25519"))
         or name.lower().endswith((".pem", ".key", ".p12", ".pfx"))
     ):
-        raise ValueError("Select ordinary relative source paths; hidden/credential paths are excluded")
+        raise ValueError(
+            "Select relative source paths or the root .gitignore; other hidden/credential paths are excluded"
+        )
     path = workspace / name
     if path.resolve() != path or not path.is_relative_to(workspace):
         raise ValueError("Selected files must not contain symlink redirection")

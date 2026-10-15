@@ -311,3 +311,101 @@ def test_non_json_output_reports_no_application_and_preserves_source(tmp_path):
     with pytest.raises(ValueError, match="non-JSON coding proposal; no files were applied"):
         parse_proposal("I need to extend this file with a multiply function.", selected)
     assert (tmp_path / "example.py").read_text() == "original = True\n"
+
+
+@pytest.mark.parametrize("exists", [False, True])
+def test_root_gitignore_uses_checked_proposals_and_reversible_diff(tmp_path, exists):
+    path = tmp_path / ".gitignore"
+    before = "node_modules/\n" if exists else None
+    if exists:
+        path.write_text(before)
+    selected = read_selected(tmp_path, [".gitignore"])
+    assert selected[0]["content"] == before
+    proposal = parse_proposal(
+        json.dumps(
+            {
+                "summary": "Ignore build output",
+                "files": [{"path": ".gitignore", "content": "node_modules/\ndist/\n"}],
+            }
+        ),
+        selected,
+    )
+    report = apply_proposal(tmp_path, selected, proposal)
+    assert path.read_text() == "node_modules/\ndist/\n"
+    assert report["files"][0]["path"] == ".gitignore"
+    assert "+dist/" in report["files"][0]["diff"]
+    assert report["files"][0]["before_sha256"] == selected[0]["sha256"]
+    result = subprocess.run(
+        ["git", "apply", "--reverse", "--check", "--"],
+        cwd=tmp_path,
+        input=report["files"][0]["diff"],
+        text=True,
+        capture_output=True,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        ".env",
+        ".git/config",
+        ".github/workflows/build.yml",
+        "src/.gitignore",
+        ".gitignore/config",
+        "./.gitignore",
+        "../.gitignore",
+        "/.gitignore",
+        ".gitignore/../app.py",
+        ".gitignore-secret",
+        "secrets/.gitignore",
+    ],
+)
+def test_ignore_exception_does_not_grant_other_hidden_or_credential_paths(tmp_path, name):
+    with pytest.raises(ValueError):
+        read_selected(tmp_path, [name])
+
+
+@pytest.mark.parametrize("redirect", ["symlink", "hardlink"])
+def test_gitignore_redirect_cannot_read_or_replace_external_data(tmp_path, redirect):
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    outside = tmp_path / "outside"
+    outside.write_text("private\n")
+    path = workspace / ".gitignore"
+    selected = read_selected(workspace, [".gitignore"])
+    proposal = parse_proposal(
+        json.dumps({"summary": "Ignore builds", "files": [{"path": ".gitignore", "content": "dist/\n"}]}),
+        selected,
+    )
+    if redirect == "symlink":
+        path.symlink_to(outside)
+    else:
+        path.hardlink_to(outside)
+    with pytest.raises(ValueError):
+        read_selected(workspace, [".gitignore"])
+    with pytest.raises(ValueError):
+        apply_proposal(workspace, selected, proposal)
+    assert outside.read_text() == "private\n"
+
+
+def test_concurrently_changed_gitignore_prevents_other_writes(tmp_path):
+    (tmp_path / ".gitignore").write_text("dist/\n")
+    selected = read_selected(tmp_path, ["new.js", ".gitignore"])
+    proposal = parse_proposal(
+        json.dumps(
+            {
+                "summary": "Add app",
+                "files": [
+                    {"path": "new.js", "content": "export default 1;"},
+                    {"path": ".gitignore", "content": "node_modules/\n"},
+                ],
+            }
+        ),
+        selected,
+    )
+    (tmp_path / ".gitignore").write_text("human change\n")
+    with pytest.raises(ValueError, match="changed after"):
+        apply_proposal(tmp_path, selected, proposal)
+    assert not (tmp_path / "new.js").exists()
+    assert (tmp_path / ".gitignore").read_text() == "human change\n"
