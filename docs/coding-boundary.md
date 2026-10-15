@@ -84,3 +84,15 @@ model conversation acceptance remains separate until that exact test executes.
 Manual project validation still uses explicitly saved commands. Automatic discovery
 currently inspects root manifests and root/tests test files; nested workspace
 package managers and arbitrary script/command generation are not inferred.
+
+## Coding task progress
+
+The coding conversation should distinguish generated code from verified results.
+Show a compact, accessible task progress summary from its existing Run history:
+workspace, local model load when present, code, automatic dependencies and checks.
+Use the latest proposal's Run references so a failed older turn cannot mark a
+successful continuation as failed. All active task stages still block a ready
+verdict. Missing checks must say untested, failed installs/checks remain explicit,
+and Stop/approval states remain visible. Links open the underlying Runs; this
+view performs no inference, scheduling or Git operations. The expanded transcript
+and per-stage history remain available below it.
