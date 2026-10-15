@@ -725,6 +725,7 @@ select {
   margin-left: 10px;
 }
 .table-scroll {
+  position: relative;
   overflow-x: auto;
 }
 .table-scroll:focus-within {
