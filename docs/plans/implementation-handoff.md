@@ -688,3 +688,12 @@ Current release qualification requires full PR review and successful guarded
 0028 rollout; the deployment manifest is authoritative. Current native source is
 byte-identical to PR #337. Full real-model website execution remains separate
 acceptance, and the operator-selected model must be preserved during deployment.
+
+## Added backlog requirement: ordinary Chat page reading (2026-10-22)
+
+Track [Chat page reading](chat-page-reading.md) in product completion. The operator
+reported that asking Local AI to analyze `akademia.ai` for a promotional-image
+prompt returned unrelated search snippets and hypothetical branding. Reuse the
+existing public-page fetch/browser boundaries for ordinary Chat; recognize explicit
+URLs/bare domains, honor Web, record sources, and test the exact request. This
+requirement is planned; adding this record does not implement or qualify it.
