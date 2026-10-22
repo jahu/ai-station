@@ -1,8 +1,8 @@
 # Read a requested website in Chat
 
-Requested by the operator on 2026-10-22. **The text-reading slice is implemented,
-merged in PR #341 and deployed.** Rendered-page and visual analysis remain in the
-backlog. This is distinct from web-search ranking; a simple website analysis does
+Requested by the operator on 2026-10-22. **Text reading (#341) and the explicitly
+selected JavaScript reader (#346) are deployed.** Pixel-grounded visual analysis
+remains backlog. This is distinct from web-search ranking; a simple website analysis does
 not require a coding project or persistent agent.
 
 ## Problem and expected experience
@@ -129,5 +129,12 @@ when Browser is subsequently unavailable. It performs no new page request.
 Both static and rendered page sources can ground the existing image-brief stage;
 the generated image Run keeps the page artifact reference and receives no network
 permission. No new executor, arbitrary browser command, provider or schema is added.
-Qualification evidence belongs under `data/acceptance/chat-rendered-pages-20261022`;
-implementation alone is not a claim of rollout or real-model visual analysis.
+PR #346 merged as `ef013b0`; qualified source `b9769f4` is deployed. Qualification
+passed 2066 backend/Runner tests (nine opt-in skips), 555 frontend tests, formatting,
+lint/type/build checks, Compose/image verification and compiled desktop/mobile
+Send, option reset, collapsed sources and follow-up acceptance. A real anonymous
+JavaScript page through the normal worker/private Runner/Chromium path supplied
+1499 visible characters versus 91 from static HTML, stored its PNG, reused its
+capture and confirmed owned cleanup. The summary model was a fixture; these checks
+do not establish real-model pixel analysis. Deployment preserved access, data and
+the loaded model. Evidence: `data/acceptance/chat-rendered-pages-20261022`.
