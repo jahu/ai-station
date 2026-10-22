@@ -125,8 +125,9 @@ def test_real_worker_price_threshold_publishes_one_frozen_message_and_receipt(
         assert second[-1].metadata_json["market_result"]["email_receipts"][0]["state"] == "accepted"
         complete(session, agent, monkeypatch, page("106", 101, now - timedelta(seconds=10)))
         assert len(transport.messages) == 1
+        agent_id = agent.id
         session.commit()
-        own = api.get("/api/email/deliveries?agent_id=" + agent.id)
+        own = api.get("/api/email/deliveries?agent_id=" + agent_id)
         assert own.status_code == 200 and len(own.json()) == 1
         from uuid import uuid4
 

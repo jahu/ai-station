@@ -63,6 +63,7 @@ export default function AgentMarketScope({
         <label>
           Direction
           <select
+            aria-label="Direction"
             value={current.direction}
             onChange={(e) =>
               onChange({

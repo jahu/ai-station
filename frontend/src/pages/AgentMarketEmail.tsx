@@ -70,6 +70,7 @@ export function MarketEmailSettings({
       <label>
         Deliver alerts to
         <select
+          aria-label="Deliver alerts to"
           value={value.email?.connector_id ?? ""}
           onChange={(event) =>
             select(rows.find((row) => row.id === event.target.value))
