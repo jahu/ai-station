@@ -697,3 +697,29 @@ prompt returned unrelated search snippets and hypothetical branding. Reuse the
 existing public-page fetch/browser boundaries for ordinary Chat; recognize explicit
 URLs/bare domains, honor Web, record sources, and test the exact request. This
 requirement is planned; adding this record does not implement or qualify it.
+
+
+## Website acceptance and market-watch implementation (2026-10-22)
+
+PR #338 is merged and deployed at schema 0028. Real acceptance via the normal
+production workers and private Runner succeeded: https://example.com → an owned
+private project → Local Auto 27B IQ2_XS at actual 131072 context → tests/build →
+static preview → second prompt and a changed successful build in the same
+Task/project/agent/worktree. The source checkout was unchanged. The acceptance
+agent was paused, preview closed and temporary model stopped. The previous Q4
+model was restored at actual 46080 context (new owned runtime identity), with no
+cleanup errors. Evidence: `data/acceptance/agent-website-real-20261022/result.json`.
+This does not claim deployment of a customer website or general visual parity.
+
+Active next branch: `feat/agent-market-observations` in
+`.tools/agent-market-observations`. [Market watch](../agent-market-watch.md)
+adds deterministic public Coinbase observations, threshold comparisons, atomic
+in-app alerts and reports, without loading a model. Migration 0029 adds reviewed
+scope and quote/alert receipts. It is not deployed or fully qualified yet. The
+public-read opt-in API/worker smoke passed in an isolated database; no messages,
+models or GPU work. Full Python qualification runs in
+`ai-station-market-check-20261022.service`; inspect its live state and
+`data/acceptance/agent-market-watch-20261022/workspace-full-check-result.json`
+before starting another run or claiming it passed. UI/browser qualification and
+full review remain. Email, stock quotes and the Chat page-reading backlog remain
+open; never label an in-app alert as email delivery.

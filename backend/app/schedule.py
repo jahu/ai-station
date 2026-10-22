@@ -44,9 +44,11 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
     definition = definition or AgentSettings.model_validate(
         {key: getattr(agent, key) for key in AgentSettings.model_fields} | {"enabled": False}
     )
-    if (not definition.model and not external_coding(definition.tools)) or any(
-        not agent_tool(name).operational for name in definition.tools
-    ):
+    if (
+        not definition.model
+        and not external_coding(definition.tools)
+        and definition.tools != ["market_watch"]
+    ) or any(not agent_tool(name).operational for name in definition.tools):
         raise ValueError("Agent model or tools are not operational")
     if "web_search" in definition.tools and not definition.search_query:
         raise ValueError("web_search requires an explicit public search query")
@@ -66,7 +68,11 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         select_coding_model(session)
         endpoint = ""
     else:
-        endpoint = "" if external_coding(definition.tools) else model_endpoint(definition.model, session)
+        endpoint = (
+            ""
+            if external_coding(definition.tools) or definition.tools == ["market_watch"]
+            else model_endpoint(definition.model, session)
+        )
     data_inputs = None
     if "python_data" in definition.tools:
         from app.data_agents import freeze_inputs, require_runtime

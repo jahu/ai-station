@@ -12,7 +12,14 @@ import { isBrowserResult } from "./browserResult";
 const TERMINAL = new Set(["succeeded", "failed", "canceled", "interrupted"]);
 
 function latestAgentReportRun(runs: Run[]) {
-  return runs.find((run) => run.executor_type === "agent") ?? null;
+  return (
+    runs.find(
+      (run) =>
+        run.executor_type === "agent" ||
+        (run.executor_type === "agent_market" &&
+          run.parameters?.tool === "market.report"),
+    ) ?? null
+  );
 }
 
 function isWebSources(value: unknown): value is WebSources {

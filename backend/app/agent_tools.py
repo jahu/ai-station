@@ -11,6 +11,17 @@ MAX_TOOL_ROUNDS = 4
 MAX_CALLS_PER_ROUND = 3
 
 AGENT_TOOLS = {
+    "market_watch": ToolSpec(
+        name="market_watch",
+        description="Observe reviewed Coinbase BTC/ETH pairs, compare numeric thresholds and create deduplicated in-app alerts. No model, trading or email.",
+        risk_level="low",
+        required_permissions=("network_read",),
+        timeout=90,
+        execution_target="container",
+        operational=True,
+        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        output_schema={"type": "object"},
+    ),
     "python_data": ToolSpec(
         name="python_data",
         description="Analyze reviewed CSV/XLSX files with a local model and offline Python. Creates an owned workspace, preserves original files and returns an answer/table/download. No networking or package installation inside generated code.",

@@ -67,7 +67,7 @@ def validate_target(body, session):
             raise HTTPException(422, str(exc)) from exc
     from app.agent_coding_policy import auto_local_coding, external_coding
 
-    if body.enabled and not external_coding(body.tools):
+    if body.enabled and not external_coding(body.tools) and body.tools != ["market_watch"]:
         try:
             if auto_local_coding(body.tools, body.model):
                 from app.coding_model_routing import select_coding_model
