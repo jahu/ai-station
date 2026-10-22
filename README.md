@@ -27,6 +27,12 @@ visible, phone history opens in a drawer, and settings/context open in a dialog.
 Reading earlier messages preserves scroll during updates.
 See [conversation workspace behavior](docs/conversation-shell.md).
 
+To read a public page that needs JavaScript, enable **Web → Search options →
+Read JavaScript pages** for that message and include its URL. The optional
+[Browser executor](docs/browser.md) must already be configured. Chat keeps the
+capture, screenshot and source links; follow-ups can reuse the saved page.
+The answer uses captured text, not screenshot pixel analysis.
+
 In Work, **Create project & build** accepts a name and goal, creates the owned
 repository/environment and queues its first isolated coding Task. Local AI is the
 default; Cursor/Codex require explicit sharing consent. See the

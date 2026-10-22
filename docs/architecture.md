@@ -1,5 +1,11 @@
 # Architecture
 
+[Rendered page reading in Chat](plans/chat-page-reading.md) composes the existing
+native Browser child and queued Chat completion through RunDependency on one
+Task. URL scope is an explicit one-turn Web option; source JSON/screenshots,
+hash-checked follow-ups and targeted Stop reuse existing ownership and artifacts.
+The model receives captured text; screenshot pixel analysis is separate work.
+
 [Deterministic price observations](agent-market-watch.md) and scoped SMTP alert
 delivery are deployed (#340, #342, #343). Fixed public source reads, comparisons,
 in-app notices, reports and mail use existing Tasks, workers, child Runs and

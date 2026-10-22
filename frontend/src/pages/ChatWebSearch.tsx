@@ -18,6 +18,8 @@ export function WebSearchControl({
   onToggle,
   onQuery,
   compact = false,
+  renderPages = false,
+  onRenderPages,
 }: {
   enabled: boolean;
   query: string;
@@ -25,6 +27,8 @@ export function WebSearchControl({
   onToggle: (enabled: boolean) => void;
   onQuery: (query: string) => void;
   compact?: boolean;
+  renderPages?: boolean;
+  onRenderPages?: (enabled: boolean) => void;
 }) {
   const labelId = useId();
   const queryId = useId();
@@ -97,7 +101,10 @@ export function WebSearchControl({
               maxLength={500}
               value={query}
               disabled={busy}
-              onChange={(e) => onQuery(e.target.value)}
+              onChange={(e) => {
+                onQuery(e.target.value);
+                if (e.target.value.trim()) onRenderPages?.(false);
+              }}
               placeholder="Understand my question and its context"
             />
           </label>
@@ -106,6 +113,24 @@ export function WebSearchControl({
             Otherwise, a short query is prepared from recent messages; the full
             conversation and attachments are not sent to search engines.
           </p>
+          {onRenderPages && (
+            <>
+              <label className="web-render-option">
+                <input
+                  type="checkbox"
+                  checked={renderPages && !query.trim()}
+                  disabled={busy || !!query.trim()}
+                  onChange={(e) => onRenderPages(e.target.checked)}
+                />
+                Read JavaScript pages
+              </label>
+              <p className="muted">
+                For this message: include a public page URL. The configured
+                Browser executor renders it and saves a screenshot, without
+                signing in. Use an empty search query to enable this option.
+              </p>
+            </>
+          )}
         </div>
       )}
     </div>

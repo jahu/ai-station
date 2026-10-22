@@ -18,6 +18,7 @@ export function useWebSearch(defaultAllowed: boolean) {
     queryFn: () => api<ChatPreferences>("/chat/preferences"),
   });
   const [override, setEnabled] = useState<boolean | null>(null);
+  const [renderPages, setRenderPages] = useState(false);
   const save = useMutation({
     mutationFn: async (enabled: boolean) => {
       const current = await api<ChatPreferences>("/chat/preferences");
@@ -34,8 +35,11 @@ export function useWebSearch(defaultAllowed: boolean) {
       override ??
       (defaultAllowed && (preferences.data?.web_search_enabled ?? true)),
     setEnabled,
+    renderPages,
+    setRenderPages,
     onToggle: (enabled: boolean) => {
       setEnabled(enabled);
+      if (!enabled) setRenderPages(false);
       save.mutate(enabled);
     },
     busy: save.isPending,

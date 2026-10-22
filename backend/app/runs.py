@@ -207,6 +207,10 @@ def mark_failed(session: Session, run: Run, error_type: str, message: str) -> No
 
 
 def request_cancel(session: Session, run: Run) -> Run:
+    if run.executor_type == "chat":
+        from app.chat_pages import cancel_page_browser
+
+        cancel_page_browser(session, run)
     if run.status == RunStatus.CANCEL_REQUESTED:
         return run
     # A stale Stop can arrive just after setup publishes its coding child.

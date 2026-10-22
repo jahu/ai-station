@@ -1,5 +1,14 @@
 # Security model
 
+Chat's optional JavaScript page reading grants Browser/network read only after
+an explicit one-turn option with a public URL in user text. It creates the same
+native-owned Browser executor as Agents, with no new host endpoint or credentials.
+The completion depends on its own successful child; scope, parent/Task/conversation,
+JSON and screenshot hashes are checked before adopting text. Source content cannot
+grant tools. Stop cancels that owned child; unrelated Tasks and shared model loads
+remain governed by their existing contracts. Saved source reuse makes no new
+request. Screenshot display does not claim the text model inspected its pixels.
+
 [Website preview](agent-site-preview.md) is an optional explicitly configured
 native workload. It receives a bounded immutable build archive; its read-only,
 non-root Chromium container has no network, host mounts, credentials or GPU.

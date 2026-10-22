@@ -1,5 +1,6 @@
 export type BrowserResult = {
   captured_at: number;
+  reused_from_message_id?: string;
   pages: {
     url: string;
     title: string;

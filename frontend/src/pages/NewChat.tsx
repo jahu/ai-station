@@ -188,7 +188,13 @@ export default function NewChat({
               },
             }
           : {}),
-        web_search: { enabled: webEnabled, query: webQuery },
+        web_search: {
+          enabled: webEnabled,
+          query: webQuery,
+          ...(webEnabled && web.renderPages && !webQuery.trim()
+            ? { render_pages: true }
+            : {}),
+        },
       };
       const body = JSON.stringify(values);
       if (pendingRequest.current?.body !== body)
@@ -427,6 +433,8 @@ export default function NewChat({
                     busy={busy}
                     onToggle={web.onToggle}
                     onQuery={setWebQuery}
+                    renderPages={web.renderPages}
+                    onRenderPages={web.setRenderPages}
                   />
                 )}
             </>

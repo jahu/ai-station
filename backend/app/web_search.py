@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.artifacts import register_file
 from app.config import get_settings
@@ -26,6 +26,14 @@ class SearchOptions(BaseModel):
     model_config = ConfigDict(extra="forbid")
     enabled: bool = False
     query: str = Field(default="", max_length=500)
+    # Preserve existing canonical turn receipt hashes when no new grant is made.
+    render_pages: bool = Field(default=False, exclude_if=lambda value: not value)
+
+    @model_validator(mode="after")
+    def rendering_scope(self):
+        if self.render_pages and (not self.enabled or self.query.strip()):
+            raise ValueError("JavaScript page reading requires Web on and no custom search query")
+        return self
 
 
 def selection(options, content):
@@ -39,6 +47,7 @@ def selection(options, content):
         "enabled": True,
         "query": query[:500],
         **({"contextual": True} if not explicit else {}),
+        **({"render_pages": True} if options.render_pages else {}),
         **({"question": query[:4000]} if not explicit and len(query) > 500 else {}),
     }
 

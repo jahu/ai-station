@@ -34,9 +34,11 @@ account quote access and external inbox delivery remain unverified.
 
 [Reading a requested website](plans/chat-page-reading.md) is deployed in ordinary
 Chat (#341). Explicit URL/bare-domain reading and same-source follow-up passed
-real `akademia.ai` acceptance with the local model. Rendered-page fallback and
-pixel-grounded visual analysis remain backlog; text reading must not invent
-observed colors, typography or layout.
+real `akademia.ai` acceptance with the local model. Explicit one-turn JavaScript
+reading now composes the existing Browser prerequisite, saved screenshot/text
+sources and hash-checked follow-ups; release qualification is recorded in
+`data/acceptance/chat-rendered-pages-20261022`. Pixel-grounded visual analysis
+remains backlog; text reading must not invent observed colors, typography or layout.
 
 Local coding agents can explicitly read reviewed public pages before creating
 their worktree/proposal. The same Task preserves fetched sources, approval,

@@ -354,7 +354,7 @@ def enqueue(
     if type(reserve_context) is not int or not 0 <= reserve_context <= 20000:
         raise ValueError("Invalid reserved conversation context")
     snapshot = dict(frozen_provider) if frozen_provider is not None else snapshot_provider(session, row)
-    from app.chat_pages import freeze_page_read
+    from app.chat_pages import freeze_page_read, prepare_page_browser
     from app.web_search import conversation_query_context
 
     web_search = user.metadata_json.get("web_search")
@@ -463,6 +463,7 @@ def enqueue(
             conversation_id=row.id,
         )
     )
+    page_read = freeze_page_read(session, row.id, user, web_search)
     run = create_run(
         session,
         task,
@@ -473,7 +474,7 @@ def enqueue(
         execution_target="container",
         parameters={
             "web_search": web_search,
-            "page_read": freeze_page_read(session, row.id, user, web_search),
+            "page_read": page_read,
             **(
                 {"web_search_context": conversation_query_context(session, row.id, user)}
                 if web_search and web_search.get("contextual")
@@ -505,12 +506,17 @@ def enqueue(
             if summary_entry
             else None,
         },
-        permissions=chat_permissions(snapshot, ["network_read"] if web_search else []),
+        permissions=chat_permissions(
+            snapshot,
+            (["network_read"] if web_search else [])
+            + (["browser"] if page_read and page_read.get("renderer") == "browser" else []),
+        ),
         retry_class="inspect",
         parent_run_id=parent_run_id,
     )
     from app.llama import prepare_consumer
 
+    prepare_page_browser(session, run)
     prepare_consumer(session, run)
     response = Message(
         conversation_id=row.id,

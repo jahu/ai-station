@@ -1,4 +1,6 @@
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
+import { BrowserPages } from "./BrowserPages";
+import { isBrowserResult, type BrowserResult } from "./browserResult";
 import { useWebSearch } from "./useWebSearch";
 import {
   useChatDraft,
@@ -108,7 +110,7 @@ type Message = ActionResult & {
     }[];
     reasoning_text?: string;
     web_search?: WebSources;
-    page_read?: FetchResult;
+    page_read?: FetchResult | BrowserResult;
     page_read_request?: string[];
     orchestration?: boolean;
     routing_only?: boolean;
@@ -889,9 +891,13 @@ function Transcript({
                   />
                 ))}
               </div>
-              {message.role === "assistant" && message.metadata.page_read && (
-                <FetchedPages result={message.metadata.page_read} compact />
-              )}
+              {message.role === "assistant" &&
+                message.metadata.page_read &&
+                (isBrowserResult(message.metadata.page_read) ? (
+                  <BrowserPages result={message.metadata.page_read} chat />
+                ) : (
+                  <FetchedPages result={message.metadata.page_read} compact />
+                ))}
               {message.role === "assistant" && message.metadata.web_search && (
                 <SearchSources result={message.metadata.web_search} />
               )}
@@ -1182,7 +1188,13 @@ function ConversationView({
               },
             }
           : {}),
-        web_search: { enabled: webEnabled, query: webQuery },
+        web_search: {
+          enabled: webEnabled,
+          query: webQuery,
+          ...(webEnabled && web.renderPages && !webQuery.trim()
+            ? { render_pages: true }
+            : {}),
+        },
       };
       const body = JSON.stringify(values);
       if (pendingRequest.current?.body !== body)
@@ -1203,6 +1215,7 @@ function ConversationView({
       clearChatRequest(conversation.id);
       draftState.accept(submittedDraft.current);
       setWebQuery("");
+      web.setRenderPages(false);
       setAttachments([]);
       setOptions(emptyOptions);
       refresh();
@@ -1642,6 +1655,8 @@ function ConversationView({
                     busy={busy || continuing}
                     onToggle={web.onToggle}
                     onQuery={setWebQuery}
+                    renderPages={web.renderPages}
+                    onRenderPages={web.setRenderPages}
                   />
                 )}
               </>
