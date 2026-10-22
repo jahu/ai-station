@@ -1,5 +1,12 @@
 # Architecture
 
+[One-send visual website questions](plans/chat-website-design.md) compose that
+explicit rendering grant with the existing local Vision action. Only a single
+current user URL and a design question can select this route; page content,
+quoted instructions and ordinary Web cannot grant Browser or model management.
+The capture is bound to its successful orchestration origin before pixel analysis.
+No initial text-model inference, new executor or network grant to Vision is added.
+
 [Rendered page reading in Chat](plans/chat-page-reading.md) composes the existing
 native Browser child and queued Chat completion through RunDependency on one
 Task. URL scope is an explicit one-turn Web option; source JSON/screenshots,

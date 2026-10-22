@@ -30,6 +30,7 @@ from app.web_search import SearchOptions
 
 Action = Literal[
     "chat",
+    "page.describe",
     "image.describe",
     "image.generate",
     "image.edit",
@@ -194,6 +195,7 @@ def assistant_needs_provider(body):
         "github.inspect",
         "audio.transcribe",
         "image.describe",
+        "page.describe",
         "project.create",
         "project.create_code",
         "video.generate",
@@ -280,6 +282,8 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
     ):
         raise HTTPException(422, "Video duration applies to a scene video with at most one first-frame image")
     selected_plan = explicit_plan(body.model_dump(mode="json", exclude={"attachments"}))
+    if body.attachments and selected_plan and selected_plan.action == "page.describe":
+        raise HTTPException(422, "Send a visual page question without file attachments")
     build = project_build_request(body.model_dump(mode="json", exclude={"attachments"}))
     if body.new_project or body.action == "project.create_code" or build:
         if not build or any(
@@ -500,6 +504,9 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         images.append({"id": row.id, "name": row.original_filename})
     if images and body.attachments:
         raise HTTPException(422, "Send image references and text documents in separate turns")
+    from app.chat_page_design import requested_design_page
+
+    design_pages = requested_design_page(body.model_dump(mode="json"))
     needs_provider = assistant_needs_provider(body)
     snapshot = snapshot_provider(session, conversation) if needs_provider else {}
     task = create_task(
@@ -522,6 +529,11 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
             **body.model_dump(mode="json", exclude={"attachments"}),
             "policy_mode": "chat" if getattr(body, "execution_mode", None) == "chat" else "work",
             "policy_version": 1,
+            **(
+                {"page_design": True, "page_read": {"urls": design_pages, "renderer": "browser"}}
+                if design_pages
+                else {}
+            ),
             "user_message_id": user.id,
             "model": conversation.model,
             **(
@@ -544,6 +556,7 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
             + (["network_read", "github_read"] if body.github else [])
             + (["filesystem_read", "workspace_write"] if body.audio_artifact_id else [])
             + (["filesystem_read", "manage_models"] if images else [])
+            + (["browser", "network_read", "filesystem_read", "manage_models"] if design_pages else [])
             + (
                 ["external_ai"]
                 if (body.coding and body.coding.external_ai) or (build and build[0].external_ai)
@@ -553,6 +566,10 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
     )
     from app.llama import prepare_consumer
 
+    if design_pages:
+        from app.chat_pages import prepare_page_browser
+
+        prepare_page_browser(session, run)
     # Deterministic actions need no inference; only an LLM plan reserves a model.
     if explicit_plan(run.parameters) is None:
         prepare_consumer(session, run)
@@ -571,7 +588,10 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
             role="assistant",
             content="",
             run_id=run.id,
-            metadata_json={"orchestration": True},
+            metadata_json={
+                "orchestration": True,
+                **({"page_read_request": design_pages} if design_pages else {}),
+            },
         )
     )
     conversation.updated_at = utcnow()
@@ -583,6 +603,12 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
 
 
 def explicit_plan(params):
+    from app.chat_page_design import requested_design_page
+
+    if requested_design_page(params):
+        return Plan(
+            action="page.describe", reason="Read the selected page and inspect its visual design locally."
+        )
     action = params["action"]
     if action != "auto":
         return Plan(action=action, reason="Using your selected action.")
@@ -826,7 +852,8 @@ class AssistantExecutor:
         if (
             run.parameters.get("web_search", {}).get("enabled")
             and plan
-            and plan.action not in {"chat", "image.generate", "image.generate_video", "clarify"}
+            and plan.action
+            not in {"chat", "page.describe", "image.generate", "image.generate_video", "clarify"}
         ):
             plan = Plan(
                 action="clarify",
@@ -998,6 +1025,18 @@ class AssistantExecutor:
             else:
                 child = create_audio_run(session, request, task=run.task, parent_run_id=run.id)
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+        elif plan.action == "page.describe":
+            from app.chat_page_design import enqueue_design
+
+            try:
+                child = enqueue_design(session, run, message)
+            except (HTTPException, ProviderError) as exc:
+                message.content = str(exc.detail) if isinstance(exc, HTTPException) else str(exc)
+            else:
+                run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                message.content = (
+                    "Inspecting the captured page locally with " + child.parameters["vision_model_name"] + "."
+                )
         elif plan.action == "image.describe" or plan.action == "chat" and images:
             from app.vision import enqueue_inspection
 

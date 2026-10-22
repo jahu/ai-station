@@ -26,13 +26,13 @@ from app.providers import ProviderError
 from app.runs import create_run
 
 
-def enqueue_inspection(session, parent):
+def enqueue_inspection(session, parent, *, page_scope=None):
     # A rejected inspection must not leave a load/unload child behind.
     with session.begin_nested():
-        return _enqueue_inspection(session, parent)
+        return _enqueue_inspection(session, parent, page_scope=page_scope)
 
 
-def _enqueue_inspection(session, parent):
+def _enqueue_inspection(session, parent, *, page_scope=None):
     require(parent.effective_permissions, "filesystem_read")
     require(parent.effective_permissions, "manage_models")
     ids = parent.parameters["image_artifact_ids"]
@@ -49,7 +49,7 @@ def _enqueue_inspection(session, parent):
             raise HTTPException(422, "Choose PNG, JPEG or WebP images up to 20 MiB")
     from app.page_vision import scope_for_images
 
-    page_scope = scope_for_images(session, parent, ids)
+    page_scope = page_scope if page_scope is not None else scope_for_images(session, parent, ids)
     files = list(
         session.scalars(
             select(ModelFile)

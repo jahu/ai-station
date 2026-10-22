@@ -349,11 +349,25 @@ def _reused_result(session, run, scope):
             or context_run is None
             or context_run.status != "succeeded"
             or context_run.executor_type != "chat"
+            and not (
+                context_run.id == parent.id
+                and parent.executor_type == "orchestrator"
+                and parent.parameters.get("page_design")
+            )
             or context_run.conversation_id != run.conversation_id
             or parent.status != "succeeded"
             or parent.task_id != source.task_id
         ):
             raise ProviderError("The rendered page source has no successful conversation answer")
+        if parent.executor_type == "orchestrator" and (
+            not parent.parameters.get("page_design")
+            or parent.parameters.get("page_read", {}).get("browser_run_id") != source.id
+            or parent.parameters.get("page_read", {}).get("urls") != source.parameters.get("urls")
+            or not {"browser", "network_read", "filesystem_read", "manage_models"}.issubset(
+                parent.effective_permissions
+            )
+        ):
+            raise ProviderError("The visual page capture has no explicit source authority")
         if context_run.id != parent.id:
             binding = context_run.parameters.get("page_read") or {}
             if (

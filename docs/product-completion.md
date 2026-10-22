@@ -39,8 +39,10 @@ reading now composes the existing Browser prerequisite, saved screenshot/text
 sources and hash-checked follow-ups; release qualification is recorded in
 `data/acceptance/chat-rendered-pages-20261022`. [Explicit saved-screenshot Vision](plans/page-screenshot-vision.md)
 adds pixel inspection and verified observation reuse through the existing local
-tool; qualification is recorded separately. Automatic capture/vision selection for
-the first website question and broader visual-quality acceptance remain planned.
+tool; qualification is recorded separately. [One-send visual questions](plans/chat-website-design.md) now compose capture and
+Vision when the explicit JavaScript-reading option and a single-page design
+question are present. Qualification is recorded separately; automatic Browser
+selection with ordinary Web and broader visual-quality acceptance remain planned.
 Text reading alone must not invent observed colors, typography or layout.
 
 Local coding agents can explicitly read reviewed public pages before creating

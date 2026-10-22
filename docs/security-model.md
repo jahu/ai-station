@@ -1,5 +1,12 @@
 # Security model
 
+[One-send visual website questions](plans/chat-website-design.md) compose that
+explicit rendering grant with the existing local Vision action. Only a single
+current user URL and a design question can select this route; page content,
+quoted instructions and ordinary Web cannot grant Browser or model management.
+The capture is bound to its successful orchestration origin before pixel analysis.
+No initial text-model inference, new executor or network grant to Vision is added.
+
 Chat's optional JavaScript page reading grants Browser/network read only after
 an explicit one-turn option with a public URL in user text. It creates the same
 native-owned Browser executor as Agents, with no new host endpoint or credentials.

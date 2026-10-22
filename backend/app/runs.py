@@ -207,7 +207,11 @@ def mark_failed(session: Session, run: Run, error_type: str, message: str) -> No
 
 
 def request_cancel(session: Session, run: Run) -> Run:
-    if run.executor_type == "chat":
+    if (
+        run.executor_type == "chat"
+        or run.executor_type == "orchestrator"
+        and run.parameters.get("page_design")
+    ):
         from app.chat_pages import cancel_page_browser
 
         cancel_page_browser(session, run)
