@@ -19,6 +19,12 @@ unchanged. See [Node project dependencies](node-project-dependencies.md).
 
 # Full-product acceptance ledger
 
+Open Chat grounding gap (operator report, 2026-10-22):
+[read a requested website](plans/chat-page-reading.md). Ordinary Chat must fetch
+the explicit URL/bare domain and ground its answer in that page, with provenance,
+instead of substituting generic search snippets. The `akademia.ai` promotional
+graphics request is the acceptance case. This is planned, not delivered.
+
 Local coding agents can explicitly read reviewed public pages before creating
 their worktree/proposal. The same Task preserves fetched sources, approval,
 deadline, Stop and conservative recovery. See [reviewed-page coding](agent-page-coding.md).
