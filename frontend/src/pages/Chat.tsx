@@ -1,3 +1,4 @@
+import { useWebSearch } from "./useWebSearch";
 import {
   useChatDraft,
   chatRequestId,
@@ -1034,7 +1035,6 @@ function ConversationView({
   const draft = draftState.value,
     setDraft = draftState.update;
   const [options, setOptions] = useState(emptyOptions);
-  const [webEnabled, setWebEnabled] = useState(false);
   const [projectSelectionVersion, setProjectSelectionVersion] = useState(0);
   const [webQuery, setWebQuery] = useState("");
   const orchestrator = ["work", "orchestrator"].includes(
@@ -1065,6 +1065,9 @@ function ConversationView({
     turnMode === "work" &&
     generalTask !== context.task_id &&
     options.action === "auto";
+  const web = useWebSearch(turnMode === "chat" && !attachments.length);
+  const webEnabled = !continuing && web.enabled;
+  const setWebEnabled = web.setEnabled;
   const contextReady =
     !continuing ||
     (!!context?.ready &&
@@ -1230,7 +1233,8 @@ function ConversationView({
     regenerate.isPending ||
     readingAttachment ||
     settings.isPending ||
-    selectingWork;
+    selectingWork ||
+    web.busy;
   const messages = conversation.messages;
   return (
     <div className="conversation-shell">
@@ -1299,7 +1303,7 @@ function ConversationView({
           </Link>
         )}
       </div>
-      <ErrorNotice error={archive.error} />
+      <ErrorNotice error={archive.error ?? web.error} />
       {conversation.archived_at && (
         <p className="dashboard-note">
           Archived conversation. Messages, tasks and files are preserved.
@@ -1530,7 +1534,7 @@ function ConversationView({
             value={draft}
             onChange={setDraft}
             onSend={() => send.mutate()}
-            canSend={canSend && contextReady}
+            canSend={canSend && contextReady && web.ready}
             busy={busy}
             sendKey={preferences.data?.send_key}
             placeholder={
@@ -1626,8 +1630,8 @@ function ConversationView({
                     compact
                     enabled={webEnabled}
                     query={webQuery}
-                    busy={busy}
-                    onToggle={setWebEnabled}
+                    busy={busy || continuing}
+                    onToggle={web.onToggle}
                     onQuery={setWebQuery}
                   />
                 )}

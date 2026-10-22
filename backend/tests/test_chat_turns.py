@@ -154,10 +154,18 @@ def test_followup_checks_settings_revision_and_preferences_are_versioned(local):
         )
         defaults = client.get("/api/chat/preferences").json()
         assert defaults["mode"] == "chat"
-        saved = client.put("/api/chat/preferences", json={**defaults, "mode": "work", "model": "test-model"})
+        assert defaults["web_search_enabled"] is True
+        saved = client.put(
+            "/api/chat/preferences",
+            json={**defaults, "mode": "work", "model": "test-model", "web_search_enabled": False},
+        )
         assert saved.json()["version"] == defaults["version"] + 1
         assert client.put("/api/chat/preferences", json=defaults).status_code == 409
         assert client.get("/api/chat/preferences").json()["mode"] == "work"
+        assert client.get("/api/chat/preferences").json()["web_search_enabled"] is False
+        # First Send updates model/mode without silently restoring search.
+        client.post("/api/chat/turns", json=turn())
+        assert client.get("/api/chat/preferences").json()["web_search_enabled"] is False
 
 
 def test_provider_version_is_stable_on_read_and_stale_send_has_no_side_effects(local):

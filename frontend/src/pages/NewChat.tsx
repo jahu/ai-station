@@ -12,6 +12,7 @@ import ConversationComposer from "./ConversationComposer";
 import AssistantActions from "./AssistantActions";
 import { emptyOptions } from "./assistant-options";
 import TextAttachments, { type TextAttachment } from "./TextAttachments";
+import { useWebSearch } from "./useWebSearch";
 import { WebSearchControl } from "./ChatWebSearch";
 import ChatModeSwitch, { type ChatMode } from "./ChatModeSwitch";
 import type { ChatProviderInfo } from "./ChatProviders";
@@ -106,7 +107,9 @@ export default function NewChat({
   const [options, setOptions] = useState(emptyOptions);
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [webEnabled, setWebEnabled] = useState(false);
+  const web = useWebSearch(mode === "chat" && !attachments.length);
+  const webEnabled = !workTaskId && web.enabled;
+  const setWebEnabled = web.setEnabled;
   const [webQuery, setWebQuery] = useState("");
   useEffect(() => {
     if (
@@ -210,6 +213,7 @@ export default function NewChat({
   });
   const busy =
     send.isPending ||
+    web.busy ||
     uploading ||
     preferences.isPending ||
     (!!workTaskId && workspace.isPending);
@@ -421,7 +425,7 @@ export default function NewChat({
                     enabled={webEnabled}
                     query={webQuery}
                     busy={busy}
-                    onToggle={setWebEnabled}
+                    onToggle={web.onToggle}
                     onQuery={setWebQuery}
                   />
                 )}
@@ -438,7 +442,9 @@ export default function NewChat({
       {!model && (
         <p className="muted">Choose an available model to send your message.</p>
       )}
-      <ErrorNotice error={send.error ?? preferences.error ?? workspace.error} />
+      <ErrorNotice
+        error={send.error ?? web.error ?? preferences.error ?? workspace.error}
+      />
     </section>
   );
 }

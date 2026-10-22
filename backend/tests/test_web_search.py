@@ -197,7 +197,7 @@ def test_query_validation_and_action_conflicts():
     with TestClient(app) as client:
         route = conversation(client, "orchestrator")
         for body in [
-            {"content": "x" * 501, "web_search": {"enabled": True}},
+            {"content": "Search", "web_search": {"enabled": True, "query": "x" * 501}},
             {"content": "Search", "web_search": {"enabled": True, "url": "http://localhost"}},
             {"content": "Create a video", "action": "video.generate", "web_search": {"enabled": True}},
         ]:
@@ -434,7 +434,9 @@ def test_empty_search_rewrites_only_reviewed_query_with_selected_model_and_persi
         client.post(route + "/messages", json={"content": "PRIVATE HISTORY MUST NOT BECOME A SEARCH QUERY"})
         step()
         model_calls.clear()
-        queued = client.post(route + "/messages", json={"content": query, "web_search": {"enabled": True}})
+        queued = client.post(
+            route + "/messages", json={"content": query, "web_search": {"enabled": True, "query": query}}
+        )
         step()
         run = client.get("/api/runs/" + queued.json()["id"]).json()
         assert run["status"] == "succeeded", run
@@ -543,3 +545,164 @@ async def test_unrelated_results_are_rejected_for_short_queries_too(monkeypatch)
     )
     result = await web_search.search("galaxy telescope")
     assert result["sources"] == []
+
+
+@pytest.mark.parametrize("mode", ["local", "orchestrator"])
+def test_followup_resolves_subject_before_search_and_never_sends_raw_history(mode, monkeypatch):
+    from app.models import Message
+
+    question = "masz teraz dostep do neta, nie pierdol i sprawdz"
+    resolved = "RJ Mitte cause of death official statement motives"
+    queries, calls = [], []
+
+    async def search(query):
+        queries.append(query)
+        # This is the false positive the old implementation accepted.
+        if query == question:
+            return {
+                **RESULT,
+                "sources": [
+                    {
+                        "id": 1,
+                        "title": "Downdetector",
+                        "url": "https://downdetector.pl/",
+                        "snippet": "dostep do internetu",
+                    }
+                ],
+            }
+        assert query == resolved
+        return {**RESULT, "query": query}
+
+    async def stream(self, **params):
+        calls.append(params)
+        if params.get("json_output"):
+            yield '{"query":"' + resolved + '"}'
+        else:
+            yield "Check the actual sources; motives are not established."
+
+    monkeypatch.setattr(web_search, "search", search)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        route = conversation(client, mode)
+        cid = route.rsplit("/", 1)[1]
+        with session_factory()() as session:
+            session.add(
+                Message(
+                    conversation_id=cid,
+                    role="user",
+                    content="Attached files: SECRET_SPREADSHEET",
+                    metadata_json={"user_text": "Breaking Bad actor death cause"},
+                )
+            )
+            session.flush()
+            session.add(
+                Message(
+                    conversation_id=cid,
+                    role="assistant",
+                    content="You asked about R.J. Mitte. Earlier claims must be verified.",
+                )
+            )
+            session.commit()
+        queued = client.post(route + "/messages", json={"content": question, "web_search": {"enabled": True}})
+        assert queued.status_code == 202, queued.text
+        step()
+        if mode == "orchestrator":
+            step()
+        detail = client.get(route).json()
+        answer = detail["messages"][-1]
+        assert answer["run_status"] == "succeeded", answer
+        result = answer["metadata"]["web_search"]
+        assert queries == [resolved]
+        assert result["query"] == resolved and result["original_query"] == question
+        assert "Downdetector" not in str(result)
+        assert "R.J. Mitte" in calls[0]["messages"][-1]["content"]
+        assert "SECRET_SPREADSHEET" not in str(calls[0]["messages"])
+        assert "network_read" in client.get("/api/runs/" + answer["run_id"]).json()["effective_permissions"]
+        artifact = client.get("/api/artifacts/" + result["artifact_id"] + "/file").json()
+        assert artifact["original_query"] == question and artifact["query"] == resolved
+        events = client.get("/api/runs/" + answer["run_id"] + "/stream").text
+        assert "tool.query_resolved" in events
+
+
+@pytest.mark.parametrize("stop", [False, True])
+def test_unresolved_or_canceled_followup_does_not_search_or_generate_final_answer(monkeypatch, stop):
+    from app.models import Message
+
+    closed = []
+
+    async def forbidden(query):
+        raise AssertionError("No unrelated search for unresolved follow-ups")
+
+    async def stream(self, **params):
+        try:
+            assert params["json_output"]
+            if stop:
+                with session_factory()() as session:
+                    request_cancel(session, session.get(Run, run_id))
+                    session.commit()
+                await asyncio.Future()
+            yield '{"query":""}'
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr(web_search, "search", forbidden)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        route = conversation(client)
+        with session_factory()() as session:
+            session.add(
+                Message(conversation_id=route.rsplit("/", 1)[1], role="user", content="An ambiguous subject")
+            )
+            session.commit()
+        queued = client.post(
+            route + "/messages", json={"content": "sprawdz to", "web_search": {"enabled": True}}
+        )
+        run_id = queued.json()["id"]
+        step()
+        run = client.get("/api/runs/" + run_id).json()
+        assert run["status"] == ("canceled" if stop else "failed")
+        assert closed and client.get(route).json()["messages"][-1]["content"] == ""
+
+
+def test_automatic_search_accepts_long_chat_but_exact_query_keeps_its_bound():
+    options = web_search.selection(web_search.SearchOptions(enabled=True), "x" * 6000)
+    assert len(options["query"]) == 500 and len(options["question"]) == 4000
+    assert options["contextual"] is True
+    with pytest.raises(ValueError):
+        web_search.SearchOptions(enabled=True, query="x" * 501)
+
+
+def test_query_context_is_bounded_and_omits_partial_and_private_attachment_bodies(session):
+    from app.models import Conversation, Message
+
+    conv = Conversation(model="fixture-model")
+    session.add(conv)
+    session.flush()
+    for i in range(10):
+        session.add(Message(conversation_id=conv.id, role="user", content="older " + str(i) + "x" * 1500))
+        session.flush()
+    session.add(
+        Message(
+            conversation_id=conv.id,
+            role="assistant",
+            content="PARTIAL_SECRET",
+            metadata_json={"partial": True},
+        )
+    )
+    session.flush()
+    session.add(
+        Message(
+            conversation_id=conv.id,
+            role="user",
+            content="FILE_SECRET",
+            metadata_json={"user_text": "actual question", "attachments": [{"id": "fixture"}]},
+        )
+    )
+    session.flush()
+    user = Message(conversation_id=conv.id, role="user", content="check it")
+    session.add(user)
+    session.flush()
+    snapshot = web_search.conversation_query_context(session, conv.id, user)
+    assert len(snapshot) == 6 and all(len(item["content"]) <= 1200 for item in snapshot)
+    assert snapshot[-1]["content"] == "actual question"
+    assert "PARTIAL_SECRET" not in str(snapshot) and "FILE_SECRET" not in str(snapshot)

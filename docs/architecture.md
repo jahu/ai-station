@@ -442,6 +442,7 @@ Generated Python execution remains the separate isolated native-runner container
 boundary; metadata inspection does not grant that permission.
 
 
+
 ## Local data-agent execution
 
 [Python data agents](python-data-agents.md) reuse ordinary agent workflows,
@@ -450,3 +451,14 @@ Python executor. Local source generation and result verification are separate
 Runs; script, inputs, raw outputs and a literal CSV download are ordinary artifacts.
 The original workflow deadline, Task Stop and frozen definition cover repairs.
 No unrestricted filesystem or shell API is activated.
+
+## Context-aware Chat search
+
+Ordinary Chat enables its visible search switch by default, with a versioned
+operator preference for opt-out. HTTP APIs still require per-request selection.
+Work tasks retain their explicit network scopes. The worker resolves automatic
+follow-up subjects from a frozen, bounded ordinary-text window before retrieval;
+manual queries bypass resolution. Only the short query reaches SearXNG. Actual
+queries, original follow-ups and source artifacts remain auditable; cancellation
+and failed resolution stop retrieval. See [web search](web-search.md).
+

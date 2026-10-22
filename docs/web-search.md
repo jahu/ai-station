@@ -1,8 +1,8 @@
 # Optional Chat web search
 
-Web search is a per-message opt-in tool, disabled by default. It runs in the existing worker before local inference and records its query, results, timestamps and failures as Run events plus a JSON artifact. A visible Sources panel links the actual retrieved results independently of model-generated citations. The Search the web toggle is a keyboard sequence with a unique Search name; Space or Enter selects it and does not send. There is no inspectable search-toggle Run. Arrow keys, Home and End move through those cards; Enter opens the selected public URL. This is search, not browser automation. Regeneration reuses the user's explicit search intent. Cancellation closes the search request; an unavailable search service fails the Run rather than pretending the answer is current.
+Web search starts enabled in ordinary Chat. The switch saves an operator preference across conversations and devices; turning it off keeps it off. Work starts without automatic search so coding, runtime control and task continuations retain their existing scopes. Each request still records its own search selection and network permission; API requests that omit search remain offline. It runs in the existing worker before local inference and records its query, results, timestamps and failures as Run events plus a JSON artifact. A visible Sources panel links the actual retrieved results independently of model-generated citations. The Search the web toggle is a keyboard sequence with a unique Search name; Space or Enter selects it and does not send. There is no inspectable search-toggle Run. Arrow keys, Home and End move through those cards; Enter opens the selected public URL. This is search, not browser automation. Regeneration reuses the user's explicit search intent. Cancellation closes the search request; an unavailable search service fails the Run rather than pretending the answer is current.
 
-Only the explicit search query (or the current message if no query is supplied) leaves the control plane. Conversation history, memory and attachments are never used as outbound search context. Queries are bounded. Retrieved titles/snippets are untrusted reference data, cannot grant tools/permissions, and are passed to the local model with citation instructions. The tool searches; it does not fetch arbitrary result pages, execute scripts or perform browser automation.
+An explicit Search query is used exactly as entered, without history. Otherwise, a follow-up is resolved by the selected permission-bound model using at most six recent ordinary text messages (1200 characters each), before contacting a search engine. Only the resulting short query leaves for search; the full conversation, system prompt, pinned memory, summaries and attachment bodies are excluded. Replies based on private attachments, memory, summaries or other executors are excluded from query context. The actual query and original follow-up are recorded separately in source details. A failed or canceled topic resolution never searches the ambiguous raw instruction. Long messages use a bounded 4000-character question draft rather than imposing the search query limit on Chat. Queries are bounded. Retrieved titles/snippets are untrusted reference data, cannot grant tools/permissions, and are passed to the local model with citation instructions. The tool searches; it does not fetch arbitrary result pages, execute scripts or perform browser automation.
 
 A private SearXNG container provides the JSON search API without account credentials. It has no host ports, host resources or Docker socket. Chat and agent search run from the control plane. Local coding search runs from the Host Runner only when `AI_STATION_WEB_SEARCH_URL` is set to an operator-configured reachable endpoint; the default Compose service remains unpublished, so runner-side search is off unless that setting is provided. Its image is pinned, capabilities dropped and filesystem read-only, with temporary cache and an ephemeral signing secret. No Redis/Valkey is required with the limiter disabled. Only the worker contacts the fixed operator-configured search endpoint. Result links permit HTTP(S) public hosts only; no automatic page fetching occurs.
 
@@ -22,7 +22,7 @@ multi-topic queries reject matches to just one generic word. This is a lexical
 relevance check, not verification of the truth or completeness of article text.
 If a Chat search returns no usable sources, the selected, permission-bound model
 may rewrite only the explicitly approved query once into concise search keywords.
-The rewrite receives no history, memory, attachments or source instructions; it
+This empty-result rewrite receives no history, memory, attachments or source instructions; it
 has a 30-second/256-token/300-character bound and cannot call tools. The original
 query and actual retry are recorded in events, the artifact and source details.
 No final factual completion runs if relevant sources are still missing. Stop
@@ -76,3 +76,15 @@ portrait. The original photo pipeline's SHA256 remained unchanged. Model and
 media reservations were released. Real desktop/mobile browser checks displayed
 the source cards and loaded image without JavaScript errors or horizontal
 overflow. Image generation took about 361 seconds.
+
+## Follow-up regression (2026-10-15)
+
+Conversation `a1b746f7-c9a7-4104-b5ba-fbec094fcbb1` exposed an additional
+failure: the raw follow-up “masz teraz dostep do neta, nie pierdol i sprawdz”
+was searched without its actor subject. Downdetector passed the lexical filter
+through incidental terms, preventing empty-result refinement. Automatic follow-up
+queries now resolve their subject before retrieval, even when the raw instruction
+would return results. Exact manually entered queries retain their explicit scope.
+Topic resolution shares the existing provider permission, bounded generation,
+Stop and audited events; no extra tool, full-page fetching or model fact trust is
+introduced. Earlier model assertions are expressly unverified query context.

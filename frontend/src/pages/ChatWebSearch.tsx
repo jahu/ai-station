@@ -1,9 +1,10 @@
-import { useId, type KeyboardEvent } from "react";
-import { Globe, ExternalLink } from "lucide-react";
+import { useId, useState, type KeyboardEvent } from "react";
+import { Globe, ExternalLink, SlidersHorizontal } from "lucide-react";
 import { useListKeyboard } from "./useListKeyboard";
 
 export type WebSources = {
   query: string;
+  original_query?: string;
   queries?: string[];
   searched_at: string;
   partial: boolean;
@@ -26,6 +27,8 @@ export function WebSearchControl({
   compact?: boolean;
 }) {
   const labelId = useId();
+  const queryId = useId();
+  const [queryOpen, setQueryOpen] = useState(false);
   const items = ["web_search"] as const;
   const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
     [...items],
@@ -43,34 +46,50 @@ export function WebSearchControl({
   return (
     <div className="chat-web-search">
       <p id={labelId} className={compact ? "sr-only" : "dashboard-note"}>
-        Search public information. Only this turn's query is shared with search
-        engines; conversation history and attachments stay private.
+        Search public information. A short query may use the recent conversation
+        to understand follow-up questions. Attachments and memory are excluded.
       </p>
-      <div
-        ref={listRef}
-        className="web-search-choice-list"
-        aria-labelledby={labelId}
-        onKeyDown={handleKey}
-      >
-        <div aria-label="Search web_search" {...itemProps(0, "web_search")}>
+      <div className="web-search-actions">
+        <div
+          ref={listRef}
+          className="web-search-choice-list"
+          aria-labelledby={labelId}
+          onKeyDown={handleKey}
+        >
+          <div aria-label="Search web_search" {...itemProps(0, "web_search")}>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={enabled}
+              aria-label="Search the web"
+              disabled={busy}
+              tabIndex={index === 0 ? 0 : -1}
+              className="web-search-toggle"
+              onClick={() => onToggle(!enabled)}
+            >
+              <Globe size={16} />
+              <span>{compact ? "Web search" : "Search the web"}</span>
+              <span className="chip">{enabled ? "ON" : "OFF"}</span>
+            </button>
+          </div>
+        </div>
+        {compact && enabled && (
           <button
             type="button"
-            role="switch"
-            aria-checked={enabled}
-            aria-label="Search the web"
+            className="web-search-options"
+            aria-label="Search options"
+            aria-expanded={queryOpen}
+            aria-controls={queryId}
+            title="Search options"
             disabled={busy}
-            tabIndex={index === 0 ? 0 : -1}
-            className="web-search-toggle"
-            onClick={() => onToggle(!enabled)}
+            onClick={() => setQueryOpen(!queryOpen)}
           >
-            <Globe size={16} />
-            <span>{compact ? "Web search" : "Search the web"}</span>
-            <span className="chip">{enabled ? "ON" : "OFF"}</span>
+            <SlidersHorizontal size={15} />
           </button>
-        </div>
+        )}
       </div>
-      {enabled && (
-        <div className="web-search-query">
+      {enabled && (!compact || queryOpen) && (
+        <div className="web-search-query" id={queryId}>
           <label>
             Search query <span className="muted">optional</span>
             <input
@@ -79,12 +98,13 @@ export function WebSearchControl({
               value={query}
               disabled={busy}
               onChange={(e) => onQuery(e.target.value)}
-              placeholder="Use my message as the search query"
+              placeholder="Understand my question and its context"
             />
           </label>
           <p className="muted">
-            Only this query is sent to search engines. Conversation history and
-            attachments stay local.
+            Enter an exact query to keep conversation context out of search.
+            Otherwise, a short query is prepared from recent messages; the full
+            conversation and attachments are not sent to search engines.
           </p>
         </div>
       )}
@@ -115,6 +135,9 @@ export function SearchSources({ result }: { result: WebSources }) {
             {new Date(result.searched_at).toLocaleString()}
           </time>
         </p>
+        {result.original_query && (
+          <p className="muted">Follow-up: {result.original_query}</p>
+        )}
         {(result.queries?.length ?? 0) > 1 && (
           <p className="muted">
             Refined search: {result.queries?.slice(1).join(" · ")}
