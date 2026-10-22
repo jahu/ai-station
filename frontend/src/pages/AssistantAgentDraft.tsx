@@ -1,5 +1,11 @@
+import {
+  MarketEmailApproval,
+  AgentMarketEmailHistory,
+  AgentMarketRunStop,
+  type MarketEmailAuthorization,
+} from "./AgentMarketEmail";
 import { AgentMarketEditor } from "./AgentMarketScope";
-import type { MarketScope } from "./marketScope";
+import { marketEmailConsentKey, type MarketScope } from "./marketScope";
 import AgentWorkspacePolicy, {
   type WorkspacePolicy,
 } from "./AgentWorkspacePolicy";
@@ -46,6 +52,7 @@ type AgentDraft = {
   tools?: string[];
   data?: DataScope | null;
   market?: MarketScope | null;
+  market_email_authorization?: MarketEmailAuthorization | null;
   workspace_policy?: WorkspacePolicy;
   data_readiness?: { ready: boolean; reason: string } | null;
   skills?: string[];
@@ -582,6 +589,8 @@ export function AssistantAgentDraft({
   tabIndex?: number;
 }) {
   const cache = useQueryClient();
+  const [emailConsent, setEmailConsent] = useState<string | null>(null);
+  const [emailReady, setEmailReady] = useState(false);
   const shortId = agentId.slice(0, 8);
   const [copy, setCopy] = useState<AgentDraft | null>(null);
   const [modelBusy, setModelBusy] = useState(false);
@@ -598,9 +607,17 @@ export function AssistantAgentDraft({
         body: JSON.stringify({
           expected_updated_at: detail.data!.updated_at,
           enabled,
+          ...(enabled && detail.data?.market?.email
+            ? {
+                confirm_market_email:
+                  emailConsent ===
+                  marketEmailConsentKey(detail.data.id, detail.data.market),
+              }
+            : {}),
         }),
       }),
     onSuccess: (result) => {
+      setEmailConsent(null);
       cache.setQueryData(["agent", agentId], (previous?: AgentDraft) => ({
         ...previous,
         ...result,
@@ -1192,26 +1209,65 @@ export function AssistantAgentDraft({
             </p>
           ) : null}
           {block.reason ? <p className="notice">{block.reason}</p> : null}
+          <MarketEmailApproval
+            market={agent.market}
+            enabled={agent.enabled}
+            authorization={agent.market_email_authorization}
+            checked={
+              emailConsent === marketEmailConsentKey(agent.id, agent.market)
+            }
+            onChange={(checked) =>
+              setEmailConsent(
+                checked ? marketEmailConsentKey(agent.id, agent.market) : null,
+              )
+            }
+            onReadyChange={setEmailReady}
+          />
           <div className="row">
             <Button
               type="button"
-              disabled={busy || block.blocked}
+              disabled={
+                busy ||
+                block.blocked ||
+                (!agent.enabled &&
+                  !!agent.market?.email &&
+                  (!emailReady ||
+                    emailConsent !==
+                      marketEmailConsentKey(agent.id, agent.market)))
+              }
               tabIndex={tabIndex}
-              aria-label={enableLabel}
+              aria-label={
+                !agent.enabled && agent.market?.email
+                  ? `Enable and allow alert email ${shortId}`
+                  : enableLabel
+              }
               onClick={() => toggle.mutate(!agent.enabled)}
             >
-              {agent.enabled ? "Pause agent" : "Enable saved definition"}
+              {agent.enabled
+                ? "Pause agent"
+                : agent.market?.email
+                  ? "Enable and allow alert email"
+                  : "Enable saved definition"}
             </Button>
             <Button
               type="button"
               variant="secondary"
-              disabled={busy || !agent.enabled || active}
+              disabled={
+                busy ||
+                !agent.enabled ||
+                active ||
+                (!!agent.market?.email &&
+                  !agent.market_email_authorization?.valid)
+              }
               tabIndex={tabIndex}
               aria-label={`Run now ${shortId}`}
               onClick={() => runNow.mutate()}
             >
               Run now
             </Button>
+            {agent.tools?.includes("market_watch") && (
+              <AgentMarketRunStop agentId={agent.id} runs={history} />
+            )}
             <Button
               type="button"
               variant="secondary"
@@ -1246,7 +1302,18 @@ export function AssistantAgentDraft({
               {agent.tools?.includes("python_data") ? (
                 <AgentDataResult runs={history} />
               ) : (
-                <AgentLatestReport runs={history} />
+                <>
+                  {(agent.market ||
+                    history.some(
+                      (run) => run.executor_type === "email_send",
+                    )) && (
+                    <AgentMarketEmailHistory
+                      agentId={agent.id}
+                      runs={history}
+                    />
+                  )}
+                  <AgentLatestReport runs={history} />
+                </>
               )}
               <AgentLastWorkflowSteps runs={history} tabIndex={tabIndex} />
               <AgentExecutionHistory

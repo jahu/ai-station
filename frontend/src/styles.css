@@ -6704,3 +6704,37 @@ section:has(> .memory-grid) > .dashboard-note {
 .email-body {
   background: var(--surface, #101315);
 }
+
+.market-email-policy,
+.market-email-consent {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  margin: 12px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.market-email-policy p,
+.market-email-consent p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.market-email-policy .project-checkbox,
+.market-email-consent .project-checkbox {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  overflow-wrap: anywhere;
+}
+.market-email-policy input[type="checkbox"],
+.market-email-consent input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.market-email-consent summary {
+  cursor: pointer;
+}

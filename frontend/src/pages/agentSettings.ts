@@ -95,6 +95,9 @@ export function agentSettingsPayload(
       on_approval: next.notification_policy?.on_approval === true,
     },
     project_id: next.project_id ?? null,
-    enabled: next.enabled ?? false,
+    enabled:
+      (next.enabled ?? false) &&
+      (patch.market === undefined ||
+        JSON.stringify(patch.market) === JSON.stringify(agent.market)),
   };
 }

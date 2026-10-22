@@ -5,35 +5,41 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current continuation — reviewed email, 2026-10-22
+## Current continuation — market email, 2026-10-22
 
-PRs #338–341 are merged. Current deployed text-reader source is `5123ca8`
-(release `.tools/ui-chat-direct-page-reading-20261022`), with schema **0029**.
-Market observations and the exact ordinary-Chat `akademia.ai` example passed real
-production acceptance; the latter also reused its source for an Instagram follow-up.
-See [page-reading status](chat-page-reading.md). Preserve the already-loaded Q4
-model/runtime and native Runner; neither needs replacement for email work.
+PR #342 is merged as `961bffc` and deployed from qualified source `e7375e7` in
+`.tools/ui-reviewed-email-delivery-20261022`, schema **0030**. Full qualification:
+1945 Python tests/nine opt-in skips, 540 UI tests, lint/types/build/Compose/image,
+exact backend/asset equality, compiled desktop/phone setup/approval/receipt flow,
+and LAN/local auth/persistence/model/worker/scheduler deployment verification.
+No native Runner or loaded model was restarted; no external mail was sent.
+Evidence: `data/acceptance/reviewed-email-delivery-20261022`.
 
-Draft PR #342 continues in `.tools/reviewed-email-delivery` on
-`feat/reviewed-email-delivery`. It adds typed TLS SMTP, operator-reviewed messages,
-immutable approval, a durable acceptance journal and settings/history UI with
-schema **0030**. This is a manual delivery foundation, not autonomous agent email.
-No external account/recipient has been used; actual SMTP protocol tests use a
-private TLS sink and synthetic credentials. Review fixes cover ASCII-safe MIME
-encoding for Polish text, stable textarea accessibility labels and invalidating
-health after credential replacement. An API regression then proved that default FastAPI validation could echo a
-credential-bearing form. Request-validation diagnostics now omit raw input and
-context. Focused checks and compiled desktop/phone acceptance are passing; final
-backend qualification must follow this fix. Frontend qualification passed 540
-tests and all lint/types/build/Compose/image gates at `fd28aee`; frontend source is
-unchanged by the validation fix, so retain that evidence and rebuild/verify the
-final backend image. Do not treat the stopped earlier backend checks as passing.
-Inspect live check handles before restarting or merging.
-Evidence/scripts: `data/acceptance/reviewed-email-delivery-20261022`.
+Continue `feat/market-email-alerts` in `.tools/market-email-alerts`, rebased onto
+`develop` `961bffc`. The candidate adds explicit activation consent via existing
+Approval records, a versioned SMTP scope, deterministic source-bound mail child
+Runs, no-replay receipt identity and agent/conversation settings/receipt UI.
+See [the plan](market-email-alerts.md). Final focused review passed 107
+market/agent/TLS cases and 60 UI cases. Actual compiled desktop/phone checks passed
+scope-save, unchecked consent, baseline without mail, accepted/unknown receipts,
+no resend, pause, fresh consent for duplicates and Stop of a published SMTP child.
+The private TLS sink also exercised a complete synthetic-quote workflow.
+
+Review proved that Stop on the successful dispatcher initially targeted its queued
+report and left nested mail able to submit. The first full backend check was
+explicitly stopped (not qualified). The fix uses existing Task-wide Stop for this
+market fanout and checks the stopped Task at publication/submission. Regression
+coverage includes two mail children and one previously accepted message. The UI
+has Stop current price check beside Run now. The earlier full UI pass (545 tests)
+predates that control; final current-source backend and UI qualification is next.
+Do not merge on superseded evidence or restart a confirmed live check.
+Evidence starts in `data/acceptance/market-email-alerts-20261022`.
 
 The root checkout has pre-existing Memory WIP: do not stage, reset or switch it.
-After reviewed email: scoped automatic market-agent email and stock providers,
-then remaining product-completion items. Visual website analysis remains backlog.
+The ordinary Chat text reader (#341) and market observations (#340) already passed
+real production acceptance; visual page analysis and stock providers remain open.
+No real SMTP account/recipient is configured. Continue useful implementation and
+never label synthetic quotes/private TLS sink tests as external email acceptance.
 
 ## Earlier implementation — website agent build policy, 2026-10-22
 

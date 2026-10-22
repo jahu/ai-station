@@ -26,7 +26,7 @@ export type EmailConnector = {
   secret_present: boolean;
   last_run_id: string | null;
 };
-type Delivery = {
+export type Delivery = {
   id: string;
   state: string;
   reason: string;
@@ -233,7 +233,7 @@ function MailSettings({
   );
 }
 
-function DeliveryPreview({
+export function DeliveryPreview({
   delivery,
   refresh,
 }: {

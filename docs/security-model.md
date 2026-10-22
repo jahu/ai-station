@@ -436,3 +436,12 @@ Request validation returns field locations, error types and actionable messages,
 but omits raw input and exception context. Model-level validation can otherwise
 echo an entire credential-bearing form, even when its password field is write-only.
 SMTP API regression tests cover both whole-form errors and invalid secret fields.
+
+Market-agent email authorization is an explicit, agent-bound configuration grant
+(`Approval.action=agent.email.enable`), separate from per-message manual approval.
+It binds the canonical reviewed market scope, connector revision, sender, exact
+recipients and fixed template. It is checked at publication and before SMTP DATA.
+Pause revokes it, duplication cannot inherit it, and settings/credential changes
+require review again. Only immutable threshold provenance can create an automatic
+mail Run; no model-supplied body or recipient is accepted. See
+[market email plan](plans/market-email-alerts.md) for current qualification status.

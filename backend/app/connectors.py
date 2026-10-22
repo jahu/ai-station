@@ -159,6 +159,12 @@ class ConnectorPatch(BaseModel):
         return self
 
 
+def email_policy_revision(row):
+    from app.market_email import connector_revision
+
+    return connector_revision(row)
+
+
 def connector_dict(row: Connector) -> dict:
     url = (row.config_json or {}).get("url", "")
     return {
@@ -169,7 +175,11 @@ def connector_dict(row: Connector) -> dict:
         "url": url,
         "repository": row.config_json.get("repository", ""),
         "method": "SMTP" if row.kind == "email" else "GET",
-        **({"smtp": row.config_json.get("smtp")} if row.kind == "email" else {}),
+        **(
+            {"smtp": row.config_json.get("smtp"), "email_policy_revision": email_policy_revision(row)}
+            if row.kind == "email"
+            else {}
+        ),
         "capabilities": list(row.capabilities),
         "status": row.status,
         "health": row.health,
@@ -320,6 +330,16 @@ def edit(connector_id: UUID, body: ConnectorPatch, session: DB):
             raise HTTPException(422, "SMTP username and credential must be configured together")
     if row.kind == "email" and (body.secret is not None or body.secret_ref is not None or body.clear_secret):
         row.status, row.health, row.last_run_id = "unconfigured", "unknown", None
+    if row.kind == "email" and (
+        body.smtp is not None
+        or body.secret is not None
+        or body.secret_ref is not None
+        or body.clear_secret
+        or body.enabled is not None
+    ):
+        from app.market_email import rotate_connector_revision
+
+        rotate_connector_revision(row)
     apply_secret(row, secret_ref=body.secret_ref, secret=body.secret, clear=body.clear_secret)
     row.updated_at = utcnow()
     session.commit()
