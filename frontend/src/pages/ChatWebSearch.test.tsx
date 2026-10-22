@@ -61,6 +61,12 @@ it("moves through the search toggle without sending a message", () => {
     key: "Enter",
   });
   expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true");
+  const describedBy = screen
+    .getByRole("switch")
+    .getAttribute("aria-describedby");
+  expect(document.getElementById(describedBy ?? "")?.textContent).toContain(
+    "installed local Vision model",
+  );
   expect(screen.getByLabelText("Search query")).toBeTruthy();
   fireEvent.keyDown(toggle.closest(".web-search-choice-list") as HTMLElement, {
     key: " ",

@@ -17,7 +17,7 @@ def request(content="Analyze https://example.com/ and give an image prompt", **e
     return {
         "content": content,
         "action": "chat",
-        "web_search": {"enabled": True, "render_pages": True},
+        "web_search": {"enabled": True},
         **extra,
     }
 
@@ -30,15 +30,14 @@ def request(content="Analyze https://example.com/ and give an image prompt", **e
         "What colors and layout does https://example.com/ use?",
     ],
 )
-def test_visual_intent_is_derived_from_the_explicit_current_request(content):
+def test_visual_intent_is_derived_from_current_request_with_ordinary_web(content):
     assert requested_design_page(request(content))
 
 
 @pytest.mark.parametrize(
     "change",
     [
-        {"web_search": {"enabled": True}},
-        {"web_search": {"enabled": False, "render_pages": True}},
+        {"web_search": {"enabled": False}},
         {"web_search": {"enabled": True, "render_pages": True, "query": "design"}},
         {"content": "Read https://example.com/ and summarize its offer"},
         {"content": "Read https://design.com/"},
@@ -186,13 +185,21 @@ def test_stop_after_publication_cancels_the_task_without_vision_inference(page_v
             assert vision.status == "canceled"
 
 
-def test_first_turn_replay_does_not_repeat_capture_or_model_preparation(page_vision):
+@pytest.mark.parametrize(
+    "content",
+    [
+        "Analyze https://example.com/ and give an image prompt",
+        "przenalizuj stronę akademia.ai i daj mi prompt do stworzaenia grafiki promujacej ta strone",
+    ],
+)
+def test_first_turn_replay_does_not_repeat_capture_or_model_preparation(page_vision, content):
     from uuid import uuid4
 
     from app.models import ChatTurnRequest
 
     seen, reports, loads = page_vision
     body = request(
+        content,
         client_request_id=str(uuid4()),
         selection={"execution_mode": "chat", "model": "unavailable-text-model"},
     )

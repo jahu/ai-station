@@ -50,8 +50,10 @@ export function WebSearchControl({
   return (
     <div className="chat-web-search">
       <p id={labelId} className={compact ? "sr-only" : "dashboard-note"}>
-        Search public information. A short query may use the recent conversation
-        to understand follow-up questions. Attachments and memory are excluded.
+        Search and read public pages. Visual website questions may capture a
+        screenshot and load an installed local Vision model. Search may use
+        recent conversation context; attachments and memory are excluded from
+        search.
       </p>
       <div className="web-search-actions">
         <div
@@ -66,6 +68,8 @@ export function WebSearchControl({
               role="switch"
               aria-checked={enabled}
               aria-label="Search the web"
+              aria-describedby={labelId}
+              title="Web: search, read public pages and inspect website designs locally"
               disabled={busy}
               tabIndex={index === 0 ? 0 : -1}
               className="web-search-toggle"
@@ -127,10 +131,10 @@ export function WebSearchControl({
               <p className="muted">
                 For this message: include a public page URL. The configured
                 Browser executor renders it and saves a screenshot, without
-                signing in. Questions about a page’s appearance or an
-                image-prompt brief also inspect its screenshot with an installed
-                local Vision model, which may load automatically. Use an empty
-                search query to enable this option.
+                signing in. Use this for JavaScript-dependent text pages. Visual
+                website questions already use local Vision automatically with
+                Web on; this option is not required. Use an empty search query
+                to enable it.
               </p>
             </>
           )}

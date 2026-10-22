@@ -51,8 +51,11 @@ The original owned model preset was restored and QA history archived. Evidence:
 `data/acceptance/chat-website-design-20261022/post-deployment-qualified.json`.
 The native Runner source/service stayed unchanged during this deployment.
 
-Next practical increment: make a single-page design question work with ordinary
-Web enabled, without finding the advanced JavaScript option. Derive the URL and
+The next selection increment is implemented in `feat/chat-auto-visual-pages`
+(`.tools/chat-auto-visual-pages`): a single-page design question uses ordinary Web
+without the advanced JavaScript option. Qualification is recorded separately in
+`data/acceptance/chat-auto-visual-pages-20261022`; inspect its actual state before
+resuming or claiming default-entry delivery. Derive the URL and
 visual intent from the current user's explicit instruction only; preserve exact
 search-query and text-only overrides, competing agent/media action priority,
 source hashes, local-model disclosure, Stop and ownership. Quoted examples, pages,
