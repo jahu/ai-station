@@ -6,6 +6,8 @@ import socketserver
 import ssl
 import subprocess
 import threading
+from email.parser import BytesParser
+from email.policy import default
 from uuid import uuid4
 
 import pytest
@@ -130,7 +132,7 @@ def test_reviewed_email_reaches_actual_local_tls_smtp_sink(tmp_path, monkeypatch
                     "expected_updated_at": row["updated_at"],
                     "recipients": ["recipient@example.com"],
                     "subject": "Local TLS acceptance",
-                    "body": "This synthetic message must reach only the private local test sink.",
+                    "body": "Zażółć gęślą jaźń.\n.\nTo jest wyłącznie prywatny test SMTP.",
                 },
             )
             assert preview.status_code == 201, preview.text
@@ -147,6 +149,13 @@ def test_reviewed_email_reaches_actual_local_tls_smtp_sink(tmp_path, monkeypatch
             assert len(received) == 1 and b"Local TLS acceptance" in received[0]
             assert b"recipient@example.com" in received[0] and b"synthetic-password" not in received[0]
             assert b"AUTH" in commands and b"DATA" in commands
+            assert received[0].isascii()
+            parsed = BytesParser(policy=default).parsebytes(received[0])
+            assert parsed.get_content().splitlines() == [
+                "Zażółć gęślą jaźń.",
+                ".",
+                "To jest wyłącznie prywatny test SMTP.",
+            ]
             assert receipt["message_id"].encode() in received[0]
     finally:
         sink.shutdown()

@@ -1,6 +1,6 @@
 # Named connectors
 
-The System workspace lists connectors with their actual status. **HTTP GET** of one reviewed public URL and read-only **GitHub repository snapshots** are operational. Named HTTP connectors are one keyboard sequence (arrows, Home, End, Enter inspects the last check when one exists) with unique Inspect names; Check GET and Remove stay on the selected row. Account browser automation, email, calendar and social adapters remain listed as unavailable; that unavailable list is a separate keyboard sequence (arrows, Home, End) with unique Adapter names and no inspectable adapter Run. GitHub publication still uses its separate, approval-bound Host Runner adapter.
+The System workspace lists connectors with their actual status. **HTTP GET** of one reviewed public URL and read-only **GitHub repository snapshots** are operational. Named HTTP connectors are one keyboard sequence (arrows, Home, End, Enter inspects the last check when one exists) with unique Inspect names; Check GET and Remove stay on the selected row. Account browser automation, calendar and social adapters remain listed as unavailable; that unavailable list is a separate keyboard sequence (arrows, Home, End) with unique Adapter names and no inspectable adapter Run. GitHub publication still uses its separate, approval-bound Host Runner adapter.
 
 An HTTP connector stores a unique key, display name, public `http`/`https` URL on port 80 or 443, optional secret reference (`env:NAME` or a write-only file under the data root) and enablement. The API never returns a secret value. URLs cannot embed credentials. Private, loopback, link-local and non-public DNS answers are rejected, including after redirects.
 
@@ -65,3 +65,14 @@ An actual isolated conversation API → worker → native gh GET run passed with
 same-Task child, stored inline snapshot and unchanged receipt replay on 2026-10-15;
 evidence: `data/acceptance/chat-github-20261015/real-result.json`. This test did
 not perform model inference or GitHub writes.
+
+## Reviewed email
+
+Settings → Integrations → Email accepts a TLS SMTP connection, sender and
+recipient allowlist. Credentials are write-only. Check connection queues verified
+TLS/authentication without sending a message. Prepare a message freezes a complete
+preview; only explicit **Approve and send** queues SMTP submission. Connection
+settings support disable, credential replacement and confirmed removal; past
+delivery receipts remain inspectable. Unknown and partial acceptance never trigger
+automatic resend. This foundation does not yet enable agent-generated email.
+See [reviewed delivery contracts and qualification](reviewed-email.md).

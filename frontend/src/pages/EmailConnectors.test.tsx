@@ -23,6 +23,7 @@ const row: EmailConnector = {
   },
   enabled: true,
   health: "unknown",
+  status: "unconfigured",
   secret_present: true,
   updated_at: "2026-10-22T12:00:00Z",
   last_run_id: null,

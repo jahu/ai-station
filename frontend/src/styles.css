@@ -6687,7 +6687,8 @@ section:has(> .memory-grid) > .dashboard-note {
 .email-history {
   margin-top: 20px;
 }
-.email-connector > .row {
+.email-connectors > .row,
+.email-connector .row {
   flex-wrap: wrap;
 }
 @media (max-width: 600px) {

@@ -1,9 +1,9 @@
-# Backlog: read a requested website in Chat
+# Read a requested website in Chat
 
-Requested by the operator on 2026-10-22. **Planned, not implemented in ordinary
-Chat.** This is a Chat grounding gap, distinct from improving web-search ranking.
-Include it in the active product-completion work; do not require a coding project
-or a persistent agent for a simple website analysis.
+Requested by the operator on 2026-10-22. **The text-reading slice is implemented,
+merged in PR #341 and deployed.** Rendered-page and visual analysis remain in the
+backlog. This is distinct from web-search ranking; a simple website analysis does
+not require a coding project or persistent agent.
 
 ## Problem and expected experience
 
@@ -71,22 +71,29 @@ Related existing boundaries: [reviewed page coding](../agent-page-coding.md),
 [orchestrator](../orchestrator.md), [security model](../security-model.md).
 
 
-## Active implementation (2026-10-22)
+## Delivered text reader (2026-10-22)
 
-Branch `feat/chat-direct-page-reading`, worktree `.tools/chat-direct-page-reading`,
-is implementing the first ordinary-Chat text-read slice. Targets are frozen from
-explicit reading instructions in the user's own text, including bare domains.
-Existing DNS-pinned HTTP fetching runs inside the queued Chat executor, before
-inference, and produces its normal JSON Artifact. The assistant message shows
-fetched sources separately from search snippets. Explicit follow-ups can reuse a
-same-conversation, successful source Artifact after hash/provenance checks,
-without a new fetch or a query rewrite. Stop cancels the pending fetch. Web off
-and explicit custom search queries retain existing behavior.
+[PR #341](https://github.com/jahu/ai-station/pull/341) merged as `157e773`.
+The qualified source `5123ca8` was deployed without replacing the operator's
+loaded model. Targets are frozen from explicit reading instructions in the
+user's own text, including bare domains. Existing DNS-pinned HTTP fetching runs
+inside the queued Chat executor before inference and produces a JSON Artifact.
+The assistant shows fetched sources separately from search snippets. Explicit
+follow-ups can reuse a successful same-conversation Artifact after hash and
+provenance checks, without another fetch or a query rewrite. Web off and explicit
+custom search queries retain their existing behavior.
 
-This branch is not released or fully qualified. Twenty-eight focused fake-provider
-API/worker tests and the combined 72-test page/search regression run passed, including
-the actual Chat mode, Work, and both legacy mode aliases. Focused frontend lint/types/build and 16 Chat/source tests also passed. No real
-website or model acceptance has been claimed. Rendered-browser fallback and pixel-grounded
-brand/style analysis remain open requirements; this text reader must never
-pretend it observed typography, colors or layout. Finish review, full checks,
-frontend/browser acceptance and PR-to-develop before deployment.
+Qualification passed 1912 Python tests (nine opt-in skips), 534 frontend tests,
+format/lint/type checks, production build, Compose validation, image qualification
+and compiled desktop/mobile acceptance. The exact Polish `akademia.ai` prompt
+above then passed through the deployed workers with a real local model and real
+page fetch. An Instagram follow-up reused the same source and fetch timestamp.
+Evidence: `data/acceptance/chat-direct-page-reading-20261022/production-smoke-result.json`
+and `deployed-verification.json`. These checks do not establish visual analysis.
+
+## Remaining backlog
+
+Add a separately permissioned rendered-browser fallback for JavaScript-only pages
+and pixel-grounded brand/style analysis with a supported vision model. A text read
+must not pretend it observed typography, colors or layout. Keep source provenance,
+Stop, bounded output and the public-address restrictions when adding this slice.

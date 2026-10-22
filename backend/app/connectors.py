@@ -318,6 +318,8 @@ def edit(connector_id: UUID, body: ConnectorPatch, session: DB):
         )
         if bool(config.username) != has_secret:
             raise HTTPException(422, "SMTP username and credential must be configured together")
+    if row.kind == "email" and (body.secret is not None or body.secret_ref is not None or body.clear_secret):
+        row.status, row.health, row.last_run_id = "unconfigured", "unknown", None
     apply_secret(row, secret_ref=body.secret_ref, secret=body.secret, clear=body.clear_secret)
     row.updated_at = utcnow()
     session.commit()

@@ -5,7 +5,32 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current implementation — website agent build policy, 2026-10-22
+## Current continuation — reviewed email, 2026-10-22
+
+PRs #338–341 are merged. Current deployed text-reader source is `5123ca8`
+(release `.tools/ui-chat-direct-page-reading-20261022`), with schema **0029**.
+Market observations and the exact ordinary-Chat `akademia.ai` example passed real
+production acceptance; the latter also reused its source for an Instagram follow-up.
+See [page-reading status](chat-page-reading.md). Preserve the already-loaded Q4
+model/runtime and native Runner; neither needs replacement for email work.
+
+Draft PR #342 continues in `.tools/reviewed-email-delivery` on
+`feat/reviewed-email-delivery`. It adds typed TLS SMTP, operator-reviewed messages,
+immutable approval, a durable acceptance journal and settings/history UI with
+schema **0030**. This is a manual delivery foundation, not autonomous agent email.
+No external account/recipient has been used; actual SMTP protocol tests use a
+private TLS sink and synthetic credentials. Review fixes cover ASCII-safe MIME
+encoding for Polish text, stable textarea accessibility labels and invalidating
+health after credential replacement. Earlier full/UI check results predate these
+fixes and do not qualify the final source. Finish current focused/browser checks,
+freeze the reviewed head, then run full local checks before merge/deployment.
+Evidence/scripts: `data/acceptance/reviewed-email-delivery-20261022`.
+
+The root checkout has pre-existing Memory WIP: do not stage, reset or switch it.
+After reviewed email: scoped automatic market-agent email and stock providers,
+then remaining product-completion items. Visual website analysis remains backlog.
+
+## Earlier implementation — website agent build policy, 2026-10-22
 
 PR #337 is merged as `e13632e` and deployed. Its native/UI/image rollout passed
 LAN/loopback authentication, all persisted IDs/password, 3 worker slots,

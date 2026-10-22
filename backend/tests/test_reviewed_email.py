@@ -468,3 +468,18 @@ def test_smtp_authentication_errors_never_expose_the_saved_credential(monkeypatc
             SECRET not in str(result)
             and SECRET not in api.get("/api/runs/" + message["run"]["id"] + "/events").text
         )
+
+
+def test_replacing_smtp_credentials_invalidates_previous_health(smtp):
+    with TestClient(app) as api:
+        row = connector(api)
+        assert api.post("/api/connectors/" + row["id"] + "/check").status_code == 202
+        step()
+        checked = api.get("/api/connectors/" + row["id"]).json()
+        assert checked["health"] == "healthy"
+        changed = api.patch(
+            "/api/connectors/" + row["id"],
+            json={"expected_updated_at": checked["updated_at"], "secret": "new-synthetic-password"},
+        )
+        assert changed.status_code == 200, changed.text
+        assert changed.json()["health"] == "unknown" and changed.json()["last_run_id"] is None

@@ -22,6 +22,7 @@ export type EmailConnector = {
   updated_at: string;
   enabled: boolean;
   health: string;
+  status: string;
   secret_present: boolean;
   last_run_id: string | null;
 };
@@ -195,6 +196,7 @@ function MailSettings({
           Allowed recipients
           <textarea
             name="recipients"
+            aria-label="Allowed recipients"
             rows={2}
             required
             defaultValue={row?.smtp.allowed_recipients.join("\n") ?? ""}
@@ -394,18 +396,25 @@ function MailCard({ row }: { row: EmailConnector }) {
         <span className="chip">
           {!row.enabled
             ? "Disabled"
-            : row.health === "healthy"
-              ? "Connection verified"
-              : row.health === "unhealthy"
-                ? "Check connection"
-                : "Not checked"}
+            : row.status === "checking"
+              ? "Checking connection…"
+              : row.health === "healthy"
+                ? "Connection verified"
+                : row.health === "unhealthy"
+                  ? "Check connection"
+                  : "Not checked"}
         </span>
       </div>
       <div className="row">
         <Button
           variant="secondary"
           type="button"
-          disabled={check.isPending || active || !row.enabled}
+          disabled={
+            check.isPending ||
+            active ||
+            row.status === "checking" ||
+            !row.enabled
+          }
           onClick={() => check.mutate()}
         >
           <ShieldCheck size={15} />
@@ -421,7 +430,7 @@ function MailCard({ row }: { row: EmailConnector }) {
         <Button
           type="button"
           variant="ghost"
-          disabled={active}
+          disabled={active || row.status === "checking"}
           onClick={() => setEditing(!editing)}
         >
           Mail settings
@@ -429,7 +438,7 @@ function MailCard({ row }: { row: EmailConnector }) {
         <Button
           type="button"
           variant="ghost"
-          disabled={active || remove.isPending}
+          disabled={active || row.status === "checking" || remove.isPending}
           onClick={() => {
             if (
               window.confirm(
@@ -498,6 +507,7 @@ function MailCard({ row }: { row: EmailConnector }) {
               Message
               <textarea
                 name="body"
+                aria-label="Message"
                 rows={4}
                 required
                 maxLength={16000}

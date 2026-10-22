@@ -375,7 +375,7 @@ class EmailSendExecutor:
             message["Subject"] = row.payload["subject"]
             message["Message-ID"] = row.message_id
             message["Date"] = format_datetime(row.created_at)
-            message.set_content(row.payload["body"])
+            message.set_content(row.payload["body"], cte="quoted-printable")
             client = connect_smtp(config, password)
             if canceled(session, run):
                 return "done"
