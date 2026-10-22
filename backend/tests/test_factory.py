@@ -108,3 +108,10 @@ def test_crypto_price_watch_keeps_its_existing_keyless_source():
     agent = draft_agent("Every day check Bitcoin prices")
     assert agent.tools == ["market_watch"] and agent.market["provider"] == "coinbase_exchange"
     assert agent.market["instruments"] == ["BTC-USD"] and agent.model == ""
+
+
+@pytest.mark.parametrize("subject", ["stock", "Bitcoin"])
+def test_price_data_in_a_spreadsheet_stays_an_offline_python_task(subject):
+    agent = draft_agent(f"Analyze {subject} prices in this CSV spreadsheet")
+    assert agent.tools == ["python_data"] and agent.model == "auto"
+    assert agent.market is None and not agent.search_query and not agent.fetch_urls

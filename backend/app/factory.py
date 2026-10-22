@@ -216,6 +216,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
     stock_request = re.search(r"\b(?:stocks?|akcj\w*|giełd\w*|gield\w*)", lowered)
     stock_research = bool(
         not wants_coding
+        and "python_data" not in tools
         and stock_request
         and re.search(r"(?:price|cen[ayę]|kurs)", lowered)
         and not re.search(r"\bfinnhub\b", lowered)
@@ -228,6 +229,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
             tools.append("web_search")
     if (
         not wants_coding
+        and "python_data" not in tools
         and not stock_research
         and (re.search(r"\b(?:bitcoin\w*|btc|ethereum|eth)\b", lowered) or stock_request)
         and re.search(r"(?:price|cen[ayę]|kurs)", lowered)
