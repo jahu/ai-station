@@ -253,3 +253,42 @@ def test_a_failed_new_page_blocks_accidental_reuse_of_the_previous_site(rendered
         step()
         queued = send(api, route, content="Make it an Instagram prompt", web_search={"enabled": True})
         assert queued["parameters"]["page_read"] is None
+
+
+def test_pre_render_option_receipt_replays_but_cannot_gain_a_browser_grant(rendered):
+    import hashlib
+    import json
+
+    from app.chat import TurnBody
+    from app.models import ChatTurnRequest
+
+    body = turn(content="Read https://example.com/", web_search={"enabled": True})
+    with TestClient(app) as api:
+        first = api.post("/api/chat/turns", json=body)
+        assert first.status_code == 202, first.text
+        # Simulate the canonical receipt from the deployed schema before render_pages existed.
+        legacy = TurnBody.model_validate(body).model_dump(mode="json")
+        for key in [
+            "expected_provider_version",
+            "reasoning",
+            "continuation",
+            "media",
+            "github",
+            "project_defaults",
+        ]:
+            legacy.pop(key)
+        legacy["web_search"].pop("render_pages", None)
+        with session_factory()() as session:
+            receipt = session.get(ChatTurnRequest, body["client_request_id"])
+            receipt.payload_hash = hashlib.sha256(
+                json.dumps(legacy, sort_keys=True, separators=(",", ":")).encode()
+            ).hexdigest()
+            session.commit()
+        replay = api.post("/api/chat/turns", json=body)
+        assert replay.status_code == 202, replay.text
+        assert replay.json()["run"]["id"] == first.json()["run"]["id"]
+        explicit_off = {**body, "web_search": {"enabled": True, "render_pages": False}}
+        assert api.post("/api/chat/turns", json=explicit_off).status_code == 202
+        changed_grant = {**body, "web_search": {"enabled": True, "render_pages": True}}
+        assert api.post("/api/chat/turns", json=changed_grant).status_code == 409
+        assert not rendered[1]

@@ -106,6 +106,10 @@ Send. Web off cannot carry this grant. No URLs are taken from attachments, quote
 examples, memory or model output. Missing scope/setup is an actionable failure;
 it never substitutes search snippets for a rendered read.
 
+The absent/false render option preserves pre-existing canonical turn receipt
+hashes. Replaying an older Send returns its existing Run; adding a Browser grant
+to that same receipt is rejected as a changed request.
+
 The enqueue transaction freezes URLs, grants only Browser/network read and
 publishes an owned native Browser child on the same Task. Chat acquires a normal
 RunDependency on it; workers perform all rendering. The existing private Runner,

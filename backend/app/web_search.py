@@ -26,7 +26,8 @@ class SearchOptions(BaseModel):
     model_config = ConfigDict(extra="forbid")
     enabled: bool = False
     query: str = Field(default="", max_length=500)
-    render_pages: bool = False
+    # Preserve existing canonical turn receipt hashes when no new grant is made.
+    render_pages: bool = Field(default=False, exclude_if=lambda value: not value)
 
     @model_validator(mode="after")
     def rendering_scope(self):
