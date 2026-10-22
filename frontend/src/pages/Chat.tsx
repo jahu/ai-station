@@ -921,6 +921,7 @@ function Transcript({
               {message.metadata.agent_id && (
                 <AssistantAgentDraft
                   agentId={message.metadata.agent_id}
+                  compact
                   tabIndex={current ? 0 : -1}
                 />
               )}

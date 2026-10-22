@@ -43,3 +43,8 @@ model-load dependencies and stale lease recovery. Frontend checks include pendin
 Stop, restored URL, errors, model selection and the preserved quick path. Run real
 local inference only as an explicitly opted-in acceptance, without Web/tools,
 cloud, credentials or model downloads.
+
+Conversation results show a compact goal/model/tools/schedule summary with a
+review link; they do not expand the full settings form by default. Existing
+in-conversation controls stay available through an explicit edit action, with
+reports still visible. Model names resolve through the read-only catalog.

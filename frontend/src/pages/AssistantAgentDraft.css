@@ -1,0 +1,68 @@
+.assistant-agent-brief {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #17191c;
+  min-width: 0;
+}
+.assistant-agent-brief-head,
+.assistant-agent-brief-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.assistant-agent-brief-head {
+  justify-content: space-between;
+}
+.assistant-agent-brief-head h3 {
+  margin: 0;
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.assistant-agent-brief-status {
+  color: var(--accent);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.assistant-agent-brief p {
+  margin: 0;
+}
+.assistant-agent-brief-goal {
+  color: #d3d7d5;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.assistant-agent-brief-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+  margin: 0;
+}
+.assistant-agent-brief-facts dt {
+  color: var(--muted);
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+.assistant-agent-brief-facts dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.assistant-agent-brief-note {
+  font-size: 12px;
+  line-height: 1.6;
+}
+@media (max-width: 600px) {
+  .assistant-agent-brief {
+    padding: 16px;
+  }
+  .assistant-agent-brief-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
