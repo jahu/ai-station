@@ -6499,3 +6499,22 @@ section:has(> .memory-grid) > .dashboard-note {
 .agent-code-workspace > header h2 {
   margin-bottom: 6px;
 }
+.agent-code-workspace .coding-conversation {
+  max-width: none;
+  margin: 0;
+}
+.agent-code-workspace .coding-reply {
+  position: static;
+}
+@media (max-width: 640px) {
+  .agent-code-workspace .coding-answer,
+  .agent-code-workspace .coding-instruction {
+    padding: 16px;
+  }
+  .agent-code-workspace .coding-inline-review .content-panel {
+    padding: 12px;
+  }
+  .agent-code-workspace .coding-inline-review > section {
+    padding: 12px 0;
+  }
+}
