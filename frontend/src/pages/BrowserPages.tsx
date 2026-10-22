@@ -10,7 +10,7 @@ export function BrowserPages({
   chat?: boolean;
 }) {
   return (
-    <details className="web-search-sources" open>
+    <details className="web-search-sources" open={!chat}>
       <summary>
         <Globe size={15} /> {chat ? "Rendered page sources" : "Browsed pages"}{" "}
         <span className="chip">{result.pages.length}</span>

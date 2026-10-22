@@ -81,5 +81,8 @@ describe("rendered page evidence", () => {
     expect(
       screen.getByText(/Reused the saved capture; no new page request/),
     ).toBeTruthy();
+    expect(
+      screen.getByText("Rendered page sources").closest("details")?.open,
+    ).toBe(false);
   });
 });

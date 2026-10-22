@@ -117,7 +117,7 @@ loads and unrelated browser tasks are not canceled by that targeted operation.
 Only a successful matching child supplies a hashed canonical JSON artifact plus
 verified PNG artifacts. The selected model receives bounded visible text with
 untrusted-source instructions, not request audits or screenshot pixels. Chat
-shows screenshots and capture times, blocked-resource warnings and the distinction
+keeps screenshots and capture times in collapsed page sources, with blocked-resource warnings and the distinction
 between rendered text and pixel analysis. A same-page follow-up verifies original
 answer/child/conversation ownership and artifact hashes, reusing the capture even
 when Browser is subsequently unavailable. It performs no new page request.
