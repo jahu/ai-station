@@ -2,7 +2,7 @@
 
 import re
 
-from app.chat_pages import _instruction_text, _rendered_result, requested_pages
+from app.chat_pages import _DOMAIN, _instruction_text, _rendered_result, requested_pages
 from app.models import Artifact, Run
 from app.permissions import require
 from app.providers import ProviderError
@@ -10,6 +10,12 @@ from app.providers import ProviderError
 _DESIGN = re.compile(
     r"\b(?:image\s+prompt|design|layout|typograph\w*|colou?rs?|wygl[aą]d\w*|kolor\w*|typografi\w*|"
     r"szat\w*\s+graficzn\w*|(?:prompt|brief)\b.{0,100}\b(?:grafik\w*|image|banner|poster))\b",
+    re.I,
+)
+
+_TEXT_ONLY = re.compile(
+    r"\b(?:text\s+only|only\s+(?:page\s+)?text|tylko\s+(?:tre[śs][ćc]|tekst)|"
+    r"without\s+(?:vision|screenshots?)|bez\s+(?:vision|zrzut\w*|analizy\s+wygl[aą]du))\b",
     re.I,
 )
 
@@ -44,7 +50,11 @@ def requested_design_page(params):
     ):
         return None
     text = params.get("content", "")
-    if not isinstance(text, str) or not _DESIGN.search(_instruction_text(text)):
+    if not isinstance(text, str):
+        return None
+    instruction = _instruction_text(text)
+    intent = _DOMAIN.sub(" ", re.sub(r"\b[a-z][a-z0-9+.-]*://[^\s]+", " ", instruction, flags=re.I))
+    if _TEXT_ONLY.search(intent) or not _DESIGN.search(intent):
         return None
     try:
         pages = requested_pages("Read " + _instruction_text(text))
