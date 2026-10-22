@@ -39,17 +39,25 @@ export default function AgentDataFiles({
       if (selected.some((item) => item.size > 16 * 1024 * 1024))
         throw new Error("Each file may be up to 16 MB.");
       const added: Artifact[] = [];
-      for (const item of selected) {
-        const body = new FormData();
-        body.append("file", item);
-        added.push(
-          await api<Artifact>("/data/uploads", { method: "POST", body }),
-        );
+      try {
+        for (const item of selected) {
+          const body = new FormData();
+          body.append("file", item);
+          const artifact = await api<Artifact>("/data/uploads", {
+            method: "POST",
+            body,
+          });
+          added.push(artifact);
+          cache.setQueryData(["artifact", artifact.id], artifact);
+        }
+      } finally {
+        // One definition update per batch, including partial success. Conversation
+        // drafts autosave this callback with a version guard.
+        if (added.length) updateIds([...ids, ...added.map((item) => item.id)]);
       }
       return added;
     },
-    onSuccess: (added) => {
-      updateIds([...ids, ...added.map((a) => a.id)]);
+    onSettled: () => {
       void cache.invalidateQueries({ queryKey: ["library"] });
     },
   });

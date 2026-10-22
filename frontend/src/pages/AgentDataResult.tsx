@@ -25,6 +25,12 @@ export default function AgentDataResult({ runs }: { runs: Run[] }) {
   const result = resultRun?.metadata?.data_result as Result | undefined;
   const latest = current[0];
   if (!latest) return null;
+  const stopped = ["failed", "canceled", "interrupted"].includes(latest.status);
+  const terminalMessage = {
+    failed: "Analysis failed. Open execution details to inspect the error.",
+    canceled: "Analysis stopped. No new result was published.",
+    interrupted: "Analysis was interrupted. Inspect execution before retrying.",
+  }[latest.status];
   return (
     <section className="agent-data-result" aria-label="Data analysis result">
       <div className="row spread">
@@ -91,6 +97,7 @@ export default function AgentDataResult({ runs }: { runs: Run[] }) {
         <>
           <p className={latest.error_message ? "notice" : "muted"}>
             {latest.error_message ||
+              terminalMessage ||
               ({
                 agent_data_generate:
                   "Writing the analysis with your local model…",
@@ -102,7 +109,7 @@ export default function AgentDataResult({ runs }: { runs: Run[] }) {
                 "Preparing data analysis…")}
           </p>
           <Link to={`/runs/${latest.id}`} className="text-link">
-            View progress and Stop
+            {stopped ? "Execution details" : "View progress and Stop"}
           </Link>
         </>
       )}

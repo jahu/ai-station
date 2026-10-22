@@ -34,3 +34,14 @@ hashes unchanged; one bounded repair; failed/missing/invalid outputs; scope chan
 Stop during model and Python stages; stale-lease inspection without replay; provenance
 and desktop/mobile result UX. Fake-provider and real local-model qualification are
 reported separately. This document does not assert completion of that acceptance.
+
+## Acceptance evidence
+
+On 2026-10-22 synthetic CSV and genuine XLSX inputs completed real local model generation and actual
+offline Python execution, returning a verified total of 27 and a downloadable
+CSV with input hashes preserved. The model was the installed 27B IQ2_XS GGUF on
+both GPUs with native-observed 131072 context. This isolated acceptance freezes
+an already-loaded runtime binding; automatic loading is not part of that test.
+The temporary model was unloaded afterward. Remaining checks and rollout are
+tracked in the current handoff, with evidence under
+`data/acceptance/python-data-agents-20261015/`.

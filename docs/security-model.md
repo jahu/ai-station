@@ -352,6 +352,22 @@ can start. No existing host checkout is selected implicitly. See
 [managed agent workspaces](agent-workspaces.md).
 
 
+An empty Chat web search may perform one bounded rewrite of only its approved
+query using the already-selected provider and existing external-AI permission.
+Conversation history, memories, attachments and search snippets never enter the
+rewrite request. Both actual queries are audited; no new URL fetching or tool
+grants are introduced. Cancellation closes the rewrite stream. Missing relevant
+sources prevent a final factual completion rather than silently falling back to
+unsupported model claims. See [web search](web-search.md).
+
+Automatic follow-up search resolution snapshots at most six recent ordinary text
+messages, 1200 characters each, excluding attachment bodies, orchestration status,
+partial/superseded replies and replies based on pinned memory, summaries, attached
+files or transcript tools. Only the short generated query (300 characters / 30
+words) reaches the configured search endpoint; exact explicit queries bypass
+contextual planning. Resolution failure and Stop prevent any ambiguous fallback
+search or final answer. Chat's default switch is a versioned operator preference;
+Work continuations and old API callers do not acquire implicit network access.
 
 ## Scoped Python data agents
 
@@ -370,24 +386,3 @@ bound before dispatch and result adoption. Python has no network, host credentia
 or arbitrary host mounts. Only confirmed program/output failures can consume the
 saved repair budget; cancellation and uncertain dispatch never replay. Final CSV
 downloads escape formula-like strings and retain source/output lineage.
-
-
-An empty Chat web search may perform one bounded rewrite of only its approved
-query using the already-selected provider and existing external-AI permission.
-Conversation history, memories, attachments and search snippets never enter the
-rewrite request. Both actual queries are audited; no new URL fetching or tool
-grants are introduced. Cancellation closes the rewrite stream. Missing relevant
-sources prevent a final factual completion rather than silently falling back to
-unsupported model claims. See [web search](web-search.md).
-
-
-
-Automatic follow-up search resolution snapshots at most six recent ordinary text
-messages, 1200 characters each, excluding attachment bodies, orchestration status,
-partial/superseded replies and replies based on pinned memory, summaries, attached
-files or transcript tools. Only the short generated query (300 characters / 30
-words) reaches the configured search endpoint; exact explicit queries bypass
-contextual planning. Resolution failure and Stop prevent any ambiguous fallback
-search or final answer. Chat's default switch is a versioned operator preference;
-Work continuations and old API callers do not acquire implicit network access.
-

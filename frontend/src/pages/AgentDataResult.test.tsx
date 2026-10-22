@@ -87,3 +87,17 @@ it("preserves failed execution state rather than showing successful preparation"
   expect(screen.getByText("Analysis output is invalid")).toBeTruthy();
   expect(screen.queryByRole("link", { name: "Download CSV" })).toBeNull();
 });
+
+it("labels canceled analysis without pretending it is still running", () => {
+  render(
+    <MemoryRouter>
+      <AgentDataResult runs={[run({ status: "canceled" })]} />
+    </MemoryRouter>,
+  );
+  expect(
+    screen.getByText("Analysis stopped. No new result was published."),
+  ).toBeTruthy();
+  expect(screen.queryByText("Running Python locally…")).toBeNull();
+  expect(screen.getByRole("link", { name: "Execution details" })).toBeTruthy();
+  expect(screen.queryByRole("link", { name: "Download CSV" })).toBeNull();
+});
