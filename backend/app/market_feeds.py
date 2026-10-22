@@ -95,7 +95,9 @@ def reviewed_connector(session, connector_id, revision=None):
         key = credential(resolve_secret(row.secret_ref))
     except Exception as exc:
         raise MarketFeedError("Configure the saved stock-data credential before continuing") from exc
-    if revision is not None and connector_revision(row) != revision:
+    # Compare the exact credential snapshot being returned, without a second
+    # SecretProvider read that could race an out-of-band environment/file change.
+    if revision is not None and _revision(row, hashlib.sha256(key.encode()).hexdigest()) != revision:
         raise MarketFeedError("Stock-data account changed; review and select it again")
     return row, key
 
@@ -255,14 +257,14 @@ async def read_page(session, run, connector_id, revision, operation, *, symbol=N
         if current_key != key:
             raise MarketFeedError("Stock-data credential changed during the read; review the account")
         safe_result(page, key)
-        if page.get("error"):
-            raise MarketFeedError("Stock-data endpoint could not be read safely")
         if page.get("status") in {401, 403}:
             raise MarketFeedError(
                 "Stock-data account rejected this read; check the credential and subscription"
             )
         if page.get("status") == 429:
             raise MarketFeedError("Stock-data account rate limit reached; no automatic retry was made")
+        if page.get("error"):
+            raise MarketFeedError("Stock-data endpoint could not be read safely")
         return page
     except MarketFeedError:
         raise
@@ -335,6 +337,16 @@ async def read_stock_quotes(session, run, scope, deadline):
     result = {"provider": "finnhub", "quotes": quotes, "fetched_at": utcnow().isoformat()}
     safe_result(result, key)
     artifact_id = record_result(session, run, result, filename="stock-quotes.json")
+    run.metadata_json = {**run.metadata_json, "stock_source_artifact_id": artifact_id}
+    append_event(
+        session,
+        run.id,
+        "market.source_recorded",
+        {"provider": "finnhub", "artifact_id": artifact_id, "quote_count": len(quotes)},
+    )
+    # A validated source read is an inspectable action even when comparison later
+    # rejects a correction. Observation/alert writes still commit only on success.
+    session.commit()
     return {"quotes": quotes, "artifact_id": artifact_id}
 
 

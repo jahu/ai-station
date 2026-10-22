@@ -190,6 +190,23 @@ def test_connector_key_rotation_rejects_stale_lookup_without_network(feed, monke
     assert response.status_code == 409 and seen == []
 
 
+def test_reviewed_revision_and_returned_key_use_one_identical_secret_snapshot(feed, monkeypatch):
+    from app.market_feeds import reviewed_connector
+
+    _, row = feed
+    calls = []
+
+    def resolve(_ref):
+        calls.append(True)
+        assert len(calls) == 1, "The returned credential must be the snapshot whose revision was checked"
+        return KEY
+
+    monkeypatch.setattr("app.market_feeds.resolve_secret", resolve)
+    with session_factory()() as session:
+        saved, key = reviewed_connector(session, row["id"], row["market_policy_revision"])
+        assert saved.id == row["id"] and key == KEY
+
+
 def test_rotation_after_enqueue_is_checked_again_by_worker(feed, monkeypatch):
     api, row = feed
     seen = fake_status(monkeypatch)
@@ -339,6 +356,30 @@ def test_dns_private_target_is_blocked_before_sending_credentials(feed, monkeypa
     queued = api.post(f"/api/connectors/{row['id']}/check").json()
     work()
     assert receipt(api, queued["id"])["status"] == "failed"
+
+
+def test_real_http_reader_rate_limit_shape_keeps_actionable_safe_diagnostic(feed, monkeypatch):
+    from app import http_fetch
+
+    api, row = feed
+    original = httpx.AsyncClient
+    seen = []
+
+    def handle(request):
+        seen.append(request.url)
+        return httpx.Response(429, json={"error": "account credits exhausted " + KEY})
+
+    monkeypatch.setattr(
+        http_fetch.socket, "getaddrinfo", lambda *args, **kwargs: [(0, 0, 0, "", ("93.184.216.34", 0))]
+    )
+    monkeypatch.setattr(
+        httpx, "AsyncClient", lambda **kwargs: original(**kwargs, transport=httpx.MockTransport(handle))
+    )
+    queued = api.post(f"/api/connectors/{row['id']}/check").json()
+    work()
+    result = receipt(api, queued["id"])
+    assert result["status"] == "failed" and "rate limit" in result["error_message"]
+    assert KEY not in json.dumps(result) and len(seen) == 1
 
 
 def test_interruption_while_read_is_pending_cancels_the_future_and_cannot_publish(feed, monkeypatch):

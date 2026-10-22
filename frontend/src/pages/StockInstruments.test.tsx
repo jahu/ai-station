@@ -245,10 +245,11 @@ it("keeps a saved API key write-only and saving makes no account request", async
 });
 
 it("freezes the settings version the operator actually opened when the account refreshes", async () => {
-  const fetcher = vi.fn(async (_path: string, _options?: RequestInit) => ({
-    ok: true,
-    json: async () => account,
-  }));
+  const fetcher = vi.fn(async (path: string, options?: RequestInit) => {
+    expect(path).toBe("/api/connectors/stocks-one");
+    expect(options?.method).toBe("PATCH");
+    return { ok: true, json: async () => account };
+  });
   vi.stubGlobal("fetch", fetcher);
   function RefreshedAccount() {
     const [row, setRow] = useState(account);

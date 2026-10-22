@@ -13,7 +13,7 @@ from app.engine import tick
 from app.market_feeds import connector_revision
 from app.market_schema import MarketScope
 from app.market_watch import policy_key
-from app.models import Agent, Connector, EmailDelivery, MarketAlert, MarketObservation, Notice, Run
+from app.models import Agent, Artifact, Connector, EmailDelivery, MarketAlert, MarketObservation, Notice, Run
 from app.schedule import launch_agent
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
@@ -181,6 +181,12 @@ def test_revised_same_timestamp_is_inspectable_and_cannot_overwrite_baseline(ses
     assert quote.status == "failed" and "already recorded" in quote.error_message
     assert list(session.scalars(select(MarketObservation.price))) == ["100"]
     assert session.scalar(select(func.count()).select_from(Notice)) == 0
+    source = session.get(Artifact, quote.metadata_json["stock_source_artifact_id"])
+    from app.config import get_settings
+    from app.paths import safe_join
+
+    receipt = json.loads(safe_join(get_settings().data_dir, source.relative_path).read_text())
+    assert receipt["quotes"][0]["price"] == "101" and source.run_id == quote.id
 
 
 def test_stale_closed_quote_is_not_delivered_even_when_asof_age_is_allowed(session, monkeypatch):

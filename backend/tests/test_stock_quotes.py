@@ -103,6 +103,7 @@ def test_profile_identity_and_currency_are_checked(profile):
         {"t": int(NOW.timestamp()) - 301},
         {"timezone": "not/a/timezone"},
         {"session": "made-up"},
+        {"isOpen": False, "session": "regular"},
     ],
 )
 def test_market_status_is_validated_separately_from_quote_time(status):
