@@ -528,3 +528,21 @@ class MarketAlert(Base):
     change_percent: Mapped[str] = mapped_column(String(80))
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
     notice_id: Mapped[str | None] = mapped_column(ForeignKey("notices.id"), unique=True, nullable=True)
+
+
+class EmailDelivery(Base):
+    __tablename__ = "email_deliveries"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    connector_id: Mapped[str | None] = mapped_column(
+        ForeignKey("connectors.id", ondelete="SET NULL"), nullable=True
+    )
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"), unique=True)
+    payload: Mapped[dict] = mapped_column(JSON)
+    payload_hash: Mapped[str] = mapped_column(String(64))
+    message_id: Mapped[str] = mapped_column(String(100), unique=True)
+    state: Mapped[str] = mapped_column(String(40), default="prepared")
+    accepted_recipients: Mapped[list] = mapped_column(JSON, default=list)
+    refused_recipients: Mapped[list] = mapped_column(JSON, default=list)
+    reason: Mapped[str] = mapped_column(String(200), default="")
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)

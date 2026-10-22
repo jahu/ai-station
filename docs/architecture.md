@@ -487,3 +487,9 @@ accepting only typed revision-bound interactions through ordinary Runs. It is
 unpublished until permissions, resource admission, process ownership, Stop,
 recovery and real browser/agent acceptance pass. No generated script executes in
 the authenticated UI origin; no public preview port is introduced.
+
+
+[Reviewed email delivery](reviewed-email.md) is being qualified as a control-plane
+SMTP connector. It reuses SecretProvider references, operator previews/approvals,
+ordinary Tasks/Runs and a durable delivery journal; no Host Runner or shell API is
+needed for SMTP. Automated agent email remains a separately scoped integration.

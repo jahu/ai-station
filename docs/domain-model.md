@@ -120,3 +120,12 @@ The [Memory workspace](memory.md) exposes durable scoped entries with validated 
 ## RunDependency
 
 A composite (run_id, prerequisite_id) edge orders Runs, including shared model loads across Tasks. Edges are added only to queued Runs, reject cycles, and are separate from parent_run_id. Dependencies survive restarts; all prerequisites must succeed before execution.
+
+
+### EmailDelivery (migration 0030; qualification pending)
+
+A frozen operator message bound to one Run: durable client identity, sender and
+recipient scope, complete preview, payload hash, message ID, SMTP configuration
+snapshot, submission state and accepted/refused recipients. Approval binds the
+hash; uncertain submission is inspection-only. History survives connector removal.
+SMTP acceptance is recorded separately from inbox delivery, which is not claimed.

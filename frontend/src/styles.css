@@ -6598,3 +6598,108 @@ section:has(> .memory-grid) > .dashboard-note {
     grid-template-columns: 1fr;
   }
 }
+
+.email-connectors {
+  margin: 24px 0;
+  display: grid;
+  gap: 16px;
+}
+.email-connector h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.email-settings,
+.email-compose {
+  margin: 18px 0;
+}
+.email-settings fieldset,
+.email-compose fieldset {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+}
+.email-settings label,
+.email-compose label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+.email-settings legend,
+.email-compose legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+.email-settings details .field-pair {
+  margin-top: 12px;
+}
+.email-settings .project-checkbox,
+.email-compose .project-checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.email-settings input[type="checkbox"],
+.email-compose input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+.email-recipient-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+.email-preview {
+  border-top: 1px solid var(--border);
+  padding: 14px 0;
+}
+.email-preview summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.email-envelope {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+.email-envelope div {
+  display: grid;
+  grid-template-columns: 45px minmax(0, 1fr);
+  gap: 12px;
+}
+.email-envelope dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.email-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  padding: 16px;
+  background: var(--surface);
+  border-radius: 10px;
+}
+.email-history {
+  margin-top: 20px;
+}
+.email-connector > .row {
+  flex-wrap: wrap;
+}
+@media (max-width: 600px) {
+  .email-settings .field-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+.email-recipient-choices label,
+.email-connector .muted {
+  overflow-wrap: anywhere;
+}
+.email-body {
+  background: var(--surface, #101315);
+}

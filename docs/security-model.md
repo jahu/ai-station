@@ -418,3 +418,16 @@ Artifact type and content hash. It preserves the original fetch timestamp and
 never silently retries a changed or missing source. No cookies or credentials
 are forwarded and JavaScript is not executed. Rendered/visual analysis remains
 separate, pending capability and permission qualification.
+
+
+## SMTP message authority (qualification pending)
+
+The [reviewed SMTP connector](reviewed-email.md) freezes sender, allowlisted
+recipients, complete body and configuration fingerprint before approval. Only
+`email_send` plus `network_external` can submit that approved payload. SMTP uses
+verified TLS on 465/587 and stored/environment credential references; no plaintext
+or certificate-verification bypass is configurable. A sending journal precedes
+DATA; uncertain outcomes cannot be automatically replayed. Accepted/partially
+accepted receipts remain truthful after late cancellation. Health checks send no
+message. Agents have no published SMTP tool in this increment; operator approval
+cannot be inferred from model output or a generic successful agent report.

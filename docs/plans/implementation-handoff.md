@@ -782,3 +782,40 @@ perform applicable real read/model acceptance without replacing the operator's
 loaded runtime, and roll out through the same guarded backup/deploy workflow.
 Rendered-browser fallback and visually grounded branding analysis remain tracked
 in [the page-reading backlog](chat-page-reading.md), not silently completed.
+
+
+## Released Chat source reading; reviewed SMTP next (2026-10-22)
+
+PR #341 is merged as `157e773` and deployed from frozen source `5123ca8` in
+`.tools/ui-chat-direct-page-reading-20261022`, database 0029. Final qualification:
+1912 Python tests/nine opt-in skips, 534 UI tests, lint/types/build/Compose/image,
+exact image/asset hashes and desktop/phone Send/source-reuse acceptance. The exact
+operator prompt about akademia.ai then succeeded through production Docker
+workers and the already-loaded local Q4 model; a second Instagram prompt reused
+the same fetched source and timestamp. The first acceptance harness mislabeled
+the parent executor as `assistant`; actual `orchestrator` and Chat Runs had already
+succeeded, so only the follow-up was submitted after correcting that assertion.
+The first request was not repeated. Both answers and evidence are in
+`data/acceptance/chat-direct-page-reading-20261022/production-smoke-result.json`.
+The operator runtime identity and actual 46080 context were preserved. Public
+site text was read; rendered appearance/visual brand analysis remains separate.
+
+Next branch: `feat/reviewed-email-delivery`, `.tools/reviewed-email-delivery`,
+based on develop #341. [Reviewed SMTP](../reviewed-email.md) adds a typed existing
+Connector kind, TLS 465/587, credential references, complete message previews,
+explicit approvals and durable submission receipts (migration 0030). Scope,
+payload hashes, idempotent request IDs, cancellation, partial/unknown outcomes,
+redaction and conservative recovery are implemented. Forty-four focused backend,
+connector, maintenance and local TLS-sink tests passed. Seven focused UI/connector
+tests and lint/types passed; final full/browser qualification is still required.
+No real SMTP account is configured and no external recipient was contacted.
+Agent auto-email and stock quotes are not implemented by this foundation.
+
+Full Python qualification uses `ai-station-reviewed-email-final-20261022.service`;
+UI/Compose/image checks use `ai-station-reviewed-email-ui-20261022.service`.
+Inspect actual handles and matching source identities before restarting or
+claiming success. Evidence: `data/acceptance/reviewed-email-delivery-20261022`.
+Finish full diff review and actual compiled desktop/phone preview/approval tests
+with private adapters, then PR to develop, guarded migration/backup and rollout.
+Never send a real external test email without its concrete configured recipient
+scope. Root Memory WIP stays untouched, and main/master remain untouched.

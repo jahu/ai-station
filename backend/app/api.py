@@ -32,6 +32,7 @@ from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
 from app.data_inputs import router as data_inputs_router
 from app.db import migrate, session_factory, session_scope, utcnow
+from app.email_delivery import router as email_router
 from app.embeddings import router as embedding_router
 from app.events import event_dict, list_events
 from app.images import MAX_UPLOAD
@@ -359,6 +360,8 @@ app.include_router(chat_router)
 app.include_router(chat_reasoning_router)
 app.include_router(chat_provider_router)
 app.include_router(connector_router)
+
+app.include_router(email_router)
 app.include_router(audio_router)
 app.include_router(transcription_router)
 app.include_router(avatar_router)

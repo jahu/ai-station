@@ -7,6 +7,7 @@ import json
 import re
 import tempfile
 from contextlib import suppress
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Literal
 from uuid import UUID
@@ -18,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.artifacts import register_file
 from app.db import session_scope, utcnow
+from app.email_schema import SMTPSettings
 from app.events import append_event
 from app.github_connector import repository_name
 from app.http_fetch import fetch_public, public_url
@@ -60,9 +62,9 @@ KINDS = (
     },
     {
         "kind": "email",
-        "operational": False,
-        "capabilities": [],
-        "summary": "Email is not enabled.",
+        "operational": True,
+        "capabilities": ["email.check", "email.preview", "email.send"],
+        "summary": "TLS SMTP with reviewed recipients, message previews, approval and durable delivery receipts.",
     },
     {
         "kind": "calendar",
@@ -93,9 +95,10 @@ class ConnectorWrite(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     key: str = Field(min_length=2, max_length=80)
     name: str = Field(min_length=1, max_length=200)
-    kind: Literal["http", "github"] = "http"
+    kind: Literal["http", "github", "email"] = "http"
     url: str = Field(default="", max_length=2000)
     repository: str = Field(default="", max_length=140)
+    smtp: SMTPSettings | None = None
     secret_ref: str = Field(default="", max_length=200)
     secret: str | None = Field(default=None, max_length=4096)
     enabled: StrictBool = True
@@ -104,7 +107,14 @@ class ConnectorWrite(BaseModel):
     def validate_connector(self):
         if not _KEY.fullmatch(self.key):
             raise ValueError("Choose a unique lowercase connector key")
-        if self.kind == "github":
+        if self.kind == "email":
+            if self.smtp is None or self.url or self.repository:
+                raise ValueError("Email requires SMTP configuration, without HTTP URL or repository")
+            if bool(self.smtp.username) != bool(self.secret or self.secret_ref):
+                raise ValueError("SMTP username and credential must be configured together")
+        elif self.smtp is not None:
+            raise ValueError("SMTP configuration belongs only to email connectors")
+        elif self.kind == "github":
             self.repository = repository_name(self.repository)
             if self.url or self.secret or self.secret_ref:
                 raise ValueError("GitHub uses the host gh session; do not provide URLs or secrets")
@@ -120,7 +130,9 @@ class ConnectorWrite(BaseModel):
 
 
 class ConnectorPatch(BaseModel):
+    expected_updated_at: datetime | None = None
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    smtp: SMTPSettings | None = None
     name: str | None = Field(default=None, min_length=1, max_length=200)
     url: str | None = Field(default=None, min_length=8, max_length=2000)
     repository: str | None = Field(default=None, max_length=140)
@@ -156,7 +168,8 @@ def connector_dict(row: Connector) -> dict:
         "kind": row.kind,
         "url": url,
         "repository": row.config_json.get("repository", ""),
-        "method": "GET",
+        "method": "SMTP" if row.kind == "email" else "GET",
+        **({"smtp": row.config_json.get("smtp")} if row.kind == "email" else {}),
         "capabilities": list(row.capabilities),
         "status": row.status,
         "health": row.health,
@@ -178,7 +191,8 @@ def get_connector(session: Session, connector_id: UUID) -> Connector:
 def active_check(session: Session, connector_id: str, *, excluding: str | None = None) -> Run | None:
     for run in session.scalars(
         select(Run).where(
-            Run.executor_type.in_(["http_connector", "github_read"]), Run.status.not_in(TERMINAL)
+            Run.executor_type.in_(["http_connector", "github_read", "email_send", "email_check"]),
+            Run.status.not_in(TERMINAL),
         )
     ):
         if (
@@ -206,7 +220,7 @@ def apply_secret(row: Connector, *, secret_ref: str | None = None, secret: str |
 
 
 def sync_connector_from_run(session: Session, run: Run, status: str) -> None:
-    if run.executor_type not in {"http_connector", "github_read"}:
+    if run.executor_type not in {"http_connector", "github_read", "email_check"}:
         return
     connector_id = (run.parameters or {}).get("connector_id")
     row = session.get(Connector, connector_id) if connector_id else None
@@ -250,7 +264,9 @@ def create(body: ConnectorWrite, session: DB):
         status="unconfigured",
         health="unknown",
         capabilities=list(spec["capabilities"]),
-        config_json={"repository": body.repository}
+        config_json={"smtp": body.smtp.model_dump()}
+        if body.kind == "email"
+        else {"repository": body.repository}
         if body.kind == "github"
         else {"url": body.url, "method": "GET"},
         enabled=body.enabled,
@@ -271,7 +287,16 @@ def detail(connector_id: UUID, session: DB):
 def edit(connector_id: UUID, body: ConnectorPatch, session: DB):
     row = get_connector(session, connector_id)
     if active_check(session, row.id):
-        raise HTTPException(409, "Cancel or finish the health check before editing this connector")
+        raise HTTPException(409, "Cancel or finish the connector operation before editing this connector")
+    if row.kind == "email" and body.expected_updated_at != row.updated_at:
+        raise HTTPException(409, "Email settings changed; refresh and review before saving")
+    if body.smtp is not None:
+        if row.kind != "email":
+            raise HTTPException(422, "SMTP configuration belongs only to email connectors")
+        row.config_json = {"smtp": body.smtp.model_dump()}
+        row.status, row.health = "unconfigured", "unknown"
+    if row.kind == "email" and any(value is not None for value in (body.url, body.repository)):
+        raise HTTPException(422, "Email does not accept HTTP URLs or repositories")
     if row.kind == "github" and any(value is not None for value in (body.url, body.secret, body.secret_ref)):
         raise HTTPException(422, "GitHub uses the host gh session; do not provide URLs or secrets")
     if body.repository is not None:
@@ -285,6 +310,14 @@ def edit(connector_id: UUID, body: ConnectorPatch, session: DB):
         row.config_json = {**row.config_json, "url": body.url, "method": "GET"}
     if body.enabled is not None:
         row.enabled = body.enabled
+    if row.kind == "email":
+        config = SMTPSettings.model_validate(row.config_json["smtp"])
+        has_secret = (
+            bool(body.secret or (body.secret_ref if body.secret_ref is not None else row.secret_ref))
+            and not body.clear_secret
+        )
+        if bool(config.username) != has_secret:
+            raise HTTPException(422, "SMTP username and credential must be configured together")
     apply_secret(row, secret_ref=body.secret_ref, secret=body.secret, clear=body.clear_secret)
     row.updated_at = utcnow()
     session.commit()
@@ -305,6 +338,10 @@ def remove(connector_id: UUID, session: DB):
 def check(connector_id: UUID, session: DB):
     row = get_connector(session, connector_id)
     kind_spec(row.kind)
+    if row.kind == "email":
+        from app.email_delivery import enqueue_check
+
+        return enqueue_check(session, row)
     if row.kind == "github":
         from app.github_connector import enqueue
 
