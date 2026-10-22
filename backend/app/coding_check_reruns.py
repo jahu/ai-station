@@ -10,6 +10,7 @@ from sqlalchemy import select, update
 from app.db import utcnow
 from app.events import append_event
 from app.models import Project, Run, Worktree
+from app.project_activity import project_write_condition
 from app.project_checks import PlanManifest
 from app.runs import create_run
 from app.state import TERMINAL
@@ -120,7 +121,9 @@ def enqueue_check_rerun(session, source_id, expected_validation_id):
     if previous.metadata_json.get("process_confirmed_gone") is not True and not undispatched:
         raise HTTPException(409, "Inspect or stop the previous check process before repeating checks")
     if session.scalar(
-        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
+        select(Run.id)
+        .where(Run.project_id == project.id, Run.status.not_in(TERMINAL), project_write_condition())
+        .limit(1)
     ):
         raise HTTPException(409, "Wait for this project's active work to finish")
     preparation = session.get(Run, tree.run_id)

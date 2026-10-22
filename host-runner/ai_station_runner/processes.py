@@ -143,14 +143,30 @@ class ProcessManager:
                     else "interrupted"
                 )
                 self._dump(records)
-            if record["executor"] in {"browser", "python"} and not alive and not completion_pending:
+            if (
+                record["executor"] in {"browser", "python", "site_preview", "site_preview_action"}
+                and not alive
+                and not completion_pending
+            ):
                 from ai_station_runner.browser_runs import stop_containers
                 from ai_station_runner.python_runs import stop_container
 
                 try:
-                    confirmed = (stop_containers if record["executor"] == "browser" else stop_container)(
-                        run_id
-                    )
+                    if record["executor"] in {"site_preview", "site_preview_action"}:
+                        from ai_station_runner.site_preview_runs import (
+                            cancel_action,
+                        )
+                        from ai_station_runner.site_preview_runs import (
+                            stop_container as stop_preview,
+                        )
+
+                        confirmed = (stop_preview if record["executor"] == "site_preview" else cancel_action)(
+                            run_id
+                        )
+                    else:
+                        confirmed = (stop_containers if record["executor"] == "browser" else stop_container)(
+                            run_id
+                        )
                 except (OSError, RuntimeError, ValueError):
                     confirmed = False
                 if not confirmed:
@@ -163,7 +179,11 @@ class ProcessManager:
                 "stdout": _read(resolve_child(self.data_dir, record["stdout_log"])),
                 "stderr_tail": _read(resolve_child(self.data_dir, record["stderr_log"]), 4000),
             }
-            if record["executor"] in {"browser", "python"} and not alive and not completion_pending:
+            if (
+                record["executor"] in {"browser", "python", "site_preview", "site_preview_action"}
+                and not alive
+                and not completion_pending
+            ):
                 result["cleanup_confirmed"] = confirmed
             for stream, offset in (("stdout", stdout_offset), ("stderr", stderr_offset)):
                 if offset is not None:
@@ -189,6 +209,10 @@ class ProcessManager:
                 from ai_station_runner.browser_runs import cancel_browser
 
                 cancel_browser(run_id)
+            elif record["executor"] in {"site_preview", "site_preview_action"}:
+                from ai_station_runner.site_preview_runs import cancel_action, cancel_preview
+
+                (cancel_preview if record["executor"] == "site_preview" else cancel_action)(run_id)
             elif record["executor"] == "python":
                 from ai_station_runner.python_runs import cancel_python
 

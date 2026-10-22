@@ -1,5 +1,13 @@
 # Security model
 
+[Website preview](agent-site-preview.md) is an optional explicitly configured
+native workload. It receives a bounded immutable build archive; its read-only,
+non-root Chromium container has no network, host mounts, credentials or GPU.
+Only PNG frames and typed pointer/text/key/scroll/reset actions cross the UI
+boundary. Durable action receipts prevent replay of uncertain interactions.
+Unconfirmed preview cleanup retains its exclusive/RAM reservations until an
+explicit Close reconciles native ownership. It does not grant a browsing tool.
+
 Local coding agents may explicitly combine coding with reviewed public HTTP GET.
 The linked project and URLs are part of the activated definition. Public text is
 bounded and quoted as untrusted data; source Run identity, definition and artifact
@@ -386,3 +394,12 @@ bound before dispatch and result adoption. Python has no network, host credentia
 or arbitrary host mounts. Only confirmed program/output failures can consume the
 saved repair budget; cancellation and uncertain dispatch never replay. Final CSV
 downloads escape formula-like strings and retain source/output lineage.
+
+## Planned agent website preview
+
+[Interactive site preview](agent-site-preview.md) executes generated JavaScript
+inside an owned network-disabled Chromium workload, returning PNG frames and
+accepting only typed revision-bound interactions through ordinary Runs. It is
+unpublished until permissions, resource admission, process ownership, Stop,
+recovery and real browser/agent acceptance pass. No generated script executes in
+the authenticated UI origin; no public preview port is introduced.

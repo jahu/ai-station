@@ -48,6 +48,7 @@ from app.resources import release_run_locks
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import mark_failed, touch_lease, transition
 from app.runtime_registry import RuntimeObservationExecutor
+from app.site_preview_executor import PreviewActionExecutor, PreviewCloseExecutor, PreviewExecutor
 from app.state import RunStatus
 from app.station_snapshot import StationSnapshotExecutor
 from app.summary_executor import SummaryExecutor
@@ -295,6 +296,9 @@ class FakeExecutor:
 
 # Activate adapters only after their vertical slice is verified end to end.
 EXECUTORS = {
+    "site_preview": PreviewExecutor(),
+    "site_preview_action": PreviewActionExecutor(),
+    "site_preview_close": PreviewCloseExecutor(),
     "browser": BrowserExecutor(),
     "python": PythonExecutor(),
     "project_setup": ProjectSetupExecutor(),

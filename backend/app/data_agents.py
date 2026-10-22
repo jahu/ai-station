@@ -23,6 +23,7 @@ from app.events import append_event
 from app.local_provider import LocalChatProvider, model_endpoint
 from app.models import Artifact, Project, Run, RunEvent, RuntimeInstance, Worktree
 from app.permissions import require
+from app.project_activity import project_write_condition
 from app.python_execution import enqueue_python, input_snapshots, read_owned_file
 from app.runner_client import RunnerClient
 from app.runs import create_run, mark_failed, transition
@@ -154,7 +155,12 @@ def publish_data(session, parent, definition, deadline):
         raise ValueError("Workspace policy changed after launch")
     if session.scalar(
         select(Run.id)
-        .where(Run.project_id == project.id, Run.id != parent.id, Run.status.not_in(TERMINAL))
+        .where(
+            Run.project_id == project.id,
+            Run.id != parent.id,
+            Run.status.not_in(TERMINAL),
+            project_write_condition(),
+        )
         .limit(1)
     ):
         raise ValueError("This project already has active work")

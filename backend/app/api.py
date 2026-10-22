@@ -60,6 +60,7 @@ from app.reviewed_commits import router as commit_router
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, request_cancel, run_dict
 from app.runtime_registry import router as runtime_router
+from app.site_preview import router as site_preview_router
 from app.skills import router as skill_router
 from app.state import TERMINAL, InvalidTransition, RunStatus
 from app.telemetry_store import history
@@ -384,6 +385,7 @@ app.include_router(skill_router)
 app.include_router(runtime_router)
 app.include_router(llama_router)
 app.include_router(browser_router)
+app.include_router(site_preview_router)
 
 dist = get_settings().frontend_dist
 if dist and Path(dist).is_dir():

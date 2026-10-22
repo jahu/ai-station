@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.db import session_scope
 from app.gitpolicy import GitPolicyError, assert_branch_allowed, normalize_policy
 from app.models import Project, Run
+from app.project_activity import project_write_condition
 from app.runs import create_run, run_dict
 from app.state import TERMINAL
 
@@ -61,7 +62,9 @@ def enqueue_reviewed_commit(session, source, body: ReviewedCommit):
     ):
         raise HTTPException(409, "Configured validation must pass before committing")
     if session.scalar(
-        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
+        select(Run.id)
+        .where(Run.project_id == project.id, Run.status.not_in(TERMINAL), project_write_condition())
+        .limit(1)
     ):
         raise HTTPException(409, "This project has an active Run")
     run = create_run(

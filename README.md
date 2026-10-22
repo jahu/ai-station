@@ -483,3 +483,12 @@ See [shot scheduling and verification](docs/parallel-video-shots.md).
 and inspect a bounded table preview. Sheet counts, formula warnings, Stop and
 preview Run history remain visible. This is read-only inspection; AI analysis and
 transformations are a separate workflow. See [data inputs](docs/data-inputs.md).
+
+### Offline website build preview
+
+Successful website build artifacts now have a preview view with desktop/phone
+layout, pointer and text interaction, reset and Close. It executes the saved
+static build in an offline, CPU-only Chromium container and sends image frames to
+the UI. It does not execute generated JavaScript in the authenticated UI origin.
+The optional adapter remains disabled until its image is configured; see
+[setup, security and verification](docs/agent-site-preview.md).

@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, 
 from sqlalchemy import select
 
 from app.models import Run, Worktree
+from app.project_activity import project_write_condition
 from app.projects import get_project
 from app.runs import create_run, create_task
 from app.state import TERMINAL
@@ -49,7 +50,9 @@ def enqueue_coding_task(
     project = get_project(session, body.project_id)
     if project.updated_at != body.expected_updated_at:
         raise HTTPException(409, "Project settings changed. Reload before starting a coding task.")
-    active = select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL))
+    active = select(Run.id).where(
+        Run.project_id == project.id, Run.status.not_in(TERMINAL), project_write_condition()
+    )
     if workflow_parent is not None:
         from app.agent_coding_policy import coding_provider
         from app.permissions import require

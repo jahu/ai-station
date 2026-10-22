@@ -1,3 +1,4 @@
+import SitePreview from "./pages/SitePreview";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -151,10 +152,11 @@ export default function App() {
   const sessionActive = Boolean(
     operator.data?.session_required && operator.data.authenticated,
   );
-  const page =
-    destinations.find(
-      ([path]) => path !== "/" && location.pathname.startsWith(path),
-    )?.[1] ?? (location.pathname === "/" ? "Chat" : "Workspace");
+  const page = location.pathname.startsWith("/preview/")
+    ? "Website preview"
+    : (destinations.find(
+        ([path]) => path !== "/" && location.pathname.startsWith(path),
+      )?.[1] ?? (location.pathname === "/" ? "Chat" : "Workspace"));
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
       if (event.key === "Escape") setNavigationOpen(false);
@@ -338,6 +340,10 @@ export default function App() {
             <Route path="/" element={<Chat assistant />} />
             <Route path="/home" element={<Dashboard />} />
             <Route path="/runs" element={<Runs />} />
+            <Route
+              path="/preview/:sourceRunId/:artifactId"
+              element={<SitePreview />}
+            />
             <Route path="/runs/:id" element={<RunDetail />} />
             <Route path="/coding" element={<Coding />} />
             <Route

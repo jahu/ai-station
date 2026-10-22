@@ -13,6 +13,15 @@ class NativeJobExecutor:
     permissions: tuple[str, ...] = ()
     error_type = "NativeJobFailed"
 
+    def prepare(self, session, run):
+        return True
+
+    def observe(self, session, run, runner, process):
+        pass
+
+    def rejected(self, session, run, runner, error):
+        mark_failed(session, run, "RunnerRejected", str(error))
+
     def execute(self, session, run):
         for permission in self.permissions:
             require(run.effective_permissions, permission)
@@ -20,6 +29,8 @@ class NativeJobExecutor:
         if run.status in {"cancel_requested", "canceled"}:
             if run.status == "cancel_requested":
                 transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
+            return "done"
+        if not self.prepare(session, run):
             return "done"
         transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})
         payload = self.payload(run)
@@ -30,7 +41,7 @@ class NativeJobExecutor:
             process = self.start(runner, payload)
         except RunnerError as exc:
             if exc.status_code < 500:
-                mark_failed(session, run, "RunnerRejected", str(exc))
+                self.rejected(session, run, runner, exc)
                 return "done"
             raise
         session.refresh(run)
@@ -51,6 +62,7 @@ class NativeJobExecutor:
             if canceled:
                 runner.cancel_process(run.id)
             process = runner.inspect_process(run.id, **offsets)
+            self.observe(session, run, runner, process)
             for stream in ("stdout", "stderr"):
                 if process.get(stream):
                     append_event(session, run.id, stream, {"text": process[stream]})

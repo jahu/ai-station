@@ -19,6 +19,7 @@ from app.events import append_event
 from app.gitpolicy import GitPolicyError, assert_branch_allowed, normalize_policy
 from app.models import Approval, Project, Run
 from app.native_job_executor import NativeJobExecutor
+from app.project_activity import project_write_condition
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, run_dict, transition
 from app.state import TERMINAL, RunStatus
@@ -103,7 +104,9 @@ def enqueue_publication(session, source, body: PublishBody):
     except GitPolicyError as exc:
         raise HTTPException(403, str(exc)) from exc
     if session.scalar(
-        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
+        select(Run.id)
+        .where(Run.project_id == project.id, Run.status.not_in(TERMINAL), project_write_condition())
+        .limit(1)
     ):
         raise HTTPException(409, "This project has an active Run")
     params = {
@@ -176,7 +179,9 @@ def reconcile_publication(publication_id: UUID, session: DB):
     if not source.metadata_json.get("dispatch_attempted"):
         raise HTTPException(409, "Publication never reached GitHub")
     if session.scalar(
-        select(Run.id).where(Run.project_id == source.project_id, Run.status.not_in(TERMINAL)).limit(1)
+        select(Run.id)
+        .where(Run.project_id == source.project_id, Run.status.not_in(TERMINAL), project_write_condition())
+        .limit(1)
     ):
         raise HTTPException(409, "This project has an active Run")
     run = create_run(

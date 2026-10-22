@@ -39,6 +39,7 @@ class Settings(BaseSettings):
     llm_model: str = ""
     web_search_url: str = ""
     browser_enabled: bool = False
+    site_preview_enabled: bool = False
     photo_python: str = ""
     photo_script: str = ""
     sd_cli: str = ""

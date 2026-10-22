@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
 from app.db import utcnow
@@ -28,7 +28,10 @@ def resource_ready_condition(now):
         .correlate(Run)
         .exists()
     )
-    return or_(Run.requested_gpu.is_(None), Run.requested_gpu.in_(("none", "")), ~waiting)
+    return and_(
+        or_(Run.requested_gpu.is_(None), Run.requested_gpu.in_(("none", "")), ~waiting),
+        or_(Run.executor_type != "site_preview", ~waiting),
+    )
 
 
 def active_locks(session: Session) -> set[str]:

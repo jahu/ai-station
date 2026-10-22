@@ -5,7 +5,22 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current delivery — 2026-10-22
+## Current preview candidate — 2026-10-22
+
+PR #337 has final successful local qualification: 1830 Python tests/eight opt-in
+skips; 523 UI tests; format/lint/types/build; Compose/image; exact image/backend
+and frontend asset equality; and actual CPU worker/socket/Chromium plus compiled
+desktop/mobile acceptance. See [preview evidence](../agent-site-preview.md).
+Production rollout is tracked separately in
+`data/acceptance/safety-redeploy-20261012/deployment.json`; never infer that the
+candidate has been applied from this document alone. The guarded deploy script
+under `data/acceptance/agent-site-preview-20261022` requires the PR to be merged,
+a fresh snapshot of ready managed models, an idle native process owner and a DB
+backup before replacing this project's containers/Runner. Preserve the separately
+operator-loaded model/context. Next: reviewed-URL website-agent end-to-end
+acceptance, then typed recurring quote observations and scoped email delivery.
+
+## Earlier delivery — 2026-10-22
 
 PR #332 (context-aware follow-up search and remembered default-on Chat search)
 is merged and deployed. Production identity and persistence checks passed; see
@@ -463,3 +478,165 @@ platform goal remains active; this PR is not a claim of full-product completion.
 Follow [private network access](../private-network-access.md) and the owner’s updated [agent-first priorities](agent-first-product.md). PR #326 adds an explicit additional private IPv4 listener while preserving localhost, a password-required startup guard, exact Host/Origin validation, independent device sessions and a persistent login budget. Settings exposes the configured URL. Real browser qualification covers both listener addresses and narrow phone layouts; keep failed QA attempts in the evidence instead of claiming them passed. Tailscale is not installed/enrolled; the HTTPS allowlist and activation instructions are preparation, not real worldwide access acceptance.
 
 Worktree `.tools/private-network-access`, branch `feat/private-network-access`. Evidence is under `data/acceptance/private-network-access-20261015`. Preserve the user’s newly stored operator password, root WIP and current owned model runtime. Before rollout, finish local checks and full-diff review, back up the existing database and verify deployment ownership/idle workloads. After rollout, resume the Python-capable agent vertical slice; PR #325 is the isolated executor foundation, not a complete spreadsheet agent.
+
+
+## Current: agent workspace and isolated site preview (2026-10-22)
+
+PR #334 fixed the exact data-input environment/repair ambiguity; #335 delivered
+results-first agent Workspace/Settings; #336 embedded the existing code
+conversation, review and follow-up composer in that workspace. All are merged
+into develop and deployed. Latest release is `.tools/ui-agent-code-workspace-20261022`
+(reviewed `253adee`, merge `d0604ed`), with verified LAN/loopback authentication,
+worker/scheduler health, backup and preserved original records. Backend/Runner:
+1717 passed, five opt-in skips; final frontend: 516 passed, format/lint/types/build,
+Compose/image and desktop/mobile browser acceptance. Evidence is under
+`data/acceptance/agent-code-workspace-20261022/`.
+
+Normal production Auto CSV acceptance now passed without mocks: installed local
+27B IQ2_XS, actual 131072 context, real offline Python, full six-row total 150,
+unchanged source and CSV download, no repair. Its QA agent is paused and its model
+unloaded. The earlier failure remains in history. See
+`data/acceptance/data-agent-input-contract-20261022/production-smoke-result.json`.
+
+Continue `feat/agent-site-preview` in `.tools/agent-site-preview`, following
+[interactive preview](../agent-site-preview.md). Internal renderer/protocol and an
+optional derivative image are implemented: 53 focused normal tests and one real
+offline Chromium/container test pass (modules, click, literal text, PNG, replay,
+stale rejection, blocked network/POST, reset and cleanup). No native/API preview
+capability is registered or deployed. Full regression, owned Runner lifecycle,
+archive broker, action receipts, resource admission, ordinary Run/API wiring,
+agent UI and real website-agent acceptance remain. Do not advertise the direct
+renderer test as an integrated preview. Image `ai-station-site-preview:development`
+was built entirely from the existing local `ai-station-browser:local` base.
+
+The preview uses an independent operator inspection Task with source project/build
+provenance, not an autonomous agent execution; do not drop project tags to bypass
+busy guards. Audit project busy checks to admit only this immutable artifact
+viewer concurrently with coding. Reuse `browser_runs`/`browser_job`, private Runner
+transport, owned process/container checks, RAM locks and build-archive validation.
+Native resource broker serves only frozen archive entries to the synthetic
+internal origin; generated JS must never execute in the authenticated UI origin.
+The original checkout WIP stays untouched. Broader platform work remains active.
+
+After CSV QA cleanup the operator loaded a separate owned model. Do not assume
+GPUs are empty: instance `4554b9cd-50af-47e9-9f94-50ab9667888e` was ready at the
+latest inspection (actual context 46080, user-triggered load at 08:34 UTC). The
+#336 deployment preserved its exact container/context against the pre-deploy
+backup; evidence `agent-code-workspace-20261022/preserved-user-runtime.json`.
+Keep that runtime while working on CPU preview. Future rollout/acceptance must
+snapshot actual ready instances immediately before changes, rather than reuse
+an empty snapshot from the earlier QA state.
+
+
+### Native preview continuation (2026-10-22)
+
+`feat/agent-site-preview` now also implements the native half: `site_preview_runs`
+(requests, archive identity, one session/action admission, safe journals, frame and
+receipt inspection, exact container cleanup and Close), `site_preview_job`
+(offline archive broker/persistent renderer/mailbox), `site_preview_action_job`
+(registered per-action proxy) and `site_preview_source` (bounded ZIP validation,
+module MIME and document-only SPA fallback). ProcessManager inspection/cancel
+supports both new executor types. Typed endpoints live under `/v1/runs/site-preview`
+and `/v1/runs/site-preview-action`; image capability is `/v1/site-preview/capabilities`.
+The optional image requires protocol 2, now built as
+`ai-station-site-preview:development`. Production `.env` remains unchanged, so the
+new native capability is disabled there and the existing live release is intact.
+
+Final real Native/renderer tests passed (2); focused fake/native/legacy tests also
+passed, with the exact current count in `native-qualification.log`. The final
+protocol root-path regression is retained once in the parameterized cases. Full
+`./scripts/check.sh` on the final combined feature is still required. Do not merge
+or deploy the unfinished control-plane/UI adapter. Preserve the operator's ready
+Q4 model (instance documented above); this work requires no GPU.
+
+Next implement `backend/app/site_preview.py`: freeze only successful same-Task
+`coding_build` artifacts from project_validation, preserve source project/Run/Task
+identity, operator preview Task plus ordinary action Runs, explicit filesystem_read
+and browser_preview permissions, RAM/exclusive admission, early and final PNG
+adoption, inspectable Close/reconciliation and truthful expiry/interruption.
+`NativeJobExecutor` needs a default no-op polling observer for continuous frames;
+resource-aware preview rejection must retain locks unless the new native Close
+endpoint confirms cleanup. Native image/frame paths are derived UUID/revision
+paths; use the existing `read_owned_file` verifier with an explicit 8 MiB bound
+before immutable Artifact adoption. The native Close endpoint handles a request
+journal even when a dispatch lost its registered process; unknown Docker creation
+stays inspection-required.
+
+Audit project busy checks for the immutable operator viewer: keep real project
+tags and permit code/follow-ups concurrently only for site preview/action work.
+Do not weaken write-work exclusion. Preserve legacy Coding APIs and reuse its
+build-download component to host Preview. Canvas interaction must scale pointer
+coordinates to the captured viewport and use exact frame revisions; input is
+literal text/enum keys, no client-executed generated HTML/JS. Show build version,
+CPU target, loading/blocked/expired/interrupted states and an explicit Close.
+Full fake API/worker/resource/recovery plus real native/browser acceptance precedes
+review/merge/rollout; the broader product goal remains active.
+
+### Frozen native qualification and control-plane workspace
+
+The native implementation is frozen at `dc373f585db01fbe2165fc0ebf59063dbb0e4328`
+in `.tools/agent-site-preview`. Full `./scripts/check.sh` is running in the owned
+user unit `ai-station-site-preview-native-check-20261022.service`. Inspect its
+actual MainPID/state and `data/acceptance/agent-site-preview-20261022/full-check.log`
+before taking action; `full-check-result.json` appears only at terminal completion.
+Do not edit/switch that worktree while qualification runs. The controller verifies
+both its head and tracked source remain unchanged. Final protocol-2 direct Native
+and renderer acceptance already passed (2); the image is local and CPU-only.
+
+Continue application integration in `.tools/agent-site-preview-workspace` on
+`feat/agent-site-preview-workspace`, based on the frozen native head. Its initial
+`backend/app/site_preview.py` provides strict Open/action DTOs, source provenance
+freeze and viewport validation. `backend/tests/test_site_preview.py` passed 17
+cases using the real build Artifact producer and a temporary database; no browser,
+model or worker runs. The module is deliberately not registered in API/executors,
+and has no execution handlers yet. Finish its API/worker/artifact/resource/Close
+contracts and UI before advertising preview. The inherited native worktree must
+stay frozen until its check finishes; later integrate the workspace branch back
+into `feat/agent-site-preview` by fast-forward/merge and qualify the final combined
+head before review/merge/deployment.
+
+Important integration details: ordinary previews/actions use a separate operator
+Task (no agent_id) but retain project/source build provenance. Add an explicit
+read-only viewer predicate to project mutation busy guards; do not drop project
+tags. Resource deferral must honor cooldown for this CPU executor (the current
+GPU-ready condition exempts gpu=none); preserve the semantics for existing jobs.
+A default no-op NativeJobExecutor polling observer may adopt live frames. Generic
+resource-free native rejection is currently a terminal failure; preview rejection
+needs an explicit Close/inspection path that releases RAM/exclusive locks only
+after the new native Close endpoint confirms cleanup. Otherwise keep interruption
+and inspection state. PNGs have derived revision paths, SHA/size, an 8 MiB bound,
+and need immutable Artifact adoption plus exact action/frame lineage checks.
+Do not execute generated HTML/JS in the station origin. Native source lookup for
+SPA navigation distinguishes Document requests from missing API/asset resources.
+
+### Preview integration follow-up — 2026-10-22
+
+The active integration worktree is `.tools/agent-site-preview-workspace` on
+`feat/agent-site-preview-workspace`, based on the frozen native preview head.
+The native head qualified 1804 normal Python tests (seven opt-in skips). The
+combined control-plane increment adds source-bound inspection Tasks, resource
+admission, frame Artifacts, typed interactions and separate Close/reconciliation
+Runs, an isolated preview page linked from successful builds, and conservative
+recovery. A real CPU-only API/worker/Unix-socket/Chromium test passed.
+
+A first combined collection found colliding backend/native pytest basenames;
+backend tests are now `test_site_preview_provenance.py`,
+`test_site_preview_execution.py` and `test_site_preview_worker_real.py`.
+The full combined regression runs under the user service
+`ai-station-preview-workspace-check2-20261022.service`; check its actual state and
+`data/acceptance/agent-site-preview-20261022/workspace-full-check-result.json`
+before restarting or claiming it passed. The operator's separate Q4 model is not
+part of acceptance and must remain loaded. Full source review, UI/browser gates,
+image/Compose verification and PR/deployment are still pending.
+
+Preview integration continuation: draft PR **#337** targets `develop` from
+`feat/agent-site-preview-workspace`. Real browser acceptance passed at 1440/390:
+actual worker/socket/Chromium pointer, reload and Close, no GPU/model changes.
+Frontend final checks on `5ae3263` passed 521 tests, lint/types/build, both Compose
+configs and image build. A subsequent focused UI fix returns agent builds to
+`/agents/<id>?view=workspace` instead of the legacy Coding route and adds a
+regression test; qualify that updated head before release. The combined Python
+service above remains the authoritative running check; its result JSON may still
+contain the older collection failure until the current live process finishes.
+Do not interpret that stale result file as termination or restart a live check.
+No preview feature has been deployed yet; production remains PR #336.
