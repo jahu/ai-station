@@ -1,15 +1,27 @@
 # One-send website design questions
 
-Extend the existing explicit **Read JavaScript pages** choice. With Web enabled,
-no custom search query, one explicitly requested public page and a question about
-its visual design or an image-prompt brief, compose the existing Browser and
-local Vision Runs in one Task. No initial text-model answer or second Send is
-required. Plain text reads remain unchanged; Web alone does not grant Browser.
+With Web enabled, no custom search query, one explicitly requested public page
+and a question about its visual design or an image-prompt brief, compose the
+existing Browser and local Vision Runs in one Task. The current user's request
+selects the visual read; finding the advanced JavaScript option is unnecessary.
+No initial text-model answer or second Send is required. Plain text reads remain
+unchanged; Web alone without a visual request does not grant Browser. An explicit
+text-only/no-Vision request suppresses visual routing. The existing JavaScript
+option remains available for ordinary rendered-text reading.
+
+PR #349 delivered the explicit-option increment with real akademia.ai acceptance.
+The next increment extends selection to ordinary Web, preserving that tested
+execution, source and recovery path. No new executor or HTTP request field.
+Search exact-query overrides, quoted/code examples, URL words and competing
+agent/media actions must keep their existing authority. Test the actual reported
+Polish request as an ordinary first Send; preserve text-reader coverage with an
+explicit text-only request instead of silently changing that contract.
 
 Only current user instruction text chooses the URL and design intent. Ignore
 quoted examples, code blocks, attachments, memory and page instructions. Do not
 combine this route with media, project, account or other execution scopes.
-The UI discloses that a visual question may load an installed local Vision model.
+The compact Web control and its accessible help disclose that visual questions
+may capture a page and load an installed local Vision model.
 
 Freeze the Browser prerequisite before claiming the orchestrator. Its worker
 verifies the successful owned capture, exact URL, readable text and screenshot
@@ -25,5 +37,5 @@ Normal tests use fake Browser/model providers and assert permissions, cancellati
 failure, hash tampering, receipt replay and no unrelated tools. Existing full local
 gates and compiled desktop/mobile checks precede merge and deployment. Real GPU
 qualification must be separately opted into and reported; fixture success is not
-visual-quality acceptance. Fully automatic Browser selection with ordinary Web
-remains separate from this explicit one-turn grant.
+visual-quality acceptance. Qualification of the new default selection must be recorded separately from
+#349; its previous explicit-option smoke alone does not prove the default entry.

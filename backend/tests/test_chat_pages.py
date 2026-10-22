@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 PROMPT = "przenalizuj stronę akademia.ai i daj mi prompt do stworzaenia grafiki promujacej ta strone"
+TEXT_PROMPT = PROMPT + ". Bez Vision, tylko treść."
 
 
 @pytest.mark.parametrize(
@@ -74,11 +75,11 @@ def page_tools(monkeypatch):
 
 
 @pytest.mark.parametrize("mode", ["chat", "local", "work", "orchestrator"])
-def test_exact_reported_prompt_fetches_page_and_preserves_evidence_and_model_roles(page_tools, mode):
+def test_explicit_text_only_request_fetches_page_and_preserves_evidence_and_model_roles(page_tools, mode):
     seen, fetched, searched = page_tools
     with TestClient(app) as api:
         route = conversation(api, mode)
-        queued = api.post(route + "/messages", json={"content": PROMPT, "web_search": {"enabled": True}})
+        queued = api.post(route + "/messages", json={"content": TEXT_PROMPT, "web_search": {"enabled": True}})
         assert queued.status_code == 202, queued.text
         step()
         with session_factory()() as session:
@@ -106,7 +107,7 @@ def test_followup_reuses_same_page_and_timestamp_without_network_search(page_too
     seen, fetched, searched = page_tools
     with TestClient(app) as api:
         route = conversation(api)
-        api.post(route + "/messages", json={"content": PROMPT, "web_search": {"enabled": True}})
+        api.post(route + "/messages", json={"content": TEXT_PROMPT, "web_search": {"enabled": True}})
         step()
         first = api.get(route).json()["messages"][-1]["metadata"]["page_read"]
         queued = api.post(
@@ -127,7 +128,9 @@ def test_web_off_never_fetches_or_reuses_a_page(page_tools):
     seen, fetched, searched = page_tools
     with TestClient(app) as api:
         route = conversation(api)
-        queued = api.post(route + "/messages", json={"content": PROMPT, "web_search": {"enabled": False}})
+        queued = api.post(
+            route + "/messages", json={"content": TEXT_PROMPT, "web_search": {"enabled": False}}
+        )
         assert queued.status_code == 202 and queued.json()["parameters"]["page_read"] is None
         step()
         assert len(seen) == 1 and fetched == searched == []
@@ -136,7 +139,7 @@ def test_web_off_never_fetches_or_reuses_a_page(page_tools):
 def test_a_new_requested_site_replaces_the_old_scope(page_tools):
     with TestClient(app) as api:
         route = conversation(api)
-        api.post(route + "/messages", json={"content": PROMPT, "web_search": {"enabled": True}})
+        api.post(route + "/messages", json={"content": TEXT_PROMPT, "web_search": {"enabled": True}})
         step()
         queued = api.post(
             route + "/messages",
@@ -152,7 +155,7 @@ def test_empty_js_page_is_a_clear_failure_not_an_invented_brand_report(monkeypat
     monkeypatch.setattr("app.http_fetch.fetch_public", empty)
     with TestClient(app) as api:
         route = conversation(api)
-        queued = api.post(route + "/messages", json={"content": PROMPT, "web_search": {"enabled": True}})
+        queued = api.post(route + "/messages", json={"content": TEXT_PROMPT, "web_search": {"enabled": True}})
         step()
         detail = api.get("/api/runs/" + queued.json()["id"]).json()
         assert detail["status"] == "failed" and "JavaScript" in detail["error_message"]
@@ -163,7 +166,7 @@ def test_empty_js_page_is_a_clear_failure_not_an_invented_brand_report(monkeypat
 def test_changed_stored_source_fails_without_refetch(page_tools):
     with TestClient(app) as api:
         route = conversation(api)
-        api.post(route + "/messages", json={"content": PROMPT, "web_search": {"enabled": True}})
+        api.post(route + "/messages", json={"content": TEXT_PROMPT, "web_search": {"enabled": True}})
         step()
         queued = api.post(
             route + "/messages",
@@ -194,7 +197,7 @@ def test_private_attachment_text_cannot_choose_fetch_targets(session):
 def test_unrelated_followup_does_not_reuse_old_page(page_tools):
     with TestClient(app) as api:
         route = conversation(api)
-        api.post(route + "/messages", json={"content": PROMPT, "web_search": {"enabled": True}})
+        api.post(route + "/messages", json={"content": TEXT_PROMPT, "web_search": {"enabled": True}})
         step()
         queued = api.post(
             route + "/messages",
@@ -211,7 +214,7 @@ def test_stopping_during_fetch_prevents_inference_and_cancels_request(monkeypatc
     canceled = []
     with TestClient(app) as api:
         route = conversation(api)
-        queued = api.post(route + "/messages", json={"content": PROMPT, "web_search": {"enabled": True}})
+        queued = api.post(route + "/messages", json={"content": TEXT_PROMPT, "web_search": {"enabled": True}})
 
         async def fetch(url, **kwargs):
             with session_factory()() as session:
@@ -233,11 +236,13 @@ def test_stopping_during_fetch_prevents_inference_and_cancels_request(monkeypatc
 def test_reuse_cannot_cross_conversation_boundaries(page_tools):
     with TestClient(app) as api:
         first = conversation(api)
-        api.post(first + "/messages", json={"content": PROMPT, "web_search": {"enabled": True}})
+        api.post(first + "/messages", json={"content": TEXT_PROMPT, "web_search": {"enabled": True}})
         step()
         previous = api.get(first).json()["messages"][-1]
         second = conversation(api)
-        queued = api.post(second + "/messages", json={"content": PROMPT, "web_search": {"enabled": True}})
+        queued = api.post(
+            second + "/messages", json={"content": TEXT_PROMPT, "web_search": {"enabled": True}}
+        )
         with session_factory()() as session:
             source = session.get(Artifact, previous["metadata"]["page_read"]["artifact_id"])
             run = session.get(Run, queued.json()["id"])

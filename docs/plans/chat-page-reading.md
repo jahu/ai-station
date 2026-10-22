@@ -95,10 +95,12 @@ and `deployed-verification.json`. These checks do not establish visual analysis.
 ## Remaining backlog
 
 The explicit saved-screenshot Vision action and attributed observation reuse are
-implemented in [visual page analysis](page-screenshot-vision.md). Automatic first-question
-capture/vision orchestration, further viewports/scrolling and broader design-quality
-acceptance remain planned. A text read alone must not pretend it observed typography,
-colors or layout.
+implemented in [visual page analysis](page-screenshot-vision.md). [Single-page visual
+questions](chat-website-design.md) now compose capture and Vision from an explicit
+current question with ordinary Web, without the advanced rendering option. New
+default-entry qualification is recorded separately. Further viewports/scrolling,
+broader orchestration and design-quality acceptance remain planned. A text read
+alone must not pretend it observed typography, colors or layout.
 
 ## Rendered reader implementation — 2026-10-22
 

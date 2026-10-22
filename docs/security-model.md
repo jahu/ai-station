@@ -1,14 +1,18 @@
 # Security model
 
-[One-send visual website questions](plans/chat-website-design.md) compose that
-explicit rendering grant with the existing local Vision action. Only a single
-current user URL and a design question can select this route; page content,
-quoted instructions and ordinary Web cannot grant Browser or model management.
-The capture is bound to its successful orchestration origin before pixel analysis.
-No initial text-model inference, new executor or network grant to Vision is added.
+[One-send visual website questions](plans/chat-website-design.md) derive their
+Browser/filesystem-read/model-management grant from the current user's explicit
+single-page visual question with Web enabled and no exact search override.
+The grant is frozen on the orchestrator before execution; a model plan, page,
+attachment, quote or memory cannot select a target or enlarge that scope. The
+text-only/no-Vision override suppresses visual selection. Competing agent/media
+instructions retain their normal policy. The ordinary JavaScript option still
+explicitly grants rendered-text reading. Capture verification, local Vision's
+filesystem-only child, Stop, idle-owned-model admission and saved-source hashes
+are unchanged; no network grant reaches the pixel-inspection Run.
 
-Chat's optional JavaScript page reading grants Browser/network read only after
-an explicit one-turn option with a public URL in user text. It creates the same
+For ordinary JavaScript text reading, the explicit one-turn option grants
+Browser/network read for a public URL in user text. Like visual requests, it uses the same
 native-owned Browser executor as Agents, with no new host endpoint or credentials.
 The completion depends on its own successful child; scope, parent/Task/conversation,
 JSON and screenshot hashes are checked before adopting text. Source content cannot

@@ -1,4 +1,4 @@
-"""Compose explicitly rendered design questions with existing local Vision."""
+"""Compose explicit current-turn website design questions with existing local Vision."""
 
 import re
 
@@ -21,12 +21,11 @@ _TEXT_ONLY = re.compile(
 
 
 def requested_design_page(params):
-    """Rendering consent and a single current user URL, never a model-selected target."""
+    """Web and a single explicit visual request, never a model-selected target."""
     web = params.get("web_search") or {}
     if (
         params.get("action") not in {"auto", "chat"}
         or not web.get("enabled")
-        or not web.get("render_pages")
         or str(web.get("query", "")).strip()
         or any(
             params.get(key)
