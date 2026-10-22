@@ -557,6 +557,7 @@ export function Agents() {
 
 export function AgentDetail() {
   const { id } = useParams();
+  const [viewParams, setViewParams] = useSearchParams();
   const cache = useQueryClient();
   const navigate = useNavigate();
   const detail = useQuery({
@@ -582,7 +583,13 @@ export function AgentDetail() {
     onSuccess: (result, variables) => {
       void cache.invalidateQueries({ queryKey: ["agent", id] });
       void cache.invalidateQueries({ queryKey: ["agents"] });
-      if (variables.operation === "run") navigate(`/runs/${result.id}`);
+      if (variables.operation === "run") {
+        setViewParams((current) => {
+          const next = new URLSearchParams(current);
+          next.set("view", "workspace");
+          return next;
+        });
+      }
       if (variables.operation === "duplicate") navigate(`/agents/${result.id}`);
     },
   });
@@ -606,6 +613,19 @@ export function AgentDetail() {
         {detail.isPending && <Loading />}
       </>
     );
+  const view =
+    viewParams.get("view") === "settings"
+      ? "settings"
+      : viewParams.get("view") === "workspace" ||
+          agent.runs?.length ||
+          agent.enabled
+        ? "workspace"
+        : "settings";
+  const viewLink = (value: string) => {
+    const next = new URLSearchParams(viewParams);
+    next.set("view", value);
+    return `?${next}`;
+  };
   const block = activationBlock(agent, catalog.data, skillsCatalog.data);
   const active = agent.runs?.some((run) => !terminal.has(run.status)) ?? false;
   const waiting = agent.runs?.find(
@@ -630,7 +650,25 @@ export function AgentDetail() {
         {agentModelLabel(agent)}
         {agent.skills?.length ? ` · Skills: ${agent.skills.join(", ")}` : ""}
       </PageTitle>
-      <section className="panel agent-form">
+      <nav className="agent-workspace-nav" aria-label="Agent workspace views">
+        <Link
+          to={viewLink("workspace")}
+          aria-current={view === "workspace" ? "page" : undefined}
+        >
+          Workspace
+        </Link>
+        <Link
+          to={viewLink("settings")}
+          aria-current={view === "settings" ? "page" : undefined}
+        >
+          Settings
+        </Link>
+      </nav>
+      <section
+        className="panel agent-form agent-workspace-summary"
+        aria-label="Agent status and actions"
+      >
+        <p className="agent-workspace-goal">{agent.goal}</p>
         {block.reason ? <p className="notice">{block.reason}</p> : null}
         <div className="row">
           <Button
@@ -657,20 +695,12 @@ export function AgentDetail() {
           </Button>
         </div>
         <p className="muted">
-          Activation uses the saved definition. Enable stays off until that
-          saved definition can activate. Pausing stops future scheduling; Stop
-          stays on an in-progress history Run and does not call Run now.
-          {agent.require_approval
-            ? " Each workflow waits for an explicit approval before any step is published. Approve and queue or Deny stays here and does not call Run now."
-            : ""}
-          {isCoding(agent.tools)
-            ? " Coding explores the linked project in a fresh worktree, prepares changes and runs configured checks. Results stay in Coding for review; it never commits or publishes."
-            : agent.workflow_mode === "gated"
-              ? " Gated mode parks the report after context tools so you can inspect those artifacts first."
-              : " Sequential mode runs saved context tools then the report, each as its own Run."}
-          {agent.tool_calling === "bounded"
-            ? " Bounded tool calling lets the report request selected registry tools; invented tools, URLs and commands fail closed."
-            : ""}
+          {agent.enabled
+            ? `Next run: ${time(agent.next_run_at)}`
+            : "Paused · enable the saved definition to run this agent."}
+          {agent.last_run_at
+            ? ` · Last run: ${time(agent.last_run_at)} · ${agent.last_status}`
+            : " · No executions yet"}
         </p>
         {waiting ? (
           <div className="agent-approval">
@@ -692,65 +722,84 @@ export function AgentDetail() {
             </div>
           </div>
         ) : null}
-        <div className="agent-fields">
-          <div>Next run: {time(agent.next_run_at)}</div>
-          <div>Last run: {time(agent.last_run_at)}</div>
-          <div>Last status: {agent.last_status || "Never run"}</div>
-          <div>Consecutive failures: {agent.failure_count}</div>
-        </div>
-        <p>
-          Effective permissions:{" "}
-          {agent.effective_permissions.join(", ") ||
-            "No host or external tools"}
-        </p>
-        <Link to={`/memory?scope=agent&scope_id=${agent.id}`}>
-          Inspect this agent's memory
-        </Link>
-        <AgentLinkedProjectLinks
-          agentId={agent.id}
-          projectId={agent.project_id}
-          projectName={
-            projects.data?.find((item) => item.id === agent.project_id)?.name
-          }
-        />
-        {agent.project_id ? (
-          <ProjectAgents
-            projectId={agent.project_id}
-            excludeAgentId={agent.id}
-          />
-        ) : null}
         <ErrorNotice error={action.error ?? detail.error ?? projects.error} />
       </section>
-      <AgentEditor key={agent.id} agent={agent} active={active} />
-      {agent.runs?.length ? (
-        <>
-          {agent.tools.includes("python_data") && (
-            <AgentDataResult runs={agent.runs ?? []} />
-          )}
-          {!isCoding(agent.tools) && <AgentLatestReport runs={agent.runs} />}
-          {isCoding(agent.tools) &&
-            !agent.tools.includes("python_data") &&
-            agent.runs?.[0]?.task_id && (
-              <Link
-                className="button secondary"
-                to={`/coding/${agent.runs[0].task_id}`}
-              >
-                Open coding task
-              </Link>
+      <div hidden={view !== "workspace"} className="agent-workspace-body">
+        {agent.runs?.length ? (
+          <>
+            {agent.tools.includes("python_data") && (
+              <AgentDataResult runs={agent.runs ?? []} />
             )}
-          <AgentLastWorkflowSteps runs={agent.runs} />
-          <AgentExecutionHistory runs={agent.runs} />
-        </>
-      ) : (
-        <section className="panel agent-form">
-          <h2>Execution history</h2>
-          <p className="muted">No executions yet.</p>
-          <p className="muted">
-            Latest 100 Runs. Open a Run to inspect events, parameters, errors,
-            and artifacts. Coding results retain their worktree for review.
+            {!isCoding(agent.tools) && <AgentLatestReport runs={agent.runs} />}
+            {isCoding(agent.tools) &&
+              !agent.tools.includes("python_data") &&
+              agent.runs?.[0]?.task_id && (
+                <Link
+                  className="button secondary"
+                  to={`/coding/${agent.runs[0].task_id}`}
+                >
+                  Open coding task
+                </Link>
+              )}
+            <AgentLastWorkflowSteps runs={agent.runs} />
+            <AgentExecutionHistory runs={agent.runs} />
+          </>
+        ) : (
+          <section className="panel agent-form">
+            <h2>Execution history</h2>
+            <p className="muted">
+              Your agent's results, files and progress will appear here.
+            </p>
+            <p className="muted">
+              Review its instructions and tools in Settings, then enable the
+              saved definition and choose Run now.
+            </p>
+            <Link to={viewLink("settings")} className="text-link">
+              Review agent settings
+            </Link>
+          </section>
+        )}
+      </div>
+      <div hidden={view !== "settings"} className="agent-workspace-body">
+        <p className="muted agent-workspace-settings-note">
+          Save changes before enabling or running. Pausing stops future
+          schedules; use Stop in the workspace to cancel an execution already in
+          progress.
+        </p>
+        <AgentEditor key={agent.id} agent={agent} active={active} />
+        <section
+          className="panel agent-form"
+          aria-label="Permissions and related resources"
+        >
+          <div className="agent-fields">
+            <div>Next run: {time(agent.next_run_at)}</div>
+            <div>Last run: {time(agent.last_run_at)}</div>
+            <div>Last status: {agent.last_status || "Never run"}</div>
+            <div>Consecutive failures: {agent.failure_count}</div>
+          </div>
+          <p>
+            Effective permissions:{" "}
+            {agent.effective_permissions.join(", ") ||
+              "No host or external tools"}
           </p>
+          <Link to={`/memory?scope=agent&scope_id=${agent.id}`}>
+            Inspect this agent's memory
+          </Link>
+          <AgentLinkedProjectLinks
+            agentId={agent.id}
+            projectId={agent.project_id}
+            projectName={
+              projects.data?.find((item) => item.id === agent.project_id)?.name
+            }
+          />
+          {agent.project_id ? (
+            <ProjectAgents
+              projectId={agent.project_id}
+              excludeAgentId={agent.id}
+            />
+          ) : null}
         </section>
-      )}
+      </div>
     </>
   );
 }
