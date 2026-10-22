@@ -21,14 +21,14 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function setup({ draft = false, view = "" } = {}) {
+function setup({ draft = false, view = "", model = "local" } = {}) {
   let agent = {
     id: "analyst",
     name: "Sales analyst",
     description: "",
     goal: "Analyze sales",
     system_prompt: "",
-    model: "local",
+    model,
     tools: [],
     skills: [],
     search_query: "",
@@ -80,7 +80,16 @@ function setup({ draft = false, view = "" } = {}) {
           : url.endsWith("/chat/provider")
             ? { models: ["local"], default_model: "local" }
             : url.endsWith("/llama")
-              ? { models: [], instances: [] }
+              ? {
+                  models: [
+                    {
+                      id: "catalog-model",
+                      model_key: "llamacpp:catalog-model",
+                      name: "Local research 27B",
+                    },
+                  ],
+                  instances: [],
+                }
               : [],
     };
   });
@@ -180,4 +189,11 @@ it("queues Run now once and stays on the agent workspace with Stop available", a
       }),
     ],
   ]);
+});
+
+it("shows the installed model name instead of its internal llama.cpp id", async () => {
+  setup({ model: "llamacpp:catalog-model" });
+  await screen.findByRole("heading", { name: "Sales analyst" });
+  await screen.findByText(/Manual.*Local research 27B/);
+  expect(screen.queryByText(/Manual.*llamacpp:catalog-model/)).toBeNull();
 });
