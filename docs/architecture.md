@@ -4,7 +4,10 @@
 native Browser child and queued Chat completion through RunDependency on one
 Task. URL scope is an explicit one-turn Web option; source JSON/screenshots,
 hash-checked follow-ups and targeted Stop reuse existing ownership and artifacts.
-The model receives captured text; screenshot pixel analysis is separate work.
+The text reader receives captured text. [Explicit screenshot design analysis](plans/page-screenshot-vision.md)
+composes the existing local Vision action with a verified saved capture. Its
+Markdown artifact binds the selected PNG and page JSON; follow-ups can reuse the
+attributed pixel observation without a new browser or inference engine.
 
 [Deterministic price observations](agent-market-watch.md) and scoped SMTP alert
 delivery are deployed (#340, #342, #343). Fixed public source reads, comparisons,

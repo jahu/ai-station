@@ -111,6 +111,7 @@ type Message = ActionResult & {
     reasoning_text?: string;
     web_search?: WebSources;
     page_read?: FetchResult | BrowserResult;
+    vision_model?: string;
     page_read_request?: string[];
     orchestration?: boolean;
     routing_only?: boolean;
@@ -705,6 +706,7 @@ function Transcript({
   setClipboardError,
   emptyHint,
   onProject,
+  onAnalyzePage,
 }: {
   messages: Message[];
   orchestrator: boolean;
@@ -716,6 +718,7 @@ function Transcript({
   ) => void;
   setClipboardError: (error: Error | null) => void;
   emptyHint: string;
+  onAnalyzePage?: (imageId: string, url: string) => void;
   onProject?: (project: {
     id: string;
     name: string;
@@ -894,7 +897,21 @@ function Transcript({
               {message.role === "assistant" &&
                 message.metadata.page_read &&
                 (isBrowserResult(message.metadata.page_read) ? (
-                  <BrowserPages result={message.metadata.page_read} chat />
+                  <BrowserPages
+                    result={message.metadata.page_read}
+                    chat
+                    busy={busy}
+                    inspectingPixels={
+                      !!message.metadata.vision_model &&
+                      ![
+                        "succeeded",
+                        "failed",
+                        "canceled",
+                        "interrupted",
+                      ].includes(message.run_status ?? "")
+                    }
+                    onAnalyze={onAnalyzePage}
+                  />
                 ) : (
                   <FetchedPages result={message.metadata.page_read} compact />
                 ))}
@@ -1083,6 +1100,7 @@ function ConversationView({
   const web = useWebSearch(turnMode === "chat" && !attachments.length);
   const webEnabled = !continuing && web.enabled;
   const setWebEnabled = web.setEnabled;
+  const pageVisionWebPreference = useRef<boolean | null>(null);
   const contextReady =
     !continuing ||
     (!!context?.ready &&
@@ -1216,6 +1234,10 @@ function ConversationView({
       draftState.accept(submittedDraft.current);
       setWebQuery("");
       web.setRenderPages(false);
+      if (pageVisionWebPreference.current !== null) {
+        setWebEnabled(pageVisionWebPreference.current);
+        pageVisionWebPreference.current = null;
+      }
       setAttachments([]);
       setOptions(emptyOptions);
       refresh();
@@ -1491,6 +1513,25 @@ function ConversationView({
         refresh={refresh}
         setOptions={setOptions}
         setClipboardError={setClipboardError}
+        onAnalyzePage={
+          conversation.archived_at
+            ? undefined
+            : (imageId, url) => {
+                pageVisionWebPreference.current ??= webEnabled;
+                setTurnMode("chat");
+                setWebEnabled(false);
+                web.setRenderPages(false);
+                setOptions({
+                  ...emptyOptions,
+                  action: "image.describe",
+                  image_artifact_ids: [imageId],
+                });
+                if (!draft.trim())
+                  setDraft(
+                    `Analyze the visual design of ${url}: colors, typography, layout and imagery. Use the saved screenshot and page text; distinguish visible observations from creative suggestions.`,
+                  );
+              }
+        }
         emptyHint={
           orchestrator
             ? 'Describe what you want done. For coding, try: In project "My app": add a feature. You can also attach images or create an agent.'
