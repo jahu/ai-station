@@ -60,6 +60,7 @@ from ai_station_runner.python_runs import PythonRequest
 from ai_station_runner.reviewed_commits import CommitRequest, commit_report, start_commit
 from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
+from ai_station_runner.site_preview_runs import PreviewAction, PreviewRequest
 from ai_station_runner.source_identity import SOURCE_FINGERPRINT
 from ai_station_runner.station_image import inspect_station_image
 from ai_station_runner.telemetry import collect
@@ -952,4 +953,76 @@ def python_report_endpoint(run_id: UUID):
     try:
         return python_report(manager(), str(run_id))
     except (ValueError, RuntimeError, ProcessNotOwned, OSError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+# Internal preview operations stay unavailable until an explicit trusted image is configured.
+@app.get("/v1/site-preview/capabilities")
+def site_preview_capabilities():
+    from ai_station_runner.site_preview_runs import capabilities
+
+    return {**capabilities(), "runner_id": get_settings().runner_id}
+
+
+@app.post("/v1/runs/site-preview")
+def site_preview_run(body: PreviewRequest):
+    from ai_station_runner.site_preview_runs import start_preview
+
+    try:
+        return {**start_preview(manager(), body), "runner_id": get_settings().runner_id}
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, RuntimeError, OSError, GitError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/runs/site-preview/{run_id}/state")
+def site_preview_state(run_id: UUID):
+    from ai_station_runner.site_preview_runs import state
+
+    try:
+        return state(manager(), str(run_id))
+    except (ValueError, RuntimeError, ProcessNotOwned, OSError, GitError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/runs/site-preview/{run_id}/report")
+def site_preview_report(run_id: UUID):
+    from ai_station_runner.site_preview_runs import report
+
+    try:
+        return report(manager(), str(run_id))
+    except (ValueError, RuntimeError, ProcessNotOwned, OSError, GitError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.post("/v1/runs/site-preview-action")
+def site_preview_action(body: PreviewAction):
+    from ai_station_runner.site_preview_runs import start_action
+
+    try:
+        return {**start_action(manager(), body), "runner_id": get_settings().runner_id}
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, RuntimeError, OSError, GitError, ProcessNotOwned) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.get("/v1/runs/site-preview-action/{run_id}/report")
+def site_preview_action_report(run_id: UUID):
+    from ai_station_runner.site_preview_runs import action_report
+
+    try:
+        return action_report(manager(), str(run_id))
+    except (ValueError, RuntimeError, ProcessNotOwned, OSError, GitError) as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.post("/v1/runs/site-preview/{run_id}/close")
+def site_preview_close(run_id: UUID):
+    from ai_station_runner.site_preview_runs import close_preview
+
+    try:
+        return close_preview(manager(), str(run_id))
+    except (ValueError, RuntimeError, ProcessNotOwned, OSError, GitError) as exc:
         raise HTTPException(409, str(exc)) from exc

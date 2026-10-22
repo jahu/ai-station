@@ -511,3 +511,48 @@ backup; evidence `agent-code-workspace-20261022/preserved-user-runtime.json`.
 Keep that runtime while working on CPU preview. Future rollout/acceptance must
 snapshot actual ready instances immediately before changes, rather than reuse
 an empty snapshot from the earlier QA state.
+
+
+### Native preview continuation (2026-10-22)
+
+`feat/agent-site-preview` now also implements the native half: `site_preview_runs`
+(requests, archive identity, one session/action admission, safe journals, frame and
+receipt inspection, exact container cleanup and Close), `site_preview_job`
+(offline archive broker/persistent renderer/mailbox), `site_preview_action_job`
+(registered per-action proxy) and `site_preview_source` (bounded ZIP validation,
+module MIME and document-only SPA fallback). ProcessManager inspection/cancel
+supports both new executor types. Typed endpoints live under `/v1/runs/site-preview`
+and `/v1/runs/site-preview-action`; image capability is `/v1/site-preview/capabilities`.
+The optional image requires protocol 2, now built as
+`ai-station-site-preview:development`. Production `.env` remains unchanged, so the
+new native capability is disabled there and the existing live release is intact.
+
+Final real Native/renderer tests passed (2); focused fake/native/legacy tests also
+passed, with the exact current count in `native-qualification.log`. The final
+protocol root-path regression is retained once in the parameterized cases. Full
+`./scripts/check.sh` on the final combined feature is still required. Do not merge
+or deploy the unfinished control-plane/UI adapter. Preserve the operator's ready
+Q4 model (instance documented above); this work requires no GPU.
+
+Next implement `backend/app/site_preview.py`: freeze only successful same-Task
+`coding_build` artifacts from project_validation, preserve source project/Run/Task
+identity, operator preview Task plus ordinary action Runs, explicit filesystem_read
+and browser_preview permissions, RAM/exclusive admission, early and final PNG
+adoption, inspectable Close/reconciliation and truthful expiry/interruption.
+`NativeJobExecutor` needs a default no-op polling observer for continuous frames;
+resource-aware preview rejection must retain locks unless the new native Close
+endpoint confirms cleanup. Native image/frame paths are derived UUID/revision
+paths; use the existing `read_owned_file` verifier with an explicit 8 MiB bound
+before immutable Artifact adoption. The native Close endpoint handles a request
+journal even when a dispatch lost its registered process; unknown Docker creation
+stays inspection-required.
+
+Audit project busy checks for the immutable operator viewer: keep real project
+tags and permit code/follow-ups concurrently only for site preview/action work.
+Do not weaken write-work exclusion. Preserve legacy Coding APIs and reuse its
+build-download component to host Preview. Canvas interaction must scale pointer
+coordinates to the captured viewport and use exact frame revisions; input is
+literal text/enum keys, no client-executed generated HTML/JS. Show build version,
+CPU target, loading/blocked/expired/interrupted states and an explicit Close.
+Full fake API/worker/resource/recovery plus real native/browser acceptance precedes
+review/merge/rollout; the broader product goal remains active.

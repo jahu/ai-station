@@ -90,14 +90,14 @@ class Input:
                 if not future.done():
                     future.set_exception(EOFError("Preview resource channel closed"))
 
-    async def fetch(self, path):
+    async def fetch(self, path, *, document=False):
         self.requests += 1
         if self.requests > 2048:
             raise ValueError("Preview session request budget exceeded")
         request_id = self.requests
         future = asyncio.get_running_loop().create_future()
         self.pending[request_id] = future
-        message({"event": "fetch", "id": request_id, "path": path})
+        message({"event": "fetch", "id": request_id, "path": path, "document": document})
         try:
             return await asyncio.wait_for(future, timeout=15)
         finally:
@@ -246,7 +246,9 @@ async def render(config):
                         )
                         return
                     try:
-                        reply, _ = await incoming.fetch(path)
+                        reply, _ = await incoming.fetch(
+                            path, document=event.get("resourceType") == "Document"
+                        )
                         await cdp.send(
                             "Fetch.fulfillRequest",
                             {

@@ -33,6 +33,7 @@ def test_canonical_build_members_and_internal_resources(path):
     "path",
     [
         "",
+        ".",
         "../x",
         "/index.html",
         ".env",

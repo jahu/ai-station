@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     wan_text_encoder: str = ""
     wan_vae: str = ""
     browser_image: str = ""
+    site_preview_image: str = ""
     python_image: str = ""
     llama_image: str = "ghcr.io/ggml-org/llama.cpp:server-cuda"
     model_roots: str = ""

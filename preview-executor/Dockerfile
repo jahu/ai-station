@@ -4,5 +4,5 @@ ARG BROWSER_BASE=ai-station-browser:local
 FROM ${BROWSER_BASE}
 COPY host-runner/ai_station_runner/site_preview_protocol.py /opt/ai-station/site_preview_protocol.py
 COPY host-runner/ai_station_runner/site_preview_renderer.py /opt/ai-station/site_preview_renderer.py
-LABEL ai-station.site-preview.protocol="1"
+LABEL ai-station.site-preview.protocol="2"
 ENTRYPOINT ["python", "-u", "/opt/ai-station/site_preview_renderer.py"]

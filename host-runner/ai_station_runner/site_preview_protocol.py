@@ -5,6 +5,7 @@ from pathlib import PurePosixPath
 from urllib.parse import unquote, urlsplit
 from uuid import UUID
 
+PROTOCOL_VERSION = "2"
 ORIGIN = "http://preview.invalid"
 MAX_RESPONSE = 8 * 1024 * 1024
 MAX_FRAME = 8 * 1024 * 1024
@@ -39,7 +40,8 @@ def asset_path(value):
         raise ValueError("Invalid preview asset path")
     path = PurePosixPath(value)
     if (
-        str(path) != value
+        not path.parts
+        or str(path) != value
         or path.is_absolute()
         or any(part.startswith(".") for part in path.parts)
         or any(c in value for c in "\\:%?#")

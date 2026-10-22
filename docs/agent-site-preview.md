@@ -1,7 +1,8 @@
 # Isolated interactive agent website preview
 
-Status: internal offline renderer/protocol implemented and directly real-tested;
-owned Runner dispatch, durable Run actions and the agent UI are still pending. Until all lifecycle
+Status: offline renderer plus typed Native Runner session/action ownership are
+implemented and real-tested. Control-plane Runs/resources and agent UI integration
+are still pending; the production configuration does not enable this adapter. Until all lifecycle
 contracts pass, this capability must remain unpublished/unavailable. A screenshot
 alone does not establish interactive preview completion.
 
@@ -63,6 +64,10 @@ environment, mount or container command is accepted.
 
 The native owned wrapper multiplexes container resource requests and a private
 validated action mailbox, retaining the current browser context between actions.
+Each action has a separately registered native proxy process, so ordinary process
+inspection/recovery can identify an interrupted send. Native admission permits
+one session and one action proxy at a time. Queued cancellation has no browser
+effect; cancellation after an uncertain send closes only its owning preview.
 The mailbox and container are identified by preview Run UUID, request digest and
 immutable image/container IDs. Actions write only canonical app-owned UUID records.
 Process ownership, cancellation and lost-create inspection reuse the existing
@@ -121,3 +126,33 @@ Evidence: `data/acceptance/agent-site-preview-20261022/{image.log,real-renderer.
 Full backend/Runner regression and complete integration gates are still required
 before this feature is reviewed for merge/deployment. Existing production does
 not load these unpublished modules.
+
+## Native lifecycle evidence — 2026-10-22
+
+Native session/action requests, immutable ZIP sourcing, image capability checks,
+single-session/action admission, durable receipts and exact process/container
+cleanup are implemented. The optional image now requires protocol **2**, including
+explicit document-versus-asset requests so SPA navigation cannot fabricate HTML
+responses for missing API data. Earlier prototype images are rejected.
+
+Focused normal coverage also includes archive traversal/symlink/duplicate/expansion
+bounds, geometry, journal identity/deadlines, native close, unknown create results,
+foreign container preservation and the atomic mailbox race found during real QA.
+A first native attempt failed because a mailbox scan could see the in-progress
+atomic temporary file; only committed requests are now considered. Failed attempts
+are preserved under the acceptance directory. A test wait also needed to re-read
+a confirmed zero-exit action rather than fail between its last running inspection
+and receipt publication.
+
+The final explicit real tests passed (**2**) on protocol 2: actual Native API,
+registered session/action process groups, local archive/modules, pointer/text,
+receipt replay, stale rejection, reconstructed-manager inspection, cleanup after
+killing a proxy while its page was wedged, and closing a second live session.
+Repeated inspection of the older action did not close the newer container, and
+an unrelated test process survived. Both containers were removed. CPU only; no
+production models, credentials or external services were used. Evidence:
+`data/acceptance/agent-site-preview-20261022/real-native-protocol2.log`.
+
+Full regression is required before merge. Control-plane permissions, RAM/exclusive
+admission, ordinary Run/artifact adoption and UI remain unfinished. No integrated
+website preview is advertised by the current production release.

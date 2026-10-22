@@ -23,7 +23,7 @@ async def test_real_offline_preview_modules_click_literal_text_and_receipts():
     tag = os.getenv("AI_STATION_PREVIEW_TEST_IMAGE", "ai-station-site-preview:development")
     metadata = json.loads(subprocess.check_output(["docker", "image", "inspect", tag], text=True))[0]
     assert metadata["Config"]["User"] == "1000:1000"
-    assert metadata["Config"]["Labels"]["ai-station.site-preview.protocol"] == "1"
+    assert metadata["Config"]["Labels"]["ai-station.site-preview.protocol"] == "2"
     image = metadata["Id"]
     owner = str(uuid4())
     name = "ai-station-site-preview-qa-" + owner
@@ -92,7 +92,7 @@ new WebSocket('ws://127.0.0.1:8765/blocked');""",
                 assert len(line) <= MAX_LINE
                 value = json.loads(line)
                 if value.get("event") == "fetch":
-                    assert set(value) == {"event", "id", "path"}
+                    assert set(value) == {"event", "id", "path", "document"}
                     path = value["path"]
                     paths.append(path)
                     content_type, body = assets.get(path, ("text/plain", b"not found"))
