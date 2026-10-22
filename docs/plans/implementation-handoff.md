@@ -819,3 +819,11 @@ Finish full diff review and actual compiled desktop/phone preview/approval tests
 with private adapters, then PR to develop, guarded migration/backup and rollout.
 Never send a real external test email without its concrete configured recipient
 scope. Root Memory WIP stays untouched, and main/master remain untouched.
+
+SMTP UI follow-up: email settings now expose enable/disable and confirmed removal
+of the saved connection/credential, with delivery history preserved. Nine focused
+UI/connector tests pass, including disabled controls and delete confirmation.
+The first UI-only qualification is superseded by
+`ai-station-reviewed-email-ui-final-20261022.service`; backend source remains
+frozen from `effbe6c` and its original full Python service continues unchanged.
+Do not restart that Python service due to this UI-only change.

@@ -87,6 +87,7 @@ function MailSettings({
         save.mutate({
           name: String(fields.get("name")),
           smtp,
+          enabled: fields.get("enabled") === "on",
           ...(row
             ? {
                 expected_updated_at: row.updated_at,
@@ -204,6 +205,14 @@ function MailSettings({
           Only these addresses can receive messages. Saving and checking the
           connection never sends mail.
         </p>
+        <label className="project-checkbox">
+          <input
+            name="enabled"
+            type="checkbox"
+            defaultChecked={row?.enabled ?? true}
+          />
+          Enable this email connection
+        </label>
         <div className="row">
           <Button type="submit">
             {save.isPending
@@ -362,6 +371,10 @@ function MailCard({ row }: { row: EmailConnector }) {
       refresh();
     },
   });
+  const remove = useMutation({
+    mutationFn: () => api(`/connectors/${row.id}`, { method: "DELETE" }),
+    onSuccess: refresh,
+  });
   const active =
     history.data?.some((d) => !terminal.has(d.run.status)) ?? false;
   return (
@@ -379,24 +392,20 @@ function MailCard({ row }: { row: EmailConnector }) {
           </p>
         </div>
         <span className="chip">
-          {row.health === "healthy"
-            ? "Connection verified"
-            : row.health === "unhealthy"
-              ? "Check connection"
-              : "Not checked"}
+          {!row.enabled
+            ? "Disabled"
+            : row.health === "healthy"
+              ? "Connection verified"
+              : row.health === "unhealthy"
+                ? "Check connection"
+                : "Not checked"}
         </span>
       </div>
       <div className="row">
         <Button
           variant="secondary"
           type="button"
-          disabled={
-            check.isPending ||
-            active ||
-            (row.last_run_id !== null &&
-              row.health === "unknown" &&
-              !row.enabled)
-          }
+          disabled={check.isPending || active || !row.enabled}
           onClick={() => check.mutate()}
         >
           <ShieldCheck size={15} />
@@ -416,6 +425,21 @@ function MailCard({ row }: { row: EmailConnector }) {
           onClick={() => setEditing(!editing)}
         >
           Mail settings
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={active || remove.isPending}
+          onClick={() => {
+            if (
+              window.confirm(
+                `Remove ${row.name} and its saved credential? Delivery history is preserved.`,
+              )
+            )
+              remove.mutate();
+          }}
+        >
+          Remove connection
         </Button>
         {row.last_run_id && (
           <Link to={`/runs/${row.last_run_id}`}>Connection details</Link>
@@ -499,7 +523,9 @@ function MailCard({ row }: { row: EmailConnector }) {
           </fieldset>
         </form>
       )}
-      <ErrorNotice error={check.error ?? preview.error ?? history.error} />
+      <ErrorNotice
+        error={check.error ?? preview.error ?? remove.error ?? history.error}
+      />
       {!!history.data?.length && (
         <section
           aria-label={`Message history ${row.name}`}

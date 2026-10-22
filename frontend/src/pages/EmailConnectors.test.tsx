@@ -38,7 +38,11 @@ function mount(rows: EmailConnector[] = [row], initial: unknown[] = []) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (path: string, init?: RequestInit) => {
-      if (init?.method === "POST" || init?.method === "PATCH") {
+      if (
+        init?.method === "POST" ||
+        init?.method === "PATCH" ||
+        init?.method === "DELETE"
+      ) {
         const body = init.body ? JSON.parse(String(init.body)) : {};
         calls.push({ path, body });
         if (path.endsWith("/drafts"))
@@ -177,4 +181,34 @@ it("does not reveal a saved password when editing and preserves it on unrelated 
   await waitFor(() => expect(calls).toHaveLength(1));
   expect(calls[0].body.expected_updated_at).toBe(row.updated_at);
   expect(calls[0].body).not.toHaveProperty("secret");
+});
+
+it("requires confirmation before removing a connection and preserves history in the prompt", async () => {
+  const calls = mount();
+  const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+  fireEvent.click(screen.getByRole("button", { name: "Remove connection" }));
+  expect(calls).toHaveLength(0);
+  expect(confirm).toHaveBeenCalledWith(
+    expect.stringContaining("Delivery history is preserved"),
+  );
+  confirm.mockReturnValue(true);
+  fireEvent.click(screen.getByRole("button", { name: "Remove connection" }));
+  await waitFor(() => expect(calls).toHaveLength(1));
+  expect(calls[0].path).toBe("/api/connectors/mail-one");
+  confirm.mockRestore();
+});
+
+it("keeps checking and sending disabled when a saved connection is disabled", () => {
+  mount([{ ...row, enabled: false, health: "healthy" }]);
+  expect(screen.getByText("Disabled")).toBeTruthy();
+  expect(
+    screen
+      .getByRole("button", { name: "Check connection" })
+      .matches(":disabled"),
+  ).toBe(true);
+  expect(
+    screen
+      .getByRole("button", { name: "Prepare a message" })
+      .matches(":disabled"),
+  ).toBe(true);
 });
