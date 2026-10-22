@@ -5,8 +5,11 @@ delivery are deployed (#340, #342, #343). Fixed public source reads, comparisons
 in-app notices, reports and mail use existing Tasks, workers, child Runs and
 Artifacts. Explicit activation grants bind automatic mail; Task-wide Stop covers
 all published submissions. There is no model-based pricing or new execution
-service. [Stock data](plans/stock-price-agents.md) is the next provider increment;
-its parser is not yet an operational connector.
+service. [Stock data](plans/stock-price-agents.md) is an optional account-based
+integration deployed in #344; no real account read has been verified. Ordinary
+stock-research requests instead draft existing public search/page tools with the
+selected local model. A saved public query or URL is reviewed before activation;
+the full private goal is never automatically submitted to a search engine.
 
 [Reviewed agent build preferences](agent-website-build-policy.md) extend the
 existing owned-workspace setup with frozen dependency/check automation. The flags

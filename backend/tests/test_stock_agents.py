@@ -241,12 +241,12 @@ def test_crypto_policy_hash_remains_byte_for_byte_compatible():
     )
 
 
-def test_factory_does_not_invent_symbols_or_choose_a_paid_account():
+def test_factory_uses_stock_account_only_when_provider_is_explicit():
     from app.factory import draft_agent
 
     for text, symbols in [
-        ("Codziennie sprawdzaj ceny akcji AAPL i MSFT i powiadom przy zmianie o 3%", ["AAPL", "MSFT"]),
-        ("Codziennie sprawdzaj ceny akcji Apple", []),
+        ("Finnhub: codziennie sprawdzaj ceny akcji AAPL i MSFT przy zmianie o 3%", ["AAPL", "MSFT"]),
+        ("Finnhub: codziennie sprawdzaj ceny akcji Apple", []),
     ]:
         draft = draft_agent(text)
         assert draft.tools == ["market_watch"] and draft.market["provider"] == "finnhub"
