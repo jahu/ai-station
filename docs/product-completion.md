@@ -37,8 +37,11 @@ Chat (#341). Explicit URL/bare-domain reading and same-source follow-up passed
 real `akademia.ai` acceptance with the local model. Explicit one-turn JavaScript
 reading now composes the existing Browser prerequisite, saved screenshot/text
 sources and hash-checked follow-ups; release qualification is recorded in
-`data/acceptance/chat-rendered-pages-20261022`. Pixel-grounded visual analysis
-remains backlog; text reading must not invent observed colors, typography or layout.
+`data/acceptance/chat-rendered-pages-20261022`. [Explicit saved-screenshot Vision](plans/page-screenshot-vision.md)
+adds pixel inspection and verified observation reuse through the existing local
+tool; qualification is recorded separately. Automatic capture/vision selection for
+the first website question and broader visual-quality acceptance remain planned.
+Text reading alone must not invent observed colors, typography or layout.
 
 Local coding agents can explicitly read reviewed public pages before creating
 their worktree/proposal. The same Task preserves fetched sources, approval,
