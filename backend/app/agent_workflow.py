@@ -36,6 +36,10 @@ STEP_KEYS = CONTEXT_STEPS | {"report"}
 
 
 def planned_steps(definition: AgentSettings) -> list[dict]:
+    if definition.tools == ["market_watch"]:
+        from app.market_watch import STEPS
+
+        return [{"key": key, "gate": "none"} for key in STEPS]
     if coding_provider(definition.tools) is not None:
         return (
             [{"key": "workspace.create", "gate": "none"}]
@@ -82,7 +86,7 @@ def workflow_view(session, run: Run) -> dict | None:
         for child in session.scalars(
             select(Run).where(Run.parent_run_id == parent.id).order_by(Run.created_at, Run.id)
         )
-        if child.executor_type in {"agent_tool", "agent", "browser", "github_read"}
+        if child.executor_type in {"agent_tool", "agent", "browser", "github_read", "agent_market"}
     ]
     definition = parent.parameters.get("definition") or {}
     if coding_provider(definition.get("tools", [])) is not None:
@@ -212,6 +216,10 @@ class AgentWorkflowExecutor:
 
 def publish_steps(session, parent: Run) -> list[Run]:
     definition = AgentSettings.model_validate(parent.parameters["definition"])
+    if definition.tools == ["market_watch"]:
+        from app.market_watch import publish_market_steps
+
+        return publish_market_steps(session, parent, definition)
     github_target = None
     if "github_read" in definition.tools:
         from app.agent_github import reviewed_connector

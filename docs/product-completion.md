@@ -2,8 +2,11 @@
 > workspaces are deployed (#333–#335). Normal-worker CSV Auto loading/generation/
 > execution returned the verified full-file total; see [data agent evidence](python-data-agents.md).
 > Code review and follow-ups now share the existing Task inside the agent
-> [workspace](agent-workspace.md). Next: isolated website preview, then deterministic
-> recurring price observations and scoped real email delivery.
+> [workspace](agent-workspace.md). Website preview/build policy are deployed (#337–#338).
+> Real Local Auto website creation, preview and same-workspace follow-up passed on
+> 2026-10-22; evidence: `data/acceptance/agent-website-real-20261022`.
+> Deterministic recurring price observations and scoped real email are the next
+> workstream; see [market watch](agent-market-watch.md) for the current slice.
 
 > Current priority override (2026-10-15): [agent-first product plan](plans/agent-first-product.md).
 > Deliver local agent code/data execution, agent-oriented results and website

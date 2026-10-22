@@ -137,6 +137,7 @@ def agent_dict(agent: Agent) -> dict:
         "runtime": agent.runtime,
         "provider": agent.provider,
         "model": agent.model,
+        "market": agent.market,
         "github": agent.github,
         "data": agent.data,
         "workspace_policy": agent.workspace_policy or {},

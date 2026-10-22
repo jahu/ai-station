@@ -1,5 +1,10 @@
 # Architecture
 
+The next agent slice is [deterministic scheduled price observations](agent-market-watch.md):
+fixed public provider reads, separate comparison/notice/report child Runs and
+durable quote/alert provenance. It reuses existing workers and schedules without
+an LLM decision or a new execution service. Email and stock adapters remain pending.
+
 [Reviewed agent build preferences](agent-website-build-policy.md) extend the
 existing owned-workspace setup with frozen dependency/check automation. The flags
 apply only when creating a private Local agent project; an existing linked
