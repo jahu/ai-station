@@ -53,13 +53,20 @@ class ChatExecutor:
     async def _consume(self, session, run, message):
         from app.web_search import context
 
-        messages = await context(session, run, message)
+        if run.parameters.get("page_read"):
+            from app.chat_pages import page_context
+
+            messages = await page_context(session, run, message)
+        else:
+            messages = await context(session, run, message)
         if messages is None:
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
             session.commit()
             return
-        if run.parameters.get("image_followup") and not message.metadata_json.get("web_search", {}).get(
-            "sources"
+        if (
+            run.parameters.get("image_followup")
+            and not message.metadata_json.get("page_read")
+            and not message.metadata_json.get("web_search", {}).get("sources")
         ):
             raise ProviderError("No usable search sources were returned for this image")
         if run.parameters.get("vision_artifact_ids"):

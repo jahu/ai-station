@@ -19,7 +19,13 @@ export type FetchResult = {
   pages: FetchedPage[];
 };
 
-export function FetchedPages({ result }: { result: FetchResult }) {
+export function FetchedPages({
+  result,
+  compact = false,
+}: {
+  result: FetchResult;
+  compact?: boolean;
+}) {
   const headingId = useId();
   const labelId = useId();
   const { listRef, onKeyDown, itemProps } = useListKeyboard(
@@ -37,7 +43,7 @@ export function FetchedPages({ result }: { result: FetchResult }) {
           Fetched pages
         </h3>
         <p className="muted">
-          Reviewed GET ·{" "}
+          {compact ? "Read from the page" : "Reviewed GET"} ·{" "}
           <time dateTime={result.fetched_at}>
             {new Date(result.fetched_at).toLocaleString()}
           </time>
@@ -45,7 +51,7 @@ export function FetchedPages({ result }: { result: FetchResult }) {
         </p>
         {result.pages.length ? (
           <>
-            <p id={labelId} className="dashboard-note">
+            <p id={labelId} className={compact ? "sr-only" : "dashboard-note"}>
               Arrow keys choose a page while the list is focused. Enter opens
               the selected public URL. JavaScript was not executed.
             </p>

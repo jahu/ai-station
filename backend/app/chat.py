@@ -354,6 +354,7 @@ def enqueue(
     if type(reserve_context) is not int or not 0 <= reserve_context <= 20000:
         raise ValueError("Invalid reserved conversation context")
     snapshot = dict(frozen_provider) if frozen_provider is not None else snapshot_provider(session, row)
+    from app.chat_pages import freeze_page_read
     from app.web_search import conversation_query_context
 
     web_search = user.metadata_json.get("web_search")
@@ -472,6 +473,7 @@ def enqueue(
         execution_target="container",
         parameters={
             "web_search": web_search,
+            "page_read": freeze_page_read(session, row.id, user, web_search),
             **(
                 {"web_search_context": conversation_query_context(session, row.id, user)}
                 if web_search and web_search.get("contextual")
@@ -517,6 +519,11 @@ def enqueue(
         run_id=run.id,
         metadata_json={
             "partial": True,
+            **(
+                {"page_read_request": run.parameters["page_read"]["urls"]}
+                if run.parameters.get("page_read", {}) and run.parameters["page_read"].get("urls")
+                else {}
+            ),
             **({"transcript_sources": list(reversed(transcript_sources))} if transcript_sources else {}),
         },
     )
