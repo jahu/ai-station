@@ -7,7 +7,14 @@ The completion depends on its own successful child; scope, parent/Task/conversat
 JSON and screenshot hashes are checked before adopting text. Source content cannot
 grant tools. Stop cancels that owned child; unrelated Tasks and shared model loads
 remain governed by their existing contracts. Saved source reuse makes no new
-request. Screenshot display does not claim the text model inspected its pixels.
+request. Screenshot display alone does not claim the text model inspected pixels.
+An explicit screenshot inspection can reuse same-conversation page evidence through
+the existing local Vision Run with filesystem-read permission only. It receives
+the selected frame and corresponding saved text; no new network or Browser grant.
+Derived descriptions bind image/page parents, actual local model, completed Run,
+message and file hashes before later Chat reuse. An image selected from another
+conversation cannot inherit that conversation's DOM text. No source content grants
+tools or changes model/runtime permissions. See [the design](plans/page-screenshot-vision.md).
 
 [Website preview](agent-site-preview.md) is an optional explicitly configured
 native workload. It receives a bounded immutable build archive; its read-only,

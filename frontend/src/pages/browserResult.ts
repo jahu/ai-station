@@ -1,6 +1,15 @@
 export type BrowserResult = {
   captured_at: number;
   reused_from_message_id?: string;
+  visual_analysis?: {
+    run_id: string;
+    artifact_id: string;
+    model: string;
+    description: string;
+    truncated: boolean;
+    location: "local";
+    screenshot_id: string;
+  };
   pages: {
     url: string;
     title: string;
@@ -17,6 +26,16 @@ export function isBrowserResult(value: unknown): value is BrowserResult {
   return (
     typeof result.captured_at === "number" &&
     Number.isFinite(result.captured_at) &&
+    (!result.visual_analysis ||
+      (result.visual_analysis.location === "local" &&
+        [
+          result.visual_analysis.model,
+          result.visual_analysis.run_id,
+          result.visual_analysis.artifact_id,
+          result.visual_analysis.screenshot_id,
+        ].every((value) => typeof value === "string" && value.length > 0) &&
+        typeof result.visual_analysis.description === "string" &&
+        typeof result.visual_analysis.truncated === "boolean")) &&
     Array.isArray(result.pages) &&
     result.pages.every(
       (page) =>

@@ -4080,6 +4080,17 @@ section:has(> .memory-grid) > .dashboard-note {
   margin-top: 8px;
   font-size: 11px;
 }
+.page-vision-action {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+.page-visual-observation {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
 .web-search-query .web-render-option {
   display: flex;
   align-items: center;

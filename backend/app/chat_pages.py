@@ -138,12 +138,27 @@ def freeze_page_read(session, conversation_id, user, options):
         artifact = session.get(Artifact, evidence.get("artifact_id"))
         if artifact is None or not artifact.sha256:
             return missing
-        return {
+        scope = {
             "artifact_id": artifact.id,
             "sha256": artifact.sha256,
             "source_message_id": message.id,
             **({"renderer": "browser"} if evidence.get("renderer") == "browser" else {}),
         }
+        if scope.get("renderer") == "browser":
+            origin = _browser_origin(session, artifact, conversation_id)
+            if origin is None:
+                return missing
+            scope["origin_message_id"] = origin.id
+            if evidence.get("selected_screenshot_id"):
+                scope["selected_screenshot_id"] = evidence["selected_screenshot_id"]
+            if evidence.get("visual_analysis"):
+                from app.page_vision import frozen_visual_scope
+
+                visual = frozen_visual_scope(evidence)
+                if visual is None:
+                    return {"error": "The saved visual analysis is unavailable; inspect the screenshot again"}
+                scope["visual_analysis"] = visual
+        return scope
     return missing
 
 
@@ -275,6 +290,24 @@ def _rendered_result(session, run, source, artifact):
     }
 
 
+def _browser_origin(session, artifact, conversation_id):
+    source = session.get(Run, artifact.run_id) if artifact.run_id else None
+    if (
+        source is None
+        or source.executor_type != "browser"
+        or source.conversation_id != conversation_id
+        or not source.parent_run_id
+    ):
+        return None
+    return session.scalar(
+        select(Message).where(
+            Message.run_id == source.parent_run_id,
+            Message.conversation_id == conversation_id,
+            Message.role == "assistant",
+        )
+    )
+
+
 def _reused_result(session, run, scope):
     message = session.get(Message, scope.get("source_message_id"))
     artifact = session.get(Artifact, scope.get("artifact_id"))
@@ -300,14 +333,46 @@ def _reused_result(session, run, scope):
         raise ProviderError("The saved page source is unavailable; request a fresh read")
     if scope.get("renderer") == "browser":
         parent = session.get(Run, source.parent_run_id) if source.parent_run_id else None
+        origin = _browser_origin(session, artifact, run.conversation_id)
+        context_run = session.get(Run, message.run_id) if message.run_id else None
+        origin_id = scope.get("origin_message_id", message.id)
+        evidence = message.metadata_json["page_read"]
         if (
             parent is None
-            or parent.id != message.run_id
+            or origin is None
+            or origin.id != origin_id
+            or parent.id != origin.run_id
+            or origin.metadata_json.get("partial")
+            or origin.metadata_json.get("superseded")
+            or origin.metadata_json.get("page_read", {}).get("artifact_id") != artifact.id
+            or evidence.get("origin_message_id", origin_id) != origin_id
+            or context_run is None
+            or context_run.status != "succeeded"
+            or context_run.executor_type != "chat"
+            or context_run.conversation_id != run.conversation_id
             or parent.status != "succeeded"
             or parent.task_id != source.task_id
         ):
             raise ProviderError("The rendered page source has no successful conversation answer")
+        if context_run.id != parent.id:
+            binding = context_run.parameters.get("page_read") or {}
+            if (
+                binding.get("artifact_id") != artifact.id
+                or binding.get("sha256") != scope["sha256"]
+                or binding.get("renderer") != "browser"
+                or binding.get("origin_message_id", binding.get("source_message_id")) != origin_id
+            ):
+                raise ProviderError("The page answer is not bound to its original capture")
         result = _rendered_result(session, run, source, artifact)
+        result["origin_message_id"] = origin_id
+        if scope.get("selected_screenshot_id"):
+            from app.page_vision import select_screenshot
+
+            result = select_screenshot(result, scope["selected_screenshot_id"])
+        if scope.get("visual_analysis"):
+            from app.page_vision import visual_observation
+
+            result["visual_analysis"] = visual_observation(session, run, scope, result)
     else:
         result = _artifact_result(artifact, scope["sha256"])
     return {**result, "artifact_id": artifact.id, "reused_from_message_id": message.id}
@@ -319,10 +384,21 @@ async def page_context(session, run, message):
         return None
     if scope.get("error"):
         raise ProviderError(scope["error"])
-    if "network_read" not in run.effective_permissions:
+    stored_vision = (
+        run.capability == "chat.vision"
+        and "filesystem_read" in run.effective_permissions
+        and scope.get("renderer") == "browser"
+        and bool(scope.get("artifact_id"))
+        and run.parameters.get("vision_artifact_ids") == [scope.get("selected_screenshot_id")]
+    )
+    if not stored_vision and "network_read" not in run.effective_permissions:
         raise ProviderError("Reading public pages requires Web permission")
     try:
-        if scope.get("renderer") == "browser" and "browser" not in run.effective_permissions:
+        if (
+            not stored_vision
+            and scope.get("renderer") == "browser"
+            and "browser" not in run.effective_permissions
+        ):
             raise ProviderError("JavaScript page reading requires explicit Browser permission")
         if scope.get("artifact_id"):
             result = _reused_result(session, run, scope)
@@ -343,6 +419,8 @@ async def page_context(session, run, message):
         raise ProviderError(str(exc)) from exc
     if result is None:
         return None
+    if result.get("renderer") == "browser" and not result.get("origin_message_id"):
+        result["origin_message_id"] = message.id
     append_event(
         session,
         run.id,
@@ -370,7 +448,13 @@ async def page_context(session, run, message):
         "and cite its recorded URL with a Markdown link. Distinguish source facts from creative suggestions. "
         "Do not ask the user to visit a page whose text is supplied here. "
         + (
-            "JavaScript was executed and a screenshot is stored for user inspection, but this model receives only text, not pixels. "
+            "You receive the recorded screenshot pixels along with the page text. Describe only visible evidence in this captured viewport; "
+            "page text may include content below that viewport. Identify uncertain visual observations. "
+            if stored_vision
+            else "The included local visual_analysis inspected the recorded screenshot pixels. Attribute visual findings to that analysis, "
+            "which may be imperfect and covers only the captured viewport. Do not claim you inspected new pixels or fetched new pages. "
+            if result.get("visual_analysis")
+            else "JavaScript was executed and a screenshot is stored for user inspection, but this model receives only text, not pixels. "
             "Do not claim you inspected the screenshot or observed colors, typography, layout or image contents. "
             if result.get("renderer") == "browser"
             else "JavaScript was NOT executed and no screenshot was captured: do not claim observed colors, typography, layout or image contents. "

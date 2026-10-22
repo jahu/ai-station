@@ -47,6 +47,9 @@ def _enqueue_inspection(session, parent):
             or artifact.size_bytes > 20 * 1024 * 1024
         ):
             raise HTTPException(422, "Choose PNG, JPEG or WebP images up to 20 MiB")
+    from app.page_vision import scope_for_images
+
+    page_scope = scope_for_images(session, parent, ids)
     files = list(
         session.scalars(
             select(ModelFile)
@@ -130,6 +133,7 @@ def _enqueue_inspection(session, parent):
             "messages": [{"role": "user", "content": parent.parameters["content"]}],
             "vision_artifact_ids": ids,
             "vision_model_name": model.filename,
+            **({"page_read": page_scope} if page_scope else {}),
         },
     )
     if load:
@@ -235,14 +239,16 @@ def save_description(session, run, message):
     with tempfile.NamedTemporaryFile(suffix=".md") as output:
         output.write(message.content.encode("utf-8"))
         output.flush()
-        register_file(
+        page = run.parameters.get("page_read") or {}
+        artifact = register_file(
             session,
             source=Path(output.name),
             artifact_type="markdown",
             mime_type="text/markdown",
             original_filename="image-description.md",
             run_id=run.id,
-            parent_artifact_ids=run.parameters["vision_artifact_ids"],
+            parent_artifact_ids=run.parameters["vision_artifact_ids"]
+            + ([page["artifact_id"]] if page else []),
             metadata={
                 "model": run.parameters["model"],
                 "model_name": run.parameters["vision_model_name"],
@@ -250,3 +256,6 @@ def save_description(session, run, message):
                 "location": "local",
             },
         )
+        from app.page_vision import remember_analysis
+
+        remember_analysis(run, message, artifact)

@@ -31,7 +31,11 @@ To read a public page that needs JavaScript, enable **Web → Search options →
 Read JavaScript pages** for that message and include its URL. The optional
 [Browser executor](docs/browser.md) must already be configured. Chat keeps the
 capture, screenshot and source links; follow-ups can reuse the saved page.
-The answer uses captured text, not screenshot pixel analysis.
+The normal answer uses captured text. To inspect the captured design, expand its
+sources and choose **Analyze visual design**, then Send. The existing local Vision
+tool inspects the selected screenshot and saved page text, records its model and
+returns a source-linked analysis. Same-page follow-ups can reuse that observation.
+See [visual page analysis](docs/plans/page-screenshot-vision.md) for qualification.
 
 In Work, **Create project & build** accepts a name and goal, creates the owned
 repository/environment and queues its first isolated coding Task. Local AI is the

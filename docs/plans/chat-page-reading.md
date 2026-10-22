@@ -1,8 +1,9 @@
 # Read a requested website in Chat
 
 Requested by the operator on 2026-10-22. **Text reading (#341) and the explicitly
-selected JavaScript reader (#346) are deployed.** Pixel-grounded visual analysis
-remains backlog. This is distinct from web-search ranking; a simple website analysis does
+selected JavaScript reader (#346) are deployed.** Explicit local pixel analysis
+of a saved screenshot is implemented in the [Vision continuation](page-screenshot-vision.md);
+its hardware/release qualification is recorded separately. This is distinct from web-search ranking; a simple website analysis does
 not require a coding project or persistent agent.
 
 ## Problem and expected experience
@@ -93,8 +94,11 @@ and `deployed-verification.json`. These checks do not establish visual analysis.
 
 ## Remaining backlog
 
-Pixel-grounded brand/style analysis with a supported vision model remains separate
-work. A text read must not pretend it observed typography, colors or layout.
+The explicit saved-screenshot Vision action and attributed observation reuse are
+implemented in [visual page analysis](page-screenshot-vision.md). Automatic first-question
+capture/vision orchestration, further viewports/scrolling and broader design-quality
+acceptance remain planned. A text read alone must not pretend it observed typography,
+colors or layout.
 
 ## Rendered reader implementation — 2026-10-22
 
