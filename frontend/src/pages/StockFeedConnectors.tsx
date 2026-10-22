@@ -18,6 +18,7 @@ function FeedSettings({
 }) {
   const cache = useQueryClient();
   const [secret, setSecret] = useState("");
+  const [openedVersion] = useState(row?.updated_at);
   const save = useMutation({
     mutationFn: (body: unknown) =>
       api(
@@ -42,7 +43,7 @@ function FeedSettings({
           name: String(fields.get("name")),
           ...(row
             ? {
-                expected_updated_at: row.updated_at,
+                expected_updated_at: openedVersion,
                 ...(enabled !== row.enabled ? { enabled } : {}),
               }
             : {

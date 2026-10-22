@@ -243,3 +243,45 @@ it("keeps a saved API key write-only and saving makes no account request", async
   expect(fetcher.mock.calls).toHaveLength(1);
   expect(document.body.textContent).not.toContain("private-fixture-stock-key");
 });
+
+it("freezes the settings version the operator actually opened when the account refreshes", async () => {
+  const fetcher = vi.fn(async (_path: string, _options?: RequestInit) => ({
+    ok: true,
+    json: async () => account,
+  }));
+  vi.stubGlobal("fetch", fetcher);
+  function RefreshedAccount() {
+    const [row, setRow] = useState(account);
+    return (
+      <>
+        <StockFeedConnectors rows={[row]} />
+        <button
+          onClick={() =>
+            setRow({ ...row, updated_at: "later", name: "Changed elsewhere" })
+          }
+        >
+          Refresh account fixture
+        </button>
+      </>
+    );
+  }
+  mount(<RefreshedAccount />);
+  fireEvent.click(screen.getByRole("button", { name: "Account settings" }));
+  fireEvent.change(screen.getByLabelText("Account name"), {
+    target: { value: "My edited name" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Refresh account fixture" }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Save stock-data account" }),
+  );
+  await waitFor(() => expect(fetcher).toHaveBeenCalled());
+  const sent = fetcher.mock.calls.find(
+    ([, options]) => options?.method === "PATCH",
+  );
+  expect(JSON.parse(String(sent?.[1]?.body))).toMatchObject({
+    expected_updated_at: "now",
+    name: "My edited name",
+  });
+});
