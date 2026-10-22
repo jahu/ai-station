@@ -4,8 +4,8 @@ After a website/design prompt, **Wygeneruj tę grafikę** must use image generat
 not become another ordinary answer because Web is enabled. Recognize common
 graphic/illustration/poster/banner wording in the existing deterministic image
 route, including its Generate → Video form. Requests to write a prompt/brief
-stay text/website questions; image words inside that request cannot launch a GPU
-job. Agent/project intent keeps priority.
+stay text/website questions; image words inside that request cannot launch image
+generation. Agent/project intent keeps priority.
 
 Reuse the current page-reader/image-brief/photo chain. A referential graphic
 request may reuse the latest verified same-conversation page/visual evidence;
