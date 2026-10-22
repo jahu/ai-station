@@ -1,9 +1,9 @@
 # Isolated interactive agent website preview
 
-Status: native lifecycle, control-plane Runs/resources, immutable frame artifacts
-and the responsive workspace are implemented. Actual renderer, native, worker
-and desktop/mobile browser acceptance passed. Combined regression and release
-review are in progress in PR #337; production has not enabled this adapter yet.
+Status: implemented, locally qualified and real-tested. The optional executor
+requires its explicitly built workload image and control-plane enable flag.
+Release identity and rollout evidence live under the project-owned acceptance
+directory; a configured capability reports actual availability.
 
 ## Product outcome
 
@@ -210,3 +210,25 @@ page overflow. Screenshots and results are in
 disposable registered static fixture; this does not yet qualify the separate
 URL → local-model website-building workflow. Agent-generated build links return
 to the source agent workspace; standalone tasks retain their existing task route.
+
+
+## Final release qualification — 2026-10-22
+
+PR #337 passed **1830 Python tests**, with eight expensive integrations skipped
+by default, plus Ruff. The explicitly opted-in actual worker/socket/container
+integration passed separately. The UI passed **523 tests**, format, lint,
+TypeScript and production build, both Compose configurations and a Docker image
+build. The image backend files and compiled frontend assets match the qualified
+source/browser build exactly. Real desktop/mobile acceptance includes pointer
+interaction, reload, source-build identity, session expiry display and confirmed
+Close. No production GPU/model was used for this acceptance.
+
+The recorded first collection failure (duplicate test basenames) and synthetic
+browser-fixture fixes remain in local evidence; they are not successful checks.
+Current final results are `workspace-full-check-result.json`,
+`ui-check-result.json`, `browser-result.json` and `image-source-and-assets.json`
+in `data/acceptance/agent-site-preview-20261022`. Deployment is a separate guarded
+step requiring a merged PR, fresh ready-runtime snapshots and a database backup.
+The next website milestone remains a real reviewed-URL → local model → build →
+preview → follow-up agent acceptance; static preview qualification alone does not
+prove that larger workflow.

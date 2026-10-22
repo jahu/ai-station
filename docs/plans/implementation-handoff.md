@@ -5,7 +5,22 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current delivery — 2026-10-22
+## Current preview candidate — 2026-10-22
+
+PR #337 has final successful local qualification: 1830 Python tests/eight opt-in
+skips; 523 UI tests; format/lint/types/build; Compose/image; exact image/backend
+and frontend asset equality; and actual CPU worker/socket/Chromium plus compiled
+desktop/mobile acceptance. See [preview evidence](../agent-site-preview.md).
+Production rollout is tracked separately in
+`data/acceptance/safety-redeploy-20261012/deployment.json`; never infer that the
+candidate has been applied from this document alone. The guarded deploy script
+under `data/acceptance/agent-site-preview-20261022` requires the PR to be merged,
+a fresh snapshot of ready managed models, an idle native process owner and a DB
+backup before replacing this project's containers/Runner. Preserve the separately
+operator-loaded model/context. Next: reviewed-URL website-agent end-to-end
+acceptance, then typed recurring quote observations and scoped email delivery.
+
+## Earlier delivery — 2026-10-22
 
 PR #332 (context-aware follow-up search and remembered default-on Chat search)
 is merged and deployed. Production identity and persistence checks passed; see
