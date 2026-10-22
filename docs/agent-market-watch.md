@@ -58,3 +58,10 @@ TLS SMTP sink with synthetic quote → activation consent → threshold → work
 delivery, and 59 focused UI cases passed before receipt-history wiring. Final
 compiled desktop/mobile acceptance, full checks and PR review remain required.
 No external SMTP account or human recipient has been used.
+
+A later review found and fixed dispatcher-level Stop for SMTP fanout. It now
+uses the existing Task-wide cancellation contract, preserving already accepted
+receipts and canceling every active submission/report. Stop current price check
+is available in Agents and the conversation. Final focused coverage passed 107
+market/agent/TLS cases and 60 UI cases; compiled desktop/phone tests include this
+Stop path and duplicate consent reset. Final whole-source gates remain separate.

@@ -1,6 +1,7 @@
 import {
   MarketEmailApproval,
   AgentMarketEmailHistory,
+  AgentMarketRunStop,
   type MarketEmailAuthorization,
 } from "./AgentMarketEmail";
 import { AgentMarketEditor } from "./AgentMarketScope";
@@ -1264,6 +1265,9 @@ export function AssistantAgentDraft({
             >
               Run now
             </Button>
+            {agent.tools?.includes("market_watch") && (
+              <AgentMarketRunStop agentId={agent.id} runs={history} />
+            )}
             <Button
               type="button"
               variant="secondary"

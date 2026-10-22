@@ -1,6 +1,7 @@
 import {
   MarketEmailApproval,
   AgentMarketEmailHistory,
+  AgentMarketRunStop,
   type MarketEmailAuthorization,
 } from "./AgentMarketEmail";
 import AgentMarketScope from "./AgentMarketScope";
@@ -775,6 +776,9 @@ export function AgentDetail() {
           >
             Run now
           </Button>
+          {agent.tools.includes("market_watch") && (
+            <AgentMarketRunStop agentId={agent.id} runs={agent.runs ?? []} />
+          )}
           <Button
             variant="ghost"
             disabled={action.isPending}

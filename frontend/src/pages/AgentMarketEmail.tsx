@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api, type Run } from "../api";
 import { DeliveryPreview, type Delivery } from "./EmailConnectors";
@@ -318,4 +318,52 @@ export function AgentMarketEmailHistory({
       ))}
     </section>
   ) : null;
+}
+
+export function AgentMarketRunStop({
+  agentId,
+  runs,
+}: {
+  agentId: string;
+  runs: Run[];
+}) {
+  const cache = useQueryClient();
+  const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
+  const active = (taskId: string) =>
+    runs.filter((run) => run.task_id === taskId && !terminal.has(run.status));
+  const parent = runs.find(
+    (run) =>
+      run.executor_type === "agent_workflow" && active(run.task_id).length > 0,
+  );
+  const cancel = useMutation({
+    mutationFn: (runId: string) =>
+      api(`/runs/${runId}/cancel`, { method: "POST" }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["agent", agentId] });
+      void cache.invalidateQueries({ queryKey: ["agents"] });
+      void cache.invalidateQueries({ queryKey: ["runs"] });
+      void cache.invalidateQueries({
+        queryKey: ["agent-email-deliveries", agentId],
+      });
+    },
+  });
+  if (!parent) return null;
+  const stopping = active(parent.task_id).every(
+    (run) => run.status === "cancel_requested",
+  );
+  return (
+    <>
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={cancel.isPending || stopping}
+        onClick={() => cancel.mutate(parent.id)}
+      >
+        {cancel.isPending || stopping
+          ? "Stopping price check…"
+          : "Stop current price check"}
+      </Button>
+      <ErrorNotice error={cancel.error} />
+    </>
+  );
 }

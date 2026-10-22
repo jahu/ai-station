@@ -53,7 +53,7 @@ def target(session, scope):
         raise MarketEmailPolicyError("Select reviewed email settings")
     try:
         connector, config = reviewed_connector(session, scope.email.connector_id)
-    except (HTTPException, ProviderError, ValueError) as exc:
+    except (HTTPException, ProviderError, ValueError, OSError) as exc:
         raise MarketEmailPolicyError("Review the enabled SMTP connection and its saved credential") from exc
     if connector_revision(connector) != scope.email.connector_revision:
         raise MarketEmailPolicyError(
@@ -224,6 +224,10 @@ def alert_source(session, run, alert_id):
 
 
 def queue_alert(session, notify_run, definition, alert_id):
+    from app.task_control import stopped_task
+
+    if stopped_task(session, notify_run.task):
+        raise MarketEmailPolicyError("The price workflow was stopped before email publication")
     for permission in ("email_send", "network_external"):
         require(notify_run.effective_permissions, permission)
     parent = session.get(Run, notify_run.parent_run_id)
@@ -320,6 +324,10 @@ def queue_alert(session, notify_run, definition, alert_id):
 
 def validate_submission(session, run, receipt):
     """Recompute authority and the fixed message, rather than trusting queue metadata."""
+    from app.task_control import stopped_task
+
+    if stopped_task(session, run.task):
+        raise MarketEmailPolicyError("The price workflow was stopped before SMTP submission")
     reference = run.parameters.get("market_alert")
     notify = session.get(Run, run.parent_run_id)
     if (

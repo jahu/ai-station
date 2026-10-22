@@ -226,6 +226,23 @@ def request_cancel(session: Session, run: Run) -> Run:
         ):
             return request_cancel(session, child)
     if run.executor_type == "agent_workflow" and run.status in TERMINAL:
+        definition = run.parameters.get("definition") or {}
+        if definition.get("tools") == ["market_watch"] and (definition.get("market") or {}).get("email"):
+            # Threshold publication can fan out into several SMTP children after
+            # the report was queued. Stop the owned Task graph, not just that
+            # earlier queued report, which would leave email able to submit.
+            from app.task_control import cancel_task
+
+            active = list(
+                session.scalars(select(Run).where(Run.task_id == run.task_id, Run.status.not_in(TERMINAL)))
+            )
+            if active:
+                result = cancel_task(session, run.task)
+                run.cancellation_requested_at = utcnow()
+                append_event(session, run.id, "workflow.stop_requested", result)
+                return next(
+                    (child for child in active if child.status == RunStatus.CANCEL_REQUESTED), active[0]
+                )
         from app.agent_workflow import active_workflow_child
 
         child = active_workflow_child(session, run)

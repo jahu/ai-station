@@ -19,12 +19,20 @@ Continue `feat/market-email-alerts` in `.tools/market-email-alerts`, rebased ont
 `develop` `961bffc`. The candidate adds explicit activation consent via existing
 Approval records, a versioned SMTP scope, deterministic source-bound mail child
 Runs, no-replay receipt identity and agent/conversation settings/receipt UI.
-See [the plan](market-email-alerts.md). Focused API/worker/SMTP tests passed 134
-cases before the latest receipt filter/read-only approval metadata changes; full
-qualification is not yet started. Fifty-nine focused UI cases passed before
-receipt-history wiring. Finish current focused checks, compile and test the actual
-desktop/phone scope-save → unchecked consent → enable → baseline → price alert →
-receipt/error paths before final full checks and a reviewed PR to develop.
+See [the plan](market-email-alerts.md). Final focused review passed 107
+market/agent/TLS cases and 60 UI cases. Actual compiled desktop/phone checks passed
+scope-save, unchecked consent, baseline without mail, accepted/unknown receipts,
+no resend, pause, fresh consent for duplicates and Stop of a published SMTP child.
+The private TLS sink also exercised a complete synthetic-quote workflow.
+
+Review proved that Stop on the successful dispatcher initially targeted its queued
+report and left nested mail able to submit. The first full backend check was
+explicitly stopped (not qualified). The fix uses existing Task-wide Stop for this
+market fanout and checks the stopped Task at publication/submission. Regression
+coverage includes two mail children and one previously accepted message. The UI
+has Stop current price check beside Run now. The earlier full UI pass (545 tests)
+predates that control; final current-source backend and UI qualification is next.
+Do not merge on superseded evidence or restart a confirmed live check.
 Evidence starts in `data/acceptance/market-email-alerts-20261022`.
 
 The root checkout has pre-existing Memory WIP: do not stage, reset or switch it.

@@ -62,11 +62,13 @@ export function WorkflowStepCards({
       <p className="muted">
         {workflow.mode === "gated"
           ? "Gated: the requested work requires approval before execution."
-          : "Sequential: each step waits for the previous one to succeed."}{" "}
+          : "Each step waits for its required work to finish."}{" "}
         {workflow.tool_calling === "bounded"
           ? "The report may request selected registry tools; invented tools fail closed. "
           : ""}
-        {extra}
+        {workflow.steps.some((step) => step.key === "email.send")
+          ? "Stop on this price workflow cancels all of its active steps, including email submissions. Individual mail cards stop only that submission."
+          : extra}
       </p>
       {workflow.steps.length ? (
         <>

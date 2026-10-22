@@ -305,3 +305,98 @@ def test_below_threshold_and_cooldown_do_not_create_extra_mail(session, monkeypa
             runs = complete(session, agent, monkeypatch, page(price, trade, now - timedelta(seconds=delta)))
             assert all(run.status == "succeeded" for run in runs), [(r.status, r.error_message) for r in runs]
             assert len(transport.messages) == expected
+
+
+def test_stopping_workflow_cancels_its_nested_mail_before_submission(session, monkeypatch, transport):
+    with TestClient(app) as api:
+        rid, _, parent_id = pending_alert(session, api, monkeypatch)
+        response = api.post("/api/runs/" + parent_id + "/cancel")
+        assert response.status_code == 200, response.text
+        for _ in range(6):
+            if not tick(session, "stopped-market-worker"):
+                break
+        session.expire_all()
+        assert not transport.messages
+        assert session.get(Run, rid).status == "canceled"
+        assert session.scalar(select(EmailDelivery)).state == "canceled"
+
+
+@pytest.mark.parametrize("already_sent", [0, 1])
+def test_workflow_stop_covers_all_alert_mail_and_preserves_prior_acceptance(
+    session, monkeypatch, transport, already_sent
+):
+    from app.db import utcnow
+    from app.market_watch import source_url
+
+    with TestClient(app) as api:
+        _, draft = settings(api)
+        scope = {**draft["market"], "instruments": ["BTC-USD", "ETH-USD"]}
+        edited = api.put(
+            "/api/agents/" + draft["id"],
+            json={
+                "name": draft["name"],
+                "goal": draft["goal"],
+                "tools": ["market_watch"],
+                "market": scope,
+                "expected_updated_at": draft["updated_at"],
+            },
+        )
+        assert edited.status_code == 200, edited.text
+        current = enabled(api, edited.json()).json()
+        now, phase = utcnow(), 0
+
+        async def fetch(url, **kwargs):
+            instrument = "BTC-USD" if "/BTC-USD/" in url else "ETH-USD"
+            assert url == source_url(instrument)
+            return page(
+                "100" if phase == 0 else "106",
+                100 + phase,
+                now - timedelta(seconds=20 if phase == 0 else 10),
+                pair=instrument,
+            )
+
+        monkeypatch.setattr("app.http_fetch.fetch_public", fetch)
+        first = api.post(
+            "/api/agents/" + draft["id"] + "/run", json={"expected_updated_at": current["updated_at"]}
+        )
+        assert first.status_code == 202, first.text
+        for _ in range(8):
+            if not tick(session, "baseline-worker"):
+                break
+        session.commit()
+        current = api.get("/api/agents/" + draft["id"]).json()
+        phase = 1
+        started = api.post(
+            "/api/agents/" + draft["id"] + "/run", json={"expected_updated_at": current["updated_at"]}
+        )
+        assert started.status_code == 202, started.text
+        for _ in range(4 + already_sent):
+            assert tick(session, "alert-publication-worker")
+        assert len(list(session.scalars(select(EmailDelivery)))) == 2
+        session.commit()
+        stopped = api.post("/api/runs/" + started.json()["id"] + "/cancel")
+        assert stopped.status_code == 200, stopped.text
+        for _ in range(6):
+            if not tick(session, "stopped-fanout-worker"):
+                break
+        session.expire_all()
+        states = [row.state for row in session.scalars(select(EmailDelivery))]
+        assert states.count("accepted") == already_sent
+        assert states.count("canceled") == 2 - already_sent
+        assert len(transport.messages) == already_sent
+
+
+def test_unreadable_email_credential_is_a_reviewable_policy_error(session, monkeypatch):
+    with TestClient(app) as api:
+        _, agent = prepare(session, api)
+        agent_id = agent.id
+        session.commit()
+
+        def unavailable(*args):
+            raise OSError("synthetic-private-credential-path")
+
+        monkeypatch.setattr("app.market_email.reviewed_connector", unavailable)
+        response = api.get("/api/agents/" + agent_id)
+        assert response.status_code == 200, response.text
+        assert not response.json()["market_email_authorization"]["valid"]
+        assert "synthetic-private-credential-path" not in response.text

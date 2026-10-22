@@ -1,3 +1,4 @@
+import type { Run } from "../api";
 import {
   cleanup,
   fireEvent,
@@ -9,7 +10,11 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactElement } from "react";
-import { MarketEmailApproval, MarketEmailSettings } from "./AgentMarketEmail";
+import {
+  AgentMarketRunStop,
+  MarketEmailApproval,
+  MarketEmailSettings,
+} from "./AgentMarketEmail";
 import { DEFAULT_MARKET } from "./marketScope";
 import { agentSettingsPayload } from "./agentSettings";
 
@@ -151,4 +156,32 @@ it("pauses changed price/email policies while preserving enablement for unrelate
   });
   expect(next.enabled).toBe(false);
   expect(next.market?.email).toEqual(market.email);
+});
+
+it("stops the workflow dispatch when its nested mail is still queued", async () => {
+  const runs = [
+    {
+      id: "workflow-one",
+      task_id: "task-one",
+      executor_type: "agent_workflow",
+      status: "succeeded",
+    },
+    {
+      id: "mail-run",
+      task_id: "task-one",
+      executor_type: "email_send",
+      status: "queued",
+    },
+  ] as Run[];
+  mount(<AgentMarketRunStop agentId="agent-one" runs={runs} />);
+  expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Stop current price check" }),
+  );
+  await waitFor(() =>
+    expect(vi.mocked(fetch)).toHaveBeenCalledWith(
+      "/api/runs/workflow-one/cancel",
+      { method: "POST" },
+    ),
+  );
 });
