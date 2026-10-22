@@ -31,7 +31,8 @@ it("shows read-page provenance distinctly from search snippets in compact Chat",
   expect(screen.getByText(/Arrow keys choose a page/).className).toBe(
     "sr-only",
   );
-  expect(screen.getByText(/Excerpts are untrusted/)).toBeTruthy();
+  expect(screen.getByText(/visual design was not inspected/)).toBeTruthy();
+  expect(screen.getByText("Page text read")).toBeTruthy();
 });
 
 it("keeps an unreadable-page outcome visible instead of claiming a successful read", () => {

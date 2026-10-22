@@ -35,7 +35,7 @@ export function FetchedPages({
   return (
     <details className="web-search-sources" open>
       <summary>
-        <Globe size={15} /> Fetched pages{" "}
+        <Globe size={15} /> {compact ? "Page sources" : "Fetched pages"}{" "}
         <span className="chip">{result.pages.length}</span>
       </summary>
       <section aria-labelledby={headingId}>
@@ -47,7 +47,9 @@ export function FetchedPages({
           <time dateTime={result.fetched_at}>
             {new Date(result.fetched_at).toLocaleString()}
           </time>
-          . Excerpts are untrusted; JavaScript was not executed.
+          {compact
+            ? ". Text only; visual design was not inspected."
+            : ". Excerpts are untrusted; JavaScript was not executed."}
         </p>
         {result.pages.length ? (
           <>
@@ -72,11 +74,19 @@ export function FetchedPages({
                   {...itemProps(i, page.url)}
                 >
                   <span className="muted">
-                    {page.status ?? "—"} · {hostname(page.url)}
+                    {compact
+                      ? hostname(page.url)
+                      : `${page.status ?? "—"} · ${hostname(page.url)}`}
                     <ExternalLink size={12} />
                   </span>
                   <strong>{page.url}</strong>
-                  <span className="muted">{pageLabel(page)}</span>
+                  <span className="muted">
+                    {compact && page.text && !page.error && !page.skipped
+                      ? page.truncated
+                        ? "Partial page text"
+                        : "Page text read"
+                      : pageLabel(page)}
+                  </span>
                 </a>
               ))}
             </div>
