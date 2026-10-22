@@ -678,3 +678,13 @@ final full run is `ai-station-agent-website-policy-final-20261022.service`;
 The previous UI head `104a4a9` passed 526 tests and all UI/Compose/image gates;
 frontend sources are unchanged by the factory fix, but the final image must be
 rebuilt with the new backend before merge/deployment. PR #338 remains draft.
+
+Website-policy final qualification: corrected source `9e6bc63` passed 1844 Python
+tests/eight opt-in skips and Ruff, with unchanged-source proof. UI source `104a4a9`
+passed 526 tests plus format/lint/types/build, Compose and image. Subsequent code
+changes were backend-only; the final image and compiled assets were verified
+against `9e6bc63`, and final actual desktop/mobile factory/save/reload passed.
+Current release qualification requires full PR review and successful guarded
+0028 rollout; the deployment manifest is authoritative. Current native source is
+byte-identical to PR #337. Full real-model website execution remains separate
+acceptance, and the operator-selected model must be preserved during deployment.

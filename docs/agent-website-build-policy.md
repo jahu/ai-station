@@ -57,3 +57,15 @@ Website creation verbs now bind to the site itself, with explicit Polish/English
 modifiers. The focused factory/page-coding scope suite passed 34 tests, including
 this negative case. The earlier full check was invalidated by this actual source
 fix; its output is retained as preliminary, not release qualification.
+
+## Final local qualification
+
+The corrected frozen source passed **1844 Python tests**, eight explicitly opt-in
+integrations skipped, and Ruff. The unchanged frontend passed **526 UI tests**,
+format/lint/types/build and both Compose configs; the final backend image was
+rebuilt and its backend files plus compiled frontend assets matched the reviewed
+source. Actual desktop/mobile definition review/save/reload passed on the final
+factory code without worker/model execution. The source-bound regression results,
+image proof and browser record are under the acceptance directory above. These
+checks qualify policy propagation; the separate real-model website scenario is
+still pending. Native source matches deployed PR #337 and needs no Runner restart.
