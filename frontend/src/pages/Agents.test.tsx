@@ -14,14 +14,16 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-function mount(detail = false) {
+function mount(detail = false, view = "settings") {
   return render(
     <QueryClientProvider
       client={
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <MemoryRouter initialEntries={[detail ? "/agents/draft" : "/agents"]}>
+      <MemoryRouter
+        initialEntries={[detail ? `/agents/draft?view=${view}` : "/agents"]}
+      >
         <Routes>
           <Route path="/agents" element={<Agents />} />
           <Route
@@ -1510,7 +1512,7 @@ it("moves through execution history with arrow keys", async () => {
                   },
     })),
   );
-  mount(true);
+  mount(true, "workspace");
   const first = await screen.findByRole("link", {
     name: "Inspect agent.workflow run-one-",
   });
@@ -1940,7 +1942,7 @@ it("retries a failed workflow from Agents history without Run now", async () => 
                   },
   }));
   vi.stubGlobal("fetch", fetch);
-  mount(true);
+  mount(true, "workspace");
   fireEvent.click(
     await screen.findByRole("button", {
       name: "Retry as a new workflow fail-run",
@@ -2022,7 +2024,7 @@ it("stops an in-progress Run from Agents history without Run now", async () => {
                   },
   }));
   vi.stubGlobal("fetch", fetch);
-  mount(true);
+  mount(true, "workspace");
   fireEvent.click(
     await screen.findByRole("button", {
       name: "Stop agent.workflow run-live",
@@ -2100,7 +2102,7 @@ it("approves a waiting Run from Agents without Run now or the inspector", async 
                   },
   }));
   vi.stubGlobal("fetch", fetch);
-  mount(true);
+  mount(true, "workspace");
   fireEvent.click(
     await screen.findByRole("button", {
       name: "Approve and queue waiting Run wait-run",
@@ -2206,7 +2208,7 @@ it("shows the latest agent report from Agents without Run now", async () => {
     };
   });
   vi.stubGlobal("fetch", fetch);
-  mount(true);
+  mount(true, "workspace");
   expect(
     await screen.findByRole("heading", { name: "Agent report" }),
   ).toBeTruthy();
@@ -2316,7 +2318,7 @@ it("shows recorded search sources next to the latest report from Agents without 
     };
   });
   vi.stubGlobal("fetch", fetch);
-  mount(true);
+  mount(true, "workspace");
   expect(
     await screen.findByRole("heading", { name: "Agent report" }),
   ).toBeTruthy();
@@ -2428,7 +2430,7 @@ it("shows recorded fetched pages next to the latest report from Agents without R
     };
   });
   vi.stubGlobal("fetch", fetch);
-  mount(true);
+  mount(true, "workspace");
   expect(
     await screen.findByRole("heading", { name: "Agent report" }),
   ).toBeTruthy();
@@ -2538,7 +2540,7 @@ it("shows recorded registry tool calls next to the latest report from Agents wit
     };
   });
   vi.stubGlobal("fetch", fetch);
-  mount(true);
+  mount(true, "workspace");
   expect(
     await screen.findByRole("heading", { name: "Registry tool calls" }),
   ).toBeTruthy();
@@ -2659,7 +2661,7 @@ it("shows last-parent workflow steps next to history from Agents without Run now
                 : agent,
   }));
   vi.stubGlobal("fetch", fetch);
-  mount(true);
+  mount(true, "workspace");
   expect(
     await screen.findByRole("heading", { name: "Workflow steps" }),
   ).toBeTruthy();

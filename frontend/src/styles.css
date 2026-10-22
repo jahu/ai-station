@@ -6423,3 +6423,63 @@ section:has(> .memory-grid) > .dashboard-note {
     padding: 14px;
   }
 }
+
+.agent-workspace-nav {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+.agent-workspace-nav a {
+  padding: 12px 18px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  font-weight: 500;
+}
+.agent-workspace-nav a[aria-current="page"] {
+  color: #e7e9e8;
+  border-color: var(--accent);
+}
+.agent-workspace-nav a:hover {
+  color: #e7e9e8;
+}
+.agent-workspace-summary {
+  gap: 12px;
+  padding: 20px 24px;
+}
+.agent-workspace-goal {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.agent-workspace-summary > .muted {
+  margin: 0;
+}
+.agent-workspace-body[hidden] {
+  display: none;
+}
+.agent-workspace-body {
+  min-width: 0;
+}
+
+.agent-workspace-settings-note {
+  margin-bottom: 16px;
+}
+
+.agent-workspace-summary > .row {
+  flex-wrap: wrap;
+}
+.agent-workspace-body > .agent-data-result {
+  margin-bottom: 24px;
+}
+.agent-workspace-body > section.panel {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+@media (max-width: 640px) {
+  .agent-workspace-summary,
+  .agent-workspace-body > section.panel {
+    padding: 16px;
+  }
+}
