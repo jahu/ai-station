@@ -556,3 +556,40 @@ literal text/enum keys, no client-executed generated HTML/JS. Show build version
 CPU target, loading/blocked/expired/interrupted states and an explicit Close.
 Full fake API/worker/resource/recovery plus real native/browser acceptance precedes
 review/merge/rollout; the broader product goal remains active.
+
+### Frozen native qualification and control-plane workspace
+
+The native implementation is frozen at `dc373f585db01fbe2165fc0ebf59063dbb0e4328`
+in `.tools/agent-site-preview`. Full `./scripts/check.sh` is running in the owned
+user unit `ai-station-site-preview-native-check-20261022.service`. Inspect its
+actual MainPID/state and `data/acceptance/agent-site-preview-20261022/full-check.log`
+before taking action; `full-check-result.json` appears only at terminal completion.
+Do not edit/switch that worktree while qualification runs. The controller verifies
+both its head and tracked source remain unchanged. Final protocol-2 direct Native
+and renderer acceptance already passed (2); the image is local and CPU-only.
+
+Continue application integration in `.tools/agent-site-preview-workspace` on
+`feat/agent-site-preview-workspace`, based on the frozen native head. Its initial
+`backend/app/site_preview.py` provides strict Open/action DTOs, source provenance
+freeze and viewport validation. `backend/tests/test_site_preview.py` passed 17
+cases using the real build Artifact producer and a temporary database; no browser,
+model or worker runs. The module is deliberately not registered in API/executors,
+and has no execution handlers yet. Finish its API/worker/artifact/resource/Close
+contracts and UI before advertising preview. The inherited native worktree must
+stay frozen until its check finishes; later integrate the workspace branch back
+into `feat/agent-site-preview` by fast-forward/merge and qualify the final combined
+head before review/merge/deployment.
+
+Important integration details: ordinary previews/actions use a separate operator
+Task (no agent_id) but retain project/source build provenance. Add an explicit
+read-only viewer predicate to project mutation busy guards; do not drop project
+tags. Resource deferral must honor cooldown for this CPU executor (the current
+GPU-ready condition exempts gpu=none); preserve the semantics for existing jobs.
+A default no-op NativeJobExecutor polling observer may adopt live frames. Generic
+resource-free native rejection is currently a terminal failure; preview rejection
+needs an explicit Close/inspection path that releases RAM/exclusive locks only
+after the new native Close endpoint confirms cleanup. Otherwise keep interruption
+and inspection state. PNGs have derived revision paths, SHA/size, an 8 MiB bound,
+and need immutable Artifact adoption plus exact action/frame lineage checks.
+Do not execute generated HTML/JS in the station origin. Native source lookup for
+SPA navigation distinguishes Document requests from missing API/asset resources.
