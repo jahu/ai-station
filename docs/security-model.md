@@ -403,3 +403,18 @@ accepting only typed revision-bound interactions through ordinary Runs. It is
 unpublished until permissions, resource admission, process ownership, Stop,
 recovery and real browser/agent acceptance pass. No generated script executes in
 the authenticated UI origin; no public preview port is introduced.
+
+
+## Direct page reading in Chat (qualification pending)
+
+The [Chat page-reader slice](plans/chat-page-reading.md) freezes public URL targets
+from explicit reading instructions in the user's own text, with Web enabled.
+Attachments, code fences, quoted instructions and model output cannot choose new
+network targets. It reuses the existing bounded DNS-pinned HTTP GET tool inside
+the ordinary Chat Run and its effective `network_read` permission; it grants no
+Work, shell, project-write, browser or email access. Page text is untrusted data.
+Source reuse checks a successful same-conversation Chat Run, message identity,
+Artifact type and content hash. It preserves the original fetch timestamp and
+never silently retries a changed or missing source. No cookies or credentials
+are forwarded and JavaScript is not executed. Rendered/visual analysis remains
+separate, pending capability and permission qualification.

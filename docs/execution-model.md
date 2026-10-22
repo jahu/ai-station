@@ -198,3 +198,15 @@ CPU/control work and other Tasks remain eligible. An owned GPU release clears
 its Task marker within the existing resource transaction, and explicit media
 resume resets it. Task Stop is serialized with deferral. The requeue event retains
 the chosen deadline for audit. See [queue fairness](media-resource-wait-fairness.md).
+
+
+## Chat website text reads (qualification pending)
+
+Explicit page-analysis requests with Web on use the existing queued Chat executor:
+freeze user-selected targets → bounded public GET → source JSON Artifact → model
+reply with recorded evidence. Assistant routing still publishes the normal Chat
+child Run. Follow-up reuse binds to a same-conversation successful source and its
+hash; it records `chat.page_read` without another HTTP request. Stop cancels an
+in-flight GET before inference. Failed/empty reads produce an inspectable failure,
+not a generic search-snippet substitute. See [page-reader scope and remaining
+rendered acceptance](plans/chat-page-reading.md).
