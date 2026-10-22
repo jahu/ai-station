@@ -1,5 +1,6 @@
 import AgentDataFiles, { type DataScope } from "./AgentDataFiles";
 import AgentDataResult from "./AgentDataResult";
+import AgentCodeWorkspace from "./AgentCodeWorkspace";
 import { useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -756,16 +757,9 @@ export function AgentDetail() {
               <AgentDataResult runs={agent.runs ?? []} />
             )}
             {!isCoding(agent.tools) && <AgentLatestReport runs={agent.runs} />}
-            {isCoding(agent.tools) &&
-              !agent.tools.includes("python_data") &&
-              agent.runs?.[0]?.task_id && (
-                <Link
-                  className="button secondary"
-                  to={`/coding/${agent.runs[0].task_id}`}
-                >
-                  Open coding task
-                </Link>
-              )}
+            {isCoding(agent.tools) && !agent.tools.includes("python_data") && (
+              <AgentCodeWorkspace runs={agent.runs} />
+            )}
             <AgentLastWorkflowSteps runs={agent.runs} />
             <AgentExecutionHistory runs={agent.runs} />
           </>

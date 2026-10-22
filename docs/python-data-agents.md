@@ -42,8 +42,7 @@ offline Python execution, returning a verified total of 27 and a downloadable
 CSV with input hashes preserved. The model was the installed 27B IQ2_XS GGUF on
 both GPUs with native-observed 131072 context. This isolated acceptance freezes
 an already-loaded runtime binding; automatic loading is not part of that test.
-The temporary model was unloaded afterward. Remaining checks and rollout are
-tracked in the current handoff, with evidence under
+The temporary model was unloaded afterward. Isolated evidence is recorded under
 `data/acceptance/python-data-agents-20261015/`.
 
 ## Using the workspace
@@ -76,4 +75,19 @@ A deployed acceptance exposed the earlier ambiguity: a Polish CSV task tried to
 open the JSON string as a filename and repeated that script. The revised contract
 passed the same instruction with six actual rows and an expected total of 150,
 including rows outside the short model preview, on the installed local model.
-Production replay is still required after this fix is deployed.
+Normal-worker production replay subsequently passed, as recorded below.
+
+## Deployed end-to-end verification — 2026-10-22
+
+PRs #333–#335 are delivered. After the input-contract fix, the normal production
+worker and native Runner selected Auto, loaded the installed 27B IQ2_XS model at
+an observed 131072 context on both GPUs, generated Python, executed it offline and
+published a verified six-row CSV total of 150 with a downloadable result. No model
+selection/loading, generation or execution was mocked, no repair was required,
+and the input bytes were unchanged. The QA definition was paused and its model
+unloaded afterward. Failed earlier attempts remain in history.
+
+Evidence: `data/acceptance/data-agent-input-contract-20261022/production-smoke-result.json`.
+The separate genuine XLSX acceptance used a fixed loaded model binding and one
+actual code repair; it does not establish an independent production XLSX autoload
+run. The workspace passed desktop/mobile stored-result/download/navigation checks.

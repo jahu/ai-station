@@ -6483,3 +6483,19 @@ section:has(> .memory-grid) > .dashboard-note {
     padding: 16px;
   }
 }
+
+.agent-code-workspace {
+  min-width: 0;
+  margin-bottom: 24px;
+}
+.agent-code-workspace > header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.agent-code-workspace > header h2 {
+  margin-bottom: 6px;
+}

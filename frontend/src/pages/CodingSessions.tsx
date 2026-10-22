@@ -275,7 +275,13 @@ export default function CodingSession() {
   return <CodingConversation key={id} id={id} />;
 }
 
-function CodingConversation({ id }: { id?: string }) {
+export function CodingConversation({
+  id,
+  embedded = false,
+}: {
+  id?: string;
+  embedded?: boolean;
+}) {
   const cache = useQueryClient();
   const draft = useChatDraft(`coding:${id}`, 4000);
   const prompt = draft.value;
@@ -297,8 +303,8 @@ function CodingConversation({ id }: { id?: string }) {
   const latest = proposals.at(-1);
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    end.current?.scrollIntoView?.({ block: "end" });
-  }, [proposals.length]);
+    if (!embedded) end.current?.scrollIntoView?.({ block: "end" });
+  }, [proposals.length, embedded]);
   const active = [...runs].reverse().find((r) => !terminal.has(r.status));
   const isExternal = latest?.metadata?.execution_location === "external";
   const send = useMutation({
@@ -334,31 +340,33 @@ function CodingConversation({ id }: { id?: string }) {
   });
   return (
     <>
-      <PageTitle
-        eyebrow={q.data?.project_name ?? "CODING"}
-        title={q.data?.title ?? "Coding conversation"}
-        action={
-          <div className="row">
-            {latest && (
+      {!embedded && (
+        <PageTitle
+          eyebrow={q.data?.project_name ?? "CODING"}
+          title={q.data?.title ?? "Coding conversation"}
+          action={
+            <div className="row">
+              {latest && (
+                <Button variant="secondary" asChild>
+                  <Link to={`/chat?work_task=${id}&work_run=${latest.id}`}>
+                    Continue in Work
+                  </Link>
+                </Button>
+              )}
               <Button variant="secondary" asChild>
-                <Link to={`/chat?work_task=${id}&work_run=${latest.id}`}>
-                  Continue in Work
+                <Link to="/coding">
+                  <Plus size={15} />
+                  New conversation
                 </Link>
               </Button>
-            )}
-            <Button variant="secondary" asChild>
-              <Link to="/coding">
-                <Plus size={15} />
-                New conversation
-              </Link>
-            </Button>
-          </div>
-        }
-      >
-        Your instructions, the agent’s results and the same workspace across
-        every turn.
-      </PageTitle>
-      {q.data?.project_id ? (
+            </div>
+          }
+        >
+          Your instructions, the agent’s results and the same workspace across
+          every turn.
+        </PageTitle>
+      )}
+      {!embedded && q.data?.project_id ? (
         <p className="muted">
           <Link
             className="text-link"
