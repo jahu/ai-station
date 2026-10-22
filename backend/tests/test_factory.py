@@ -1,3 +1,4 @@
+import pytest
 from app.api import app
 from app.factory import draft_agent
 from fastapi.testclient import TestClient
@@ -78,3 +79,32 @@ def test_unrecognized_instruction_stays_manual_and_silent():
         "on_failure": False,
         "on_approval": False,
     }
+
+
+@pytest.mark.parametrize(
+    "instruction",
+    [
+        "Codziennie sprawdzaj ceny akcji Apple i wyślij email do private@example.com",
+        "Every day check stock prices AAPL and Bitcoin and email private@example.com",
+    ],
+)
+def test_stock_examples_draft_public_research_without_choosing_an_account(instruction):
+    agent = draft_agent(instruction, model="fake-local")
+    assert agent.tools == ["web_search"]
+    assert agent.market is None and agent.model == "fake-local"
+    assert not agent.enabled and agent.search_query == "" and agent.fetch_urls == []
+    assert "do not claim email delivery" in agent.output_expectation
+
+
+def test_stock_research_preserves_reviewed_query_or_public_page():
+    query = draft_agent('Daily check stock prices; search for "Apple stock price"', model="fake-local")
+    assert query.tools == ["web_search"] and query.search_query == "Apple stock price"
+    page = draft_agent("Daily check stock prices on https://example.com/prices", model="fake-local")
+    assert page.tools == ["http_fetch"] and page.fetch_urls == ["https://example.com/prices"]
+    assert page.market is None and not page.enabled
+
+
+def test_crypto_price_watch_keeps_its_existing_keyless_source():
+    agent = draft_agent("Every day check Bitcoin prices")
+    assert agent.tools == ["market_watch"] and agent.market["provider"] == "coinbase_exchange"
+    assert agent.market["instruments"] == ["BTC-USD"] and agent.model == ""

@@ -1,9 +1,27 @@
 # Stock observations for price agents
 
-Next increment after deployed market/email PR #343. Work starts on
-`feat/stock-price-agents` in `.tools/stock-price-agents`. A parser alone does not
-make this an operational integration: connector, worker, scheduling, permissions,
-recovery, UI and real-account acceptance remain required before advertisement.
+The optional account adapter was deployed in #344 after local qualification.
+Real-account acceptance is unverified and is not required for ordinary research.
+
+## User correction and default path — 2026-10-22
+
+The stock-price examples illustrated general agent capabilities, not a request
+to require financial-service accounts. Use free public sources in tests and
+ordinary research; do not request API keys to prove those examples. Stop expanding
+specialized quote providers as a completion prerequisite.
+
+A stock-research instruction without an explicit Finnhub request creates a
+disabled general-agent draft, preserving the selected local model and existing
+public search/page tools. A quoted public query or supplied URL is retained for
+review; otherwise the user reviews the public query before activation. Never send
+the entire private goal, email address or memory to search to save a form field.
+Existing keyless Coinbase BTC/ETH watches and explicitly selected Finnhub scopes
+remain compatible. No credentials, schema migration or new executor are added.
+
+Public research returns source-linked findings, not guaranteed current quotes,
+deterministic threshold monitoring or implicit email delivery. The existing typed
+price/email workflow remains available when the operator explicitly chooses it.
+Do not rewrite saved agents or migrate their previously approved scopes silently.
 
 ## Provider contract checked on 2026-10-22
 
@@ -84,7 +102,7 @@ writing this plan and parser. Current production and backups remain recorded in
 
 The account adapter, queued check/search, stock scope and migration 0031, quote
 workflow, source metadata, closed-session comparison, separate stock-email
-template and shared desktop/phone controls are implemented on this feature branch.
+template and shared desktop/phone controls were deployed in #344.
 Focused fake-account/worker/SMTP and UI tests pass. Qualification and rollout
 evidence is recorded under `data/acceptance/stock-price-agents-20261022`; only
 executed checks in that evidence establish release readiness. No real finance

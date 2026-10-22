@@ -214,8 +214,21 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         tools = ["python_data"]
     market = None
     stock_request = re.search(r"\b(?:stocks?|akcj\w*|giełd\w*|gield\w*)", lowered)
+    stock_research = bool(
+        not wants_coding
+        and stock_request
+        and re.search(r"(?:price|cen[ayę]|kurs)", lowered)
+        and not re.search(r"\bfinnhub\b", lowered)
+    )
+    if stock_research:
+        # An illustrative research goal does not select an account-based provider.
+        # Keep explicit pages/queries for review; never disclose the entire goal
+        # (which may contain private instructions or recipients) to a search engine.
+        if not fetch_urls and "web_search" not in tools:
+            tools.append("web_search")
     if (
         not wants_coding
+        and not stock_research
         and (re.search(r"\b(?:bitcoin\w*|btc|ethereum|eth)\b", lowered) or stock_request)
         and re.search(r"(?:price|cen[ayę]|kurs)", lowered)
     ):
@@ -301,6 +314,9 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         tool_calling="bounded" if not market and _has(lowered, _TOOL_CALLING) else "none",
         output_expectation="A working website with passing checks, a static build and downloadable output."
         if build_website
+        else "A source-linked research report with source dates when available. "
+        "Distinguish public findings from verified live quotes; do not claim email delivery."
+        if stock_research
         else "A short report the user can inspect in Runs.",
         notification_policy=notices,
         retry_policy={"mode": "manual" if _has(lowered, _RETRY) else "none"},

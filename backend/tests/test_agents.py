@@ -363,6 +363,50 @@ def test_agent_web_research_snapshots_public_query_and_retains_sources(research,
         assert "tool.completed" in api.get("/api/runs/" + search["id"] + "/stream").text
 
 
+def test_stock_example_runs_as_public_research_without_a_data_account(research):
+    calls, messages = research
+    with TestClient(app) as api:
+        instruction = (
+            'Every day check stock prices; search for "Apple stock price". '
+            "PRIVATE: report to private@example.com"
+        )
+        response = api.post("/api/agents/draft", json={"instruction": instruction, "model": "fake-local"})
+        assert response.status_code == 201, response.text
+        draft = response.json()
+        assert draft["market"] is None and draft["tools"] == ["web_search"]
+        assert draft["enabled"] is False
+        enabled = api.post(
+            f"/api/agents/{draft['id']}/enabled",
+            json={"enabled": True, "expected_updated_at": draft["updated_at"]},
+        )
+        assert enabled.status_code == 200, enabled.text
+        run_id = run_now(api, enabled.json())["id"]
+        with session_factory()() as session:
+            drain(session, "public-research-test")
+        parent = api.get("/api/runs/" + run_id).json()
+        report = workflow_step(api, run_id, "report")
+        assert parent["status"] == report["status"] == "succeeded", report
+        assert parent["effective_permissions"] == ["network_read"]
+        assert calls == ["Apple stock price"] and "PRIVATE" in str(messages)
+        search = workflow_step(api, run_id, "web_search")
+        assert search["metadata"]["web_search"]["sources"][0]["url"] == "https://example.com/research"
+        assert not api.get("/api/connectors").json()
+
+
+def test_stock_research_reviews_public_query_instead_of_requesting_a_key():
+    with TestClient(app) as api:
+        draft = api.post(
+            "/api/agents/draft",
+            json={"instruction": "Codziennie sprawdzaj ceny akcji Apple", "model": "fake-local"},
+        ).json()
+        response = api.post(
+            f"/api/agents/{draft['id']}/enabled",
+            json={"enabled": True, "expected_updated_at": draft["updated_at"]},
+        )
+        assert response.status_code == 422 and "public search query" in response.text
+        assert "stock-data account" not in response.text
+
+
 @pytest.mark.parametrize("mode", ["cancel", "timeout", "permission", "failure"])
 def test_agent_search_cancels_bounds_runtime_and_enforces_permission(research, monkeypatch, mode):
     from app import web_search

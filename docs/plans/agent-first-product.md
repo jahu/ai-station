@@ -5,6 +5,13 @@ priorities for a standalone IDE-like Coding workspace and large business-app
 engineering. It changes the product acceptance target; it does not remove the
 shared execution, Git, safety or observability architecture.
 
+2026-10-22 clarification: website, spreadsheet and price-checking requests are
+examples of useful general agents. Prefer existing public search, page reading
+and local execution; test free/public sources. A financial-data API key is not a
+prerequisite for using or qualifying general research. Specialized provider
+integrations stay optional; prioritize tool composition and clear results over
+adding an account/provider for each example.
+
 ## Product contract
 
 Chat remains the entry point, with Chat/Work modes and model selection. Agents

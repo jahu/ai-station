@@ -6,8 +6,10 @@
 > Real Local Auto website creation, preview and same-workspace follow-up passed on
 > 2026-10-22; evidence: `data/acceptance/agent-website-real-20261022`.
 > Deterministic recurring price observations are deployed (#340), including a
-> real normal-worker public quote read. Reviewed SMTP delivery is being qualified
-> separately; automatic agent email and stock providers remain next. See
+> real normal-worker public quote read. Reviewed SMTP and scoped automatic agent
+> email are deployed (#342–#343); the optional Finnhub adapter is deployed (#344).
+> Public research remains the default for ordinary stock-research instructions;
+> account configuration is not required. See
 > [market watch](agent-market-watch.md) and [email](reviewed-email.md).
 
 > Current priority override (2026-10-15): [agent-first product plan](plans/agent-first-product.md).
