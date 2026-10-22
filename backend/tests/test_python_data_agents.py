@@ -55,10 +55,12 @@ def data_environment(repository, owned_runner, monkeypatch):
         "stop_model": False,
         "model": model,
         "jobs": {},
+        "model_requests": [],
     }
 
     async def stream(self, **kwargs):
         state["calls"] += 1
+        state["model_requests"].append(kwargs)
         assert kwargs["json_output"] and kwargs["model"] == model
         if state["stop_model"]:
             with session_factory()() as session:
@@ -373,3 +375,34 @@ def test_unverified_short_context_never_generates_or_executes_code(data_environm
         rows = finish(client, parent)
         assert not data_environment["calls"] and not data_environment["jobs"], rows
         assert any(kind == "agent_data_generate" and status == "failed" for _, kind, status, _ in rows)
+
+
+def test_generation_receives_exact_container_input_map_and_failed_attempt_context(data_environment):
+    state = data_environment
+    state["program_failures"] = 1
+    with TestClient(app) as client:
+        _, parent, artifact, _ = create(client, state)
+        finish(client, parent)
+        with session_factory()() as session:
+            generation = session.scalar(
+                select(Run)
+                .where(Run.task_id == parent["task_id"], Run.executor_type == "agent_data_generate")
+                .order_by(Run.created_at, Run.id)
+            )
+            from app.models import Artifact
+
+            source = session.get(Artifact, generation.metadata_json["script_artifact_id"])
+            original_code = (get_settings().data_dir / source.relative_path).read_text()
+    first, repaired = state["model_requests"]
+    request = json.loads(first["messages"][1]["content"])
+    filename = artifact["id"] + ".csv"
+    assert request["runtime"]["input_map"] == {filename: "/inputs/" + filename}
+    assert request["runtime"]["output_dir"] == "/outputs"
+    assert request["runtime"]["required_outputs"] == ["result.json", "result.csv"]
+    assert "json.loads(os.environ" in first["messages"][0]["content"]
+    assert "NOT a file" in first["messages"][0]["content"]
+    retry = json.loads(repaired["messages"][1]["content"])
+    assert retry["runtime"] == request["runtime"]
+    assert retry["repair"]["previous_script"] == original_code
+    assert "Synthetic program failure" in retry["repair"]["error"]
+    assert "previous script FAILED" in repaired["messages"][0]["content"]
