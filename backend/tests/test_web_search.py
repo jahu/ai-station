@@ -199,11 +199,27 @@ def test_query_validation_and_action_conflicts():
         for body in [
             {"content": "Search", "web_search": {"enabled": True, "query": "x" * 501}},
             {"content": "Search", "web_search": {"enabled": True, "url": "http://localhost"}},
-            {"content": "Create a video", "action": "video.generate", "web_search": {"enabled": True}},
+            {
+                "content": "Create a video",
+                "action": "video.generate",
+                "web_search": {"enabled": True, "query": "a public topic"},
+            },
+            {
+                "content": "Create a video",
+                "action": "video.generate",
+                "web_search": {"enabled": True, "render_pages": True},
+            },
         ]:
             response = client.post(route + "/messages", json=body)
             assert response.status_code == 422, response.text
         assert client.get(route).json()["messages"] == []
+        # Plain Web availability is not an explicit request for research.
+        accepted = client.post(
+            route + "/messages",
+            json={"content": "Create a video", "action": "video.generate", "web_search": {"enabled": True}},
+        )
+        assert accepted.status_code == 202, accepted.text
+        assert not accepted.json()["parameters"]["web_search"]["enabled"]
 
 
 @pytest.mark.asyncio

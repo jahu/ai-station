@@ -56,6 +56,25 @@ Action = Literal[
     "runtime.stop",
     "clarify",
 ]
+_IMAGE_REQUEST = re.compile(
+    r"^(generate|draw|create|make|wygeneruj|narysuj|stw[oó]rz|utw[oó]rz)\b.{0,30}?\b"
+    r"(image|picture|photo|graphic|illustration|poster|banner|infographic|obraz|zdję|fotograf|grafik|ilustracj|plakat|baner|infografik)\w*",
+    re.I,
+)
+
+
+def _image_request(text):
+    text = text.strip()
+    match = _IMAGE_REQUEST.match(text)
+    if match is None:
+        return False
+    # A request for a written prompt/brief is not an instruction to run a GPU job.
+    brief_word = r"(?:prompts?|prompty|promptu|briefs?|briefu)"
+    if re.search(rf"\b{brief_word}\b", text[: match.end()], re.I):
+        return False
+    return not re.match(rf"\s+(?:(?:design|generation)\s+)?{brief_word}\b", text[match.end() :], re.I)
+
+
 CODING_REVIEW_EXECUTORS = {
     "worktree_prepare",
     "cursor_proposal",
@@ -188,6 +207,8 @@ def assistant_needs_provider(body):
     plan = explicit_plan(body.model_dump(mode="json", exclude={"attachments"}))
     if plan and plan.action == "coding.local" and body.coding and body.coding.model == "auto":
         return False  # Auto uses its own qualified local provider, never the Chat model.
+    if plan and plan.action in {"image.generate", "image.generate_video"} and not body.web_search.enabled:
+        return False  # A direct photo request has no text-model inference stage.
     return not plan or plan.action not in {
         "runtime.load",
         "runtime.stop",
@@ -195,6 +216,10 @@ def assistant_needs_provider(body):
         "github.inspect",
         "audio.transcribe",
         "image.describe",
+        "image.edit",
+        "image.recompose",
+        "image.upscale",
+        "audio.speech",
         "page.describe",
         "project.create",
         "project.create_code",
@@ -696,10 +721,7 @@ def explicit_plan(params):
         motion
         and not params["image_artifact_ids"]
         and not params.get("audio_artifact_id")
-        and re.match(
-            r"^(generate|draw|create|make|wygeneruj|narysuj|stw[oó]rz|utw[oó]rz)\b.{0,30}\b(image|picture|photo|obraz|zdję|fotograf)",
-            image_prompt.strip().lower(),
-        )
+        and _image_request(image_prompt.strip())
     ):
         return Plan(
             action="image.generate_video",
@@ -713,11 +735,21 @@ def explicit_plan(params):
             action="video.generate",
             reason="Create a local scene video from your prompt and optional first frame.",
         )
-    if re.match(
-        r"^(generate|draw|create|make|wygeneruj|narysuj|stw[oó]rz|utw[oó]rz)\b.{0,30}\b(image|picture|photo|obraz|zdję|fotograf)",
-        prompt,
-    ):
+    if _image_request(prompt):
         return Plan(action="image.generate", reason="Generate an image from your instruction.")
+    if params["image_artifact_ids"]:
+        from app.conversation_media import followup_action
+
+        referenced = followup_action(params["content"])
+        if referenced is None and re.fullmatch(r"(?:upscale|powiększ|powieksz)[.!]?", prompt, re.I):
+            referenced = "image.upscale"
+        if referenced:
+            action = (
+                "image.recompose"
+                if referenced == "image.edit" and len(params["image_artifact_ids"]) > 1
+                else referenced
+            )
+            return Plan(action=action, reason="Use your explicitly selected image input.")
     if params["image_artifact_ids"] and re.match(
         r"^(describe|inspect|explain|what|opisz|obejrzyj|co (jest|widzisz)|por[oó]wnaj|compare)\b", prompt
     ):

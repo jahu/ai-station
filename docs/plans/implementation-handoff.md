@@ -51,17 +51,25 @@ The original owned model preset was restored and QA history archived. Evidence:
 `data/acceptance/chat-website-design-20261022/post-deployment-qualified.json`.
 The native Runner source/service stayed unchanged during this deployment.
 
-The next selection increment is implemented in `feat/chat-auto-visual-pages`
-(`.tools/chat-auto-visual-pages`): a single-page design question uses ordinary Web
-without the advanced JavaScript option. Qualification is recorded separately in
-`data/acceptance/chat-auto-visual-pages-20261022`; inspect its actual state before
-resuming or claiming default-entry delivery. Derive the URL and
-visual intent from the current user's explicit instruction only; preserve exact
-search-query and text-only overrides, competing agent/media action priority,
-source hashes, local-model disclosure, Stop and ownership. Quoted examples, pages,
-attachments, memory and model plans cannot grant Browser or model management.
-Reuse the delivered capture/Vision chain; do not introduce another executor.
-The explicit option is a delivered increment, not completion of automatic routing.
+Default single-page visual selection (#351) is merged as `06cfbd9`, deployed
+from source `a1afc6e`, and verified with the exact original Polish/bare-domain
+akademia.ai request, Web on and no render flag. Full gates again passed 2112
+Python/nine skips, 559 UI tests, exact image and compiled desktop/phone default
+entry. Actual Browser/Vision, stored-observation follow-up, source hashes,
+archived QA and restored native-ready model preset passed. Evidence:
+`data/acceptance/chat-auto-visual-pages-20261022/post-deployment-qualified.json`.
+
+Current increment: [natural image continuations](conversational-graphics.md),
+`feat/conversational-graphics` in `.tools/conversational-graphics`. A verified
+routing bug sent **Wygeneruj tę grafikę** to Chat instead of the image executor.
+Common graphic wording now uses the image path; saved page/Vision evidence feeds
+its existing local brief without a new page request. Ordinary Web availability
+also must not block inspect/edit/upscale/animate media actions or references.
+Preserve explicit research/selected-input/worktree precedence, source integrity,
+receipt replay, preferences and typed execution. Qualification is separate under
+`data/acceptance/conversational-graphics-20261022`; do not claim real image output
+from the queued fake-GPU tests. Earlier image smoke cases are recorded in the
+historical MVP report; broader quality/profile acceptance remains distinct.
 
 Continue the [full-product ledger](../product-completion.md) and
 [agent-first milestone](agent-first-product.md): practical general-agent workflows,

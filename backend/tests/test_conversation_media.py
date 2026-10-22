@@ -6,7 +6,7 @@ from app.api import app
 from app.conversation_media import followup_action
 from app.db import session_factory, utcnow
 from app.engine import tick
-from app.models import Artifact, Run
+from app.models import Artifact, Message, Run
 from app.runs import transition
 from app.state import RunStatus
 from fastapi.testclient import TestClient
@@ -47,6 +47,10 @@ def conversation(client, mode="work"):
     ("content", "action"),
     [
         ("Powiększ to", "image.upscale"),
+        ("Describe it", "image.describe"),
+        ("Opisz tę grafikę", "image.describe"),
+        ("Powiększ tę grafikę", "image.upscale"),
+        ("Edytuj tę grafikę: dodaj czerwone logo", "image.edit"),
         ("Upscale the previous image.", "image.upscale"),
         ("Ożyw ten obraz: spokojny ruch kamery", "video.generate"),
         ("Animate it into a 5 second video", "video.generate"),
@@ -54,13 +58,16 @@ def conversation(client, mode="work"):
         ("Edit this image: add a red hat", "image.edit"),
     ],
 )
-def test_followup_is_bound_to_visible_same_conversation_result(content, action):
+@pytest.mark.parametrize("web_enabled", [False, True])
+def test_followup_is_bound_to_visible_same_conversation_result(content, action, web_enabled):
     with TestClient(app) as client:
         cid = conversation(client)
         aid, producer = completed_image(client, cid)
         completed_image(client, conversation(client))
+        web_preference = client.get("/api/chat/preferences").json()["web_search_enabled"]
         request = {
             "content": content,
+            "web_search": {"enabled": web_enabled},
             "client_request_id": str(uuid4()),
             "conversation_id": cid,
             "expected_settings_version": 1,
@@ -71,6 +78,8 @@ def test_followup_is_bound_to_visible_same_conversation_result(content, action):
         assert run["parameters"]["action"] == action
         assert run["parameters"]["image_artifact_ids"] == [aid]
         assert "external_ai" not in run["effective_permissions"]
+        assert not run["parameters"]["web_search"]["enabled"]
+        assert client.get("/api/chat/preferences").json()["web_search_enabled"] == web_preference
         view = client.get(f"/api/chat/conversations/{cid}").json()
         user = next(m for m in view["messages"] if m["id"] == response.json()["user_message_id"])
         assert user["metadata"]["conversation_reference"]["run_id"] == producer
@@ -179,3 +188,83 @@ def test_missing_result_rejects_without_creating_messages_or_receipts():
 )
 def test_noncommands_never_acquire_previous_sources(text):
     assert followup_action(text) is None
+
+
+@pytest.mark.parametrize(
+    "web",
+    [
+        {"enabled": True, "query": "an explicit public topic"},
+        {"enabled": True, "render_pages": True},
+    ],
+)
+def test_explicit_research_scope_does_not_acquire_a_previous_image(web):
+    with TestClient(app) as client:
+        cid = conversation(client)
+        completed_image(client, cid)
+        r = client.post(
+            f"/api/chat/conversations/{cid}/messages", json={"content": "Upscale it", "web_search": web}
+        )
+        assert r.status_code == 202, r.text
+        assert r.json()["parameters"]["action"] == "auto"
+        assert r.json()["parameters"]["image_artifact_ids"] == []
+        assert r.json()["parameters"]["web_search"] == web | ({"query": ""} if "query" not in web else {})
+
+
+def test_disabled_saved_query_does_not_block_a_media_reference():
+    with TestClient(app) as client:
+        cid = conversation(client)
+        aid, _ = completed_image(client, cid)
+        r = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={"content": "Upscale it", "web_search": {"enabled": False, "query": "old query"}},
+        )
+        assert r.status_code == 202, r.text
+        assert r.json()["parameters"]["image_artifact_ids"] == [aid]
+
+
+@pytest.mark.parametrize("has_old_image", [False, True])
+def test_generic_description_after_text_does_not_acquire_an_old_image(has_old_image):
+    with TestClient(app) as client:
+        cid = conversation(client)
+        if has_old_image:
+            completed_image(client, cid)
+        with session_factory()() as session:
+            session.add(
+                Message(
+                    conversation_id=cid, role="assistant", content="A plain explanation of a text concept."
+                )
+            )
+            session.commit()
+        r = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={"content": "Describe it", "web_search": {"enabled": True}},
+        )
+        assert r.status_code == 202, r.text
+        assert (
+            r.json()["parameters"]["action"] == "auto" and r.json()["parameters"]["image_artifact_ids"] == []
+        )
+
+
+@pytest.mark.parametrize("web_enabled", [False, True])
+def test_failed_latest_generation_without_output_never_reuses_older_image(web_enabled):
+    with TestClient(app) as client:
+        cid = conversation(client)
+        completed_image(client, cid)
+        new = client.post(
+            f"/api/chat/conversations/{cid}/messages", json={"content": "Generate an image of a mountain"}
+        )
+        assert new.status_code == 202, new.text
+        with session_factory()() as session:
+            assert tick(session, "failed-image-dispatch")
+            producer = session.scalar(select(Run).where(Run.parent_run_id == new.json()["id"]))
+            for status in [RunStatus.CLAIMED, RunStatus.PREPARING, RunStatus.RUNNING, RunStatus.FAILED]:
+                transition(session, producer, status, event_type="test.transition")
+            session.commit()
+            before = len(list(session.scalars(select(Run))))
+        r = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={"content": "Upscale it", "web_search": {"enabled": web_enabled}},
+        )
+        assert r.status_code == 422 and "latest image task" in r.text, r.text
+        with session_factory()() as session:
+            assert len(list(session.scalars(select(Run)))) == before
