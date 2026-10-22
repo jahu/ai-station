@@ -463,3 +463,42 @@ platform goal remains active; this PR is not a claim of full-product completion.
 Follow [private network access](../private-network-access.md) and the owner’s updated [agent-first priorities](agent-first-product.md). PR #326 adds an explicit additional private IPv4 listener while preserving localhost, a password-required startup guard, exact Host/Origin validation, independent device sessions and a persistent login budget. Settings exposes the configured URL. Real browser qualification covers both listener addresses and narrow phone layouts; keep failed QA attempts in the evidence instead of claiming them passed. Tailscale is not installed/enrolled; the HTTPS allowlist and activation instructions are preparation, not real worldwide access acceptance.
 
 Worktree `.tools/private-network-access`, branch `feat/private-network-access`. Evidence is under `data/acceptance/private-network-access-20261015`. Preserve the user’s newly stored operator password, root WIP and current owned model runtime. Before rollout, finish local checks and full-diff review, back up the existing database and verify deployment ownership/idle workloads. After rollout, resume the Python-capable agent vertical slice; PR #325 is the isolated executor foundation, not a complete spreadsheet agent.
+
+
+## Current: agent workspace and isolated site preview (2026-10-22)
+
+PR #334 fixed the exact data-input environment/repair ambiguity; #335 delivered
+results-first agent Workspace/Settings; #336 embedded the existing code
+conversation, review and follow-up composer in that workspace. All are merged
+into develop and deployed. Latest release is `.tools/ui-agent-code-workspace-20261022`
+(reviewed `253adee`, merge `d0604ed`), with verified LAN/loopback authentication,
+worker/scheduler health, backup and preserved original records. Backend/Runner:
+1717 passed, five opt-in skips; final frontend: 516 passed, format/lint/types/build,
+Compose/image and desktop/mobile browser acceptance. Evidence is under
+`data/acceptance/agent-code-workspace-20261022/`.
+
+Normal production Auto CSV acceptance now passed without mocks: installed local
+27B IQ2_XS, actual 131072 context, real offline Python, full six-row total 150,
+unchanged source and CSV download, no repair. Its QA agent is paused and its model
+unloaded. The earlier failure remains in history. See
+`data/acceptance/data-agent-input-contract-20261022/production-smoke-result.json`.
+
+Continue `feat/agent-site-preview` in `.tools/agent-site-preview`, following
+[interactive preview](../agent-site-preview.md). Internal renderer/protocol and an
+optional derivative image are implemented: 53 focused normal tests and one real
+offline Chromium/container test pass (modules, click, literal text, PNG, replay,
+stale rejection, blocked network/POST, reset and cleanup). No native/API preview
+capability is registered or deployed. Full regression, owned Runner lifecycle,
+archive broker, action receipts, resource admission, ordinary Run/API wiring,
+agent UI and real website-agent acceptance remain. Do not advertise the direct
+renderer test as an integrated preview. Image `ai-station-site-preview:development`
+was built entirely from the existing local `ai-station-browser:local` base.
+
+The preview uses an independent operator inspection Task with source project/build
+provenance, not an autonomous agent execution; do not drop project tags to bypass
+busy guards. Audit project busy checks to admit only this immutable artifact
+viewer concurrently with coding. Reuse `browser_runs`/`browser_job`, private Runner
+transport, owned process/container checks, RAM locks and build-archive validation.
+Native resource broker serves only frozen archive entries to the synthetic
+internal origin; generated JS must never execute in the authenticated UI origin.
+The original checkout WIP stays untouched. Broader platform work remains active.

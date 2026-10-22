@@ -1,7 +1,7 @@
 # Isolated interactive agent website preview
 
-Status: planned integration; implement the offline renderer/protocol first, then
-owned Runner dispatch, durable Run actions and the agent UI. Until all lifecycle
+Status: internal offline renderer/protocol implemented and directly real-tested;
+owned Runner dispatch, durable Run actions and the agent UI are still pending. Until all lifecycle
 contracts pass, this capability must remain unpublished/unavailable. A screenshot
 alone does not establish interactive preview completion.
 
@@ -38,8 +38,14 @@ JavaScript or obtains operator cookies. External links and APIs are visibly bloc
 
 ## Typed interaction and ownership
 
-The initial preview is an ordinary Task child Run dispatched by a worker through
-the private Runner socket. One preview per Runner is admitted initially, with a
+The initial preview is an ordinary operator inspection Task/Run dispatched by a
+worker through the private Runner socket. It retains the source project, source
+build Run/Task and artifact provenance, but is not an autonomous agent execution.
+Actions belong to that preview Task. Do not hide project identity to evade busy
+checks: explicitly classify this immutable artifact viewer as non-mutating in
+shared project admission checks. Agent coding can continue in its separate Task
+while the preview still shows the frozen older build; label that build clearly.
+Close targets only the preview Task, and coding Stop retains its own task scope. One preview per Runner is admitted initially, with a
 durable exclusive resource lock, conservative RAM reservation and a bounded active
 session (maximum 15 minutes). A live preview occupies one existing worker slot;
 normal deployment has three. Native admission also enforces the single-session
@@ -98,3 +104,20 @@ This extends the [agent-first plan](plans/agent-first-product.md) and existing
 [build artifacts](coding-build-artifacts.md), [browser isolation](browser.md) and
 [agent workspace](agent-workspace.md). It does not revive IDE expansion or remove
 legacy task history before equivalent agent access exists.
+
+## Internal renderer evidence — 2026-10-22
+
+The first protocol/renderer implementation passes 53 normal tests covering typed
+inputs, internal-origin/path handling, identity/revision guards, literal text,
+duplicate/conflicting receipts and failure without replay. An explicit real
+container test passed on the already-installed project Chromium base, with no
+model download, GPU, public network or host mount. It loaded JavaScript modules,
+clicked a counter, inserted literal script-like text, decoded each PNG, rejected
+a duplicate/stale click, blocked POST/private-network requests, reset and removed
+its own container. The direct workload test does not prove native/API ownership,
+Run recovery, resource admission or UI integration. Those remain unpublished.
+
+Evidence: `data/acceptance/agent-site-preview-20261022/{image.log,real-renderer.log}`.
+Full backend/Runner regression and complete integration gates are still required
+before this feature is reviewed for merge/deployment. Existing production does
+not load these unpublished modules.
