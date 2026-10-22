@@ -124,9 +124,7 @@ it("opens an enabled agent in its workspace and switches views without losing un
     target: { value: "Keep this unsaved goal" },
   });
   fireEvent.click(screen.getByRole("link", { name: "Workspace" }));
-  expect(
-    screen.queryByRole("textbox", { name: "Goal" }),
-  ).toBeNull();
+  expect(screen.queryByRole("textbox", { name: "Goal" })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Go back" }));
   await waitFor(() =>
     expect(
@@ -138,9 +136,7 @@ it("opens an enabled agent in its workspace and switches views without losing un
     ).toBe("Keep this unsaved goal"),
   );
   expect(
-    screen
-      .getByRole("link", { name: "Settings" })
-      .getAttribute("aria-current"),
+    screen.getByRole("link", { name: "Settings" }).getAttribute("aria-current"),
   ).toBe("page");
   expect(fetch.mock.calls.every(([, options]) => !options)).toBe(true);
 });
