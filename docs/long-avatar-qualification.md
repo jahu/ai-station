@@ -6,10 +6,13 @@ desktop/mobile persistence inspection. The source-matching native service and
 the same 27B/131072-context container were verified after deployment. Evidence:
 `data/acceptance/runner-source-compatibility-20261015/review.json`.
 
-The next acceptance increment exercises a real 30-second avatar at the normal
-384-pixel/eight-step profile. Existing real evidence only qualifies approximately
-14 seconds at 256 pixels/four steps. Do not claim the longer profile works until
-its complete ordinary API → worker → native → composition chain succeeds.
+## Acceptance protocol
+
+This protocol was executed successfully on 2026-10-15; see [the result below](#executed-2026-10-15).
+It targets a real 30-second avatar at the normal 384-pixel/eight-step profile.
+Before this run, real evidence qualified approximately 14 seconds at 256 pixels/
+four steps. The complete API → worker → native → composition result, independent
+decode and browser evidence distinguish this qualification from that earlier test.
 
 Use the existing generated QA portrait and speech, without an external provider,
 new model download or modification of existing source artifacts. Prepare a

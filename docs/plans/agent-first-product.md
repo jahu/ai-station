@@ -40,18 +40,26 @@ adapters are not required to complete the revised agent workflows.
   and tests in an owned worktree and passed its configured checks. This is already
   operational, not a capability that must be rebuilt.
 - [Reviewed-page coding](../agent-page-coding.md): saved public URLs feed bounded,
-  provenance-bearing context into that same local workflow. Its contracts have
-  tests and real source-read/Stop acceptance; arbitrary website rebuilding is
-  not yet qualified end to end.
+  provenance-bearing context into that same local workflow. Its source-read/Stop
+  contracts have tests. A concrete Local Auto website creation/preview/follow-up
+  passed real acceptance; see [website build policy](../agent-website-build-policy.md).
+  This does not establish arbitrary website-rebuilding fidelity.
 - Managed project setup, worktrees, local model selection/loading, dependency
   installation, validation, diffs, builds and artifacts. PR #323 adds component
   environments and fixes real Python installer problems; it remains useful to
   agent code execution.
 
-Current agent coding mainly produces a proposal and runs saved project checks.
-It is not yet a general Python/data-analysis execution tool. Email delivery and a
-qualified recurring market-alert workflow are also not operational acceptance.
-Do not present these gaps as completed merely because HTTP/cron tools exist.
+The 2026-10-22 delivery now includes [general Python/data agents](../python-data-agents.md)
+with real synthetic CSV acceptance and [results-first workspaces](../agent-workspace.md).
+[Reviewed email](../reviewed-email.md), scoped agent SMTP and deterministic
+[market observations](../agent-market-watch.md) are implemented; private-sink mail
+qualification does not establish delivery to the operator's external inbox.
+Ordinary stock research uses the existing public search/page tools and requires
+no financial-data account. These shipped slices extend the original execution
+foundation; do not rebuild them or use stale milestone text to request API keys.
+The implementation order below retains the intended acceptance contracts;
+[the current handoff](implementation-handoff.md) records delivered work and the
+active candidate. Broader general-agent and full-product acceptance remains open.
 
 ## Implementation order
 

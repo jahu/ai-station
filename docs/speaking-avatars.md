@@ -1,9 +1,14 @@
 # Typed speech → Avatar workflow
 
-The [long-media plan](plans/long-media-execution.md#6-full-speech-echomimic-without-audio-truncation)
-specifies full-speech animation, including bounded long-text speech stages and
-audio-aligned windows. This is planned; the current implementation described below
-still animates only the selected opening clip.
+The current workspace and conversational workflow compose typed speech with
+[full-recording media jobs](long-media.md), up to 60 seconds, using audio-aligned
+windows and one canonical speech timeline. Short preview controls and the older
+direct-Run workflow below remain available. They do not define the default
+full-recording behavior. [The longer-term plan](plans/long-media-execution.md#6-full-speech-echomimic-without-audio-truncation)
+retains broader narration/quality profiles; the real 30-second acceptance is
+[reported separately](long-avatar-qualification.md#executed-2026-10-15).
+
+## Compatible short-Run workflow (earlier implementation)
 
 In Avatars or Video, select **Type what to say**, attach a portrait and a short WAV voice reference, and enter Polish speech text. **Use a recording** retains the existing direct animation path. Scene direction, quality, clip length and advanced GPU/steps/seed remain available. The clip animates the start of the generated speech for the selected length; it does not promise to cover an arbitrarily long script.
 

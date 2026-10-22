@@ -1,9 +1,14 @@
 # Local general video
 
-**Planned, not implemented:** [longer local video and avatar execution](plans/long-media-execution.md)
-defines duration-based UI, bounded continuation/shot Runs, CPU composition,
-RAM-aware scheduling, Stop/resume and real quality acceptance. The short-clip
-limits and verification below remain the current behavior until that work lands.
+The workspace now uses [durable long-media jobs](long-media.md): 1–60-second
+video plans, bounded continuation or independent shots, CPU composition, RAM-aware
+admission and Task Stop/resume. A real 60-second continuous draft is qualified;
+this does not establish every quality profile or simultaneous multi-GPU generation.
+[The longer-term execution plan](plans/long-media-execution.md) tracks subsequent
+120/300-second profiles and broader quality acceptance.
+
+The adapter setup and short-window limits below describe the reused native stage
+and compatible direct-Run API, not a duration limit on the current workspace.
 
 The Video workspace offers text-to-video and image-to-video with an installed
 Wan 2.2 TI2V 5B profile, alongside the existing portrait-and-speech workflow.
