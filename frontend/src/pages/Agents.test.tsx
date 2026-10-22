@@ -52,11 +52,12 @@ it("creates a reviewable draft without enabling or running it", async () => {
   vi.stubGlobal("fetch", fetch);
   mount();
   await screen.findByRole("heading", { name: "No agents in this view" });
-  expect(screen.getByText(/disabled definition/i)).toBeTruthy();
+  expect(screen.getByText(/review them before enabling/i)).toBeTruthy();
   fireEvent.change(screen.getByLabelText("Instruction"), {
     target: { value: "Every morning summarize memory" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Create draft" }));
+  fireEvent.click(screen.getByText("Without AI"));
+  fireEvent.click(screen.getByRole("button", { name: "Create without AI" }));
   await screen.findByRole("heading", { name: "Review draft" });
   const writes = fetch.mock.calls.filter((call) => call[1]);
   expect(writes).toHaveLength(1);

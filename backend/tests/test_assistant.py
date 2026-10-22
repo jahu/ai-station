@@ -80,7 +80,18 @@ def test_two_references_dispatch_real_image_contract_and_project_results(monkeyp
         assert client.post(route + "/regenerate").status_code == 409
 
 
-def test_agent_goal_image_does_not_dispatch_image_and_draft_is_disabled():
+def test_agent_goal_image_does_not_dispatch_image_and_draft_is_disabled(monkeypatch):
+    async def stream(self, **params):
+        yield json.dumps(
+            {
+                "name": "Image workflow draft",
+                "goal": "Review image workflow requirements",
+                "trigger": "cron",
+                "cron_expr": "0 8 * * *",
+            }
+        )
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
     with TestClient(app) as client:
         cid = create(client)
         client.post(
@@ -88,13 +99,16 @@ def test_agent_goal_image_does_not_dispatch_image_and_draft_is_disabled():
             json={"content": "Stwórz mi agenta który generuje obrazy co rano"},
         )
         step()
+        preparing = client.get(f"/api/chat/conversations/{cid}").json()
+        assert preparing["active_run"]["executor_type"] == "agent_draft"
+        step()
         detail = client.get(f"/api/chat/conversations/{cid}").json()
         agent_id = detail["messages"][-1]["metadata"]["agent_id"]
         with session_factory()() as session:
             agent = session.get(Agent, agent_id)
             assert agent.enabled is False
             assert agent.cron_expr == "0 8 * * *"
-            assert len(list(session.scalars(select(Run)))) == 1
+            assert len(list(session.scalars(select(Run)))) == 2
 
 
 def test_chat_fallback_has_one_task_and_does_not_feed_planner_annotation_to_model(monkeypatch):

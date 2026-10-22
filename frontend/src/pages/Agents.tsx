@@ -1,3 +1,4 @@
+import AgentDraftForm from "./AgentDraftForm";
 import {
   MarketEmailApproval,
   AgentMarketEmailHistory,
@@ -431,11 +432,7 @@ function AgentCards({
 }
 
 export function Agents() {
-  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const [instruction, setInstruction] = useState("");
-  const [model, setModel] = useState("");
-  const [modelBusy, setModelBusy] = useState(false);
   const [offset, setOffset] = useState(0);
   const projectId = params.get("project_id") ?? "";
   const agents = useQuery({
@@ -448,25 +445,9 @@ export function Agents() {
       ),
     refetchInterval: 5000,
   });
-  const provider = useQuery({
-    queryKey: ["chat-provider"],
-    queryFn: () =>
-      api<{ models: string[]; default_model: string }>("/chat/provider"),
-  });
   const projects = useQuery({
     queryKey: ["projects"],
     queryFn: () => api<{ id: string; name: string }[]>("/projects?limit=500"),
-  });
-  const draft = useMutation({
-    mutationFn: () =>
-      api<Agent>(
-        "/agents/draft",
-        json("POST", {
-          instruction,
-          model: model || provider.data?.default_model || "",
-        }),
-      ),
-    onSuccess: (agent) => navigate(`/agents/${agent.id}`),
   });
   return (
     <>
@@ -474,48 +455,7 @@ export function Agents() {
         Persistent instructions, explicit tools, and a history for every
         execution.
       </PageTitle>
-      <form
-        className="panel agent-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!modelBusy) draft.mutate();
-        }}
-      >
-        <h2>Create an agent draft</h2>
-        <p className="muted">
-          Describe the task and cadence. A deterministic parser copies
-          recognized tools, UTC schedules, approval, gated steps, retry,
-          notices, quoted public search queries and tool calling into a disabled
-          definition. Creating a draft does not call a model or enable the
-          agent.
-        </p>
-        <label>
-          Instruction
-          <textarea
-            required
-            maxLength={16000}
-            rows={3}
-            value={instruction}
-            onChange={(event) => setInstruction(event.target.value)}
-            placeholder="Every morning summarize my workstation's GPU and memory usage."
-          />
-        </label>
-        <LlamaModels
-          value={model || provider.data?.default_model || ""}
-          models={provider.data?.models ?? []}
-          onSelect={setModel}
-          onBusy={setModelBusy}
-          busy={draft.isPending}
-        />
-        <ErrorNotice error={draft.error} />
-        <div>
-          <Button
-            disabled={draft.isPending || modelBusy || !instruction.trim()}
-          >
-            Create draft
-          </Button>
-        </div>
-      </form>
+      <AgentDraftForm />
       <div className="toolbar">
         <label>
           Filter linked project{" "}

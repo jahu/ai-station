@@ -9,6 +9,7 @@ from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.agent_drafts import AgentDraftExecutor
 from app.agent_executor import LocalAgentExecutor
 from app.agent_page_coding import AgentPageCodingExecutor
 from app.agent_workflow import AgentToolExecutor, AgentWorkflowExecutor
@@ -339,6 +340,7 @@ EXECUTORS = {
     "model_install": ModelInstallExecutor(),
     "agent": LocalAgentExecutor(),
     "agent_workflow": AgentWorkflowExecutor(),
+    "agent_draft": AgentDraftExecutor(),
     "agent_tool": AgentToolExecutor(),
     "agent_market": MarketExecutor(),
     "market_feed": MarketFeedExecutor(),

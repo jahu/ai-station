@@ -1,5 +1,11 @@
 # Architecture
 
+[AI-assisted agent drafting](plans/assisted-agent-drafts.md) uses one local
+preparation executor from Agents and as a Work child Run. The HTTP API only
+enqueues; model admission, leases, Stop and artifacts reuse existing services.
+A validated definition, its JSON artifact and terminal Run publish atomically,
+always disabled. Existing quick drafting remains explicit and compatible.
+
 [One-send visual website questions](plans/chat-website-design.md) compose a single
 current user URL/design request and Web selection with the existing Browser and
 local Vision actions. The advanced rendering option is unnecessary for this route.
