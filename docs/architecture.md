@@ -2,7 +2,6 @@
 
 Agent details separate a results-first [workspace](agent-workspace.md) from saved settings. Run now keeps progress and results on the agent; existing coding task links remain available for continuation.
 
-
 [Isolated Python execution](agent-python-execution.md) adds a typed, explicitly
 permissioned container executor behind the native Runner. It snapshots approved
 worktree code and input artifacts, uses no host-writable mounts or networking,

@@ -1816,7 +1816,7 @@ section:has(> .memory-grid) > .dashboard-note {
 .memory-filters select {
   width: 100%;
   padding: 10px 12px;
-  color: #e7e9e8;
+  color: var(--text);
   background: #111315;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -4225,7 +4225,7 @@ section:has(> .memory-grid) > .dashboard-note {
 .coding-review-file[aria-selected="true"] {
   border-color: var(--accent);
   background: rgba(185, 245, 139, 0.08);
-  color: #e7e9e8;
+  color: var(--text);
 }
 .coding-review-file-name {
   display: flex;
@@ -5191,7 +5191,7 @@ section:has(> .memory-grid) > .dashboard-note {
   cursor: pointer;
 }
 .transcript-time:hover {
-  color: #e7e9e8;
+  color: var(--text);
   text-decoration: underline;
 }
 
@@ -6360,7 +6360,7 @@ section:has(> .memory-grid) > .dashboard-note {
 }
 .web-search-options:hover,
 .web-search-options[aria-expanded="true"] {
-  color: #e7e9e8;
+  color: var(--text);
   border-color: var(--accent);
 }
 
@@ -6465,4 +6465,21 @@ section:has(> .memory-grid) > .dashboard-note {
 
 .agent-workspace-settings-note {
   margin-bottom: 16px;
+}
+
+.agent-workspace-summary > .row {
+  flex-wrap: wrap;
+}
+.agent-workspace-body > .agent-data-result {
+  margin-bottom: 24px;
+}
+.agent-workspace-body > section.panel {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+@media (max-width: 640px) {
+  .agent-workspace-summary,
+  .agent-workspace-body > section.panel {
+    padding: 16px;
+  }
 }

@@ -605,6 +605,13 @@ export function AgentDetail() {
     queryKey: ["projects"],
     queryFn: () => api<{ id: string; name: string }[]>("/projects?limit=500"),
   });
+  const modelCatalog = useQuery({
+    queryKey: ["llama-models"],
+    queryFn: () =>
+      api<{ models: { id: string; name: string; model_key: string }[] }>(
+        "/llama",
+      ),
+  });
   const agent = detail.data;
   if (!agent)
     return (
@@ -626,6 +633,22 @@ export function AgentDetail() {
     next.set("view", value);
     return `?${next}`;
   };
+  const taskId = agent.runs?.[0]?.task_id;
+  const actualModel = agent.runs?.find(
+    (run) =>
+      run.task_id === taskId && typeof run.parameters?.model === "string",
+  )?.parameters.model;
+  const modelKey =
+    agent.model === "auto" && typeof actualModel === "string"
+      ? actualModel
+      : agent.model;
+  const selectedModel = modelCatalog.data?.models?.find(
+    (model) =>
+      model.model_key === modelKey || `llamacpp:${model.id}` === modelKey,
+  );
+  const modelLabel =
+    selectedModel?.name ??
+    (modelKey.startsWith("llamacpp:") ? "Local llama.cpp" : modelKey);
   const block = activationBlock(agent, catalog.data, skillsCatalog.data);
   const active = agent.runs?.some((run) => !terminal.has(run.status)) ?? false;
   const waiting = agent.runs?.find(
@@ -647,7 +670,9 @@ export function AgentDetail() {
         }
       >
         {agent.enabled ? "Enabled" : "Paused / draft"} · {schedule(agent)} ·{" "}
-        {agentModelLabel(agent)}
+        {agent.model === "auto"
+          ? `${agentModelLabel(agent)}${selectedModel ? ` · ${selectedModel.name}` : ""}`
+          : agentModelLabel({ ...agent, model: modelLabel })}
         {agent.skills?.length ? ` · Skills: ${agent.skills.join(", ")}` : ""}
       </PageTitle>
       <nav className="agent-workspace-nav" aria-label="Agent workspace views">
