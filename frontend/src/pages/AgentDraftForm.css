@@ -1,0 +1,37 @@
+.agent-draft-progress {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+.agent-draft-progress-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.agent-draft-progress-head p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.agent-draft-progress-head svg {
+  flex-shrink: 0;
+}
+.agent-draft-progress-head a {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.agent-draft-progress-head a:hover {
+  color: var(--accent);
+}
+.agent-draft-progress > button {
+  justify-self: start;
+}
+.agent-draft-progress .notice {
+  margin: 0;
+}

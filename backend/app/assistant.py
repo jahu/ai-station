@@ -1157,14 +1157,34 @@ class AssistantExecutor:
                 if request.upscale_result:
                     message.content += " The result will then be upscaled 4×; both images stay in Library."
         elif plan.action == "agent.create":
-            from app.factory import draft_agent
+            if params.get("location") == "local" and params.get("provider") == "local-openai-compatible":
+                from app.agent_drafts import enqueue_for_task
 
-            agent = draft_agent(params["content"], model=params["model"])
-            session.add(agent)
-            session.flush()
-            message.metadata_json = {**message.metadata_json, "agent_id": agent.id}
-            message.content = f"{plan.reason}\n\nAgent definition saved. Review its model, tools and schedule, then enable it in Agents."
-            append_event(session, run.id, "agent.draft.created", {"agent_id": agent.id})
+                snapshot = {
+                    key: params[key]
+                    for key in (
+                        "provider",
+                        "provider_id",
+                        "location",
+                        "endpoint",
+                        "secret_ref",
+                        "provider_config_version",
+                    )
+                }
+                child = enqueue_for_task(
+                    session, run.task, params["content"], params["model"], snapshot, parent=run
+                )
+                run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                message.content = "Preparing an agent draft with your selected local model. Review its tools and schedule before enabling it."
+            else:
+                from app.factory import draft_agent
+
+                agent = draft_agent(params["content"])
+                session.add(agent)
+                session.flush()
+                message.metadata_json = {**message.metadata_json, "agent_id": agent.id}
+                message.content = "Quick agent draft saved without inference. Choose a local model and review its tools and schedule before enabling it."
+                append_event(session, run.id, "agent.draft.created", {"agent_id": agent.id})
         elif plan.action in {"coding.cursor", "coding.codex", "coding.local"}:
             self.coding(session, run, message, provider=plan.action.split(".")[1])
         elif plan.action == "coding.commit":

@@ -4,6 +4,13 @@ Local coding agents can use an [automatic private workspace](docs/agent-workspac
 review the goal, model and tools, then enable. A project is created on the first Run;
 manual repository registration remains optional.
 
+Agents → **Create draft** uses the selected local model to prepare a disabled,
+reviewable definition. Local-model **Work** requests such as “create an agent”
+use the same queued preparation. Inspect tools, public scope and UTC schedule
+before enabling. Conversation results use a compact summary with a review link;
+full inline editing remains available. Preparation supports Stop and a reload-safe return link; **Without
+AI** preserves quick keyword-based drafting. See [assisted drafts](docs/plans/assisted-agent-drafts.md).
+
 Current direction: [agents that can execute local code](docs/plans/agent-first-product.md).
 Chat and Agents lead the experience; existing Coding/Git services supply isolated
 workspaces and inspectable results. Standalone IDE expansion and further external

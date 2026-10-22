@@ -23,7 +23,11 @@ def provider(monkeypatch):
     monkeypatch.setattr(LocalChatProvider, "models", lambda _: ["local-model"])
 
 
-def test_local_conversation_rejects_capability_actions_until_this_turn_is_assistant():
+def test_local_conversation_rejects_capability_actions_until_this_turn_is_assistant(monkeypatch):
+    async def stream(self, **params):
+        yield '{"name":"GPU observer","goal":"Summarize workstation telemetry","tools":["system_snapshot"],"trigger":"cron","cron_expr":"0 9 * * 1"}'
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
     api = TestClient(app)
     cid = api.post("/api/chat/conversations", json={"model": "fake-local"}).json()["id"]
     assert api.get(f"/api/chat/conversations/{cid}").json()["execution_mode"] == "local"
@@ -43,6 +47,8 @@ def test_local_conversation_rejects_capability_actions_until_this_turn_is_assist
     assert queued.status_code == 202, queued.text
     assert queued.json()["executor_type"] == "orchestrator"
     with session_factory()() as session:
+        tick(session, "mode-test")
+        assert session.scalar(select(Agent)) is None
         tick(session, "mode-test")
         agent = session.scalar(select(Agent))
         assert agent is not None and agent.enabled is False

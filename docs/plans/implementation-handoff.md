@@ -81,6 +81,19 @@ inspect the actual `production-smoke-result.json` and output review before claim
 that GPU workflow passed. Existing six-mode small real image smoke coverage is
 historical evidence; broader visual quality/profile acceptance remains distinct.
 
+Current increment: [local AI-assisted drafts](assisted-agent-drafts.md),
+`feat/assisted-agent-drafts` in `.tools/assisted-agent-drafts`. Agents prepares
+reviewable definitions through a queued local JSON Run; local-provider Work
+agent requests reuse that service as a child on their current Task. The legacy
+model-free path remains explicit; other Chat providers use a labelled quick draft
+without external inference. Generated scopes cannot activate tools, provide IDs,
+change parsed market policies or invent fetch URLs. Model/schema errors permit
+one bounded correction, with inspectable responses and no agent on failure/Stop.
+Qualification is pending under `data/acceptance/assisted-agent-drafts-20261023`;
+do not claim this candidate is deployed or real-tested until its evidence exists.
+The #352 real graphic/Upscale acceptance has now passed and restored the original
+owned model preset; the inspected images have a documented Polish-lettering gap.
+
 Continue the [full-product ledger](../product-completion.md) and
 [agent-first milestone](agent-first-product.md): practical general-agent workflows,
 clear results and remaining real media/runtime/operations acceptance. Broader

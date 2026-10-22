@@ -106,7 +106,7 @@ function withCatalog(
   };
 }
 
-function mount(agent = draft) {
+function mount(agent = draft, compact = false) {
   let current = { ...agent };
   const fetch = vi.fn(async (path: string, options?: RequestInit) => {
     const url = String(path);
@@ -242,7 +242,7 @@ function mount(agent = draft) {
       }
     >
       <MemoryRouter>
-        <AssistantAgentDraft agentId={agent.id} />
+        <AssistantAgentDraft agentId={agent.id} compact={compact} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -2351,4 +2351,76 @@ it("shows last-parent workflow steps next to history without Run now", async () 
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/run")),
   ).toBe(true);
+});
+
+it("shows a compact review card instead of the full editor without enabling or running", async () => {
+  const fetch = mount(draft, true);
+  await screen.findByRole("heading", { name: draft.name });
+  expect(screen.getByText(draft.goal)).toBeTruthy();
+  expect(screen.getByText("Custom UTC schedule")).toBeTruthy();
+  expect(screen.getByText(draft.search_query)).toBeTruthy();
+  expect(screen.queryByText("Identity")).toBeNull();
+  expect(
+    screen.getByRole("link", { name: "Review & enable" }).getAttribute("href"),
+  ).toBe("/agents/agent-one?view=settings");
+  expect(fetch.mock.calls.filter((call) => call[1])).toHaveLength(0);
+});
+
+it("can expand the preserved conversation editor and return to its summary without a Run", async () => {
+  const fetch = mount(draft, true);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Edit in conversation" }),
+  );
+  expect(
+    screen.getByRole("button", { name: "Save identity agent-on" }),
+  ).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Back to summary" }));
+  expect(
+    screen.queryByRole("button", { name: "Save identity agent-on" }),
+  ).toBeNull();
+  expect(fetch.mock.calls.filter((call) => call[1])).toHaveLength(0);
+});
+
+it("describes an existing paused agent without claiming it has never run", async () => {
+  mount({ ...draft, last_run_at: "2026-10-23T08:00:00Z" }, true);
+  await screen.findByText(
+    "Paused. Previous results and history remain in the agent workspace.",
+  );
+  expect(screen.queryByText(/No agent work has started/)).toBeNull();
+});
+
+it("labels historical external coding explicitly and does not request a local model", async () => {
+  mount({ ...draft, tools: ["coding_codex"], model: "" }, true);
+  await screen.findByText("External coding · Codex · CLI default");
+  expect(screen.queryByText(/Choose a local model/)).toBeNull();
+});
+
+it("resolves an owned local model name from the read-only model catalog", async () => {
+  const owned = { ...draft, model: "llamacpp:model-file-1" };
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path.endsWith("/llama")
+        ? {
+            models: [
+              { id: "model-file-1", name: "Installed local model.gguf" },
+            ],
+            instances: [],
+          }
+        : (stationCatalog(path) ?? owned),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AssistantAgentDraft agentId={owned.id} compact />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByText("Local · Installed local model.gguf");
+  expect(fetch).toHaveBeenCalledWith("/api/llama", undefined);
 });

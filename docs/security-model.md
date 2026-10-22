@@ -1,5 +1,14 @@
 # Security model
 
+[Assisted agent drafts](plans/assisted-agent-drafts.md) perform bounded local
+JSON inference with manage_agents only. They do not call proposed tools or grant
+activation. Proposals cannot supply credentials, UUIDs, permission profiles,
+external coding or arbitrary fetch URLs; the latter must come from current user
+input. Existing parsed market policies remain controller-owned. Work publication
+is bound to its authorized parent/Task/conversation; Stop and draft publication
+serialize on that Task. Every saved definition stays disabled until separately
+reviewed/enabled through normal validation. No execution boundary changes.
+
 [One-send visual website questions](plans/chat-website-design.md) derive their
 Browser/filesystem-read/model-management grant from the current user's explicit
 single-page visual question with Web enabled and no exact search override.

@@ -17,6 +17,7 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
+from app.agent_drafts import router as agent_draft_router
 from app.agents_api import router as agent_router
 from app.approvals import resolve_run_approval, run_public
 from app.audio import router as audio_router
@@ -396,6 +397,7 @@ app.include_router(nodes_router)
 app.include_router(model_definition_router)
 app.include_router(model_router)
 app.include_router(agent_router)
+app.include_router(agent_draft_router)
 app.include_router(notice_router)
 app.include_router(skill_router)
 app.include_router(runtime_router)

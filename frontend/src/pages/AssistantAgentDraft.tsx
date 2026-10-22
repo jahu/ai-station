@@ -1,3 +1,4 @@
+import "./AssistantAgentDraft.css";
 import {
   MarketEmailApproval,
   AgentMarketEmailHistory,
@@ -585,11 +586,14 @@ function AgentInstructions({
 export function AssistantAgentDraft({
   agentId,
   tabIndex = 0,
+  compact = false,
 }: {
   agentId: string;
   tabIndex?: number;
+  compact?: boolean;
 }) {
   const cache = useQueryClient();
+  const [expanded, setExpanded] = useState(false);
   const [emailConsent, setEmailConsent] = useState<string | null>(null);
   const [emailReady, setEmailReady] = useState(false);
   const shortId = agentId.slice(0, 8);
@@ -698,6 +702,11 @@ export function AssistantAgentDraft({
       void cache.invalidateQueries({ queryKey: ["agents"] });
     },
   });
+  const localModels = useQuery({
+    queryKey: ["llama-models"],
+    queryFn: () => api<{ models: { id: string; name: string }[] }>("/llama"),
+    enabled: compact && !!detail.data?.model.startsWith("llamacpp:"),
+  });
   const agent = detail.data;
   const block = agent
     ? activationBlock(agent, catalog.data, skillsCatalog.data)
@@ -716,8 +725,154 @@ export function AssistantAgentDraft({
     saveSettings.isPending ||
     modelBusy;
   const active = history.some((run) => !TERMINAL.has(run.status));
+  if (compact && !expanded) {
+    const external = agent?.tools?.some((tool) =>
+      ["coding_cursor", "coding_codex"].includes(tool),
+    );
+    const modelName = external
+      ? `${agent?.tools?.includes("coding_cursor") ? "Cursor" : "Codex"} · CLI default`
+      : agent?.model === "auto"
+        ? "Auto · local coding"
+        : agent?.tools?.includes("market_watch")
+          ? "No model needed"
+          : agent?.model.startsWith("llamacpp:")
+            ? (localModels.data?.models.find(
+                (item) => item.id === agent.model.slice(9),
+              )?.name ?? "Local llama.cpp model")
+            : agent?.model || "Choose a local model";
+    const interval = agent?.interval_seconds ?? 0;
+    const daily =
+      agent?.trigger === "cron"
+        ? /^(\d{1,2}) (\d{1,2}) \* \* \*$/.exec(agent.cron_expr ?? "")
+        : null;
+    const cadence = !agent
+      ? ""
+      : agent.trigger === "interval" && interval > 0
+        ? interval % 3600 === 0
+          ? `Every ${interval / 3600} ${interval === 3600 ? "hour" : "hours"}`
+          : interval % 60 === 0
+            ? `Every ${interval / 60} ${interval === 60 ? "minute" : "minutes"}`
+            : `Every ${interval} seconds`
+        : daily
+          ? `Daily at ${daily[2].padStart(2, "0")}:${daily[1].padStart(2, "0")} UTC`
+          : agent.trigger === "cron"
+            ? "Custom UTC schedule"
+            : scheduleLabel(agent);
+    return (
+      <section
+        className="assistant-agent-brief"
+        aria-label="Agent draft summary"
+      >
+        <ErrorNotice error={detail.error ?? runNow.error} />
+        {agent ? (
+          <>
+            <div className="assistant-agent-brief-head">
+              <h3>{agent.name}</h3>
+              <span className="assistant-agent-brief-status">
+                {agent.enabled ? "Enabled" : "Disabled draft"}
+              </span>
+            </div>
+            <p className="assistant-agent-brief-goal">
+              {agent.goal || agent.description}
+            </p>
+            <dl className="assistant-agent-brief-facts">
+              <div>
+                <dt>Execution</dt>
+                <dd>
+                  {external ? "External coding" : "Local"} · {modelName}
+                </dd>
+              </div>
+              <div>
+                <dt>Schedule</dt>
+                <dd title={agent.cron_expr ?? undefined}>{cadence}</dd>
+              </div>
+              <div>
+                <dt>Tools</dt>
+                <dd>
+                  {agent.tools?.length
+                    ? agent.tools
+                        .map((tool) => tool.replaceAll("_", " "))
+                        .join(" · ")
+                    : "No tools selected"}
+                </dd>
+              </div>
+              {agent.search_query && (
+                <div>
+                  <dt>Public search query</dt>
+                  <dd>{agent.search_query}</dd>
+                </div>
+              )}
+              {agent.fetch_urls?.length ? (
+                <div>
+                  <dt>Reviewed pages</dt>
+                  <dd>{agent.fetch_urls.join(" · ")}</dd>
+                </div>
+              ) : null}
+            </dl>
+            {!agent.enabled && (
+              <p className="muted assistant-agent-brief-note">
+                {history.length || agent.last_run_at
+                  ? "Paused. Previous results and history remain in the agent workspace."
+                  : "Review its instructions and scope before enabling. No agent work has started."}
+              </p>
+            )}
+            <div className="assistant-agent-brief-actions">
+              <Button asChild>
+                <Link
+                  tabIndex={tabIndex}
+                  to={`/agents/${agent.id}?view=${agent.enabled ? "workspace" : "settings"}`}
+                >
+                  {agent.enabled ? "Open agent workspace" : "Review & enable"}
+                </Link>
+              </Button>
+              {agent.enabled && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  tabIndex={tabIndex}
+                  disabled={busy || active}
+                  onClick={() => runNow.mutate()}
+                >
+                  Run now
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                tabIndex={tabIndex}
+                onClick={() => setExpanded(true)}
+              >
+                Edit in conversation
+              </Button>
+            </div>
+            {history.length ? (
+              agent.tools?.includes("python_data") ? (
+                <AgentDataResult runs={history} />
+              ) : (
+                <AgentLatestReport runs={history} />
+              )
+            ) : null}
+          </>
+        ) : !detail.error ? (
+          <p className="muted" role="status">
+            Loading the saved agent…
+          </p>
+        ) : null}
+      </section>
+    );
+  }
   return (
     <div className="assistant-agent-draft">
+      {compact && (
+        <Button
+          type="button"
+          variant="ghost"
+          tabIndex={tabIndex}
+          onClick={() => setExpanded(false)}
+        >
+          Back to summary
+        </Button>
+      )}
       <ErrorNotice
         error={
           detail.error ??
