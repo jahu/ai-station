@@ -386,3 +386,12 @@ bound before dispatch and result adoption. Python has no network, host credentia
 or arbitrary host mounts. Only confirmed program/output failures can consume the
 saved repair budget; cancellation and uncertain dispatch never replay. Final CSV
 downloads escape formula-like strings and retain source/output lineage.
+
+## Planned agent website preview
+
+[Interactive site preview](agent-site-preview.md) executes generated JavaScript
+inside an owned network-disabled Chromium workload, returning PNG frames and
+accepting only typed revision-bound interactions through ordinary Runs. It is
+unpublished until permissions, resource admission, process ownership, Stop,
+recovery and real browser/agent acceptance pass. No generated script executes in
+the authenticated UI origin; no public preview port is introduced.

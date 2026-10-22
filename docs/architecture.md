@@ -461,3 +461,12 @@ Python executor. Local source generation and result verification are separate
 Runs; script, inputs, raw outputs and a literal CSV download are ordinary artifacts.
 The original workflow deadline, Task Stop and frozen definition cover repairs.
 No unrestricted filesystem or shell API is activated.
+
+## Planned agent website preview
+
+[Interactive site preview](agent-site-preview.md) executes generated JavaScript
+inside an owned network-disabled Chromium workload, returning PNG frames and
+accepting only typed revision-bound interactions through ordinary Runs. It is
+unpublished until permissions, resource admission, process ownership, Stop,
+recovery and real browser/agent acceptance pass. No generated script executes in
+the authenticated UI origin; no public preview port is introduced.
