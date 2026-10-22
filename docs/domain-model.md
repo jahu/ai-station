@@ -129,3 +129,11 @@ recipient scope, complete preview, payload hash, message ID, SMTP configuration
 snapshot, submission state and accepted/refused recipients. Approval binds the
 hash; uncertain submission is inspection-only. History survives connector removal.
 SMTP acceptance is recorded separately from inbox delivery, which is not claimed.
+
+The market-email candidate stores its optional typed delivery scope in the existing
+Agent.market JSON and its version nonce in Connector configuration. Existing
+nullable-Run Approval records persist explicit activation grants; ordinary
+EmailDelivery records reference the alert, consent and fixed template in their
+frozen payload, using a stable UUID derived from MarketAlert identity. No new
+column or schema migration is introduced by this increment. Parentage/provenance
+and a report dependency keep mail children in the existing Task graph.

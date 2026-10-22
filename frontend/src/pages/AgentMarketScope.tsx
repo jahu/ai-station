@@ -1,3 +1,4 @@
+import { MarketEmailSettings } from "./AgentMarketEmail";
 import { useState } from "react";
 import { Button } from "../components/ui/button";
 
@@ -18,8 +19,7 @@ export default function AgentMarketScope({
       <legend>Price watch</legend>
       <p className="muted">
         Coinbase last-trade prices. Calculations run locally without a model or
-        GPU. Alerts appear in AI Station; email and stock prices are not
-        connected yet.
+        GPU. Choose your instruments, threshold and alert delivery below.
       </p>
       <div className="market-instruments" role="group" aria-label="Instruments">
         {["BTC-USD", "BTC-EUR", "ETH-USD", "ETH-EUR"].map((pair) => (
@@ -111,11 +111,13 @@ export default function AgentMarketScope({
           />
         </label>
       </div>
+      <MarketEmailSettings value={current} onChange={onChange} />
       <p className="muted">
         Compares with the previous valid observation within this gap. The first
         reading sets a baseline. Stale or repeated trades never trigger alerts.
         Choose when to check under Schedule. Changing this policy starts a new
-        baseline.
+        baseline. Saving a changed price or delivery policy pauses the agent for
+        review.
       </p>
     </fieldset>
   );
@@ -137,6 +139,7 @@ export function AgentMarketEditor({
     /^\d{1,3}(?:\.\d{1,4})?$/.test(draft.threshold_percent) &&
     Number(draft.threshold_percent) > 0 &&
     Number(draft.threshold_percent) <= 100 &&
+    (!draft.email || draft.email.recipients.length > 0) &&
     [draft.comparison_window_seconds, draft.cooldown_seconds].every(
       (seconds) =>
         Number.isInteger(seconds) && seconds >= 60 && seconds <= 2592000,

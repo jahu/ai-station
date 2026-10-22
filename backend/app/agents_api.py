@@ -57,7 +57,7 @@ def get_agent(session, agent_id):
 
 
 def validate_target(body, session, agent=None, *, enabling=False):
-    if body.market is not None and body.market.email is not None:
+    if body.market is not None and body.market.email is not None and (not enabling or body.enabled):
         from app.market_email import authorization, target
 
         try:
@@ -194,7 +194,7 @@ def edit(agent_id: UUID, body: AgentUpdate, session: DB):
         raise HTTPException(409, "Cancel or finish the active Run before editing its agent")
     settings = AgentSettings.model_validate(body.model_dump(exclude={"expected_updated_at"}))
     validate_target(settings, session, agent)
-    if not settings.enabled:
+    if not settings.enabled or settings.market is None or settings.market.email is None:
         from app.market_email import revoke
 
         revoke(session, agent.id)

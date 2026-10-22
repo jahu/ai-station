@@ -1,5 +1,14 @@
+import {
+  MarketEmailApproval,
+  AgentMarketEmailHistory,
+  type MarketEmailAuthorization,
+} from "./AgentMarketEmail";
 import AgentMarketScope from "./AgentMarketScope";
-import { DEFAULT_MARKET, type MarketScope } from "./marketScope";
+import {
+  DEFAULT_MARKET,
+  marketEmailConsentKey,
+  type MarketScope,
+} from "./marketScope";
 import AgentWorkspacePolicy, {
   type WorkspacePolicy,
 } from "./AgentWorkspacePolicy";
@@ -70,6 +79,7 @@ interface Agent {
   model: string;
   tools: string[];
   market?: MarketScope | null;
+  market_email_authorization?: MarketEmailAuthorization | null;
   data?: DataScope | null;
   workspace_policy?: WorkspacePolicy;
   data_readiness?: { ready: boolean; reason: string } | null;
@@ -566,6 +576,8 @@ export function Agents() {
 }
 
 export function AgentDetail() {
+  const [emailConsent, setEmailConsent] = useState<string | null>(null);
+  const [emailReady, setEmailReady] = useState(false);
   const { id } = useParams();
   const [viewParams, setViewParams] = useSearchParams();
   const cache = useQueryClient();
@@ -588,9 +600,17 @@ export function AgentDetail() {
         json("POST", {
           expected_updated_at: detail.data!.updated_at,
           ...(enabled === undefined ? {} : { enabled }),
+          ...(enabled && detail.data?.market?.email
+            ? {
+                confirm_market_email:
+                  emailConsent ===
+                  marketEmailConsentKey(detail.data.id, detail.data.market),
+              }
+            : {}),
         }),
       ),
     onSuccess: (result, variables) => {
+      setEmailConsent(null);
       void cache.invalidateQueries({ queryKey: ["agent", id] });
       void cache.invalidateQueries({ queryKey: ["agents"] });
       if (variables.operation === "run") {
@@ -707,18 +727,50 @@ export function AgentDetail() {
       >
         <p className="agent-workspace-goal">{agent.goal}</p>
         {block.reason ? <p className="notice">{block.reason}</p> : null}
+        <MarketEmailApproval
+          market={agent.market}
+          enabled={agent.enabled}
+          authorization={agent.market_email_authorization}
+          checked={
+            emailConsent === marketEmailConsentKey(agent.id, agent.market)
+          }
+          onChange={(checked) =>
+            setEmailConsent(
+              checked ? marketEmailConsentKey(agent.id, agent.market) : null,
+            )
+          }
+          onReadyChange={setEmailReady}
+        />
         <div className="row">
           <Button
-            disabled={action.isPending || block.blocked}
+            disabled={
+              action.isPending ||
+              block.blocked ||
+              (!agent.enabled &&
+                !!agent.market?.email &&
+                (!emailReady ||
+                  emailConsent !==
+                    marketEmailConsentKey(agent.id, agent.market)))
+            }
             onClick={() =>
               action.mutate({ operation: "enabled", enabled: !agent.enabled })
             }
           >
-            {agent.enabled ? "Pause agent" : "Enable saved definition"}
+            {agent.enabled
+              ? "Pause agent"
+              : agent.market?.email
+                ? "Enable and allow alert email"
+                : "Enable saved definition"}
           </Button>
           <Button
             variant="secondary"
-            disabled={action.isPending || !agent.enabled || active}
+            disabled={
+              action.isPending ||
+              !agent.enabled ||
+              active ||
+              (!!agent.market?.email &&
+                !agent.market_email_authorization?.valid)
+            }
             onClick={() => action.mutate({ operation: "run" })}
           >
             Run now
@@ -766,6 +818,10 @@ export function AgentDetail() {
           <>
             {agent.tools.includes("python_data") && (
               <AgentDataResult runs={agent.runs ?? []} />
+            )}
+            {(agent.market ||
+              agent.runs.some((run) => run.executor_type === "email_send")) && (
+              <AgentMarketEmailHistory agentId={agent.id} runs={agent.runs} />
             )}
             {!isCoding(agent.tools) && <AgentLatestReport runs={agent.runs} />}
             {isCoding(agent.tools) && !agent.tools.includes("python_data") && (
@@ -871,7 +927,8 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         `/agents/${agent.id}`,
         json(
           "PUT",
-          agentSettingsPayload(values, {
+          agentSettingsPayload(agent, {
+            ...values,
             fetch_urls: parseFetchUrls(fetchText),
             enabled: agent.enabled,
           }),

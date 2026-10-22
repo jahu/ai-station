@@ -1,11 +1,39 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
+import type { ReactElement } from "react";
+import {
+  cleanup,
+  fireEvent,
+  render as renderDOM,
+  screen,
+} from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AgentMarketScope, { AgentMarketEditor } from "./AgentMarketScope";
 import { DEFAULT_MARKET } from "./marketScope";
 import { activationBlock } from "./agentActivation";
 import { agentSettingsPayload } from "./agentSettings";
 
-afterEach(cleanup);
+beforeEach(() =>
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, json: async () => [] })),
+  ),
+);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+function render(element: ReactElement) {
+  return renderDOM(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>{element}</MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
 
 const catalog = [
   {

@@ -1,9 +1,11 @@
 # Reviewed email delivery
 
-Implementation in progress. This increment provides a typed SMTP connector and
-operator-reviewed message delivery. It prepares the existing market-agent
-workflow for scoped email, but does not yet grant agents an email tool or send
-price alerts automatically. No real account or recipient is configured by tests.
+The operator-reviewed SMTP foundation is merged and deployed in PR #342. It
+passed 1945 Python tests (nine opt-in skips), 540 frontend tests, all local gates,
+compiled desktop/phone acceptance and deployment/persistence verification.
+The next candidate adds [activation-scoped price alerts](agent-market-watch.md);
+it remains under qualification and is not deployed. No real account or external
+recipient is configured by tests.
 
 SMTP configuration lives on the existing Connector: host, TLS transport (465 SSL
 or 587 STARTTLS), username, sender and allowed recipients. Credentials reuse the

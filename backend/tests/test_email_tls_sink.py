@@ -20,7 +20,8 @@ from fastapi.testclient import TestClient
 @pytest.mark.skipif(
     shutil.which("openssl") is None, reason="Local TLS sink needs the normal OpenSSL test utility"
 )
-def test_reviewed_email_reaches_actual_local_tls_smtp_sink(tmp_path, monkeypatch):
+@pytest.mark.parametrize("mode", ["manual", "market"])
+def test_reviewed_email_reaches_actual_local_tls_smtp_sink(tmp_path, monkeypatch, mode):
     cert, key = tmp_path / "cert.pem", tmp_path / "key.pem"
     subprocess.run(
         [
@@ -125,37 +126,99 @@ def test_reviewed_email_reaches_actual_local_tls_smtp_sink(tmp_path, monkeypatch
             )
             assert connector.status_code == 201, connector.text
             row = connector.json()
-            preview = api.post(
-                "/api/email/connectors/" + row["id"] + "/drafts",
-                json={
-                    "client_request_id": str(uuid4()),
-                    "expected_updated_at": row["updated_at"],
-                    "recipients": ["recipient@example.com"],
-                    "subject": "Local TLS acceptance",
-                    "body": "Zażółć gęślą jaźń.\n.\nTo jest wyłącznie prywatny test SMTP.",
-                },
-            )
-            assert preview.status_code == 201, preview.text
-            assert not received
-            run_id = preview.json()["run"]["id"]
-            assert (
-                api.post("/api/runs/" + run_id + "/approval", json={"resolution": "granted"}).status_code
-                == 200
-            )
-            with session_factory()() as session:
-                tick(session, "local-smtp-sink-worker")
+            if mode == "manual":
+                preview = api.post(
+                    "/api/email/connectors/" + row["id"] + "/drafts",
+                    json={
+                        "client_request_id": str(uuid4()),
+                        "expected_updated_at": row["updated_at"],
+                        "recipients": ["recipient@example.com"],
+                        "subject": "Local TLS acceptance",
+                        "body": "Zażółć gęślą jaźń.\n.\nTo jest wyłącznie prywatny test SMTP.",
+                    },
+                )
+                assert preview.status_code == 201, preview.text
+                assert not received
+                run_id = preview.json()["run"]["id"]
+                assert (
+                    api.post("/api/runs/" + run_id + "/approval", json={"resolution": "granted"}).status_code
+                    == 200
+                )
+                with session_factory()() as session:
+                    tick(session, "local-smtp-sink-worker")
+            else:
+                from datetime import timedelta
+
+                from app.db import utcnow
+                from test_market_watch import page
+
+                now = utcnow()
+                quote = page("100", 100, now - timedelta(seconds=20))
+
+                async def fetch(url, **kwargs):
+                    assert url == quote["url"]
+                    return quote
+
+                monkeypatch.setattr("app.http_fetch.fetch_public", fetch)
+                created = api.post(
+                    "/api/agents",
+                    json={
+                        "name": "Private TLS price watch",
+                        "goal": "Watch BTC",
+                        "tools": ["market_watch"],
+                        "market": {
+                            "email": {
+                                "connector_id": row["id"],
+                                "connector_revision": row["email_policy_revision"],
+                                "recipients": ["recipient@example.com"],
+                            }
+                        },
+                    },
+                )
+                assert created.status_code == 201, created.text
+                agent = created.json()
+                response = api.post(
+                    "/api/agents/" + agent["id"] + "/enabled",
+                    json={
+                        "enabled": True,
+                        "expected_updated_at": agent["updated_at"],
+                        "confirm_market_email": True,
+                    },
+                )
+                assert response.status_code == 200, response.text
+                agent = response.json()
+                for turn in range(2):
+                    started = api.post(
+                        "/api/agents/" + agent["id"] + "/run",
+                        json={"expected_updated_at": agent["updated_at"]},
+                    )
+                    assert started.status_code == 202, started.text
+                    with session_factory()() as session:
+                        for _ in range(8):
+                            if not tick(session, "private-tls-market-worker"):
+                                break
+                    agent = api.get("/api/agents/" + agent["id"]).json()
+                    if turn == 0:
+                        assert not received and not commands
+                        quote = page("106", 101, now - timedelta(seconds=10))
+                assert all(run["status"] == "succeeded" for run in agent["runs"]), agent["runs"]
             receipt = api.get("/api/email/deliveries").json()[0]
             assert receipt["state"] == "accepted", receipt
-            assert len(received) == 1 and b"Local TLS acceptance" in received[0]
+            assert len(received) == 1
+            assert (b"Local TLS acceptance" if mode == "manual" else b"BTC-USD") in received[0]
             assert b"recipient@example.com" in received[0] and b"synthetic-password" not in received[0]
             assert b"AUTH" in commands and b"DATA" in commands
             assert received[0].isascii()
             parsed = BytesParser(policy=default).parsebytes(received[0])
-            assert parsed.get_content().splitlines() == [
-                "Zażółć gęślą jaźń.",
-                ".",
-                "To jest wyłącznie prywatny test SMTP.",
-            ]
+            if mode == "manual":
+                assert parsed.get_content().splitlines() == [
+                    "Zażółć gęślą jaźń.",
+                    ".",
+                    "To jest wyłącznie prywatny test SMTP.",
+                ]
+            else:
+                assert "Current price: 106" in parsed.get_content()
+                assert "Change: 6.00000000%" in parsed.get_content()
             assert receipt["message_id"].encode() in received[0]
     finally:
         sink.shutdown()

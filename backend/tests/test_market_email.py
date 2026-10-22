@@ -5,7 +5,7 @@ from datetime import timedelta
 import pytest
 from app.api import app
 from app.engine import tick
-from app.models import Agent, Approval, EmailDelivery, Run
+from app.models import Agent, Approval, EmailDelivery, MarketObservation, Run
 from fastapi.testclient import TestClient
 from sqlalchemy import select
 from test_market_watch import complete, page
@@ -90,6 +90,7 @@ def test_email_scope_requires_distinct_operator_consent_and_duplicate_does_not_i
         consent = current["market_email_authorization"]
         assert consent["valid"] and consent["recipients"] == ["recipient@example.com"]
         assert consent["sender"] == "station@example.com"
+        assert consent["scope"]["threshold_percent"] == "5" and consent["requested_at"]
         copy = api.post(
             "/api/agents/" + agent["id"] + "/duplicate",
             json={
@@ -124,6 +125,12 @@ def test_real_worker_price_threshold_publishes_one_frozen_message_and_receipt(
         assert second[-1].metadata_json["market_result"]["email_receipts"][0]["state"] == "accepted"
         complete(session, agent, monkeypatch, page("106", 101, now - timedelta(seconds=10)))
         assert len(transport.messages) == 1
+        session.commit()
+        own = api.get("/api/email/deliveries?agent_id=" + agent.id)
+        assert own.status_code == 200 and len(own.json()) == 1
+        from uuid import uuid4
+
+        assert api.get("/api/email/deliveries?agent_id=" + str(uuid4())).json() == []
 
 
 def test_health_check_preserves_consent_but_settings_rotation_requires_review(session, transport):
@@ -179,14 +186,14 @@ def pending_alert(session, api, monkeypatch):
     return rid, aid, parent_id
 
 
-@pytest.mark.parametrize("change", ["pause", "permission", "wrong_grant", "stale", "stop"])
+@pytest.mark.parametrize("change", ["pause", "re_enable", "permission", "wrong_grant", "stale", "stop"])
 def test_revocation_or_invalid_scope_prevents_pending_smtp(session, monkeypatch, transport, change):
     from app.db import utcnow
     from app.runs import request_cancel
 
     with TestClient(app) as api:
         rid, aid, _ = pending_alert(session, api, monkeypatch)
-        if change == "pause":
+        if change in {"pause", "re_enable"}:
             agent = api.get("/api/agents/" + aid).json()
             response = api.post(
                 "/api/agents/" + aid + "/enabled",
@@ -196,6 +203,8 @@ def test_revocation_or_invalid_scope_prevents_pending_smtp(session, monkeypatch,
                 },
             )
             assert response.status_code == 200, response.text
+            if change == "re_enable":
+                assert enabled(api, response.json()).status_code == 200
         else:
             run = session.get(Run, rid)
             if change == "permission":
@@ -227,8 +236,6 @@ def test_revocation_or_invalid_scope_prevents_pending_smtp(session, monkeypatch,
 def test_unknown_submission_is_not_repeated_by_another_price_check(session, monkeypatch, transport):
     import smtplib
 
-    from app.db import utcnow
-
     with TestClient(app) as api:
         rid, aid, _ = pending_alert(session, api, monkeypatch)
         transport.failure = smtplib.SMTPServerDisconnected("synthetic lost acceptance reply")
@@ -238,9 +245,13 @@ def test_unknown_submission_is_not_repeated_by_another_price_check(session, monk
         session.expire_all()
         assert session.scalar(select(EmailDelivery)).state == "unknown"
         assert len(transport.messages) == 1
-        complete(
-            session, session.get(Agent, aid), monkeypatch, page("106", 101, utcnow() - timedelta(seconds=10))
+        observed = session.scalar(select(MarketObservation).order_by(MarketObservation.source_at.desc()))
+        repeated = complete(
+            session, session.get(Agent, aid), monkeypatch, page("106", 101, observed.source_at)
         )
+        assert all(run.status == "succeeded" for run in repeated), [
+            (run.status, run.error_message) for run in repeated
+        ]
         assert len(transport.messages) == 1
 
 
@@ -259,3 +270,37 @@ def test_in_app_baseline_hash_does_not_change_when_email_is_added():
         }
     )
     assert policy_key(before) == policy_key(after)
+
+
+def test_pause_remains_available_after_smtp_connection_was_removed(session):
+    with TestClient(app) as api:
+        connector, agent = prepare(session, api)
+        assert api.delete("/api/connectors/" + connector["id"]).status_code == 204
+        row = api.get("/api/agents/" + agent.id).json()
+        response = api.post(
+            "/api/agents/" + agent.id + "/enabled",
+            json={
+                "expected_updated_at": row["updated_at"],
+                "enabled": False,
+            },
+        )
+        assert response.status_code == 200, response.text
+        assert not response.json()["enabled"]
+        assert response.json()["market_email_authorization"]["resolution"] == "revoked"
+
+
+def test_below_threshold_and_cooldown_do_not_create_extra_mail(session, monkeypatch, transport):
+    from app.db import utcnow
+
+    with TestClient(app) as api:
+        _, agent = prepare(session, api)
+        now = utcnow()
+        for price, trade, delta, expected in [
+            ("100", 100, 30, 0),
+            ("101", 101, 20, 0),
+            ("110", 102, 10, 1),
+            ("120", 103, 1, 1),
+        ]:
+            runs = complete(session, agent, monkeypatch, page(price, trade, now - timedelta(seconds=delta)))
+            assert all(run.status == "succeeded" for run in runs), [(r.status, r.error_message) for r in runs]
+            assert len(transport.messages) == expected

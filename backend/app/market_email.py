@@ -152,6 +152,8 @@ def authorization_public(session, agent):
         valid = False
     return {
         "id": row.id,
+        "scope": row.payload.get("scope"),
+        "requested_at": row.requested_at.isoformat(),
         "resolution": row.resolution,
         "valid": valid,
         "resolved_at": row.resolved_at.isoformat() if row.resolved_at else None,
@@ -199,6 +201,25 @@ def alert_source(session, run, alert_id):
         or comparison.parameters.get("definition") != run.parameters.get("definition")
     ):
         raise MarketEmailPolicyError("Email has no matching successful price comparison")
+    from app.market_watch import policy_key
+
+    scope = MarketScope.model_validate(comparison.parameters["definition"]["market"])
+    matched = any(
+        row.get("alert_id") == alert.id
+        and row.get("observation_id") == observation.id
+        and row.get("baseline_id") == baseline.id
+        and row.get("change_percent") == alert.change_percent
+        and row.get("status") == "alert"
+        for row in comparison.metadata_json.get("market_result", {}).get("rows", [])
+    )
+    if (
+        not matched
+        or observation.policy_key != policy_key(scope)
+        or baseline.policy_key != observation.policy_key
+        or baseline.instrument != observation.instrument
+        or observation.instrument not in scope.instruments
+    ):
+        raise MarketEmailPolicyError("Email has no recorded threshold crossing in its reviewed scope")
     return alert, observation, baseline
 
 

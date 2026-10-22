@@ -81,10 +81,17 @@ def delivery_dict(row, session):
 
 
 @router.get("/deliveries")
-def deliveries(session: DB, connector_id: UUID | None = None, limit: int = Query(20, ge=1, le=100)):
+def deliveries(
+    session: DB,
+    connector_id: UUID | None = None,
+    agent_id: UUID | None = None,
+    limit: int = Query(20, ge=1, le=100),
+):
     query = select(EmailDelivery).order_by(EmailDelivery.created_at.desc())
     if connector_id:
         query = query.where(EmailDelivery.connector_id == str(connector_id))
+    if agent_id:
+        query = query.join(Run, Run.id == EmailDelivery.run_id).where(Run.agent_id == str(agent_id))
     return [delivery_dict(row, session) for row in session.scalars(query.limit(limit))]
 
 
