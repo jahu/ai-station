@@ -1,3 +1,6 @@
+import AgentWorkspacePolicy, {
+  type WorkspacePolicy,
+} from "./AgentWorkspacePolicy";
 import AgentDataFiles, { type DataScope } from "./AgentDataFiles";
 import AgentDataResult from "./AgentDataResult";
 import AgentCodeWorkspace from "./AgentCodeWorkspace";
@@ -63,6 +66,7 @@ interface Agent {
   model: string;
   tools: string[];
   data?: DataScope | null;
+  workspace_policy?: WorkspacePolicy;
   data_readiness?: { ready: boolean; reason: string } | null;
   permission_profile?: "agent_local" | "agent_external_coding";
   github?: { connector_id: string; repository: string } | null;
@@ -978,6 +982,14 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             onSave={(project_id) => update("project_id", project_id)}
           />
         </div>
+        {values.tools.includes("coding_local") && (
+          <AgentWorkspacePolicy
+            value={values.workspace_policy}
+            linkedProject={values.project_id}
+            disabled={active || save.isPending}
+            onChange={(value) => update("workspace_policy", value)}
+          />
+        )}
         <label className="agent-wide">
           Goal
           <textarea

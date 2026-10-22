@@ -1,3 +1,6 @@
+import AgentWorkspacePolicy, {
+  type WorkspacePolicy,
+} from "./AgentWorkspacePolicy";
 import AgentDataFiles, { type DataScope } from "./AgentDataFiles";
 import AgentDataResult from "./AgentDataResult";
 import GithubAgentScope from "./GithubAgentScope";
@@ -40,6 +43,7 @@ type AgentDraft = {
   system_prompt?: string;
   tools?: string[];
   data?: DataScope | null;
+  workspace_policy?: WorkspacePolicy;
   data_readiness?: { ready: boolean; reason: string } | null;
   skills?: string[];
   trigger?: string;
@@ -1092,6 +1096,16 @@ export function AssistantAgentDraft({
               </dd>
             </div>
           </dl>
+          {agent.tools?.includes("coding_local") && (
+            <AgentWorkspacePolicy
+              value={agent.workspace_policy}
+              linkedProject={agent.project_id}
+              disabled={busy || active}
+              onChange={(workspace_policy) =>
+                saveSettings.mutate({ workspace_policy })
+              }
+            />
+          )}
           {waiting ? (
             <div className="assistant-agent-approval">
               <p className="notice">

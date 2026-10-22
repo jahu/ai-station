@@ -1,5 +1,10 @@
 # Architecture
 
+[Reviewed agent build preferences](agent-website-build-policy.md) extend the
+existing owned-workspace setup with frozen dependency/check automation. The flags
+apply only when creating a private Local agent project; an existing linked
+project's saved policy remains authoritative. They add no execution boundary.
+
 [Offline website preview](agent-site-preview.md) runs frozen successful static
 builds in a CPU-only, network-disabled native-owned Chromium container. It uses
 separate inspection Tasks and child action Runs, immutable PNG artifacts and

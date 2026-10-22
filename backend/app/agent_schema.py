@@ -71,6 +71,17 @@ class AgentDataScope(BaseModel):
         return values
 
 
+class AgentWorkspacePolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    auto_install_dependencies: StrictBool = False
+    auto_validate: StrictBool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def legacy_default(cls, value):
+        return {} if value is None else value
+
+
 class AgentSettings(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     name: str = Field(min_length=1, max_length=200)
@@ -82,6 +93,7 @@ class AgentSettings(BaseModel):
     model: str = Field(default="", max_length=200)
     github: AgentGithubScope | None = None
     data: AgentDataScope | None = None
+    workspace_policy: AgentWorkspacePolicy = Field(default_factory=AgentWorkspacePolicy)
     search_query: str = Field(default="", max_length=500)
     fetch_urls: list[str] = Field(default_factory=list, max_length=3)
     tools: list[str] = Field(default_factory=list, max_length=8)
@@ -106,6 +118,10 @@ class AgentSettings(BaseModel):
     @model_validator(mode="after")
     def validate_definition(self):
         self.tools = list(dict.fromkeys(self.tools))
+        if (self.workspace_policy.auto_install_dependencies or self.workspace_policy.auto_validate) and (
+            coding_provider(self.tools) != "local" or "python_data" in self.tools
+        ):
+            raise ValueError("New-workspace build automation belongs only to Local coding agents")
         if any(tool not in AGENT_TOOLS for tool in self.tools):
             raise ValueError("Unknown agent tool")
         if set(self.tools).intersection(CODING_TOOLS):

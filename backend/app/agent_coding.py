@@ -50,6 +50,14 @@ def publish_coding(session, parent, definition, *, context="", deadline_at=None,
         request = preparation.parameters[request_key]
         preparation.parameters = {**preparation.parameters, "agent_coding_deadline": deadline}
         guidance = definition.system_prompt + "\n" + request["guidance"]
+        if request["project_check_policy"]["auto_validate"]:
+            guidance += (
+                "\nThis agent's reviewed new-workspace policy runs detected checks/builds. "
+                "For a website, create a complete self-contained static site with package.json "
+                "test/build scripts and output under dist/. Declare any required public-registry "
+                "dependencies in the manifest; avoid runtime CDN dependencies. Do not modify "
+                "saved project validation policy or claim checks passed before actual execution."
+            )
         if snapshots:
             guidance += "\n" + skill_prompt(snapshots)
         if context:
