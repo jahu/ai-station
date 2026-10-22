@@ -1,11 +1,77 @@
 # Chat/Work and longer media: implementation handoff
 
-Updated 2026-10-15. Implementation is active: the earlier planning-only request and
+Updated 2026-10-22. Implementation is active: the earlier planning-only request and
 pause were explicitly superseded. Continue implementation; do not repeat delivered
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current continuation — stock data, 2026-10-22
+## Current continuation — general agents and website understanding, 2026-10-22
+
+The user clarified that website, spreadsheet and price requests are examples of
+**general useful agents**. Use free/public search and public-page reads for normal
+research and acceptance. Do not require a Finnhub key or add a specialized
+provider for each example. Account-based stock quotes remain optional advanced
+functionality; no real Finnhub account qualification is claimed.
+
+Delivered and deployed: Python/data agents and results-first agent workspaces
+(#333–#335), isolated website preview/build policies and real Local Auto website
+creation with a follow-up (#337–#338), keyless public crypto observations (#340),
+ordinary Chat URL/bare-domain reading (#341), reviewed/scoped SMTP delivery
+(#342–#343), public-research defaults (#345), rendered-page Chat sources (#346)
+and explicit saved-screenshot local Vision with verified observation reuse (#348).
+The optional stock adapter (#344) is already implemented; do not repeat its old
+implementation plan below. Real external email remains unverified and requires
+an explicitly configured recipient/delivery test; a private TLS sink is not an
+operator inbox. Do not send an external test message without its concrete approval.
+
+Real #348 qualification used native Chromium on a public JavaScript page, the
+installed local Vision GGUF/projector and a text-model follow-up using the saved
+visual observation. The application restored the previous owned multi-GPU model
+preset. Evidence: `data/acceptance/page-screenshot-vision-20261022/production-smoke-result.json`.
+These observations qualify that workflow, not arbitrary design-analysis accuracy.
+
+A real general research agent also passed natural-language disabled drafting,
+explicit activation, actual public SearXNG search and a saved local llama.cpp
+report with matching source links and snippet-only uncertainty. No API key,
+external AI, email or release installation was used; the QA agent is paused.
+Evidence: `data/acceptance/public-research-real-20261022/result.json`. This is a
+public-research workflow check, not verification of live stock quotes.
+
+[One-send visual questions](chat-website-design.md), PR #349, are merged as
+`8e3ca9c` and deployed from qualified source `d071542` in
+`.tools/ui-chat-website-design-20261022`, schema **0031**. Local qualification:
+2112 Python tests/nine opt-in skips, 559 frontend tests, format/lint/types/build,
+Compose/image equality and compiled desktop/phone checks. Actual `akademia.ai`
+acceptance completed one Send → native Browser → local Qwen3.5 9B Vision, followed
+by an answer on the original text model using verified saved observations. No
+initial text-model inference, repeated Browser/Vision, cloud, credential or model
+download was needed. The actual capture and answer were reviewed: major visual
+observations matched; a minor form-label color inaccuracy is recorded separately.
+The original owned model preset was restored and QA history archived. Evidence:
+`data/acceptance/chat-website-design-20261022/post-deployment-qualified.json`.
+The native Runner source/service stayed unchanged during this deployment.
+
+Next practical increment: make a single-page design question work with ordinary
+Web enabled, without finding the advanced JavaScript option. Derive the URL and
+visual intent from the current user's explicit instruction only; preserve exact
+search-query and text-only overrides, competing agent/media action priority,
+source hashes, local-model disclosure, Stop and ownership. Quoted examples, pages,
+attachments, memory and model plans cannot grant Browser or model management.
+Reuse the delivered capture/Vision chain; do not introduce another executor.
+The explicit option is a delivered increment, not completion of automatic routing.
+
+Continue the [full-product ledger](../product-completion.md) and
+[agent-first milestone](agent-first-product.md): practical general-agent workflows,
+clear results and remaining real media/runtime/operations acceptance. Broader
+visual quality and the complete platform remain open. Do not convert a concrete
+passing website test into a claim of arbitrary-site or full-product completion.
+
+The sections below are a historical implementation timeline. Their “next” or
+“current” labels are not instructions to reimplement delivered slices or request
+credentials. Prefer this checkpoint, the live release manifest and actual PR/test
+state. Preserve the root checkout's unrelated Memory WIP.
+
+## Earlier continuation — optional stock data, 2026-10-22
 
 PR #343 is merged as `fdd7a64` and deployed from qualified source `6be4cfc` in
 `.tools/ui-market-email-alerts-20261022`, schema **0030**. Final qualification:

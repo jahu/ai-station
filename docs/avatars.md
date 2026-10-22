@@ -1,10 +1,14 @@
 # Local avatar video
 
-**Planned, not implemented:** [full-speech and longer media](plans/long-media-execution.md)
-replaces the short-prefix UX with complete recording/script coverage, bounded
-motion-continuation windows and a single audio timeline. It records the installed
-flash/preview pipeline mismatch and required compatibility/quality tests. Current
-short-clip acceptance below does not establish long-avatar support.
+The current workspace defaults to **Full recording (up to 60 seconds)** through
+[durable long-media jobs](long-media.md). Generated speech uses the same complete
+recording plan; bounded motion windows share one canonical audio timeline. The
+[real 30-second qualification](long-avatar-qualification.md#executed-2026-10-15)
+passed full decoding/timing and desktop/mobile playback. Broader portrait and
+lip-sync quality remain distinct from that concrete acceptance.
+
+The direct short-Run adapter and earlier verification below remain compatible;
+their per-window frame limits are not the current workspace's duration limit.
 
 Avatars and Video expose the same concrete capability: EchoMimic V3 portrait animation driven by an existing speech recording. This is not a text-to-video model. The default assistant can also dispatch it when a portrait and WAV are attached, or when the avatar action is selected.
 
