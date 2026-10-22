@@ -1,3 +1,5 @@
+import AgentDataFiles, { type DataScope } from "./AgentDataFiles";
+import AgentDataResult from "./AgentDataResult";
 import { useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -31,7 +33,12 @@ import {
   WorkflowModeChoiceList,
 } from "./AgentPolicyLists";
 
-const codingNames = ["coding_local", "coding_cursor", "coding_codex"];
+const codingNames = [
+  "coding_local",
+  "coding_cursor",
+  "coding_codex",
+  "python_data",
+];
 const isCoding = (tools: string[]) =>
   tools.some((name) => codingNames.includes(name));
 const isExternalCoding = (tools: string[]) =>
@@ -40,7 +47,9 @@ const agentModelLabel = (agent: { tools: string[]; model: string }) =>
   isExternalCoding(agent.tools)
     ? `${agent.tools[0] === "coding_codex" ? "Codex" : "Cursor"} · EXTERNAL · CLI default model`
     : isCoding(agent.tools) && agent.model === "auto"
-      ? "Auto Local Coding · 100k+ context"
+      ? agent.tools.includes("python_data")
+        ? "Auto · local data analysis"
+        : "Auto Local Coding · 100k+ context"
       : agent.model || "No model selected";
 
 type Trigger = "manual" | "interval" | "cron" | "datetime";
@@ -52,6 +61,8 @@ interface Agent {
   system_prompt: string;
   model: string;
   tools: string[];
+  data?: DataScope | null;
+  data_readiness?: { ready: boolean; reason: string } | null;
   permission_profile?: "agent_local" | "agent_external_coding";
   github?: { connector_id: string; repository: string } | null;
   search_query: string;
@@ -713,15 +724,20 @@ export function AgentDetail() {
       <AgentEditor key={agent.id} agent={agent} active={active} />
       {agent.runs?.length ? (
         <>
-          {!isCoding(agent.tools) && <AgentLatestReport runs={agent.runs} />}
-          {isCoding(agent.tools) && agent.runs?.[0]?.task_id && (
-            <Link
-              className="button secondary"
-              to={`/coding/${agent.runs[0].task_id}`}
-            >
-              Open coding task
-            </Link>
+          {agent.tools.includes("python_data") && (
+            <AgentDataResult runs={agent.runs ?? []} />
           )}
+          {!isCoding(agent.tools) && <AgentLatestReport runs={agent.runs} />}
+          {isCoding(agent.tools) &&
+            !agent.tools.includes("python_data") &&
+            agent.runs?.[0]?.task_id && (
+              <Link
+                className="button secondary"
+                to={`/coding/${agent.runs[0].task_id}`}
+              >
+                Open coding task
+              </Link>
+            )}
           <AgentLastWorkflowSteps runs={agent.runs} />
           <AgentExecutionHistory runs={agent.runs} />
         </>
@@ -877,12 +893,16 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         </label>
         <div className="agent-wide">
           <h3>
-            {values.tools.includes("coding_local")
+            {values.tools.includes("coding_local") ||
+            values.tools.includes("python_data")
               ? "Workspace"
               : "Linked project"}
           </h3>
           <AgentProjectList
-            automaticWorkspace={values.tools.includes("coding_local")}
+            automaticWorkspace={
+              values.tools.includes("coding_local") ||
+              values.tools.includes("python_data")
+            }
             agentId={agent.id}
             projectId={values.project_id ?? null}
             projects={projects.data ?? []}
@@ -1145,6 +1165,15 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             />
           )}
         </div>
+        {values.tools.includes("python_data") && (
+          <div className="agent-wide">
+            <AgentDataFiles
+              value={values.data}
+              disabled={active || save.isPending}
+              onChange={(data) => update("data", data)}
+            />
+          </div>
+        )}
         <div className="agent-wide">
           <h3>Tools</h3>
           {isCoding(values.tools) && (
@@ -1190,6 +1219,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                 setValues((current) => ({
                   ...current,
                   tools: selected,
+                  data: selected.includes("python_data") ? current.data : null,
                   permission_profile: isExternalCoding(selected)
                     ? "agent_external_coding"
                     : "agent_local",

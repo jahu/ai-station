@@ -79,7 +79,9 @@ it("queues a CPU transcription, retains progress and stops the owned run", async
       body: JSON.stringify({ audio_artifact_id: "voice", language: "pl" }),
     }),
   );
-  fireEvent.click(screen.getByRole("button", { name: "Stop transcription" }));
+  const stop = screen.getByRole("button", { name: "Stop transcription" });
+  await waitFor(() => expect(stop.hasAttribute("disabled")).toBe(false));
+  fireEvent.click(stop);
   await waitFor(() =>
     expect(fetch).toHaveBeenCalledWith(
       "/api/runs/asr/cancel",

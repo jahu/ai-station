@@ -11,6 +11,24 @@ MAX_TOOL_ROUNDS = 4
 MAX_CALLS_PER_ROUND = 3
 
 AGENT_TOOLS = {
+    "python_data": ToolSpec(
+        name="python_data",
+        description="Analyze reviewed CSV/XLSX files with a local model and offline Python. Creates an owned workspace, preserves original files and returns an answer/table/download. No networking or package installation inside generated code.",
+        risk_level="medium",
+        required_permissions=(
+            "filesystem_read",
+            "workspace_write",
+            "git_read",
+            "git_write",
+            "network_read",
+            "python_execute",
+        ),
+        timeout=3600,
+        execution_target="container",
+        operational=True,
+        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        output_schema={"type": "object"},
+    ),
     "github_read": ToolSpec(
         name="github_read",
         description="Read repository details and bounded open issue/PR titles from the explicitly reviewed GitHub connector, using the host gh session. Sends no source files or writes. The report uses only the selected local model.",

@@ -450,3 +450,12 @@ follow-up subjects from a frozen, bounded ordinary-text window before retrieval;
 manual queries bypass resolution. Only the short query reaches SearXNG. Actual
 queries, original follow-ups and source artifacts remain auditable; cancellation
 and failed resolution stop retrieval. See [web search](web-search.md).
+
+## Local data-agent execution
+
+[Python data agents](python-data-agents.md) reuse ordinary agent workflows,
+automatic private projects, owned worktree preparation and the existing offline
+Python executor. Local source generation and result verification are separate
+Runs; script, inputs, raw outputs and a literal CSV download are ordinary artifacts.
+The original workflow deadline, Task Stop and frozen definition cover repairs.
+No unrestricted filesystem or shell API is activated.

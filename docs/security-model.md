@@ -368,3 +368,21 @@ words) reaches the configured search endpoint; exact explicit queries bypass
 contextual planning. Resolution failure and Stop prevent any ambiguous fallback
 search or final answer. Chat's default switch is a versioned operator preference;
 Work continuations and old API callers do not acquire implicit network access.
+
+## Scoped Python data agents
+
+A `python_data` definition records selected immutable CSV/XLSX artifact IDs and a
+bounded repair budget. Activation requires inspected input files and a Runner
+advertising installed offline Python execution with artifact-source support.
+Generated source remains an artifact until the typed Python request snapshots its
+UUID-derived path and frozen hash. The Runner creates only `analysis-<run-id>.py`
+in that project's ready owned worktree, under the existing snapshot lock and with
+exclusive creation. Existing files and earlier attempts are never overwritten;
+draft filesystem-write endpoints remain disabled.
+
+Model generation uses a managed llama.cpp instance with verified 100k+ actual
+context. Inputs/previews, definition, project, Task and every attempt's parent are
+bound before dispatch and result adoption. Python has no network, host credentials
+or arbitrary host mounts. Only confirmed program/output failures can consume the
+saved repair budget; cancellation and uncertain dispatch never replay. Final CSV
+downloads escape formula-like strings and retain source/output lineage.

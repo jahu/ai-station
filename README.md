@@ -7,8 +7,9 @@ manual repository registration remains optional.
 Current direction: [agents that can execute local code](docs/plans/agent-first-product.md).
 Chat and Agents lead the experience; existing Coding/Git services supply isolated
 workspaces and inspectable results. Standalone IDE expansion and further external
-coding CLI integrations are deferred. Spreadsheet execution and conditional email
-are planned capabilities, not yet qualified as operational.
+coding CLI integrations are deferred. CSV/Excel data agents generate local Python, run it in an offline container,
+and return a verified answer, table and CSV download. Conditional email remains
+planned. See [data-agent setup and verification](docs/python-data-agents.md).
 
 **Conversation entry:** type immediately at `/` or `/chat`; the first Send creates
 the conversation. Chat supports replies and media tools; Work adds scoped project,

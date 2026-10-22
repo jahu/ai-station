@@ -2,7 +2,14 @@ import { TRANSCRIPTION_AUDIO_TYPES } from "../../recording-formats";
 import { useEffect, useId, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { AudioLines, Check, Library, Search, X } from "lucide-react";
+import {
+  AudioLines,
+  Check,
+  FileSpreadsheet,
+  Library,
+  Search,
+  X,
+} from "lucide-react";
 import { api, type Artifact } from "../../api";
 import { ErrorNotice, Loading } from "../common";
 import { Button } from "../ui/button";
@@ -16,7 +23,7 @@ export default function LibraryPicker({
   busy,
   onSelect,
 }: {
-  kind: "image" | "audio";
+  kind: "image" | "audio" | "document";
   audioMode?: "voice" | "transcription";
   existing: string[];
   limit: number;
@@ -51,7 +58,10 @@ export default function LibraryPicker({
         (a.metadata?.duration_seconds === undefined ||
           a.metadata.duration_seconds <=
             (audioMode === "transcription" ? 300 : 60))
-      : ["image/png", "image/jpeg", "image/webp"].includes(a.mime_type),
+      : kind === "document"
+        ? a.metadata.data_input === true &&
+          /\.(csv|xlsx)$/i.test(a.original_filename)
+        : ["image/png", "image/jpeg", "image/webp"].includes(a.mime_type),
   );
   const headingId = useId();
   const labelId = useId();
@@ -74,11 +84,13 @@ export default function LibraryPicker({
       <Dialog.Trigger asChild>
         <Button type="button" variant="ghost" disabled={busy || limit < 1}>
           <Library size={15} />{" "}
-          {kind === "image"
-            ? "Images from Library"
-            : audioMode === "transcription"
-              ? "Recordings from Library"
-              : "Voice from Library"}
+          {kind === "document"
+            ? "Data from Library"
+            : kind === "image"
+              ? "Images from Library"
+              : audioMode === "transcription"
+                ? "Recordings from Library"
+                : "Voice from Library"}
         </Button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -86,11 +98,13 @@ export default function LibraryPicker({
         <Dialog.Content className="library-picker-dialog">
           <div className="library-dialog-heading">
             <Dialog.Title>
-              {kind === "image"
-                ? "Choose image references"
-                : audioMode === "transcription"
-                  ? "Choose a recording"
-                  : "Choose a voice recording"}
+              {kind === "document"
+                ? "Choose data files"
+                : kind === "image"
+                  ? "Choose image references"
+                  : audioMode === "transcription"
+                    ? "Choose a recording"
+                    : "Choose a voice recording"}
             </Dialog.Title>
             <Dialog.Close
               className="icon-button"
@@ -100,11 +114,13 @@ export default function LibraryPicker({
             </Dialog.Close>
           </div>
           <Dialog.Description>
-            {kind === "image"
-              ? "Select images in the order you want the assistant to use them. Existing files are reused without another upload."
-              : audioMode === "transcription"
-                ? "Choose audio to transcribe locally. Duration is checked by the transcription job."
-                : "Select a PCM WAV recording for speech or portrait animation."}
+            {kind === "document"
+              ? "Choose stored CSV or Excel inputs. Original files remain unchanged."
+              : kind === "image"
+                ? "Select images in the order you want the assistant to use them. Existing files are reused without another upload."
+                : audioMode === "transcription"
+                  ? "Choose audio to transcribe locally. Duration is checked by the transcription job."
+                  : "Select a PCM WAV recording for speech or portrait animation."}
           </Dialog.Description>
           <label className="model-search">
             <Search size={16} />
@@ -150,7 +166,7 @@ export default function LibraryPicker({
                       disabled={
                         busy ||
                         attached ||
-                        (kind === "image" &&
+                        (kind !== "audio" &&
                           selected.length >= limit &&
                           chosen < 0)
                       }
@@ -168,7 +184,11 @@ export default function LibraryPicker({
                         <img src={`/api/artifacts/${a.id}/thumbnail`} alt="" />
                       ) : (
                         <div className="library-picker-audio">
-                          <AudioLines size={28} />
+                          {kind === "document" ? (
+                            <FileSpreadsheet size={28} />
+                          ) : (
+                            <AudioLines size={28} />
+                          )}
                         </div>
                       )}
                       <strong>{a.title || a.original_filename}</strong>
@@ -179,7 +199,9 @@ export default function LibraryPicker({
                             ? `Selected ${chosen + 1}`
                             : kind === "image"
                               ? `${a.metadata.width ?? "?"} × ${a.metadata.height ?? "?"}`
-                              : "PCM WAV"}
+                              : kind === "document"
+                                ? "CSV / Excel"
+                                : "PCM WAV"}
                       </small>
                       {(chosen >= 0 || attached) && (
                         <span className="library-picker-check">
@@ -212,7 +234,7 @@ export default function LibraryPicker({
           <div className="library-dialog-footer">
             <span className="muted">
               {selected.length} selected{" "}
-              {kind === "image" && `· up to ${limit}`}
+              {kind !== "audio" && `· up to ${limit}`}
             </span>
             <Button
               type="button"

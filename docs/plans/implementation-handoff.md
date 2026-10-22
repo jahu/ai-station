@@ -5,6 +5,30 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current delivery — 2026-10-22
+
+PR #332 (context-aware follow-up search and remembered default-on Chat search)
+is merged and deployed. Production identity and persistence checks passed; see
+`data/acceptance/chat-contextual-search-20261015/deployed-verification.json`.
+
+The active feature is `feat/python-data-agents` in `.tools/python-data-agents`.
+It includes persisted input scope (migration 0027), local source generation,
+automatic private worktrees, offline CPU Python execution, bounded repair,
+verified result/table/CSV artifacts and Agent/conversation UI. CSV and genuine XLSX acceptance
+passed with the installed 27B IQ2_XS model at verified 131072 context and an actual
+Python container. The acceptance freezes an already-loaded real model binding;
+it does not prove production automatic loading for this new workflow. Original
+input bytes remained unchanged and the test model was unloaded afterward.
+
+Compiled desktop/mobile checks passed result/download/reload and draft
+duplication/upload/save without running an agent or model. Genuine XLSX also
+exercised one real bounded repair before success. Remaining before delivery:
+combined regression checks, final PR review, migration/Runner/image rollout and
+production smoke. Do not mistake the earlier executor-only handoff or
+old status files for this feature's current result. Preserve root WIP. Do not
+restart the user-selected model just to inspect UI; acceptance-only model loads
+must be unloaded afterward if the original station was idle.
+
 ## Current priority override — 2026-10-15
 
 Read [agent-first product direction](agent-first-product.md) before choosing work.

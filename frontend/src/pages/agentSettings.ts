@@ -6,6 +6,7 @@ export type AgentSettingsInput = {
   system_prompt?: string;
   model?: string | null;
   tools?: string[];
+  data?: { input_artifact_ids: string[]; max_repairs: number } | null;
   permission_profile?: "agent_local" | "agent_external_coding";
   search_query?: string | null;
   fetch_urls?: string[] | null;
@@ -44,6 +45,7 @@ export function agentSettingsPayload(
     system_prompt: next.system_prompt ?? "",
     model: next.model ?? "",
     tools: next.tools ?? [],
+    ...(next.data !== undefined ? { data: next.data } : {}),
     ...(next.permission_profile !== undefined
       ? { permission_profile: next.permission_profile }
       : {}),

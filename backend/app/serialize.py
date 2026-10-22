@@ -138,6 +138,7 @@ def agent_dict(agent: Agent) -> dict:
         "provider": agent.provider,
         "model": agent.model,
         "github": agent.github,
+        "data": agent.data,
         "tools": agent.tools,
         "search_query": agent.search_query,
         "fetch_urls": agent.fetch_urls,

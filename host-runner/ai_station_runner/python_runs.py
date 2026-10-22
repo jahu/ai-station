@@ -50,6 +50,7 @@ class PythonRequest(BaseModel):
     worktree_run_id: UUID
     script_relative: str = Field(min_length=1, max_length=200)
     script_sha256: str = Field(pattern=DIGEST)
+    script_artifact_id: UUID | None = None
     inputs: list[PythonInput] = Field(default_factory=list, max_length=8)
     expected_outputs: list[str] = Field(min_length=1, max_length=8)
     maximum_runtime: int = Field(default=120, ge=1, le=600, strict=True)
@@ -76,6 +77,8 @@ class PythonRequest(BaseModel):
 
     @model_validator(mode="after")
     def input_limits(self):
+        if self.script_artifact_id and self.script_relative != f"analysis-{self.run_id}.py":
+            raise ValueError("Artifact source uses only its fixed Run-owned entrypoint")
         if len({item.artifact_id for item in self.inputs}) != len(self.inputs):
             raise ValueError("Input artifacts must be unique")
         if sum(item.size_bytes for item in self.inputs) > MAX_INPUT_TOTAL:
@@ -103,7 +106,13 @@ def capabilities():
             or (config.get("Labels") or {}).get("ai-station.python.protocol") != "1"
         ):
             return unavailable
-        return {"available": True, "image_id": image["Id"], "protocol": 1, "network": False}
+        return {
+            "available": True,
+            "image_id": image["Id"],
+            "protocol": 1,
+            "network": False,
+            "artifact_source": True,
+        }
     except (OSError, RuntimeError, ValueError):
         return unavailable
 
@@ -196,7 +205,18 @@ def start_python(manager, body):
             parent = component_directory(workspace, script.parent.as_posix())
             stage = root / "inputs"
             stage.mkdir(mode=0o700)  # An uncertain partial snapshot is never silently replaced.
-            copy_snapshot(parent / script.name, stage / "script.py", body.script_sha256, MAX_SCRIPT)
+            source = parent / script.name
+            if body.script_artifact_id:
+                aid = str(body.script_artifact_id)
+                clean = aid.replace("-", "")
+                source = owned_path(f"artifacts/{clean[:2]}/{clean[2:4]}/{aid}.py")
+            copy_snapshot(source, stage / "script.py", body.script_sha256, MAX_SCRIPT)
+            if body.script_artifact_id:
+                # Each attempt owns a new fixed filename. Never overwrite user edits,
+                # follow links, or revive a partially staged attempt.
+                with (parent / script.name).open("xb") as handle:
+                    handle.write((stage / "script.py").read_bytes())
+                (parent / script.name).chmod(0o600)
             for item in body.inputs:
                 copy_snapshot(
                     owned_path(item.relative_path),

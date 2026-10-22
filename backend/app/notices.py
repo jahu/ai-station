@@ -69,11 +69,19 @@ def notice_dict(row: Notice, session: Session | None = None) -> dict:
 def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
     task = session.get(Task, run.task_id) if run.agent_id else None
     coding = task.metadata_json.get("agent_coding_definition") if task else None
+    data_agent = coding and "python_data" in coding.get("tools", [])
+    if data_agent and (
+        status == "succeeded"
+        and (run.executor_type != "agent_data_result" or run.metadata_json.get("repair_run_id"))
+        or run.executor_type == "python"
+        and run.error_type == "PythonProgramFailed"
+    ):
+        return None
     if coding and run.executor_type != "agent_workflow":
         if status not in {"failed", "interrupted", "succeeded"}:
             return None
         if status == "succeeded" and (
-            run.executor_type not in {"local_proposal", "project_validation"}
+            run.executor_type not in {"local_proposal", "project_validation", "agent_data_result"}
             or run.executor_type == "local_proposal"
             and run.parameters.get("commands")
         ):
@@ -107,6 +115,10 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
         titles["succeeded"] = "Coding agent result ready for review"
         titles["failed"] = "Coding agent workflow failed"
         titles["interrupted"] = "Coding agent workflow interrupted"
+    if data_agent:
+        titles["succeeded"] = "Data agent results ready"
+        titles["failed"] = "Data agent workflow failed"
+        titles["interrupted"] = "Data agent needs inspection"
     notice = Notice(
         agent_id=run.agent_id,
         run_id=run.id,

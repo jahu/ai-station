@@ -872,7 +872,7 @@ def prepare_consumer(session, run):
         key=lambda i: (session.get(Run, i.metadata_json["load_run_id"]).created_at, i.id), reverse=True
     )
     instance = next((i for i in matching if i.status in {"ready", "queued", "loading"}), None)
-    coding = run.executor_type == "local_proposal"
+    coding = run.executor_type in {"local_proposal", "agent_data_generate"}
     target = 0
     if coding:
         row = session.get(ModelFile, file_id)

@@ -6363,3 +6363,63 @@ section:has(> .memory-grid) > .dashboard-note {
   color: var(--text);
   border-color: var(--accent);
 }
+
+.agent-data-files,
+.agent-data-result {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--border);
+  background: #ffffff03;
+  border-radius: 12px;
+}
+.agent-data-files > p,
+.agent-data-result > p {
+  line-height: 1.65;
+}
+.agent-data-actions {
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.agent-data-inputs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.agent-data-inputs li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.agent-data-inputs li > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agent-data-inputs li > svg {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.agent-data-inputs li > a {
+  color: var(--accent);
+  font-size: 12px;
+}
+.agent-data-result h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.agent-data-answer {
+  white-space: pre-wrap;
+  font-size: 15px;
+}
+@media (max-width: 600px) {
+  .agent-data-files,
+  .agent-data-result {
+    padding: 14px;
+  }
+}

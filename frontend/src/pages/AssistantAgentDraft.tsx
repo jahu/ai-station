@@ -1,3 +1,5 @@
+import AgentDataFiles, { type DataScope } from "./AgentDataFiles";
+import AgentDataResult from "./AgentDataResult";
 import GithubAgentScope from "./GithubAgentScope";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -37,6 +39,8 @@ type AgentDraft = {
   goal?: string;
   system_prompt?: string;
   tools?: string[];
+  data?: DataScope | null;
+  data_readiness?: { ready: boolean; reason: string } | null;
   skills?: string[];
   trigger?: string;
   cron_expr?: string | null;
@@ -742,7 +746,10 @@ export function AssistantAgentDraft({
               <dt>Linked project</dt>
               <dd>
                 <AgentProjectList
-                  automaticWorkspace={agent.tools?.includes("coding_local")}
+                  automaticWorkspace={
+                    agent.tools?.includes("coding_local") ||
+                    agent.tools?.includes("python_data")
+                  }
                   key={agent.updated_at}
                   agentId={agent.id}
                   projectId={agent.project_id ?? null}
@@ -818,13 +825,24 @@ export function AssistantAgentDraft({
                       tools: (agent.tools ?? []).filter(
                         (tool) => tool !== name,
                       ),
+                      ...(name === "python_data" ? { data: null } : {}),
                     })
                   }
                   onAdd={(name) => {
                     if ((agent.tools ?? []).includes(name)) return;
-                    saveSettings.mutate({
-                      tools: [...(agent.tools ?? []), name],
-                    });
+                    saveSettings.mutate(
+                      name === "python_data"
+                        ? {
+                            tools: [name],
+                            model: "auto",
+                            data: null,
+                            permission_profile: "agent_local",
+                            tool_calling: "none",
+                          }
+                        : {
+                            tools: [...(agent.tools ?? []), name],
+                          },
+                    );
                   }}
                 />
                 {agent.tools?.includes("remember_report") ? (
@@ -879,6 +897,18 @@ export function AssistantAgentDraft({
                 />
               </dd>
             </div>
+            {agent.tools?.includes("python_data") && (
+              <div>
+                <dt>Data inputs</dt>
+                <dd>
+                  <AgentDataFiles
+                    value={agent.data}
+                    disabled={busy || active}
+                    onChange={(data) => saveSettings.mutate({ data })}
+                  />
+                </dd>
+              </div>
+            )}
             {agent.tools?.includes("github_read") ? (
               <div>
                 <dt>Reviewed GitHub repository</dt>
@@ -1180,7 +1210,11 @@ export function AssistantAgentDraft({
           </div>
           {history.length ? (
             <>
-              <AgentLatestReport runs={history} />
+              {agent.tools?.includes("python_data") ? (
+                <AgentDataResult runs={history} />
+              ) : (
+                <AgentLatestReport runs={history} />
+              )}
               <AgentLastWorkflowSteps runs={history} tabIndex={tabIndex} />
               <AgentExecutionHistory
                 runs={history}
