@@ -59,17 +59,27 @@ entry. Actual Browser/Vision, stored-observation follow-up, source hashes,
 archived QA and restored native-ready model preset passed. Evidence:
 `data/acceptance/chat-auto-visual-pages-20261022/post-deployment-qualified.json`.
 
-Current increment: [natural image continuations](conversational-graphics.md),
-`feat/conversational-graphics` in `.tools/conversational-graphics`. A verified
-routing bug sent **Wygeneruj tę grafikę** to Chat instead of the image executor.
-Common graphic wording now uses the image path; saved page/Vision evidence feeds
-its existing local brief without a new page request. Ordinary Web availability
-also must not block inspect/edit/upscale/animate media actions or references.
-Preserve explicit research/selected-input/worktree precedence, source integrity,
-receipt replay, preferences and typed execution. Qualification is separate under
-`data/acceptance/conversational-graphics-20261022`; do not claim real image output
-from the queued fake-GPU tests. Earlier image smoke cases are recorded in the
-historical MVP report; broader quality/profile acceptance remains distinct.
+[Natural image continuations](conversational-graphics.md), PR #352, are merged
+as `2d40bf3`, deployed from qualified source `5d2af30` in
+`.tools/ui-conversational-graphics-20261022`, schema **0031**. The routing bug sent
+**Wygeneruj tę grafikę** to Chat; common graphic wording now uses the existing
+image path and verified saved page/Vision evidence, without a new page request.
+Ordinary Web availability also permits inspect/edit/upscale/animate media actions
+and references. Exact research/selected-input/worktree precedence, source integrity,
+receipt replay, preferences and typed execution remain enforced. Failed latest
+image generation cannot silently revive an older image for Upscale.
+
+Release qualification passed **2153 Python tests/nine opt-in skips**, lint/format,
+Compose, exact Docker image/source/assets and a new compiled 1440/390-pixel
+website → graphic → Upscale chain using fixture executors. Frontend source stayed
+identical to its qualified parent: **559 tests** and format/lint/types/build are
+inherited with an explicit source-equality proof. Backup/persistence, LAN/login,
+three workers, scheduler, private Runner and the ready owned model were verified
+after rollout; the unchanged native Runner was not restarted. Real image output
+is qualified separately in `data/acceptance/conversational-graphics-20261022`:
+inspect the actual `production-smoke-result.json` and output review before claiming
+that GPU workflow passed. Existing six-mode small real image smoke coverage is
+historical evidence; broader visual quality/profile acceptance remains distinct.
 
 Continue the [full-product ledger](../product-completion.md) and
 [agent-first milestone](agent-first-product.md): practical general-agent workflows,
