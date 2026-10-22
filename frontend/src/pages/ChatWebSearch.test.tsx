@@ -33,7 +33,7 @@ it("starts offline and exposes a bounded explicit query only when enabled", () =
     "500",
   );
   expect(
-    screen.getByText(/Conversation history and attachments stay local/),
+    screen.getByText(/full conversation and attachments are not sent/),
   ).toBeTruthy();
   fireEvent.click(screen.getByRole("switch"));
   expect(screen.queryByLabelText("Search query")).toBeNull();
@@ -55,9 +55,7 @@ it("moves through the search toggle without sending a message", () => {
   render(<Control />);
   const toggle = screen.getByLabelText("Search web_search");
   expect(toggle.tabIndex).toBe(0);
-  expect(
-    screen.getByText(/conversation history and attachments stay private/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Attachments and memory are excluded/)).toBeTruthy();
   expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("false");
   fireEvent.keyDown(toggle.closest(".web-search-choice-list") as HTMLElement, {
     key: "Enter",
@@ -142,4 +140,23 @@ it("moves through search sources with arrow keys", () => {
     key: "Home",
   });
   expect(first.tabIndex).toBe(0);
+});
+
+it("keeps the default online composer compact while exposing exact-query options", () => {
+  render(
+    <WebSearchControl
+      compact
+      enabled
+      query=""
+      busy={false}
+      onToggle={() => {}}
+      onQuery={() => {}}
+    />,
+  );
+  expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true");
+  expect(screen.queryByLabelText("Search query")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Search options" }));
+  expect(screen.getByLabelText("Search query")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Search options" }));
+  expect(screen.queryByLabelText("Search query")).toBeNull();
 });

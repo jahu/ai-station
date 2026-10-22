@@ -24,6 +24,7 @@ type Preferences = {
   provider: string;
   model: string;
   send_key: "enter" | "ctrl-enter";
+  web_search_enabled: boolean;
 };
 
 export default function Settings() {
@@ -129,6 +130,20 @@ function GeneralSettings() {
                 Manage installed models
               </Link>
             </div>
+            <label className="row">
+              <input
+                type="checkbox"
+                disabled={busy}
+                checked={values.web_search_enabled ?? true}
+                onChange={(event) =>
+                  setValues({
+                    ...values,
+                    web_search_enabled: event.target.checked,
+                  })
+                }
+              />
+              Search the web by default in Chat
+            </label>
             <label>
               Send message with
               <select

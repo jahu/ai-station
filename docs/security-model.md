@@ -75,7 +75,7 @@ Runs store an effective permission list. There is no universal full-access flag.
 
 ## Network tools
 
-HTTP fetch is a real tool and is off unless the run has `network_read` (GET) or `network_external` (POST). URLs are resolved and rejected when any address is loopback, private, link-local, reserved, or multicast. That blocks trivial SSRF to the host's model servers and cloud metadata endpoints. Local coding exploration may GET public pages under that rule. Agents may GET up to three explicitly reviewed public URLs stored on the definition; the model cannot add URLs. Named HTTP connectors reuse the same public-URL rule for a single GET, with optional Bearer secret references that never appear in API responses. Chat web search is an explicit per-message opt-in through a configured private SearXNG service. Only the query leaves the control plane; history, memory and attachments are not sent to search engines. Results are bounded untrusted snippets, with persisted provenance; Chat and agents do not fetch arbitrary search-result pages. Interactive/account interactive/account browser automation remains unavailable.
+HTTP fetch is a real tool and is off unless the run has `network_read` (GET) or `network_external` (POST). URLs are resolved and rejected when any address is loopback, private, link-local, reserved, or multicast. That blocks trivial SSRF to the host's model servers and cloud metadata endpoints. Local coding exploration may GET public pages under that rule. Agents may GET up to three explicitly reviewed public URLs stored on the definition; the model cannot add URLs. Named HTTP connectors reuse the same public-URL rule for a single GET, with optional Bearer secret references that never appear in API responses. Chat web search is a visible, remembered per-message selection through a configured private SearXNG service, enabled by default for ordinary Chat. Only the query leaves for search. Automatic follow-ups resolve the subject locally with the selected permission-bound provider from bounded recent ordinary text; full history, hidden context and attachments are not sent to search engines. Explicit queries omit that contextual resolution. Results are bounded untrusted snippets, with persisted provenance; Chat and agents do not fetch arbitrary search-result pages. Interactive/account interactive/account browser automation remains unavailable.
 
 ## Operator credential
 
@@ -359,3 +359,12 @@ rewrite request. Both actual queries are audited; no new URL fetching or tool
 grants are introduced. Cancellation closes the rewrite stream. Missing relevant
 sources prevent a final factual completion rather than silently falling back to
 unsupported model claims. See [web search](web-search.md).
+
+Automatic follow-up search resolution snapshots at most six recent ordinary text
+messages, 1200 characters each, excluding attachment bodies, orchestration status,
+partial/superseded replies and replies based on pinned memory, summaries, attached
+files or transcript tools. Only the short generated query (300 characters / 30
+words) reaches the configured search endpoint; exact explicit queries bypass
+contextual planning. Resolution failure and Stop prevent any ambiguous fallback
+search or final answer. Chat's default switch is a versioned operator preference;
+Work continuations and old API callers do not acquire implicit network access.

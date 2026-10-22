@@ -94,6 +94,7 @@ it("sends the first prompt without creating an empty conversation", async () => 
     path: "/api/chat/turns",
     body: expect.objectContaining({
       content: "Explain this clearly",
+      web_search: { enabled: true, query: "" },
       execution_mode: "chat",
       client_request_id: expect.any(String),
       selection: {
@@ -554,6 +555,14 @@ it.each(["image.generate", "image.generate_video"])(
       name: "Search the web",
     });
     fireEvent.click(toggle);
+    await vi.waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Search options" })
+          .hasAttribute("disabled"),
+      ).toBe(false),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Search options" }));
     fireEvent.change(screen.getByLabelText("Search query"), {
       target: { value: "example.com brand" },
     });
@@ -568,6 +577,11 @@ it.each(["image.generate", "image.generate_video"])(
     fireEvent.change(screen.getByLabelText("Message", { exact: true }), {
       target: { value: "Create a promotional image" },
     });
+    await vi.waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Send" }).hasAttribute("disabled"),
+      ).toBe(false),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     await vi.waitFor(() => expect(requests).toHaveLength(1));
     expect(requests[0]).toEqual({
