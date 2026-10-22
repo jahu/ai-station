@@ -517,6 +517,7 @@ class MarketObservation(Base):
     source_at: Mapped[Any] = mapped_column(UTCDateTime)
     observed_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
     source_url: Mapped[str] = mapped_column(String(200))
+    source_metadata: Mapped[dict] = mapped_column(JSON, default=dict, server_default="{}")
 
 
 class MarketAlert(Base):

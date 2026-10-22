@@ -1,9 +1,12 @@
 # Architecture
 
-The next agent slice is [deterministic scheduled price observations](agent-market-watch.md):
-fixed public provider reads, separate comparison/notice/report child Runs and
-durable quote/alert provenance. It reuses existing workers and schedules without
-an LLM decision or a new execution service. Email and stock adapters remain pending.
+[Deterministic price observations](agent-market-watch.md) and scoped SMTP alert
+delivery are deployed (#340, #342, #343). Fixed public source reads, comparisons,
+in-app notices, reports and mail use existing Tasks, workers, child Runs and
+Artifacts. Explicit activation grants bind automatic mail; Task-wide Stop covers
+all published submissions. There is no model-based pricing or new execution
+service. [Stock data](plans/stock-price-agents.md) is the next provider increment;
+its parser is not yet an operational connector.
 
 [Reviewed agent build preferences](agent-website-build-policy.md) extend the
 existing owned-workspace setup with frozen dependency/check automation. The flags
@@ -493,3 +496,16 @@ the authenticated UI origin; no public preview port is introduced.
 SMTP connector. It reuses SecretProvider references, operator previews/approvals,
 ordinary Tasks/Runs and a durable delivery journal; no Host Runner or shell API is
 needed for SMTP. Automated agent email remains a separately scoped integration.
+
+
+### Stock-data account execution
+
+[Stock agents](plans/stock-price-agents.md) extend the deterministic price workflow.
+Named `market_data` connectors store write-only Finnhub credential references.
+Handlers enqueue account-check/symbol-search Runs; `market_feed` workers use fixed
+DNS-pinned endpoints and return canonical bounded artifacts. Stock quote children
+require both network-read and account-read permissions. The selected account
+revision, symbols, provider timestamps/currency/session and approval scope are
+frozen and revalidated before notification. Migration 0031 adds source metadata
+without replacing crypto history or changing its policy hashes/template IDs.
+Deployment requires full local qualification and reviewed integration through develop.

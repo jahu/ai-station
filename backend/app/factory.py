@@ -213,9 +213,10 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
     if not tools and re.search(r"\b(excel|xlsx|csv|spreadsheet|arkusz)", lowered):
         tools = ["python_data"]
     market = None
+    stock_request = re.search(r"\b(?:stocks?|akcj\w*|giełd\w*|gield\w*)", lowered)
     if (
         not wants_coding
-        and re.search(r"\b(?:bitcoin\w*|btc|ethereum|eth)\b", lowered)
+        and (re.search(r"\b(?:bitcoin\w*|btc|ethereum|eth)\b", lowered) or stock_request)
         and re.search(r"(?:price|cen[ayę]|kurs)", lowered)
     ):
         from app.market_schema import MarketScope
@@ -228,10 +229,27 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
             instruments.append("ETH-" + currency)
         threshold = re.search(r"(?<![\d.,])([0-9]{1,3}(?:[.,][0-9]{1,4})?)\s*%", lowered)
         value = threshold.group(1).replace(",", ".") if threshold else "5"
+        provider = "coinbase_exchange"
+        if stock_request:
+            from app.stock_quotes import stock_symbol
+
+            provider = "finnhub"
+            instruments = []
+            for symbol in re.findall(r"(?<![\w:])\$?([A-Z][A-Z0-9]*(?:[.-][A-Z0-9]+)*)(?![\w:])", text):
+                if symbol in {"AI", "USD", "EUR", "US", "UTC", "ETF", "API", "SMTP", "LLM"}:
+                    continue
+                try:
+                    stock_symbol(symbol)
+                except ValueError:
+                    continue
+                if symbol not in instruments and len(instruments) < 3:
+                    instruments.append(symbol)
         try:
-            market = MarketScope(instruments=instruments, threshold_percent=value).model_dump()
+            market = MarketScope(
+                provider=provider, instruments=instruments, threshold_percent=value
+            ).model_dump(mode="json")
         except ValueError:
-            market = MarketScope(instruments=instruments).model_dump()
+            market = MarketScope(provider=provider, instruments=instruments).model_dump(mode="json")
         tools = ["market_watch"]
         fetch_urls, search_query = [], ""
     notices = {

@@ -11,12 +11,15 @@ import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import { useListKeyboard } from "./useListKeyboard";
 import { GithubConnectors } from "./GithubConnectors";
+import { StockFeedConnectors } from "./StockFeedConnectors";
 
 type ConnectorInfo = {
   id: string;
   key: string;
   name: string;
   kind: string;
+  market_provider?: "finnhub";
+  market_policy_revision?: string;
   smtp?: SMTP;
   updated_at: string;
   repository: string;
@@ -230,12 +233,12 @@ export default function Connectors() {
         <div>
           <h2>Connectors</h2>
           <p className="muted">
-            GitHub repositories, email and reviewed HTTP endpoints
+            GitHub repositories, stock prices, email and HTTP endpoints
           </p>
         </div>
       </div>
       <p className="muted">
-        Connect a GitHub repository, configure reviewed email, or add a public
+        Connect stock data, a GitHub repository, reviewed email, or a public
         HTTP endpoint. Refreshes are inspectable Runs with stored snapshots.
         GitHub uses your existing host login; HTTP secrets stay write-only.
       </p>
@@ -264,6 +267,15 @@ export default function Connectors() {
               (row): row is ConnectorInfo & EmailConnector =>
                 row.kind === "email" && !!row.smtp,
             ) ?? []
+          }
+        />
+      )}
+      {kinds.data?.some(
+        (item) => item.kind === "market_data" && item.operational,
+      ) && (
+        <StockFeedConnectors
+          rows={
+            connectors.data?.filter((row) => row.kind === "market_data") ?? []
           }
         />
       )}

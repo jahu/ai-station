@@ -13,7 +13,7 @@ MAX_CALLS_PER_ROUND = 3
 AGENT_TOOLS = {
     "market_watch": ToolSpec(
         name="market_watch",
-        description="Observe reviewed Coinbase BTC/ETH pairs, compare numeric thresholds and create deduplicated in-app alerts. Optional email requires separately approved agent/recipient scope. No model or trading.",
+        description="Observe reviewed Coinbase BTC/ETH pairs or Finnhub USD stocks through your selected account, compare numeric thresholds and create deduplicated in-app alerts. Stock data requires its separate account-read permission. Optional email requires approved agent/recipient scope. No model or trading.",
         risk_level="low",
         required_permissions=("network_read",),
         timeout=90,

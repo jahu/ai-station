@@ -33,15 +33,19 @@ def market_email_authorization(session, agent):
 
 def definition_dict(agent, session=None):
     from app.data_agents import data_readiness
+    from app.market_feeds import stock_permissions, stock_readiness
+    from app.market_schema import MarketScope
 
     email_authorization = market_email_authorization(session, agent)
     return {
         **agent_dict(agent),
         "data_readiness": data_readiness(session, agent.data) if "python_data" in agent.tools else None,
         "market_email_authorization": email_authorization,
+        "market_readiness": stock_readiness(session, agent.market),
         "created_at": agent.created_at.isoformat(),
         "updated_at": agent.updated_at.isoformat(),
         "effective_permissions": effective_permissions([name for name in agent.tools if name in AGENT_TOOLS])
+        + stock_permissions(MarketScope.model_validate(agent.market) if agent.market else None)
         + (
             ["email_send", "network_external"] if email_authorization and email_authorization["valid"] else []
         ),
@@ -57,6 +61,23 @@ def get_agent(session, agent_id):
 
 
 def validate_target(body, session, agent=None, *, enabling=False):
+    if (
+        body.market is not None
+        and body.market.provider == "finnhub"
+        and (not enabling or body.enabled)
+        and (body.enabled or body.market.feed is not None)
+    ):
+        from app.market_feeds import reviewed_connector, validate_stock_scope
+
+        try:
+            if body.enabled:
+                validate_stock_scope(session, body.market)
+            else:
+                reviewed_connector(
+                    session, body.market.feed.connector_id, body.market.feed.connector_revision
+                )
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
     if body.market is not None and body.market.email is not None and (not enabling or body.enabled):
         from app.market_email import authorization, target
 

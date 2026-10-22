@@ -6738,3 +6738,62 @@ section:has(> .memory-grid) > .dashboard-note {
 .market-email-consent summary {
   cursor: pointer;
 }
+
+.stock-instruments {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+.stock-symbol-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.6rem;
+}
+.stock-symbol-search label {
+  flex: 1 1 13rem;
+  min-width: 0;
+}
+.stock-symbol-search button {
+  flex-shrink: 0;
+}
+.stock-symbol-results {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.stock-symbol-results li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+}
+.stock-symbol-results li > div {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.stock-selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.stock-selected > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding-left: 0.65rem;
+}
+.stock-account-review {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.6rem;
+}

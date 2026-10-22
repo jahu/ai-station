@@ -1,5 +1,6 @@
 export type MarketScope = {
-  provider: "coinbase_exchange";
+  provider: "coinbase_exchange" | "finnhub";
+  feed?: { connector_id: string; connector_revision: string } | null;
   instruments: string[];
   threshold_percent: string;
   direction: "both" | "up" | "down";

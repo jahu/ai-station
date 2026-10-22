@@ -24,6 +24,12 @@ unchanged. See [Node project dependencies](node-project-dependencies.md).
 
 # Full-product acceptance ledger
 
+[Stock-data agents](plans/stock-price-agents.md) add user-owned Finnhub account
+configuration, explicit company/symbol lookup, reviewed stock scope and quote
+metadata, and reuse deterministic comparison/notice/email delivery. Normal
+qualification uses synthetic source/account/SMTP fixtures; a real Finnhub key,
+account quote access and external inbox delivery remain unverified.
+
 [Reading a requested website](plans/chat-page-reading.md) is deployed in ordinary
 Chat (#341). Explicit URL/bare-domain reading and same-source follow-up passed
 real `akademia.ai` acceptance with the local model. Rendered-page fallback and

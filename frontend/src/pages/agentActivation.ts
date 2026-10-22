@@ -34,6 +34,7 @@ export function activationBlock(
   agent: {
     enabled: boolean;
     market?: MarketScope | null;
+    market_readiness?: { ready: boolean; reason: string | null } | null;
     github?: { connector_id: string; repository: string } | null;
     maximum_runtime?: number;
     project_id?: string | null;
@@ -57,6 +58,16 @@ export function activationBlock(
       blocked: true,
       reason:
         "Review and save an exclusive price-watch policy before enabling.",
+    };
+  if (market && agent.market?.provider === "finnhub" && !agent.market.feed)
+    return {
+      blocked: true,
+      reason: "Review and save a stock-data account before enabling.",
+    };
+  if (market && agent.market_readiness?.ready === false)
+    return {
+      blocked: true,
+      reason: agent.market_readiness.reason ?? "Review the stock-data account.",
     };
   const coding = names.filter((name) =>
     ["coding_local", "coding_cursor", "coding_codex"].includes(name),

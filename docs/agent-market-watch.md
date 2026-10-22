@@ -1,9 +1,9 @@
 # Scheduled price observations
 
 The deterministic in-app market watch is deployed in PR #340. Reviewed SMTP
-foundation is deployed in PR #342. Activation-scoped automatic email is now being
-implemented on `feat/market-email-alerts`; it is not deployed or fully qualified.
-A stock-data provider remains a separate follow-up; no trading is performed.
+foundation is deployed in PR #342, and activation-scoped automatic email in
+PR #343. Current source extends the same workflow with scoped Finnhub stock-data
+accounts. No trading is performed.
 
 The first provider is the public Coinbase Exchange last-trade ticker. Supported
 pairs are BTC/USD, BTC/EUR, ETH/USD and ETH/EUR. The operator reviews instruments,
@@ -33,7 +33,7 @@ external messages or credential changes are needed to qualify this slice.
 
 Provider contract: [Coinbase product ticker](https://docs.cdp.coinbase.com/api-reference/exchange-api/rest-api/products/get-product-ticker).
 
-## Automatic email candidate
+## Activation-scoped automatic email
 
 The saved optional email policy selects one existing SMTP connector revision and
 1–5 allowlisted recipients. **Enable and allow alert email** requires a separate
@@ -64,4 +64,48 @@ uses the existing Task-wide cancellation contract, preserving already accepted
 receipts and canceling every active submission/report. Stop current price check
 is available in Agents and the conversation. Final focused coverage passed 107
 market/agent/TLS cases and 60 UI cases; compiled desktop/phone tests include this
-Stop path and duplicate consent reset. Final whole-source gates remain separate.
+Stop path and duplicate consent reset. PR #343 passed final whole-source gates (1963 Python cases, nine opt-in skips,
+546 UI cases), image qualification and compiled desktop/phone acceptance before
+deployment. Its proof is recorded under `data/acceptance/market-email-alerts-20261022`.
+
+
+## Stock-data accounts
+
+Settings → Integrations → Stock prices accepts a named Finnhub account and a
+write-only API key. Save performs no network access. Check stock account queues
+a separate Run reading the US market-status endpoint; success does not prove
+quote entitlements. Account rates and subscriptions remain the provider’s policy.
+Keys use SecretProvider storage and only `X-Finnhub-Token`, never a query string.
+Rotating an environment/stored key, changing settings or disabling the account
+changes the reviewed revision. Health checks and renaming preserve it.
+
+Price watch → Price source → US stocks lets the operator select that account,
+explicitly search for a company/symbol, and select up to three symbols. Typing
+does not issue requests. Manual symbol entry is also available. Search results
+do not establish quote rights/currency. Natural-language stock drafts stay
+disabled and do not invent an account or convert a company name into a ticker.
+An incomplete draft can be saved; activation requires a current account and
+symbols. Missing/rotated credentials block execution while Pause remains usable.
+
+The quote stage requests fixed quote/profile paths and one bounded US status
+snapshot. It requires a matching USD NASDAQ/NYSE-family profile; unknown exchanges
+are rejected rather than applying US hours to another market. Numeric JSON is
+parsed as Decimal. Prices, provider sequence/time, currency, actual market-status
+time/session and recent/last-known state are persisted with migration 0031.
+Finnhub’s quote timestamp is not represented as an exchange trade identity.
+Regular-session data must be at most five minutes old; last-known quotes outside
+the regular session may be up to seven days old. The fetch and market-status
+evidence must still be recent before publishing an alert. The default maximum
+comparison gap is seven days; explicit shorter gaps are respected.
+
+The same comparison, cooldown, notice, Task Stop, approval and SMTP journal are
+reused. Stock mail has a separate immutable template/receipt identity and displays
+USD, quote as-of time and session freshness. Legacy crypto policy hashes, default
+48-hour windows, existing email scopes and crypto template identities stay valid.
+No raw credential-bearing provider response/error is saved or sent to a model.
+Permission `market_data_read` is additional to `network_read`; uncertain leases
+are interrupted without automatic account reads or email retries.
+
+Normal acceptance uses fake data/SMTP in a migrated temporary database. A real
+Finnhub key, account quote access and external inbox delivery have not been tested.
+See [the implementation plan](plans/stock-price-agents.md).
