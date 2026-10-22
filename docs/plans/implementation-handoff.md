@@ -668,3 +668,13 @@ service above remains the authoritative running check; its result JSON may still
 contain the older collection failure until the current live process finishes.
 Do not interpret that stale result file as termination or restart a live check.
 No preview feature has been deployed yet; production remains PR #336.
+
+Website-policy scope fix: the broad website recognizer incorrectly classified an
+agent that merely reads CSV from a website as a builder. Creation verbs now bind
+to the site; 34 focused factory/page-coding tests pass. The preliminary full check
+is intentionally superseded because backend source changed. The authoritative
+final full run is `ai-station-agent-website-policy-final-20261022.service`;
+`workspace-full-check-result.json` must show exit zero and unchanged source.
+The previous UI head `104a4a9` passed 526 tests and all UI/Compose/image gates;
+frontend sources are unchanged by the factory fix, but the final image must be
+rebuilt with the new backend before merge/deployment. PR #338 remains draft.

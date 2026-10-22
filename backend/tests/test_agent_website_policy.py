@@ -100,3 +100,9 @@ def test_workspace_policy_survives_api_save_reload_and_duplicate():
             not duplicate.json()["enabled"]
             and duplicate.json()["workspace_policy"] == body["workspace_policy"]
         )
+
+
+def test_reading_a_website_does_not_grant_website_build_automation():
+    draft = draft_agent("Create an agent that reads CSV files from a website at https://example.com")
+    assert "coding_local" not in draft.tools
+    assert draft.workspace_policy == {} and not draft.enabled

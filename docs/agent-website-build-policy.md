@@ -50,3 +50,10 @@ worker, model or project execution. Evidence is under
 are retained with `next-workspace-` names in the preview acceptance directory.
 Full regression and release review remain required. This is not a claim that the
 new end-to-end website/model/build flow was already executed on real GPUs.
+
+Factory scope review found an ambiguity: “create an agent that reads CSV files
+from a website” must not become a website builder or acquire build automation.
+Website creation verbs now bind to the site itself, with explicit Polish/English
+modifiers. The focused factory/page-coding scope suite passed 34 tests, including
+this negative case. The earlier full check was invalidated by this actual source
+fix; its output is retained as preliminary, not release qualification.

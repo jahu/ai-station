@@ -153,12 +153,11 @@ def _search_query(text: str) -> str:
 
 
 def website_build_goal(lowered):
+    # Bind the creation verb to the site, rather than to an agent that only reads it.
+    verb = r"(?:build\w*|creat\w*|recreat\w*|clon\w*|stw[oó]rz\w*|utw[oó]rz\w*|tw[oó]rz\w*|buduj\w*|zbuduj\w*|odtw[oó]rz\w*|przebuduj\w*|tworzy\w*)"
+    modifier = r"(?:a|an|the|me|mi|new|modern|responsive|static|complete|small|news|personal|business|version|of|this|now[aą]|nowej|wersj[eę]|tej|lepsz[aą])"
     return bool(
-        re.search(r"\b(?:website|web app|stron\w*|witryn\w*)\b", lowered)
-        and re.search(
-            r"\b(?:build\w*|creat\w*|recreat\w*|clon\w*|stw[oó]rz\w*|utw[oó]rz\w*|tw[oó]rz\w*|buduj\w*|zbuduj\w*|odtw[oó]rz\w*|przebuduj\w*|tworzy\w*)\b",
-            lowered,
-        )
+        re.search(rf"\b{verb}\s+(?:{modifier}\s+){{0,5}}(?:website|web app|stron\w*|witryn\w*)\b", lowered)
     )
 
 
