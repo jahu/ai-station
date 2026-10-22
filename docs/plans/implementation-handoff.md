@@ -723,3 +723,29 @@ models or GPU work. Full Python qualification runs in
 before starting another run or claiming it passed. UI/browser qualification and
 full review remain. Email, stock quotes and the Chat page-reading backlog remain
 open; never label an in-app alert as email delivery.
+
+
+Market-watch final review continuation: draft PR #340 targets develop. Code head
+`d3f7d65` passed 1883 Python tests/nine opt-in skips with unchanged-source proof,
+532 frontend tests and all format/lint/types/build/Compose/image gates. Actual
+compiled desktop/phone settings and Enable → Run → public BTC quote → report
+passed in isolated state, without a model/GPU or external messages. Production
+has not been changed. Review then identified that the default 24-hour maximum
+comparison gap was too tight for daily schedule jitter; the reviewed default is
+now 48 hours, also reflected in the UI. The cross-day fake-clock regression and
+all 40 focused market tests pass. The first fake-clock test attempt expired its
+own staged deadline; the fixture now advances both observation and workflow
+clocks consistently, without changing runtime deadline behavior.
+
+Final full Python qualification for that corrected source uses
+`ai-station-market-daily-final-20261022.service`. The earlier passed full result
+is archived under `qualified-d3f7d65-*`; never use it as the new head's final result.
+`ai-station-market-gap-ui-20261022.service` qualifies the unchanged frontend at
+`ac559e3`; later changes are only this handoff and the cross-day test fixture.
+Check live handles and matching source identities before merge. Evidence:
+`data/acceptance/agent-market-watch-20261022`. Deployment helpers are prepared but
+must not run before PR review and final local gates succeed. Stock data and real
+scoped SMTP/email delivery remain next work. In a separate worktree,
+`feat/chat-direct-page-reading` implements the queued Chat text-reader slice and
+same-conversation source reuse; its 62 page/search tests passed, but it still
+needs full qualification after integration and real/browser acceptance.

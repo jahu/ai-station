@@ -410,8 +410,11 @@ def test_default_gap_allows_daily_schedule_and_network_jitter(session, monkeypat
     now = utcnow()
     yesterday = now - timedelta(days=1, seconds=15)
     monkeypatch.setattr("app.market_watch.utcnow", lambda: yesterday)
-    complete(session, agent, monkeypatch, page("100", 100, yesterday))
+    monkeypatch.setattr("app.agent_workflow.utcnow", lambda: yesterday)
+    first = complete(session, agent, monkeypatch, page("100", 100, yesterday))
+    assert all(r.status == "succeeded" for r in first), [(r.status, r.error_message) for r in first]
     monkeypatch.setattr("app.market_watch.utcnow", lambda: now)
+    monkeypatch.setattr("app.agent_workflow.utcnow", lambda: now)
     runs = complete(session, agent, monkeypatch, page("110", 101, now))
     assert runs[-1].metadata_json["market_result"]["rows"][0]["status"] == "alert"
     assert agent.market["comparison_window_seconds"] == 172800
