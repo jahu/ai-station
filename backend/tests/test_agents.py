@@ -897,3 +897,134 @@ def test_workflow_memory_excerpts_oversized_observations(monkeypatch):
     assert snapshot["status"] == "succeeded" and snapshot["metadata"]["memory_excerpted"] is True
     artifact = api.get("/api/artifacts?run_id=" + snapshot["id"]).json()[0]
     assert '"blob"' in api.get(f"/api/artifacts/{artifact['id']}/file").text
+
+
+RAW_REPORT_REQUEST = """I'll gather more concrete details from public GitHub sources.
+<tool_call>
+<function=web_search>
+<parameter=query>
+llama.cpp release notes b4892 June 2026 changelog
+</parameter>
+</function>
+</tool_call>"""
+
+
+@pytest.mark.parametrize("bounded", [False, True])
+def test_raw_report_requests_get_one_tool_free_correction(research, monkeypatch, bounded):
+    from app.agent_executor import LocalAgentExecutor
+
+    calls, _ = research
+    received, deadlines = [], []
+    consume = LocalAgentExecutor._consume
+
+    async def observed(self, session, run, definition, deadline, **kwargs):
+        deadlines.append(deadline)
+        return await consume(self, session, run, definition, deadline, **kwargs)
+
+    async def stream(self, **kwargs):
+        received.append(kwargs)
+        if len(received) == 1:
+            yield RAW_REPORT_REQUEST
+        else:
+            assert kwargs["tools"] is None and kwargs["on_tool_calls"] is None
+            assert "No further tool requests" in kwargs["messages"][0]["content"]
+            assert "Public finding" in str(kwargs["messages"])
+            yield "# Report\n\nPublic finding. [Source](https://example.com/research)"
+
+    monkeypatch.setattr(LocalAgentExecutor, "_consume", observed)
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    api = TestClient(app)
+    agent = create(
+        api,
+        enabled=True,
+        tools=["web_search", "remember_report"],
+        search_query="llama.cpp latest updates news",
+        tool_calling="bounded" if bounded else "none",
+    )
+    queued = run_now(api, agent)
+    with session_factory()() as session:
+        drain(session)
+    run = workflow_step(api, queued["id"], "report")
+    assert run["status"] == "succeeded", run
+    assert calls == ["llama.cpp latest updates news"]  # No model-invented search was dispatched.
+    assert len(received) == 2 and deadlines[0] == deadlines[1]
+    events = api.get(f"/api/runs/{run['id']}/stream").text
+    assert events.count('"event_type": "agent.report.correction_requested"') == 1
+    artifacts = api.get("/api/artifacts?run_id=" + run["id"]).json()
+    assert len(artifacts) == 1 and artifacts[0]["metadata"]["partial"] is False
+    report = api.get(f"/api/artifacts/{artifacts[0]['id']}/file").text
+    assert report.startswith("# Report") and "<tool_call>" not in report
+    with session_factory()() as session:
+        entry = session.scalar(select(MemoryEntry))
+        assert entry.content == report and entry.source_run_id == run["id"]
+
+
+@pytest.mark.parametrize("response", [RAW_REPORT_REQUEST, "", "<function=web_search>again</function>"])
+def test_invalid_report_correction_never_succeeds_or_retains_memory(monkeypatch, response):
+    received = []
+
+    async def stream(self, **kwargs):
+        received.append(kwargs)
+        yield RAW_REPORT_REQUEST if len(received) == 1 else response
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    api = TestClient(app)
+    agent = create(api, enabled=True, tools=["remember_report"])
+    queued = run_now(api, agent)
+    with session_factory()() as session:
+        drain(session)
+    run = workflow_step(api, queued["id"], "report")
+    assert run["status"] == "failed" and len(received) == 2
+    assert api.get("/api/artifacts?run_id=" + run["id"]).json() == []
+    with session_factory()() as session:
+        assert session.scalar(select(MemoryEntry)) is None
+
+
+def test_stop_during_report_correction_closes_stream_without_retention(monkeypatch):
+    received, closed = [], []
+
+    async def stream(self, **kwargs):
+        received.append(kwargs)
+        if len(received) == 1:
+            yield RAW_REPORT_REQUEST
+            return
+        try:
+            with session_factory()() as session:
+                request_cancel(session, session.scalar(select(Run).where(Run.executor_type == "agent")))
+                session.commit()
+            await asyncio.sleep(30)
+            yield "never"
+        finally:
+            closed.append(True)
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    api = TestClient(app)
+    agent = create(api, enabled=True, tools=["remember_report"])
+    queued = run_now(api, agent)
+    with session_factory()() as session:
+        drain(session)
+    run = workflow_step(api, queued["id"], "report")
+    assert run["status"] == "canceled" and len(received) == 2 and closed == [True]
+    assert api.get("/api/artifacts?run_id=" + run["id"]).json() == []
+    with session_factory()() as session:
+        assert session.scalar(select(MemoryEntry)) is None
+
+
+@pytest.mark.parametrize("fence,close", [("```xml", "```"), ("~~~~xml", "~~~~~")])
+def test_fenced_tool_protocol_examples_remain_valid_reports(monkeypatch, fence, close):
+    received = []
+    report = f"Protocol example:\n{fence}\n<tool_call>example</tool_call>\n{close}\nEnd of example."
+
+    async def stream(self, **kwargs):
+        received.append(kwargs)
+        yield report
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    api = TestClient(app)
+    queued = run_now(api, create(api, enabled=True))
+    with session_factory()() as session:
+        drain(session)
+    run = workflow_step(api, queued["id"], "report")
+    assert run["status"] == "succeeded" and len(received) == 1
+    artifact = api.get("/api/artifacts?run_id=" + run["id"]).json()[0]
+    assert api.get(f"/api/artifacts/{artifact['id']}/file").text == report

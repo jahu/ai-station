@@ -79,3 +79,14 @@ cannot change the target. See [retrieval bounds and retention](memory.md#explici
 ## External coding providers
 
 Coding agents can select Codex or Cursor as an exclusive project tool. Review the external-coding profile and source-sharing disclosure before activation. New external factory drafts require approval before each execution. The CLI uses its existing login/default model; the Local AI model selector applies only to Local coding. No autonomous commit, push or merge is introduced. See [contracts and verification](agent-coding-providers.md).
+
+## Final report integrity
+
+The report stage must return prose based on its actual saved observations, not
+text pretending to call tools. Raw XML tool/function requests trigger one
+correction with no tools and the same original runtime deadline. The correction
+reuses observed sources; it cannot search model-generated queries or fetch new
+URLs. Repeated invalid or empty output fails without a completed report or report
+memory. Stop closes the pending stream. Fenced protocol examples in technical
+reports remain valid; this safeguard does not establish factual accuracy. Native
+bounded tool calls still use the existing reviewed tool scopes and round limits.
