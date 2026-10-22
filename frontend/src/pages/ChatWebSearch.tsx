@@ -127,7 +127,10 @@ export function WebSearchControl({
               <p className="muted">
                 For this message: include a public page URL. The configured
                 Browser executor renders it and saves a screenshot, without
-                signing in. Use an empty search query to enable this option.
+                signing in. Questions about a page’s appearance or an
+                image-prompt brief also inspect its screenshot with an installed
+                local Vision model, which may load automatically. Use an empty
+                search query to enable this option.
               </p>
             </>
           )}

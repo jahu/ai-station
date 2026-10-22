@@ -5,6 +5,7 @@ from fastapi import HTTPException
 CHAT_ACTIONS = {
     "auto",
     "chat",
+    "page.describe",
     "github.inspect",
     "clarify",
     "image.describe",

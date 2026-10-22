@@ -132,6 +132,12 @@ Do not commit `.env` or secrets. The UI/API port is bound to localhost. Settings
 
 ## Local chat
 
+To inspect a website’s appearance in one message, turn on Web → Search options →
+**Read JavaScript pages**, include one public URL and ask about its design, colors
+or an image-prompt brief. The saved capture goes directly to an installed local
+Vision model, which may load automatically. Ordinary text reads remain lighter;
+no API key is required. See [website design questions](docs/plans/chat-website-design.md).
+
 Click the **model selector** when creating a conversation, or the model button in its header to switch. One searchable picker lists GGUFs under **llama.cpp** and models from the configured local server. Arrow keys move through that list; Enter marks a model. Choose a model and press **Use model**; a first GGUF load starts automatically, with messages waiting until it is ready. **GPU, context and advanced options** lets you choose GPUs and context size before that first load. Arrow keys move through those GPU checkboxes; Space or Enter selects the focused card. There is no inspectable allocation Run. Multiple selected GPUs share the model by layers. Stop unloads only AI Station's owned instance. Later messages automatically reload that model with its saved GPU/context settings. Image generation and other model loads can evict idle managed models; active conversations remain protected. Use Models to scan configured roots first. The Runner uses the already-installed image selected by `AI_STATION_LLAMA_IMAGE` and never pulls models or images automatically. See [runtime lifecycle](docs/managed-llama.md).
 
 Configure `AI_STATION_LLM_BASE_URL` (for example `http://127.0.0.1:11434/v1` for Ollama or `http://127.0.0.1:8080/v1` for llama.cpp) and optionally `AI_STATION_LLM_MODEL`. An existing compatible server must already be running; the private runner bridge reaches it on the host, and AI Station does not launch or reconfigure it. If required, supply its key through `AI_STATION_LLM_API_KEY`, never in the URL.

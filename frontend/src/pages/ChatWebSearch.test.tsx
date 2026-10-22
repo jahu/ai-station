@@ -189,6 +189,7 @@ it("requires an explicit rendering choice and clears it for exact search queries
   expect(checkbox.checked).toBe(false);
   fireEvent.click(checkbox);
   expect(checkbox.checked).toBe(true);
+  expect(screen.getByText(/installed local Vision model/)).toBeTruthy();
   expect(
     screen.getByText(/For this message: include a public page URL/),
   ).toBeTruthy();
