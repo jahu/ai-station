@@ -26,6 +26,7 @@ from app.connectors import HttpConnectorExecutor
 from app.cursor_executor import CursorProposalExecutor
 from app.data_agents import DataGenerateExecutor, DataResultExecutor
 from app.data_inputs import DataInspectionExecutor
+from app.email_delivery import EmailCheckExecutor, EmailSendExecutor
 from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
 from app.github_connector import GithubReadExecutor
@@ -339,6 +340,8 @@ EXECUTORS = {
     "agent_workflow": AgentWorkflowExecutor(),
     "agent_tool": AgentToolExecutor(),
     "agent_market": MarketExecutor(),
+    "email_check": EmailCheckExecutor(),
+    "email_send": EmailSendExecutor(),
     "agent_page_coding": AgentPageCodingExecutor(),
     "http_connector": HttpConnectorExecutor(),
     "github_read": GithubReadExecutor(),

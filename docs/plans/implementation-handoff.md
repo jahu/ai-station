@@ -5,7 +5,37 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current implementation — website agent build policy, 2026-10-22
+## Current continuation — reviewed email, 2026-10-22
+
+PRs #338–341 are merged. Current deployed text-reader source is `5123ca8`
+(release `.tools/ui-chat-direct-page-reading-20261022`), with schema **0029**.
+Market observations and the exact ordinary-Chat `akademia.ai` example passed real
+production acceptance; the latter also reused its source for an Instagram follow-up.
+See [page-reading status](chat-page-reading.md). Preserve the already-loaded Q4
+model/runtime and native Runner; neither needs replacement for email work.
+
+Draft PR #342 continues in `.tools/reviewed-email-delivery` on
+`feat/reviewed-email-delivery`. It adds typed TLS SMTP, operator-reviewed messages,
+immutable approval, a durable acceptance journal and settings/history UI with
+schema **0030**. This is a manual delivery foundation, not autonomous agent email.
+No external account/recipient has been used; actual SMTP protocol tests use a
+private TLS sink and synthetic credentials. Review fixes cover ASCII-safe MIME
+encoding for Polish text, stable textarea accessibility labels and invalidating
+health after credential replacement. An API regression then proved that default FastAPI validation could echo a
+credential-bearing form. Request-validation diagnostics now omit raw input and
+context. Focused checks and compiled desktop/phone acceptance are passing; final
+backend qualification must follow this fix. Frontend qualification passed 540
+tests and all lint/types/build/Compose/image gates at `fd28aee`; frontend source is
+unchanged by the validation fix, so retain that evidence and rebuild/verify the
+final backend image. Do not treat the stopped earlier backend checks as passing.
+Inspect live check handles before restarting or merging.
+Evidence/scripts: `data/acceptance/reviewed-email-delivery-20261022`.
+
+The root checkout has pre-existing Memory WIP: do not stage, reset or switch it.
+After reviewed email: scoped automatic market-agent email and stock providers,
+then remaining product-completion items. Visual website analysis remains backlog.
+
+## Earlier implementation — website agent build policy, 2026-10-22
 
 PR #337 is merged as `e13632e` and deployed. Its native/UI/image rollout passed
 LAN/loopback authentication, all persisted IDs/password, 3 worker slots,
@@ -782,3 +812,48 @@ perform applicable real read/model acceptance without replacing the operator's
 loaded runtime, and roll out through the same guarded backup/deploy workflow.
 Rendered-browser fallback and visually grounded branding analysis remain tracked
 in [the page-reading backlog](chat-page-reading.md), not silently completed.
+
+
+## Released Chat source reading; reviewed SMTP next (2026-10-22)
+
+PR #341 is merged as `157e773` and deployed from frozen source `5123ca8` in
+`.tools/ui-chat-direct-page-reading-20261022`, database 0029. Final qualification:
+1912 Python tests/nine opt-in skips, 534 UI tests, lint/types/build/Compose/image,
+exact image/asset hashes and desktop/phone Send/source-reuse acceptance. The exact
+operator prompt about akademia.ai then succeeded through production Docker
+workers and the already-loaded local Q4 model; a second Instagram prompt reused
+the same fetched source and timestamp. The first acceptance harness mislabeled
+the parent executor as `assistant`; actual `orchestrator` and Chat Runs had already
+succeeded, so only the follow-up was submitted after correcting that assertion.
+The first request was not repeated. Both answers and evidence are in
+`data/acceptance/chat-direct-page-reading-20261022/production-smoke-result.json`.
+The operator runtime identity and actual 46080 context were preserved. Public
+site text was read; rendered appearance/visual brand analysis remains separate.
+
+Next branch: `feat/reviewed-email-delivery`, `.tools/reviewed-email-delivery`,
+based on develop #341. [Reviewed SMTP](../reviewed-email.md) adds a typed existing
+Connector kind, TLS 465/587, credential references, complete message previews,
+explicit approvals and durable submission receipts (migration 0030). Scope,
+payload hashes, idempotent request IDs, cancellation, partial/unknown outcomes,
+redaction and conservative recovery are implemented. Forty-four focused backend,
+connector, maintenance and local TLS-sink tests passed. Seven focused UI/connector
+tests and lint/types passed; final full/browser qualification is still required.
+No real SMTP account is configured and no external recipient was contacted.
+Agent auto-email and stock quotes are not implemented by this foundation.
+
+Full Python qualification uses `ai-station-reviewed-email-final-20261022.service`;
+UI/Compose/image checks use `ai-station-reviewed-email-ui-20261022.service`.
+Inspect actual handles and matching source identities before restarting or
+claiming success. Evidence: `data/acceptance/reviewed-email-delivery-20261022`.
+Finish full diff review and actual compiled desktop/phone preview/approval tests
+with private adapters, then PR to develop, guarded migration/backup and rollout.
+Never send a real external test email without its concrete configured recipient
+scope. Root Memory WIP stays untouched, and main/master remain untouched.
+
+SMTP UI follow-up: email settings now expose enable/disable and confirmed removal
+of the saved connection/credential, with delivery history preserved. Nine focused
+UI/connector tests pass, including disabled controls and delete confirmation.
+The first UI-only qualification is superseded by
+`ai-station-reviewed-email-ui-final-20261022.service`; backend source remains
+frozen from `effbe6c` and its original full Python service continues unchanged.
+Do not restart that Python service due to this UI-only change.

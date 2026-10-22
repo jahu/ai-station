@@ -1,3 +1,8 @@
+import {
+  EmailConnectors,
+  type EmailConnector,
+  type SMTP,
+} from "./EmailConnectors";
 import { useId, useState, type KeyboardEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -12,6 +17,8 @@ type ConnectorInfo = {
   key: string;
   name: string;
   kind: string;
+  smtp?: SMTP;
+  updated_at: string;
   repository: string;
   url: string;
   method: string;
@@ -223,14 +230,14 @@ export default function Connectors() {
         <div>
           <h2>Connectors</h2>
           <p className="muted">
-            GitHub repositories and reviewed HTTP endpoints
+            GitHub repositories, email and reviewed HTTP endpoints
           </p>
         </div>
       </div>
       <p className="muted">
-        Connect a GitHub repository or add a reviewed public HTTP endpoint.
-        Refreshes are inspectable Runs with stored snapshots. GitHub uses your
-        existing host login; HTTP secrets stay write-only.
+        Connect a GitHub repository, configure reviewed email, or add a public
+        HTTP endpoint. Refreshes are inspectable Runs with stored snapshots.
+        GitHub uses your existing host login; HTTP secrets stay write-only.
       </p>
       <ErrorNotice
         error={
@@ -246,6 +253,18 @@ export default function Connectors() {
       ) && (
         <GithubConnectors
           rows={connectors.data?.filter((row) => row.kind === "github") ?? []}
+        />
+      )}
+      {kinds.data?.some(
+        (item) => item.kind === "email" && item.operational,
+      ) && (
+        <EmailConnectors
+          rows={
+            connectors.data?.filter(
+              (row): row is ConnectorInfo & EmailConnector =>
+                row.kind === "email" && !!row.smtp,
+            ) ?? []
+          }
         />
       )}
       {!!connectors.data?.some((row) => row.kind === "http") && (

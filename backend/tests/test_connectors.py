@@ -35,7 +35,9 @@ def test_kinds_keep_unavailable_adapters_unpublished():
     kinds = {item["kind"]: item for item in api.get("/api/connectors/kinds").json()}
     assert kinds["http"]["operational"] is True
     assert kinds["github"]["operational"] is True
-    for kind in ("browser", "email", "calendar", "social"):
+    assert kinds["email"]["operational"] is True
+    assert set(kinds["email"]["capabilities"]) == {"email.check", "email.preview", "email.send"}
+    for kind in ("browser", "calendar", "social"):
         assert kinds[kind]["operational"] is False
     rejected = api.post(
         "/api/connectors",

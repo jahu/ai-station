@@ -5,8 +5,10 @@
 > [workspace](agent-workspace.md). Website preview/build policy are deployed (#337–#338).
 > Real Local Auto website creation, preview and same-workspace follow-up passed on
 > 2026-10-22; evidence: `data/acceptance/agent-website-real-20261022`.
-> Deterministic recurring price observations and scoped real email are the next
-> workstream; see [market watch](agent-market-watch.md) for the current slice.
+> Deterministic recurring price observations are deployed (#340), including a
+> real normal-worker public quote read. Reviewed SMTP delivery is being qualified
+> separately; automatic agent email and stock providers remain next. See
+> [market watch](agent-market-watch.md) and [email](reviewed-email.md).
 
 > Current priority override (2026-10-15): [agent-first product plan](plans/agent-first-product.md).
 > Deliver local agent code/data execution, agent-oriented results and website
@@ -22,11 +24,11 @@ unchanged. See [Node project dependencies](node-project-dependencies.md).
 
 # Full-product acceptance ledger
 
-Open Chat grounding gap (operator report, 2026-10-22):
-[read a requested website](plans/chat-page-reading.md). Ordinary Chat must fetch
-the explicit URL/bare domain and ground its answer in that page, with provenance,
-instead of substituting generic search snippets. The `akademia.ai` promotional
-graphics request is the acceptance case. This is planned, not delivered.
+[Reading a requested website](plans/chat-page-reading.md) is deployed in ordinary
+Chat (#341). Explicit URL/bare-domain reading and same-source follow-up passed
+real `akademia.ai` acceptance with the local model. Rendered-page fallback and
+pixel-grounded visual analysis remain backlog; text reading must not invent
+observed colors, typography or layout.
 
 Local coding agents can explicitly read reviewed public pages before creating
 their worktree/proposal. The same Task preserves fetched sources, approval,
@@ -103,7 +105,7 @@ The target is the complete AI Station vision, reconfirmed on 2026-10-13. An impl
 | Agents and workflows | Disabled natural-language drafts, explicit activation, durable schedules, child-Run workflows, approvals, retries, notices, Skills, telemetry/scoped-memory/public-search/reviewed-GET and optional isolated public-page Browser tools and inspectable reports and project-scoped Local coding workflows, plus reviewed GitHub reads with local reports | Additional real tools and broader recurring workflows; actual scheduled telemetry/memory reports are verified |
 | Memory | Provenance/scopes, FTS, pin/edit/disable/delete, manual/automatic summaries, agent/workflow observations, explicit linked-project memory retrieval and optional embeddings | End-to-end scope and retention acceptance; retain inspectable retrieval |
 | Models and runtimes | Read-only discovery, external observations, owned multi-GPU llama.cpp, loading/unloading, presets, reload/idle eviction, health and restart | Broader runtime adapters; hardware-backed fit/context acceptance for installed models |
-| Connectors | Typed registry, permissions, secret references, operational public HTTP GET and GitHub repository/issue/PR read snapshots (also in Chat/Work) | Further GitHub account actions, email/calendar/social providers, account browser automation and approvals for consequential actions |
+| Connectors | Typed registry, permissions, secret references, operational public HTTP GET and GitHub read snapshots (also in Chat/Work); reviewed TLS SMTP with per-message approval (qualification in progress) | Further GitHub account actions, automatic agent email, calendar/social providers and account browser automation |
 | Nodes and operations | Portable Docker/native Runner, private socket, password-protected private UI access with independent device sessions, invitation records, backup/check/download, inspectable deployment/lease health | Actual Tailscale enrollment/mobile remote acceptance; safe restore and rollout; remote execution-node transport and target-aware execution |
 | UX | Dedicated workspaces, default platform assistant, command palette, keyboard/focus support, filters, inspectors and clear execution history | Broader responsive/accessibility acceptance and user-facing wording; compact composer/model catalog/contextual Work paths are delivered |
 

@@ -144,6 +144,9 @@ def transition(
 
     emit_agent_notice(session, run, target)
     sync_connector_from_run(session, run, target)
+    from app.email_delivery import sync_delivery_from_run
+
+    sync_delivery_from_run(session, run, target)
     return run
 
 

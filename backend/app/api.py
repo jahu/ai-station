@@ -9,6 +9,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
@@ -32,6 +33,7 @@ from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
 from app.data_inputs import router as data_inputs_router
 from app.db import migrate, session_factory, session_scope, utcnow
+from app.email_delivery import router as email_router
 from app.embeddings import router as embedding_router
 from app.events import event_dict, list_events
 from app.images import MAX_UPLOAD
@@ -117,6 +119,16 @@ async def local_requests(request: Request, call_next):
         response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+@app.exception_handler(RequestValidationError)
+async def invalid_request(_request, error):
+    # Model-level errors can contain the complete submitted form, including a
+    # write-only password. Keep actionable diagnostics, never input or context.
+    return JSONResponse(
+        {"detail": [{key: item[key] for key in ("loc", "msg", "type")} for item in error.errors()]},
+        status_code=422,
+    )
 
 
 @app.exception_handler(InvalidTransition)
@@ -359,6 +371,8 @@ app.include_router(chat_router)
 app.include_router(chat_reasoning_router)
 app.include_router(chat_provider_router)
 app.include_router(connector_router)
+
+app.include_router(email_router)
 app.include_router(audio_router)
 app.include_router(transcription_router)
 app.include_router(avatar_router)
