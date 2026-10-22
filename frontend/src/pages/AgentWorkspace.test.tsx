@@ -119,13 +119,13 @@ it("opens an enabled agent in its workspace and switches views without losing un
   const fetch = setup();
   await screen.findByRole("heading", { name: "Execution history" });
   expect(screen.queryByRole("heading", { name: "Definition" })).toBeNull();
-  fireEvent.click(screen.getByRole("link", { name: "Settings", exact: true }));
-  fireEvent.change(screen.getByRole("textbox", { name: "Goal", exact: true }), {
+  fireEvent.click(screen.getByRole("link", { name: "Settings" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "Goal" }), {
     target: { value: "Keep this unsaved goal" },
   });
-  fireEvent.click(screen.getByRole("link", { name: "Workspace", exact: true }));
+  fireEvent.click(screen.getByRole("link", { name: "Workspace" }));
   expect(
-    screen.queryByRole("textbox", { name: "Goal", exact: true }),
+    screen.queryByRole("textbox", { name: "Goal" }),
   ).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Go back" }));
   await waitFor(() =>
@@ -133,14 +133,13 @@ it("opens an enabled agent in its workspace and switches views without losing un
       (
         screen.getByRole("textbox", {
           name: "Goal",
-          exact: true,
         }) as HTMLTextAreaElement
       ).value,
     ).toBe("Keep this unsaved goal"),
   );
   expect(
     screen
-      .getByRole("link", { name: "Settings", exact: true })
+      .getByRole("link", { name: "Settings" })
       .getAttribute("aria-current"),
   ).toBe("page");
   expect(fetch.mock.calls.every(([, options]) => !options)).toBe(true);
