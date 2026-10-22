@@ -1,7 +1,9 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { BrowserPages } from "./BrowserPages";
 import { isBrowserResult } from "./browserResult";
+
+afterEach(cleanup);
 
 describe("rendered page evidence", () => {
   it("shows the saved screenshot, captured text and partial-page warning", () => {
@@ -60,5 +62,24 @@ describe("rendered page evidence", () => {
         ],
       }),
     ).toBe(false);
+  });
+  it("distinguishes saved Chat screenshots from model pixel analysis and new fetching", () => {
+    render(
+      <BrowserPages
+        chat
+        result={{
+          captured_at: 1000,
+          reused_from_message_id: "previous",
+          pages: [],
+        }}
+      />,
+    );
+    expect(screen.getByText("Rendered page sources")).toBeTruthy();
+    expect(
+      screen.getByText(/model has not analyzed their pixels/),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/Reused the saved capture; no new page request/),
+    ).toBeTruthy();
   });
 });

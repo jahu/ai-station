@@ -160,3 +160,41 @@ it("keeps the default online composer compact while exposing exact-query options
   fireEvent.click(screen.getByRole("button", { name: "Search options" }));
   expect(screen.queryByLabelText("Search query")).toBeNull();
 });
+
+it("requires an explicit rendering choice and clears it for exact search queries", () => {
+  function Control() {
+    const [query, setQuery] = useState("");
+    const [renderPages, setRenderPages] = useState(false);
+    return (
+      <WebSearchControl
+        compact
+        enabled
+        query={query}
+        busy={false}
+        onToggle={() => {}}
+        onQuery={setQuery}
+        renderPages={renderPages}
+        onRenderPages={setRenderPages}
+      />
+    );
+  }
+  render(<Control />);
+  expect(
+    screen.queryByRole("checkbox", { name: "Read JavaScript pages" }),
+  ).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Search options" }));
+  const checkbox = screen.getByRole("checkbox", {
+    name: "Read JavaScript pages",
+  }) as HTMLInputElement;
+  expect(checkbox.checked).toBe(false);
+  fireEvent.click(checkbox);
+  expect(checkbox.checked).toBe(true);
+  expect(
+    screen.getByText(/For this message: include a public page URL/),
+  ).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Search query"), {
+    target: { value: "public topic" },
+  });
+  expect(checkbox.checked).toBe(false);
+  expect(checkbox.disabled).toBe(true);
+});

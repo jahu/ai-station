@@ -1,6 +1,7 @@
 # Public-page browsing
 
-Browser is an optional, read-only agent tool. Enable it only with the reviewed
+Browser is an optional, read-only page tool for Agents and explicitly selected
+Chat page reading. Enable it only with the reviewed
 executor image installed locally. It renders JavaScript, records bounded visible
 text and links, and saves a 1240×800 screenshot for each reviewed public URL.
 Static HTTP GET and web search remain separate tools.
@@ -34,6 +35,12 @@ Platform assistant can edit those URLs on its attached agent definition too.
 The history shows local screenshot previews, captured plain text, public source
 links, capture time and a warning when resources were blocked or unavailable.
 Screenshots and the full JSON request audit are ordinary Library artifacts.
+
+In Chat, Web → Search options → **Read JavaScript pages** applies to the next
+message's explicit public URL. The Chat reply waits for its owned Browser child.
+Captured text grounds the answer; saved screenshots are available for the user to
+inspect. Source-backed follow-ups reuse the immutable capture without fetching it
+again. This does not enable screenshot vision analysis or account browsing.
 
 An explicit operator can also enqueue `POST /api/browser/runs` with
 `{"urls":["https://example.org/"]}`. The HTTP handler enqueues only; the worker

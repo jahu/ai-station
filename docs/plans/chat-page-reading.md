@@ -93,7 +93,37 @@ and `deployed-verification.json`. These checks do not establish visual analysis.
 
 ## Remaining backlog
 
-Add a separately permissioned rendered-browser fallback for JavaScript-only pages
-and pixel-grounded brand/style analysis with a supported vision model. A text read
-must not pretend it observed typography, colors or layout. Keep source provenance,
-Stop, bounded output and the public-address restrictions when adding this slice.
+Pixel-grounded brand/style analysis with a supported vision model remains separate
+work. A text read must not pretend it observed typography, colors or layout.
+
+## Rendered reader implementation — 2026-10-22
+
+The next slice connects the existing optional public Browser executor to ordinary
+Chat and Work replies. In Web → Search options, **Read JavaScript pages** is an
+explicit choice for one message containing a public URL or domain. It is off by
+default, incompatible with an exact search query and cleared after a successful
+Send. Web off cannot carry this grant. No URLs are taken from attachments, quoted
+examples, memory or model output. Missing scope/setup is an actionable failure;
+it never substitutes search snippets for a rendered read.
+
+The enqueue transaction freezes URLs, grants only Browser/network read and
+publishes an owned native Browser child on the same Task. Chat acquires a normal
+RunDependency on it; workers perform all rendering. The existing private Runner,
+anonymous DNS-pinned GET broker, network-disabled Chromium, resource bounds,
+ownership/Stop/cleanup and conservative recovery contracts are reused unchanged.
+Stopping the Chat Run also stops its exact owned Browser child; shared model
+loads and unrelated browser tasks are not canceled by that targeted operation.
+
+Only a successful matching child supplies a hashed canonical JSON artifact plus
+verified PNG artifacts. The selected model receives bounded visible text with
+untrusted-source instructions, not request audits or screenshot pixels. Chat
+shows screenshots and capture times, blocked-resource warnings and the distinction
+between rendered text and pixel analysis. A same-page follow-up verifies original
+answer/child/conversation ownership and artifact hashes, reusing the capture even
+when Browser is subsequently unavailable. It performs no new page request.
+
+Both static and rendered page sources can ground the existing image-brief stage;
+the generated image Run keeps the page artifact reference and receives no network
+permission. No new executor, arbitrary browser command, provider or schema is added.
+Qualification evidence belongs under `data/acceptance/chat-rendered-pages-20261022`;
+implementation alone is not a claim of rollout or real-model visual analysis.

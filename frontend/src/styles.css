@@ -4080,6 +4080,19 @@ section:has(> .memory-grid) > .dashboard-note {
   margin-top: 8px;
   font-size: 11px;
 }
+.web-search-query .web-render-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+.web-render-option input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  padding: 0;
+  accent-color: var(--accent);
+}
 .web-search-sources {
   margin: 16px 0;
   padding: 14px;

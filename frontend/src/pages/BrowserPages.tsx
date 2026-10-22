@@ -2,11 +2,17 @@ import { ExternalLink, Globe } from "lucide-react";
 
 import type { BrowserResult } from "./browserResult";
 
-export function BrowserPages({ result }: { result: BrowserResult }) {
+export function BrowserPages({
+  result,
+  chat = false,
+}: {
+  result: BrowserResult;
+  chat?: boolean;
+}) {
   return (
     <details className="web-search-sources" open>
       <summary>
-        <Globe size={15} /> Browsed pages{" "}
+        <Globe size={15} /> {chat ? "Rendered page sources" : "Browsed pages"}{" "}
         <span className="chip">{result.pages.length}</span>
       </summary>
       <p className="muted">
@@ -14,6 +20,15 @@ export function BrowserPages({ result }: { result: BrowserResult }) {
         {new Date(result.captured_at * 1000).toLocaleString()}. Page content is
         untrusted reference material.
       </p>
+      {result.reused_from_message_id && (
+        <p className="muted">Reused the saved capture; no new page request.</p>
+      )}
+      {chat && (
+        <p className="muted">
+          The answer uses captured text. Screenshots are saved for you to
+          inspect; the model has not analyzed their pixels.
+        </p>
+      )}
       <div className="web-source-grid">
         {result.pages.map((page) => (
           <article
