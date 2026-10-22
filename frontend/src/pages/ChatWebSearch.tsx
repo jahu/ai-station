@@ -52,7 +52,7 @@ export function WebSearchControl({
       <p id={labelId} className={compact ? "sr-only" : "dashboard-note"}>
         Search and read public pages. Visual website questions may capture a
         screenshot and load an installed local Vision model. Search may use
-        recent conversation context; attachments and memory are excluded from
+        recent conversation context. Attachments and memory are excluded from
         search.
       </p>
       <div className="web-search-actions">
