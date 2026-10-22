@@ -749,3 +749,36 @@ scoped SMTP/email delivery remain next work. In a separate worktree,
 `feat/chat-direct-page-reading` implements the queued Chat text-reader slice and
 same-conversation source reuse; its 62 page/search tests passed, but it still
 needs full qualification after integration and real/browser acceptance.
+
+
+## Current release and Chat reader qualification (2026-10-22, after PR #340)
+
+PR #340 is squash-merged as `43ce000` and deployed from frozen source `ae1d1cc`
+in `.tools/ui-agent-market-watch-20261022`, database head 0029. The corrected
+48-hour default passed the final 1884 Python tests/nine opt-in skips with unchanged
+source proof. UI: 532 tests and format/lint/types/build/Compose/image gates;
+subsequent test/handoff-only changes preserve all runtime/frontend sources.
+Desktop/phone actual public-quote report passed, and final image backend/asset
+hashes match the source. Production rollout preserved record IDs, operator
+credential, all ready owned model instances, private socket, three workers and
+scheduler. Evidence: `data/acceptance/agent-market-watch-20261022` including
+`deployed-verification.json`. Existing Q4 context/model was not swapped. Real
+email and stock quotes remain unimplemented.
+
+Draft PR #341: `feat/chat-direct-page-reading`, `.tools/chat-direct-page-reading`,
+now includes develop #340 by merge. It implements ordinary Chat public page
+analysis and explicit follow-up reuse, including actual Chat/Work modes and
+legacy aliases. The page/search regression suite passed 72 tests, and focused
+UI lint/types/build and 16 Chat/source tests passed before integrating the latest
+Agent styles. Compiled desktop/phone Send and source reuse passed with explicit
+fake HTTP/model adapters (not real website/model acceptance). Compact source
+cards were then made more readable and require the final compiled-browser rerun.
+No Chat-reader code is deployed yet. The full final source is qualified by
+`ai-station-chat-page-final-20261022.service`; UI/Compose/image qualification uses
+`ai-station-chat-page-ui-20261022.service`. Inspect actual live handles and
+matching results in `data/acceptance/chat-direct-page-reading-20261022` before
+restarting, merging or claiming success. After those pass, review the full PR,
+perform applicable real read/model acceptance without replacing the operator's
+loaded runtime, and roll out through the same guarded backup/deploy workflow.
+Rendered-browser fallback and visually grounded branding analysis remain tracked
+in [the page-reading backlog](chat-page-reading.md), not silently completed.

@@ -19,7 +19,13 @@ export type FetchResult = {
   pages: FetchedPage[];
 };
 
-export function FetchedPages({ result }: { result: FetchResult }) {
+export function FetchedPages({
+  result,
+  compact = false,
+}: {
+  result: FetchResult;
+  compact?: boolean;
+}) {
   const headingId = useId();
   const labelId = useId();
   const { listRef, onKeyDown, itemProps } = useListKeyboard(
@@ -29,7 +35,7 @@ export function FetchedPages({ result }: { result: FetchResult }) {
   return (
     <details className="web-search-sources" open>
       <summary>
-        <Globe size={15} /> Fetched pages{" "}
+        <Globe size={15} /> {compact ? "Page sources" : "Fetched pages"}{" "}
         <span className="chip">{result.pages.length}</span>
       </summary>
       <section aria-labelledby={headingId}>
@@ -37,15 +43,17 @@ export function FetchedPages({ result }: { result: FetchResult }) {
           Fetched pages
         </h3>
         <p className="muted">
-          Reviewed GET ·{" "}
+          {compact ? "Read from the page" : "Reviewed GET"} ·{" "}
           <time dateTime={result.fetched_at}>
             {new Date(result.fetched_at).toLocaleString()}
           </time>
-          . Excerpts are untrusted; JavaScript was not executed.
+          {compact
+            ? ". Text only; visual design was not inspected."
+            : ". Excerpts are untrusted; JavaScript was not executed."}
         </p>
         {result.pages.length ? (
           <>
-            <p id={labelId} className="dashboard-note">
+            <p id={labelId} className={compact ? "sr-only" : "dashboard-note"}>
               Arrow keys choose a page while the list is focused. Enter opens
               the selected public URL. JavaScript was not executed.
             </p>
@@ -66,11 +74,19 @@ export function FetchedPages({ result }: { result: FetchResult }) {
                   {...itemProps(i, page.url)}
                 >
                   <span className="muted">
-                    {page.status ?? "—"} · {hostname(page.url)}
+                    {compact
+                      ? hostname(page.url)
+                      : `${page.status ?? "—"} · ${hostname(page.url)}`}
                     <ExternalLink size={12} />
                   </span>
                   <strong>{page.url}</strong>
-                  <span className="muted">{pageLabel(page)}</span>
+                  <span className="muted">
+                    {compact && page.text && !page.error && !page.skipped
+                      ? page.truncated
+                        ? "Partial page text"
+                        : "Page text read"
+                      : pageLabel(page)}
+                  </span>
                 </a>
               ))}
             </div>

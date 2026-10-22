@@ -1,3 +1,4 @@
+import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import { useWebSearch } from "./useWebSearch";
 import {
   useChatDraft,
@@ -107,6 +108,8 @@ type Message = ActionResult & {
     }[];
     reasoning_text?: string;
     web_search?: WebSources;
+    page_read?: FetchResult;
+    page_read_request?: string[];
     orchestration?: boolean;
     routing_only?: boolean;
     agent_id?: string;
@@ -836,7 +839,10 @@ function Transcript({
                           message.run_status,
                         )
                         ? "No response text was returned."
-                        : "Waiting for response…"
+                        : message.metadata.page_read_request?.length &&
+                            !message.metadata.page_read
+                          ? "Preparing page analysis…"
+                          : "Waiting for response…"
                       : "")}
                 </Markdown>
               </div>
@@ -883,6 +889,9 @@ function Transcript({
                   />
                 ))}
               </div>
+              {message.role === "assistant" && message.metadata.page_read && (
+                <FetchedPages result={message.metadata.page_read} compact />
+              )}
               {message.role === "assistant" && message.metadata.web_search && (
                 <SearchSources result={message.metadata.web_search} />
               )}

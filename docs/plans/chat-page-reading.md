@@ -69,3 +69,24 @@ sources and a clear distinction between observed facts and creative suggestions.
 
 Related existing boundaries: [reviewed page coding](../agent-page-coding.md),
 [orchestrator](../orchestrator.md), [security model](../security-model.md).
+
+
+## Active implementation (2026-10-22)
+
+Branch `feat/chat-direct-page-reading`, worktree `.tools/chat-direct-page-reading`,
+is implementing the first ordinary-Chat text-read slice. Targets are frozen from
+explicit reading instructions in the user's own text, including bare domains.
+Existing DNS-pinned HTTP fetching runs inside the queued Chat executor, before
+inference, and produces its normal JSON Artifact. The assistant message shows
+fetched sources separately from search snippets. Explicit follow-ups can reuse a
+same-conversation, successful source Artifact after hash/provenance checks,
+without a new fetch or a query rewrite. Stop cancels the pending fetch. Web off
+and explicit custom search queries retain existing behavior.
+
+This branch is not released or fully qualified. Twenty-eight focused fake-provider
+API/worker tests and the combined 72-test page/search regression run passed, including
+the actual Chat mode, Work, and both legacy mode aliases. Focused frontend lint/types/build and 16 Chat/source tests also passed. No real
+website or model acceptance has been claimed. Rendered-browser fallback and pixel-grounded
+brand/style analysis remain open requirements; this text reader must never
+pretend it observed typography, colors or layout. Finish review, full checks,
+frontend/browser acceptance and PR-to-develop before deployment.
