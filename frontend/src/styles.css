@@ -6518,3 +6518,35 @@ section:has(> .memory-grid) > .dashboard-note {
     padding: 12px 0;
   }
 }
+
+.agent-workspace-policy {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  margin: 0;
+  min-width: 0;
+}
+.agent-workspace-policy legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+.agent-workspace-policy .project-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+.agent-workspace-policy p {
+  line-height: 1.6;
+  font-size: 12px;
+  margin: 8px 0 14px;
+}
+.agent-workspace-policy p:last-child {
+  margin-bottom: 0;
+}
+.agent-workspace-policy input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}

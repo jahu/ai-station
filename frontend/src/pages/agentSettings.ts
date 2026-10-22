@@ -6,6 +6,10 @@ export type AgentSettingsInput = {
   system_prompt?: string;
   model?: string | null;
   tools?: string[];
+  workspace_policy?: {
+    auto_install_dependencies?: boolean;
+    auto_validate?: boolean;
+  };
   data?: { input_artifact_ids: string[]; max_repairs: number } | null;
   permission_profile?: "agent_local" | "agent_external_coding";
   search_query?: string | null;
@@ -45,6 +49,13 @@ export function agentSettingsPayload(
     system_prompt: next.system_prompt ?? "",
     model: next.model ?? "",
     tools: next.tools ?? [],
+    ...(next.workspace_policy !== undefined
+      ? {
+          workspace_policy: next.tools?.includes("coding_local")
+            ? next.workspace_policy
+            : {},
+        }
+      : {}),
     ...(next.data !== undefined ? { data: next.data } : {}),
     ...(next.permission_profile !== undefined
       ? { permission_profile: next.permission_profile }

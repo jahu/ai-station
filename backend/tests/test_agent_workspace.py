@@ -253,3 +253,62 @@ def test_changed_scope_is_rejected_before_native_workspace_dispatch(monkeypatch,
         assert stage.status == "failed"
         assert not stage.metadata_json.get("dispatch_attempted")
         assert not session.scalars(select(Project)).all()
+
+
+def test_reviewed_new_workspace_build_policy_survives_setup_and_is_frozen():
+    client = TestClient(app)
+    policy = {"auto_install_dependencies": True, "auto_validate": True}
+    with session_factory()() as session:
+        agent, parent = start(client, workspace_policy=policy)
+        stage = setup(session, parent)
+        assert all(stage.parameters["settings"][name] is True for name in policy)
+        root = session.get(Run, parent["id"])
+        assert root.parameters["definition"]["workspace_policy"] == policy
+        native_finish(session, stage)
+        project = session.get(Project, stage.project_id)
+        assert project.auto_install_dependencies and project.auto_validate
+        nested = session.get(Run, stage.metadata_json["workspace_workflow_run_id"])
+        assert nested.parameters["definition"]["workspace_policy"] == policy
+        assert all(nested.parameters["coding_project_policy"][name] is True for name in policy)
+        assert nested.task_id == root.task_id and nested.agent_id == agent["id"]
+
+
+def test_workspace_cannot_change_reviewed_build_policy_before_adoption():
+    client = TestClient(app)
+    with session_factory()() as session:
+        _, parent = start(client, workspace_policy={"auto_validate": True})
+        stage = setup(session, parent)
+        stage.parameters = {
+            **stage.parameters,
+            "settings": {**stage.parameters["settings"], "auto_validate": False},
+        }
+        session.commit()
+        with pytest.raises(ValueError, match="reviewed build policy"):
+            native_finish(session, stage)
+        session.rollback()
+        assert not session.scalars(select(Project)).all()
+
+
+def test_existing_project_policy_is_not_changed_by_agent_workspace_preferences():
+    client = TestClient(app)
+    with session_factory()() as session:
+        project = Project(
+            name="Existing",
+            repo_path="/projects/existing",
+            auto_validate=False,
+            auto_install_dependencies=False,
+        )
+        session.add(project)
+        session.commit()
+        _, parent = start(
+            client,
+            project_id=project.id,
+            workspace_policy={"auto_validate": True, "auto_install_dependencies": True},
+        )
+        assert tick(session, "existing-project") == parent["id"]
+        preparation = session.scalar(select(Run).where(Run.parent_run_id == parent["id"]))
+        assert preparation.executor_type == "worktree_prepare"
+        policy = preparation.parameters["local_coding"]["project_check_policy"]
+        assert not policy["auto_validate"] and not policy["auto_install_dependencies"]
+        session.refresh(project)
+        assert not project.auto_validate and not project.auto_install_dependencies

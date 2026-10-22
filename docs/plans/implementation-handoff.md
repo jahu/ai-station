@@ -5,7 +5,35 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current preview candidate — 2026-10-22
+## Current implementation — website agent build policy, 2026-10-22
+
+PR #337 is merged as `e13632e` and deployed. Its native/UI/image rollout passed
+LAN/loopback authentication, all persisted IDs/password, 3 worker slots,
+scheduler/socket/source identity and preservation of the operator's actual model
+container/context. Current release:
+`.tools/ui-agent-site-preview-20261022`; actual deployment state remains in
+`data/acceptance/safety-redeploy-20261012/deployment.json`.
+
+Continue `feat/agent-owned-site-workspace` in `.tools/agent-owned-site-workspace`.
+Automatic private project setup already existed; do not reimplement it. The new
+increment fixes absent build output by adding reviewed `workspace_policy` flags
+to Agent definitions (migration **0028**) and forwarding them to the existing
+setup/dependency/check pipeline. Factory proposes them for explicit Local website
+requests, still disabled pending activation. Existing definitions default off;
+linked project policy remains authoritative. Agent settings/conversation cards
+show the possible public package downloads. Exact frozen setup policy, tool
+boundaries, API round-trip/duplicate and legacy migration tests passed. Current
+focused coverage: 133 Python and 80 UI tests; compiled desktop/mobile review/save/
+reload passed without models/workers. See [policy](../agent-website-build-policy.md).
+
+Full regression/review and the actual website generation/build/preview follow-up
+still remain. Do not claim real-model acceptance from these fixture checks, and
+preserve the operator-selected 27B Q4 instance at its current 46080 context. Root
+checkout WIP is untouched. Any eventual 0028 rollout verifier must update its
+expected schema head and compare fresh ready model instances; native source is
+unchanged from PR #337, so no Runner restart is needed for this increment.
+
+## Earlier preview candidate — 2026-10-22
 
 PR #337 has final successful local qualification: 1830 Python tests/eight opt-in
 skips; 523 UI tests; format/lint/types/build; Compose/image; exact image/backend

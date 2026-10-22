@@ -152,6 +152,16 @@ def _search_query(text: str) -> str:
     return match.group(1).strip() if match else ""
 
 
+def website_build_goal(lowered):
+    return bool(
+        re.search(r"\b(?:website|web app|stron\w*|witryn\w*)\b", lowered)
+        and re.search(
+            r"\b(?:build\w*|creat\w*|recreat\w*|clon\w*|stw[oó]rz\w*|utw[oó]rz\w*|tw[oó]rz\w*|buduj\w*|zbuduj\w*|odtw[oó]rz\w*|przebuduj\w*|tworzy\w*)\b",
+            lowered,
+        )
+    )
+
+
 def draft_agent(text: str, *, model: str = "") -> Agent:
     lowered = text.lower()
     trigger, cron_expr, interval, run_at = _schedule(lowered, text)
@@ -171,6 +181,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
     if (
         search_query
         or re.search(r"\bweb\b", lowered)
+        and not website_build_goal(lowered)
         or any(
             word in lowered for word in ("search", "internet", "news", "szukaj", "wiadomości", "wiadomosci")
         )
@@ -187,7 +198,11 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
     if re.search(
         r"\b(coding agent|write code|(?:build(?:s|ing)?|creat(?:e|es|ing)|recreat(?:e|es|ing)|clon(?:e|es|ing)) (?:a )?(?:website|web app)|implement features|agent koduj[aą]cy|pisz kod|(?:tw[oó]rz|buduj|tworzy[łl]|tworzy|buduje) stron[eęy])\b",
         lowered,
-    ) and (not tools or tools == ["http_fetch"]):
+    ) or website_build_goal(lowered):
+        wants_coding = True
+    else:
+        wants_coding = False
+    if wants_coding and (not tools or tools == ["http_fetch"]):
         chosen = (
             "codex"
             if re.search(r"\bcodex\b", lowered)
@@ -208,6 +223,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
             lowered, ("notify when waiting", "notify on approval", "powiadom o zatwierdzeniu")
         ),
     }
+    build_website = "coding_local" in tools and website_build_goal(lowered)
     agent = Agent(
         name=name,
         description=text.strip()[:500],
@@ -226,7 +242,8 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         runtime="openai-compatible",
         execution_target="container",
         memory_scope="agent",
-        maximum_runtime=600,
+        maximum_runtime=1800 if build_website else 600,
+        workspace_policy={"auto_install_dependencies": True, "auto_validate": True} if build_website else {},
         tools=tools,
         search_query=search_query,
         fetch_urls=fetch_urls,
@@ -242,7 +259,9 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         require_approval=_has(lowered, _APPROVAL) or tools in (["coding_codex"], ["coding_cursor"]),
         workflow_mode="gated" if _has(lowered, _GATED) else "sequential",
         tool_calling="bounded" if _has(lowered, _TOOL_CALLING) else "none",
-        output_expectation="A short report the user can inspect in Runs.",
+        output_expectation="A working website with passing checks, a static build and downloadable output."
+        if build_website
+        else "A short report the user can inspect in Runs.",
         notification_policy=notices,
         retry_policy={"mode": "manual" if _has(lowered, _RETRY) else "none"},
     )

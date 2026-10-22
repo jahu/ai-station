@@ -35,7 +35,10 @@ def publish_workspace(session, parent, definition, deadline):
         require(parent.effective_permissions, permission)
     with session.begin_nested():
         child = enqueue_project(
-            session, ProjectName(name=definition.name), task=parent.task, parent_run_id=parent.id
+            session,
+            ProjectName(name=definition.name, **definition.workspace_policy.model_dump()),
+            task=parent.task,
+            parent_run_id=parent.id,
         )
         parent.task.metadata_json = {
             **parent.task.metadata_json,
@@ -85,13 +88,14 @@ def reviewed_workspace(session, run):
         require(parent.effective_permissions, permission)
     for permission in ("workspace_write", "git_write"):
         require(run.effective_permissions, permission)
-    expected = ProjectName(name=definition.name)
+    expected = ProjectName(name=definition.name, **definition.workspace_policy.model_dump())
     if (
         run.parameters["settings"]["name"] != expected.name
-        or run.parameters["settings"].get("auto_install_dependencies") is not False
-        or run.parameters["settings"].get("auto_validate") is not False
+        or run.parameters["settings"].get("auto_install_dependencies")
+        is not expected.auto_install_dependencies
+        or run.parameters["settings"].get("auto_validate") is not expected.auto_validate
     ):
-        raise ValueError("Automatic workspace preparation must retain its reviewed offline policy")
+        raise ValueError("Automatic workspace preparation must retain its reviewed build policy")
     return parent, definition, agent
 
 
