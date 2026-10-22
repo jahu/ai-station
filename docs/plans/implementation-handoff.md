@@ -502,3 +502,12 @@ transport, owned process/container checks, RAM locks and build-archive validatio
 Native resource broker serves only frozen archive entries to the synthetic
 internal origin; generated JS must never execute in the authenticated UI origin.
 The original checkout WIP stays untouched. Broader platform work remains active.
+
+After CSV QA cleanup the operator loaded a separate owned model. Do not assume
+GPUs are empty: instance `4554b9cd-50af-47e9-9f94-50ab9667888e` was ready at the
+latest inspection (actual context 46080, user-triggered load at 08:34 UTC). The
+#336 deployment preserved its exact container/context against the pre-deploy
+backup; evidence `agent-code-workspace-20261022/preserved-user-runtime.json`.
+Keep that runtime while working on CPU preview. Future rollout/acceptance must
+snapshot actual ready instances immediately before changes, rather than reuse
+an empty snapshot from the earlier QA state.
