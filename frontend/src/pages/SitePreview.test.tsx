@@ -56,7 +56,7 @@ function backend({
     task_id: "inspection-task",
     status: "running",
     parameters: { source: { artifact_id: "archive" } },
-    metadata: { frame },
+    metadata: { frame, expires_at: Date.now() / 1000 + 180 },
   };
   let rejected = false;
   const fetch = vi.fn(async (path: string, options?: RequestInit) => {
@@ -81,7 +81,12 @@ function backend({
     }
     const value =
       path === "/api/runs/build"
-        ? { id: "build", task_id: "source-task", agent_id: agentId }
+        ? {
+            id: "build",
+            task_id: "source-task",
+            agent_id: agentId,
+            created_at: "2026-10-22T10:00:00Z",
+          }
         : path.includes("capabilities")
           ? { available, reason: "Preview image is not configured" }
           : path.includes("?source_task_id")
@@ -197,4 +202,15 @@ it("returns agent-generated builds to the agent workspace", async () => {
       .getByRole("link", { name: "← Back to workspace" })
       .getAttribute("href"),
   ).toBe("/agents/builder?view=workspace");
+});
+
+it("identifies the saved build and shows the live session deadline", async () => {
+  backend();
+  show();
+  await screen.findByRole("img", { name: "Preview: Counter" });
+  expect(screen.getByText(/Build captured/)).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "View checks" }).getAttribute("href"),
+  ).toBe("/runs/build");
+  expect(screen.getByText(/Session ends in [23]:[0-5][0-9]/)).toBeTruthy();
 });

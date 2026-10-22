@@ -238,6 +238,18 @@ function PreviewSession({
   const active = run && !terminal.has(run.status);
   const needsCleanup =
     !!run?.metadata?.cleanup_requires_inspection && !run?.metadata?.closed_at;
+  const expiresAt = run?.metadata?.expires_at;
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    if (!active || typeof expiresAt !== "number") return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [active, expiresAt]);
+  const remaining =
+    typeof expiresAt === "number"
+      ? Math.max(0, Math.ceil(expiresAt - now / 1000))
+      : null;
+  const capturedAt = source.data?.finished_at ?? source.data?.created_at;
   const canOpen =
     !active &&
     !needsCleanup &&
@@ -308,6 +320,14 @@ function PreviewSession({
             Explore this saved build. Your agent can keep working while you
             inspect it.
           </p>
+          {capturedAt && (
+            <small className="muted site-preview-source">
+              Build captured {new Date(capturedAt).toLocaleString()} ·{" "}
+              <Link className="text-link" to={`/runs/${sourceRunId}`}>
+                View checks
+              </Link>
+            </small>
+          )}
         </div>
         <Button variant="secondary" asChild>
           <a
@@ -323,6 +343,12 @@ function PreviewSession({
           <i className={ready ? "ready" : ""} />
           {status}
         </span>
+        {active && remaining !== null && (
+          <small className="muted">
+            Session ends in {Math.floor(remaining / 60)}:
+            {String(remaining % 60).padStart(2, "0")}
+          </small>
+        )}
         {!active && !needsCleanup ? (
           <div className="site-preview-start">
             <label>
@@ -468,6 +494,10 @@ function PreviewSession({
       </div>
       {frame && (
         <>
+          <p className="muted site-preview-footnote">
+            Click the page to focus it. Tab and Enter operate its controls;
+            Shift+Tab returns to AI Station.
+          </p>
           <div className="site-preview-controls">
             <div>
               <Button

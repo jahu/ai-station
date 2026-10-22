@@ -1,5 +1,12 @@
 # Architecture
 
+[Offline website preview](agent-site-preview.md) runs frozen successful static
+builds in a CPU-only, network-disabled native-owned Chromium container. It uses
+separate inspection Tasks and child action Runs, immutable PNG artifacts and
+confirmed cleanup before releasing resource holds. The UI never executes generated
+site JavaScript in the authenticated control-plane origin. Release qualification
+is recorded separately from implementation.
+
 Agent details separate a results-first [workspace](agent-workspace.md) from saved settings. Run now keeps progress and results on the agent; code-capable agents reuse the existing Task conversation for inline review and follow-ups. Legacy task URLs remain available.
 
 [Isolated Python execution](agent-python-execution.md) adds a typed, explicitly

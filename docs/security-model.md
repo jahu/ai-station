@@ -1,5 +1,13 @@
 # Security model
 
+[Website preview](agent-site-preview.md) is an optional explicitly configured
+native workload. It receives a bounded immutable build archive; its read-only,
+non-root Chromium container has no network, host mounts, credentials or GPU.
+Only PNG frames and typed pointer/text/key/scroll/reset actions cross the UI
+boundary. Durable action receipts prevent replay of uncertain interactions.
+Unconfirmed preview cleanup retains its exclusive/RAM reservations until an
+explicit Close reconciles native ownership. It does not grant a browsing tool.
+
 Local coding agents may explicitly combine coding with reviewed public HTTP GET.
 The linked project and URLs are part of the activated definition. Public text is
 bounded and quoted as untrusted data; source Run identity, definition and artifact

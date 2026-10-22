@@ -190,3 +190,9 @@
     margin-left: auto;
   }
 }
+
+.site-preview-source {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+}

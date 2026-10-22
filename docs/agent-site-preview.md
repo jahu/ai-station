@@ -1,10 +1,9 @@
 # Isolated interactive agent website preview
 
-Status: offline renderer plus typed Native Runner session/action ownership are
-implemented and real-tested. Control-plane Runs/resources and agent UI integration
-are still pending; the production configuration does not enable this adapter. Until all lifecycle
-contracts pass, this capability must remain unpublished/unavailable. A screenshot
-alone does not establish interactive preview completion.
+Status: native lifecycle, control-plane Runs/resources, immutable frame artifacts
+and the responsive workspace are implemented. Actual renderer, native, worker
+and desktop/mobile browser acceptance passed. Combined regression and release
+review are in progress in PR #337; production has not enabled this adapter yet.
 
 ## Product outcome
 
