@@ -26,6 +26,20 @@ unchanged. See [Node project dependencies](node-project-dependencies.md).
 
 # Full-product acceptance ledger
 
+Current evidence summary, 2026-10-22: general-agent research, local Python/data
+execution and website-building workflows are operational. Public research uses
+free search/reviewed public pages and requires no Finnhub key; finance examples
+do not define the general agent architecture. A real research agent searched for
+`llama.cpp release notes`, wrote an attributed local-model report and was paused
+when acceptance finished. Evidence:
+`data/acceptance/public-research-real-20261022/result.json`.
+
+Implementation and acceptance remain separate. The dated initial MVP report and
+timeline below are historical; their old “future” or “next” labels do not override
+the [current implementation handoff](plans/implementation-handoff.md). The ledger
+tracks the [agent-first milestone](plans/agent-first-product.md), preserving older
+Coding records without making IDE or external coding parity a release requirement.
+
 [Stock-data agents](plans/stock-price-agents.md) add user-owned Finnhub account
 configuration, explicit company/symbol lookup, reviewed stock scope and quote
 metadata, and reuse deterministic comparison/notice/email delivery. Normal
@@ -115,10 +129,10 @@ The target is the complete AI Station vision, reconfirmed on 2026-10-13. An impl
 | --- | --- | --- |
 | Shared execution | Durable Tasks, Runs, events/SSE, artifacts, worker leases, recovery, scheduling, approvals and resource locks | Extended reliability under sustained concurrent use; end-to-end acceptance for every enabled adapter |
 | Chat and assistant | Streaming compatible providers, selectable stored GGUFs/owned llama.cpp, local/external disclosure, conversation history, summaries, text/PDF attachments, default-on optional web search, typed image/coding/agent/runtime actions, live workstation inspection, bounded planner context, Generate/Edit/Recompose → Upscale, Generate → Video and search → visual brief → image workflows and inline results | Broader multi-step orchestration and practical vision-task acceptance; explicit same-conversation image-result follow-ups now reuse provenance-bound sources (installed 9B pixel inspection verified) |
-| Coding and Git | Name-only managed projects, persistent coding sessions, owned worktrees, local/Cursor/Codex bounded proposals, exploration, validation, local repair, cumulative diffs, dependency installation, reviewed commits and approved draft PR publication | Claude adapter; broader practical coding-task acceptance and fit verification across installed models (27B IQ2_XS long context, React Work, generated-lock continuation and synthetic >100 KB local-source editing now verified) |
-| Images and Library | Existing photo pipeline adapter, Generate/Edit/Recompose/Upscale, uploads, thumbnails, annotations, reversible Trash, source/derived lineage and reuse in workspaces/chat | Real acceptance for all modes/backends with supported model selection |
-| Audio, video and avatars | Wan text/image video, CPU Whisper transcription of WAV/MP3/M4A/Ogg/WebM/FLAC, Chatterbox speech and EchoMimic portrait animation adapters, typed speech → avatar workflows, inline workspaces and artifact playback | Music and broader media runtime/model selection |
-| Agents and workflows | Disabled natural-language drafts, explicit activation, durable schedules, child-Run workflows, approvals, retries, notices, Skills, telemetry/scoped-memory/public-search/reviewed-GET and optional isolated public-page Browser tools and inspectable reports and project-scoped Local coding workflows, plus reviewed GitHub reads with local reports | Additional real tools and broader recurring workflows; actual scheduled telemetry/memory reports are verified |
+| Coding and Git | Name-only managed projects, persistent coding sessions, owned worktrees, local/Cursor/Codex bounded proposals, exploration, validation, local repair, cumulative diffs, dependency installation, reviewed commits and approved draft PR publication | Standalone IDE/external coding expansion is deferred by the agent-first decision. Preserve working services; broaden practical local-agent task and model-fit acceptance. 27B long context, React Work, generated-lock continuation and >100 KB source editing are already verified |
+| Images and Library | Existing photo pipeline adapter, Generate/Edit/Recompose/Upscale, uploads, thumbnails, annotations, reversible Trash, source/derived lineage and reuse in workspaces/chat; all six initial mode/backend cases passed small real GPU smoke tests | Broader visual quality, performance and supported profile acceptance; qualify newly composed conversation workflows separately |
+| Audio, video and avatars | Wan text/image video, CPU Whisper transcription of WAV/MP3/M4A/Ogg/WebM/FLAC, Chatterbox speech and EchoMimic portrait animation adapters, typed speech → avatar workflows, inline workspaces and artifact playback | Music and broader runtime/model selection; broader lip-sync, identity and quality profiles. Real 60-second Wan draft and 30-second EchoMimic output are verified at their recorded profiles |
+| Agents and workflows | Disabled drafts, explicit activation, durable schedules, child-Run workflows, approvals/retries/notices, Skills, scoped memory, public search/reviewed GET/Browser and GitHub reports; private Local workspaces, offline Python/data processing, website generation/preview/follow-up, deterministic public crypto observations and scoped SMTP delivery | Broader recurring/general-agent composition and real operator-inbox delivery. Scheduled telemetry/memory/GitHub reports, keyless public research, CSV processing and a concrete website workflow are real-tested; SMTP uses a private test sink |
 | Memory | Provenance/scopes, FTS, pin/edit/disable/delete, manual/automatic summaries, agent/workflow observations, explicit linked-project memory retrieval and optional embeddings | End-to-end scope and retention acceptance; retain inspectable retrieval |
 | Models and runtimes | Read-only discovery, external observations, owned multi-GPU llama.cpp, loading/unloading, presets, reload/idle eviction, health and restart | Broader runtime adapters; hardware-backed fit/context acceptance for installed models |
 | Connectors | Typed registry, permissions, secret references, operational public HTTP GET and GitHub read snapshots (also in Chat/Work); reviewed TLS SMTP with per-message approval and explicitly activated scoped agent email (private-sink qualified) | Real operator-inbox delivery; further GitHub account actions, calendar/social providers and account browser automation |
@@ -126,6 +140,15 @@ The target is the complete AI Station vision, reconfirmed on 2026-10-13. An impl
 | UX | Dedicated workspaces, default platform assistant, command palette, keyboard/focus support, filters, inspectors and clear execution history | Broader responsive/accessibility acceptance and user-facing wording; compact composer/model catalog/contextual Work paths are delivered |
 
 ## Current work
+
+Actual longer-media acceptance exists and must not be repeated because an older
+plan calls it unfinished. The 60-second Wan draft produced 1440 frames at
+1280×704 with four steps; see
+`data/acceptance/long-media-20261014/real-result.json`. The 30-second EchoMimic
+case produced a fully decoded 384-pixel/eight-step video with audio and browser
+playback; see `data/acceptance/long-avatar-default-20261015/result.json`. These
+qualify concrete profiles, not cinematic quality or every duration. Recorded
+appearance/lighting drift and hand artifacts still need quality work.
 
 [Cursor review](cursor-review.md) records the concrete regressions, fixes and delivery order. Automatic destructive worktree expiry is disabled and SQLite authentication waits no longer freeze the UI. Conversation-first entry, the shared model catalog and retained Coding/Work continuity are delivered. The current handoff identifies the next implementation increment.
 

@@ -1,5 +1,13 @@
 # MVP acceptance status
 
+This is the historical initial MVP snapshot, dated below. Later “future” and
+“unfinished” statements in this file are also historical, not the current backlog.
+Use the [full-product ledger](product-completion.md) and
+[current handoff](plans/implementation-handoff.md) for today's delivered features,
+actual acceptance and next work. In particular, local pixel Vision, page reading,
+automatic summaries, longer video/avatars and local-agent Python execution have
+since been delivered; their exact verification is recorded there.
+
 Updated 2026-09-30. The first local MVP is available with the tested scope and limits in the [acceptance report](mvp-acceptance.md); this is not completion of the full product vision.
 
 | Capability | Current evidence | Remaining acceptance work |
