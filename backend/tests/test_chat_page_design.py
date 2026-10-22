@@ -257,3 +257,18 @@ def test_followup_rejects_a_broken_orchestration_source_authority(page_vision, c
         drain()
         assert api.get(route).json()["messages"][-1]["run_status"] == "failed"
         assert len(seen) == len(reports) == len(loads) == 1
+
+
+@pytest.mark.parametrize(
+    "content,action",
+    [
+        ("Create an agent that reviews the design of https://example.com/", "agent.create"),
+        ("Stwórz agenta analizującego wygląd https://example.com/", "agent.create"),
+        ("Generate an image of a design for https://example.com/", "image.generate"),
+    ],
+)
+def test_nested_website_design_words_do_not_override_the_requested_action(content, action):
+    from app.assistant import explicit_plan
+
+    params = request(content, action="auto", image_artifact_ids=[])
+    assert explicit_plan(params).action == action

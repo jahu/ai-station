@@ -506,7 +506,11 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         raise HTTPException(422, "Send image references and text documents in separate turns")
     from app.chat_page_design import requested_design_page
 
-    design_pages = requested_design_page(body.model_dump(mode="json"))
+    design_pages = (
+        requested_design_page(body.model_dump(mode="json"))
+        if selected_plan and selected_plan.action == "page.describe"
+        else None
+    )
     needs_provider = assistant_needs_provider(body)
     snapshot = snapshot_provider(session, conversation) if needs_provider else {}
     task = create_task(
@@ -605,12 +609,12 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
 def explicit_plan(params):
     from app.chat_page_design import requested_design_page
 
-    if requested_design_page(params):
-        return Plan(
-            action="page.describe", reason="Read the selected page and inspect its visual design locally."
-        )
     action = params["action"]
     if action != "auto":
+        if action == "chat" and requested_design_page(params):
+            return Plan(
+                action="page.describe", reason="Read the selected page and inspect its visual design locally."
+            )
         return Plan(action=action, reason="Using your selected action.")
     if params.get("github"):
         return Plan(action="github.inspect", reason="Read the GitHub repository you selected for this turn.")
@@ -727,6 +731,10 @@ def explicit_plan(params):
         action = "image.recompose" if len(params["image_artifact_ids"]) > 1 else "image.edit"
         return Plan(action=action, reason="Use your ordered references and edit instruction.")
     if params.get("web_search", {}).get("enabled"):
+        if requested_design_page(params):
+            return Plan(
+                action="page.describe", reason="Read the selected page and inspect its visual design locally."
+            )
         return Plan(action="chat", reason="Answer using your requested web search and local model.")
     return None
 
