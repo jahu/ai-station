@@ -1,6 +1,6 @@
 # Architecture
 
-Agent details separate a results-first [workspace](agent-workspace.md) from saved settings. Run now keeps progress and results on the agent; existing coding task links remain available for continuation.
+Agent details separate a results-first [workspace](agent-workspace.md) from saved settings. Run now keeps progress and results on the agent; code-capable agents reuse the existing Task conversation for inline review and follow-ups. Legacy task URLs remain available.
 
 [Isolated Python execution](agent-python-execution.md) adds a typed, explicitly
 permissioned container executor behind the native Runner. It snapshots approved

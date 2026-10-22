@@ -1,3 +1,10 @@
+> 2026-10-22 delivery: persistent CSV/XLSX Python agents and results-first agent
+> workspaces are deployed (#333–#335). Normal-worker CSV Auto loading/generation/
+> execution returned the verified full-file total; see [data agent evidence](python-data-agents.md).
+> Code review and follow-ups now share the existing Task inside the agent
+> [workspace](agent-workspace.md). Next: isolated website preview, then deterministic
+> recurring price observations and scoped real email delivery.
+
 > Current priority override (2026-10-15): [agent-first product plan](plans/agent-first-product.md).
 > Deliver local agent code/data execution, agent-oriented results and website
 > workflows, followed by real price observations and scoped email delivery.
