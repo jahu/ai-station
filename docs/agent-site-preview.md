@@ -201,3 +201,13 @@ It uses a disposable registered build, not an unexecuted claim about a new
 LLM-generated website. Normal focused coverage includes uncertain dispatch,
 recovery reservations, CPU admission, revision identity and Stop. Full regression,
 compiled desktop/mobile acceptance and deployment remain required before release.
+
+Compiled real-browser acceptance now passed at 1440 and 390 px using the normal
+API, workers, private native socket and actual offline Chromium. It exercised
+opening a desktop/phone viewport, a pointer action changing the page, reload
+preserving its frame, Close and confirmed process cleanup, with no horizontal
+page overflow. Screenshots and results are in
+`data/acceptance/agent-site-preview-20261022/browser-result.json`. The source is a
+disposable registered static fixture; this does not yet qualify the separate
+URL → local-model website-building workflow. Agent-generated build links return
+to the source agent workspace; standalone tasks retain their existing task route.

@@ -39,6 +39,7 @@ function backend({
   existing = true,
   failAction = false,
   available = true,
+  agentId = null as string | null,
 } = {}) {
   const requests: { path: string; body: Record<string, unknown> }[] = [];
   const frame = {
@@ -80,7 +81,7 @@ function backend({
     }
     const value =
       path === "/api/runs/build"
-        ? { id: "build", task_id: "source-task" }
+        ? { id: "build", task_id: "source-task", agent_id: agentId }
         : path.includes("capabilities")
           ? { available, reason: "Preview image is not configured" }
           : path.includes("?source_task_id")
@@ -185,4 +186,15 @@ it("shows an unavailable capability without starting any workload", async () => 
       .hasAttribute("disabled"),
   ).toBe(true);
   expect(requests).toHaveLength(0);
+});
+
+it("returns agent-generated builds to the agent workspace", async () => {
+  backend({ agentId: "builder" });
+  show();
+  await screen.findByRole("img", { name: "Preview: Counter" });
+  expect(
+    screen
+      .getByRole("link", { name: "← Back to workspace" })
+      .getAttribute("href"),
+  ).toBe("/agents/builder?view=workspace");
 });

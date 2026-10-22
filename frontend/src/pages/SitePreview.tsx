@@ -293,7 +293,13 @@ function PreviewSession({
         <div>
           <Link
             className="text-link"
-            to={source.data ? `/coding/${source.data.task_id}` : "/agents"}
+            to={
+              source.data?.agent_id
+                ? `/agents/${source.data.agent_id}?view=workspace`
+                : source.data
+                  ? `/coding/${source.data.task_id}`
+                  : "/agents"
+            }
           >
             ← Back to workspace
           </Link>

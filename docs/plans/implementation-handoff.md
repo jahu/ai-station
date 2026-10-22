@@ -613,3 +613,15 @@ The full combined regression runs under the user service
 before restarting or claiming it passed. The operator's separate Q4 model is not
 part of acceptance and must remain loaded. Full source review, UI/browser gates,
 image/Compose verification and PR/deployment are still pending.
+
+Preview integration continuation: draft PR **#337** targets `develop` from
+`feat/agent-site-preview-workspace`. Real browser acceptance passed at 1440/390:
+actual worker/socket/Chromium pointer, reload and Close, no GPU/model changes.
+Frontend final checks on `5ae3263` passed 521 tests, lint/types/build, both Compose
+configs and image build. A subsequent focused UI fix returns agent builds to
+`/agents/<id>?view=workspace` instead of the legacy Coding route and adds a
+regression test; qualify that updated head before release. The combined Python
+service above remains the authoritative running check; its result JSON may still
+contain the older collection failure until the current live process finishes.
+Do not interpret that stale result file as termination or restart a live check.
+No preview feature has been deployed yet; production remains PR #336.
