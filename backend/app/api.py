@@ -9,6 +9,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
@@ -118,6 +119,16 @@ async def local_requests(request: Request, call_next):
         response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+@app.exception_handler(RequestValidationError)
+async def invalid_request(_request, error):
+    # Model-level errors can contain the complete submitted form, including a
+    # write-only password. Keep actionable diagnostics, never input or context.
+    return JSONResponse(
+        {"detail": [{key: item[key] for key in ("loc", "msg", "type")} for item in error.errors()]},
+        status_code=422,
+    )
 
 
 @app.exception_handler(InvalidTransition)

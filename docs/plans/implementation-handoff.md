@@ -21,9 +21,14 @@ schema **0030**. This is a manual delivery foundation, not autonomous agent emai
 No external account/recipient has been used; actual SMTP protocol tests use a
 private TLS sink and synthetic credentials. Review fixes cover ASCII-safe MIME
 encoding for Polish text, stable textarea accessibility labels and invalidating
-health after credential replacement. Earlier full/UI check results predate these
-fixes and do not qualify the final source. Finish current focused/browser checks,
-freeze the reviewed head, then run full local checks before merge/deployment.
+health after credential replacement. An API regression then proved that default FastAPI validation could echo a
+credential-bearing form. Request-validation diagnostics now omit raw input and
+context. Focused checks and compiled desktop/phone acceptance are passing; final
+backend qualification must follow this fix. Frontend qualification passed 540
+tests and all lint/types/build/Compose/image gates at `fd28aee`; frontend source is
+unchanged by the validation fix, so retain that evidence and rebuild/verify the
+final backend image. Do not treat the stopped earlier backend checks as passing.
+Inspect live check handles before restarting or merging.
 Evidence/scripts: `data/acceptance/reviewed-email-delivery-20261022`.
 
 The root checkout has pre-existing Memory WIP: do not stage, reset or switch it.

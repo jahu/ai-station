@@ -431,3 +431,8 @@ DATA; uncertain outcomes cannot be automatically replayed. Accepted/partially
 accepted receipts remain truthful after late cancellation. Health checks send no
 message. Agents have no published SMTP tool in this increment; operator approval
 cannot be inferred from model output or a generic successful agent report.
+
+Request validation returns field locations, error types and actionable messages,
+but omits raw input and exception context. Model-level validation can otherwise
+echo an entire credential-bearing form, even when its password field is write-only.
+SMTP API regression tests cover both whole-form errors and invalid secret fields.

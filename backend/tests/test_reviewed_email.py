@@ -483,3 +483,26 @@ def test_replacing_smtp_credentials_invalidates_previous_health(smtp):
         )
         assert changed.status_code == 200, changed.text
         assert changed.json()["health"] == "unknown" and changed.json()["last_run_id"] is None
+
+
+@pytest.mark.parametrize("password", [SECRET, SECRET * 200])
+def test_invalid_smtp_form_never_echoes_a_submitted_password(password):
+    with TestClient(app) as api:
+        response = api.post(
+            "/api/connectors",
+            json={
+                "key": "invalid-mail",
+                "name": "Invalid mail",
+                "kind": "email",
+                "secret": password,
+                "smtp": {
+                    "host": "smtp.example.com",
+                    "sender": "station@example.com",
+                    "allowed_recipients": ["one@example.com"],
+                },
+            },
+        )
+        assert response.status_code == 422
+        assert SECRET not in response.text
+        assert response.json()["detail"][0]["msg"]
+        assert all("input" not in item and "ctx" not in item for item in response.json()["detail"])

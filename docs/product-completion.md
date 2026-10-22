@@ -5,8 +5,10 @@
 > [workspace](agent-workspace.md). Website preview/build policy are deployed (#337–#338).
 > Real Local Auto website creation, preview and same-workspace follow-up passed on
 > 2026-10-22; evidence: `data/acceptance/agent-website-real-20261022`.
-> Deterministic recurring price observations and scoped real email are the next
-> workstream; see [market watch](agent-market-watch.md) for the current slice.
+> Deterministic recurring price observations are deployed (#340), including a
+> real normal-worker public quote read. Reviewed SMTP delivery is being qualified
+> separately; automatic agent email and stock providers remain next. See
+> [market watch](agent-market-watch.md) and [email](reviewed-email.md).
 
 > Current priority override (2026-10-15): [agent-first product plan](plans/agent-first-product.md).
 > Deliver local agent code/data execution, agent-oriented results and website
@@ -22,11 +24,11 @@ unchanged. See [Node project dependencies](node-project-dependencies.md).
 
 # Full-product acceptance ledger
 
-Open Chat grounding gap (operator report, 2026-10-22):
-[read a requested website](plans/chat-page-reading.md). Ordinary Chat must fetch
-the explicit URL/bare domain and ground its answer in that page, with provenance,
-instead of substituting generic search snippets. The `akademia.ai` promotional
-graphics request is the acceptance case. This is planned, not delivered.
+[Reading a requested website](plans/chat-page-reading.md) is deployed in ordinary
+Chat (#341). Explicit URL/bare-domain reading and same-source follow-up passed
+real `akademia.ai` acceptance with the local model. Rendered-page fallback and
+pixel-grounded visual analysis remain backlog; text reading must not invent
+observed colors, typography or layout.
 
 Local coding agents can explicitly read reviewed public pages before creating
 their worktree/proposal. The same Task preserves fetched sources, approval,

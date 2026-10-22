@@ -8,7 +8,9 @@ price alerts automatically. No real account or recipient is configured by tests.
 SMTP configuration lives on the existing Connector: host, TLS transport (465 SSL
 or 587 STARTTLS), username, sender and allowed recipients. Credentials reuse the
 SecretProvider (stored file or environment reference), never database plaintext,
-model prompts, events or error strings. TLS certificate/hostname verification is
+model prompts, events or error strings. Request-validation diagnostics retain field
+locations and messages but omit raw input and context, which may include a
+write-only credential on a model-level validation error. TLS certificate/hostname verification is
 mandatory. There is no arbitrary URL, port, shell or unencrypted SMTP option.
 
 Draft creation validates the connector revision and recipient allowlist, freezes
