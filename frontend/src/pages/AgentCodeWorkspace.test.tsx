@@ -16,8 +16,19 @@ afterEach(() => {
   vi.unstubAllGlobals();
   sessionStorage.clear();
 });
-const proposal = {
+const proposal: Run = {
   id: "proposal",
+  project_id: "project",
+  parent_run_id: null,
+  execution_target: "host",
+  started_at: null,
+  finished_at: null,
+  actual_gpu: null,
+  requested_gpu: "none",
+  effective_permissions: ["workspace_write"],
+  error_type: "",
+  error_message: "",
+  worker_id: null,
   task_id: "agent-task",
   agent_id: "builder",
   executor_type: "local_proposal",
@@ -27,7 +38,7 @@ const proposal = {
   parameters: { prompt: "Create a sales report" },
   summary: "Report script created",
   metadata: { execution_location: "local" },
-} as Run;
+};
 function mount(runs: Run[]) {
   return render(
     <QueryClientProvider
