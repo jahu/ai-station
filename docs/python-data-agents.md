@@ -61,3 +61,19 @@ execution details. Automatic fixes have a saved budget of zero to two attempts.
 Inputs remain unchanged. Stop and uncertain cleanup never silently retry code.
 Model/context combinations beyond the recorded acceptance still require fit
 verification; no weights or Python packages are downloaded by generated code.
+
+## Exact model input contract
+
+The generator receives a controller-derived `runtime.input_map` whose keys are
+UUID-based input filenames and whose values are their existing sandbox paths.
+`AI_STATION_INPUTS` contains that mapping as a JSON string, not a configuration
+file, directory or nested `inputs` object. The model is given explicit decoding
+and CSV-reading examples; only the already-approved files are mapped. Repairs
+explicitly diagnose the prior stderr/error and return corrected complete source.
+This changes no permissions, mounts, output validation or retry budgets.
+
+A deployed acceptance exposed the earlier ambiguity: a Polish CSV task tried to
+open the JSON string as a filename and repeated that script. The revised contract
+passed the same instruction with six actual rows and an expected total of 150,
+including rows outside the short model preview, on the installed local model.
+Production replay is still required after this fix is deployed.
