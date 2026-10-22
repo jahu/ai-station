@@ -1,3 +1,4 @@
+import "./AgentDraftForm.css";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -101,8 +102,11 @@ export default function AgentDraftForm() {
         instructions, tools and schedule. Review them before enabling the agent.
       </p>
       {runId && (
-        <section className="panel" aria-label="Draft preparation">
-          <div className="row spread">
+        <section
+          className="panel agent-draft-progress"
+          aria-label="Draft preparation"
+        >
+          <div className="agent-draft-progress-head">
             <p role="status">
               {active ? (
                 <>
