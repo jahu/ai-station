@@ -403,3 +403,15 @@ def test_workflow_cannot_restore_withdrawn_parent_network_permission(session):
     assert session.get(Run, rid).status == "failed"
     assert "network_read" in parent.error_message
     assert not list(session.scalars(select(Run).where(Run.parent_run_id == rid)))
+
+
+def test_default_gap_allows_daily_schedule_and_network_jitter(session, monkeypatch):
+    agent = setup_agent(session)
+    now = utcnow()
+    yesterday = now - timedelta(days=1, seconds=15)
+    monkeypatch.setattr("app.market_watch.utcnow", lambda: yesterday)
+    complete(session, agent, monkeypatch, page("100", 100, yesterday))
+    monkeypatch.setattr("app.market_watch.utcnow", lambda: now)
+    runs = complete(session, agent, monkeypatch, page("110", 101, now))
+    assert runs[-1].metadata_json["market_result"]["rows"][0]["status"] == "alert"
+    assert agent.market["comparison_window_seconds"] == 172800

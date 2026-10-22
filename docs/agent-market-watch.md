@@ -18,7 +18,8 @@ than thirty seconds in the future fail, without updating the baseline.
 
 Comparison uses Decimal arithmetic and the last valid older observation in this
 agent's identical reviewed policy. The comparison window is a **maximum gap**,
-not a claim of a fixed-period return. First observations establish a baseline;
+not a claim of a fixed-period return. Its default is 48 hours so daily checks
+retain their baseline despite small scheduling/network delays. First observations establish a baseline;
 repeated, corrected or out-of-order trades cannot manufacture alerts. A policy
 change establishes a separate baseline. Threshold direction and cooldown are
 deterministic. Durable alert identity and atomic in-app delivery prevent duplicate

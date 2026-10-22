@@ -16,7 +16,7 @@ class MarketScope(BaseModel):
     )
     threshold_percent: str = Field(default="5", pattern=r"^\d{1,3}(?:\.\d{1,4})?$", max_length=8)
     direction: Literal["both", "up", "down"] = "both"
-    comparison_window_seconds: int = Field(default=86400, ge=60, le=2592000, strict=True)
+    comparison_window_seconds: int = Field(default=172800, ge=60, le=2592000, strict=True)
     cooldown_seconds: int = Field(default=3600, ge=60, le=2592000, strict=True)
 
     @field_validator("threshold_percent")

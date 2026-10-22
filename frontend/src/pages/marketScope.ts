@@ -11,6 +11,6 @@ export const DEFAULT_MARKET: MarketScope = {
   instruments: ["BTC-USD"],
   threshold_percent: "5",
   direction: "both",
-  comparison_window_seconds: 86400,
+  comparison_window_seconds: 172800,
   cooldown_seconds: 3600,
 };
