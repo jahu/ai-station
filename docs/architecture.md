@@ -1,9 +1,12 @@
 # Architecture
 
-The next agent slice is [deterministic scheduled price observations](agent-market-watch.md):
-fixed public provider reads, separate comparison/notice/report child Runs and
-durable quote/alert provenance. It reuses existing workers and schedules without
-an LLM decision or a new execution service. Email and stock adapters remain pending.
+[Deterministic price observations](agent-market-watch.md) and scoped SMTP alert
+delivery are deployed (#340, #342, #343). Fixed public source reads, comparisons,
+in-app notices, reports and mail use existing Tasks, workers, child Runs and
+Artifacts. Explicit activation grants bind automatic mail; Task-wide Stop covers
+all published submissions. There is no model-based pricing or new execution
+service. [Stock data](plans/stock-price-agents.md) is the next provider increment;
+its parser is not yet an operational connector.
 
 [Reviewed agent build preferences](agent-website-build-policy.md) extend the
 existing owned-workspace setup with frozen dependency/check automation. The flags

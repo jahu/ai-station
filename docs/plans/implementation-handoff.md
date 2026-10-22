@@ -5,41 +5,45 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current continuation — market email, 2026-10-22
+## Current continuation — stock data, 2026-10-22
 
-PR #342 is merged as `961bffc` and deployed from qualified source `e7375e7` in
-`.tools/ui-reviewed-email-delivery-20261022`, schema **0030**. Full qualification:
-1945 Python tests/nine opt-in skips, 540 UI tests, lint/types/build/Compose/image,
-exact backend/asset equality, compiled desktop/phone setup/approval/receipt flow,
-and LAN/local auth/persistence/model/worker/scheduler deployment verification.
-No native Runner or loaded model was restarted; no external mail was sent.
-Evidence: `data/acceptance/reviewed-email-delivery-20261022`.
+PR #343 is merged as `fdd7a64` and deployed from qualified source `6be4cfc` in
+`.tools/ui-market-email-alerts-20261022`, schema **0030**. Final qualification:
+1963 Python tests/nine opt-in skips, 546 UI tests, all format/lint/types/build/
+Compose/image gates, exact backend/asset equality and compiled desktop/phone
+consent, baseline, accepted/unknown, no-resend, revoke, duplicate-consent and
+nested-mail Stop flows. Deployment verified LAN/local authentication, database
+IDs (also approvals, mail receipts and market records), 3 workers, scheduler,
+private Runner source/socket and preservation of the existing model. No native
+Runner/model restart or real external email was performed. Evidence:
+`data/acceptance/market-email-alerts-20261022`.
 
-Continue `feat/market-email-alerts` in `.tools/market-email-alerts`, rebased onto
-`develop` `961bffc`. The candidate adds explicit activation consent via existing
-Approval records, a versioned SMTP scope, deterministic source-bound mail child
-Runs, no-replay receipt identity and agent/conversation settings/receipt UI.
-See [the plan](market-email-alerts.md). Final focused review passed 107
-market/agent/TLS cases and 60 UI cases. Actual compiled desktop/phone checks passed
-scope-save, unchecked consent, baseline without mail, accepted/unknown receipts,
-no resend, pause, fresh consent for duplicates and Stop of a published SMTP child.
-The private TLS sink also exercised a complete synthetic-quote workflow.
+Continue `feat/stock-price-agents` in `.tools/stock-price-agents`, based directly
+on develop `fdd7a64`. Read [the plan](stock-price-agents.md). The pure
+`stock_quotes.py` validator has 30 passing fixture tests, including exact decimal
+prices, source/status timestamps, closed-session last-known values, currency and
+symbol bounds and rejecting enormous numeric exponents before formatting.
+It is deliberately unregistered: no connector, worker, picker, factory, migration
+or network operation is operational yet. No real Finnhub credential/quote was used.
 
-Review proved that Stop on the successful dispatcher initially targeted its queued
-report and left nested mail able to submit. The first full backend check was
-explicitly stopped (not qualified). The fix uses existing Task-wide Stop for this
-market fanout and checks the stopped Task at publication/submission. Regression
-coverage includes two mail children and one previously accepted message. The UI
-has Stop current price check beside Run now. The earlier full UI pass (545 tests)
-predates that control; final current-source backend and UI qualification is next.
-Do not merge on superseded evidence or restart a confirmed live check.
-Evidence starts in `data/acceptance/market-email-alerts-20261022`.
+Next: typed market-data connector/secret/revision and queued check/symbol lookup;
+fixed-header DNS-pinned reads with canonical secret-safe artifacts; reviewed stock
+scope and observation metadata/migration; reuse compare/SMTP/Stop with correct
+quote-time/currency labels and a stock-specific template; preserve old crypto
+baseline hashes and existing grants. Canonical grant scopes must omit newly absent
+optional stock fields to avoid invalidating unchanged crypto permissions. Finish
+API/worker/desktop/phone qualification before advertising or merging the adapter.
+Normal tests never consume real financial API credits or send external mail.
+
+A request is pending for the operator to configure SMTP and approve a test
+message in the deployed UI. Continue other work while waiting; do not send to an
+external recipient yourself without concrete authorization. Record any operator
+inbox confirmation separately from the private SMTP-sink qualification.
 
 The root checkout has pre-existing Memory WIP: do not stage, reset or switch it.
-The ordinary Chat text reader (#341) and market observations (#340) already passed
-real production acceptance; visual page analysis and stock providers remain open.
-No real SMTP account/recipient is configured. Continue useful implementation and
-never label synthetic quotes/private TLS sink tests as external email acceptance.
+Chat website text reading (#341), market observations (#340) and agent mail (#343)
+are delivered; rendered visual page analysis and the broader product ledger
+remain open. The live release record is authoritative before another deployment.
 
 ## Earlier implementation — website agent build policy, 2026-10-22
 

@@ -8,8 +8,10 @@ Current direction: [agents that can execute local code](docs/plans/agent-first-p
 Chat and Agents lead the experience; existing Coding/Git services supply isolated
 workspaces and inspectable results. Standalone IDE expansion and further external
 coding CLI integrations are deferred. CSV/Excel data agents generate local Python, run it in an offline container,
-and return a verified answer, table and CSV download. Conditional email remains
-planned. See [data-agent setup and verification](docs/python-data-agents.md).
+and return a verified answer, table and CSV download. Price-watch agents can use
+[explicitly approved SMTP delivery](docs/agent-market-watch.md). Stock-provider
+integration is being built separately; see [the plan](docs/plans/stock-price-agents.md).
+See [data-agent setup and verification](docs/python-data-agents.md).
 
 **Conversation entry:** type immediately at `/` or `/chat`; the first Send creates
 the conversation. Chat supports replies and media tools; Work adds scoped project,
