@@ -75,7 +75,7 @@ export default function AgentDataFiles({
           type="file"
           accept=".csv,.xlsx"
           multiple
-          className="sr-only"
+          hidden
           tabIndex={-1}
           aria-label="Upload agent data"
           disabled={busy || ids.length >= 8}
@@ -139,6 +139,7 @@ export default function AgentDataFiles({
       <label>
         Automatic fixes
         <select
+          aria-label="Automatic fixes"
           disabled={busy || !ids.length}
           value={value?.max_repairs ?? 1}
           onChange={(event) =>

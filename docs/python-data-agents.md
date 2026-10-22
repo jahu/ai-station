@@ -45,3 +45,19 @@ an already-loaded runtime binding; automatic loading is not part of that test.
 The temporary model was unloaded afterward. Remaining checks and rollout are
 tracked in the current handoff, with evidence under
 `data/acceptance/python-data-agents-20261015/`.
+
+## Using the workspace
+
+Configure the native Runner with an existing offline Python image as described in
+[executor setup](agent-python-execution.md). Create an agent draft mentioning
+CSV or Excel, choose inputs with **Upload CSV / Excel** or **Data from Library**,
+and describe the calculation. Keep **Auto** for a fitting installed local model
+or select an installed llama.cpp model with 100k+ verified actual context. Save
+the definition, wait for input inspection, explicitly enable it and choose
+**Run now**. No repository setup is required; AI Station provisions its workspace.
+
+Results show the answer, a bounded table, **Download CSV**, Python source and
+execution details. Automatic fixes have a saved budget of zero to two attempts.
+Inputs remain unchanged. Stop and uncertain cleanup never silently retry code.
+Model/context combinations beyond the recorded acceptance still require fit
+verification; no weights or Python packages are downloaded by generated code.

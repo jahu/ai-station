@@ -20,9 +20,11 @@ Python container. The acceptance freezes an already-loaded real model binding;
 it does not prove production automatic loading for this new workflow. Original
 input bytes remained unchanged and the test model was unloaded afterward.
 
-Remaining before delivery: compiled desktop/mobile checks,
-combined regression checks, full diff review, PR to develop, migration/Runner/image
-rollout and production smoke. Do not mistake the earlier executor-only handoff or
+Compiled desktop/mobile checks passed result/download/reload and draft
+duplication/upload/save without running an agent or model. Genuine XLSX also
+exercised one real bounded repair before success. Remaining before delivery:
+combined regression checks, final PR review, migration/Runner/image rollout and
+production smoke. Do not mistake the earlier executor-only handoff or
 old status files for this feature's current result. Preserve root WIP. Do not
 restart the user-selected model just to inspect UI; acceptance-only model loads
 must be unloaded afterward if the original station was idle.
