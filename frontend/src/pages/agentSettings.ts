@@ -1,3 +1,4 @@
+import { DEFAULT_MARKET, type MarketScope } from "./marketScope";
 export type AgentSettingsInput = {
   updated_at: string;
   name: string;
@@ -10,6 +11,7 @@ export type AgentSettingsInput = {
     auto_install_dependencies?: boolean;
     auto_validate?: boolean;
   };
+  market?: MarketScope | null;
   data?: { input_artifact_ids: string[]; max_repairs: number } | null;
   permission_profile?: "agent_local" | "agent_external_coding";
   search_query?: string | null;
@@ -49,6 +51,13 @@ export function agentSettingsPayload(
     system_prompt: next.system_prompt ?? "",
     model: next.model ?? "",
     tools: next.tools ?? [],
+    ...(next.market !== undefined || next.tools?.includes("market_watch")
+      ? {
+          market: next.tools?.includes("market_watch")
+            ? (next.market ?? DEFAULT_MARKET)
+            : null,
+        }
+      : {}),
     ...(next.workspace_policy !== undefined
       ? {
           workspace_policy: next.tools?.includes("coding_local")

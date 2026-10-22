@@ -11,6 +11,7 @@ from app.agent_coding_policy import CODING_TOOLS, coding_provider, external_codi
 from app.agent_tools import AGENT_TOOLS, agent_tool
 from app.db import utcnow
 from app.http_fetch import reviewed_urls
+from app.market_schema import MarketScope
 
 
 class RetryPolicy(BaseModel):
@@ -91,6 +92,7 @@ class AgentSettings(BaseModel):
     runtime: Literal["openai-compatible"] = "openai-compatible"
     provider: Literal["local-openai-compatible"] = "local-openai-compatible"
     model: str = Field(default="", max_length=200)
+    market: MarketScope | None = None
     github: AgentGithubScope | None = None
     data: AgentDataScope | None = None
     workspace_policy: AgentWorkspacePolicy = Field(default_factory=AgentWorkspacePolicy)
@@ -118,6 +120,19 @@ class AgentSettings(BaseModel):
     @model_validator(mode="after")
     def validate_definition(self):
         self.tools = list(dict.fromkeys(self.tools))
+        if self.market is not None and self.tools != ["market_watch"]:
+            raise ValueError("Market policy belongs only to a deterministic market watch agent")
+        if "market_watch" in self.tools:
+            if (
+                self.tools != ["market_watch"]
+                or self.market is None
+                or self.tool_calling != "none"
+                or self.skills
+                or self.workflow_mode != "sequential"
+            ):
+                raise ValueError(
+                    "Market watch needs an exclusive reviewed scope, without model tools or skills"
+                )
         if (self.workspace_policy.auto_install_dependencies or self.workspace_policy.auto_validate) and (
             coding_provider(self.tools) != "local" or "python_data" in self.tools
         ):
@@ -181,7 +196,7 @@ class AgentSettings(BaseModel):
                 raise ValueError("web_search requires an explicit public search query before activation")
             if {"http_fetch", "browser"}.intersection(self.tools) and not self.fetch_urls:
                 raise ValueError("Page tools require 1 to 3 explicit public URLs before activation")
-            if not self.model and not external_coding(self.tools):
+            if not self.model and not external_coding(self.tools) and self.tools != ["market_watch"]:
                 raise ValueError("Select a local model before enabling the agent")
             unavailable = [name for name in self.tools if not agent_tool(name).operational]
             if unavailable:

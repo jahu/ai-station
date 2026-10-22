@@ -239,6 +239,7 @@ class Agent(Base):
     model: Mapped[str] = mapped_column(String(200), default="")
     search_query: Mapped[str] = mapped_column(String(500), default="")
     fetch_urls: Mapped[list] = mapped_column(JSON, default=list)
+    market: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     github: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     workspace_policy: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -498,3 +499,32 @@ class ConversationSummary(Base):
     source_message_ids: Mapped[list] = mapped_column(JSON)
     previous_summary_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+
+
+class MarketObservation(Base):
+    __tablename__ = "market_observations"
+    __table_args__ = (
+        UniqueConstraint("agent_id", "policy_key", "instrument", "trade_id", name="uq_market_trade"),
+        Index("ix_market_agent_policy", "agent_id", "policy_key"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    agent_id: Mapped[str] = mapped_column(ForeignKey("agents.id"))
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"))
+    policy_key: Mapped[str] = mapped_column(String(64))
+    instrument: Mapped[str] = mapped_column(String(16))
+    trade_id: Mapped[str] = mapped_column(String(32))
+    price: Mapped[str] = mapped_column(String(48))
+    source_at: Mapped[Any] = mapped_column(UTCDateTime)
+    observed_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    source_url: Mapped[str] = mapped_column(String(200))
+
+
+class MarketAlert(Base):
+    __tablename__ = "market_alerts"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    observation_id: Mapped[str] = mapped_column(ForeignKey("market_observations.id"), unique=True)
+    baseline_id: Mapped[str] = mapped_column(ForeignKey("market_observations.id"))
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"))
+    change_percent: Mapped[str] = mapped_column(String(80))
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    notice_id: Mapped[str | None] = mapped_column(ForeignKey("notices.id"), unique=True, nullable=True)

@@ -1,3 +1,5 @@
+import { AgentMarketEditor } from "./AgentMarketScope";
+import type { MarketScope } from "./marketScope";
 import AgentWorkspacePolicy, {
   type WorkspacePolicy,
 } from "./AgentWorkspacePolicy";
@@ -43,6 +45,7 @@ type AgentDraft = {
   system_prompt?: string;
   tools?: string[];
   data?: DataScope | null;
+  market?: MarketScope | null;
   workspace_policy?: WorkspacePolicy;
   data_readiness?: { ready: boolean; reason: string } | null;
   skills?: string[];
@@ -782,19 +785,23 @@ export function AssistantAgentDraft({
             <div>
               <dt>Model</dt>
               <dd>
-                <LlamaModels
-                  compact
-                  value={agent.model}
-                  models={provider.data?.models ?? []}
-                  triggerLabel={`Saved model ${shortId}`}
-                  tabIndex={tabIndex}
-                  busy={busy || active}
-                  onBusy={setModelBusy}
-                  onSelect={(model) => {
-                    if (model === agent.model || active) return;
-                    saveSettings.mutate({ model });
-                  }}
-                />
+                {agent.tools?.includes("market_watch") ? (
+                  <span>Deterministic · no model or GPU</span>
+                ) : (
+                  <LlamaModels
+                    compact
+                    value={agent.model}
+                    models={provider.data?.models ?? []}
+                    triggerLabel={`Saved model ${shortId}`}
+                    tabIndex={tabIndex}
+                    busy={busy || active}
+                    onBusy={setModelBusy}
+                    onSelect={(model) => {
+                      if (model === agent.model || active) return;
+                      saveSettings.mutate({ model });
+                    }}
+                  />
+                )}
               </dd>
             </div>
             <div>
@@ -984,7 +991,9 @@ export function AssistantAgentDraft({
                   }
                   name={`workflow_mode_${shortId}`}
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy || active || agent.tools?.includes("market_watch")
+                  }
                   onChange={(workflow_mode) => {
                     const current =
                       agent.workflow_mode === "gated" ? "gated" : "sequential";
@@ -1005,7 +1014,9 @@ export function AssistantAgentDraft({
                       : "none"
                   }
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy || active || agent.tools?.includes("market_watch")
+                  }
                   onChange={(tool_calling) => {
                     const current =
                       agent.tool_calling === true ||
@@ -1096,6 +1107,14 @@ export function AssistantAgentDraft({
               </dd>
             </div>
           </dl>
+          {agent.tools?.includes("market_watch") && (
+            <AgentMarketEditor
+              key={agent.updated_at}
+              value={agent.market}
+              disabled={busy || active}
+              onSave={(market) => saveSettings.mutate({ market })}
+            />
+          )}
           {agent.tools?.includes("coding_local") && (
             <AgentWorkspacePolicy
               value={agent.workspace_policy}

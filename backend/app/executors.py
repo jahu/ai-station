@@ -32,6 +32,7 @@ from app.github_connector import GithubReadExecutor
 from app.llama import LlamaExecutor, LlamaHealthExecutor
 from app.local_coding import LocalProposalExecutor
 from app.maintenance import SqliteBackupExecutor
+from app.market_watch import MarketExecutor
 from app.media_jobs import AvatarPlannerExecutor, CompositionExecutor
 from app.model_definitions import ModelInstallExecutor
 from app.model_registry import ModelDiscoveryExecutor
@@ -337,6 +338,7 @@ EXECUTORS = {
     "agent": LocalAgentExecutor(),
     "agent_workflow": AgentWorkflowExecutor(),
     "agent_tool": AgentToolExecutor(),
+    "agent_market": MarketExecutor(),
     "agent_page_coding": AgentPageCodingExecutor(),
     "http_connector": HttpConnectorExecutor(),
     "github_read": GithubReadExecutor(),

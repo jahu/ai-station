@@ -212,6 +212,28 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         tools = ["coding_" + chosen] + (["http_fetch"] if chosen == "local" and fetch_urls else [])
     if not tools and re.search(r"\b(excel|xlsx|csv|spreadsheet|arkusz)", lowered):
         tools = ["python_data"]
+    market = None
+    if (
+        not wants_coding
+        and re.search(r"\b(?:bitcoin\w*|btc|ethereum|eth)\b", lowered)
+        and re.search(r"(?:price|cen[ayę]|kurs)", lowered)
+    ):
+        from app.market_schema import MarketScope
+
+        instruments = []
+        currency = "EUR" if re.search(r"\b(?:eur|euro)\b", lowered) else "USD"
+        if re.search(r"\b(?:bitcoin\w*|btc)\b", lowered):
+            instruments.append("BTC-" + currency)
+        if re.search(r"\b(?:ethereum|eth)\b", lowered):
+            instruments.append("ETH-" + currency)
+        threshold = re.search(r"(?<![\d.,])([0-9]{1,3}(?:[.,][0-9]{1,4})?)\s*%", lowered)
+        value = threshold.group(1).replace(",", ".") if threshold else "5"
+        try:
+            market = MarketScope(instruments=instruments, threshold_percent=value).model_dump()
+        except ValueError:
+            market = MarketScope(instruments=instruments).model_dump()
+        tools = ["market_watch"]
+        fetch_urls, search_query = [], ""
     notices = {
         "on_success": _has(lowered, ("notify on success", "powiadom o sukcesie")),
         "on_failure": _has(
@@ -232,8 +254,9 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
             "Prefer local information. Do not invent tool results. "
             "Use the goal supplied with each execution."
         ),
+        market=market,
         model=""
-        if tools in (["coding_codex"], ["coding_cursor"])
+        if tools in (["coding_codex"], ["coding_cursor"], ["market_watch"])
         else "auto"
         if "coding_local" in tools or "python_data" in tools
         else model,
@@ -246,7 +269,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         tools=tools,
         search_query=search_query,
         fetch_urls=fetch_urls,
-        skills=_mentioned_skills(text),
+        skills=[] if market else _mentioned_skills(text),
         trigger=trigger,
         cron_expr=cron_expr,
         interval_seconds=interval,
@@ -256,8 +279,8 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         else "agent_local",
         enabled=False,
         require_approval=_has(lowered, _APPROVAL) or tools in (["coding_codex"], ["coding_cursor"]),
-        workflow_mode="gated" if _has(lowered, _GATED) else "sequential",
-        tool_calling="bounded" if _has(lowered, _TOOL_CALLING) else "none",
+        workflow_mode="gated" if not market and _has(lowered, _GATED) else "sequential",
+        tool_calling="bounded" if not market and _has(lowered, _TOOL_CALLING) else "none",
         output_expectation="A working website with passing checks, a static build and downloadable output."
         if build_website
         else "A short report the user can inspect in Runs.",

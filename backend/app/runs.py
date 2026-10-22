@@ -130,7 +130,9 @@ def transition(
             run.executor_type == "agent_workflow" and target == RunStatus.SUCCEEDED
         ):
             agent.last_status = target
-            if run.executor_type != "agent_tool":
+            if run.executor_type != "agent_tool" and not (
+                run.executor_type == "agent_market" and run.parameters.get("tool") != "market.report"
+            ):
                 if target in {RunStatus.FAILED, RunStatus.INTERRUPTED}:
                     agent.failure_count += 1
                 elif target == RunStatus.SUCCEEDED:

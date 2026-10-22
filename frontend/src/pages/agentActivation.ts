@@ -1,3 +1,4 @@
+import type { MarketScope } from "./marketScope";
 export type AgentToolSpec = {
   name: string;
   description: string;
@@ -32,6 +33,7 @@ export function isAgentSkillList(value: unknown): value is { id: string }[] {
 export function activationBlock(
   agent: {
     enabled: boolean;
+    market?: MarketScope | null;
     github?: { connector_id: string; repository: string } | null;
     maximum_runtime?: number;
     project_id?: string | null;
@@ -49,6 +51,13 @@ export function activationBlock(
 ): { blocked: boolean; reason: string | null } {
   if (agent.enabled) return { blocked: false, reason: null };
   const names = agent.tools ?? [];
+  const market = names.includes("market_watch");
+  if (market && (names.length !== 1 || !agent.market?.instruments.length))
+    return {
+      blocked: true,
+      reason:
+        "Review and save an exclusive price-watch policy before enabling.",
+    };
   const coding = names.filter((name) =>
     ["coding_local", "coding_cursor", "coding_codex"].includes(name),
   );
@@ -79,7 +88,7 @@ export function activationBlock(
         "Review and save the explicit external-coding permission profile before enabling.",
     };
   }
-  if (!external && !(agent.model ?? "").trim()) {
+  if (!external && !market && !(agent.model ?? "").trim()) {
     return {
       blocked: true,
       reason: "Select a local model before enabling.",

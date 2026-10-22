@@ -1,3 +1,5 @@
+import AgentMarketScope from "./AgentMarketScope";
+import { DEFAULT_MARKET, type MarketScope } from "./marketScope";
 import AgentWorkspacePolicy, {
   type WorkspacePolicy,
 } from "./AgentWorkspacePolicy";
@@ -48,13 +50,15 @@ const isCoding = (tools: string[]) =>
 const isExternalCoding = (tools: string[]) =>
   tools.some((name) => ["coding_cursor", "coding_codex"].includes(name));
 const agentModelLabel = (agent: { tools: string[]; model: string }) =>
-  isExternalCoding(agent.tools)
-    ? `${agent.tools[0] === "coding_codex" ? "Codex" : "Cursor"} · EXTERNAL · CLI default model`
-    : isCoding(agent.tools) && agent.model === "auto"
-      ? agent.tools.includes("python_data")
-        ? "Auto · local data analysis"
-        : "Auto Local Coding · 100k+ context"
-      : agent.model || "No model selected";
+  agent.tools.includes("market_watch")
+    ? "Deterministic · no model or GPU"
+    : isExternalCoding(agent.tools)
+      ? `${agent.tools[0] === "coding_codex" ? "Codex" : "Cursor"} · EXTERNAL · CLI default model`
+      : isCoding(agent.tools) && agent.model === "auto"
+        ? agent.tools.includes("python_data")
+          ? "Auto · local data analysis"
+          : "Auto Local Coding · 100k+ context"
+        : agent.model || "No model selected";
 
 type Trigger = "manual" | "interval" | "cron" | "datetime";
 interface Agent {
@@ -65,6 +69,7 @@ interface Agent {
   system_prompt: string;
   model: string;
   tools: string[];
+  market?: MarketScope | null;
   data?: DataScope | null;
   workspace_policy?: WorkspacePolicy;
   data_readiness?: { ready: boolean; reason: string } | null;
@@ -663,9 +668,11 @@ export function AgentDetail() {
     <>
       <PageTitle
         eyebrow={
-          isExternalCoding(agent.tools)
-            ? "AGENT / EXTERNAL CODING"
-            : "AGENT / LOCAL EXECUTION"
+          agent.tools.includes("market_watch")
+            ? "Deterministic · no model or GPU"
+            : isExternalCoding(agent.tools)
+              ? "AGENT / EXTERNAL CODING"
+              : "AGENT / LOCAL EXECUTION"
         }
         title={agent.name}
         action={
@@ -915,7 +922,11 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             onChange={(e) => update("name", e.target.value)}
           />
         </label>
-        {isExternalCoding(values.tools) ? (
+        {values.tools.includes("market_watch") ? (
+          <p className="muted">
+            Deterministic price watch · no model or GPU needed.
+          </p>
+        ) : isExternalCoding(values.tools) ? (
           <p className="notice">
             EXTERNAL coding uses the selected CLI's default model and existing
             login. Your goal, guidance and relevant project files are shared
@@ -982,6 +993,13 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             onSave={(project_id) => update("project_id", project_id)}
           />
         </div>
+        {values.tools.includes("market_watch") && (
+          <AgentMarketScope
+            value={values.market}
+            disabled={active || save.isPending}
+            onChange={(market) => update("market", market)}
+          />
+        )}
         {values.tools.includes("coding_local") && (
           <AgentWorkspacePolicy
             value={values.workspace_policy}
@@ -1100,16 +1118,19 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             only after a successful report. Bounded tool calling is extra
             registry calls during the report, not a shell or browser.
           </p>
-          {!isCoding(values.tools) && (
-            <ToolCallingChoiceList
-              mode={values.tool_calling ?? "none"}
-              onChange={(mode) => update("tool_calling", mode)}
+          {!isCoding(values.tools) &&
+            !values.tools.includes("market_watch") && (
+              <ToolCallingChoiceList
+                mode={values.tool_calling ?? "none"}
+                onChange={(mode) => update("tool_calling", mode)}
+              />
+            )}
+          {!values.tools.includes("market_watch") && (
+            <WorkflowModeChoiceList
+              mode={values.workflow_mode ?? "sequential"}
+              onChange={(mode) => update("workflow_mode", mode)}
             />
           )}
-          <WorkflowModeChoiceList
-            mode={values.workflow_mode ?? "sequential"}
-            onChange={(mode) => update("workflow_mode", mode)}
-          />
         </fieldset>
         <fieldset className="agent-wide">
           <legend>Retry</legend>
@@ -1280,25 +1301,45 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                   (name) =>
                     codingNames.includes(name) && !values.tools.includes(name),
                 );
-                const selected = addedCoding
-                  ? [
-                      addedCoding,
-                      ...(addedCoding === "coding_local" &&
-                      names.includes("http_fetch")
-                        ? ["http_fetch"]
-                        : []),
-                    ]
-                  : names.length === 1 && codingNames.includes(names[0])
-                    ? names
-                    : names.includes("coding_local") &&
-                        names.every((name) =>
-                          ["coding_local", "http_fetch"].includes(name),
-                        )
+                const addedMarket =
+                  names.includes("market_watch") &&
+                  !values.tools.includes("market_watch");
+                const selected = addedMarket
+                  ? ["market_watch"]
+                  : addedCoding
+                    ? [
+                        addedCoding,
+                        ...(addedCoding === "coding_local" &&
+                        names.includes("http_fetch")
+                          ? ["http_fetch"]
+                          : []),
+                      ]
+                    : names.length === 1 && codingNames.includes(names[0])
                       ? names
-                      : names.filter((name) => !codingNames.includes(name));
+                      : names.includes("coding_local") &&
+                          names.every((name) =>
+                            ["coding_local", "http_fetch"].includes(name),
+                          )
+                        ? names
+                        : names.filter(
+                            (name) =>
+                              !codingNames.includes(name) &&
+                              (names.length === 1 || name !== "market_watch"),
+                          );
                 setValues((current) => ({
                   ...current,
                   tools: selected,
+                  market: selected.includes("market_watch")
+                    ? (current.market ?? DEFAULT_MARKET)
+                    : null,
+                  ...(addedMarket
+                    ? {
+                        model: "",
+                        skills: [],
+                        tool_calling: "none" as const,
+                        workflow_mode: "sequential" as const,
+                      }
+                    : {}),
                   data: selected.includes("python_data") ? current.data : null,
                   permission_profile: isExternalCoding(selected)
                     ? "agent_external_coding"

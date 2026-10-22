@@ -86,11 +86,15 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
             and run.parameters.get("commands")
         ):
             return None
+    if run.executor_type == "agent_market" and run.parameters.get("tool") != "market.report":
+        return None
     if run.executor_type == "agent_tool":
         return None
     if run.executor_type == "agent_workflow" and status == "succeeded":
         return None
-    if (not coding and run.executor_type not in {"agent", "agent_workflow"}) or not run.agent_id:
+    if (
+        not coding and run.executor_type not in {"agent", "agent_workflow", "agent_market"}
+    ) or not run.agent_id:
         return None
     field = KIND_POLICY.get(status)
     if field is None:
