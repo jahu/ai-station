@@ -492,3 +492,43 @@ def test_external_chat_provider_creates_only_a_labelled_model_free_local_draft(m
         agent = api.get("/api/agents/" + aid).json()
         assert agent["model"] == "" and not agent["enabled"]
         assert not model[0] and detail["active_run"] is None
+
+
+def test_real_model_missing_page_scope_is_corrected_before_a_draft_is_saved(model):
+    calls, responses = model
+    incomplete = {
+        **PROPOSAL,
+        "name": "Llama.cpp Daily Digest",
+        "tools": ["web_search", "http_fetch"],
+        "fetch_urls": [],
+        "trigger": "cron",
+        "cron_expr": "0 8 * * *",
+        "interval_seconds": None,
+    }
+    responses[:] = [json.dumps(incomplete), json.dumps({**incomplete, "tools": ["web_search"]})]
+    with TestClient(app) as api:
+        run = submit(
+            api,
+            instruction="Codziennie o 08:00 UTC przygotuj podsumowanie nowości w llama.cpp z publicznych źródeł",
+        )
+        step()
+        done = state(api, run)
+        assert done["status"] == "succeeded", done["error_message"]
+        assert len(calls) == 2
+        catalog = json.loads(calls[0]["messages"][1]["content"])["operational_local_tools"]
+        assert "http_fetch" not in catalog and "browser" not in catalog
+        agent = api.get("/api/agents/" + done["metadata"]["agent_id"]).json()
+        assert agent["tools"] == ["web_search"] and agent["search_query"]
+        assert not agent["fetch_urls"] and not agent["enabled"] and agent["next_run_at"] is None
+
+
+@pytest.mark.parametrize("tool", ["web_search", "http_fetch", "browser"])
+def test_selected_tools_with_missing_required_scope_never_publish_an_unusable_draft(model, tool):
+    _, responses = model
+    responses[:] = [json.dumps({**PROPOSAL, "tools": [tool], "search_query": "", "fetch_urls": []})]
+    with TestClient(app) as api:
+        run = submit(api, instruction="Review public information at https://example.com/")
+        step()
+        assert state(api, run)["status"] == "failed"
+        with session_factory()() as session:
+            assert not list(session.scalars(select(Agent)))

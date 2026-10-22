@@ -14,6 +14,10 @@ validation and remain disabled with no next run. The model cannot provide UUIDs,
 credentials, account bindings, project paths, external coding, permission profiles
 or activation flags. Fetch URLs must be copied from current user input; generated
 search queries are proposals for review, never submitted during preparation.
+Page tools are omitted from the drafting catalog when the user supplied no public
+URL. A selected page tool must have an explicit reviewed URL, and selected public
+search must have a proposed query; otherwise the bounded correction runs before
+any draft is saved.
 
 Existing controller-derived market scopes may be preserved for a recognized
 explicit quote-watch request; the model cannot change their instruments, thresholds

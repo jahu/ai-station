@@ -81,18 +81,28 @@ inspect the actual `production-smoke-result.json` and output review before claim
 that GPU workflow passed. Existing six-mode small real image smoke coverage is
 historical evidence; broader visual quality/profile acceptance remains distinct.
 
-Current increment: [local AI-assisted drafts](assisted-agent-drafts.md),
-`feat/assisted-agent-drafts` in `.tools/assisted-agent-drafts`. Agents prepares
-reviewable definitions through a queued local JSON Run; local-provider Work
-agent requests reuse that service as a child on their current Task. The legacy
-model-free path remains explicit; other Chat providers use a labelled quick draft
-without external inference. Generated scopes cannot activate tools, provide IDs,
-change parsed market policies or invent fetch URLs. Model/schema errors permit
-one bounded correction, with inspectable responses and no agent on failure/Stop.
-Qualification is pending under `data/acceptance/assisted-agent-drafts-20261023`;
-do not claim this candidate is deployed or real-tested until its evidence exists.
-The #352 real graphic/Upscale acceptance has now passed and restored the original
-owned model preset; the inspected images have a documented Polish-lettering gap.
+[Local AI-assisted drafts](assisted-agent-drafts.md), PR #354, are merged as
+`686044a` and deployed from source `46887d3`. Local qualification passed 2186
+Python tests/nine skips, 570 UI tests, all lint/format/types/build, Compose, exact
+Docker source/assets and compiled desktop/phone Agents/Work workflows. Chat now
+shows compact model/tools/schedule review cards; the full editor remains explicit.
+
+Real local inference prepared a disabled daily llama.cpp research draft, but it
+also selected http_fetch without a supplied URL. Pre-activation inspection caught
+that incomplete scope; no research workflow was enabled or executed. The QA agent
+is paused, the QA conversation archived and the original owned model preset
+restored. This real smoke is **not passed**. Evidence:
+`data/acceptance/assisted-agent-drafts-20261023/production-smoke-result.json`.
+
+Active fix: `fix/assisted-agent-scopes` in `.tools/fix-assisted-agent-scopes`.
+Exclude page tools from the drafting catalog without current user URLs and
+validate required page/search scope before publication, using the existing single
+bounded correction. Preserve disabled data/GitHub drafts that still require user
+input selection and the explicit legacy quick path. Add the actual model's
+missing-URL combination as a regression, qualify through local checks/PR to
+develop, deploy and repeat real acceptance against the fixed release only.
+The original #354 failed acceptance and its source remain recorded; do not report
+it as a successful research agent. Full-product work remains active.
 
 Continue the [full-product ledger](../product-completion.md) and
 [agent-first milestone](agent-first-product.md): practical general-agent workflows,
