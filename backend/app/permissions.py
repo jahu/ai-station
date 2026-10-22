@@ -37,6 +37,7 @@ ALL_PERMISSIONS = sorted(
         "git_write",
         "network_read",
         "github_read",
+        "market_data_read",
         "network_external",
         "shell_project_commands",
         "email_read",

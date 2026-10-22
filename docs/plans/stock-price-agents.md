@@ -78,3 +78,15 @@ external mail remains separately scoped; a fake provider or private SMTP sink is
 not live market/account acceptance. No real Finnhub key or quote was used when
 writing this plan and parser. Current production and backups remain recorded in
 `data/acceptance/safety-redeploy-20261012/deployment.json`.
+
+
+## Implementation checkpoint
+
+The account adapter, queued check/search, stock scope and migration 0031, quote
+workflow, source metadata, closed-session comparison, separate stock-email
+template and shared desktop/phone controls are implemented on this feature branch.
+Focused fake-account/worker/SMTP and UI tests pass. Qualification and rollout
+evidence is recorded under `data/acceptance/stock-price-agents-20261022`; only
+executed checks in that evidence establish release readiness. No real finance
+account was used. The first source profile supports only known NASDAQ/NYSE-family
+USD listing labels; unknown exchanges fail closed instead of borrowing US hours.

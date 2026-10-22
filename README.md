@@ -9,8 +9,10 @@ Chat and Agents lead the experience; existing Coding/Git services supply isolate
 workspaces and inspectable results. Standalone IDE expansion and further external
 coding CLI integrations are deferred. CSV/Excel data agents generate local Python, run it in an offline container,
 and return a verified answer, table and CSV download. Price-watch agents can use
-[explicitly approved SMTP delivery](docs/agent-market-watch.md). Stock-provider
-integration is being built separately; see [the plan](docs/plans/stock-price-agents.md).
+[explicitly approved SMTP delivery](docs/agent-market-watch.md). Finnhub stock-data accounts, explicit symbol lookup and deterministic stock alerts
+use the same workflow and delivery contracts; see
+[the plan](docs/plans/stock-price-agents.md). A user-owned API key is required;
+no real stock account or external inbox delivery has been tested.
 See [data-agent setup and verification](docs/python-data-agents.md).
 
 **Conversation entry:** type immediately at `/` or `/chat`; the first Send creates

@@ -86,7 +86,10 @@ def test_invalid_or_nonrecent_open_session_quote_cannot_become_an_observation(qu
         normalize(quote=quote)
 
 
-@pytest.mark.parametrize("profile", [{"currency": "EUR"}, {"ticker": "OTHER"}, {"name": "x" * 201}])
+@pytest.mark.parametrize(
+    "profile",
+    [{"currency": "EUR"}, {"ticker": "OTHER"}, {"name": "x" * 201}, {"exchange": "LONDON STOCK EXCHANGE"}],
+)
 def test_profile_identity_and_currency_are_checked(profile):
     with pytest.raises(StockQuoteError):
         normalize(profile=profile)

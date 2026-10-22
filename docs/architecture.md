@@ -496,3 +496,16 @@ the authenticated UI origin; no public preview port is introduced.
 SMTP connector. It reuses SecretProvider references, operator previews/approvals,
 ordinary Tasks/Runs and a durable delivery journal; no Host Runner or shell API is
 needed for SMTP. Automated agent email remains a separately scoped integration.
+
+
+### Stock-data account execution
+
+[Stock agents](plans/stock-price-agents.md) extend the deterministic price workflow.
+Named `market_data` connectors store write-only Finnhub credential references.
+Handlers enqueue account-check/symbol-search Runs; `market_feed` workers use fixed
+DNS-pinned endpoints and return canonical bounded artifacts. Stock quote children
+require both network-read and account-read permissions. The selected account
+revision, symbols, provider timestamps/currency/session and approval scope are
+frozen and revalidated before notification. Migration 0031 adds source metadata
+without replacing crypto history or changing its policy hashes/template IDs.
+Deployment requires full local qualification and reviewed integration through develop.

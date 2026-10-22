@@ -22,6 +22,11 @@ from app.runs import create_run
 
 ACTION = "agent.email.enable"
 TEMPLATE = "market-threshold-v1"
+STOCK_TEMPLATE = "stock-threshold-v1"
+
+
+def template(scope):
+    return STOCK_TEMPLATE if scope.provider == "finnhub" else TEMPLATE
 
 
 class MarketEmailPolicyError(ValueError):
@@ -65,14 +70,20 @@ def target(session, scope):
 
 
 def scope_payload(session, agent_id, scope):
+    from app.market_feeds import validate_stock_scope
+
+    try:
+        validate_stock_scope(session, scope)
+    except ValueError as exc:
+        raise MarketEmailPolicyError(str(exc)) from exc
     connector, config = target(session, scope)
     return {
         "agent_id": str(agent_id),
-        "scope": scope.model_dump(mode="json"),
+        "scope": scope.model_dump(mode="json", exclude_none=True),
         "connector_id": connector.id,
         "sender": config.sender,
         "recipients": scope.email.recipients,
-        "template": TEMPLATE,
+        "template": template(scope),
     }
 
 
@@ -164,6 +175,24 @@ def authorization_public(session, agent):
 
 
 def alert_message(alert, observation, baseline):
+    if (observation.source_metadata or {}).get("provider") == "finnhub":
+        metadata = observation.source_metadata
+        return {
+            "subject": f"AI Station: {observation.instrument} moved {alert.change_percent}%",
+            "body": (
+                "AI Station stock price alert\n\n"
+                f"Instrument: {observation.instrument}\nCurrency: {metadata['currency']}\n"
+                f"Previous price: {baseline.price}\nCurrent price: {observation.price}\n"
+                f"Change: {alert.change_percent}%\n"
+                f"Previous provider quote time: {baseline.source_at.isoformat()}\n"
+                f"Current provider quote time: {observation.source_at.isoformat()}\n"
+                f"Market session: {metadata['market_session']}; {metadata['freshness'].replace('_', ' ')}\n"
+                f"Fetched: {observation.observed_at.isoformat()}\n"
+                f"Source: {observation.source_url}\n\n"
+                "Compared with the previous valid observation within the approved maximum gap.\n"
+                f"Alert ID: {alert.id}\n"
+            ),
+        }
     return {
         "subject": f"AI Station: {observation.instrument} moved {alert.change_percent}%",
         "body": (
@@ -210,6 +239,9 @@ def alert_source(session, run, alert_id):
         and row.get("baseline_id") == baseline.id
         and row.get("change_percent") == alert.change_percent
         and row.get("status") == "alert"
+        and row.get("price") == observation.price
+        and row.get("baseline_price") == baseline.price
+        and row.get("source_url") == observation.source_url
         for row in comparison.metadata_json.get("market_result", {}).get("rows", [])
     )
     if (
@@ -220,6 +252,20 @@ def alert_source(session, run, alert_id):
         or observation.instrument not in scope.instruments
     ):
         raise MarketEmailPolicyError("Email has no recorded threshold crossing in its reviewed scope")
+    if scope.provider == "finnhub":
+        from app.stock_quotes import source_url
+
+        for source in (observation, baseline):
+            metadata = source.source_metadata or {}
+            if (
+                metadata.get("provider") != "finnhub"
+                or metadata.get("currency") != "USD"
+                or metadata.get("source_time_kind") != "provider_quote"
+                or metadata.get("connector_id") != str(scope.feed.connector_id)
+                or metadata.get("connector_revision") != scope.feed.connector_revision
+                or source.source_url != source_url("quote", source.instrument)
+            ):
+                raise MarketEmailPolicyError("Stock email is missing its reviewed data-source provenance")
     return alert, observation, baseline
 
 
@@ -248,13 +294,16 @@ def queue_alert(session, notify_run, definition, alert_id):
         expected_id=parent.parameters.get("market_email_approval_id"),
     )
     alert, observation, baseline = alert_source(session, notify_run, alert_id)
-    delivery_id = str(uuid5(UUID(alert.id), TEMPLATE))
+    message_template = template(definition.market)
+    delivery_id = str(uuid5(UUID(alert.id), message_template))
     existing = session.get(EmailDelivery, delivery_id)
     if existing:
         if existing.payload.get("market_alert", {}).get("alert_id") != alert.id:
             raise MarketEmailPolicyError("Alert receipt identity is occupied by another message")
         return existing
-    if notify_run.status != "running" or not -30 <= (utcnow() - observation.source_at).total_seconds() <= 300:
+    from app.market_watch import observation_fresh
+
+    if notify_run.status != "running" or not observation_fresh(observation, now=utcnow()):
         raise MarketEmailPolicyError("Price alert expired before SMTP publication")
     connector, config = target(session, definition.market)
     envelope = alert_message(alert, observation, baseline)
@@ -264,7 +313,7 @@ def queue_alert(session, notify_run, definition, alert_id):
         "recipients": definition.market.email.recipients,
         **envelope,
         "connector_fingerprint": fingerprint(connector),
-        "market_alert": {"alert_id": alert.id, "approval_id": consent.id, "template": TEMPLATE},
+        "market_alert": {"alert_id": alert.id, "approval_id": consent.id, "template": message_template},
     }
     child = create_run(
         session,
@@ -333,7 +382,7 @@ def validate_submission(session, run, receipt):
     if (
         not isinstance(reference, dict)
         or reference != receipt.payload.get("market_alert")
-        or reference.get("template") != TEMPLATE
+        or reference.get("template") not in {TEMPLATE, STOCK_TEMPLATE}
         or notify is None
         or notify.status != "succeeded"
         or notify.executor_type != "agent_market"
@@ -343,6 +392,8 @@ def validate_submission(session, run, receipt):
     ):
         raise MarketEmailPolicyError("Email is missing its successful alert-publication stage")
     scope = MarketScope.model_validate(notify.parameters["definition"]["market"])
+    if reference["template"] != template(scope):
+        raise MarketEmailPolicyError("Alert email template does not match its approved source")
     authorization(session, session.get(Agent, run.agent_id), scope, expected_id=reference.get("approval_id"))
     parent = session.get(Run, notify.parent_run_id)
     if (
@@ -355,13 +406,15 @@ def validate_submission(session, run, receipt):
         raise MarketEmailPolicyError("Alert authorization does not match its frozen workflow")
     alert, observation, baseline = alert_source(session, notify, reference.get("alert_id"))
     connector, config = target(session, scope)
+    from app.market_watch import observation_fresh
+
     if (
-        receipt.id != str(uuid5(UUID(alert.id), TEMPLATE))
+        receipt.id != str(uuid5(UUID(alert.id), template(scope)))
         or receipt.payload["connector_id"] != connector.id
         or receipt.payload["sender"] != config.sender
         or receipt.payload["recipients"] != scope.email.recipients
         or any(receipt.payload[k] != v for k, v in alert_message(alert, observation, baseline).items())
-        or not -30 <= (utcnow() - observation.source_at).total_seconds() <= 300
+        or not observation_fresh(observation, now=utcnow())
         or utcnow() >= datetime.fromisoformat(run.parameters["deadline_at"])
     ):
         raise MarketEmailPolicyError(

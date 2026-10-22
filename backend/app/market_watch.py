@@ -31,7 +31,9 @@ STEPS = ("market.quote", "market.compare", "market.notify", "market.report")
 
 def policy_key(scope: MarketScope) -> str:
     return hashlib.sha256(
-        json.dumps(scope.model_dump(exclude={"email"}), sort_keys=True).encode()
+        json.dumps(
+            scope.model_dump(mode="json", exclude={"email"}, exclude_none=True), sort_keys=True
+        ).encode()
     ).hexdigest()
 
 
@@ -73,6 +75,11 @@ def parse_quote(page, instrument, *, now):
 
 
 def publish_market_steps(session, parent, definition):
+    from app.market_feeds import stock_permissions, validate_stock_scope
+
+    validate_stock_scope(session, definition.market)
+    for permission in stock_permissions(definition.market):
+        require(parent.effective_permissions, permission)
     require(parent.effective_permissions, "network_read")
     if definition.market.email is not None:
         require(parent.effective_permissions, "email_send")
@@ -95,7 +102,7 @@ def publish_market_steps(session, parent, definition):
                 "tool": key,
                 "deadline_at": deadline,
             },
-            permissions=["network_read"]
+            permissions=["network_read"] + stock_permissions(definition.market)
             if key == "market.quote"
             else (
                 ["email_send", "network_external"]
@@ -140,16 +147,25 @@ def sibling_result(session, run, step):
 def observe(session, run, definition, deadline):
     require(run.effective_permissions, "network_read")
     scope = definition.market
-    response = asyncio.run(
-        execute_fetch(session, run, [source_url(pair) for pair in scope.instruments], deadline=deadline)
-    )
+    if scope.provider == "finnhub":
+        from app.market_feeds import read_stock_quotes
+
+        response = asyncio.run(read_stock_quotes(session, run, scope, deadline))
+    else:
+        response = asyncio.run(
+            execute_fetch(session, run, [source_url(pair) for pair in scope.instruments], deadline=deadline)
+        )
     if response is None:
         return None
     now = utcnow()
-    quotes = [
-        parse_quote(page, pair, now=now)
-        for pair, page in zip(scope.instruments, response["pages"], strict=True)
-    ]
+    quotes = (
+        response["quotes"]
+        if scope.provider == "finnhub"
+        else [
+            {**parse_quote(page, pair, now=now), "source_url": source_url(pair), "source_metadata": {}}
+            for pair, page in zip(scope.instruments, response["pages"], strict=True)
+        ]
+    )
     key = policy_key(scope)
     ids = []
     for quote in quotes:
@@ -163,13 +179,14 @@ def observe(session, run, definition, deadline):
         )
         if row is not None:
             if Decimal(row.price) != Decimal(quote["price"]) or row.source_at != quote["source_at"]:
-                raise ValueError("Provider changed an already recorded trade; inspect the source")
+                raise ValueError(
+                    "Provider changed an already recorded source observation; inspect the source"
+                )
         else:
             row = MarketObservation(
                 agent_id=run.agent_id,
                 run_id=run.id,
                 policy_key=key,
-                source_url=source_url(quote["instrument"]),
                 observed_at=now,
                 **quote,
             )
@@ -177,6 +194,37 @@ def observe(session, run, definition, deadline):
             session.flush()
         ids.append(row.id)
     return {"observation_ids": ids, "source_artifact_id": response["artifact_id"], "policy_key": key}
+
+
+def observation_fresh(row, *, now=None):
+    now = now or utcnow()
+    metadata = row.source_metadata or {}
+    if not metadata:
+        return -30 <= (now - row.source_at).total_seconds() <= 300
+    if (
+        metadata.get("provider") != "finnhub"
+        or metadata.get("currency") != "USD"
+        or metadata.get("source_time_kind") != "provider_quote"
+        or metadata.get("freshness") not in {"recent", "last_known"}
+        or type(metadata.get("market_open")) is not bool
+        or metadata.get("market_session") not in {"regular", "pre-market", "post-market", "closed"}
+        or not -30 <= (now - row.observed_at).total_seconds() <= 300
+    ):
+        return False
+    from app.stock_quotes import source_url as stock_url
+
+    if row.source_url != stock_url("quote", row.instrument) or row.trade_id != str(
+        int(row.source_at.timestamp())
+    ):
+        return False
+    try:
+        status_at = datetime.fromisoformat(metadata["market_status_at"])
+        if status_at.tzinfo is None or not -30 <= (now - status_at).total_seconds() <= 300:
+            return False
+    except (KeyError, TypeError, ValueError):
+        return False
+    regular = metadata["market_open"] and metadata["market_session"] == "regular"
+    return -30 <= (now - row.source_at).total_seconds() <= (300 if regular else 604800)
 
 
 def compare(session, run, definition):
@@ -197,7 +245,8 @@ def compare(session, run, definition):
             "observation_id": current.id,
             "instrument": current.instrument,
             "price": current.price,
-            "currency": current.instrument.split("-")[1],
+            "currency": (current.source_metadata or {}).get("currency") or current.instrument.split("-")[1],
+            "source_metadata": current.source_metadata or {},
             "source_at": current.source_at.isoformat(),
             "observed_at": current.observed_at.isoformat(),
             "source_url": current.source_url,
@@ -220,7 +269,7 @@ def compare(session, run, definition):
         )
         if current.run_id != source.id:
             item["status"] = "repeated"
-        elif not -30 <= (utcnow() - current.source_at).total_seconds() <= 300:
+        elif not observation_fresh(current):
             item["status"] = "stale"
         elif previous is not None:
             gap = (current.source_at - previous.source_at).total_seconds()
@@ -307,7 +356,7 @@ def notify(session, run, definition):
             or observation.policy_key != policy_key(definition.market)
         ):
             raise ValueError("Notification has no matching reviewed comparison")
-        if alert.notice_id is None and not -30 <= (utcnow() - observation.source_at).total_seconds() <= 300:
+        if alert.notice_id is None and not observation_fresh(observation):
             item["status"] = "stale_before_delivery"
             continue
         if alert.notice_id is None:
@@ -370,7 +419,13 @@ def report(session, run):
         "email_sent": any(r["state"] in {"accepted", "accepted_partial"} for r in email_receipts),
     }
     for item in result["rows"]:
-        text += f"- [{item['instrument']}]({item['source_url']}): last-trade time {item['source_at']}; fetched {item['observed_at']}. Observation `{item['observation_id']}`.\n"
+        source_kind = (
+            "provider quote time"
+            if item.get("source_metadata", {}).get("source_time_kind") == "provider_quote"
+            else "last-trade time"
+        )
+        freshness = item.get("source_metadata", {}).get("freshness", "recent")
+        text += f"- [{item['instrument']}]({item['source_url']}): {source_kind} {item['source_at']}; {freshness.replace('_', ' ')}; fetched {item['observed_at']}. Observation `{item['observation_id']}`.\n"
     with tempfile.NamedTemporaryFile(mode="w+", suffix=".md") as handle:
         handle.write(text)
         handle.flush()
@@ -397,6 +452,9 @@ class MarketExecutor:
             return "done"
         try:
             definition = AgentSettings.model_validate(run.parameters["definition"])
+            from app.market_feeds import validate_stock_scope
+
+            validate_stock_scope(session, definition.market)
             parent = session.get(Run, run.parent_run_id)
             step = run.parameters.get("tool")
             if (

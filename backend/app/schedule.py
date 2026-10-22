@@ -44,6 +44,9 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
     definition = definition or AgentSettings.model_validate(
         {key: getattr(agent, key) for key in AgentSettings.model_fields} | {"enabled": False}
     )
+    from app.market_feeds import stock_permissions, validate_stock_scope
+
+    validate_stock_scope(session, definition.market)
     if (
         not definition.model
         and not external_coding(definition.tools)
@@ -120,6 +123,7 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
             "steps": steps,
         },
         permissions=effective_permissions(definition.tools)
+        + stock_permissions(definition.market)
         + (["email_send", "network_external"] if market_email_approval else []),
         retry_class="inspect",
         triggered_by=triggered_by,

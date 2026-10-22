@@ -80,6 +80,7 @@ interface Agent {
   model: string;
   tools: string[];
   market?: MarketScope | null;
+  market_readiness?: { ready: boolean; reason: string | null } | null;
   market_email_authorization?: MarketEmailAuthorization | null;
   data?: DataScope | null;
   workspace_policy?: WorkspacePolicy;

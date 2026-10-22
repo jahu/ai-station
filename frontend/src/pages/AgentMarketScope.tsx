@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Button } from "../components/ui/button";
 
 import { DEFAULT_MARKET, type MarketScope } from "./marketScope";
+import StockInstruments from "./StockInstruments";
 
 export default function AgentMarketScope({
   value,
@@ -18,33 +19,66 @@ export default function AgentMarketScope({
     <fieldset className="agent-wide agent-market-policy" disabled={disabled}>
       <legend>Price watch</legend>
       <p className="muted">
-        Coinbase last-trade prices. Calculations run locally without a model or
-        GPU. Choose your instruments, threshold and alert delivery below.
+        Calculations run locally without a model or GPU. Choose your price
+        source, instruments, threshold and alert delivery below.
       </p>
-      <div className="market-instruments" role="group" aria-label="Instruments">
-        {["BTC-USD", "BTC-EUR", "ETH-USD", "ETH-EUR"].map((pair) => (
-          <label className="project-checkbox" key={pair}>
-            <input
-              type="checkbox"
-              checked={current.instruments.includes(pair)}
-              disabled={
-                current.instruments.includes(pair)
-                  ? current.instruments.length === 1
-                  : current.instruments.length >= 3
-              }
-              onChange={(e) =>
-                onChange({
-                  ...current,
-                  instruments: e.target.checked
-                    ? [...current.instruments, pair].sort()
-                    : current.instruments.filter((item) => item !== pair),
-                })
-              }
-            />
-            {pair.replace("-", " / ")}
-          </label>
-        ))}
-      </div>
+      <label>
+        Price source
+        <select
+          aria-label="Price source"
+          value={current.provider}
+          onChange={(event) =>
+            onChange({
+              ...current,
+              provider: event.target.value as MarketScope["provider"],
+              feed: null,
+              instruments: event.target.value === "finnhub" ? [] : ["BTC-USD"],
+              comparison_window_seconds:
+                event.target.value === "finnhub" ? 604800 : 172800,
+            })
+          }
+        >
+          <option value="coinbase_exchange">Crypto · Coinbase</option>
+          <option value="finnhub">Stocks · Finnhub</option>
+        </select>
+      </label>
+      {current.provider === "finnhub" ? (
+        <StockInstruments value={current} onChange={onChange} />
+      ) : (
+        <>
+          <p className="muted">
+            Coinbase last-trade prices. No account needed.
+          </p>
+          <div
+            className="market-instruments"
+            role="group"
+            aria-label="Instruments"
+          >
+            {["BTC-USD", "BTC-EUR", "ETH-USD", "ETH-EUR"].map((pair) => (
+              <label className="project-checkbox" key={pair}>
+                <input
+                  type="checkbox"
+                  checked={current.instruments.includes(pair)}
+                  disabled={
+                    current.instruments.includes(pair)
+                      ? current.instruments.length === 1
+                      : current.instruments.length >= 3
+                  }
+                  onChange={(e) =>
+                    onChange({
+                      ...current,
+                      instruments: e.target.checked
+                        ? [...current.instruments, pair].sort()
+                        : current.instruments.filter((item) => item !== pair),
+                    })
+                  }
+                />
+                {pair.replace("-", " / ")}
+              </label>
+            ))}
+          </div>
+        </>
+      )}
       <div className="market-policy-grid">
         <label>
           Alert when change reaches (%)
@@ -115,11 +149,19 @@ export default function AgentMarketScope({
       <MarketEmailSettings value={current} onChange={onChange} />
       <p className="muted">
         Compares with the previous valid observation within this gap. The first
-        reading sets a baseline. Stale or repeated trades never trigger alerts.
-        Choose when to check under Schedule. Changing this policy starts a new
-        baseline. Saving a changed price or delivery policy pauses the agent for
-        review.
+        reading sets a baseline. Stale or repeated source observations never
+        trigger alerts. Choose when to check under Schedule. Changing this
+        policy starts a new baseline. Saving a changed price or delivery policy
+        pauses the agent for review.
       </p>
+      {current.provider === "finnhub" && (
+        <p className="muted">
+          Regular-session quotes must be recent. When the market is closed, the
+          last known quote can be up to seven days old and keeps its actual
+          provider timestamp. The default seven-day comparison gap covers a
+          normal weekend. No trades are placed.
+        </p>
+      )}
     </fieldset>
   );
 }
@@ -140,6 +182,8 @@ export function AgentMarketEditor({
     /^\d{1,3}(?:\.\d{1,4})?$/.test(draft.threshold_percent) &&
     Number(draft.threshold_percent) > 0 &&
     Number(draft.threshold_percent) <= 100 &&
+    (draft.provider === "coinbase_exchange" ||
+      (!!draft.feed && draft.instruments.length > 0)) &&
     (!draft.email || draft.email.recipients.length > 0) &&
     [draft.comparison_window_seconds, draft.cooldown_seconds].every(
       (seconds) =>

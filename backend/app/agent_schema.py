@@ -188,6 +188,14 @@ class AgentSettings(BaseModel):
         except ValueError as exc:
             raise ValueError(str(exc)) from exc
         if self.enabled:
+            if (
+                self.market is not None
+                and self.market.provider == "finnhub"
+                and (self.market.feed is None or not self.market.instruments)
+            ):
+                raise ValueError(
+                    "Review a stock-data account and select 1 to 3 stock symbols before activation"
+                )
             if "github_read" in self.tools and (self.github is None or self.maximum_runtime < 70):
                 raise ValueError("GitHub reading needs a reviewed repository and at least 70 seconds runtime")
             if "project_memory" in self.tools and not self.project_id:

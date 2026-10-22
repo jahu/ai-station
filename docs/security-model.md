@@ -445,3 +445,24 @@ Pause revokes it, duplication cannot inherit it, and settings/credential changes
 require review again. Only immutable threshold provenance can create an automatic
 mail Run; no model-supplied body or recipient is accepted. See
 [market email plan](plans/market-email-alerts.md) for current qualification status.
+
+
+## Read-only stock-data accounts
+
+Finnhub access uses a typed `market_data` connector and fixed public endpoints,
+not a caller-supplied host or token URL. HTTP handlers only save configuration or
+enqueue normal check/search Runs. Workers require `network_read` and
+`market_data_read`, retrieve the write-only SecretProvider credential, use the
+DNS-pinned TLS reader and persist only validated canonical subsets. Cross-origin
+redirects drop credential headers; redirected/oversized/unrecognized responses
+are not accepted as stock evidence. Provider errors and credential echoes are
+not saved. Missing/changed credentials block scoped agents and pending mail.
+An account health check proves only its actual endpoint, not quote entitlements.
+
+Account revision, symbols, thresholds and optional email recipients are reviewed
+together. No account is selected automatically from natural-language intent.
+Stock observations keep currency, provider quote time, market-state time and
+fetch time distinct. Unknown listing exchanges cannot borrow US market hours.
+Pause remains available after a credential change. Task Stop, uncertain worker
+recovery, immutable alert/template identities and SMTP acceptance receipts reuse
+the existing contracts; no trading or implicit retry is introduced.

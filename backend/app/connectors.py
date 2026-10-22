@@ -67,6 +67,12 @@ KINDS = (
         "summary": "TLS SMTP with reviewed recipients, message previews, approval and durable delivery receipts.",
     },
     {
+        "kind": "market_data",
+        "operational": True,
+        "capabilities": ["market.check", "market.search", "market.quote"],
+        "summary": "Finnhub US stock data through a saved account; endpoint checks do not prove symbol entitlements.",
+    },
+    {
         "kind": "calendar",
         "operational": False,
         "capabilities": [],
@@ -95,7 +101,8 @@ class ConnectorWrite(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     key: str = Field(min_length=2, max_length=80)
     name: str = Field(min_length=1, max_length=200)
-    kind: Literal["http", "github", "email"] = "http"
+    kind: Literal["http", "github", "email", "market_data"] = "http"
+    market_provider: Literal["finnhub"] | None = None
     url: str = Field(default="", max_length=2000)
     repository: str = Field(default="", max_length=140)
     smtp: SMTPSettings | None = None
@@ -107,6 +114,8 @@ class ConnectorWrite(BaseModel):
     def validate_connector(self):
         if not _KEY.fullmatch(self.key):
             raise ValueError("Choose a unique lowercase connector key")
+        if self.kind != "market_data" and self.market_provider is not None:
+            raise ValueError("Market provider belongs only to market data connectors")
         if self.kind == "email":
             if self.smtp is None or self.url or self.repository:
                 raise ValueError("Email requires SMTP configuration, without HTTP URL or repository")
@@ -114,6 +123,13 @@ class ConnectorWrite(BaseModel):
                 raise ValueError("SMTP username and credential must be configured together")
         elif self.smtp is not None:
             raise ValueError("SMTP configuration belongs only to email connectors")
+        elif self.kind == "market_data":
+            if self.market_provider != "finnhub" or self.url or self.repository:
+                raise ValueError("Choose Finnhub without a custom URL or repository")
+            if self.secret is not None:
+                from app.market_feeds import credential
+
+                credential(self.secret)
         elif self.kind == "github":
             self.repository = repository_name(self.repository)
             if self.url or self.secret or self.secret_ref:
@@ -180,6 +196,7 @@ def connector_dict(row: Connector) -> dict:
             if row.kind == "email"
             else {}
         ),
+        **market_feed_public(row),
         "capabilities": list(row.capabilities),
         "status": row.status,
         "health": row.health,
@@ -188,6 +205,17 @@ def connector_dict(row: Connector) -> dict:
         "created_at": iso(row.created_at),
         "updated_at": iso(row.updated_at),
         **public_secret(row.secret_ref),
+    }
+
+
+def market_feed_public(row):
+    if row.kind != "market_data":
+        return {}
+    from app.market_feeds import connector_revision
+
+    return {
+        "market_provider": row.config_json.get("provider"),
+        "market_policy_revision": connector_revision(row),
     }
 
 
@@ -201,14 +229,28 @@ def get_connector(session: Session, connector_id: UUID) -> Connector:
 def active_check(session: Session, connector_id: str, *, excluding: str | None = None) -> Run | None:
     for run in session.scalars(
         select(Run).where(
-            Run.executor_type.in_(["http_connector", "github_read", "email_send", "email_check"]),
+            Run.executor_type.in_(
+                [
+                    "http_connector",
+                    "github_read",
+                    "email_send",
+                    "email_check",
+                    "market_feed",
+                    "agent_market",
+                    "agent_workflow",
+                ]
+            ),
             Run.status.not_in(TERMINAL),
         )
     ):
+        market = (run.parameters.get("definition") or {}).get("market") or {}
+        feed = market.get("feed") or {}
         if (
             run.id != excluding
             and run.status not in TERMINAL
-            and run.parameters.get("connector_id") == connector_id
+            and (
+                run.parameters.get("connector_id") == connector_id or feed.get("connector_id") == connector_id
+            )
         ):
             return run
     return None
@@ -230,7 +272,9 @@ def apply_secret(row: Connector, *, secret_ref: str | None = None, secret: str |
 
 
 def sync_connector_from_run(session: Session, run: Run, status: str) -> None:
-    if run.executor_type not in {"http_connector", "github_read", "email_check"}:
+    if run.executor_type not in {"http_connector", "github_read", "email_check", "market_feed"}:
+        return
+    if run.executor_type == "market_feed" and run.parameters.get("operation") != "check":
         return
     connector_id = (run.parameters or {}).get("connector_id")
     row = session.get(Connector, connector_id) if connector_id else None
@@ -242,7 +286,12 @@ def sync_connector_from_run(session: Session, run: Run, status: str) -> None:
         row.status, row.health = "failed", "unhealthy"
     elif status == "canceled":
         row.status = "ready" if row.health == "healthy" else "unconfigured"
-    if active_check(session, row.id, excluding=run.id):
+    other = active_check(session, row.id, excluding=run.id)
+    if other and (
+        row.kind != "market_data"
+        or other.executor_type == "market_feed"
+        and other.parameters.get("operation") == "check"
+    ):
         row.status = "checking"
     row.updated_at = utcnow()
 
@@ -276,6 +325,8 @@ def create(body: ConnectorWrite, session: DB):
         capabilities=list(spec["capabilities"]),
         config_json={"smtp": body.smtp.model_dump()}
         if body.kind == "email"
+        else {"provider": body.market_provider}
+        if body.kind == "market_data"
         else {"repository": body.repository}
         if body.kind == "github"
         else {"url": body.url, "method": "GET"},
@@ -298,8 +349,18 @@ def edit(connector_id: UUID, body: ConnectorPatch, session: DB):
     row = get_connector(session, connector_id)
     if active_check(session, row.id):
         raise HTTPException(409, "Cancel or finish the connector operation before editing this connector")
-    if row.kind == "email" and body.expected_updated_at != row.updated_at:
-        raise HTTPException(409, "Email settings changed; refresh and review before saving")
+    if row.kind in {"email", "market_data"} and body.expected_updated_at != row.updated_at:
+        raise HTTPException(409, "Connector settings changed; refresh and review before saving")
+    if row.kind == "market_data":
+        if body.url is not None or body.repository is not None or body.smtp is not None:
+            raise HTTPException(422, "Stock data does not accept custom URLs, repositories or SMTP")
+        if body.secret is not None:
+            from app.market_feeds import credential
+
+            try:
+                credential(body.secret)
+            except ValueError as exc:
+                raise HTTPException(422, str(exc)) from exc
     if body.smtp is not None:
         if row.kind != "email":
             raise HTTPException(422, "SMTP configuration belongs only to email connectors")
@@ -340,6 +401,16 @@ def edit(connector_id: UUID, body: ConnectorPatch, session: DB):
         from app.market_email import rotate_connector_revision
 
         rotate_connector_revision(row)
+    if row.kind == "market_data" and (
+        body.secret is not None
+        or body.secret_ref is not None
+        or body.clear_secret
+        or body.enabled is not None
+    ):
+        from app.market_feeds import rotate_connector_revision
+
+        rotate_connector_revision(row)
+        row.status, row.health, row.last_run_id = "unconfigured", "unknown", None
     apply_secret(row, secret_ref=body.secret_ref, secret=body.secret, clear=body.clear_secret)
     row.updated_at = utcnow()
     session.commit()
@@ -360,6 +431,10 @@ def remove(connector_id: UUID, session: DB):
 def check(connector_id: UUID, session: DB):
     row = get_connector(session, connector_id)
     kind_spec(row.kind)
+    if row.kind == "market_data":
+        from app.market_feeds import enqueue
+
+        return enqueue(session, row, "check")
     if row.kind == "email":
         from app.email_delivery import enqueue_check
 
