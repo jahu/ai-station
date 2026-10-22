@@ -1,7 +1,7 @@
 # Continue from an image result
 
 In Chat or Work, a direct follow-up such as `Powiększ to`, `Upscale the previous
-image`, `Zmień ten obraz: dodaj kapelusz` or `Ożyw ten obraz: spokojny ruch kamery`
+image`, `Opisz tę grafikę`, `Zmień ten obraz: dodaj kapelusz` or `Ożyw ten obraz: spokojny ruch kamery`
 can reuse a completed generated image in the same conversation. `Animate it into
 a 5 second video` uses the normal long-video duration contract. Sending creates
 a new ordinary Task/Run, retaining source-artifact lineage; it never overwrites
@@ -10,7 +10,11 @@ source link. Generation still happens in the worker and remains cancellable.
 
 Resolution runs before intent enqueue, only for explicit referential commands
 with Auto action and no conflicting selected input/tool/research scope. Explicit
-attachments and existing coding-task bindings take precedence. General discussion,
+attachments and existing coding-task bindings take precedence. Ordinary Web
+availability does not block media references or selected non-research media tools;
+the effective media request has Web off without changing the composer preference.
+An exact search query or explicit JavaScript request remains a conflicting scope.
+A disabled saved query does not become an active research grant. General discussion,
 negation, implicit pronouns in arbitrary text and a bare `Upscale` do not select
 an old image. The selected provider is not changed and no external permission is
 inferred. The existing Chat/Work capability policy still applies.
@@ -21,7 +25,10 @@ conversation and Task. Internal media frames are excluded. In a generation →
 upscale chain, source/derived lineage selects the final image. Multiple independent
 results require explicit Use in next prompt instead of a guess. A trashed or
 unsuccessful latest result is rejected without silently falling back to an older
-one. Uploaded sources by themselves are not generated results.
+one. An image task that failed without publishing any image also blocks fallback.
+A generic **Describe it** inspects pixels only when the current result is the
+image; it cannot reach past a newer text answer to inspect an old picture.
+Uploaded sources by themselves are not generated results.
 
 The resolved artifact/message/producer IDs are stored in user-message metadata,
 and the source IDs are snapshotted in Run parameters. First-Send receipt hashing

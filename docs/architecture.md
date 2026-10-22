@@ -18,6 +18,12 @@ composes the existing local Vision action with a verified saved capture. Its
 Markdown artifact binds the selected PNG and page JSON; follow-ups can reuse the
 attributed pixel observation without a new browser or inference engine.
 
+[Natural image continuations](plans/conversational-graphics.md) reuse verified
+page observations in the existing image-brief/photo chain. Image references and
+selected media actions treat ordinary Web as availability, while exact research
+scope remains explicit. Request receipts and conversation preferences are preserved;
+there is no new executor, schema or execution boundary.
+
 [Deterministic price observations](agent-market-watch.md) and scoped SMTP alert
 delivery are deployed (#340, #342, #343). Fixed public source reads, comparisons,
 in-app notices, reports and mail use existing Tasks, workers, child Runs and

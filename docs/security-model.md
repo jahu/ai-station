@@ -27,6 +27,14 @@ message and file hashes before later Chat reuse. An image selected from another
 conversation cannot inherit that conversation's DOM text. No source content grants
 tools or changes model/runtime permissions. See [the design](plans/page-screenshot-vision.md).
 
+[Natural media continuations](plans/conversational-graphics.md) bind only an
+explicit current referential command to the same conversation's verified image.
+Ordinary Web availability is removed from the effective non-research media action,
+without changing the original receipt or global preference. Exact search queries,
+explicit rendering, selected inputs and worktree scopes keep precedence. No page,
+attachment, model output or memory can select an action or image ID. Existing
+trash/status/unique-final-image checks and typed local execution still apply.
+
 [Website preview](agent-site-preview.md) is an optional explicitly configured
 native workload. It receives a bounded immutable build archive; its read-only,
 non-root Chromium container has no network, host mounts, credentials or GPU.

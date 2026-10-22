@@ -156,6 +156,13 @@ check and generation are cancellable Runs. See [local thinking](docs/chat-thinki
 
 ## Images
 
+After a page/design prompt, **Wygeneruj tę grafikę** selects the existing image
+workflow and reuses verified page observations. After an image result, **Opisz tę
+grafikę**, **Powiększ tę grafikę**, **Edit this image: …** or **Animate it** can use
+that conversation's final image. Ordinary Web can stay available; an explicit
+search query or JavaScript option keeps its research scope. See
+[natural image continuations](docs/plans/conversational-graphics.md).
+
 Set `AI_STATION_PHOTO_PYTHON` and `AI_STATION_PHOTO_SCRIPT` to absolute paths for the existing Python environment and `photo_pipe.py`; `AI_STATION_SD_CLI` helps diagnostics. Restart AI Station after changing configuration. The original script remains independent and unchanged.
 
 Open Images, select an operation and GPU (or Auto), and submit. Arrow keys choose Generate, Edit, Recompose or Upscale; Space or Enter selects it with a unique Operation name and does not queue a Run. There is no inspectable operation Run. Edit, Recompose and Upscale still force Qwen. For Generate, arrow keys choose Qwen or Juggernaut; Space or Enter selects it with a unique Backend name and does not queue a Run. There is no inspectable backend Run. Arrow keys choose that GPU target; Space or Enter selects it with a unique Target GPU name and does not queue a Run. There is no inspectable GPU-target Run. The worker creates an ordinary Run, reserves a discovered GPU, and calls the native runner. Generation shows its live state, Stop and the finished image in place; the Run inspector remains available for logs. The result's Run ID is preserved in the URL for reopening after navigation or refresh. Shared source/derived lineage uses the same Library graph; Enter inspects the related artifact and does not invent a lineage Run. Edit, Recompose and Upscale on that result stage it as the next source without queueing a Run. Completed images also remain in Library with actual dimensions, parameters, and source links. Library actions reuse an image for Edit, Recompose, or Upscale. Those operations can also attach existing Library images from the workspace without another upload; arrow keys move through that picker and Enter selects or deselects. Arrow keys also move through staged sources; Remove stays on the selected image and Enter does not queue a Run. There is no inspectable source Run. Uploads accept PNG/JPEG/WebP up to 20 MiB and 64 megapixels; upscale output is capped at 64 megapixels. Qwen's existing pipeline does not use seed/negative-prompt controls, so those controls appear only for Juggernaut.
