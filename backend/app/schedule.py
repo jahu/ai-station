@@ -79,6 +79,11 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
 
         require_runtime()
         data_inputs = freeze_inputs(session, definition.data)
+    market_email_approval = None
+    if definition.market is not None and definition.market.email is not None:
+        from app.market_email import authorization
+
+        market_email_approval = authorization(session, agent, definition.market).id
     task = create_task(
         session,
         title=agent.name,
@@ -111,9 +116,11 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
             ),
             "endpoint": endpoint,
             "skill_snapshots": skill_snapshots,
+            **({"market_email_approval_id": market_email_approval} if market_email_approval else {}),
             "steps": steps,
         },
-        permissions=effective_permissions(definition.tools),
+        permissions=effective_permissions(definition.tools)
+        + (["email_send", "network_external"] if market_email_approval else []),
         retry_class="inspect",
         triggered_by=triggered_by,
     )

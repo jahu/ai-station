@@ -89,7 +89,11 @@ def workflow_view(session, run: Run) -> dict | None:
         if child.executor_type in {"agent_tool", "agent", "browser", "github_read", "agent_market"}
     ]
     definition = parent.parameters.get("definition") or {}
-    if coding_provider(definition.get("tools", [])) is not None:
+    if (
+        coding_provider(definition.get("tools", [])) is not None
+        or definition.get("tools") == ["market_watch"]
+        and (definition.get("market") or {}).get("email")
+    ):
         children = list(
             session.scalars(
                 select(Run)

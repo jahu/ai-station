@@ -30,7 +30,9 @@ STEPS = ("market.quote", "market.compare", "market.notify", "market.report")
 
 
 def policy_key(scope: MarketScope) -> str:
-    return hashlib.sha256(json.dumps(scope.model_dump(), sort_keys=True).encode()).hexdigest()
+    return hashlib.sha256(
+        json.dumps(scope.model_dump(exclude={"email"}), sort_keys=True).encode()
+    ).hexdigest()
 
 
 def source_url(instrument: str) -> str:
@@ -72,6 +74,9 @@ def parse_quote(page, instrument, *, now):
 
 def publish_market_steps(session, parent, definition):
     require(parent.effective_permissions, "network_read")
+    if definition.market.email is not None:
+        require(parent.effective_permissions, "email_send")
+        require(parent.effective_permissions, "network_external")
     expected = [{"key": key, "gate": "none"} for key in STEPS]
     if parent.parameters.get("steps") != expected:
         raise ValueError("Market workflow does not match the reviewed deterministic plan")
@@ -90,7 +95,13 @@ def publish_market_steps(session, parent, definition):
                 "tool": key,
                 "deadline_at": deadline,
             },
-            permissions=["network_read"] if key == "market.quote" else [],
+            permissions=["network_read"]
+            if key == "market.quote"
+            else (
+                ["email_send", "network_external"]
+                if key == "market.notify" and definition.market.email is not None
+                else []
+            ),
             retry_class="inspect",
             triggered_by=parent.triggered_by,
             agent_id=parent.agent_id,
@@ -269,12 +280,20 @@ def compare(session, run, definition):
                         session.flush()
                         item.update(status="alert", alert_id=alert.id)
         rows.append(item)
-    return {"rows": rows, "policy": scope.model_dump(), "policy_key": key, "quote_run_id": source.id}
+    return {
+        "rows": rows,
+        "policy": scope.model_dump(mode="json"),
+        "policy_key": key,
+        "quote_run_id": source.id,
+    }
 
 
 def notify(session, run, definition):
     comparison, result = sibling_result(session, run, "market.compare")
-    delivered = []
+    delivered, email_delivery_ids = [], []
+    if definition.market.email is not None:
+        require(run.effective_permissions, "email_send")
+        require(run.effective_permissions, "network_external")
     for item in result["rows"]:
         if not item.get("alert_id"):
             continue
@@ -297,7 +316,12 @@ def notify(session, run, definition):
                 run_id=run.id,
                 kind="market_threshold",
                 title=f"{item['instrument']} moved {item['change_percent']}%",
-                body=f"{item['baseline_price']} → {item['price']} {item['currency']}; compared with the previous valid observation at {item['baseline_at']}. Source: {item['source_url']}. In-app alert; no email sent.",
+                body=f"{item['baseline_price']} → {item['price']} {item['currency']}; compared with the previous valid observation at {item['baseline_at']}. Source: {item['source_url']}. "
+                + (
+                    "Email submission is recorded separately."
+                    if definition.market.email
+                    else "In-app alert; no email sent."
+                ),
             )
             session.add(notice)
             session.flush()
@@ -309,15 +333,42 @@ def notify(session, run, definition):
                 {"notice_id": notice.id, "kind": notice.kind, "alert_id": alert.id},
             )
         delivered.append(alert.notice_id)
-    return {**result, "notice_ids": delivered, "delivery": "in_app", "email_sent": False}
+        if definition.market.email is not None:
+            from app.market_email import queue_alert
+
+            receipt = queue_alert(session, run, definition, alert.id)
+            email_delivery_ids.append(receipt.id)
+    return {
+        **result,
+        "notice_ids": delivered,
+        "delivery": "in_app",
+        "email_sent": False,
+        "email_delivery_ids": email_delivery_ids,
+    }
 
 
 def report(session, run):
     _, result = sibling_result(session, run, "market.notify")
-    text = "# Price watch\n\nCompared with the previous valid observation within the reviewed maximum gap. No trading or email.\n\n| Instrument | Price | Change | Outcome |\n| --- | --- | --- | --- |\n"
+    text = "# Price watch\n\nCompared with the previous valid observation within the reviewed maximum gap.\n\n| Instrument | Price | Change | Outcome |\n| --- | --- | --- | --- |\n"
     for item in result["rows"]:
         text += f"| {item['instrument']} | {item['price']} {item['currency']} | {item['change_percent'] + '%' if item['change_percent'] is not None else '—'} | {item['status'].replace('_', ' ')} |\n"
     text += f"\nIn-app alerts: {len(result['notice_ids'])}.\n\n"
+    from app.models import EmailDelivery
+
+    email_receipts = []
+    for delivery_id in result.get("email_delivery_ids", []):
+        receipt = session.get(EmailDelivery, delivery_id)
+        if receipt is None:
+            raise ValueError("Missing recorded alert delivery")
+        email_receipts.append({"id": receipt.id, "run_id": receipt.run_id, "state": receipt.state})
+        text += (
+            f"- Email: {receipt.state.replace('_', ' ')}. Delivery `{receipt.id}`; Run `{receipt.run_id}`.\n"
+        )
+    result = {
+        **result,
+        "email_receipts": email_receipts,
+        "email_sent": any(r["state"] in {"accepted", "accepted_partial"} for r in email_receipts),
+    }
     for item in result["rows"]:
         text += f"- [{item['instrument']}]({item['source_url']}): last-trade time {item['source_at']}; fetched {item['observed_at']}. Observation `{item['observation_id']}`.\n"
     with tempfile.NamedTemporaryFile(mode="w+", suffix=".md") as handle:

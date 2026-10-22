@@ -2,10 +2,25 @@
 
 from decimal import Decimal
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.email_schema import SMTPSettings
+
 PAIR_NAMES = ("BTC-USD", "BTC-EUR", "ETH-USD", "ETH-EUR")
+
+
+class MarketEmailScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    connector_id: UUID
+    connector_revision: str = Field(pattern=r"^[a-f0-9]{64}$")
+    recipients: list[str] = Field(min_length=1, max_length=5)
+
+    @field_validator("recipients")
+    @classmethod
+    def valid_recipients(cls, values):
+        return SMTPSettings.valid_recipients(values)
 
 
 class MarketScope(BaseModel):
@@ -18,6 +33,7 @@ class MarketScope(BaseModel):
     direction: Literal["both", "up", "down"] = "both"
     comparison_window_seconds: int = Field(default=172800, ge=60, le=2592000, strict=True)
     cooldown_seconds: int = Field(default=3600, ge=60, le=2592000, strict=True)
+    email: MarketEmailScope | None = None
 
     @field_validator("threshold_percent")
     @classmethod

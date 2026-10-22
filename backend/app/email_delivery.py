@@ -352,15 +352,22 @@ class EmailSendExecutor:
                 run.parameters.get("message")
                 != {key: row.payload[key] for key in ("sender", "recipients", "subject", "body")}
                 or message_hash(row.payload) != row.payload_hash
-                or approval is None
-                or approval.resolution != "granted"
-                or approval.action != "email.send"
-                or approval.payload.get("payload_hash") != row.payload_hash
+                or not run.parameters.get("market_alert")
+                and (
+                    approval is None
+                    or approval.resolution != "granted"
+                    or approval.action != "email.send"
+                    or approval.payload.get("payload_hash") != row.payload_hash
+                )
             ):
                 raise ValueError("The frozen message does not match its explicit approval")
             transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
             transition(session, run, RunStatus.RUNNING, event_type="executor.started")
             session.commit()
+            if run.parameters.get("market_alert"):
+                from app.market_email import validate_submission
+
+                validate_submission(session, run, row)
             config, password = validated_snapshot(session, run)
             if (
                 row.payload["sender"] != config.sender
@@ -379,6 +386,8 @@ class EmailSendExecutor:
             client = connect_smtp(config, password)
             if canceled(session, run):
                 return "done"
+            if run.parameters.get("market_alert"):
+                validate_submission(session, run, row)
             row.state = "sending"
             row.updated_at = utcnow()
             append_event(
@@ -468,6 +477,11 @@ class EmailSendExecutor:
                 elif row.state == "prepared":
                     row.state = "failed_before_send"
                     row.reason = smtp_error(exc)
+                    if run.parameters.get("market_alert"):
+                        from app.market_email import MarketEmailPolicyError
+
+                        if isinstance(exc, MarketEmailPolicyError):
+                            row.reason = str(exc)
                 row.updated_at = utcnow()
             session.refresh(run)
             if run.status == "cancel_requested" and not submission_started:

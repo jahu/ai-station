@@ -25,15 +25,26 @@ router = APIRouter(prefix="/api/agents", tags=["agents"])
 DB = Annotated[Session, Depends(session_scope)]
 
 
+def market_email_authorization(session, agent):
+    from app.market_email import authorization_public
+
+    return authorization_public(session, agent)
+
+
 def definition_dict(agent, session=None):
     from app.data_agents import data_readiness
 
+    email_authorization = market_email_authorization(session, agent)
     return {
         **agent_dict(agent),
         "data_readiness": data_readiness(session, agent.data) if "python_data" in agent.tools else None,
+        "market_email_authorization": email_authorization,
         "created_at": agent.created_at.isoformat(),
         "updated_at": agent.updated_at.isoformat(),
-        "effective_permissions": effective_permissions([name for name in agent.tools if name in AGENT_TOOLS]),
+        "effective_permissions": effective_permissions([name for name in agent.tools if name in AGENT_TOOLS])
+        + (
+            ["email_send", "network_external"] if email_authorization and email_authorization["valid"] else []
+        ),
         "schedule_timezone": "UTC",
     }
 
@@ -45,7 +56,16 @@ def get_agent(session, agent_id):
     return row
 
 
-def validate_target(body, session):
+def validate_target(body, session, agent=None, *, enabling=False):
+    if body.market is not None and body.market.email is not None:
+        from app.market_email import authorization, target
+
+        try:
+            target(session, body.market)
+            if body.enabled and not enabling:
+                authorization(session, agent, body.market)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
     if body.project_id and session.get(Project, str(body.project_id)) is None:
         raise HTTPException(422, "Project does not exist")
     if "python_data" in body.tools and body.enabled:
@@ -83,7 +103,7 @@ def apply_settings(agent, body):
     for key, value in body.model_dump().items():
         if key == "project_id" and value is not None:
             value = str(value)
-        if key in {"github", "data"} and value is not None:
+        if key in {"github", "data", "market"} and value is not None:
             value = getattr(body, key).model_dump(mode="json")
         setattr(agent, key, value)
     agent.retry_policy = body.retry_policy.model_dump()
@@ -173,7 +193,11 @@ def edit(agent_id: UUID, body: AgentUpdate, session: DB):
     if active_run(session, agent.id):
         raise HTTPException(409, "Cancel or finish the active Run before editing its agent")
     settings = AgentSettings.model_validate(body.model_dump(exclude={"expected_updated_at"}))
-    validate_target(settings, session)
+    validate_target(settings, session, agent)
+    if not settings.enabled:
+        from app.market_email import revoke
+
+        revoke(session, agent.id)
     apply_settings(agent, settings)
     session.commit()
     return definition_dict(agent, session)
@@ -181,6 +205,7 @@ def edit(agent_id: UUID, body: AgentUpdate, session: DB):
 
 class EnableBody(VersionBody):
     enabled: StrictBool
+    confirm_market_email: StrictBool = False
 
 
 @router.post("/{agent_id}/enabled")
@@ -195,7 +220,16 @@ def set_enabled(agent_id: UUID, body: EnableBody, session: DB):
         )
     except ValidationError as exc:
         raise HTTPException(422, "; ".join(error["msg"] for error in exc.errors())) from exc
-    validate_target(settings, session)
+    validate_target(settings, session, agent, enabling=True)
+    from app.market_email import grant, revoke
+
+    if body.enabled and settings.market is not None and settings.market.email is not None:
+        try:
+            grant(session, agent, settings.market, confirmed=body.confirm_market_email)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+    else:
+        revoke(session, agent.id)
     agent.enabled = body.enabled
     agent.next_run_at = compute_next(agent) if body.enabled else None
     agent.updated_at = utcnow()
