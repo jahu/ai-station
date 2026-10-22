@@ -343,6 +343,8 @@ def start_preview(manager, body):
         raise PermissionError("Offline preview requires filesystem_read and browser_preview permissions")
     run_id = str(body.run_id)
     with locked(owned_path("runtime/site-preview-admission.lock")):
+        if not path(run_id).exists() and path(run_id, "cancel.json").exists():
+            raise ValueError("Preview canceled before dispatch")
         if path(run_id).exists():
             if PreviewRequest.model_validate(load_request(run_id)["request"]) != body:
                 raise ValueError("Run already owns another preview request")
@@ -387,6 +389,8 @@ def start_preview(manager, body):
             expected_size=body.archive.size_bytes,
         )
         BuildSource(destination, body.archive.sha256, body.archive.size_bytes, body.entry)
+        if path(run_id, "cancel.json").exists():
+            raise ValueError("Preview canceled during source preparation")
         save(
             path(run_id),
             {
@@ -550,11 +554,20 @@ def report(manager, run_id):
 
 
 def close_preview(manager, run_id):
+    """Serialize close with admission so a confirmed close prevents late dispatch."""
+    with locked(owned_path("runtime/site-preview-admission.lock")):
+        return _close_preview(manager, run_id)
+
+
+def _close_preview(manager, run_id):
     """Close only this reserved scope, including an interrupted dispatch journal."""
     if not path(run_id).exists():
         try:
             manager.inspect(run_id)
         except ProcessNotOwned:
+            # A close may race the initial dispatch. This barrier prevents a later
+            # wrapper/container from starting after cleanup already returned.
+            save(path(run_id, "cancel.json"), {"requested": True})
             owner = owned_path("runtime/site-preview-owner.json")
             if owner.exists() and read(owner).get("run_id") == run_id:
                 return {"cleanup_confirmed": False, "reason": "Preview ownership journal requires inspection"}

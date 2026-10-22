@@ -437,3 +437,12 @@ def test_native_admission_bounds_action_proxies_per_preview(monkeypatch):
     with pytest.raises(ValueError, match="active"):
         preview.start_action(manager, action(body))
     assert len(manager.calls) == 2
+
+
+def test_close_before_dispatch_prevents_late_renderer_launch(monkeypatch):
+    monkeypatch.setattr(preview, "capabilities", lambda: {"available": True, "image_id": IMAGE})
+    manager, body = Manager(), request()
+    assert preview.close_preview(manager, str(body.run_id))["cleanup_confirmed"]
+    with pytest.raises(ValueError, match="cancel|clos"):
+        preview.start_preview(manager, body)
+    assert manager.calls == []

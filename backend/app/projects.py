@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.db import session_scope, utcnow
 from app.models import Project, Run, Worktree
+from app.project_activity import project_write_condition
 from app.runner_client import RunnerClient, RunnerError
 from app.runs import create_run, create_task, run_dict
 from app.serialize import project_dict, worktree_dict
@@ -153,7 +154,9 @@ def update_project(project_id: UUID, body: ProjectUpdate, session: DB):
     if body.expected_updated_at != project.updated_at:
         raise HTTPException(409, "Project settings changed. Reload before saving again.")
     active = session.scalar(
-        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
+        select(Run.id)
+        .where(Run.project_id == project.id, Run.status.not_in(TERMINAL), project_write_condition())
+        .limit(1)
     )
     if active:
         raise HTTPException(409, "Project settings cannot change while a project Run is active")
@@ -188,7 +191,9 @@ def prepare_project_worktree(project_id: UUID, body: WorktreeRequest, session: D
     if project.updated_at != body.expected_updated_at:
         raise HTTPException(409, "Project settings changed. Reload before preparing a worktree.")
     if session.scalar(
-        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
+        select(Run.id)
+        .where(Run.project_id == project.id, Run.status.not_in(TERMINAL), project_write_condition())
+        .limit(1)
     ):
         raise HTTPException(409, "This project already has an active Run")
     task = create_task(
@@ -256,7 +261,9 @@ def validate_project_worktree(project_id: UUID, worktree_id: UUID, body: Worktre
     ):
         raise HTTPException(409, "Worktree preparation must have succeeded")
     if session.scalar(
-        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
+        select(Run.id)
+        .where(Run.project_id == project.id, Run.status.not_in(TERMINAL), project_write_condition())
+        .limit(1)
     ):
         raise HTTPException(409, "This project already has an active Run")
     commands = [
@@ -321,7 +328,9 @@ def install_project_dependencies(project_id: UUID, worktree_id: UUID, body: Work
     ):
         raise HTTPException(409, "Worktree preparation must have succeeded")
     if session.scalar(
-        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
+        select(Run.id)
+        .where(Run.project_id == project.id, Run.status.not_in(TERMINAL), project_write_condition())
+        .limit(1)
     ):
         raise HTTPException(409, "This project already has an active Run")
     task = create_task(

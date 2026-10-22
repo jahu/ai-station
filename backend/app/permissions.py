@@ -42,6 +42,7 @@ ALL_PERMISSIONS = sorted(
         "email_read",
         "email_send",
         "browser",
+        "browser_preview",
         "external_ai",
         "manage_agents",
         "manage_models",

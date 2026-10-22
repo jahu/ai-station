@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.db import session_scope, utcnow
 from app.models import Project, Run, Task, Worktree
+from app.project_activity import project_write_condition
 from app.redact import redact_obj
 from app.runner_client import RunnerClient
 from app.runs import create_run, run_dict
@@ -143,7 +144,9 @@ def enqueue_followup(session, task_id, body, *, commit=True, conversation_id=Non
     if source.status != "succeeded" and not failed_before_dispatch:
         raise HTTPException(409, "Inspect the previous execution before continuing")
     if session.scalar(
-        select(Run.id).where(Run.project_id == task.project_id, Run.status.not_in(TERMINAL)).limit(1)
+        select(Run.id)
+        .where(Run.project_id == task.project_id, Run.status.not_in(TERMINAL), project_write_condition())
+        .limit(1)
     ):
         raise HTTPException(409, "Wait for this project's active work to finish")
     worktree = session.get(Worktree, source.parameters["worktree_id"])

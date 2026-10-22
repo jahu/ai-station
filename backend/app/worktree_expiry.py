@@ -4,6 +4,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.models import Project, Run, Worktree
+from app.project_activity import project_write_condition
 from app.runs import create_run, create_task
 from app.state import TERMINAL
 
@@ -45,7 +46,9 @@ def queue_worktree_removal(
     if worktree.relative_path != expected or worktree.branch != f"ai/{worktree.run_id}-workspace":
         raise ValueError("Worktree ownership record is inconsistent")
     if session.scalar(
-        select(Run.id).where(Run.project_id == project.id, Run.status.not_in(TERMINAL)).limit(1)
+        select(Run.id)
+        .where(Run.project_id == project.id, Run.status.not_in(TERMINAL), project_write_condition())
+        .limit(1)
     ):
         raise ValueError("This project already has an active Run")
     task = create_task(

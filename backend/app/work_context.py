@@ -6,6 +6,7 @@ from sqlalchemy import select
 from app.coding_sessions import PROPOSALS, Followup, enqueue_followup
 from app.db import utcnow
 from app.models import ChatWorkContext, Message, ModelFile, Project, Run, Task, Worktree
+from app.project_activity import project_write_condition
 from app.state import TERMINAL
 
 
@@ -60,7 +61,9 @@ def context_of(session, source):
     if not project or not worktree or not worktree.owned or worktree.removed_at is not None:
         reason = "The owned task workspace is unavailable."
     elif session.scalar(
-        select(Run.id).where(Run.project_id == task.project_id, Run.status.not_in(TERMINAL)).limit(1)
+        select(Run.id)
+        .where(Run.project_id == task.project_id, Run.status.not_in(TERMINAL), project_write_condition())
+        .limit(1)
     ):
         reason = "Wait for this project's active work to finish."
     elif source.status != "succeeded" and not safe_failure:

@@ -131,6 +131,15 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
                     pass  # Remains pending until inspection confirms termination.
             touched.append(run.id)
             continue
+        if (
+            run.executor_type == "site_preview"
+            and run.metadata_json.get("dispatch_attempted")
+            and info.get("cleanup_confirmed") is not True
+        ):
+            run.metadata_json = {**run.metadata_json, "cleanup_requires_inspection": True}
+            _interrupt(session, run, "Preview dispatch cleanup requires explicit confirmation")
+            touched.append(run.id)
+            continue
         if info.get("cleanup_confirmed") is False:
             run.metadata_json = {**run.metadata_json, "cleanup_requires_inspection": True}
             _interrupt(session, run, "Owned container cleanup could not be confirmed")
@@ -177,4 +186,5 @@ def _interrupt(session: Session, run: Run, reason: str) -> None:
     run.error_type = "Interrupted"
     run.error_message = reason
     transition(session, run, RunStatus.INTERRUPTED, event_type="run.interrupted", payload={"reason": reason})
-    release_run_locks(session, run.id)
+    if run.executor_type != "site_preview" or not run.metadata_json.get("cleanup_requires_inspection"):
+        release_run_locks(session, run.id)

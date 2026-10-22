@@ -593,3 +593,23 @@ and inspection state. PNGs have derived revision paths, SHA/size, an 8 MiB bound
 and need immutable Artifact adoption plus exact action/frame lineage checks.
 Do not execute generated HTML/JS in the station origin. Native source lookup for
 SPA navigation distinguishes Document requests from missing API/asset resources.
+
+### Preview integration follow-up — 2026-10-22
+
+The active integration worktree is `.tools/agent-site-preview-workspace` on
+`feat/agent-site-preview-workspace`, based on the frozen native preview head.
+The native head qualified 1804 normal Python tests (seven opt-in skips). The
+combined control-plane increment adds source-bound inspection Tasks, resource
+admission, frame Artifacts, typed interactions and separate Close/reconciliation
+Runs, an isolated preview page linked from successful builds, and conservative
+recovery. A real CPU-only API/worker/Unix-socket/Chromium test passed.
+
+A first combined collection found colliding backend/native pytest basenames;
+backend tests are now `test_site_preview_provenance.py`,
+`test_site_preview_execution.py` and `test_site_preview_worker_real.py`.
+The full combined regression runs under the user service
+`ai-station-preview-workspace-check2-20261022.service`; check its actual state and
+`data/acceptance/agent-site-preview-20261022/workspace-full-check-result.json`
+before restarting or claiming it passed. The operator's separate Q4 model is not
+part of acceptance and must remain loaded. Full source review, UI/browser gates,
+image/Compose verification and PR/deployment are still pending.

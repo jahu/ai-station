@@ -14,7 +14,7 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 
 
-def built(session):
+def built(session, entries=None):
     project = Project(name="Disposable site", repo_path="/projects/site")
     session.add(project)
     session.flush()
@@ -32,17 +32,19 @@ def built(session):
     session.flush()
     path = get_settings().data_dir / f"runtime/validation/{run.id}.build.zip"
     path.parent.mkdir(parents=True)
+    entries = entries or {"index.html": "<h1>Immutable site</h1>"}
     with zipfile.ZipFile(path, "w") as archive:
-        archive.writestr("index.html", "<h1>Immutable site</h1>")
+        for name, content in entries.items():
+            archive.writestr(name, content)
     report = {
         "commands": [{"kind": "build", "exit_code": 0}],
         "build_export": {
             "status": "ready",
             "relative_path": str(path.relative_to(get_settings().data_dir)),
-            "file_count": 1,
+            "file_count": len(entries),
             "size_bytes": path.stat().st_size,
             "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-            "uncompressed_bytes": len(b"<h1>Immutable site</h1>"),
+            "uncompressed_bytes": sum(len(content.encode()) for content in entries.values()),
         },
     }
     register_build(session, run, report)

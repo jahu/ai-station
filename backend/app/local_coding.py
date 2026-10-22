@@ -14,6 +14,7 @@ from app.coding_tasks import CodingTask, enqueue_coding_task
 from app.db import session_scope
 from app.events import append_event
 from app.models import Run, RunEvent, Worktree
+from app.project_activity import project_write_condition
 from app.providers import ProviderError
 from app.runs import create_run, run_dict
 from app.state import TERMINAL
@@ -96,7 +97,9 @@ def enqueue_local_repair(session, source_id):
     ):
         raise HTTPException(409, "The task worktree is unavailable")
     if session.scalar(
-        select(Run.id).where(Run.project_id == source.project_id, Run.status.not_in(TERMINAL)).limit(1)
+        select(Run.id)
+        .where(Run.project_id == source.project_id, Run.status.not_in(TERMINAL), project_write_condition())
+        .limit(1)
     ):
         raise HTTPException(409, "This project has an active Run")
     # Retain the reviewed file scope, including unchanged inputs from exploration.

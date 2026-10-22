@@ -1,4 +1,4 @@
-import { Download, PackageCheck } from "lucide-react";
+import { Download, PackageCheck, Monitor } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Run } from "../api";
 import { Button } from "../components/ui/button";
@@ -38,6 +38,11 @@ export default function CodingBuildArtifact({ run }: { run?: Run }) {
         </div>
       </div>
       <div className="coding-build-actions">
+        <Button variant="secondary" asChild>
+          <Link to={`/preview/${run.id}/${id}`}>
+            <Monitor size={15} /> Preview website
+          </Link>
+        </Button>
         <Button variant="secondary" asChild>
           <a href={`/api/artifacts/${id}/file`} download="project-build.zip">
             <Download size={15} /> Download build

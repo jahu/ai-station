@@ -156,3 +156,48 @@ production models, credentials or external services were used. Evidence:
 Full regression is required before merge. Control-plane permissions, RAM/exclusive
 admission, ordinary Run/artifact adoption and UI remain unfinished. No integrated
 website preview is advertised by the current production release.
+
+## Integrated workspace increment — awaiting release qualification
+
+The control plane now publishes typed preview, interaction and Close Runs. A
+preview has its own operator inspection Task with source-project provenance; it
+never joins or stops the coding Task. Immutable preview Runs are excluded from
+project *write* admission checks, while all other existing project guards remain.
+RAM (1536 MiB) and the single per-Runner preview slot are reserved before native
+dispatch. Low-memory waits defer only preview admission. No GPU allocation or
+model eviction is requested.
+
+Frames become immutable PNG Artifacts on the preview Run with the exact source
+build as their parent. Frame hashes, viewport, revision and interaction ownership
+are checked before adoption. Stop and adoption serialize on the same Task. An
+uncertain native dispatch or recovery retains reservations until an explicit
+Close confirms cleanup. Native admission and Close share a lock and a persistent
+cancel barrier, preventing a delayed initial dispatch after a confirmed close.
+
+Successful build cards link to `/preview/<validation-run-id>/<artifact-id>`.
+The view offers desktop/phone dimensions, screenshot interaction, literal text
+entry, scrolling, reset, session history recovery on reload and Close. Site
+JavaScript runs exclusively in the offline container; the authenticated UI
+receives images. A lost HTTP response can retry only the same operation receipt,
+so it does not repeat an uncertain click. Session and interaction history remain
+ordinary inspectable Runs. This is a static build preview, not an internet browser
+or a live Node development server; server/API calls and remote assets stay offline.
+
+Setup after qualification:
+
+```bash
+docker build -f preview-executor/Dockerfile -t ai-station-site-preview:development .
+```
+
+The installed `ai-station-browser:local` base must already be available; preview
+setup does not download models. Configure `AI_STATION_SITE_PREVIEW_IMAGE` on the
+native Runner and `AI_STATION_SITE_PREVIEW_ENABLED=true` in the control plane.
+Both default to unavailable until explicitly configured. Normal startup never
+silently replaces an incompatible existing Runner.
+
+Verification so far: the actual worker/native Unix socket/container test passed
+pointer interaction, PNG adoption, idempotent replay, Close and released locks.
+It uses a disposable registered build, not an unexecuted claim about a new
+LLM-generated website. Normal focused coverage includes uncertain dispatch,
+recovery reservations, CPU admission, revision identity and Stop. Full regression,
+compiled desktop/mobile acceptance and deployment remain required before release.
