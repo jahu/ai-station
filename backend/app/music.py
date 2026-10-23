@@ -165,6 +165,7 @@ class MusicExecutor(HostMediaExecutor):
                 },
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **self.native_budget(run),
             },
         )
 

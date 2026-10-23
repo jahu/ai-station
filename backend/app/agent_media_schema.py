@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.image_schema import ImageRequest
 from app.music_schema import MusicSettings
@@ -12,6 +12,15 @@ class AgentImageScope(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kind: Literal["image"]
     request: ImageRequest
+    description_source: Literal["fixed", "goal"] = "fixed"
+
+    @model_validator(mode="after")
+    def supported_output(self):
+        if self.request.video_prompt:
+            raise ValueError("Image agents cannot select an unimplemented video output scope")
+        if self.description_source == "goal" and self.request.mode == "upscale":
+            raise ValueError("Upscale uses its reviewed source image without a generated description")
+        return self
 
 
 class AgentMusicRequest(MusicSettings):
@@ -24,6 +33,15 @@ class AgentMusicScope(BaseModel):
     model_config = ConfigDict(extra="forbid")
     kind: Literal["music"]
     request: AgentMusicRequest
+    description_source: Literal["fixed", "goal"] = "fixed"
 
 
 AgentMediaScope = Annotated[AgentImageScope | AgentMusicScope, Field(discriminator="kind")]
+
+
+def fixed_media_only(definition):
+    return (
+        definition.tools == ["create_media"]
+        and definition.media is not None
+        and definition.media.description_source == "fixed"
+    )

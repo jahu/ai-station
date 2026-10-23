@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.agent_media_schema import fixed_media_only
 from app.agent_schema import AgentSettings
 from app.agent_tools import AGENT_TOOLS, agent_tool, effective_permissions
 from app.approvals import run_public
@@ -61,6 +62,14 @@ def get_agent(session, agent_id):
 
 
 def validate_target(body, session, agent=None, *, enabling=False):
+    if body.media is not None and body.enabled:
+        from app.agent_media import freeze_inputs, require_profile
+
+        try:
+            require_profile(body.media)
+            freeze_inputs(session, body.media)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
     if (
         body.market is not None
         and body.market.provider == "finnhub"
@@ -108,7 +117,12 @@ def validate_target(body, session, agent=None, *, enabling=False):
             raise HTTPException(422, str(exc)) from exc
     from app.agent_coding_policy import auto_local_coding, external_coding
 
-    if body.enabled and not external_coding(body.tools) and body.tools != ["market_watch"]:
+    if (
+        body.enabled
+        and not external_coding(body.tools)
+        and body.tools != ["market_watch"]
+        and not fixed_media_only(body)
+    ):
         try:
             if auto_local_coding(body.tools, body.model):
                 from app.coding_model_routing import select_coding_model

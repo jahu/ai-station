@@ -13,11 +13,11 @@ from app.models import Run, WorkerRow
 from app.state import TERMINAL
 
 
-def cancel_expired_coding(session, run_id):
+def cancel_expired_run(session, run_id):
     run = session.get(Run, run_id)
     if run is None or run.status in TERMINAL:
         return
-    raw = run.parameters.get("agent_coding_deadline")
+    raw = run.parameters.get("execution_deadline_at") or run.parameters.get("agent_coding_deadline")
     if raw and datetime.fromisoformat(raw) <= utcnow():
         from app.events import append_event
         from app.runs import request_cancel
@@ -25,6 +25,11 @@ def cancel_expired_coding(session, run_id):
         if run.status != "cancel_requested":
             append_event(session, run.id, "agent.runtime_limit", {})
             request_cancel(session, run)
+
+
+# Existing coding/check integrations use this name; both contracts now share
+# the same cancellation path without changing their stored deadline fields.
+cancel_expired_coding = cancel_expired_run
 
 
 @contextmanager
@@ -46,7 +51,7 @@ def keep_lease(run_id: str, worker_id: str):
                         .where(Run.id == run_id, Run.worker_id == worker_id, Run.status.not_in(TERMINAL))
                         .values(lease_expires_at=now + timedelta(seconds=settings.lease_seconds))
                     )
-                    cancel_expired_coding(session, run_id)
+                    cancel_expired_run(session, run_id)
                     session.commit()
             except Exception:
                 logging.exception("Could not renew worker lease")

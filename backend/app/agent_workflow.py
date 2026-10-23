@@ -33,7 +33,7 @@ CONTEXT_STEPS = frozenset(
         "github_read",
     }
 )
-STEP_KEYS = CONTEXT_STEPS | {"report"}
+STEP_KEYS = CONTEXT_STEPS | {"report", "create_media"}
 
 
 def planned_steps(definition: AgentSettings) -> list[dict]:
@@ -60,12 +60,14 @@ def planned_steps(definition: AgentSettings) -> list[dict]:
     for name in tools:
         if name in RETENTION_TOOLS:
             continue
+        if name == "create_media":
+            continue
         if name not in CONTEXT_STEPS or not agent_tool(name).operational:
             raise ValueError(f"Refusing an invented or unavailable agent step: {name}")
         steps.append({"key": name, "gate": "none"})
     steps.append(
         {
-            "key": "report",
+            "key": "create_media" if definition.media else "report",
             "gate": "approval" if definition.workflow_mode == "gated" else "none",
         }
     )
@@ -96,6 +98,7 @@ def workflow_view(session, run: Run) -> dict | None:
     definition = parent.parameters.get("definition") or {}
     if (
         coding_provider(definition.get("tools", [])) is not None
+        or definition.get("media") is not None
         or definition.get("tools") == ["market_watch"]
         and (definition.get("market") or {}).get("email")
     ):
@@ -115,6 +118,7 @@ def workflow_view(session, run: Run) -> dict | None:
                 "run_id": child.id,
                 "key": child.capability
                 if coding_provider(definition.get("tools", [])) is not None
+                or definition.get("media") is not None
                 else child.parameters.get("tool") or "report",
                 "gate": child.parameters.get("gate", "none"),
                 "status": child.status,
@@ -137,7 +141,10 @@ def active_workflow_child(session, run: Run) -> Run | None:
         for child in session.scalars(select(Run).where(Run.parent_run_id == parent.id))
         if child.status in ACTIVE
     ]
-    if coding_provider(parent.parameters.get("definition", {}).get("tools", [])) is not None:
+    if (
+        coding_provider(parent.parameters.get("definition", {}).get("tools", [])) is not None
+        or parent.parameters.get("definition", {}).get("media") is not None
+    ):
         children = list(
             session.scalars(
                 select(Run).where(Run.task_id == parent.task_id, Run.id != parent.id, Run.status.in_(ACTIVE))
@@ -262,7 +269,11 @@ def publish_steps(session, parent: Run) -> list[Run]:
     if not isinstance(steps, list) or not steps:
         steps = planned_steps(definition)
     allowed = {name for name in definition.tools if name not in RETENTION_TOOLS} | {"report"}
-    deadline_at = utcnow() + timedelta(seconds=definition.maximum_runtime)
+    deadline_at = ((parent.started_at or utcnow()) if definition.media else utcnow()) + timedelta(
+        seconds=definition.maximum_runtime
+    )
+    if definition.media:
+        parent.parameters = {**parent.parameters, "media_deadline_at": deadline_at.isoformat()}
     validated = []
     for index, raw in enumerate(steps):
         if not isinstance(raw, dict):
@@ -271,7 +282,9 @@ def publish_steps(session, parent: Run) -> list[Run]:
         gate = raw.get("gate", "none")
         if key not in STEP_KEYS or key not in allowed or gate not in {"none", "approval"}:
             raise ValueError(f"Refusing an invented or unauthorized workflow step: {key}")
-        if key != "report" and (key not in CONTEXT_STEPS or not agent_tool(key).operational):
+        if key != "report" and (
+            key not in CONTEXT_STEPS | {"create_media"} or not agent_tool(key).operational
+        ):
             raise ValueError(f"Refusing an invented or unavailable agent step: {key}")
         validated.append((index, key, gate))
     created: list[Run] = []
@@ -281,9 +294,15 @@ def publish_steps(session, parent: Run) -> list[Run]:
             session,
             parent.task,
             run_type="agent",
-            capability="agent.execute" if key == "report" else "agent.step",
+            capability="agent.media.prepare"
+            if key == "create_media"
+            else "agent.execute"
+            if key == "report"
+            else "agent.step",
             executor_type="agent"
             if key == "report"
+            else "agent_media"
+            if key == "create_media"
             else "browser"
             if key == "browser"
             else "github_read"
@@ -307,6 +326,12 @@ def publish_steps(session, parent: Run) -> list[Run]:
                 "gate": gate,
                 "step_index": index,
                 "deadline_at": deadline_at.isoformat(),
+                **({"execution_deadline_at": deadline_at.isoformat()} if definition.media else {}),
+                **(
+                    {"media_inputs": parent.parameters.get("media_inputs", [])}
+                    if key == "create_media"
+                    else {}
+                ),
             },
             permissions=[p for p in parent.effective_permissions if p in {"network_read", "github_read"}]
             if key == "github_read"
@@ -339,7 +364,7 @@ def publish_steps(session, parent: Run) -> list[Run]:
                     "step_index": index,
                 },
             )
-        elif key == "report":
+        elif key == "report" or key == "create_media" and definition.media.description_source == "goal":
             from app.llama import prepare_consumer
 
             prepare_consumer(session, child)

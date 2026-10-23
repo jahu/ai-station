@@ -30,6 +30,7 @@ class MusicRequest(BaseModel):
     seed: int = Field(ge=0, le=2**31 - 1, strict=True)
     gpu: int = Field(ge=0, strict=True)
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
+    deadline_at: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
 
     @model_validator(mode="after")
     def lyrics_match_mode(self):
@@ -182,4 +183,5 @@ def start(manager, body):
             cwd=root,
             executor=EXECUTOR,
             env=environment,
+            **({"deadline_at": body.deadline_at} if body.deadline_at is not None else {}),
         )

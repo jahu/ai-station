@@ -4,6 +4,26 @@ Status: implementation candidate after the deployed Music adapter (#361).
 There is no operational media tool in the Agent registry yet. Preserve the
 working Chat/Work and dedicated media workspaces.
 
+Implemented source foundation: nullable scope migration/API round-trip/duplicate,
+shared pure image/music validation and an explicitly unavailable registry entry.
+The optional shared process budget is now carried through typed photo/music
+dispatch, enforced by a persisted native group timer, and checked by worker
+expiry/recovery. CPU fake-process cases cover expiry without a worker, restart,
+forked descendants, replay without extension, reused PID rejection, queued and
+running cancellation, and resource release. Actual agent publication/UI and
+full release qualification remain open; this foundation does not enable a tool.
+
+Current worker implementation publishes fixed image/music requests or prepares
+one bounded description from the saved goal and completed observations. Only
+that description may change; supplied lyrics and execution settings remain
+frozen. Prepared JSON, source hashes/lineage, actual UTC preparation context and
+the selected media child share the agent Task. Stop serializes on that whole
+Task. Scheduled/manual cases, source/permission/definition/deadline tampering,
+receipt replay, no Runner HTTP during publication, and fixed gated execution
+without an unnecessary language-model load have CPU integration coverage.
+The registry remains unavailable pending editor/results, factory and full
+release qualification. Automatic lyrics remain separate work.
+
 ## Result and user flow
 
 An operator can create a disabled agent, select **Create media**, describe its

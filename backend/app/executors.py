@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.agent_drafts import AgentDraftExecutor
 from app.agent_executor import LocalAgentExecutor
+from app.agent_media import AgentMediaExecutor
 from app.agent_page_coding import AgentPageCodingExecutor
 from app.agent_workflow import AgentToolExecutor, AgentWorkflowExecutor
 from app.artifacts import adopt_existing
@@ -342,6 +343,7 @@ EXECUTORS = {
     "model_install": ModelInstallExecutor(),
     "agent": LocalAgentExecutor(),
     "agent_workflow": AgentWorkflowExecutor(),
+    "agent_media": AgentMediaExecutor(),
     "agent_draft": AgentDraftExecutor(),
     "agent_tool": AgentToolExecutor(),
     "agent_market": MarketExecutor(),

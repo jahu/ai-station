@@ -8,7 +8,7 @@ from croniter import croniter
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
 from app.agent_coding_policy import CODING_TOOLS, coding_provider, external_coding
-from app.agent_media_schema import AgentMediaScope
+from app.agent_media_schema import AgentMediaScope, fixed_media_only
 from app.agent_tools import AGENT_TOOLS, agent_tool
 from app.db import utcnow
 from app.http_fetch import reviewed_urls
@@ -129,6 +129,16 @@ class AgentSettings(BaseModel):
                 raise ValueError("Media generation cannot inherit coding, data or market authority")
             if self.enabled and self.media is None:
                 raise ValueError("Review media output settings before enabling this agent")
+            if (
+                self.media
+                and self.media.description_source == "fixed"
+                and (not fixed_media_only(self) or self.skills)
+            ):
+                raise ValueError("Research and skills require a media description prepared from the goal")
+            if self.tool_calling != "none" or "remember_report" in self.tools:
+                raise ValueError(
+                    "Media workflows use reviewed steps without report tool calling or report retention"
+                )
         if "search_pages" in self.tools and "web_search" not in self.tools:
             raise ValueError("Read search sources requires web_search and its reviewed public query")
         if self.market is not None and self.tools != ["market_watch"]:
@@ -215,7 +225,12 @@ class AgentSettings(BaseModel):
                 raise ValueError("web_search requires an explicit public search query before activation")
             if {"http_fetch", "browser"}.intersection(self.tools) and not self.fetch_urls:
                 raise ValueError("Page tools require 1 to 3 explicit public URLs before activation")
-            if not self.model and not external_coding(self.tools) and self.tools != ["market_watch"]:
+            if (
+                not self.model
+                and not external_coding(self.tools)
+                and self.tools != ["market_watch"]
+                and not fixed_media_only(self)
+            ):
                 raise ValueError("Select a local model before enabling the agent")
             unavailable = [name for name in self.tools if not agent_tool(name).operational]
             if unavailable:
