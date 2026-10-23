@@ -7008,3 +7008,8 @@ section:has(> .memory-grid) > .dashboard-note {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.agent-video-settings .check-row {
+  flex-direction: row;
+  align-items: center;
+}
