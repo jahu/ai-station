@@ -1,3 +1,4 @@
+import { copyText } from "../lib/clipboard";
 import { useConversationAttachmentUpload } from "./attachment-upload";
 import { useDataInputs, type ConversationDataScope } from "./useDataInputs";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
@@ -1011,15 +1012,13 @@ function Transcript({
                     tabIndex={current ? 0 : -1}
                     disabled={!message.content}
                     onClick={() => {
-                      void navigator.clipboard
-                        .writeText(message.content)
-                        .catch(() =>
-                          setClipboardError(
-                            new Error(
-                              "Clipboard unavailable. Select and copy the response text.",
-                            ),
+                      void copyText(message.content).catch(() =>
+                        setClipboardError(
+                          new Error(
+                            "Clipboard unavailable. Select and copy the response text.",
                           ),
-                        );
+                        ),
+                      );
                     }}
                   >
                     <Copy size={14} aria-hidden="true" />
