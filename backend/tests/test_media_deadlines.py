@@ -39,21 +39,35 @@ def test_expired_queued_media_never_dispatches_a_process(music_bridge, monkeypat
             assert not row.metadata_json.get("dispatch_attempted")
 
 
-def test_running_media_carries_its_deadline_and_releases_resources_after_owned_stop(music_bridge):
+def test_running_media_carries_its_deadline_and_releases_resources_after_owned_stop(
+    music_bridge, monkeypatch
+):
+    from app import heartbeat
+    from app.music import MusicExecutor
+
+    deadline = utcnow() + timedelta(seconds=60)
+    original_start = MusicExecutor._start
+
+    def start_then_expire(self, runner, run, allocated, output):
+        # Exercise expiry only after the native process has actually accepted its
+        # budget. A 0.5s wall-clock budget could expire before dispatch on busy CI,
+        # correctly canceling without creating the ownership record this test needs.
+        started = original_start(self, runner, run, allocated, output)
+        monkeypatch.setattr(heartbeat, "utcnow", lambda: deadline + timedelta(seconds=1))
+        return started
+
+    monkeypatch.setattr(MusicExecutor, "_start", start_then_expire)
     with TestClient(app) as client:
         run = client.post("/api/audio/music/runs", json=body(caption="wait")).json()
         with session_factory()() as session:
             row = session.get(Run, run["id"])
-            row.parameters = {
-                **row.parameters,
-                "execution_deadline_at": (utcnow() + timedelta(seconds=0.5)).isoformat(),
-            }
+            row.parameters = {**row.parameters, "execution_deadline_at": deadline.isoformat()}
             session.commit()
             tick(session, "budgeted-media")
             session.refresh(row)
             assert row.status == "canceled" and not active_locks(session)
             inspected = host_app.manager().inspect(row.id)
-            assert not inspected["alive"] and inspected["deadline_at"]
+            assert not inspected["alive"] and inspected["deadline_at"] == deadline.timestamp()
         assert client.get("/api/artifacts", params={"run_id": run["id"]}).json() == []
 
 

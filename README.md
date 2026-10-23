@@ -17,6 +17,12 @@ progress and the final verified film. Review the runtime budget for longer/high
 quality output; Stop cancels the entire execution. Retry by running the reviewed
 agent again. [Video-agent contracts](docs/plans/agent-motion-generation.md).
 
+Media jobs that cannot start show **Waiting for memory** or **Waiting for an
+available GPU**. The RAM notice includes the last observed availability, required
+reservation and safety headroom. Checks repeat automatically; leave the page or
+Stop the task at any time. The notice links to the waiting Run and disappears
+after admission or Stop; it does not claim generation has begun.
+
 For an **Avatar** output, choose a Library portrait and WAV, then select new Polish
 speech or the complete saved recording. Goal mode prepares words for generated
 speech, or motion direction for a recording; the reviewed sources remain fixed.

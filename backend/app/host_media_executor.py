@@ -11,7 +11,13 @@ from app.events import append_event
 from app.heartbeat import cancel_expired_run
 from app.models import Run
 from app.permissions import require
-from app.resources import RESOURCE_WAIT_KEY, release_run_locks, reserve_gpu, reserve_memory
+from app.resources import (
+    RESOURCE_WAIT_KEY,
+    memory_observation,
+    release_run_locks,
+    reserve_gpu,
+    reserve_memory,
+)
 from app.runner_client import RunnerClient, RunnerError
 from app.runs import mark_failed, transition
 from app.state import RunStatus
@@ -62,12 +68,26 @@ class HostMediaExecutor:
             if not defer_media_task(session, run):
                 self._cancel_before_dispatch(session, run)
                 return "done"
+            observed = {
+                "reason": "gpu" if memory_ready else "memory",
+                "checked_at": utcnow().isoformat(),
+                **memory_observation(
+                    session,
+                    run,
+                    (hardware.get("memory") or {}).get("available_mib"),
+                    run.requested_resources.get("ram_mib", 0),
+                ),
+            }
+            run.metadata_json = {**run.metadata_json, "resource_wait": observed}
             transition(
                 session,
                 run,
                 RunStatus.INTERRUPTED,
                 event_type="run.interrupted",
-                payload={"reason": "GPU busy" if memory_ready else "Waiting for available host RAM"},
+                payload={
+                    "reason": "GPU busy" if memory_ready else "Waiting for available host RAM",
+                    "resource_wait": observed,
+                },
             )
             wait_until = run.task.metadata_json.get(RESOURCE_WAIT_KEY)
             transition(
@@ -89,6 +109,10 @@ class HostMediaExecutor:
 
                 evict_idle_models(session, run, indexes)
             return "requeued" if run.status == "queued" else "done"
+        if "resource_wait" in run.metadata_json:
+            run.metadata_json = {
+                key: value for key, value in run.metadata_json.items() if key != "resource_wait"
+            }
         self.validate_inputs(session, run)
         output = f"artifacts/{run.id[:2]}/{run.id[2:4]}/{run.id}{self.suffix}"
         # Durable before sending: even a lost response may hide a live process.

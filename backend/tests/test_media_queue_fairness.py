@@ -37,6 +37,9 @@ def test_resource_blocked_shot_batch_does_not_hide_a_new_cpu_run(bridge, monkeyp
             events = client.get("/api/runs/" + blocked_id + "/events").json()
             deferred = [event for event in events if event["event_type"] == "run.requeued"]
             assert deferred[-1]["payload"]["resource_wait_until"]
+            observed = client.get("/api/runs/" + blocked_id).json()["resource_wait"]
+            assert observed["reason"] == "gpu" and observed["run_id"] == blocked_id
+            assert view(client, tid)["resource_wait"] == observed
             assert len(bridge) == 1
             assert work("interactive-next-tick") == cpu_id
             assert client.get("/api/runs/" + cpu_id).json()["status"] == "succeeded"

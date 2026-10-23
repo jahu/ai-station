@@ -42,6 +42,15 @@ export interface Hardware {
   disk: { total_bytes: number; used_bytes: number; free_bytes: number };
   load: Record<string, number>;
 }
+export interface ResourceWait {
+  run_id: string;
+  reason: "memory" | "gpu";
+  checked_at: string;
+  required_mib: number;
+  available_mib: number | null;
+  reserved_mib: number;
+  headroom_mib: number;
+}
 export interface Run {
   id: string;
   project_id: string | null;
@@ -57,6 +66,7 @@ export interface Run {
   finished_at: string | null;
   actual_gpu: string | null;
   requested_gpu: string;
+  resource_wait?: ResourceWait | null;
   parameters: Record<string, unknown>;
   effective_permissions: string[];
   summary: string;

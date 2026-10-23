@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../../api";
+import { api, type ResourceWait } from "../../api";
 
 export type MediaRequest = {
   image_artifact_id?: string | null;
@@ -18,6 +18,7 @@ export type MediaRequest = {
   scenes?: { prompt: string; duration_seconds: number }[] | null;
 };
 export type MediaJob = {
+  resource_wait?: ResourceWait | null;
   request?: MediaRequest;
   preview_artifact_id?: string | null;
   task_id: string;
