@@ -353,3 +353,20 @@ it("closing Advanced preserves expanded Chat navigation and returns focus", asyn
   ).toBe("true");
   expect(document.activeElement).toBe(trigger);
 });
+
+it("keeps Chat navigation open when a dialog already consumed Escape", () => {
+  mount("/chat");
+  fireEvent.click(screen.getByRole("button", { name: "Expand navigation" }));
+  const event = new KeyboardEvent("keydown", {
+    key: "Escape",
+    bubbles: true,
+    cancelable: true,
+  });
+  event.preventDefault();
+  fireEvent(document, event);
+  expect(
+    screen
+      .getByRole("button", { name: "Collapse navigation" })
+      .getAttribute("aria-expanded"),
+  ).toBe("true");
+});

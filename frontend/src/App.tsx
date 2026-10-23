@@ -160,6 +160,7 @@ export default function App() {
     const listener = (event: KeyboardEvent) => {
       if (
         event.key === "Escape" &&
+        !event.defaultPrevented &&
         !document.querySelector('[role="dialog"][data-state="open"]')
       )
         setNavigationOpen(false);
