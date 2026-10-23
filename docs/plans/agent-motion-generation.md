@@ -1,7 +1,7 @@
 # Video and avatar output from persistent agents
 
-Status: the optional native deadline prerequisite is implemented; release
-qualification is in progress. Image, music and speech agents are delivered.
+Status: the optional native deadline prerequisite is implemented and qualified
+in CPU tests. Image, music and speech agents are delivered.
 Video/avatar agent scopes remain unavailable. Reuse the existing long-media
 controller rather than adding a short-clip-only agent engine.
 
@@ -13,6 +13,13 @@ forwarding and public-form rejection. Existing motion and process-ownership
 regressions pass. The source and frontend qualification are recorded under
 data/acceptance/motion-media-deadlines-20261023/. No new real GPU video/avatar
 generation is claimed by this transport/lifecycle change.
+
+The complete normal Python/Runner qualification passed all 2436 collected cases:
+2427 passed, 9 opt-in skips, zero failures. Ruff formatting/lint and Docker/Compose
+checks passed. The frontend is byte-identical to #365, reusing its 596 passed tests,
+formatting/lint/typecheck/build and compiled desktop/phone qualification; the built
+image has those same assets. Final review and rollout evidence remain separate
+from these CPU checks.
 
 ## Delivery sequence
 
