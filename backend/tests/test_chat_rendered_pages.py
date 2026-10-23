@@ -277,6 +277,7 @@ def test_pre_render_option_receipt_replays_but_cannot_gain_a_browser_grant(rende
             "data",
             "github",
             "project_defaults",
+            "schedule_timezone",
         ]:
             legacy.pop(key)
         legacy["web_search"].pop("render_pages", None)
