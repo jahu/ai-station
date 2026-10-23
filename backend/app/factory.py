@@ -123,16 +123,22 @@ def _schedule(lowered: str, original: str) -> tuple[str, str, int | None, dateti
         if stamp.tzinfo is None:
             return "manual", "", None, None
         return "datetime", "", None, stamp.astimezone(timezone.utc)
-    hours = re.search(r"every (\d+) hours|co (\d+) godzin", lowered)
-    if hours:
-        count = int(hours.group(1) or hours.group(2))
-        if 1 <= count <= 168:
-            return "interval", "", count * 3600, None
-    minutes = re.search(r"every (\d+) minutes|co (\d+) minut", lowered)
-    if minutes:
-        count = int(minutes.group(1) or minutes.group(2))
-        if 60 <= count <= 10080:
-            return "interval", "", count * 60, None
+    for factor, units in (
+        (3600, r"hours?|godzin[ęey]?"),
+        (60, r"minutes?|minut[ęey]?"),
+        (1, r"seconds?|sekund[ęey]?"),
+    ):
+        interval = re.search(rf"\b(?:every|co)\s+([+-]?\d+(?:[.,]\d+)?)\s+(?:{units})\b", lowered)
+        if interval:
+            digits = interval.group(1)
+            # The API accepts at most a year; bound numeric conversion as well.
+            if len(digits) <= 8 and digits.isdecimal():
+                seconds = int(digits) * factor
+                if 60 <= seconds <= 31536000:
+                    return "interval", "", seconds, None
+            return "manual", "", None, None
+    if re.search(r"\b(?:every minute|co minut[ęe])\b", lowered):
+        return "interval", "", 60, None
     clock = _clock(lowered)
     hour, minute = clock if clock else (9, 0)
     if "every morning" in lowered or "co rano" in lowered:

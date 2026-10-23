@@ -61,7 +61,10 @@ def test_factory_interval_one_shot_and_weekly_phrases_stay_disabled():
     assert evening.trigger == "cron" and evening.cron_expr == "0 20 * * *"
     minutes = draft_agent("Every 90 minutes check hardware")
     assert minutes.trigger == "interval" and minutes.interval_seconds == 5400
-    too_short = draft_agent("Every 30 minutes check hardware")
+    half_hour = draft_agent("Every 30 minutes check hardware")
+    assert half_hour.trigger == "interval" and half_hour.interval_seconds == 1800
+    assert half_hour.enabled is False
+    too_short = draft_agent("Every 30 seconds check hardware")
     assert too_short.trigger == "manual" and too_short.interval_seconds is None
 
 
