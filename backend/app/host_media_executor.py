@@ -113,6 +113,9 @@ class HostMediaExecutor:
             run.metadata_json = {
                 key: value for key, value in run.metadata_json.items() if key != "resource_wait"
             }
+        from app.vision_inputs import verify_media_inputs
+
+        verify_media_inputs(session, run)
         self.validate_inputs(session, run)
         output = f"artifacts/{run.id[:2]}/{run.id[2:4]}/{run.id}{self.suffix}"
         # Durable before sending: even a lost response may hide a live process.

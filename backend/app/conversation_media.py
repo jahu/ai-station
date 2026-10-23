@@ -8,7 +8,8 @@ from sqlalchemy import select
 
 from app.models import Artifact, ChatWorkContext, Message, Run
 
-_REFERENCE = r"(?:it|this(?: image| picture)?|the (?:last |previous )?(?:image|picture|graphic|result)|this graphic|tę grafikę|te grafike|tą grafikę|ta grafike|to|ten obraz|ten wynik|ostatni obraz|poprzedni obraz)"
+_PLURAL_REFERENCE = r"(?:these images|these pictures|both images|the reference images|te obrazy|te zdjęcia|te zdjecia|oba obrazy|obie fotografie|te fotografie)"
+_REFERENCE = r"(?:it|this(?: image| picture)?|the (?:last |previous )?(?:image|picture|graphic|result)|this graphic|tę grafikę|te grafike|tą grafikę|ta grafike|to|ten obraz|ten wynik|ostatni obraz|poprzedni obraz|to zdjęcie|to zdjecie|tę fotografię)"
 
 
 def _media_web_options(body):
@@ -53,7 +54,9 @@ def _media_web_options(body):
 
 def followup_action(content):
     text = content.strip()
-    if re.fullmatch(rf"(?:describe|inspect|opisz|obejrzyj)\s+{_REFERENCE}[.!]?", text, re.I):
+    if re.fullmatch(
+        rf"(?:describe|inspect|opisz|obejrzyj)\s+(?:{_REFERENCE}|{_PLURAL_REFERENCE})[.!]?", text, re.I
+    ):
         return "image.describe"
     if re.fullmatch(rf"(?:upscale|powiększ|powieksz)\s+{_REFERENCE}[.!]?", text, re.I):
         return "image.upscale"
@@ -63,7 +66,11 @@ def followup_action(content):
         re.I,
     ):
         return "video.generate"
-    if re.fullmatch(rf"(?:edit|modify|change|edytuj|zmień|zmien)\s+{_REFERENCE}\s*[:—-]\s*\S.+", text, re.I):
+    edit = r"(?:edit|modify|change|edytuj|zmień|zmien)"
+    joiner = r"(?:\s*[:—-]\s*|\s+(?:to|into|na)\s+)"
+    if re.fullmatch(rf"{edit}\s+{_PLURAL_REFERENCE}{joiner}\S.+", text, re.I):
+        return "image.recompose"
+    if re.fullmatch(rf"{edit}\s+{_REFERENCE}{joiner}\S.+", text, re.I):
         return "image.edit"
     return None
 
@@ -147,9 +154,15 @@ def resolve_result_reference(session, conversation, body, mode):
         .limit(32)
     )
     for message, source in previous:
-        if message.metadata_json.get("superseded") or message.metadata_json.get("partial"):
+        if message.metadata_json.get("superseded"):
             continue
         if generic_description and source.task_id != description_task:
+            continue
+        if message.metadata_json.get("partial"):
+            if source.parameters.get("image_artifact_ids"):
+                raise HTTPException(
+                    422, "The latest image input has no completed inspection. Select it explicitly."
+                )
             continue
         images = list(
             session.execute(
@@ -177,6 +190,24 @@ def resolve_result_reference(session, conversation, body, mode):
                     422,
                     "The latest image task has no completed result. Inspect it or select an image explicitly.",
                 )
+            from app.inspected_image_reference import inspected_inputs
+
+            inspected = inspected_inputs(session, source, message)
+            if inspected is not None:
+                ids, reference = inspected
+                plural = bool(re.search(_PLURAL_REFERENCE, body.content, re.I))
+                if len(ids) > 1 and (not plural or action not in {"image.describe", "image.recompose"}):
+                    raise HTTPException(
+                        422,
+                        "Several inspected images match. Select one image or explicitly refer to the group.",
+                    )
+                return body.model_copy(
+                    update={
+                        "action": action,
+                        "image_artifact_ids": [UUID(aid) for aid in ids],
+                        "web_search": body.web_search.model_copy(update={"enabled": False}),
+                    }
+                ), reference
             continue
         ancestors = {parent for artifact, _ in images for parent in artifact.parent_artifact_ids}
         leaves = [(a, r) for a, r in images if a.id not in ancestors]

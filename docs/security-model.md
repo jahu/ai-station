@@ -18,6 +18,12 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Implicit reuse of an inspected image requires a direct current-user reference and
+verified same-conversation inspection provenance. Changed, trashed, ambiguous or
+unverified legacy inputs are rejected without choosing an older image. New Vision
+Runs verify frozen canonical paths, metadata and SHA before inference and publication;
+model descriptions cannot select source IDs.
+
 [Ordinary image attachments](plans/conversation-images.md) publish only the
 current user's selected stored image IDs. Generic mixed scopes are rejected before
 upload. Chat's ordinary image question uses local Vision without snapshotting or

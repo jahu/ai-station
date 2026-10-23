@@ -9,6 +9,11 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Image follow-ups also resolve the exact uploaded input of a completed local Vision
+inspection. Portable source snapshots bind the user message, orchestration, Vision
+child and description artifact; source bytes are checked before reuse. The existing
+media children execute the next command. See [image conversations](plans/conversation-images.md).
+
 [Ordinary image attachments](plans/conversation-images.md) reuse stored image IDs,
 local Vision and the existing PhotoPipe reference operations. Chat's image-to-Vision
 fallback skips unused text-provider/model preparation; Work can retain its normal

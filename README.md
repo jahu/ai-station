@@ -1,5 +1,11 @@
 # AI Station
 
+After inspecting an uploaded image in Chat, refer to it directly: **“Zmień to zdjęcie
+na portret w zimowym ubraniu”**, **“Powiększ to zdjęcie”**, or **“Opisz ten obraz”**.
+The source link identifies the inspected input. Multiple inputs require an explicit
+group reference for description/recomposition; otherwise select one image. A changed
+or unavailable source must be attached or inspected again.
+
 Persistent media agents use the existing Images, Music, full scene Video and Polish speech engines. In **Agents**,
 attach **Create media**, choose the output and review its settings before enabling.
 An exact saved description runs without loading a text model; goal-based output

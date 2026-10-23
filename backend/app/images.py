@@ -133,6 +133,9 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
         parent_artifact_ids=[parent.id for parent in parents],
         repeats=1,
     )
+    from app.vision_inputs import pin_media_inputs
+
+    pin_media_inputs(session, parent_run_id, parameters)
     run = create_run(
         session,
         task,
