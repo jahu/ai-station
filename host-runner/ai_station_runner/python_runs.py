@@ -112,6 +112,9 @@ def capabilities():
             "protocol": 1,
             "network": False,
             "artifact_source": True,
+            "data_exports": 1
+            if (config.get("Labels") or {}).get("ai-station.python.data-exports") == "1"
+            else 0,
         }
     except (OSError, RuntimeError, ValueError):
         return unavailable

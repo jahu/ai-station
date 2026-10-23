@@ -1,5 +1,12 @@
 # Execution model
 
+Optional chart/workbook/report names are frozen on the local data generation Run
+before the existing Python dispatch. All declared files are mandatory in the
+typed request and owned completion report. The result worker validates table/CSV
+and every optional export before publishing usable files; failures use the same
+bounded repair and original deadline. Legacy two-file requests remain valid.
+The installed Python image advertises export support without starting a workload.
+
 The [agent Python executor](agent-python-execution.md) uses ordinary container-target
 Runs dispatched by the native Runner. Source/input snapshots, bounded script logs,
 required output validation, exact container cleanup, task cancellation and

@@ -9,6 +9,12 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+[Generated analysis files](plans/data-output-files.md) extend the existing
+Python request's fixed expected-output list. The model declares only supported
+optional names; controller and worker bind the declaration to its source Run.
+The result worker checks all exports before creating usable Artifacts. No new
+executor, filesystem grant or database schema is introduced.
+
 Image follow-ups also resolve the exact uploaded input of a completed local Vision
 inspection. Portable source snapshots bind the user message, orchestration, Vision
 child and description artifact; source bytes are checked before reuse. The existing

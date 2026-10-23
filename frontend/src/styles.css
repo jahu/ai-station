@@ -6478,6 +6478,31 @@ section:has(> .memory-grid) > .dashboard-note {
   white-space: pre-wrap;
   font-size: 15px;
 }
+.agent-data-chart {
+  min-width: 0;
+  margin: 0;
+}
+.agent-data-chart img {
+  display: block;
+  width: 100%;
+  max-height: 480px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #fff;
+}
+.agent-data-chart figcaption {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.agent-data-file-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.agent-data-file-action > .text-link {
+  padding: 10px;
+}
 @media (max-width: 600px) {
   .agent-data-files,
   .agent-data-result {
