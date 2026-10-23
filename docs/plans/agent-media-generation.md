@@ -1,28 +1,33 @@
 # Persistent agents can create media
 
-Status: implementation candidate after the deployed Music adapter (#361).
-There is no operational media tool in the Agent registry yet. Preserve the
-working Chat/Work and dedicated media workspaces.
+Status: implemented candidate, pending full release gates and real GPU agent
+qualification; the deployed release remains Music #361 until backed-up rollout.
 
-Implemented source foundation: nullable scope migration/API round-trip/duplicate,
-shared pure image/music validation and an explicitly unavailable registry entry.
-The optional shared process budget is now carried through typed photo/music
-dispatch, enforced by a persisted native group timer, and checked by worker
-expiry/recovery. CPU fake-process cases cover expiry without a worker, restart,
-forked descendants, replay without extension, reused PID rejection, queued and
-running cancellation, and resource release. Actual agent publication/UI and
-full release qualification remain open; this foundation does not enable a tool.
+Image/music scopes, nullable migration 0032, API/duplicate handling, natural
+AI-assisted disabled drafts, editor and inline results reuse existing media
+services. Fixed descriptions need no text model. Goal-based descriptions can use
+completed reviewed research observations; only the creative text may change.
+Supplied lyrics, references, model/backend, GPU and generation settings remain
+frozen. Drafting cannot invent Library IDs or lyrics. Output-specific native
+readiness blocks activation when the selected engine is unavailable.
 
-Current worker implementation publishes fixed image/music requests or prepares
-one bounded description from the saved goal and completed observations. Only
-that description may change; supplied lyrics and execution settings remain
-frozen. Prepared JSON, source hashes/lineage, actual UTC preparation context and
-the selected media child share the agent Task. Stop serializes on that whole
-Task. Scheduled/manual cases, source/permission/definition/deadline tampering,
-receipt replay, no Runner HTTP during publication, and fixed gated execution
-without an unnecessary language-model load have CPU integration coverage.
-The registry remains unavailable pending editor/results, factory and full
-release qualification. Automatic lyrics remain separate work.
+The shared absolute deadline reaches typed native requests and a persisted
+owned-process timer. CPU integration covers expiry without a worker, restart,
+forked descendants, replay, reused PID rejection, queued/running Stop and resource
+release. Worker publication verifies the exact agent definition, effective
+permissions, source hashes/lineage and preparation receipt under the Task lock.
+No Runner HTTP occurs inside media publication. Final success notices wait for
+actual media rather than preparation.
+
+Compiled browser qualification passed at 1440px and 390px: edit/save/enable/run,
+fixed output without a text model, supplied lyrics, music playback/image results,
+Library/refresh, missing-reference validation, whole-Task Stop before native
+launch and no horizontal overflow. These used temporary databases and fake
+native outputs, not real image/music inference. Focused factory/worker tests and
+590 UI tests passed; full gates and real GPU qualification remain release work.
+Evidence: ignored data/acceptance/agent-media-generation-20261023/.
+
+Automatic lyric writing and agent video/avatar scopes remain separate work.
 
 ## Result and user flow
 

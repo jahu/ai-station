@@ -149,13 +149,20 @@ def apply_settings(agent, body):
 
 @router.get("/tools")
 def tools():
+    from app.agent_media import runtime_readiness
     from app.data_agents import runtime_capability
 
     capability = runtime_capability()
+    media = runtime_readiness() if agent_tool("create_media").operational else {}
     return [
         {
             **asdict(agent_tool(name)),
             **({"operational": capability["available"]} if name == "python_data" else {}),
+            **(
+                {"operational": any(value["ready"] for value in media.values()), "outputs": media}
+                if name == "create_media"
+                else {}
+            ),
         }
         for name in AGENT_TOOLS
     ]

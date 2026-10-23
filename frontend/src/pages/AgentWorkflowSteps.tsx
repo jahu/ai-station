@@ -46,6 +46,14 @@ export function WorkflowStepCards({
     "coding.prepare": "Prepare isolated workspace",
     "coding.local": "Implement changes",
   };
+  const mediaLabels: Record<string, string> = {
+    "agent.media.prepare": "Prepare media",
+    "image.generate": "Generate image",
+    "image.edit": "Edit image",
+    "image.recompose": "Recompose image",
+    "image.upscale": "Upscale image",
+    "audio.music": "Generate music",
+  };
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
     onKeyDown(event);
     if (event.key !== "Enter" || event.defaultPrevented) return;
@@ -93,7 +101,9 @@ export function WorkflowStepCards({
                 >
                   <div>
                     <strong>
-                      {(pageCoding && pageCodingLabels[step.key]) || step.key}
+                      {mediaLabels[step.key] ||
+                        (pageCoding && pageCodingLabels[step.key]) ||
+                        step.key}
                     </strong>
                     <p>
                       {step.capability}

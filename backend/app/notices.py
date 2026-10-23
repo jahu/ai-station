@@ -69,6 +69,23 @@ def notice_dict(row: Notice, session: Session | None = None) -> dict:
 def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
     task = session.get(Task, run.task_id) if run.agent_id else None
     coding = task.metadata_json.get("agent_coding_definition") if task else None
+    media = None
+    if run.agent_id and run.executor_type in {"agent_media", "photo_pipe", "ace_step_music"}:
+        from app.agent_workflow import workflow_parent
+
+        root = workflow_parent(session, run)
+        if root and root.task_id == run.task_id and root.agent_id == run.agent_id:
+            definition = root.parameters.get("definition") or {}
+            if definition.get("media"):
+                media = definition
+    if media and (
+        status == "succeeded"
+        and (run.executor_type == "agent_media" or run.metadata_json.get("upscale_run_id"))
+        or status == "interrupted"
+        and not run.error_type
+        and not run.metadata_json.get("process_confirmed_gone")
+    ):
+        return None
     data_agent = coding and "python_data" in coding.get("tools", [])
     if data_agent and (
         status == "succeeded"
@@ -93,14 +110,14 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
     if run.executor_type == "agent_workflow" and status == "succeeded":
         return None
     if (
-        not coding and run.executor_type not in {"agent", "agent_workflow", "agent_market"}
+        not coding and not media and run.executor_type not in {"agent", "agent_workflow", "agent_market"}
     ) or not run.agent_id:
         return None
     field = KIND_POLICY.get(status)
     if field is None:
         return None
     policy = notification_policy(
-        (coding or run.parameters.get("definition") or {}).get("notification_policy")
+        (coding or media or run.parameters.get("definition") or {}).get("notification_policy")
     )
     if not getattr(policy, field):
         return None
@@ -123,6 +140,8 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
         titles["succeeded"] = "Data agent results ready"
         titles["failed"] = "Data agent workflow failed"
         titles["interrupted"] = "Data agent needs inspection"
+    if media:
+        titles["succeeded"] = "Agent media ready"
     notice = Notice(
         agent_id=run.agent_id,
         run_id=run.id,

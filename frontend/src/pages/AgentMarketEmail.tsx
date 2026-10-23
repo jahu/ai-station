@@ -323,9 +323,11 @@ export function AgentMarketEmailHistory({
 export function AgentMarketRunStop({
   agentId,
   runs,
+  subject = "price check",
 }: {
   agentId: string;
   runs: Run[];
+  subject?: string;
 }) {
   const cache = useQueryClient();
   const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
@@ -360,8 +362,8 @@ export function AgentMarketRunStop({
         onClick={() => cancel.mutate(parent.id)}
       >
         {cancel.isPending || stopping
-          ? "Stopping price check…"
-          : "Stop current price check"}
+          ? `Stopping ${subject}…`
+          : `Stop current ${subject}`}
       </Button>
       <ErrorNotice error={cancel.error} />
     </>

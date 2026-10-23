@@ -15,6 +15,14 @@ import AgentWorkspacePolicy, {
   type WorkspacePolicy,
 } from "./AgentWorkspacePolicy";
 import AgentDataFiles, { type DataScope } from "./AgentDataFiles";
+import AgentMediaScopeEditor from "./AgentMediaScope";
+import AgentMediaResult from "./AgentMediaResult";
+import {
+  agentMediaIssue,
+  fixedAgentMedia,
+  newAgentMedia,
+  type AgentMediaScope,
+} from "./agent-media";
 import AgentDataResult from "./AgentDataResult";
 import AgentCodeWorkspace from "./AgentCodeWorkspace";
 import { useId, useState, type KeyboardEvent } from "react";
@@ -60,16 +68,22 @@ const isCoding = (tools: string[]) =>
   tools.some((name) => codingNames.includes(name));
 const isExternalCoding = (tools: string[]) =>
   tools.some((name) => ["coding_cursor", "coding_codex"].includes(name));
-const agentModelLabel = (agent: { tools: string[]; model: string }) =>
+const agentModelLabel = (agent: {
+  tools: string[];
+  model: string;
+  media?: AgentMediaScope | null;
+}) =>
   agent.tools.includes("market_watch")
     ? "Deterministic · no model or GPU"
-    : isExternalCoding(agent.tools)
-      ? `${agent.tools[0] === "coding_codex" ? "Codex" : "Cursor"} · EXTERNAL · CLI default model`
-      : isCoding(agent.tools) && agent.model === "auto"
-        ? agent.tools.includes("python_data")
-          ? "Auto · local data analysis"
-          : "Auto Local Coding · 100k+ context"
-        : agent.model || "No model selected";
+    : fixedAgentMedia(agent)
+      ? `Local ${agent.media?.kind === "music" ? "music" : "image"} engine`
+      : isExternalCoding(agent.tools)
+        ? `${agent.tools[0] === "coding_codex" ? "Codex" : "Cursor"} · EXTERNAL · CLI default model`
+        : isCoding(agent.tools) && agent.model === "auto"
+          ? agent.tools.includes("python_data")
+            ? "Auto · local data analysis"
+            : "Auto Local Coding · 100k+ context"
+          : agent.model || "No model selected";
 
 type Trigger = "manual" | "interval" | "cron" | "datetime";
 interface Agent {
@@ -84,6 +98,7 @@ interface Agent {
   market_readiness?: { ready: boolean; reason: string | null } | null;
   market_email_authorization?: MarketEmailAuthorization | null;
   data?: DataScope | null;
+  media?: AgentMediaScope | null;
   workspace_policy?: WorkspacePolicy;
   data_readiness?: { ready: boolean; reason: string } | null;
   permission_profile?: "agent_local" | "agent_external_coding";
@@ -121,6 +136,9 @@ interface Tool {
   description: string;
   operational: boolean;
   required_permissions: string[];
+  outputs?: Partial<
+    Record<"image" | "music", { ready: boolean; reason?: string | null }>
+  >;
 }
 interface Skill {
   id: string;
@@ -146,6 +164,7 @@ const schedule = (agent: Agent) =>
         : "Manual";
 
 function toolTitle(tool: Tool) {
+  if (tool.name === "create_media") return "Create media";
   if (tool.name === "search_pages") return "Read search sources";
   return tool.name === "github_read"
     ? "GitHub repository"
@@ -718,8 +737,17 @@ export function AgentDetail() {
           >
             Run now
           </Button>
-          {agent.tools.includes("market_watch") && (
-            <AgentMarketRunStop agentId={agent.id} runs={agent.runs ?? []} />
+          {(agent.tools.includes("market_watch") ||
+            agent.tools.includes("create_media")) && (
+            <AgentMarketRunStop
+              agentId={agent.id}
+              runs={agent.runs ?? []}
+              subject={
+                agent.tools.includes("create_media")
+                  ? "media generation"
+                  : "price check"
+              }
+            />
           )}
           <Button
             variant="ghost"
@@ -762,6 +790,9 @@ export function AgentDetail() {
       <div hidden={view !== "workspace"} className="agent-workspace-body">
         {agent.runs?.length ? (
           <>
+            {agent.tools.includes("create_media") && (
+              <AgentMediaResult runs={agent.runs ?? []} />
+            )}
             {agent.tools.includes("python_data") && (
               <AgentDataResult runs={agent.runs ?? []} />
             )}
@@ -848,6 +879,13 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
   const [values, setValues] = useState(agent);
   const [fetchText, setFetchText] = useState(fetchLines(agent.fetch_urls));
   const [modelBusy, setModelBusy] = useState(false);
+  const [mediaBusy, setMediaBusy] = useState(false);
+  const mediaScope = values.tools.includes("create_media")
+    ? (values.media ?? newAgentMedia("image", values.goal))
+    : null;
+  const mediaIssue = values.tools.includes("create_media")
+    ? agentMediaIssue(mediaScope)
+    : null;
   const provider = useQuery({
     queryKey: ["chat-provider"],
     queryFn: () =>
@@ -876,6 +914,9 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           agentSettingsPayload(agent, {
             ...values,
             fetch_urls: parseFetchUrls(fetchText),
+            ...(values.tools.includes("create_media")
+              ? { media: mediaScope }
+              : {}),
             enabled: agent.enabled,
           }),
         ),
@@ -891,9 +932,13 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
   return (
     <form
       className="panel agent-form"
+      onChangeCapture={() => {
+        if (save.isSuccess) save.reset();
+      }}
       onSubmit={(event) => {
         event.preventDefault();
-        if (!modelBusy && !active && !stale) save.mutate();
+        if (!modelBusy && !mediaBusy && !mediaIssue && !active && !stale)
+          save.mutate();
       }}
     >
       <h2>Definition</h2>
@@ -915,7 +960,10 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
       {active && (
         <p className="muted">Finish or cancel the active Run before editing.</p>
       )}
-      <fieldset disabled={active || save.isPending} className="agent-fields">
+      <fieldset
+        disabled={active || save.isPending || mediaBusy}
+        className="agent-fields"
+      >
         <label>
           Name
           <input
@@ -928,6 +976,10 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         {values.tools.includes("market_watch") ? (
           <p className="muted">
             Deterministic price watch · no model or GPU needed.
+          </p>
+        ) : fixedAgentMedia({ ...values, media: mediaScope }) ? (
+          <p className="muted">
+            Local media engine · uses your exact saved description.
           </p>
         ) : isExternalCoding(values.tools) ? (
           <p className="notice">
@@ -1095,7 +1147,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             onChange={(e) => update("maximum_runtime", Number(e.target.value))}
           />
         </label>
-        {!isCoding(values.tools) && (
+        {!isCoding(values.tools) && !values.tools.includes("create_media") && (
           <label className="agent-wide">
             Expected output
             <textarea
@@ -1115,14 +1167,22 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         <fieldset className="agent-wide">
           <legend>Workflow steps</legend>
           <p className="muted">
-            Selected context tools become persisted child Runs with
-            dependencies. The model cannot add tools, URLs or shell commands.
-            Cancel stops the currently active child. Remember reports still runs
-            only after a successful report. Bounded tool calling is extra
-            registry calls during the report, not a shell or browser.
+            {values.tools.includes("create_media") ? (
+              "Research finishes before creative preparation and generation. Stop cancels the whole execution. Your saved output settings stay fixed."
+            ) : (
+              <>
+                Selected context tools become persisted child Runs with
+                dependencies. The model cannot add tools, URLs or shell
+                commands. Cancel stops the currently active child. Remember
+                reports still runs only after a successful report. Bounded tool
+                calling is extra registry calls during the report, not a shell
+                or browser.
+              </>
+            )}
           </p>
           {!isCoding(values.tools) &&
-            !values.tools.includes("market_watch") && (
+            !values.tools.includes("market_watch") &&
+            !values.tools.includes("create_media") && (
               <ToolCallingChoiceList
                 mode={values.tool_calling ?? "none"}
                 onChange={(mode) => update("tool_calling", mode)}
@@ -1130,6 +1190,9 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             )}
           {!values.tools.includes("market_watch") && (
             <WorkflowModeChoiceList
+              output={
+                values.tools.includes("create_media") ? "media" : "report"
+              }
               mode={values.workflow_mode ?? "sequential"}
               onChange={(mode) => update("workflow_mode", mode)}
             />
@@ -1155,6 +1218,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             enabled. Existing agents stay silent until you opt in.
           </p>
           <NoticeChoiceList
+            output={values.tools.includes("create_media") ? "media" : "report"}
             policy={{
               on_success: Boolean(values.notification_policy?.on_success),
               on_failure: Boolean(values.notification_policy?.on_failure),
@@ -1269,6 +1333,33 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             />
           )}
         </div>
+        {values.tools.includes("create_media") && (
+          <div className="agent-wide">
+            <AgentMediaScopeEditor
+              value={mediaScope}
+              goal={values.goal}
+              disabled={active || save.isPending}
+              readiness={
+                tools.data?.find((tool) => tool.name === "create_media")
+                  ?.outputs
+              }
+              onBusy={setMediaBusy}
+              onChange={(media) =>
+                setValues((current) => ({
+                  ...current,
+                  media,
+                  ...(media.description_source === "fixed"
+                    ? {
+                        tools: ["create_media"],
+                        skills: [],
+                        tool_calling: "none" as const,
+                      }
+                    : {}),
+                }))
+              }
+            />
+          </div>
+        )}
         {values.tools.includes("python_data") && (
           <div className="agent-wide">
             <AgentDataFiles
@@ -1297,7 +1388,11 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           </p>
           {!!tools.data?.length && (
             <ToolChoiceList
-              tools={tools.data}
+              tools={
+                values.tools.includes("create_media")
+                  ? tools.data.filter((tool) => tool.name !== "remember_report")
+                  : tools.data
+              }
               selected={values.tools}
               onChange={(names) => {
                 const addedCoding = names.find(
@@ -1307,7 +1402,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                 const addedMarket =
                   names.includes("market_watch") &&
                   !values.tools.includes("market_watch");
-                const selected = addedMarket
+                let selected = addedMarket
                   ? ["market_watch"]
                   : addedCoding
                     ? [
@@ -1329,6 +1424,10 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                               !codingNames.includes(name) &&
                               (names.length === 1 || name !== "market_watch"),
                           );
+                if (selected.includes("create_media"))
+                  selected = selected.filter(
+                    (name) => name !== "remember_report",
+                  );
                 setValues((current) => ({
                   ...current,
                   tools: selected,
@@ -1344,6 +1443,19 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                       }
                     : {}),
                   data: selected.includes("python_data") ? current.data : null,
+                  ...(selected.includes("create_media")
+                    ? { tool_calling: "none" as const }
+                    : {}),
+                  media: selected.includes("create_media")
+                    ? {
+                        ...(current.media ??
+                          newAgentMedia("image", current.goal)),
+                        description_source:
+                          selected.length > 1
+                            ? "goal"
+                            : (current.media?.description_source ?? "goal"),
+                      }
+                    : null,
                   permission_profile: isExternalCoding(selected)
                     ? "agent_external_coding"
                     : "agent_local",
@@ -1366,9 +1478,23 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         error={save.error ?? tools.error ?? skills.error ?? projects.error}
       />
       <div>
-        <Button disabled={active || stale || modelBusy || save.isPending}>
+        <Button
+          disabled={
+            active ||
+            stale ||
+            modelBusy ||
+            mediaBusy ||
+            !!mediaIssue ||
+            save.isPending
+          }
+        >
           Save definition
         </Button>
+        {save.isSuccess && (
+          <p role="status" className="muted">
+            Definition saved.
+          </p>
+        )}
       </div>
     </form>
   );

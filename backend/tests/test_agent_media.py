@@ -22,8 +22,8 @@ from test_music import music_bridge as music_bridge
 
 @pytest.fixture
 def implemented_media(monkeypatch):
-    # The public registry stays unavailable until the full feature's execution,
-    # deadline/recovery and UI qualification is complete.
+    # Explicit fixture selection keeps execution contract tests independent of
+    # future registry readiness changes; native runtimes are always fakes here.
     monkeypatch.setitem(AGENT_TOOLS, "create_media", replace(AGENT_TOOLS["create_media"], operational=True))
 
 
@@ -425,3 +425,12 @@ def test_media_publication_has_no_runner_io_and_replays_the_same_child(
                 )
                 == 1
             )
+
+
+def test_tool_readiness_reports_each_engine_without_launching(implemented_media, music_bridge):
+    with TestClient(app) as api:
+        media = next(tool for tool in api.get("/api/agents/tools").json() if tool["name"] == "create_media")
+        assert media["operational"] is True
+        assert media["outputs"]["music"]["ready"] is True
+        assert media["outputs"]["image"]["ready"] is False
+        assert api.get("/api/runs").json() == []

@@ -9,10 +9,12 @@ export default function MusicScope({
   value,
   onChange,
   descriptionLength,
+  allowAutomaticDuration = true,
 }: {
   value: MusicScopeOptions;
   onChange: (value: MusicScopeOptions) => void;
   descriptionLength?: number;
+  allowAutomaticDuration?: boolean;
 }) {
   const instrumental = value.instrumental !== false;
   const rememberedLyrics = useRef(value.lyrics ?? "");
@@ -51,9 +53,11 @@ export default function MusicScope({
             })
           }
         >
-          <option value="auto">
-            From your message · 30 seconds by default
-          </option>
+          {allowAutomaticDuration && (
+            <option value="auto">
+              From your message · 30 seconds by default
+            </option>
+          )}
           {[10, 30, 60, 120, 180, 300, 600].map((seconds) => (
             <option key={seconds} value={seconds}>
               {seconds < 60

@@ -1,0 +1,77 @@
+import { Link } from "react-router-dom";
+import { Image, Music2, LoaderCircle } from "lucide-react";
+import type { Run } from "../api";
+import { ErrorNotice } from "../components/common";
+import MediaResult from "../components/media/MediaResult";
+
+export default function AgentMediaResult({ runs }: { runs: Run[] }) {
+  const task = runs[0]?.task_id;
+  const current = runs.filter((run) => run.task_id === task);
+  const output = current.find(
+    (run) =>
+      run.executor_type === "photo_pipe" ||
+      run.executor_type === "ace_step_music",
+  );
+  const preparation = current.find(
+    (run) => run.executor_type === "agent_media",
+  );
+  if (output)
+    return (
+      <MediaResult
+        kind={output.executor_type === "ace_step_music" ? "audio" : "image"}
+        audioMode="music"
+        runId={output.id}
+        run={output}
+        allowRetry={false}
+        error={output.error_message ? new Error(output.error_message) : null}
+        steps={
+          output.executor_type === "photo_pipe"
+            ? current
+                .filter((run) => run.executor_type === "photo_pipe")
+                .reverse()
+            : undefined
+        }
+      />
+    );
+  const latest = preparation ?? current[0];
+  if (!latest) return null;
+  const stopped = ["canceled", "failed", "interrupted"].includes(latest.status);
+  const scope = (
+    latest.parameters?.definition as { media?: { kind: string } } | undefined
+  )?.media;
+  const Icon = scope?.kind === "music" ? Music2 : Image;
+  return (
+    <section
+      className="panel agent-media-pending"
+      aria-label="Agent media result"
+    >
+      <div className="media-composer-heading">
+        <Icon size={20} />
+        <h2>
+          {stopped
+            ? "No new media was published"
+            : "Preparing your agent’s output"}
+        </h2>
+      </div>
+      <p role="status" className="muted">
+        {stopped ? (
+          "Your saved settings and execution history are preserved. Review the details before running again."
+        ) : latest.status === "waiting_for_approval" ? (
+          "Review and approve the generation step below to continue."
+        ) : (
+          <>
+            <LoaderCircle size={16} className="animate-spin" />
+            Creative direction and reviewed sources are prepared before
+            generation.
+          </>
+        )}
+      </p>
+      <ErrorNotice
+        error={latest.error_message ? new Error(latest.error_message) : null}
+      />
+      <Link className="text-link" to={`/runs/${latest.id}`}>
+        Inspect preparation
+      </Link>
+    </section>
+  );
+}

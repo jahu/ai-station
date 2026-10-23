@@ -46,6 +46,30 @@ def require_profile(scope):
     return profile
 
 
+def runtime_readiness():
+    """Report both output engines without loading a model or launching work."""
+    from app.music import PROFILE_SHA256, capabilities
+
+    music = capabilities()
+    try:
+        photo = RunnerClient().request("GET", "/v1/photo/capabilities")
+    except (RunnerError, RunnerUnavailable):
+        photo = {}
+    image_ready = bool(photo.get("available") and "t2i" in photo.get("modes", []))
+    music_ready = bool(music.get("available") and music.get("profile_sha256") == PROFILE_SHA256)
+    return {
+        "image": {
+            "ready": image_ready,
+            "reason": None if image_ready else "Local image engine is unavailable; inspect Images setup",
+            "modes": photo.get("modes", []) if image_ready else [],
+        },
+        "music": {
+            "ready": music_ready,
+            "reason": None if music_ready else "Local music engine is unavailable; inspect Audio setup",
+        },
+    }
+
+
 def freeze_inputs(session, scope):
     if scope.kind != "image":
         return []

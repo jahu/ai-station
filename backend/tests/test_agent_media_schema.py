@@ -64,7 +64,7 @@ def test_media_scopes_do_not_accept_invented_inputs_or_authority(value):
         scope.validate_python(value)
 
 
-def test_disabled_media_scope_round_trips_and_duplicates_without_enabling_unfinished_tool():
+def test_disabled_media_scope_round_trips_and_duplicates_without_an_installed_engine():
     from app.api import app
     from fastapi.testclient import TestClient
 
@@ -94,7 +94,7 @@ def test_disabled_media_scope_round_trips_and_duplicates_without_enabling_unfini
             f"/api/agents/{original['id']}/enabled",
             json={"expected_updated_at": original["updated_at"], "enabled": True},
         )
-        assert enabled.status_code == 422 and "Unavailable tools" in enabled.text
+        assert enabled.status_code == 409 and "engine is unavailable" in enabled.text
         assert api.get("/api/runs").json() == []
 
 

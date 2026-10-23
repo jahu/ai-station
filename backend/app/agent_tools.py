@@ -19,9 +19,7 @@ AGENT_TOOLS = {
         required_permissions=("filesystem_read", "workspace_write"),
         timeout=3600,
         execution_target="host",
-        # The scope can be saved in disabled drafts during implementation.
-        # Enable only after workflow, Stop/deadline and recovery qualification.
-        operational=False,
+        operational=True,
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},
         output_schema={"type": "object"},
     ),
