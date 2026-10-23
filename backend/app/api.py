@@ -49,6 +49,7 @@ from app.memory_api import router as memory_router
 from app.model_definitions import router as model_definition_router
 from app.model_registry import router as model_router
 from app.models import Run, Setting, WorkerRow
+from app.music import router as music_router
 from app.nodes import router as nodes_router
 from app.notices import router as notice_router
 from app.operator_auth import refresh_operator_cookie, refuse_non_loopback_bind, require_operator_session
@@ -377,6 +378,7 @@ app.include_router(connector_router)
 app.include_router(email_router)
 app.include_router(market_feed_router)
 app.include_router(audio_router)
+app.include_router(music_router)
 app.include_router(transcription_router)
 app.include_router(avatar_router)
 app.include_router(video_router)

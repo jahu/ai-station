@@ -538,11 +538,16 @@ the UI. It does not execute generated JavaScript in the authenticated UI origin.
 The optional adapter remains disabled until its image is configured; see
 [setup, security and verification](docs/agent-site-preview.md).
 
-### Local music setup (in progress)
+### Optional local music
 
 The [music delivery plan](docs/plans/local-music-generation.md) includes a pinned
 ACE-Step 1.5 checkpoint manifest and explicit setup script. Running
 `scripts/install-music-model.py --destination <new-directory>` only prints an
 offline plan; `--download` explicitly fetches 6.34 GB into a new directory and
 `--verify` checks all file hashes offline. It never overwrites existing models,
-installs dependencies or enables generation. Music is not yet available in Audio.
+installs dependencies or enables generation. Audio → Music and Chat/Work use the
+same offline adapter, queued Runs, Stop and playable Library artifacts. Actual
+10-second instrumental and 30-second supplied-lyrics GPU cases and native Stop
+were verified. Longer lengths and subjective quality are not qualified by those
+cases. Follow the plan to configure its separate Python/source/model paths and
+allowed roots; empty configuration keeps Music unavailable.

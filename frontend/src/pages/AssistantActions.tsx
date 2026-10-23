@@ -1,4 +1,6 @@
 import RecordingButton from "../components/media/RecordingButton";
+import MusicScope from "./MusicScope";
+import type { MusicScopeOptions } from "./music-scope";
 import { TRANSCRIPTION_AUDIO_ACCEPT } from "../recording-formats";
 import { TranscriptResult } from "./Transcription";
 import GithubSnapshotResult, {
@@ -73,6 +75,7 @@ export type LoadScope = {
 export type StopScope = { instance_id: string };
 export type GithubScope = { connector_id: string; expected_updated_at: string };
 export type AssistantOptions = {
+  music?: MusicScopeOptions | null;
   github?: GithubScope | null;
   action: string;
   image_artifact_ids: string[];
@@ -318,7 +321,11 @@ export function AssistantResults({
                   controls
                   preload="metadata"
                   src={`/api/artifacts/${artifact.id}/file`}
-                  aria-label="Generated speech"
+                  aria-label={
+                    artifact.metadata?.capability === "audio.music"
+                      ? "Generated music"
+                      : "Generated speech"
+                  }
                 />
               )}
               <Link to={`/library/${artifact.id}`}>
@@ -328,6 +335,7 @@ export function AssistantResults({
               {onUse &&
                 (artifact.type === "image" ||
                   (artifact.type === "audio" &&
+                    artifact.metadata?.capability !== "audio.music" &&
                     artifact.mime_type === "audio/wav")) && (
                   <Button
                     type="button"
@@ -382,6 +390,7 @@ export function AssistantResults({
                 </div>
               )}
               {artifact.type === "audio" &&
+                artifact.metadata?.capability !== "audio.music" &&
                 artifact.mime_type === "audio/wav" && (
                   <div className="media-result-reuse">
                     <Button asChild variant="secondary">
@@ -536,6 +545,7 @@ export default function AssistantActions({
   onUploading,
   sources = [],
   allowWork = true,
+  description,
 }: {
   value: AssistantOptions;
   onChange: (value: AssistantOptions) => void;
@@ -543,6 +553,7 @@ export default function AssistantActions({
   onUploading: (uploading: boolean) => void;
   sources?: Run[];
   allowWork?: boolean;
+  description?: string;
 }) {
   const repositories = useQuery({
     queryKey: ["connectors"],
@@ -701,6 +712,25 @@ export default function AssistantActions({
     }
   }
   function resetAction(action: string) {
+    if (action === "audio.music") {
+      onChange({
+        action,
+        music: {},
+        image_artifact_ids: [],
+        audio_artifact_id: null,
+        coding: null,
+        new_project: null,
+        commit: null,
+        publish: null,
+        load: null,
+        stop: null,
+        media: null,
+        github: null,
+        speech_text: null,
+        upscale_result: false,
+      });
+      return;
+    }
     if (["audio.transcribe", "audio.analyze"].includes(action)) {
       onChange({
         ...value,
@@ -716,6 +746,7 @@ export default function AssistantActions({
         github: null,
         upscale_result: false,
         speech_text: null,
+        music: null,
       });
       return;
     }
@@ -743,6 +774,7 @@ export default function AssistantActions({
       onChange({
         ...value,
         github: undefined,
+        music: null,
         action,
         upscale_result: false,
         speech_text: null,
@@ -851,6 +883,7 @@ export default function AssistantActions({
       github: undefined,
       action,
       media: action === "video.generate" ? value.media : null,
+      music: null,
       commit: null,
       publish: null,
       load: null,
@@ -965,6 +998,7 @@ export default function AssistantActions({
           !value.action.startsWith("runtime.") &&
           value.action !== "system.inspect" &&
           value.action !== "github.inspect" &&
+          value.action !== "audio.music" &&
           value.action !== "image.generate_video" &&
           value.action !== "project.create" &&
           value.action !== "project.create_code" && (
@@ -1085,6 +1119,7 @@ export default function AssistantActions({
           value.action !== "image.generate_video" &&
           value.action !== "project.create" &&
           value.action !== "project.create_code" &&
+          value.action !== "audio.music" &&
           value.action !== "github.inspect") ||
           value.image_artifact_ids.length > 0) && (
           <div
@@ -1163,6 +1198,13 @@ export default function AssistantActions({
             </span>
             <ErrorNotice error={repositories.error} />
           </label>
+        )}
+        {value.action === "audio.music" && (
+          <MusicScope
+            value={value.music ?? {}}
+            descriptionLength={description?.trim().length}
+            onChange={(music) => onChange({ ...value, music })}
+          />
         )}
         {value.action === "video.generate" && (
           <label>
