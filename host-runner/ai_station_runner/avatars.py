@@ -24,6 +24,7 @@ class AudioWindow(BaseModel):
 class AvatarRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     run_id: UUID
+    deadline_at: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
     audio_window: AudioWindow | None = None
     previous_video: MediaInput | None = None
     motion_context: MediaInput | None = None
@@ -219,4 +220,11 @@ def start_avatar(manager, body):
         "PYTHONUNBUFFERED": "1",
         "CUDA_VISIBLE_DEVICES": str(body.gpu),
     }
-    return manager.start(run_id=run_id, argv=argv, cwd=work, executor="echomimic", env=environment)
+    return manager.start(
+        run_id=run_id,
+        argv=argv,
+        cwd=work,
+        executor="echomimic",
+        env=environment,
+        **({"deadline_at": body.deadline_at} if body.deadline_at is not None else {}),
+    )

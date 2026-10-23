@@ -138,6 +138,7 @@ class AvatarExecutor(MotionArtifacts, HostMediaExecutor):
             "/v1/runs/avatar",
             {
                 "run_id": run.id,
+                **self.native_budget(run),
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
                 **(

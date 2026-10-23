@@ -1,10 +1,15 @@
+[Persistent video/avatar output](plans/agent-motion-generation.md) will reuse the
+existing long-media planner, segments and CPU composition on the agent Task.
+The first prerequisite is optional native-owned expiry for all three executors;
+agent scopes stay unavailable until publication and recovery are fully tested.
+
 # Architecture
 
 [Spoken agent output](plans/agent-speech-generation.md) reuses the existing
 Chatterbox executor and reviewed Library voice references.
 Shared scopes, prepared text and owned deadlines use the same media-agent chain;
-editor and execution contracts are tested in the candidate. Full release and
-real-model qualification are tracked separately before deployment.
+editor and execution contracts are deployed and real goal-based Polish speech
+is qualified; see the linked evidence.
 
 [Persistent media agents](plans/agent-media-generation.md) compose reviewed research,
 bounded creative preparation and existing image/music children on one Task.

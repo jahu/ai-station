@@ -1,0 +1,46 @@
+# Video and avatar output from persistent agents
+
+Status: planned. Image, music and speech agents are delivered; video/avatar
+agent scopes remain unavailable. Reuse the existing long-media controller rather
+than adding a short-clip-only agent engine.
+
+## Delivery sequence
+
+1. Carry the existing optional absolute owned-process deadline through Wan,
+   EchoMimic and CPU composition. Use the same native ProcessManager journal,
+   SIGTERM/SIGKILL ownership checks and restart-restored timer as speech/music.
+   Add only private typed request fields; public workspace forms cannot set them.
+   Calls without a deadline retain their current behavior. This prerequisite does
+   not enable video/avatar agents or automatically put a budget on ordinary jobs.
+2. Extend the reviewed discriminated media scope with long scene video and
+   whole-speech avatars. Video uses the existing duration/composition/storyboard
+   contract. Avatars require reviewed portrait and audio/voice Library references;
+   disabled drafts may wait for selection. Freeze source identity, hashes, sizes,
+   actual files and runtime profile; models cannot choose UUIDs or runtime paths.
+3. Publish via the existing media preparation receipt and Task lock into existing
+   media jobs. Creative preparation may change only the main scene instruction
+   or bounded spoken words. Keep duration, storyboard, portrait, voice, quality,
+   GPU, permissions and absolute deadline controller-owned. Every planner,
+   segment, generated speech and final composition inherits that same expiry.
+   A replay/resume must never extend it. Final agent success requires the verified
+   composed video artifact, not its first segment or prepared prompt.
+4. Retain Task-wide Stop through queued/running stages, dependency failure,
+   worker/native restart, uncertain ownership and resource admission. Use existing
+   operation keys; never duplicate generation on lost responses. Expiry must be
+   enforced by native ownership even while the worker is unavailable.
+5. Add familiar Video/Avatar output cards to the agent editor, with source previews,
+   clear whole-output duration and advanced resource/quality settings. Natural
+   drafts stay disabled; missing source or unavailable engine blocks activation.
+   Inline final playback, step progress, Library/reuse and reload preserve UX.
+
+## Qualification
+
+Use temporary databases and fake installed profiles/processes for schema,
+permissions, immutable inputs, publication receipts, shared budget, Stop,
+failure, recovery and no-budget regressions. Native tests exercise real owned
+sleeping CPU processes with short deadlines; they require no GPU or download.
+Use compiled desktop/phone browser checks for editor, source selection, final
+playback and reload. Run the required local full checks, inspect the full PR diff
+and built image, then back up and deploy through develop. Qualify a short actual
+existing-model agent video/avatar only after the complete chain is operational;
+record real duration/profile and preserve the operator's actual model state.

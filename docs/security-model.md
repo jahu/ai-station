@@ -1,3 +1,9 @@
+[Video/avatar agent planning](plans/agent-motion-generation.md) extends the same
+private optional owned-process deadline to Wan, EchoMimic and CPU composition.
+Public Video/Avatar/long-media forms cannot set it. No new endpoint, shell,
+filesystem grant or agent output scope is introduced by this prerequisite.
+Ordinary calls without a budget retain their existing lifecycle.
+
 # Security model
 
 The [persistent media-agent work](plans/agent-media-generation.md) adds an optional
