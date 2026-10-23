@@ -39,6 +39,15 @@ bounded UTF-8. Raw optional Python outputs stay internal and cannot be downloade
 as validated exports. Validate the complete set before publishing any exports.
 Each usable file retains the exact raw output, script and original-input lineage.
 
+The inert-workbook contract also rejects formula-bearing XML outside ordinary
+cells, including conditional-formatting expressions and data-validation formula1/
+formula2 elements and formula-typed thresholds. Literal conditional formatting
+remains supported. The audit reproduced acceptance of harmless expression
+fixtures before the fix; none were executed. Preserve that evidence under
+`data/acceptance/data-export-expressions-20261024`. Recheck the already qualified
+real literal workbook under the stricter policy; do not rerun model inference for
+an unchanged output when its original hash and provenance can be verified.
+
 Show the verified chart inline, with clear PNG/Excel/report downloads and Library
 inspection, on desktop and mobile. Persist identifiers in the existing result
 metadata; no migration or changes to public submission/receipt fields are needed.

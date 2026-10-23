@@ -1,42 +1,33 @@
 # Chat/Work and longer media: implementation handoff
 
-Updated 2026-10-22. Implementation is active: the earlier planning-only request and
+Updated 2026-10-24. Implementation is active: the earlier planning-only request and
 pause were explicitly superseded. Continue implementation; do not repeat delivered
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current continuation — generated analysis files, 2026-10-23
+## Current continuation — analysis output qualification, 2026-10-24
 
-Real export acceptance found a material #384 issue: the local model wrote PNG,
-XLSX and text but omitted their output declaration, so only the required table/CSV
-were collected. The failed evidence remains under
-`data/acceptance/data-output-files-20261023/production-smoke-result.json`; the
-operator model preset was restored. Do not count that attempt as qualified.
-The fix candidate `.tools/required-data-exports` derives and freezes required
-files from current creation instructions, independently of model declarations.
-Its evidence is under `data/acceptance/required-data-exports-20261023`.
-No new Python-image/native/UI changes are needed for this correction; retain
-their exact-source qualification, run the full backend gate and repeat real
-normal-worker chart/Excel/report acceptance after guarded rollout.
+Natural CSV/XLSX follow-ups (#383) and inline PNG/Excel/text exports (#384–#385)
+are deployed. Actual normal-worker local inference at131072 context and offline
+Python produced the correct average25, then all six original chart bars, an Excel
+workbook and text total150. Original source bytes and the operator model preset
+were preserved. Latest functional qualification:
+`data/acceptance/required-data-exports-20261023/post-deployment-qualified.json`.
+The first #384 real attempt missed the model's undeclared files; it remains failed
+in its own evidence. #385 makes current requested files mandatory independently
+of model declarations. Do not repeat the completed implementation.
 
-Agent timezone schedules (#381), interval parsing (#382) and natural CSV/XLSX
-follow-ups (#383) are merged and deployed. The latter passed 2679 Python/Runner
-tests, nine opt-in skips, 658 UI tests and compiled desktop/mobile checks. Actual
-normal-worker inference with 131072 context and offline Python returned the
-correct average25 from the original full CSV; input hashes and the operator
-preset were preserved. Evidence:
-`data/acceptance/conversation-data-references-20261023/post-deployment-qualified.json`.
+The current candidate `.tools/data-export-expressions` strengthens the inert-XLSX
+contract for conditional/data-validation expressions and formula-typed thresholds,
+while retaining literal formatting. Its evidence is under
+`data/acceptance/data-export-expressions-20261024`; inspect full qualification and
+the central deployment record before claiming rollout. Recheck the existing real
+workbook by its hash; no new GPU inference, native restart or dependency is needed.
 
-The current candidate is [generated analysis files](data-output-files.md) on
-`.tools/data-output-files`: actual PNG/Excel/text exports through the existing
-Python/data graph and clear inline/download/Library results. Qualification is
-recorded under `data/acceptance/data-output-files-20261023`; do not claim deployed
-or real-model tested before those checks run. The optional Python CPU image gains
-pinned plotting support; the native capability advertises its installed features.
-Preserve the root checkout WIP and the ready operator LLM preset during rollout.
-No Whisper-small weights have been downloaded; its separate approval remains
-pending. The full platform goal remains active, including general orchestration,
-media quality/resource acceptance and operations/private remote access.
+The full platform goal remains active: broader general-agent orchestration,
+media/resource/quality acceptance and operations/private remote access. Preserve
+the original checkout WIP and existing model preset. Whisper-small download
+approval remains pending; no additional model weights have been downloaded.
 
 ## Earlier continuation — coherent Vision replies, 2026-10-23
 

@@ -126,7 +126,23 @@ def xlsx(data, check):
                 if index % 128 == 0:
                     check()
                 local = node.tag.rsplit("}", 1)[-1]
-                if local in {"f", "definedName", "externalReference", "hyperlink", "oleObject"}:
+                formula_attribute = any(
+                    (key.rsplit("}", 1)[-1] in {"type", "t"} and value.strip().casefold() == "formula")
+                    or key.rsplit("}", 1)[-1].casefold() in {"formula", "formula1", "formula2"}
+                    for key, value in node.attrib.items()
+                )
+                if (
+                    formula_attribute
+                    or "formula" in local.casefold()
+                    or local
+                    in {
+                        "f",
+                        "definedName",
+                        "externalReference",
+                        "hyperlink",
+                        "oleObject",
+                    }
+                ):
                     raise ValueError("Workbook exports cannot contain formulas, links or named expressions")
                 if local in {"Default", "Override"} and node.get("ContentType") not in types:
                     raise ValueError("Unsupported workbook content type")
