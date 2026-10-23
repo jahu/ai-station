@@ -12,7 +12,10 @@ full inline editing remains available. Preparation supports Stop and a reload-sa
 AI** preserves quick keyword-based drafting. See [assisted drafts](docs/plans/assisted-agent-drafts.md).
 
 Current direction: [agents that can execute local code](docs/plans/agent-first-product.md).
-Chat and Agents lead the experience; existing Coding/Git services supply isolated
+Chat and Agents lead the experience. **Advanced** in the station navigation keeps
+existing Coding conversations/history and Projects available; saved URLs and
+command-palette shortcuts still work. Project-task selection in Work is optional.
+Existing Coding/Git services supply isolated
 workspaces and inspectable results. Standalone IDE expansion and further external
 coding CLI integrations are deferred. CSV/Excel data agents generate local Python, run it in an offline container,
 and return a verified answer, table and CSV download. Price-watch agents can use

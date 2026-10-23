@@ -73,7 +73,7 @@ export default function ChatWorkPicker({
   });
   const disabled = busy || select.isPending;
   return (
-    <section className="work-task-picker" aria-label="Choose coding workspace">
+    <section className="work-task-picker" aria-label="Continue a project task">
       <Button
         type="button"
         variant="ghost"
@@ -83,7 +83,11 @@ export default function ChatWorkPicker({
         disabled={disabled}
         onClick={() => setOpen(!open)}
       >
-        {open ? "Close task picker" : "Choose coding task"}
+        {open
+          ? "Close task picker"
+          : selectedTask
+            ? "Change project task"
+            : "Continue a project task"}
       </Button>
       {open && (
         <div
@@ -109,8 +113,8 @@ export default function ChatWorkPicker({
             </Button>
           </div>
           <p className="muted">
-            Choose a task to keep its branch, files and coding agent. Selection
-            does not start work.
+            Optionally continue a project task with its files and agent. You can
+            use Work without selecting one. Selection does not start work.
           </p>
           <input
             aria-label="Find coding task or project"
@@ -152,7 +156,8 @@ export default function ChatWorkPicker({
           </div>
           {tasks.data?.length === 0 && (
             <p className="muted">
-              No matching tasks. Create a project or start a task in Coding.
+              No matching project tasks. You can use Work without choosing a
+              project.
             </p>
           )}
           <div className="row spread">
