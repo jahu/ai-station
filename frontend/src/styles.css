@@ -1967,6 +1967,9 @@ section:has(> .memory-grid) > .dashboard-note {
   border-radius: 8px;
   padding: 10px 12px;
 }
+.agent-form select {
+  margin: 0;
+}
 .agent-form textarea {
   resize: vertical;
 }
