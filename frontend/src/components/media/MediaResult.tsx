@@ -119,7 +119,9 @@ export default function MediaResult({
         : copy[kind];
   const statusText =
     run?.status === "queued"
-      ? "Waiting for an available GPU"
+      ? kind === "audio" && audioMode === "music"
+        ? "Waiting for an available GPU and enough memory"
+        : "Waiting for an available GPU"
       : run?.status === "cancel_requested"
         ? "Stopping generation…"
         : "Creating on your workstation";

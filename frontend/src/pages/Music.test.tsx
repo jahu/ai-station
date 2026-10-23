@@ -101,7 +101,7 @@ it("generates music with lyrics in the shared workspace and exposes Stop", async
     ).toBe(false),
   );
   fireEvent.click(screen.getByRole("button", { name: "Generate music" }));
-  await screen.findByText("Waiting for an available GPU");
+  await screen.findByText("Waiting for an available GPU and enough memory");
   const sent = fetch.mock.calls.find(
     ([path]) => path === "/api/audio/music/runs",
   );
@@ -155,7 +155,7 @@ it("reuses the same request identity after an uncertain response", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Generate music" }));
   await screen.findByText("Connection interrupted");
   fireEvent.click(screen.getByRole("button", { name: "Generate music" }));
-  await screen.findByText("Waiting for an available GPU");
+  await screen.findByText("Waiting for an available GPU and enough memory");
   expect(submitted).toHaveLength(2);
   expect(submitted[0]).toBe(submitted[1]);
 });
