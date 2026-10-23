@@ -33,8 +33,17 @@ combined backend/Runner gate passes 2318 tests; release/image qualification is
 recorded under `data/acceptance/local-music-generation-20261023`. This is an
 optional configured runtime, not a claim that every music duration or quality
 profile is qualified. Persistent-agent media tools are delivered through #362–#368.
-Reviewed goal-based lyric writing is the current composition candidate; ordinary
-Chat/Music still require supplied words.
+Original goal-based lyric writing is delivered for persistent agents (#370) and
+ordinary Chat/Work (#371). Actual local writing and short GPU WAV/inline/Library
+chains passed; subjective sung-word intelligibility remains unverified. See
+[conversation music qualification](plans/conversational-music.md).
+
+The current candidate is [conversation CSV/Excel analysis](plans/conversation-data.md),
+PR #372. It reuses the deployed local Python/data pipeline without a persistent
+Agent or manual repository. Compiled desktop/phone upload, inspection-gated Send,
+table/download and reload pass with fake inference/Python and disposable real Git.
+Complete final CPU checks, review and actual local-model conversation acceptance
+remain release gates; this entry does not claim the candidate is deployed.
 
 Current evidence summary, 2026-10-22: general-agent research, local Python/data
 execution and website-building workflows are operational. Public research uses

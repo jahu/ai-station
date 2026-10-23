@@ -1,3 +1,4 @@
+import { useDataInputs } from "./useDataInputs";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import { BrowserPages } from "./BrowserPages";
 import { isBrowserResult, type BrowserResult } from "./browserResult";
@@ -1069,6 +1070,8 @@ function ConversationView({
   const draft = draftState.value,
     setDraft = draftState.update;
   const [options, setOptions] = useState(emptyOptions);
+  const dataInputs = useDataInputs(options.data);
+  const dataReady = options.action !== "data.analyze" || dataInputs.ready;
   const [projectSelectionVersion, setProjectSelectionVersion] = useState(0);
   const [webQuery, setWebQuery] = useState("");
   const orchestrator = ["work", "orchestrator"].includes(
@@ -1098,7 +1101,8 @@ function ConversationView({
     !!context &&
     turnMode === "work" &&
     generalTask !== context.task_id &&
-    options.action === "auto";
+    options.action === "auto" &&
+    !options.data;
   const web = useWebSearch(turnMode === "chat" && !attachments.length);
   const webEnabled = !continuing && web.enabled;
   const setWebEnabled = web.setEnabled;
@@ -1200,7 +1204,7 @@ function ConversationView({
           ? { reasoning: { enabled: true, budget: 256 } }
           : {}),
         ...(assistantTurn ? options : {}),
-        ...(turnMode === "work"
+        ...(turnMode === "work" && !options.data
           ? {
               project_defaults: {
                 auto_install_dependencies: true,
@@ -1599,7 +1603,7 @@ function ConversationView({
             value={draft}
             onChange={setDraft}
             onSend={() => send.mutate()}
-            canSend={canSend && contextReady && web.ready}
+            canSend={canSend && dataReady && contextReady && web.ready}
             busy={busy}
             sendKey={preferences.data?.send_key}
             placeholder={
@@ -1657,6 +1661,7 @@ function ConversationView({
                     options.action === "audio.transcribe" ||
                     options.action === "audio.analyze" ||
                     options.action === "audio.music" ||
+                    options.action === "data.analyze" ||
                     options.action === "image.generate_video" ||
                     options.action === "project.create" ||
                     options.action === "project.create_code"

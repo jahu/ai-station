@@ -232,6 +232,10 @@ class AgentWorkflowExecutor:
 
 def publish_steps(session, parent: Run) -> list[Run]:
     definition = AgentSettings.model_validate(parent.parameters["definition"])
+    if definition.tools == ["python_data"] and parent.agent_id is None:
+        from app.conversation_data import validate_workflow
+
+        validate_workflow(session, parent)
     if definition.tools == ["market_watch"]:
         from app.market_watch import publish_market_steps
 

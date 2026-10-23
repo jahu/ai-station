@@ -20,10 +20,13 @@ Python/Runner tests, nine opt-in skips and 610 UI tests plus desktop/phone
 playback. Real local drafting → original Polish words → 10-second GPU WAV passed;
 the operator's model preset was restored. Tiny ASR could not confirm sung-word
 intelligibility, which remains a separate listening check. Current release and
-proof: `data/acceptance/agent-music-lyrics-20261023`. The active next increment is
-[original songs in the conversation](conversational-music.md#original-songs-from-one-send--active-increment),
-reusing the existing orchestrator and music child. No persistent agent should be
-created for an ordinary one-turn music request.
+proof: `data/acceptance/agent-music-lyrics-20261023`. Original songs in the conversation are now delivered by #371: 2515 normal
+Python/Runner tests, nine opt-in skips and 611 UI tests pass. Actual selected-model
+Chat → original words → 10-second GPU WAV → inline/Library passed with the original
+46080-token model preset restored; listening quality remains separate. Evidence:
+`data/acceptance/conversation-song-lyrics-20261023`. The next active increment is
+[CSV/Excel in the conversation](conversation-data.md), reusing the existing local
+Python pipeline without requiring a persistent Agent or manual repository.
 The local-music section below is historical qualification, not unfinished #361.
 
 ## Active continuation — local music, 2026-10-23

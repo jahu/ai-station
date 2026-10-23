@@ -18,6 +18,14 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+[Conversation data analysis](plans/conversation-data.md) requires a current
+explicit CSV/XLSX scope, inspected immutable stored inputs and local-only model
+selection. The root is bound to its actual user message; workspace setup and
+agent-less workflow adoption verify that origin, exact permissions and deadline.
+Model output cannot choose files, extend expiry or change the private project.
+The existing Python sandbox has no network or writable user input mounts.
+Conversation provider selection grants no external data sharing for this tool.
+
 The [persistent media-agent work](plans/agent-media-generation.md) adds an optional
 internal execution deadline. The controller freezes UTC expiry; typed photo/music/speech
 requests carry its epoch value to the native owned-process manager. Admission

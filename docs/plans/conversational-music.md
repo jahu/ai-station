@@ -53,7 +53,7 @@ Frontend checks cover action selection, scope reset, lyrics/duration, inline
 audio and normal conversation preservation. Inspect compiled desktop/phone UI.
 Run required repository checks and review the updated #361 diff before merging.
 
-Automatic lyric writing and image/audio-conditioned music are subsequent chains,
+Historical #361 scope: automatic lyric writing and image/audio-conditioned music were subsequent chains,
 not behavior to fake by ignoring a reference or silently generating an
 instrumental. The first conversation action accepts instrumental descriptions or
 explicitly supplied lyrics; requests outside that scope must ask for the required
@@ -61,7 +61,7 @@ input. These later chains should reuse ordinary model/Vision Runs and the same
 music child, not another executor or queue.
 
 
-## Original songs from one Send — active increment
+## Original songs from one Send — delivered #371
 
 Persistent original-lyric agents are deployed (#370). Real local drafting,
 original Polish words, a normal-worker 10-second GPU WAV and restoration of the
@@ -95,3 +95,11 @@ authorize a new song. Verify natural/selected entry and follow-up, provider gran
 legacy receipts, fixed no-inference behavior, immutable fields, invalid/truncated
 output, Stop and actual inline words. Qualify compiled desktop/phone and a short
 real selected-local-model case while preserving the operator's runtime preset.
+
+
+Release qualification: 2515 Python/Runner tests, nine opt-in skips and 611 UI tests
+pass; compiled desktop/phone first Send and continuation pass. Actual normal-worker
+selected-local-model writing and 10-second GPU WAV/inline/Library passed, with no
+persistent Agent and the original operator model preset restored. Evidence:
+`data/acceptance/conversation-song-lyrics-20261023/post-deployment-qualified.json`.
+This proves the chain and artifacts, not subjective vocal intelligibility.

@@ -16,6 +16,7 @@ CHAT_ACTIONS = {
     "image.generate_video",
     "audio.speech",
     "audio.music",
+    "data.analyze",
     "audio.transcribe",
     "audio.analyze",
     "avatar.animate",

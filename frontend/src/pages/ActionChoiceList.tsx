@@ -12,6 +12,12 @@ const ACTIONS = [
     detail: "Stay in chat without routing to a station action.",
   },
   {
+    key: "data.analyze",
+    title: "Analyze CSV / Excel",
+    detail:
+      "Ask a question about your files. A local model runs the analysis and returns a table and download.",
+  },
+  {
     key: "image.describe",
     title: "Inspect images",
     detail:
@@ -173,6 +179,7 @@ export function ActionChoiceList({
             ["auto", "chat"].includes(item.key) ||
             item.key.startsWith("image.") ||
             [
+              "data.analyze",
               "audio.speech",
               "audio.music",
               "audio.transcribe",

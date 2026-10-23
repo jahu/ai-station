@@ -252,6 +252,10 @@ def new_generation(session, source, scope, *, repair=None):
 def context(session, run):
     scope = run.parameters["agent_data"]
     workflow = session.get(Run, scope["workflow_run_id"])
+    if workflow is not None and workflow.agent_id is None:
+        from app.conversation_data import validate_workflow
+
+        validate_workflow(session, workflow)
     tree = session.get(Worktree, scope["worktree_id"])
     preparation = session.get(Run, scope["worktree_run_id"])
     if (

@@ -74,6 +74,8 @@ def resolve_result_reference(session, conversation, body, mode):
     Selection never inspects another conversation, grants external permissions,
     guesses among siblings, or overrides an explicitly selected tool/input/worktree.
     """
+    if body.data is not None:
+        return body, None
     if mode not in {"chat", "work", "orchestrator"}:
         return body, None
     body = _media_web_options(body)
