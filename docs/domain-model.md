@@ -137,3 +137,8 @@ EmailDelivery records reference the alert, consent and fixed template in their
 frozen payload, using a stable UUID derived from MarketAlert identity. No new
 column or schema migration is introduced by this increment. Parentage/provenance
 and a report dependency keep mail children in the existing Task graph.
+
+Agent `schedule_timezone` is a persisted IANA identifier, default UTC for existing
+records and API clients. Cron uses local calendar minutes; `next_run_at` remains
+an absolute UTC instant. The frozen Run definition retains the reviewed zone.
+Interval durations and explicit-offset one-shot timestamps remain unchanged.

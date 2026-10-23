@@ -26,6 +26,7 @@ from app.providers import ProviderError
 from app.publication import PublishBody
 from app.reviewed_commits import ReviewedCommit
 from app.runs import create_run, create_task, run_dict, transition
+from app.schedule_time import ScheduleTimezone
 from app.serialize import artifact_dict, iso
 from app.state import TERMINAL, RunStatus
 from app.web_search import SearchOptions
@@ -187,6 +188,7 @@ class AssistantInputs(BaseModel):
         "runtime.load",
         "runtime.stop",
     ] = "auto"
+    schedule_timezone: ScheduleTimezone | None = None
     audio_artifact_id: UUID | None = None
     continuation: ContinuationScope | None = None
     media: VideoScope | None = None
@@ -1328,14 +1330,22 @@ class AssistantExecutor:
                     )
                 }
                 child = enqueue_for_task(
-                    session, run.task, params["content"], params["model"], snapshot, parent=run
+                    session,
+                    run.task,
+                    params["content"],
+                    params["model"],
+                    snapshot,
+                    parent=run,
+                    schedule_timezone=params.get("schedule_timezone") or "UTC",
                 )
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                 message.content = "Preparing an agent draft with your selected local model. Review its tools and schedule before enabling it."
             else:
                 from app.factory import draft_agent
 
-                agent = draft_agent(params["content"])
+                agent = draft_agent(
+                    params["content"], schedule_timezone=params.get("schedule_timezone") or "UTC"
+                )
                 session.add(agent)
                 session.flush()
                 message.metadata_json = {**message.metadata_json, "agent_id": agent.id}

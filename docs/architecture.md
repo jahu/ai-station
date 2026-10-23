@@ -609,3 +609,8 @@ Stop bind creative inference. Prepared JSON and final WAV preserve provenance.
 Instrumental/supplied words retain their no-text-model path. There is no new
 executor, persistent transient agent or native API; see
 [the conversation contract](plans/conversational-music.md).
+
+Agent cron schedules resolve reviewed IANA wall-clock rules into durable UTC due
+instants through the existing scheduler. Daily/custom controls share the same
+contract in Agents and conversations; legacy schedules retain UTC. See
+[calendar scheduling](plans/agent-schedule-timezones.md).

@@ -2357,7 +2357,7 @@ it("shows a compact review card instead of the full editor without enabling or r
   const fetch = mount(draft, true);
   await screen.findByRole("heading", { name: draft.name });
   expect(screen.getByText(draft.goal)).toBeTruthy();
-  expect(screen.getByText("Custom UTC schedule")).toBeTruthy();
+  expect(screen.getByText("Custom schedule · UTC")).toBeTruthy();
   expect(screen.getByText(draft.search_query)).toBeTruthy();
   expect(screen.queryByText("Identity")).toBeNull();
   expect(

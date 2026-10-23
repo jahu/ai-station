@@ -13,6 +13,7 @@ dependencies = [
   "httpx>=0.28",
   "python-multipart>=0.0.17",
   "croniter>=5.0",
+  "tzdata==2026.5",
   "pillow>=11.0",
   "pypdf>=5.0",
 ]

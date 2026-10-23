@@ -690,6 +690,8 @@ def accept_turn(body: TurnBody, session: DB):
         payload.pop("github")
     if body.project_defaults is None:
         payload.pop("project_defaults")
+    if body.schedule_timezone is None:
+        payload.pop("schedule_timezone")
 
     def fingerprint(values):
         return hashlib.sha256(json.dumps(values, sort_keys=True, separators=(",", ":")).encode()).hexdigest()

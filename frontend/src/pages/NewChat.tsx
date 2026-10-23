@@ -1,3 +1,4 @@
+import { browserTimezone } from "./AgentCronFields";
 import { useConversationAttachmentUpload } from "./attachment-upload";
 import { useDataInputs } from "./useDataInputs";
 import { useChatDraft, chatRequestId, clearChatRequest } from "./chat-draft";
@@ -187,6 +188,7 @@ export default function NewChat({
           ? { expected_provider_version: providerVersion }
           : {}),
         execution_mode: mode,
+        ...(mode === "work" ? { schedule_timezone: browserTimezone() } : {}),
         ...(thinking.enabled
           ? { reasoning: { enabled: true, budget: 256 } }
           : {}),

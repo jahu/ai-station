@@ -1,3 +1,4 @@
+import { browserTimezone, ScheduleTimezoneSelect } from "./AgentCronFields";
 import "./AgentDraftForm.css";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ export default function AgentDraftForm() {
   const runId = params.get("draft_run") ?? "";
   const [instruction, setInstruction] = useState("");
   const [model, setModel] = useState("");
+  const [zone, setZone] = useState(browserTimezone);
   const [modelBusy, setModelBusy] = useState(false);
   const restored = useRef("");
   const provider = useQuery({
@@ -49,7 +51,11 @@ export default function AgentDraftForm() {
   }, [run, navigate]);
   const draft = useMutation({
     mutationFn: async () => {
-      const body = { instruction: instruction.trim(), model: selectedModel };
+      const body = {
+        instruction: instruction.trim(),
+        model: selectedModel,
+        schedule_timezone: zone,
+      };
       const key = await chatRequestId("agent-factory", JSON.stringify(body));
       return api<Run>("/agent-drafts", {
         method: "POST",
@@ -70,7 +76,11 @@ export default function AgentDraftForm() {
       api<{ id: string }>("/agents/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instruction, model: selectedModel }),
+        body: JSON.stringify({
+          instruction,
+          model: selectedModel,
+          schedule_timezone: zone,
+        }),
       }),
     onSuccess: (agent) => navigate(`/agents/${agent.id}`),
   });
@@ -101,6 +111,7 @@ export default function AgentDraftForm() {
         Describe what you want done and how often. Your local model prepares the
         instructions, tools and schedule. Review them before enabling the agent.
       </p>
+      <ScheduleTimezoneSelect value={zone} onChange={setZone} disabled={busy} />
       {runId && (
         <section
           className="panel agent-draft-progress"

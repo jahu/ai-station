@@ -20,6 +20,7 @@ from app.local_provider import model_endpoint
 from app.models import Agent, Project, Run
 from app.providers import ProviderError
 from app.schedule import active_run, compute_next, launch_agent
+from app.schedule_time import ScheduleTimezone
 from app.serialize import agent_dict
 
 router = APIRouter(prefix="/api/agents", tags=["agents"])
@@ -50,7 +51,6 @@ def definition_dict(agent, session=None):
         + (
             ["email_send", "network_external"] if email_authorization and email_authorization["valid"] else []
         ),
-        "schedule_timezone": "UTC",
     }
 
 
@@ -136,6 +136,8 @@ def validate_target(body, session, agent=None, *, enabling=False):
 
 def apply_settings(agent, body):
     for key, value in body.model_dump().items():
+        if key == "schedule_timezone" and key not in body.model_fields_set and agent.schedule_timezone:
+            continue
         if key == "project_id" and value is not None:
             value = str(value)
         if key in {"github", "data", "market", "media"} and value is not None:
@@ -143,8 +145,18 @@ def apply_settings(agent, body):
         setattr(agent, key, value)
     agent.retry_policy = body.retry_policy.model_dump()
     agent.notification_policy = body.notification_policy.model_dump()
-    agent.next_run_at = compute_next(agent) if agent.enabled else None
+    try:
+        agent.next_run_at = compute_next(agent) if agent.enabled else None
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
     agent.updated_at = utcnow()
+
+
+@router.get("/timezones")
+def schedule_timezones():
+    from app.schedule_time import timezones
+
+    return sorted(timezones())
 
 
 @router.get("/tools")
@@ -195,11 +207,12 @@ class DraftBody(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     instruction: str = Field(min_length=1, max_length=16000)
     model: str = Field(default="", max_length=200)
+    schedule_timezone: ScheduleTimezone = "UTC"
 
 
 @router.post("/draft", status_code=201)
 def draft(body: DraftBody, session: DB):
-    agent = draft_agent(body.instruction, model=body.model)
+    agent = draft_agent(body.instruction, model=body.model, schedule_timezone=body.schedule_timezone)
     session.add(agent)
     session.commit()
     return definition_dict(agent, session)
@@ -234,7 +247,15 @@ def edit(agent_id: UUID, body: AgentUpdate, session: DB):
     version(agent, body.expected_updated_at)
     if active_run(session, agent.id):
         raise HTTPException(409, "Cancel or finish the active Run before editing its agent")
-    settings = AgentSettings.model_validate(body.model_dump(exclude={"expected_updated_at"}))
+    values = body.model_dump(exclude={"expected_updated_at"})
+    if "schedule_timezone" not in body.model_fields_set:
+        values["schedule_timezone"] = agent.schedule_timezone or "UTC"
+    from pydantic import ValidationError
+
+    try:
+        settings = AgentSettings.model_validate(values)
+    except ValidationError as exc:
+        raise HTTPException(422, "; ".join(error["msg"] for error in exc.errors())) from exc
     validate_target(settings, session, agent)
     if not settings.enabled or settings.market is None or settings.market.email is None:
         from app.market_email import revoke

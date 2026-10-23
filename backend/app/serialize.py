@@ -149,6 +149,7 @@ def agent_dict(agent: Agent) -> dict:
         "memory_scope": agent.memory_scope,
         "trigger": agent.trigger,
         "cron_expr": agent.cron_expr,
+        "schedule_timezone": agent.schedule_timezone or "UTC",
         "interval_seconds": agent.interval_seconds,
         "run_at": iso(agent.run_at),
         "permission_profile": agent.permission_profile,

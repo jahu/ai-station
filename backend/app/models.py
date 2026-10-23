@@ -249,6 +249,7 @@ class Agent(Base):
     memory_scope: Mapped[str] = mapped_column(String(40), default="agent")
     trigger: Mapped[str] = mapped_column(String(40), default="manual")
     cron_expr: Mapped[str] = mapped_column(String(120), default="")
+    schedule_timezone: Mapped[str] = mapped_column(String(100), default="UTC", server_default="UTC")
     interval_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
     run_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
     permission_profile: Mapped[str] = mapped_column(String(80), default="agent_minimal")

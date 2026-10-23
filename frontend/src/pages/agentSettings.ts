@@ -21,6 +21,7 @@ export type AgentSettingsInput = {
   skills?: string[];
   trigger?: string;
   cron_expr?: string | null;
+  schedule_timezone?: string;
   interval_seconds?: number | null;
   run_at?: string | null;
   maximum_runtime?: number;
@@ -80,6 +81,7 @@ export function agentSettingsPayload(
     skills: next.skills ?? [],
     trigger,
     cron_expr: trigger === "cron" ? (next.cron_expr ?? "") : "",
+    schedule_timezone: next.schedule_timezone ?? "UTC",
     interval_seconds:
       trigger === "interval" ? (next.interval_seconds ?? 3600) : null,
     run_at: trigger === "datetime" ? (next.run_at ?? null) : null,

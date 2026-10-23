@@ -1,3 +1,4 @@
+import AgentCronFields from "./AgentCronFields";
 import "./AssistantAgentDraft.css";
 import {
   MarketEmailApproval,
@@ -60,6 +61,7 @@ type AgentDraft = {
   skills?: string[];
   trigger?: string;
   cron_expr?: string | null;
+  schedule_timezone?: string;
   interval_seconds?: number | null;
   run_at?: string | null;
   maximum_runtime?: number;
@@ -86,7 +88,8 @@ type AgentDraft = {
 const TERMINAL = new Set(["succeeded", "failed", "canceled", "interrupted"]);
 
 function scheduleLabel(agent: AgentDraft) {
-  if (agent.trigger === "cron") return `${agent.cron_expr} (UTC)`;
+  if (agent.trigger === "cron")
+    return `${agent.cron_expr} (${agent.schedule_timezone ?? "UTC"})`;
   if (agent.trigger === "interval")
     return `Every ${agent.interval_seconds} seconds`;
   if (agent.trigger === "datetime") return `Once: ${agent.run_at}`;
@@ -99,6 +102,7 @@ function AgentSchedule({
   agentId,
   trigger,
   cronExpr,
+  timezone,
   intervalSeconds,
   runAt,
   tabIndex,
@@ -109,6 +113,7 @@ function AgentSchedule({
   agentId: string;
   trigger: string;
   cronExpr: string;
+  timezone: string;
   intervalSeconds: number | null;
   runAt: string | null;
   tabIndex: number;
@@ -117,6 +122,7 @@ function AgentSchedule({
   onSave: (patch: {
     trigger: ScheduleTrigger;
     cron_expr: string;
+    schedule_timezone: string;
     interval_seconds: number | null;
     run_at: string | null;
   }) => void;
@@ -129,6 +135,7 @@ function AgentSchedule({
       : "manual",
   );
   const [cron, setCron] = useState(cronExpr);
+  const [zone, setZone] = useState(timezone);
   const [interval, setInterval] = useState(String(intervalSeconds ?? 3600));
   const [once, setOnce] = useState(runAt?.slice(0, 16) ?? "");
   const intervalValue = Number(interval);
@@ -143,7 +150,8 @@ function AgentSchedule({
     (nextTrigger === "datetime" && !!once);
   const unchanged =
     nextTrigger === saved &&
-    (nextTrigger !== "cron" || cron.trim() === cronExpr) &&
+    (nextTrigger !== "cron" ||
+      (cron.trim() === cronExpr && zone === timezone)) &&
     (nextTrigger !== "interval" ||
       intervalValue === (intervalSeconds ?? 3600)) &&
     (nextTrigger !== "datetime" || nextRunAt === runAt);
@@ -156,6 +164,7 @@ function AgentSchedule({
         onSave({
           trigger: nextTrigger,
           cron_expr: nextTrigger === "cron" ? cron.trim() : "",
+          schedule_timezone: zone,
           interval_seconds: nextTrigger === "interval" ? intervalValue : null,
           run_at: nextTrigger === "datetime" ? nextRunAt : null,
         });
@@ -168,13 +177,15 @@ function AgentSchedule({
           tabIndex={tabIndex}
           aria-label={`Schedule trigger ${shortId}`}
           disabled={disabled}
-          onChange={(event) =>
-            setNextTrigger(event.target.value as ScheduleTrigger)
-          }
+          onChange={(event) => {
+            const trigger = event.target.value as ScheduleTrigger;
+            setNextTrigger(trigger);
+            if (trigger === "cron" && !cron) setCron("0 9 * * *");
+          }}
         >
           <option value="manual">Manual</option>
           <option value="interval">Interval</option>
-          <option value="cron">Cron (UTC)</option>
+          <option value="cron">Daily / custom schedule</option>
           <option value="datetime">One-shot (UTC)</option>
         </select>
       </label>
@@ -195,18 +206,15 @@ function AgentSchedule({
         </label>
       ) : null}
       {nextTrigger === "cron" ? (
-        <label>
-          Cron expression (UTC)
-          <input
-            required
-            value={cron}
-            tabIndex={tabIndex}
-            aria-label={`Cron expression ${shortId}`}
-            disabled={disabled}
-            placeholder="0 8 * * *"
-            onChange={(event) => setCron(event.target.value)}
-          />
-        </label>
+        <AgentCronFields
+          cron={cron}
+          timezone={zone}
+          onCron={setCron}
+          onTimezone={setZone}
+          disabled={disabled}
+          tabIndex={tabIndex}
+          suffix={` ${shortId}`}
+        />
       ) : null}
       {nextTrigger === "datetime" ? (
         <label>
@@ -754,9 +762,9 @@ export function AssistantAgentDraft({
             ? `Every ${interval / 60} ${interval === 60 ? "minute" : "minutes"}`
             : `Every ${interval} seconds`
         : daily
-          ? `Daily at ${daily[2].padStart(2, "0")}:${daily[1].padStart(2, "0")} UTC`
+          ? `Daily at ${daily[2].padStart(2, "0")}:${daily[1].padStart(2, "0")} ${agent.schedule_timezone ?? "UTC"}`
           : agent.trigger === "cron"
-            ? "Custom UTC schedule"
+            ? `Custom schedule · ${agent.schedule_timezone ?? "UTC"}`
             : scheduleLabel(agent);
     return (
       <section
@@ -986,6 +994,7 @@ export function AssistantAgentDraft({
                   agentId={agent.id}
                   trigger={agent.trigger ?? "manual"}
                   cronExpr={agent.cron_expr ?? ""}
+                  timezone={agent.schedule_timezone ?? "UTC"}
                   intervalSeconds={agent.interval_seconds ?? null}
                   runAt={agent.run_at ?? null}
                   tabIndex={tabIndex}
