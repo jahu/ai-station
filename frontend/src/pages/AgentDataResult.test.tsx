@@ -152,8 +152,9 @@ it("shows the verified chart inline with named file downloads and Library links"
       .getByRole("img", { name: "Chart generated from the analyzed data" })
       .getAttribute("src"),
   ).toBe("/api/artifacts/plot/file");
-  expect(screen.queryByRole("cell", { name: "27" })).toBeNull();
-  expect(screen.getByText("View result table")).toBeTruthy();
+  expect(
+    screen.getByText("View result table").closest("details")?.hasAttribute("open"),
+  ).toBe(false);
   expect(
     screen
       .getByRole("link", { name: "Open analysis chart at full size" })
