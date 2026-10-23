@@ -24,9 +24,10 @@ export default function Audio() {
   const speech = search.get("mode") !== "transcribe" && !music;
   return (
     <>
-      <nav className="mode-tabs" aria-label="Audio mode">
+      <nav className="mode-tabs audio-mode-tabs" aria-label="Audio mode">
         <button
           type="button"
+          aria-label="Create speech"
           disabled={busy}
           className={speech ? "active" : ""}
           aria-pressed={speech}
@@ -36,7 +37,7 @@ export default function Audio() {
             setSearch(next);
           }}
         >
-          Create speech
+          Speech
         </button>
         <button
           type="button"
