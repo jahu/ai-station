@@ -1,12 +1,15 @@
 # AI Station
 
-Persistent media agents use the existing Images and Music engines. In **Agents**,
+Persistent media agents use the existing Images, Music and Polish speech engines. In **Agents**,
 attach **Create media**, choose the output and review its settings before enabling.
 An exact saved description runs without loading a text model; goal-based output
 uses the selected local model and any reviewed research sources. Run now and
 saved schedules show results inline and in Library. **Stop current media
 generation** cancels the whole execution. Vocal music uses lyrics you supply.
 See [the media-agent contract and qualification](docs/plans/agent-media-generation.md).
+For spoken output, select a Library WAV voice, review the text or goal-based
+writing instructions and enable the agent. A draft can wait for voice selection.
+See [speech-agent setup and verification](docs/plans/agent-speech-generation.md).
 
 
 Local coding agents can use an [automatic private workspace](docs/agent-workspaces.md):

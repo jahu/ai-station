@@ -1,7 +1,7 @@
 # Architecture
 
-[Spoken agent output](plans/agent-speech-generation.md) is a guarded candidate
-that reuses the existing Chatterbox executor and reviewed Library voice references.
+[Spoken agent output](plans/agent-speech-generation.md) reuses the existing
+Chatterbox executor and reviewed Library voice references.
 Shared scopes, prepared text and owned deadlines use the same media-agent chain;
 editor and execution contracts are tested in the candidate. Full release and
 real-model qualification are tracked separately before deployment.

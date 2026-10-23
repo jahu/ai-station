@@ -1,8 +1,8 @@
 # Spoken output from persistent agents
 
-Status: next implementation candidate after image/music agents (#362) and the
-verified idle-model RAM admission correction (#363). Speech is not an operational
-agent output until this entire chain is wired and qualified.
+Status: implemented PR #364 candidate after image/music agents (#362) and the
+idle-model RAM admission correction (#363). Backed-up deployment and real
+normal-worker voice acceptance remain; no real speech-agent result is claimed yet.
 
 Reuse Create media, the agent Task/workflow and the existing local Chatterbox
 executor. No model download, separate speech agent engine or additional host
@@ -27,8 +27,10 @@ real speech model. A discovered editor revision issue is corrected: untouched
 settings refresh after Enable/Pause; unsaved changes remain preserved for review.
 
 The speech implementation gate is enabled in the candidate following these
-contracts. Full release checks, PR review, backed-up native/control-plane rollout
-and real voice generation still remain. No candidate version is deployed yet.
+contracts. Complete Python/Runner checks pass across four isolated normal CPU
+shards (2403 cases, 9 opt-in skips, zero failures); all 594 UI tests, formatting,
+lint, TypeScript and production build pass. Review/rollout and real voice
+generation remain. No candidate version is deployed yet.
 
 ## Reviewed scope and authority
 
