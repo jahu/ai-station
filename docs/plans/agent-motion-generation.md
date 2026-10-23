@@ -2,7 +2,8 @@
 
 Status: scene-video agents are implemented through the existing long-media
 controller. The optional native deadline prerequisite (#366) is deployed.
-Whole-speech avatar agent scopes remain planned; their dedicated workspace works.
+Whole-speech avatar agent scopes are implemented and deployed in #368; new real
+agent GPU qualification is tracked separately from the dedicated workspace.
 Image, music and speech agents retain their delivered contracts.
 
 The prerequisite adds private optional deadlines to Wan, EchoMimic and CPU
@@ -50,8 +51,8 @@ Save/Enable/Run, full playback, Library, reload and Task Stop without overflow.
 These use test native segments and real CPU composition, not a GPU model.
 Review, backed-up rollout and a real normal-worker sample are recorded separately
 in data/acceptance/agent-long-media-output-20261023/.
-Avatar agent output remains planned and unavailable; its existing dedicated
-workspace is unchanged.
+Whole-avatar agent output is now delivered through the increment below; its
+existing dedicated workspace remains available.
 
 ## Delivery sequence
 

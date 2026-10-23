@@ -174,7 +174,22 @@ it("shows the actual completed music inline with Library access and no speech or
             executor_type: "ace_step_music",
             capability: "audio.music",
             status: "succeeded",
-            parameters: {},
+            project_id: null,
+            parent_run_id: null,
+            execution_target: "host",
+            created_at: "2026-10-23T10:00:00Z",
+            started_at: "2026-10-23T10:00:00Z",
+            finished_at: "2026-10-23T10:01:00Z",
+            actual_gpu: "7",
+            requested_gpu: "7",
+            effective_permissions: ["filesystem_read", "workspace_write"],
+            summary: "",
+            error_type: "",
+            worker_id: null,
+            parameters: {
+              instrumental: false,
+              lyrics: "[Chorus]\nA bright new day",
+            },
             metadata: {},
             error_message: "",
           } as Run,
@@ -190,6 +205,9 @@ it("shows the actual completed music inline with Library access and no speech or
   expect(
     screen.getByRole("link", { name: "Open in Library" }).getAttribute("href"),
   ).toBe("/library/track");
+  expect(
+    screen.getByRole("region", { name: "Song lyrics" }).textContent,
+  ).toContain("A bright new day");
   expect(screen.queryByRole("link", { name: /Use as speech/ })).toBeNull();
   expect(screen.queryByRole("button", { name: /Retry/ })).toBeNull();
 });
@@ -669,4 +687,95 @@ it("requires speech readiness only when the avatar writes new words", () => {
       catalog,
     ).blocked,
   ).toBe(false);
+});
+
+it("offers original lyrics for goal-based vocals and clears that authority for fixed text or instrumental", () => {
+  responses();
+  function Editor() {
+    const [value, setValue] = useState<AgentMediaScope>(
+      newAgentMedia("music", "Write a short original Polish folk song"),
+    );
+    return (
+      <>
+        <AgentMediaScopeEditor
+          value={value}
+          goal="Write a short original Polish folk song"
+          disabled={false}
+          onChange={setValue}
+          onBusy={() => {}}
+        />
+        <output aria-label="Lyric scope">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "With lyrics" }));
+  expect(
+    (screen.getByLabelText("Song lyrics policy") as HTMLSelectElement).value,
+  ).toBe("goal");
+  expect(screen.getByLabelText("Lyrics guidance (optional)")).toBeTruthy();
+  const current = () =>
+    JSON.parse(screen.getByLabelText("Lyric scope").textContent || "{}");
+  expect(agentMediaIssue(current())).toBeNull();
+  expect(
+    agentSettingsPayload({
+      name: "Song",
+      updated_at: "version",
+      media: current(),
+      tools: ["create_media"],
+    }).media,
+  ).toEqual(expect.objectContaining({ lyrics_source: "goal" }));
+  fireEvent.change(screen.getByLabelText("Song lyrics policy"), {
+    target: { value: "fixed" },
+  });
+  expect(screen.getByText("Add the lyrics for your song.")).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Your lyrics"), {
+    target: { value: "[Verse]\nReviewed words" },
+  });
+  fireEvent.change(screen.getByLabelText("Song lyrics policy"), {
+    target: { value: "goal" },
+  });
+  expect(
+    (screen.getByLabelText("Lyrics guidance (optional)") as HTMLTextAreaElement)
+      .value,
+  ).toContain("Reviewed words");
+  fireEvent.change(screen.getByLabelText("Media description policy"), {
+    target: { value: "fixed" },
+  });
+  expect(current().lyrics_source).toBe("fixed");
+  expect(screen.queryByLabelText("Song lyrics policy")).toBeNull();
+  expect(screen.getByLabelText("Your lyrics")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Instrumental" }));
+  expect(current().lyrics_source).toBe("fixed");
+  expect(current().request.lyrics).toBe("");
+  expect(screen.queryByLabelText("Your lyrics")).toBeNull();
+});
+
+it("rejects generated lyric authority outside a goal-based vocal scope", () => {
+  const base = {
+    ...newAgentMedia("music", "Folk"),
+    kind: "music" as const,
+    description_source: "goal" as const,
+    lyrics_source: "goal" as const,
+    request: {
+      caption: "Folk",
+      instrumental: false,
+      lyrics: "",
+      duration_seconds: 30,
+    },
+  };
+  expect(agentMediaIssue(base)).toBeNull();
+  expect(agentMediaIssue({ ...base, description_source: "fixed" })).toContain(
+    "goal-based",
+  );
+  expect(
+    agentMediaIssue({
+      ...base,
+      request: { ...base.request, instrumental: true },
+    }),
+  ).toContain("vocals");
 });

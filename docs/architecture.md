@@ -574,3 +574,11 @@ revision, symbols, provider timestamps/currency/session and approval scope are
 frozen and revalidated before notification. Migration 0031 adds source metadata
 without replacing crypto history or changing its policy hashes/template IDs.
 Deployment requires full local qualification and reviewed integration through develop.
+
+
+Goal-based vocal agents extend the existing local media preparation with an
+explicit reviewed lyric-writing mode. One bounded JSON preparation produces the
+caption and original song text; the existing music Run receives finalized words.
+Supplied lyrics retain their default exact-word contract. UI and Library preserve
+the actual words, while Task ownership, immutable expiry, Stop and publication
+receipts reuse [the media-agent contract](plans/agent-media-generation.md).

@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.audio_schema import SpeechRequest
 from app.avatar_schema import FullAvatarSettings
 from app.image_schema import ImageRequest
-from app.music_schema import MusicSettings
+from app.music_schema import MusicOptions, MusicSettings
 from app.video_schema import LongVideoSettings
 
 
@@ -27,7 +27,7 @@ class AgentImageScope(BaseModel):
         return self
 
 
-class AgentMusicRequest(MusicSettings):
+class AgentMusicRequest(MusicOptions):
     # Receipts and child identity belong to the workflow publisher, not a draft
     # or model. Reuse the existing settings validator without accepting its UUID.
     caption: str = Field(min_length=1, max_length=512)
@@ -38,6 +38,16 @@ class AgentMusicScope(BaseModel):
     kind: Literal["music"]
     request: AgentMusicRequest
     description_source: Literal["fixed", "goal"] = "fixed"
+    lyrics_source: Literal["fixed", "goal"] = "fixed"
+
+    @model_validator(mode="after")
+    def reviewed_lyrics_mode(self):
+        if self.lyrics_source == "goal":
+            if self.description_source != "goal" or self.request.instrumental:
+                raise ValueError("Generated lyrics require vocal music and a goal-based description")
+        else:
+            MusicSettings.model_validate(self.request.model_dump(exclude={"caption"}))
+        return self
 
 
 class AgentSpeechRequest(SpeechRequest):
@@ -90,3 +100,7 @@ def fixed_media_only(definition):
         and definition.media is not None
         and definition.media.description_source == "fixed"
     )
+
+
+def writes_lyrics(scope):
+    return scope.kind == "music" and scope.lyrics_source == "goal"

@@ -180,4 +180,6 @@ class MusicExecutor(HostMediaExecutor):
             **artifact.metadata_json,
             "actual_gpu": run.actual_gpu,
             "prompt": run.parameters["caption"],
+            "lyrics": run.parameters["lyrics"],
+            "instrumental": run.parameters["instrumental"],
         }

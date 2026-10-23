@@ -90,3 +90,27 @@ def test_media_proposals_require_scope_reviewed_inputs_and_supplied_lyrics(imple
     result = definition(Proposal(**base, media=vocal), "Sing [Verse]\nMorning light", "fake-local")
     assert result.media.request.lyrics == vocal["request"]["lyrics"]
     assert result.model == "" and not result.enabled
+
+
+def test_natural_vocal_agent_can_review_goal_lyrics_without_inventing_supplied_words(implemented_media):
+    candidate = Proposal(
+        name="Morning song",
+        goal="Write and sing a short original Polish song",
+        tools=["create_media"],
+        media={
+            "kind": "music",
+            "description_source": "goal",
+            "lyrics_source": "goal",
+            "request": {
+                "caption": "Acoustic Polish folk",
+                "duration_seconds": 30,
+                "instrumental": False,
+                "lyrics": "",
+            },
+        },
+    )
+    result = definition(
+        candidate, "Create an agent that writes and sings a new Polish song each morning", "fake-local"
+    )
+    assert not result.enabled and result.model == "fake-local"
+    assert result.media.lyrics_source == "goal" and result.media.request.lyrics == ""

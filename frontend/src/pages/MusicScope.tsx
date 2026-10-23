@@ -10,13 +10,18 @@ export default function MusicScope({
   onChange,
   descriptionLength,
   allowAutomaticDuration = true,
+  lyricsSource = "fixed",
+  onLyricsSourceChange,
 }: {
   value: MusicScopeOptions;
   onChange: (value: MusicScopeOptions) => void;
   descriptionLength?: number;
   allowAutomaticDuration?: boolean;
+  lyricsSource?: "fixed" | "goal";
+  onLyricsSourceChange?: (source: "fixed" | "goal") => void;
 }) {
   const instrumental = value.instrumental !== false;
+  const generatedLyrics = lyricsSource === "goal" && !!onLyricsSourceChange;
   const rememberedLyrics = useRef(value.lyrics ?? "");
   const hardware = useHardware();
   function vocals(enabled: boolean) {
@@ -84,21 +89,48 @@ export default function MusicScope({
         </button>
       </div>
       {!instrumental && (
-        <label>
-          Your lyrics
-          <textarea
-            aria-label="Your lyrics"
-            value={value.lyrics ?? ""}
-            rows={5}
-            maxLength={4096}
-            onChange={(event) => {
-              rememberedLyrics.current = event.target.value;
-              onChange({ ...value, lyrics: event.target.value });
-            }}
-            placeholder={"[Verse]\nWrite your words…\n\n[Chorus]\n"}
-          />
-          <small>Use [Verse] and [Chorus] to shape the song.</small>
-        </label>
+        <>
+          {onLyricsSourceChange && (
+            <label>
+              Song lyrics
+              <select
+                aria-label="Song lyrics policy"
+                value={lyricsSource}
+                onChange={(event) =>
+                  onLyricsSourceChange(event.target.value as "fixed" | "goal")
+                }
+              >
+                <option value="goal">Write lyrics each run</option>
+                <option value="fixed">Use my lyrics</option>
+              </select>
+            </label>
+          )}
+          <label>
+            {generatedLyrics ? "Lyrics guidance (optional)" : "Your lyrics"}
+            <textarea
+              aria-label={
+                generatedLyrics ? "Lyrics guidance (optional)" : "Your lyrics"
+              }
+              value={value.lyrics ?? ""}
+              rows={5}
+              maxLength={4096}
+              onChange={(event) => {
+                rememberedLyrics.current = event.target.value;
+                onChange({ ...value, lyrics: event.target.value });
+              }}
+              placeholder={
+                generatedLyrics
+                  ? "For example: a short Polish chorus about a fresh start, without names."
+                  : "[Verse]\nWrite your words…\n\n[Chorus]\n"
+              }
+            />
+            <small>
+              {generatedLyrics
+                ? "Your local model writes original words from the agent goal and this guidance. The actual lyrics are saved with the result."
+                : "Use [Verse] and [Chorus] to shape the song."}
+            </small>
+          </label>
+        </>
       )}
       <details className="media-advanced">
         <summary>

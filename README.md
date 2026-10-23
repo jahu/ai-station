@@ -5,7 +5,10 @@ attach **Create media**, choose the output and review its settings before enabli
 An exact saved description runs without loading a text model; goal-based output
 uses the selected local model and any reviewed research sources. Run now and
 saved schedules show results inline and in Library. **Stop current media
-generation** cancels the whole execution. Vocal music uses lyrics you supply.
+generation** cancels the whole execution. Vocal music can use your exact lyrics
+or **Write lyrics each run** with goal-based preparation. The local model writes
+original words from the goal and optional guidance; the actual song text appears
+beside the finished track and is saved with its Library artifact.
 See [the media-agent contract and qualification](docs/plans/agent-media-generation.md).
 For spoken output, select a Library WAV voice, review the text or goal-based
 writing instructions and enable the agent. A draft can wait for voice selection.
