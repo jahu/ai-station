@@ -202,6 +202,8 @@ def artifact_detail(artifact_id: UUID, session: DB):
 
 
 def artifact_response(artifact: Artifact, *, thumbnail=False):
+    if artifact.metadata_json.get("internal_data_output"):
+        raise HTTPException(409, "This raw Python output is internal; use the verified analysis export")
     relative = artifact.thumbnail_relative_path if thumbnail else artifact.relative_path
     try:
         path = safe_join(get_settings().data_dir, relative)

@@ -74,6 +74,7 @@ def artifacts(
         )
     if not run_id and not include_internal:
         statement = statement.where(Artifact.metadata_json["internal_media"].as_boolean().is_not(True))
+        statement = statement.where(Artifact.metadata_json["internal_data_output"].as_boolean().is_not(True))
     if kind == "files":
         statement = statement.where(Artifact.artifact_type.not_in(["image", "audio", "video"]))
     elif kind:

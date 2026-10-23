@@ -101,3 +101,74 @@ it("labels canceled analysis without pretending it is still running", () => {
   expect(screen.getByRole("link", { name: "Execution details" })).toBeTruthy();
   expect(screen.queryByRole("link", { name: "Download CSV" })).toBeNull();
 });
+
+it("shows the verified chart inline with named file downloads and Library links", () => {
+  render(
+    <MemoryRouter>
+      <AgentDataResult
+        runs={[
+          run({
+            id: "result",
+            status: "succeeded",
+            executor_type: "agent_data_result",
+            metadata: {
+              data_result: {
+                answer: "Wykres i Excel są gotowe.",
+                columns: ["Total"],
+                rows: [["27"]],
+                download_artifact_id: "csv",
+                script_artifact_id: "python",
+                attempt: 0,
+                exports: [
+                  {
+                    artifact_id: "plot",
+                    filename: "chart.png",
+                    label: "Chart",
+                    mime_type: "image/png",
+                  },
+                  {
+                    artifact_id: "excel",
+                    filename: "result.xlsx",
+                    label: "Excel workbook",
+                    mime_type:
+                      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                  },
+                  {
+                    artifact_id: "report",
+                    filename: "report.txt",
+                    label: "Text report",
+                    mime_type: "text/plain",
+                  },
+                ],
+              },
+            },
+          }),
+        ]}
+      />
+    </MemoryRouter>,
+  );
+  expect(
+    screen
+      .getByRole("img", { name: "Chart generated from the analyzed data" })
+      .getAttribute("src"),
+  ).toBe("/api/artifacts/plot/file");
+  expect(
+    screen
+      .getByRole("link", { name: "Open analysis chart at full size" })
+      .getAttribute("target"),
+  ).toBe("_blank");
+  for (const [label, id, filename] of [
+    ["Chart", "plot", "chart.png"],
+    ["Excel workbook", "excel", "result.xlsx"],
+    ["Text report", "report", "report.txt"],
+  ]) {
+    const download = screen.getByRole("link", { name: `Download ${label}` });
+    expect(download.getAttribute("href")).toBe(`/api/artifacts/${id}/file`);
+    expect(download.getAttribute("download")).toBe(filename);
+    expect(
+      screen
+        .getByRole("link", { name: `Inspect ${label} in Library` })
+        .getAttribute("href"),
+    ).toBe(`/library/${id}`);
+  }
+});

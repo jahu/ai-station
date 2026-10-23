@@ -18,6 +18,15 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Optional Python analysis exports remain internal until the result worker checks
+the entire declared set. Raw files are excluded from the normal Library and file
+delivery; source/Run metadata remains inspectable. Bounded PNGs are re-encoded;
+literal XLSX packages reject formulas, external links, macros and embedded content;
+text reports require bounded UTF-8. Verified exports retain original inputs,
+source script and raw-output lineage. Existing offline container permissions,
+hash checks, Stop and repair limits remain unchanged. See
+[generated analysis files](plans/data-output-files.md).
+
 Implicit reuse of an inspected image requires a direct current-user reference and
 verified same-conversation inspection provenance. Changed, trashed, ambiguous or
 unverified legacy inputs are rejected without choosing an older image. New Vision

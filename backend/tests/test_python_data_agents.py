@@ -56,6 +56,8 @@ def data_environment(repository, owned_runner, monkeypatch):
         "model": model,
         "jobs": {},
         "model_requests": [],
+        "exports": {},
+        "data_exports": 0,
     }
 
     async def stream(self, **kwargs):
@@ -69,14 +71,16 @@ def data_environment(repository, owned_runner, monkeypatch):
                 )
                 request_cancel(session, running)
                 session.commit()
-        yield json.dumps({"script": SCRIPT + f"# attempt {state['calls']}\n"})
+        yield json.dumps(
+            {"script": SCRIPT + f"# attempt {state['calls']}\n", "outputs": list(state["exports"])}
+        )
 
     monkeypatch.setattr(LocalChatProvider, "stream", stream)
     original = RunnerClient.request
 
     def request(self, method, path, payload=None):
         if path == "/v1/python/capabilities":
-            return {"available": True, "artifact_source": True}
+            return {"available": True, "artifact_source": True, "data_exports": state["data_exports"]}
         if path == "/v1/llama/" + iid:
             return {"status": "ready", "alive": True, "n_ctx": 131072}
         if path == "/v1/runs/python" and method == "POST":
@@ -111,7 +115,11 @@ def data_environment(repository, owned_runner, monkeypatch):
                 if state["bad_report"]:
                     answer["rows"] = [["999"]]
                 for index, (name, data) in enumerate(
-                    [("result.json", json.dumps(answer).encode()), ("result.csv", b"Total\n27\n")]
+                    [
+                        ("result.json", json.dumps(answer).encode()),
+                        ("result.csv", b"Total\n27\n"),
+                        *state["exports"].items(),
+                    ]
                 ):
                     suffix = Path(name).suffix
                     relative = f"runtime/python/{payload['run_id']}/output-{index}{suffix}"

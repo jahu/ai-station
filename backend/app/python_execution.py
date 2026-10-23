@@ -234,6 +234,7 @@ class PythonExecutor(NativeJobExecutor):
         lineage = [script_artifact.id, *input_ids]
         registered = []
         for index, (item, source) in enumerate(zip(outputs, paths, strict=True)):
+            internal = "agent_data" in run.parameters and index >= 2
             suffix = source.suffix.lower()
             kind, mime = {
                 ".csv": ("document", "text/csv"),
@@ -246,7 +247,7 @@ class PythonExecutor(NativeJobExecutor):
                 session,
                 source=source,
                 artifact_type=kind,
-                mime_type=mime,
+                mime_type="application/octet-stream" if internal else mime,
                 original_filename=Path(item["name"]).name,
                 run_id=run.id,
                 artifact_id=str(uuid5(NAMESPACE_URL, f"python:{run.id}:output:{index}")),
@@ -254,6 +255,7 @@ class PythonExecutor(NativeJobExecutor):
                     "python_execution": True,
                     "output_name": item["name"],
                     "script_sha256": run.parameters["script_sha256"],
+                    **({"internal_data_output": True} if internal else {}),
                 },
                 parent_artifact_ids=lineage,
             )

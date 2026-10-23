@@ -12,6 +12,12 @@ type Result = {
   script_artifact_id: string;
   input_artifact_ids: string[];
   attempt: number;
+  exports?: {
+    artifact_id: string;
+    filename: string;
+    label: string;
+    mime_type: string;
+  }[];
 };
 export default function AgentDataResult({ runs }: { runs: Run[] }) {
   const task = runs[0]?.task_id;
@@ -42,6 +48,44 @@ export default function AgentDataResult({ runs }: { runs: Run[] }) {
       {result && resultRun ? (
         <>
           <p className="agent-data-answer">{result.answer}</p>
+          {result.exports?.map((file) => (
+            <div className="agent-data-export" key={file.artifact_id}>
+              {file.mime_type === "image/png" && (
+                <figure>
+                  <a
+                    href={`/api/artifacts/${file.artifact_id}/file`}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label="Open analysis chart at full size"
+                  >
+                    <img
+                      src={`/api/artifacts/${file.artifact_id}/file`}
+                      alt="Chart generated from the analyzed data"
+                      loading="lazy"
+                    />
+                  </a>
+                  <figcaption>{file.label}</figcaption>
+                </figure>
+              )}
+              <div className="row agent-data-actions">
+                <Button asChild variant="secondary">
+                  <a
+                    href={`/api/artifacts/${file.artifact_id}/file`}
+                    download={file.filename}
+                  >
+                    <Download size={15} /> Download {file.label}
+                  </a>
+                </Button>
+                <Link
+                  to={`/library/${file.artifact_id}`}
+                  className="text-link"
+                  aria-label={`Inspect ${file.label} in Library`}
+                >
+                  Inspect in Library
+                </Link>
+              </div>
+            </div>
+          ))}
           {result.columns.length > 0 && (
             <div className="data-preview-table">
               <table>

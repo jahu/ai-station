@@ -32,7 +32,14 @@ def requested(content):
         return False
     prefix = r"^(?:(?:a|teraz|jeszcze|następnie|nastepnie|proszę|prosze|please|now|then|also|and)\s+){0,4}"
     prefix += r"(?:(?:(?:can|could|would) you|(?:czy )?(?:możesz|mozesz))\s+)?"
-    operation = r"(?:calculate|compute|sum|average|group|aggregate|analy[sz]e|compare|filter|sort|count|transform|extract|policz(?:y[ćc])?|oblicz(?:y[ćc])?|przelicz(?:y[ćc])?|zsumuj|por[óo]wnaj|pogrupuj|podziel|wylicz|przeanalizuj|posortuj|wyodr[ęe]bnij)\b"
+    operation = r"(?:calculate|compute|sum|average|group|aggregate|analy[sz]e|compare|filter|sort|count|transform|extract|plot|chart|policz(?:y[ćc])?|oblicz(?:y[ćc])?|przelicz(?:y[ćc])?|zsumuj|por[óo]wnaj|pogrupuj|podziel|wylicz|przeanalizuj|posortuj|wyodr[ęe]bnij|narysuj)\b"
+    if re.search(
+        prefix
+        + r"(?:create|draw|make|stw[oó]rz|utw[oó]rz)\b.{0,50}\b(?:chart|plot|workbook|wykres\w*|raport\w*|excel)\b",
+        text,
+        re.I,
+    ):
+        return True
     if re.search(prefix + operation, text, re.I):
         return True
     return bool(

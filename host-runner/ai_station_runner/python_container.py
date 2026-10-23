@@ -100,6 +100,8 @@ def execute(request):
         "PYTHONDONTWRITEBYTECODE": "1",
         "AI_STATION_INPUTS": json.dumps(request["inputs"]),
         "AI_STATION_OUTPUT_DIR": "/outputs",
+        "MPLBACKEND": "Agg",
+        "MPLCONFIGDIR": "/tmp/matplotlib",
     }
     deadline = time.monotonic() + timeout
     size = 0

@@ -103,6 +103,9 @@ def test_python_image_is_fixed_installed_and_protocol_checked(monkeypatch):
     }
     monkeypatch.setattr(python_runs, "docker", lambda *args, **kw: json.dumps(image))
     assert python_runs.capabilities()["available"]
+    assert python_runs.capabilities()["data_exports"] == 0
+    image["Config"]["Labels"]["ai-station.python.data-exports"] = "1"
+    assert python_runs.capabilities()["data_exports"] == 1
     image["Config"]["Entrypoint"] = ["bash"]
     assert not python_runs.capabilities()["available"]
 
