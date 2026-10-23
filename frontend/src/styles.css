@@ -6957,3 +6957,20 @@ section:has(> .memory-grid) > .dashboard-note {
   gap: 10px;
   align-items: center;
 }
+.media-spoken-text {
+  padding: 16px;
+  margin: 16px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.media-spoken-text h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.media-spoken-text p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}

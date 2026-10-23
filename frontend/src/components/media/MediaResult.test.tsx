@@ -370,3 +370,51 @@ it("edits Library details on a finished image without queueing a Run", async () 
     ),
   ).toBe(true);
 });
+
+const spokenRun: Run = {
+  id: "speech",
+  task_id: "spoken-task",
+  project_id: null,
+  parent_run_id: null,
+  capability: "audio.speech",
+  executor_type: "chatterbox",
+  execution_target: "host",
+  status: "succeeded",
+  created_at: "2026-10-23T12:00:00Z",
+  started_at: null,
+  finished_at: null,
+  actual_gpu: "0",
+  requested_gpu: "auto",
+  effective_permissions: ["filesystem_read", "workspace_write"],
+  summary: "Speech ready",
+  error_type: "",
+  error_message: "",
+  worker_id: null,
+  parameters: { text: "Dzień dobry.\nŻyczę Ci miłego dnia." },
+};
+it("shows the saved spoken words with the audio, independently of its Library title", async () => {
+  mount(
+    spokenRun,
+    { id: voice.id, sources: [], derived: [] },
+    { ...voice, title: "My renamed recording", run_id: spokenRun.id },
+  );
+  const script = await screen.findByRole("region", { name: "Spoken text" });
+  expect(script.textContent).toContain("Dzień dobry.\nŻyczę Ci miłego dnia.");
+  expect(screen.getByText("My renamed recording")).toBeTruthy();
+  expect(screen.getByLabelText("Generated audio").getAttribute("src")).toBe(
+    "/api/artifacts/voiceclip/file",
+  );
+});
+it("does not label other audio text as a speech transcript", async () => {
+  mount(
+    {
+      ...spokenRun,
+      capability: "audio.music",
+      executor_type: "ace_step_music",
+    },
+    { id: voice.id, sources: [], derived: [] },
+    voice,
+  );
+  await screen.findByLabelText("Generated audio");
+  expect(screen.queryByRole("region", { name: "Spoken text" })).toBeNull();
+});

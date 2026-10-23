@@ -1,36 +1,30 @@
 # Spoken output from persistent agents
 
-Status: implemented PR #364 candidate after image/music agents (#362) and the
-idle-model RAM admission correction (#363). Backed-up deployment and real
-normal-worker voice acceptance remain; no real speech-agent result is claimed yet.
+Status: delivered in PR #364, deployed and qualified with the normal worker.
+A reviewed existing Library voice and goal-based local text preparation produced
+an actual non-silent 7.48-second Polish WAV on GPU 0. The result is in Library;
+the sample agent is paused. No model download was required and the source voice
+bytes were unchanged. Evidence: data/acceptance/agent-speech-generation-20261023/.
 
 Reuse Create media, the agent Task/workflow and the existing local Chatterbox
-executor. No model download, separate speech agent engine or additional host
-access is needed. Existing supplied-lyrics music and image scopes stay intact.
+executor. Fixed text skips the language model; goal mode prepares only bounded
+Polish text. Natural drafts leave voice selection for review and reject invented
+UUIDs. The editor supports WAV upload, Library selection/removal, saving a pending
+voice draft and advanced GPU selection. Clean settings refresh after Enable/Pause;
+unsaved edits are preserved and must be reloaded before replacing a newer revision.
 
-The source candidate now includes the shared speech scope/voice validation,
-existing Audio publication with immutable source hashes and receipts, a native
-readiness endpoint and owned deadlines. Fixed text skips the language model;
-goal mode prepares only bounded Polish text. Natural drafts keep their voice
-unset for review and reject invented UUIDs. The editor supports WAV upload and
-Library selection/removal, saving a pending voice draft, advanced GPU selection,
-inline playback and existing Library/Avatar source actions.
+The player now shows the exact saved spoken text from its speech Run, independently
+of any Library rename. Refresh retains the script. This is the input used to
+synthesize the voice, not an independently verified transcription. Music and other
+audio outputs do not receive a speech label. Playback, Library and reuse actions
+retain their existing behavior; this display adds no execution permission.
 
-CPU regression covers fixed/goal output, actual source changes, missing/invalid
-voice activation, Task Stop before and after dispatch, native expiry without a
-worker, receipt replay without Runner HTTP and stale-worker cleanup without
-replaying. The combined focused check has 101 passing tests. Compiled browser
-checks passed at 1440px and 390px for pending-draft save, voice upload/selection,
-activation, Run now, Stop, PCM playback, Library and reload persistence without
-horizontal overflow. These use temporary databases/fake native outputs, not a
-real speech model. A discovered editor revision issue is corrected: untouched
-settings refresh after Enable/Pause; unsaved changes remain preserved for review.
-
-The speech implementation gate is enabled in the candidate following these
-contracts. Complete Python/Runner checks pass across four isolated normal CPU
-shards (2403 cases, 9 opt-in skips, zero failures); all 594 UI tests, formatting,
-lint, TypeScript and production build pass. Review/rollout and real voice
-generation remain. No candidate version is deployed yet.
+The speech release passed all 2403 collected Python/Runner cases (2394 passed,
+9 opt-in skips), 594 frontend tests, formatting, lint, TypeScript, production build,
+compiled desktop/phone checks and image/Compose checks. Live checks verified
+backup integrity, authentication, persistence, worker/scheduler and native source
+identity. The UI-only spoken-text follow-up reuses this unchanged backend/native
+qualification and separately validates its changed frontend and built image.
 
 ## Reviewed scope and authority
 
