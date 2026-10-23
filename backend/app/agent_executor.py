@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import re
 import tempfile
 import time
 from contextlib import suppress
@@ -138,6 +139,37 @@ def persist_agent_memory(session, run, text, *, tags, tool, excerpt_notice):
         },
     )
     append_event(session, run.id, "tool.completed", {"tool": tool, "memory_id": entry.id})
+
+
+FINAL_REPORT_ONLY = (
+    " Write the final report now using only the observations already supplied. "
+    "No further tool requests are available in this report response. Do not emit XML tool_call, "
+    "function-call markup, or promises to gather information later. Do not merely quote or fence "
+    "unexecuted requests. If the observations are insufficient, explain what is missing and cite "
+    "the actual available source URLs. Never invent versions, dates or findings."
+)
+
+
+def unexecuted_report_request(text):
+    """Final prose cannot pretend to execute a model's text tool protocol.
+
+    Fenced code examples remain valid technical report content.
+    """
+    fence = None
+    for line in text.splitlines():
+        marker = re.match(r"^[ \t]*(`{3,}|~{3,})", line)
+        if marker:
+            value = marker.group(1)
+            if fence is None:
+                fence = value
+            elif value[0] == fence[0] and len(value) >= len(fence):
+                fence = None
+            continue
+        if fence is None and re.match(
+            r"^\s*<(?:tool_calls?|function_calls?|invoke)(?=[\s>])|^\s*<function=", line, re.I
+        ):
+            return True
+    return False
 
 
 class LocalAgentExecutor:
@@ -298,6 +330,32 @@ class LocalAgentExecutor:
                 run.parameters = {**run.parameters, "messages": messages, "tool_calls": recorded}
                 run.metadata_json = {**run.metadata_json, "tool_calls": recorded}
                 session.commit()
+            if unexecuted_report_request(text):
+                append_event(
+                    session,
+                    run.id,
+                    "agent.report.correction_requested",
+                    {"reason": "unexecuted_tool_request", "additional_tool_execution": False},
+                )
+                messages = [
+                    {**messages[0], "content": messages[0]["content"] + FINAL_REPORT_ONLY},
+                    *messages[1:],
+                    {"role": "assistant", "content": text[:12000]},
+                    {
+                        "role": "user",
+                        "content": "The previous response contained unexecuted tool requests, not a report. "
+                        + FINAL_REPORT_ONLY,
+                    },
+                ]
+                run.parameters = {**run.parameters, "messages": messages}
+                session.commit()
+                # One correction reuses observations and the original deadline;
+                # it receives no tool schemas and cannot dispatch another tool.
+                text, calls = asyncio.run(self._consume(session, run, definition, deadline, tools=None))
+                if calls:
+                    raise ProviderError(
+                        "Report correction requested additional tools instead of a final answer"
+                    )
             # Re-read under the short write transaction before final output. A
             # cancellation arriving at stream completion must win over retention.
             session.refresh(run)
@@ -309,6 +367,8 @@ class LocalAgentExecutor:
                 return "done"
             if not text.strip():
                 raise ProviderError("Provider returned no report text")
+            if unexecuted_report_request(text):
+                raise ProviderError("Provider returned unexecuted tool requests instead of a final report")
             if recorded:
                 run.metadata_json = {**run.metadata_json, "tool_calls": recorded}
             self._artifact(session, run, text, partial=False)
@@ -361,7 +421,7 @@ class LocalAgentExecutor:
             "uncertainty and unavailable information."
         )
         if definition.tool_calling != "bounded":
-            return base
+            return base + FINAL_REPORT_ONLY
         return (
             base
             + " You may call only the tools included in this request. You cannot invent tools, URLs, search "

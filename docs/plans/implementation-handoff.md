@@ -5,6 +5,30 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Observed agent acceptance follow-up — 2026-10-23
+
+AI-assisted disabled drafting and compact Work review shipped in #354. Real
+acceptance caught a missing-URL page-tool proposal; #355 now omits unavailable
+page scopes and requires usable public queries/URLs before saving the draft. The
+fixed live model produced the correct Web-only daily llama.cpp definition, which
+was explicitly reviewed and activated for QA. The actual public search succeeded.
+However, its local report contained unexecuted XML tool requests while its Run
+incorrectly reported success. Preserve that failed semantic acceptance:
+`data/acceptance/assisted-agent-scopes-20261023/production-smoke-result.json`,
+`actual-reports.json` and `actual-search-sources.json`. The QA agent was paused;
+the original model profile was restored. These green Run states do not qualify
+the report.
+
+Active focused fix: `fix/agent-report-finalization`, owned worktree
+`.tools/fix-agent-report-finalization`. Require final prose; allow one tool-free
+correction within the original deadline, then fail closed on repeated raw
+protocol output. Add cancellation/retention/source-scope regressions, run the
+required backend checks, review the full PR to develop and deploy only its tested
+source. Repeat a real manual report on the same paused own QA definition/query
+without changing its goal or treating its earlier invalid report as corrected.
+No new provider, API key or external email is needed. Qualification evidence:
+`data/acceptance/agent-report-finalization-20261023`.
+
 ## Current continuation — general agents and website understanding, 2026-10-22
 
 The user clarified that website, spreadsheet and price requests are examples of
