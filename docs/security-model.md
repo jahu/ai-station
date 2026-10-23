@@ -1,5 +1,11 @@
 # Security model
 
+Music setup is an explicit offline plan followed by an opt-in, checksum-pinned
+public download into a new dedicated directory. It cannot overwrite existing
+models, install packages, run downloaded code or enable an executor. Generation
+must separately prevent upstream automatic downloads and checkpoint code writes;
+see the [music delivery plan](plans/local-music-generation.md).
+
 [Assisted agent drafts](plans/assisted-agent-drafts.md) perform bounded local
 JSON inference with manage_agents only. They do not call proposed tools or grant
 activation. Proposals cannot supply credentials, UUIDs, permission profiles,
