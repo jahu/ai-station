@@ -872,6 +872,7 @@ export default function AssistantActions({
       onChange({
         ...value,
         data: null,
+        new_project: null,
         github: undefined,
         music: null,
         action,
@@ -980,6 +981,7 @@ export default function AssistantActions({
     onChange({
       ...value,
       data: null,
+      new_project: null,
       github: undefined,
       action,
       media: action === "video.generate" ? value.media : null,

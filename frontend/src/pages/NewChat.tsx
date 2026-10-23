@@ -1,4 +1,7 @@
-import { useConversationDataUpload } from "./data-upload";
+import {
+  acceptsDataAttachments,
+  useConversationDataUpload,
+} from "./data-upload";
 import { useDataInputs } from "./useDataInputs";
 import { useChatDraft, chatRequestId, clearChatRequest } from "./chat-draft";
 import { useEffect, useRef, useState } from "react";
@@ -428,7 +431,7 @@ export default function NewChat({
                     busy={send.isPending}
                     onReading={setUploading}
                     onDataFiles={
-                      ["auto", "chat"].includes(options.action) &&
+                      acceptsDataAttachments(options) &&
                       !webQuery.trim() &&
                       !web.renderPages
                         ? dataUpload.mutateAsync

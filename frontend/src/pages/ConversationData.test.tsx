@@ -95,6 +95,15 @@ it.each([
     await screen.findByRole("textbox", { name: "Message" });
     if (mode === "work")
       fireEvent.click(screen.getByRole("button", { name: "Work" }));
+    if (entry === "csv" && mode === "work") {
+      // Deliberately switching out of project creation must clear that scope.
+      fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
+        target: { value: "project.create_code" },
+      });
+      fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
+        target: { value: "auto" },
+      });
+    }
     if (entry === "tool")
       fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
         target: { value: "data.analyze" },

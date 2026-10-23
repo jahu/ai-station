@@ -3,8 +3,29 @@ import {
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
+import type { AssistantOptions } from "./AssistantActions";
 import { api, type Artifact } from "../api";
 import type { ConversationDataScope } from "./useDataInputs";
+
+export function acceptsDataAttachments(options: AssistantOptions) {
+  return (
+    ["auto", "chat"].includes(options.action) &&
+    !options.image_artifact_ids.length &&
+    !options.audio_artifact_id &&
+    !options.data &&
+    !options.github &&
+    !options.coding &&
+    !options.new_project &&
+    !options.commit &&
+    !options.publish &&
+    !options.load &&
+    !options.stop &&
+    !options.music &&
+    !options.media &&
+    !options.upscale_result &&
+    !options.speech_text
+  );
+}
 
 export function isDataFile(file: File) {
   return /\.(csv|xlsx)$/i.test(file.name);

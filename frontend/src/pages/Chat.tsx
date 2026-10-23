@@ -1,4 +1,7 @@
-import { useConversationDataUpload } from "./data-upload";
+import {
+  acceptsDataAttachments,
+  useConversationDataUpload,
+} from "./data-upload";
 import { useDataInputs, type ConversationDataScope } from "./useDataInputs";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import { BrowserPages } from "./BrowserPages";
@@ -1712,16 +1715,7 @@ function ConversationView({
                     onReading={setReadingAttachment}
                     onDataFiles={
                       !continuing &&
-                      ["auto", "chat"].includes(options.action) &&
-                      !options.github &&
-                      !options.coding &&
-                      !options.new_project &&
-                      !options.commit &&
-                      !options.publish &&
-                      !options.load &&
-                      !options.stop &&
-                      !options.music &&
-                      !options.media &&
+                      acceptsDataAttachments(options) &&
                       !webQuery.trim() &&
                       !web.renderPages
                         ? dataUpload.mutateAsync
