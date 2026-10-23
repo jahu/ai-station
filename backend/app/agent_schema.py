@@ -130,6 +130,13 @@ class AgentSettings(BaseModel):
             if self.enabled and self.media is None:
                 raise ValueError("Review media output settings before enabling this agent")
             if (
+                self.enabled
+                and self.media is not None
+                and self.media.kind == "speech"
+                and self.media.request.reference_artifact_id is None
+            ):
+                raise ValueError("Select and review a Library voice reference before enabling speech")
+            if (
                 self.media
                 and self.media.description_source == "fixed"
                 and (not fixed_media_only(self) or self.skills)

@@ -11,7 +11,7 @@ export type AgentToolSpec = {
   required_permissions: string[];
   outputs?: Partial<
     Record<
-      "image" | "music",
+      AgentMediaScope["kind"],
       { ready: boolean; reason?: string | null; modes?: string[] }
     >
   >;

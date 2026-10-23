@@ -1,5 +1,11 @@
 # Architecture
 
+[Spoken agent output](plans/agent-speech-generation.md) reuses the existing
+Chatterbox executor and reviewed Library voice references.
+Shared scopes, prepared text and owned deadlines use the same media-agent chain;
+editor and execution contracts are tested in the candidate. Full release and
+real-model qualification are tracked separately before deployment.
+
 [Persistent media agents](plans/agent-media-generation.md) compose reviewed research,
 bounded creative preparation and existing image/music children on one Task.
 Fixed descriptions skip text inference. Saved scopes, source hashes and native

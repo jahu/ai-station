@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Image, Music2, LoaderCircle } from "lucide-react";
+import { Image, Music2, AudioLines, LoaderCircle } from "lucide-react";
 import type { Run } from "../api";
 import { ErrorNotice } from "../components/common";
 import MediaResult from "../components/media/MediaResult";
@@ -10,7 +10,8 @@ export default function AgentMediaResult({ runs }: { runs: Run[] }) {
   const output = current.find(
     (run) =>
       run.executor_type === "photo_pipe" ||
-      run.executor_type === "ace_step_music",
+      run.executor_type === "ace_step_music" ||
+      run.executor_type === "chatterbox",
   );
   const preparation = current.find(
     (run) => run.executor_type === "agent_media",
@@ -18,8 +19,10 @@ export default function AgentMediaResult({ runs }: { runs: Run[] }) {
   if (output)
     return (
       <MediaResult
-        kind={output.executor_type === "ace_step_music" ? "audio" : "image"}
-        audioMode="music"
+        kind={output.executor_type === "photo_pipe" ? "image" : "audio"}
+        audioMode={
+          output.executor_type === "ace_step_music" ? "music" : "speech"
+        }
         runId={output.id}
         run={output}
         allowRetry={false}
@@ -39,7 +42,12 @@ export default function AgentMediaResult({ runs }: { runs: Run[] }) {
   const scope = (
     latest.parameters?.definition as { media?: { kind: string } } | undefined
   )?.media;
-  const Icon = scope?.kind === "music" ? Music2 : Image;
+  const Icon =
+    scope?.kind === "music"
+      ? Music2
+      : scope?.kind === "speech"
+        ? AudioLines
+        : Image;
   return (
     <section
       className="panel agent-media-pending"

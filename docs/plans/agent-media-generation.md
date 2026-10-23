@@ -1,7 +1,9 @@
 # Persistent agents can create media
 
-Status: implemented and qualified for PR #362. Backed-up rollout and live
-normal-worker agent acceptance are tracked separately in the deployment evidence.
+Status: delivered in #362 and #363, with backed-up rollout. Actual normal-worker
+natural drafting, goal-based preparation, automatic idle-model GPU/RAM handoff,
+10-second music and Library results passed; the example agent remains paused.
+Evidence: data/acceptance/media-idle-ram-admission-20261023/post-deployment-qualified.json.
 
 Image/music scopes, nullable migration 0032, API/duplicate handling, natural
 AI-assisted disabled drafts, editor and inline results reuse existing media
@@ -37,7 +39,10 @@ maintenance assertion expecting schema 0031. That assertion now expects 0032;
 its entire module passed again (10 tests). Production Python/Runner source was
 unchanged between these checks: all 2381 current cases are covered, with 2372
 passing and 9 skipped across the complete run and corrected module. The original
-failed log is retained; no execution-test failure was waived. Deployment remains.
+failed log is retained; no execution-test failure was waived. The subsequent
+#363 complete suite passed 2374 tests with 9 opt-in skips and no failures. Its
+real normal-worker acceptance verified the automatic LLM-to-music handoff after
+fixing resource rejection that had blocked reclamation of an idle owned model.
 Evidence: ignored data/acceptance/agent-media-generation-20261023/.
 
 Automatic lyric writing and agent video/avatar scopes remain separate work.

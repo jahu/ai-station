@@ -1,9 +1,11 @@
 """Reviewed media settings for persistent agents; not an execution entry point."""
 
 from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.audio_schema import SpeechRequest
 from app.image_schema import ImageRequest
 from app.music_schema import MusicSettings
 
@@ -36,7 +38,20 @@ class AgentMusicScope(BaseModel):
     description_source: Literal["fixed", "goal"] = "fixed"
 
 
-AgentMediaScope = Annotated[AgentImageScope | AgentMusicScope, Field(discriminator="kind")]
+class AgentSpeechRequest(SpeechRequest):
+    # A disabled natural draft has no authority to invent a Library reference.
+    # The operator chooses it before activation or execution.
+    reference_artifact_id: UUID | None = None
+
+
+class AgentSpeechScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["speech"]
+    request: AgentSpeechRequest
+    description_source: Literal["fixed", "goal"] = "fixed"
+
+
+AgentMediaScope = Annotated[AgentImageScope | AgentMusicScope | AgentSpeechScope, Field(discriminator="kind")]
 
 
 def fixed_media_only(definition):

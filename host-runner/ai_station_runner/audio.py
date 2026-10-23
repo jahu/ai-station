@@ -17,10 +17,37 @@ from ai_station_runner.telemetry import collect
 class AudioRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     run_id: UUID
+    deadline_at: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
     text: str = Field(min_length=1, max_length=1000)
     reference_relative: str = Field(max_length=500)
     gpu: int = Field(ge=0)
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
+
+
+def capabilities():
+    settings = get_settings()
+    python = Path(settings.chatterbox_python).expanduser() if settings.chatterbox_python else None
+    script = Path(settings.chatterbox_script).expanduser() if settings.chatterbox_script else None
+    cache = Path(settings.chatterbox_cache).expanduser() if settings.chatterbox_cache else None
+    configured = bool(
+        python
+        and python.is_file()
+        and os.access(python, os.X_OK)
+        and script
+        and script.is_file()
+        and cache
+        and cache.is_dir()
+    )
+    return {
+        "available": configured and bool(collect(settings.host_data_dir()).get("gpus")),
+        "configuration_present": configured,
+        "backend": "chatterbox",
+        "languages": ["pl"],
+        "max_text_characters": 1000,
+        "reference_min_seconds": 0.1,
+        "reference_max_seconds": 60,
+        "offline": True,
+    }
 
 
 def start_audio(manager, body):
@@ -83,4 +110,11 @@ def start_audio(manager, body):
         "CUDA_VISIBLE_DEVICES": str(body.gpu),
         "PYTHONUNBUFFERED": "1",
     }
-    return manager.start(run_id=run_id, argv=argv, cwd=root, executor="chatterbox", env=environment)
+    return manager.start(
+        run_id=run_id,
+        argv=argv,
+        cwd=root,
+        executor="chatterbox",
+        env=environment,
+        **({"deadline_at": body.deadline_at} if body.deadline_at is not None else {}),
+    )

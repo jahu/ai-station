@@ -70,7 +70,7 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
     task = session.get(Task, run.task_id) if run.agent_id else None
     coding = task.metadata_json.get("agent_coding_definition") if task else None
     media = None
-    if run.agent_id and run.executor_type in {"agent_media", "photo_pipe", "ace_step_music"}:
+    if run.agent_id and run.executor_type in {"agent_media", "photo_pipe", "ace_step_music", "chatterbox"}:
         from app.agent_workflow import workflow_parent
 
         root = workflow_parent(session, run)
