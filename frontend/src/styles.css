@@ -6931,7 +6931,7 @@ section:has(> .memory-grid) > .dashboard-note {
 }
 .agent-media-scope .mode-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 .agent-media-scope .mode-tabs button {
   display: flex;
@@ -6973,4 +6973,38 @@ section:has(> .memory-grid) > .dashboard-note {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.6;
+}
+
+.agent-video-settings {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+.agent-video-settings .form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.agent-form .agent-video-settings .video-scene-duration {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+.agent-form .agent-video-settings .video-scene-duration input {
+  width: 64px;
+  padding: 8px;
+}
+.agent-media-scope input[type="file"].sr-only {
+  width: 1px;
+  padding: 0;
+  border: 0;
+}
+@media (max-width: 600px) {
+  .agent-media-scope .mode-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .agent-video-settings .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

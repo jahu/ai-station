@@ -204,6 +204,22 @@ def verify_files(run):
             raise ValueError("A reviewed source image failed its saved checksum")
 
 
+def verify_published_inputs(session, run):
+    """A queued segment must still read the exact reviewed Library resource."""
+    for item in run.parameters.get("media_inputs", []):
+        artifact = session.get(Artifact, item["id"])
+        if (
+            artifact is None
+            or artifact.trashed_at is not None
+            or artifact.artifact_type != "image"
+            or artifact.mime_type not in {"image/png", "image/jpeg"}
+            or (artifact.relative_path, artifact.size_bytes, artifact.sha256)
+            != (item["path"], item["size"], item["sha256"])
+        ):
+            raise ValueError("The reviewed first frame is unavailable or changed")
+    verify_files(run)
+
+
 class Description(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     description: str = Field(min_length=1, max_length=10000)
@@ -291,6 +307,7 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
             segment.parameters = {
                 **segment.parameters,
                 "parent_artifact_ids": [*segment.parameters.get("parent_artifact_ids", []), preparation_id],
+                "media_inputs": list(run.parameters.get("media_inputs", [])),
             }
             segment.triggered_by = run.triggered_by
     elif prepared_scope.kind == "speech":

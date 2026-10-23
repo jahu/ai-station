@@ -89,6 +89,7 @@ class HostMediaExecutor:
 
                 evict_idle_models(session, run, indexes)
             return "requeued" if run.status == "queued" else "done"
+        self.validate_inputs(session, run)
         output = f"artifacts/{run.id[:2]}/{run.id[2:4]}/{run.id}{self.suffix}"
         # Durable before sending: even a lost response may hide a live process.
         run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}
@@ -126,6 +127,9 @@ class HostMediaExecutor:
         session.commit()
         self._poll(session, run, runner, output)
         return "done"
+
+    def validate_inputs(self, session, run):
+        """Optional bounded source check before recording a native dispatch."""
 
     def _start(self, runner, run, allocated, output):
         raise NotImplementedError

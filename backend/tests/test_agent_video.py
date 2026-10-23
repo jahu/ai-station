@@ -358,3 +358,32 @@ def test_failed_video_stage_never_publishes_a_finished_film_notice(bridge, monke
             assert not session.scalar(select(Artifact).where(Artifact.run_id == compose.id))
             notices = list(session.scalars(select(Notice)))
             assert notices and not any(notice.kind == "succeeded" for notice in notices)
+
+
+@pytest.mark.parametrize("change", ["bytes", "trash", "record"])
+def test_queued_video_rechecks_its_first_frame_before_each_gpu_dispatch(bridge, change):
+    from app.config import get_settings
+
+    with TestClient(app) as api:
+        source = image(api)
+        agent = create(api, kind="video", request=settings(image_artifact_id=source["id"]))
+        root = start(api, agent)
+        with session_factory()() as session:
+            tick(session, "parent")
+            tick(session, "prepare")
+            artifact = session.get(Artifact, source["id"])
+            if change == "bytes":
+                (get_settings().data_dir / artifact.relative_path).write_bytes(b"changed after publication")
+            elif change == "trash":
+                artifact.trashed_at = utcnow()
+            else:
+                artifact.sha256 = "0" * 64
+            session.commit()
+            drain(session)
+            rows = list(
+                session.scalars(
+                    select(Run).where(Run.task_id == root["task_id"], Run.executor_type == "wan_video")
+                )
+            )
+            assert rows and all(row.status in {"failed", "canceled"} for row in rows)
+            assert not bridge and not active_locks(session)

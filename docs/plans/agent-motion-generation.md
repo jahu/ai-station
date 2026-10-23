@@ -34,7 +34,10 @@ Every segment and final composition receives the same immutable absolute budget.
 Only final composition success emits the ready notice; completed segments remain
 partial results. An agent cannot resume an old film with a fresh budget: Run now
 or the ordinary agent retry creates a new reviewed workflow instead. Sources and
-prepared JSON retain transitive lineage through segment artifacts.
+prepared JSON retain transitive lineage through segment artifacts. Each queued
+segment rechecks first-frame availability, metadata and actual bytes before a
+native dispatch is recorded; changed or trashed sources fail without launching
+GPU work or retaining a reservation.
 
 The editor adds Video, full duration, continuous/shot motion, optional storyboard
 and first-frame selection. Advanced controls reuse local GPU selection. The

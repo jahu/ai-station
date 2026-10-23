@@ -78,6 +78,12 @@ class VideoExecutor(MotionArtifacts, HostMediaExecutor):
     artifact_type = "video"
     mime_type = "video/mp4"
 
+    def validate_inputs(self, session, run):
+        if run.parameters.get("media_inputs"):
+            from app.agent_media import verify_published_inputs
+
+            verify_published_inputs(session, run)
+
     def _start(self, runner, run, allocated, output):
         continuation = None
         motion = None
