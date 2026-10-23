@@ -41,6 +41,7 @@ def _media_web_options(body):
         "image.recompose",
         "image.upscale",
         "audio.speech",
+        "audio.music",
         "audio.transcribe",
         "audio.analyze",
         "avatar.animate",
@@ -93,6 +94,7 @@ def resolve_result_reference(session, conversation, body, mode):
             "load",
             "stop",
             "speech_text",
+            "music",
             "upscale_result",
         )
     ) or (body.web_search.enabled and (body.web_search.query.strip() or body.web_search.render_pages)):

@@ -3,6 +3,8 @@
 [Local music](plans/local-music-generation.md) is being added through the shared
 media Run/Host Runner boundary. A pinned, explicit model installer is separate
 from inference; installing its weights alone does not enable the capability.
+[Conversation dispatch](plans/conversational-music.md) reuses that same media
+child on a Chat/Work Task without text inference or a second execution engine.
 
 [Research source reading](agent-search-pages.md) composes existing public-search
 and HTTP GET steps with a source-bound optional agent tool. The worker verifies

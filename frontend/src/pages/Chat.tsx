@@ -20,6 +20,7 @@ import ChatWorkPicker from "./ChatWorkPicker";
 import { useThinking } from "./chat-thinking";
 import NewChat from "./NewChat";
 import ConversationComposer from "./ConversationComposer";
+import { musicScopeReady } from "./music-scope";
 import ChatModeSwitch from "./ChatModeSwitch";
 import type { ChatProviderInfo } from "./ChatProviders";
 import { emptyOptions } from "./assistant-options";
@@ -1152,7 +1153,7 @@ function ConversationView({
                 (options.action === "coding.commit" ||
                   options.action === "coding.publish")
               ? gitReady
-              : !!draft.trim();
+              : !!draft.trim() && musicScopeReady(options, draft);
   const thinking = useThinking(
     conversation.model,
     turnMode === "chat" &&
@@ -1616,6 +1617,7 @@ function ConversationView({
               <>
                 {assistantTurn && (
                   <AssistantActions
+                    description={draft}
                     key={projectSelectionVersion}
                     value={options}
                     allowWork={turnMode === "work"}
@@ -1654,6 +1656,7 @@ function ConversationView({
                     options.action === "github.inspect" ||
                     options.action === "audio.transcribe" ||
                     options.action === "audio.analyze" ||
+                    options.action === "audio.music" ||
                     options.action === "image.generate_video" ||
                     options.action === "project.create" ||
                     options.action === "project.create_code"

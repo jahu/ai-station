@@ -3,7 +3,7 @@
 Status: implementation in progress. Music is not yet an operational capability.
 Existing speech, transcription, video and avatars remain unchanged.
 
-The next source increment contains the typed native launch, offline wrapper,
+The source increment contains the typed native launch, offline wrapper,
 `audio.music` worker adapter, idempotent workspace requests and Audio → Music.
 Focused fake-engine tests cover library publication, invalid output, owned Stop,
 and recovery of a live process without replay. This is not a real music smoke.
@@ -15,9 +15,8 @@ qualification and deployment remain separate from that installer result.
 Audio gains a Music mode beside speech and transcription. Describe the music,
 choose instrumental or provide lyrics, choose the duration, and Generate. Keep
 GPU and seed under advanced settings. Progress, Stop, playback, download, Library
-and return-to-Run use the existing media workspace. Chat/Work must eventually
-dispatch the same typed request and show the same artifact, rather than launch
-a separate generation architecture. Persistent-agent use follows the normal
+and return-to-Run use the existing media workspace. [Chat/Work](conversational-music.md)
+dispatch the same typed request and show its audio artifact. Persistent-agent use follows the normal
 reviewed tool/permission publication contract; it is not enabled by this plan.
 
 ## Selected runtime and exact setup scope
@@ -65,6 +64,36 @@ explicitly incomplete; no automatic overwrite, retry or cleanup is performed.
 Offline verification reads all files and requires a matching completed receipt.
 Installing weights does not install a runtime or make Music available.
 
+The optional inference environment is now installed separately on the developer
+workstation. Imports of the pinned SDK and its real API signatures passed with
+network access denied and GPU visibility disabled. Actual PyTorch → PCM WAV
+conversion, signal amplitude and rejection of non-finite samples also passed on
+CPU. On 2026-10-23 the operator explicitly approved the 6.34 GB download. All 16
+files then passed offline SHA-256 verification, and the native adapter generated
+a checked 30-second stereo WAV with supplied lyrics on one RTX 3060 12 GB.
+Full queued execution, cancellation, review and deployment remain separate gates.
+Training,
+LoRA, Gradio and the optional music LLM were not installed for this preset.
+
+Reproduce the isolated runtime on CPython 3.12/Linux x86_64:
+
+```bash
+git init .tools/music-source
+git -C .tools/music-source remote add origin https://github.com/ace-step/ACE-Step-1.5.git
+git -C .tools/music-source fetch --depth 1 origin ca1e85fe9430179831e6bc6be790c332190a3866
+git -C .tools/music-source checkout --detach FETCH_HEAD
+python3.12 -m venv .tools/music-runtime
+.tools/music-runtime/bin/python -m pip install --only-binary=:all: \
+  -r config/music/requirements-cp312-linux-x86_64.lock
+```
+
+Use new directories; do not replace an existing user environment. These are
+framework/dependency downloads, separate from the explicitly approved model
+installation above. The lock pins the actual tested inference packages and the
+official PyTorch/torchaudio wheel SHA-256 values. Native settings then point to
+the new runtime Python, pinned source and verified model directory. Do not put
+these optional GPU dependencies in the control-plane image or default tests.
+
 ## Execution boundary
 
 - Add `audio.music` Task/Run and a HostMediaExecutor adapter. HTTP only enqueues;
@@ -97,7 +126,11 @@ Installing weights does not install a runtime or make Music available.
   preset. Devices are discovered; do not assume two GPUs or combine their VRAM.
   The official guide describes low-VRAM support, but actual admission/maximum
   duration/quality must be qualified on this workstation before advertising it.
-  The initial conservative host-RAM reservation is 16 GiB. Existing resource
+  The measured 10/30-second CPU-offloaded processes peaked below 8 GiB RSS.
+  Reserve 12 GiB for clips up to 60 seconds and 16 GiB for longer clips, with
+  the scheduler's additional 1 GiB host headroom. The original uniform 16 GiB
+  request correctly waited on this busy 32 GiB workstation rather than dispatching.
+  Existing resource
   admission, deferral and lease recovery remain authoritative; no work starts
   when that reservation cannot be satisfied.
 - Output is an owned UUID PCM WAV plus actual duration/rate/channels, prompt,

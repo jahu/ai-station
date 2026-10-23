@@ -54,6 +54,12 @@ const ACTIONS = [
     detail: "Queues local Chatterbox speech. Not transcription or music.",
   },
   {
+    key: "audio.music",
+    title: "Generate music",
+    detail:
+      "Create a local instrumental, or bring your own lyrics. Set the sound in your message.",
+  },
+  {
     key: "image.generate_video",
     title: "Image → video",
     detail: "Generate an image, then animate it locally. Keeps both results.",
@@ -168,6 +174,7 @@ export function ActionChoiceList({
             item.key.startsWith("image.") ||
             [
               "audio.speech",
+              "audio.music",
               "audio.transcribe",
               "audio.analyze",
               "avatar.animate",

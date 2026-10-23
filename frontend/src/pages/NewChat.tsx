@@ -9,6 +9,7 @@ import UnifiedModelPicker from "./UnifiedModelPicker";
 import ChatThinking from "./ChatThinking";
 import { useThinking } from "./chat-thinking";
 import ConversationComposer from "./ConversationComposer";
+import { musicScopeReady } from "./music-scope";
 import AssistantActions from "./AssistantActions";
 import { emptyOptions } from "./assistant-options";
 import TextAttachments, { type TextAttachment } from "./TextAttachments";
@@ -224,6 +225,7 @@ export default function NewChat({
     preferences.isPending ||
     (!!workTaskId && workspace.isPending);
   const canSend =
+    musicScopeReady(options, draft) &&
     !!draft.trim() &&
     !!model &&
     (workTaskId
@@ -380,6 +382,7 @@ export default function NewChat({
           workTaskId ? undefined : (
             <>
               <AssistantActions
+                description={draft}
                 value={options}
                 onChange={(value) => {
                   setOptions(value);
@@ -403,6 +406,7 @@ export default function NewChat({
                 options.action !== "github.inspect" &&
                 options.action !== "audio.transcribe" &&
                 options.action !== "audio.analyze" &&
+                options.action !== "audio.music" &&
                 !options.image_artifact_ids.length &&
                 !options.audio_artifact_id && (
                   <TextAttachments

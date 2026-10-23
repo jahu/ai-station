@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 from ai_station_runner import app as host_app
 from ai_station_runner import music as native_music
+from ai_station_runner.config import clear_settings_cache as clear_runner_settings
 from ai_station_runner.music_protocol import MODEL_REVISION
 from app.api import app
 from app.db import session_factory, utcnow
@@ -54,6 +55,7 @@ print('fake music generated')
     monkeypatch.setattr(native_music, "collect", hardware)
     monkeypatch.setattr(host_app, "collect", hardware)
     host_app.reset_manager()
+    clear_runner_settings()
     with TestClient(host_app.app) as host:
 
         def request(self, method, path, json=None):
@@ -66,10 +68,19 @@ print('fake music generated')
         yield host
     host_app.manager().shutdown()
     host_app.reset_manager()
+    clear_runner_settings()
 
 
 def body(**kwargs):
     return {"client_request_id": str(uuid4()), "caption": "Piano", "duration_seconds": 10, **kwargs}
+
+
+@pytest.mark.parametrize("duration,budget", [(10, 12288), (60, 12288), (61, 16384), (600, 16384)])
+def test_music_reserves_short_or_long_clip_host_memory(music_bridge, duration, budget):
+    with TestClient(app) as client:
+        response = client.post("/api/audio/music/runs", json=body(duration_seconds=duration))
+        assert response.status_code == 202, response.text
+        assert response.json()["requested_resources"]["ram_mib"] == budget
 
 
 def test_music_runs_share_lifecycle_and_return_playable_library_audio(music_bridge):
@@ -111,7 +122,10 @@ def test_failed_or_invalid_output_never_publishes_a_music_artifact(music_bridge,
         run = response.json()
         with session_factory()() as session:
             tick(session, "music-test")
-            assert session.get(Run, run["id"]).status == "failed"
+            current = session.get(Run, run["id"])
+            assert current.status == "failed"
+            expected = {"fail": "Exit 4", "truncated": "truncated", "clamped": "duration"}[caption]
+            assert expected in current.error_message
             assert not active_locks(session)
         assert client.get("/api/artifacts", params={"run_id": run["id"]}).json() == []
 

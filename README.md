@@ -546,5 +546,6 @@ ACE-Step 1.5 checkpoint manifest and explicit setup script. Running
 offline plan; `--download` explicitly fetches 6.34 GB into a new directory and
 `--verify` checks all file hashes offline. It never overwrites existing models,
 installs dependencies or enables generation. The Audio → Music workspace and
-typed offline adapter are under qualification; real music generation is not yet
-verified. Empty music configuration keeps generation unavailable.
+typed offline adapter, including Chat/Work dispatch, are under qualification.
+Pinned files and native 30-second GPU output were verified; this does not imply
+deployment or qualification of every length. Empty configuration keeps Music unavailable.

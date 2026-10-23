@@ -28,10 +28,8 @@ CODE_REVISION = "ca1e85fe9430179831e6bc6be790c332190a3866"
 PROFILE_SHA256 = "912b4a5cd50f729d8874dcbd44776d87643f04d199b748ba3706b7181a69c658"
 
 
-class MusicRequest(BaseModel):
+class MusicSettings(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    client_request_id: UUID
-    caption: str = Field(min_length=1, max_length=512)
     lyrics: str = Field(default="", max_length=4096)
     instrumental: bool = True
     duration_seconds: int = Field(default=30, ge=10, le=600, strict=True)
@@ -45,6 +43,11 @@ class MusicRequest(BaseModel):
         if not self.instrumental and not self.lyrics:
             raise ValueError("Provide lyrics for a song with vocals")
         return self
+
+
+class MusicRequest(MusicSettings):
+    client_request_id: UUID
+    caption: str = Field(min_length=1, max_length=512)
 
 
 @router.get("/capabilities")
@@ -87,11 +90,11 @@ def generate(body: MusicRequest, session: DB):
     return run_dict(run)
 
 
-def create_music_run(session, body, *, task=None, parent_run_id=None):
+def create_music_run(session, body, *, task=None, parent_run_id=None, observed_profile=None):
     prior = existing(session, body, task)
     if prior is not None:
         return prior
-    ready = capabilities()
+    ready = capabilities() if observed_profile is None else observed_profile
     if not ready.get("available") or ready.get("profile_sha256") != PROFILE_SHA256:
         raise HTTPException(409, ready.get("reason", "The approved local music preset is unavailable"))
     maximum = ready.get("max_seconds", 0)
@@ -116,7 +119,9 @@ def create_music_run(session, body, *, task=None, parent_run_id=None):
         operation_key=f"music:{body.client_request_id}",
         permissions=["filesystem_read", "workspace_write"],
         requested_gpu=body.gpu,
-        requested_resources={"ram_mib": 16384},
+        # Qualified 10/30 s CPU-offloaded Runs peaked below 8 GiB RSS.
+        # Keep 4 GiB headroom for short clips and a larger long-clip budget.
+        requested_resources={"ram_mib": 12288 if body.duration_seconds <= 60 else 16384},
         retry_class="inspect",
         parent_run_id=parent_run_id,
         parameters={
@@ -186,4 +191,8 @@ class MusicExecutor(HostMediaExecutor):
         if abs(artifact.metadata_json["duration_seconds"] - run.parameters["duration_seconds"]) > 1:
             raise ValueError("Music output duration differs from the requested duration")
         artifact.title = run.parameters["caption"][:200]
-        artifact.metadata_json = {**artifact.metadata_json, "actual_gpu": run.actual_gpu}
+        artifact.metadata_json = {
+            **artifact.metadata_json,
+            "actual_gpu": run.actual_gpu,
+            "prompt": run.parameters["caption"],
+        }
