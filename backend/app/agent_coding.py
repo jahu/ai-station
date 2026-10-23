@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from app.agent_coding_policy import coding_provider
 from app.coding_tasks import CodingTask, enqueue_coding_task
 from app.db import utcnow
+from app.events import append_event
 from app.local_coding import LocalCodingTask
 from app.models import Project
 from app.skills import skill_prompt, verify_snapshots
@@ -71,9 +72,21 @@ def publish_coding(session, parent, definition, *, context="", deadline_at=None,
             request_key: {
                 **request,
                 "guidance": guidance,
+                **(
+                    {"max_repair_attempts": 1 if request["project_check_policy"]["auto_validate"] else 0}
+                    if provider == "local"
+                    else {}
+                ),
                 **({"context_sources": context_sources} if context_sources else {}),
                 "agent_coding_deadline": deadline,
             },
         }
+        if provider == "local" and request["project_check_policy"]["auto_validate"]:
+            append_event(
+                session,
+                preparation.id,
+                "coding.repair.policy",
+                {"maximum_attempts": 1, "source": "agent_automatic_checks", "deadline_at": deadline},
+            )
         preparation.triggered_by = parent.triggered_by
         return preparation

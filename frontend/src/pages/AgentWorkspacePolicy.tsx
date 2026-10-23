@@ -58,7 +58,8 @@ export default function AgentWorkspacePolicy({
       </label>
       <p className="muted">
         Successful static website builds appear with downloads and Preview.
-        Failed checks stay in the workspace.
+        If checks fail, Local coding tries one correction within the same time
+        limit. Remaining failures stay in the workspace.
       </p>
     </fieldset>
   );

@@ -1,6 +1,7 @@
 """Local coding intent and native job transport; never grants external AI."""
 
 import json
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -11,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.coding_proposal_executor import CodingProposalExecutor
 from app.coding_tasks import CodingTask, enqueue_coding_task
-from app.db import session_scope
+from app.db import session_scope, utcnow
 from app.events import append_event
 from app.models import Run, RunEvent, Worktree
 from app.project_activity import project_write_condition
@@ -187,6 +188,10 @@ def queue_automatic_repair(session, validation):
         return
     budget = source.parameters.get("max_repair_attempts", 0)
     if not budget or validation.metadata_json.get("repair_run_id"):
+        return
+    deadline = source.parameters.get("agent_coding_deadline")
+    if deadline and datetime.fromisoformat(deadline) <= utcnow():
+        append_event(session, validation.id, "coding.repair.expired", {"deadline_at": deadline})
         return
     if source.parameters.get("repair_attempt", 0) >= budget:
         append_event(session, validation.id, "coding.repair.exhausted", {"maximum_attempts": budget})
