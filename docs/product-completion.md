@@ -1,3 +1,10 @@
+> 2026-10-24 functional delivery: natural same-file analysis (#383) and actual
+> PNG/Excel/text outputs (#384–#385) are deployed. The real local-model/native
+> Python chain checked all six source rows and total150, preserved original bytes
+> and restored the operator preset. Qualification:
+> `data/acceptance/required-data-exports-20261023/post-deployment-qualified.json`.
+> This closes that output workflow, not the full platform objective.
+
 > Agent calendar timezone work reuses existing Tasks/scheduler/worker and adds
 > daily-time/custom-cron controls in Agents and the conversation. Existing schedules
 > retain UTC through migration 0033. Contract and qualification state:

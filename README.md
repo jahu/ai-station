@@ -106,11 +106,11 @@ are checked again and used in a new local analysis; the conversation names the
 files and links the source. For one file out of a group, choose it explicitly.
 [Data reference contract](docs/plans/conversation-data-references.md).
 
-Analysis file exports are being added through the same offline Python workflow:
-PNG charts, literal Excel workbooks and text reports, with inline chart preview,
-downloads and Library provenance. Existing table/CSV results stay available.
-See [contract and qualification](docs/plans/data-output-files.md) for deployment
-status and the optional Python image requirement.
+Ask **“Narysuj wykres sprzedaży i przygotuj plik Excel oraz raport tekstowy”**
+to get actual files from the same local analysis. Charts appear inline; download
+PNG, Excel, text or CSV and inspect their sources in Library. With a chart, the
+result table stays under **View result table**. The export-capable optional Python
+image is described in [setup and qualification](docs/plans/data-output-files.md).
 
 Ordinary PNG/JPEG/WebP attachments also use stored, ordered image references.
 Review their previews and Send a question for local Vision, or an edit/reference
