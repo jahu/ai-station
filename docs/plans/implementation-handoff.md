@@ -5,7 +5,25 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current continuation — coherent Vision replies, 2026-10-23
+## Current continuation — agent calendar timezones, 2026-10-23
+
+Coherent Vision replies (#379) and LAN HTTP clipboard copying (#380) are merged
+and deployed. Do not repeat their historical active-increment descriptions below.
+The current increment is [reviewed local agent schedules](agent-schedule-timezones.md):
+persisted IANA zones, daily/custom controls in Agents and conversations, browser-zone
+quick/AI/Work defaults and explicit UTC override. Existing definitions/due instants
+must survive migration 0033 with UTC backfill. Calendar gaps skip and folds run once;
+interval and one-shot semantics remain unchanged. Models cannot choose the zone.
+
+Qualification and deployment state are recorded under
+`data/acceptance/agent-schedule-timezones-20261023`; inspect the final qualification
+and central live-release record before claiming deployment or repeating work.
+The compiled browser check uses fake inference and an isolated normal
+scheduler/worker; it does not claim new GPU acceptance. Preserve existing ready
+operator models during the controller-only rollout. Broader media acceptance,
+recognition quality and the full platform goal remain open.
+
+## Earlier continuation — coherent Vision replies, 2026-10-23
 
 Conversation data entry/follow-ups (#372–#374), ordinary image/local Vision entry
 (#375), verified inspected-image follow-ups (#376), and ordinary recording entry
