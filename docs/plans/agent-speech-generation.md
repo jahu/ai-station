@@ -8,17 +8,27 @@ Reuse Create media, the agent Task/workflow and the existing local Chatterbox
 executor. No model download, separate speech agent engine or additional host
 access is needed. Existing supplied-lyrics music and image scopes stay intact.
 
-The current source candidate has pure shared SpeechRequest settings, disabled
-reviewable scopes, required voice selection at activation, a native configuration
-capability endpoint and optional owned deadlines. Worker publication reuses the
-existing Audio service with immutable voice/source hashes and preparation receipts.
-CPU fake-bridge tests cover fixed output without a text model, bounded Polish
-text preparation, source changes, Task Stop before publication and native expiry
-without a worker. The combined Audio/image/music/agent-draft regression has
-93 passing tests; this is not a real speech-model or full-release qualification.
-`SPEECH_AGENTS_ENABLED` remains false until editor/results, natural drafting,
-remaining lifecycle contracts and release checks are complete. No new version is
-deployed from this candidate.
+The source candidate now includes the shared speech scope/voice validation,
+existing Audio publication with immutable source hashes and receipts, a native
+readiness endpoint and owned deadlines. Fixed text skips the language model;
+goal mode prepares only bounded Polish text. Natural drafts keep their voice
+unset for review and reject invented UUIDs. The editor supports WAV upload and
+Library selection/removal, saving a pending voice draft, advanced GPU selection,
+inline playback and existing Library/Avatar source actions.
+
+CPU regression covers fixed/goal output, actual source changes, missing/invalid
+voice activation, Task Stop before and after dispatch, native expiry without a
+worker, receipt replay without Runner HTTP and stale-worker cleanup without
+replaying. The combined focused check has 101 passing tests. Compiled browser
+checks passed at 1440px and 390px for pending-draft save, voice upload/selection,
+activation, Run now, Stop, PCM playback, Library and reload persistence without
+horizontal overflow. These use temporary databases/fake native outputs, not a
+real speech model. A discovered editor revision issue is corrected: untouched
+settings refresh after Enable/Pause; unsaved changes remain preserved for review.
+
+The speech implementation gate is enabled in the candidate following these
+contracts. Full release checks, PR review, backed-up native/control-plane rollout
+and real voice generation still remain. No candidate version is deployed yet.
 
 ## Reviewed scope and authority
 

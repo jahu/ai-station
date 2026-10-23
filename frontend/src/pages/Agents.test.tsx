@@ -2921,3 +2921,110 @@ it("selects Auto Local Coding without starting a model or agent", async () => {
     fetch.mock.calls.every(([, options]) => options?.method !== "POST"),
   ).toBe(true);
 });
+
+it("refreshes untouched settings after activation but preserves edits when the saved revision changes", async () => {
+  let revision = 0;
+  let agent = {
+    id: "draft",
+    updated_at: "2026-10-23T12:00:00Z",
+    name: "Spoken welcome",
+    description: "",
+    goal: "A saved welcome",
+    system_prompt: "Stay local",
+    model: "local",
+    provider: "local-openai-compatible",
+    runtime: "openai-compatible",
+    trigger: "manual",
+    cron_expr: "",
+    interval_seconds: null,
+    run_at: null,
+    enabled: false,
+    project_id: null,
+    tools: [] as string[],
+    skills: [],
+    fetch_urls: [],
+    search_query: "",
+    permission_profile: "agent_local",
+    memory_scope: "agent",
+    execution_target: "container",
+    maximum_runtime: 600,
+    require_approval: false,
+    workflow_mode: "sequential",
+    tool_calling: "none",
+    output_expectation: "A welcome",
+    notification_policy: {
+      on_success: false,
+      on_failure: false,
+      on_approval: false,
+    },
+    retry_policy: { mode: "none" },
+    effective_permissions: [],
+    failure_count: 0,
+    runs: [],
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, options?: RequestInit) => {
+      if (options && url.endsWith("/enabled")) {
+        revision++;
+        agent = {
+          ...agent,
+          enabled: JSON.parse(String(options.body)).enabled,
+          updated_at: `2026-10-23T12:0${revision}:00Z`,
+        };
+      }
+      return {
+        ok: true,
+        json: async () =>
+          url.endsWith("/chat/provider")
+            ? { models: ["local"], default_model: "local" }
+            : url.endsWith("/llama")
+              ? { models: [], instances: [] }
+              : url.includes("/skills") ||
+                  url.includes("/projects") ||
+                  url.endsWith("/tools")
+                ? []
+                : agent,
+      };
+    }),
+  );
+  mount(true);
+  await screen.findByRole("heading", { name: "Definition" });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Enable saved definition" }),
+  );
+  await screen.findByRole("button", { name: "Pause agent" });
+  await waitFor(() =>
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Save definition",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false),
+  );
+  expect(
+    screen.queryByRole("button", { name: "Reload saved definition" }),
+  ).toBeNull();
+  fireEvent.change(screen.getByLabelText("Goal"), {
+    target: { value: "Unsaved local wording" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Pause agent" }));
+  await screen.findByRole("button", { name: "Reload saved definition" });
+  expect((screen.getByLabelText("Goal") as HTMLTextAreaElement).value).toBe(
+    "Unsaved local wording",
+  );
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Save definition",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Reload saved definition" }),
+  );
+  expect((screen.getByLabelText("Goal") as HTMLTextAreaElement).value).toBe(
+    "A saved welcome",
+  );
+});

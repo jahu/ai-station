@@ -41,7 +41,7 @@ def test_disabled_speech_scope_round_trips_without_inventing_a_voice_or_enabling
         assert api.get("/api/runs").json() == []
 
 
-def test_reviewed_voice_cannot_enable_unfinished_speech_execution():
+def test_speech_activation_requires_a_configured_engine():
     with TestClient(app) as api:
         response = api.post(
             "/api/agents",
@@ -56,7 +56,7 @@ def test_reviewed_voice_cannot_enable_unfinished_speech_execution():
                 },
             },
         )
-        assert response.status_code == 409 and "not available yet" in response.text
+        assert response.status_code == 409 and "engine is unavailable" in response.text
         assert api.get("/api/runs").json() == []
 
 

@@ -878,6 +878,19 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
   const cache = useQueryClient();
   const [values, setValues] = useState(agent);
   const [fetchText, setFetchText] = useState(fetchLines(agent.fetch_urls));
+  const [serverVersion, setServerVersion] = useState(agent.updated_at);
+  const [dirty, setDirty] = useState(false);
+  if (serverVersion !== agent.updated_at) {
+    setServerVersion(agent.updated_at);
+    if (!dirty) {
+      setValues(agent);
+      setFetchText(fetchLines(agent.fetch_urls));
+    }
+  }
+  const editValues = (next: Agent | ((current: Agent) => Agent)) => {
+    setDirty(true);
+    setValues(next);
+  };
   const [modelBusy, setModelBusy] = useState(false);
   const [mediaBusy, setMediaBusy] = useState(false);
   const mediaScope = values.tools.includes("create_media")
@@ -904,7 +917,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
     queryFn: () => api<{ id: string; name: string }[]>("/projects?limit=500"),
   });
   const update = <K extends keyof Agent>(key: K, value: Agent[K]) =>
-    setValues((current) => ({ ...current, [key]: value }));
+    editValues((current) => ({ ...current, [key]: value }));
   const save = useMutation({
     mutationFn: () =>
       api<Agent>(
@@ -922,6 +935,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         ),
       ),
     onSuccess: (result) => {
+      setDirty(false);
       setValues(result);
       setFetchText(fetchLines(result.fetch_urls));
       void cache.invalidateQueries({ queryKey: ["agent", agent.id] });
@@ -933,6 +947,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
     <form
       className="panel agent-form"
       onChangeCapture={() => {
+        setDirty(true);
         if (save.isSuccess) save.reset();
       }}
       onClickCapture={() => {
@@ -952,6 +967,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             type="button"
             variant="secondary"
             onClick={() => {
+              setDirty(false);
               setValues(agent);
               setFetchText(fetchLines(agent.fetch_urls));
             }}
@@ -1348,7 +1364,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               }
               onBusy={setMediaBusy}
               onChange={(media) =>
-                setValues((current) => ({
+                editValues((current) => ({
                   ...current,
                   media,
                   ...(media.description_source === "fixed"
@@ -1436,7 +1452,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                   selected = selected.filter(
                     (name) => name !== "remember_report",
                   );
-                setValues((current) => ({
+                editValues((current) => ({
                   ...current,
                   tools: selected,
                   market: selected.includes("market_watch")

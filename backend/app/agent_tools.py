@@ -14,7 +14,7 @@ MAX_CALLS_PER_ROUND = 3
 AGENT_TOOLS = {
     "create_media": ToolSpec(
         name="create_media",
-        description="Create an image or music artifact with the reviewed output settings. Uses existing local media Runs; no shell, model downloads or arbitrary paths.",
+        description="Create an image, music or Polish speech artifact with the reviewed output settings. Speech requires an operator-selected Library WAV voice. Uses existing local media Runs; no shell, model downloads or arbitrary paths.",
         risk_level="medium",
         required_permissions=("filesystem_read", "workspace_write"),
         timeout=3600,

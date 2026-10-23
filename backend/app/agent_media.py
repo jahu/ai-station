@@ -28,7 +28,7 @@ from app.runs import mark_failed, transition
 from app.state import RunStatus
 from app.task_control import lock_task
 
-SPEECH_AGENTS_ENABLED = False
+SPEECH_AGENTS_ENABLED = True
 
 
 def require_profile(scope):
@@ -57,7 +57,7 @@ def require_profile(scope):
 
 
 def runtime_readiness():
-    """Report both output engines without loading a model or launching work."""
+    """Report local output readiness without loading a model or launching work."""
     from app.music import PROFILE_SHA256, capabilities
 
     music = capabilities()
@@ -116,6 +116,15 @@ def freeze_inputs(session, scope):
             or len(artifact.sha256) != 64
         ):
             raise ValueError(f"Choose an available Library {expected_type} with a stored checksum")
+        if scope.kind == "speech":
+            from app.audio import MAX_BYTES, wav_metadata
+
+            try:
+                path = safe_join(get_settings().data_dir, artifact.relative_path)
+                with path.open("rb") as source:
+                    wav_metadata(source.read(MAX_BYTES + 1))
+            except (OSError, ValueError) as exc:
+                raise ValueError("Choose an intact WAV voice reference, 0.1–60 seconds") from exc
         frozen.append(
             {
                 "id": artifact.id,
