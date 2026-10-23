@@ -57,8 +57,8 @@ export default function AgentWorkspacePolicy({
         Run detected tests and builds
       </label>
       <p className="muted">
-        Successful static website builds appear with downloads and Preview.
-        If checks fail, Local coding tries one correction within the same time
+        Successful static website builds appear with downloads and Preview. If
+        checks fail, Local coding tries one correction within the same time
         limit. Remaining failures stay in the workspace.
       </p>
     </fieldset>
