@@ -53,6 +53,7 @@ export function WorkflowStepCards({
     "image.recompose": "Recompose image",
     "image.upscale": "Upscale image",
     "audio.music": "Generate music",
+    "audio.speech": "Generate speech",
   };
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
     onKeyDown(event);

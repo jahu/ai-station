@@ -76,7 +76,7 @@ const agentModelLabel = (agent: {
   agent.tools.includes("market_watch")
     ? "Deterministic · no model or GPU"
     : fixedAgentMedia(agent)
-      ? `Local ${agent.media?.kind === "music" ? "music" : "image"} engine`
+      ? `Local ${agent.media?.kind ?? "media"} engine`
       : isExternalCoding(agent.tools)
         ? `${agent.tools[0] === "coding_codex" ? "Codex" : "Cursor"} · EXTERNAL · CLI default model`
         : isCoding(agent.tools) && agent.model === "auto"
@@ -137,7 +137,7 @@ interface Tool {
   operational: boolean;
   required_permissions: string[];
   outputs?: Partial<
-    Record<"image" | "music", { ready: boolean; reason?: string | null }>
+    Record<AgentMediaScope["kind"], { ready: boolean; reason?: string | null }>
   >;
 }
 interface Skill {
@@ -884,7 +884,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
     ? (values.media ?? newAgentMedia("image", values.goal))
     : null;
   const mediaIssue = values.tools.includes("create_media")
-    ? agentMediaIssue(mediaScope)
+    ? agentMediaIssue(mediaScope, { allowMissingVoice: !agent.enabled })
     : null;
   const provider = useQuery({
     queryKey: ["chat-provider"],

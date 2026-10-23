@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Image, Music2, Settings2, Plus, X } from "lucide-react";
+import { Image, Music2, AudioLines, Settings2, Plus, X } from "lucide-react";
 import MediaInput from "../components/media/MediaInput";
 import { Button } from "../components/ui/button";
 import { useHardware } from "../api";
@@ -26,7 +26,7 @@ export default function AgentMediaScopeEditor({
   onChange: (scope: AgentMediaScope) => void;
   onBusy: (busy: boolean) => void;
   readiness?: Partial<
-    Record<"image" | "music", { ready: boolean; reason?: string | null }>
+    Record<AgentMediaScope["kind"], { ready: boolean; reason?: string | null }>
   >;
 }) {
   const [uploading, setUploading] = useState(false);
@@ -36,10 +36,18 @@ export default function AgentMediaScopeEditor({
   const caption =
     scope.kind === "music"
       ? scope.request.caption
-      : image?.mode === "img2img"
-        ? (image.edit_prompt ?? "")
-        : (image?.prompt ?? "");
+      : scope.kind === "speech"
+        ? scope.request.text
+        : image?.mode === "img2img"
+          ? (image.edit_prompt ?? "")
+          : (image?.prompt ?? "");
   const issue = agentMediaIssue(scope);
+  const OutputIcon =
+    scope.kind === "speech"
+      ? AudioLines
+      : scope.kind === "music"
+        ? Music2
+        : Image;
   function updateImage(patch: Partial<ImageMediaRequest>) {
     if (scope.kind === "image")
       onChange({ ...scope, request: { ...scope.request, ...patch } });
@@ -47,7 +55,7 @@ export default function AgentMediaScopeEditor({
   return (
     <section className="agent-media-scope" aria-label="Media output settings">
       <div className="media-composer-heading">
-        <Image size={20} />
+        <OutputIcon size={20} />
         <h3>Your agent's output</h3>
         <span>LOCAL</span>
       </div>
@@ -64,7 +72,7 @@ export default function AgentMediaScopeEditor({
       )}
       <fieldset disabled={disabled || uploading}>
         <div className="mode-tabs" aria-label="Media output type">
-          {(["image", "music"] as const).map((kind) => (
+          {(["image", "music", "speech"] as const).map((kind) => (
             <button
               type="button"
               key={kind}
@@ -77,8 +85,18 @@ export default function AgentMediaScopeEditor({
                 })
               }
             >
-              {kind === "image" ? <Image size={16} /> : <Music2 size={16} />}
-              {kind === "image" ? "Image" : "Music"}
+              {kind === "image" ? (
+                <Image size={16} />
+              ) : kind === "speech" ? (
+                <AudioLines size={16} />
+              ) : (
+                <Music2 size={16} />
+              )}
+              {kind === "image"
+                ? "Image"
+                : kind === "speech"
+                  ? "Speech"
+                  : "Music"}
             </button>
           ))}
         </div>
@@ -151,31 +169,93 @@ export default function AgentMediaScopeEditor({
                 : "Runs directly with the media engine. No language model is needed."}
             </p>
             <label>
-              Creative direction
+              {scope.kind === "speech"
+                ? "Spoken text or writing instructions"
+                : "Creative direction"}
               <textarea
                 aria-label="Media creative direction"
                 rows={4}
                 required
-                maxLength={scope.kind === "music" ? 512 : 10000}
+                maxLength={
+                  scope.kind === "music"
+                    ? 512
+                    : scope.kind === "speech"
+                      ? 1000
+                      : 10000
+                }
                 value={caption}
                 onChange={(event) =>
-                  scope.kind === "music"
+                  scope.kind === "speech"
                     ? onChange({
                         ...scope,
-                        request: {
-                          ...scope.request,
-                          caption: event.target.value,
-                        },
+                        request: { ...scope.request, text: event.target.value },
                       })
-                    : updateImage(
-                        image?.mode === "img2img"
-                          ? { edit_prompt: event.target.value }
-                          : { prompt: event.target.value },
-                      )
+                    : scope.kind === "music"
+                      ? onChange({
+                          ...scope,
+                          request: {
+                            ...scope.request,
+                            caption: event.target.value,
+                          },
+                        })
+                      : updateImage(
+                          image?.mode === "img2img"
+                            ? { edit_prompt: event.target.value }
+                            : { prompt: event.target.value },
+                        )
                 }
-                placeholder="Describe the mood, subject and style your agent should create…"
+                placeholder={
+                  scope.kind === "speech"
+                    ? "Write the exact Polish text, or describe the short briefing your agent should write…"
+                    : "Describe the mood, subject and style your agent should create…"
+                }
               />
             </label>
+          </>
+        )}
+        {scope.kind === "speech" && (
+          <>
+            <p className="muted">
+              Speech in Polish. Your selected recording provides the voice
+              reference. Goal mode writes the spoken text; the voice stays
+              fixed.
+            </p>
+            <MediaInput
+              kind="audio"
+              label="Voice reference"
+              hint="Choose or upload a clear PCM WAV recording, 0.1–60 seconds."
+              value={scope.request.reference_artifact_id ?? ""}
+              disabled={disabled || uploading}
+              onChange={(id) =>
+                onChange({
+                  ...scope,
+                  request: {
+                    ...scope.request,
+                    reference_artifact_id: id || null,
+                  },
+                })
+              }
+              onBusy={(busy) => {
+                setUploading(busy);
+                onBusy(busy);
+              }}
+            />
+            <details>
+              <summary>
+                <Settings2 size={15} />
+                Advanced speech settings
+              </summary>
+              <p className="muted">
+                Chatterbox · local · at most 1000 characters per execution.
+              </p>
+              <GpuTargetChoiceList
+                value={scope.request.gpu ?? "auto"}
+                gpus={hardware.data?.gpus ?? []}
+                onChange={(gpu) =>
+                  onChange({ ...scope, request: { ...scope.request, gpu } })
+                }
+              />
+            </details>
           </>
         )}
         {scope.kind === "music" && (

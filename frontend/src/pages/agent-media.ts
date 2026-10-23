@@ -17,6 +17,15 @@ export type ImageMediaRequest = {
 };
 export type AgentMediaScope =
   | {
+      kind: "speech";
+      description_source: "fixed" | "goal";
+      request: {
+        text: string;
+        reference_artifact_id: string | null;
+        gpu?: string;
+      };
+    }
+  | {
       kind: "image";
       description_source: "fixed" | "goal";
       request: ImageMediaRequest;
@@ -31,9 +40,19 @@ export type AgentMediaScope =
     };
 
 export function newAgentMedia(
-  kind: "image" | "music",
+  kind: AgentMediaScope["kind"],
   goal: string,
 ): AgentMediaScope {
+  if (kind === "speech")
+    return {
+      kind,
+      description_source: "goal",
+      request: {
+        text: goal.slice(0, 1000),
+        reference_artifact_id: null,
+        gpu: "auto",
+      },
+    };
   return kind === "image"
     ? {
         kind,
@@ -74,8 +93,18 @@ export function fixedAgentMedia(agent: {
   );
 }
 
-export function agentMediaIssue(scope?: AgentMediaScope | null): string | null {
+export function agentMediaIssue(
+  scope?: AgentMediaScope | null,
+  options?: { allowMissingVoice?: boolean },
+): string | null {
   if (!scope) return "Choose the output and save its creative settings.";
+  if (scope.kind === "speech") {
+    if (!scope.request.text.trim() || scope.request.text.length > 1000)
+      return "Write the spoken text or instructions in 1–1000 characters.";
+    if (!scope.request.reference_artifact_id && !options?.allowMissingVoice)
+      return "Choose a voice reference from Library or upload a WAV before enabling.";
+    return null;
+  }
   if (scope.kind === "music") {
     const p = scope.request;
     if (!p.caption.trim() || p.caption.trim().length > 512)

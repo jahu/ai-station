@@ -6929,6 +6929,24 @@ section:has(> .memory-grid) > .dashboard-note {
 .agent-media-scope .media-composer-heading h3 {
   margin: 0;
 }
+.agent-media-scope .mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.agent-media-scope .mode-tabs button {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 8px;
+}
+@media (max-width: 600px) {
+  .agent-media-scope .mode-tabs button {
+    flex-direction: column;
+    gap: 4px;
+  }
+}
 .agent-media-references {
   display: grid;
   gap: 18px;

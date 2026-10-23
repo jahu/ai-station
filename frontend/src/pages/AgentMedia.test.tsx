@@ -257,3 +257,142 @@ it("keeps Upscale tied to its fixed source instead of a text-model preparation",
     }),
   ).toBeNull();
 });
+
+it("reviews a pending speech draft, selects and removes its Library voice without starting work", async () => {
+  const id = "c23c77b2-e3d6-46ab-bc80-04108a4615c2";
+  const voice = {
+    id,
+    type: "audio",
+    mime_type: "audio/wav",
+    title: "Polish reference",
+    original_filename: "voice.wav",
+    relative_path: "artifacts/voice.wav",
+    size_bytes: 6400,
+    metadata: { duration_seconds: 0.2 },
+    parent_artifact_ids: [],
+    created_at: "2026-10-23T10:00:00Z",
+  };
+  const fetch = vi.fn(async (url: string) => ({
+    ok: true,
+    json: async () =>
+      url.includes("/hardware")
+        ? { gpus: [{ index: 7, name: "Fixture GPU" }] }
+        : url.endsWith("/" + id)
+          ? voice
+          : [voice],
+  }));
+  vi.stubGlobal("fetch", fetch);
+  function Editor() {
+    const [scope, setScope] = useState<AgentMediaScope>({
+      ...newAgentMedia("speech", "Powiedz dzień dobry"),
+      description_source: "fixed",
+    });
+    return (
+      <>
+        <AgentMediaScopeEditor
+          value={scope}
+          goal="Powiedz dzień dobry"
+          disabled={false}
+          onChange={setScope}
+          onBusy={() => {}}
+        />
+        <output aria-label="Speech settings">{JSON.stringify(scope)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  expect(
+    screen.getByText(/Choose a voice reference from Library/),
+  ).toBeTruthy();
+  expect(
+    (screen.getByLabelText("Media creative direction") as HTMLTextAreaElement)
+      .maxLength,
+  ).toBe(1000);
+  fireEvent.click(screen.getByRole("button", { name: "Choose from Library" }));
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Choose Polish reference c23c77b2",
+    }),
+  );
+  await waitFor(() =>
+    expect(
+      JSON.parse(screen.getByLabelText("Speech settings").textContent || "{}")
+        .request.reference_artifact_id,
+    ).toBe(id),
+  );
+  fireEvent.change(screen.getByLabelText("Media creative direction"), {
+    target: { value: "Witaj w AI Station." },
+  });
+  const saved = JSON.parse(
+    screen.getByLabelText("Speech settings").textContent || "{}",
+  );
+  expect(saved.request.reference_artifact_id).toBe(id);
+  expect(agentMediaIssue(saved)).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Remove voice reference" }),
+  );
+  const pending = JSON.parse(
+    screen.getByLabelText("Speech settings").textContent || "{}",
+  );
+  expect(pending.request.reference_artifact_id).toBeNull();
+  expect(agentMediaIssue(pending)).toContain("before enabling");
+  expect(agentMediaIssue(pending, { allowMissingVoice: true })).toBeNull();
+  expect(fetch.mock.calls.every(([url]) => !url.includes("/runs"))).toBe(true);
+});
+
+it("shows speech playback with the existing voice/Avatar source actions", async () => {
+  responses([
+    {
+      id: "speech",
+      type: "audio",
+      mime_type: "audio/wav",
+      title: "Daily brief",
+      original_filename: "brief.wav",
+      relative_path: "artifacts/brief.wav",
+      size_bytes: 9600,
+      run_id: "speech-run",
+      metadata: { capability: "audio.speech", duration_seconds: 0.2 },
+      parent_artifact_ids: [],
+      created_at: "2026-10-23T10:00:00Z",
+    },
+  ]);
+  render(
+    <Frame>
+      <AgentMediaResult
+        runs={[
+          {
+            id: "speech-run",
+            task_id: "speech-task",
+            project_id: null,
+            parent_run_id: null,
+            execution_target: "host",
+            created_at: "2026-10-23T10:00:00Z",
+            started_at: null,
+            finished_at: null,
+            actual_gpu: "7",
+            requested_gpu: "auto",
+            effective_permissions: ["filesystem_read", "workspace_write"],
+            summary: "Speech generated",
+            error_type: "",
+            worker_id: null,
+            executor_type: "chatterbox",
+            capability: "audio.speech",
+            status: "succeeded",
+            parameters: { text: "Dzień dobry." },
+            metadata: {},
+            error_message: "",
+          },
+        ]}
+      />
+    </Frame>,
+  );
+  await waitFor(() =>
+    expect(screen.getByLabelText("Generated audio")).toBeTruthy(),
+  );
+  expect(screen.getByRole("link", { name: "Open in Library" })).toBeTruthy();
+  expect(screen.getByRole("link", { name: /^Use as speech/ })).toBeTruthy();
+});
