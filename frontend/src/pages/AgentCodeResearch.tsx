@@ -45,7 +45,7 @@ export default function AgentCodeResearch({
     hasFetched = isFetchResult(fetched);
   if (!hasSearch && !hasPages && !hasFetched) return null;
   return (
-    <details className="panel" aria-label="Research for this task">
+    <details className="panel web-search-sources" aria-label="Research for this task">
       <summary>
         Research sources
         {hasPages && pages.partial ? " · Some pages unavailable" : ""}
