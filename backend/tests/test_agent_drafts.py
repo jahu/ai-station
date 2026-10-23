@@ -532,3 +532,23 @@ def test_selected_tools_with_missing_required_scope_never_publish_an_unusable_dr
         assert state(api, run)["status"] == "failed"
         with session_factory()() as session:
             assert not list(session.scalars(select(Agent)))
+
+
+def test_assisted_draft_can_review_source_page_reading_without_inventing_urls(model, monkeypatch):
+    calls, responses = model
+    responses[:] = [json.dumps({**PROPOSAL, "tools": ["web_search", "search_pages"]})]
+
+    async def forbidden(*args, **kwargs):
+        raise AssertionError("Drafting must never read public pages")
+
+    monkeypatch.setattr("app.http_fetch.fetch_public", forbidden)
+    with TestClient(app) as api:
+        run = submit(api, instruction="Find release notes and read the search sources before reporting.")
+        step()
+        result = state(api, run)
+        assert result["status"] == "succeeded", result["error_message"]
+        agent = api.get("/api/agents/" + result["metadata"]["agent_id"]).json()
+        assert agent["tools"] == ["web_search", "search_pages"] and agent["fetch_urls"] == []
+        assert not agent["enabled"] and agent["next_run_at"] is None
+        assert agent["search_query"] == PROPOSAL["search_query"]
+        assert "search_pages" in calls[0]["messages"][1]["content"]

@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type Artifact, type Run } from "../api";
 import { ErrorNotice } from "../components/common";
 import AgentReport from "./AgentReport";
+import { AgentSearchSources } from "./AgentSearchSources";
+import { isSearchPageResult } from "./agent-search-result";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import { RegistryToolCalls, type RegistryToolCall } from "./AgentToolCalls";
 import { SearchSources, type WebSources } from "./ChatWebSearch";
@@ -60,7 +62,7 @@ function latestToolMetadata<T>(
   runs: Run[],
   reportRun: Run,
   tool: string,
-  key: "web_search" | "http_fetch" | "browser",
+  key: "web_search" | "http_fetch" | "browser" | "search_pages",
   guard: (value: unknown) => value is T,
 ): T | null {
   const fromReport = reportRun.metadata?.[key];
@@ -101,6 +103,13 @@ export function AgentLatestReport({ runs }: { runs: Run[] }) {
     "http_fetch",
     isFetchResult,
   );
+  const searchPages = latestToolMetadata(
+    runs,
+    reportRun,
+    "search_pages",
+    "search_pages",
+    isSearchPageResult,
+  );
   const browser = latestToolMetadata(
     runs,
     reportRun,
@@ -126,6 +135,7 @@ export function AgentLatestReport({ runs }: { runs: Run[] }) {
       ) : null}
       {search ? <SearchSources result={search} /> : null}
       {pages ? <FetchedPages result={pages} /> : null}
+      {searchPages ? <AgentSearchSources result={searchPages} /> : null}
       {browser ? <BrowserPages result={browser} /> : null}
       {calls.length ? <RegistryToolCalls calls={calls} /> : null}
     </>

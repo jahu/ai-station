@@ -27,6 +27,7 @@ CONTEXT_STEPS = frozenset(
         "memory_search",
         "project_memory",
         "web_search",
+        "search_pages",
         "http_fetch",
         "browser",
         "github_read",
@@ -52,7 +53,11 @@ def planned_steps(definition: AgentSettings) -> list[dict]:
             )
         ]
     steps = []
-    for name in definition.tools:
+    tools = list(definition.tools)
+    if "search_pages" in tools:
+        tools.remove("search_pages")
+        tools.insert(tools.index("web_search") + 1, "search_pages")
+    for name in tools:
         if name in RETENTION_TOOLS:
             continue
         if name not in CONTEXT_STEPS or not agent_tool(name).operational:

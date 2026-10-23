@@ -22,9 +22,11 @@ export type FetchResult = {
 export function FetchedPages({
   result,
   compact = false,
+  label,
 }: {
   result: FetchResult;
   compact?: boolean;
+  label?: string;
 }) {
   const headingId = useId();
   const labelId = useId();
@@ -35,12 +37,13 @@ export function FetchedPages({
   return (
     <details className="web-search-sources" open>
       <summary>
-        <Globe size={15} /> {compact ? "Page sources" : "Fetched pages"}{" "}
+        <Globe size={15} />{" "}
+        {label ?? (compact ? "Page sources" : "Fetched pages")}{" "}
         <span className="chip">{result.pages.length}</span>
       </summary>
       <section aria-labelledby={headingId}>
         <h3 id={headingId} className="sr-only">
-          Fetched pages
+          {label ?? "Fetched pages"}
         </h3>
         <p className="muted">
           {compact ? "Read from the page" : "Reviewed GET"} ·{" "}

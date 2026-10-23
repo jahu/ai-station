@@ -90,3 +90,18 @@ URLs. Repeated invalid or empty output fails without a completed report or repor
 memory. Stop closes the pending stream. Fenced protocol examples in technical
 reports remain valid; this safeguard does not establish factual accuracy. Native
 bounded tool calls still use the existing reviewed tool scopes and round limits.
+
+
+## Read search sources
+
+Select **web_search** and **Read search sources** together to read up to three
+public pages from the agent's own successful search before reporting. Review the
+public query and source-reading tool before activation. No explicit URL list is
+needed for this tool; existing **HTTP fetch** still requires reviewed fixed URLs.
+The model cannot add URLs or queries, and this tool is not callable again from the
+report loop. Search alone keeps its existing snippet-only behavior.
+
+The report shows the saved search snapshot, actually read page excerpts and
+partial/unread-source outcomes separately. DNS/redirect SSRF protection, bounded
+text-only GET, shared deadlines, Stop and own-scope optional retention reuse the
+existing contracts. See [source authority and qualification](agent-search-pages.md).

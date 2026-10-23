@@ -1,5 +1,10 @@
 # Architecture
 
+[Research source reading](agent-search-pages.md) composes existing public-search
+and HTTP GET steps with a source-bound optional agent tool. The worker verifies
+the same-workflow search artifact before selecting at most three public targets;
+reporting, deadlines, Stop and artifacts reuse existing infrastructure.
+
 [AI-assisted agent drafting](plans/assisted-agent-drafts.md) uses one local
 preparation executor from Agents and as a Work child Run. The HTTP API only
 enqueues; model admission, leases, Stop and artifacts reuse existing services.

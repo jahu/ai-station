@@ -146,6 +146,7 @@ const schedule = (agent: Agent) =>
         : "Manual";
 
 function toolTitle(tool: Tool) {
+  if (tool.name === "search_pages") return "Read search sources";
   return tool.name === "github_read"
     ? "GitHub repository"
     : tool.name === "coding_cursor"

@@ -1,16 +1,28 @@
 """Only tools implemented for the local agent execution boundary are advertised."""
 
 import json
+from dataclasses import replace
 
 from app.tools import TOOLS, ToolSpec, get_tool
 
 CALLABLE_TOOLS = frozenset({"system_snapshot", "memory_search", "project_memory", "web_search", "http_fetch"})
 RETENTION_TOOLS = frozenset({"remember_report", "remember_workflow"})
-WORKFLOW_MEMORY_TOOLS = frozenset({"system_snapshot", "web_search", "http_fetch", "browser"})
+WORKFLOW_MEMORY_TOOLS = frozenset({"system_snapshot", "web_search", "http_fetch", "browser", "search_pages"})
 MAX_TOOL_ROUNDS = 4
 MAX_CALLS_PER_ROUND = 3
 
 AGENT_TOOLS = {
+    "search_pages": ToolSpec(
+        name="search_pages",
+        description="Read search sources: read up to three public result pages from this workflow's own reviewed web_search query. Requires web_search. Source-bound GET only; no caller/model URLs, cookies, credentials, JavaScript or recursive links. Failed sources remain visible.",
+        risk_level="medium",
+        required_permissions=("network_read",),
+        timeout=90,
+        execution_target="container",
+        operational=True,
+        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        output_schema={"type": "object"},
+    ),
     "market_watch": ToolSpec(
         name="market_watch",
         description="Observe reviewed Coinbase BTC/ETH pairs or Finnhub USD stocks through your selected account, compare numeric thresholds and create deduplicated in-app alerts. Stock data requires its separate account-read permission. Optional email requires approved agent/recipient scope. No model or trading.",
@@ -172,6 +184,8 @@ AGENT_TOOLS["browser"] = TOOLS["browser"]
 
 
 def agent_tool(name):
+    if name == "search_pages":
+        return replace(AGENT_TOOLS[name], operational=get_tool("web_search").operational)
     return get_tool(name) if name in {"web_search", "http_fetch", "browser"} else AGENT_TOOLS[name]
 
 
