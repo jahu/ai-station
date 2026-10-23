@@ -558,11 +558,15 @@ def submit_message(conversation_id, body, session, *, commit=True):
     from app.conversation_music import prepare_turn
 
     body = prepare_data_turn(body)
+    from app.conversation_data_reference import resolve as resolve_data_reference
+
+    body, data_reference = resolve_data_reference(session, row, body, mode)
     if mode in {"chat", "work", "orchestrator"}:
         body = prepare_turn(body)
     from app.conversation_media import resolve_result_reference
 
     body, result_reference = resolve_result_reference(session, row, body, mode)
+    result_reference = data_reference or result_reference
     if mode == "chat":
         validate_chat_scope(body)
     from app.project_reference import resolve_project_reference

@@ -106,8 +106,8 @@ it("sends the first prompt without creating an empty conversation", async () => 
   });
 });
 
-it.each([undefined, 1, 2])(
-  "moves through messages and identifies a resolved image (%s)",
+it.each([undefined, 1, 2, 3])(
+  "moves through messages and identifies the resolved input source (%s)",
   async (inputCount) => {
     const conversation = {
       id: "conv",
@@ -135,9 +135,18 @@ it.each([undefined, 1, 2])(
           run_status: null,
           error_message: "",
           metadata: {
-            images: [{ id: "source-image", name: "landscape.png" }],
+            images:
+              inputCount === 3
+                ? []
+                : [{ id: "source-image", name: "landscape.png" }],
             conversation_reference: {
-              source_kind: inputCount ? "inspected_input" : undefined,
+              source_kind:
+                inputCount === 3
+                  ? "analyzed_data"
+                  : inputCount
+                    ? "inspected_input"
+                    : undefined,
+              filenames: inputCount === 3 ? ["sales.csv"] : undefined,
               artifact_ids:
                 inputCount === 2
                   ? ["source-image", "second-image"]
@@ -210,11 +219,13 @@ it.each([undefined, 1, 2])(
     });
     expect(
       screen.getByText(
-        inputCount
-          ? inputCount === 2
-            ? /Using the inspected images/
-            : /Using the inspected image ·/
-          : /Using the previous image result/,
+        inputCount === 3
+          ? /Using the analyzed input files · sales.csv/
+          : inputCount
+            ? inputCount === 2
+              ? /Using the inspected images/
+              : /Using the inspected image ·/
+            : /Using the previous image result/,
       ),
     ).toBeTruthy();
     expect(screen.getByText(/Using a stored transcript/)).toBeTruthy();
@@ -225,10 +236,14 @@ it.each([undefined, 1, 2])(
     ).toBe("/runs/transcript-run");
     expect(
       screen
-        .getByRole("link", { name: "Inspect referenced image user-one" })
+        .getByRole("link", {
+          name: `Inspect referenced ${inputCount === 3 ? "data" : "image"} user-one`,
+        })
         .getAttribute("href"),
     ).toBe("/runs/source-run");
-    expect(screen.getByAltText("Reference 1: landscape.png")).toBeTruthy();
+    if (inputCount === 3)
+      expect(screen.queryByAltText("Reference 1: landscape.png")).toBeNull();
+    else expect(screen.getByAltText("Reference 1: landscape.png")).toBeTruthy();
     const copy = screen.getByRole("button", { name: "Copy Local AI asst-two" });
     const articles = screen.getAllByRole("article");
     expect(screen.getByRole("region", { name: "Messages" })).toBeTruthy();

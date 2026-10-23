@@ -614,3 +614,9 @@ Agent cron schedules resolve reviewed IANA wall-clock rules into durable UTC due
 instants through the existing scheduler. Daily/custom controls share the same
 contract in Agents and conversations; legacy schedules retain UTC. See
 [calendar scheduling](plans/agent-schedule-timezones.md).
+
+[Explicit natural data follow-ups](plans/conversation-data-references.md) resolve
+current-user file references to a verified completed same-conversation analysis.
+Controller-owned source/context/input snapshots feed the existing private data
+workspace pipeline. Each question has a new Task/deadline; quoted prior context
+adds no tool authority. No new executor or native API is introduced.
