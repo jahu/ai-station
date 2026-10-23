@@ -45,7 +45,10 @@ checks pass. Actual Auto model loading with 131072 context and native offline
 Python produced the checked full-file total 150, preserved the original input,
 and restored the operator model preset. Evidence:
 `data/acceptance/conversation-data-20261023/post-deployment-qualified.json`.
-Explicit same-file follow-up selection is the current UI increment.
+Explicit same-file follow-up selection is deployed (#373), with 616 UI tests and
+compiled desktop/phone draft/scope/reload checks. The unchanged backend reuses
+the actual #372 acceptance. The current UI increment routes ordinary CSV/XLSX
+attachments into that same local analysis, retaining mixed-scope guards.
 
 Current evidence summary, 2026-10-22: general-agent research, local Python/data
 execution and website-building workflows are operational. Public research uses

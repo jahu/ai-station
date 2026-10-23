@@ -1,3 +1,4 @@
+import { uploadDataFiles } from "./data-upload";
 import { useEffect, useId, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
@@ -50,33 +51,14 @@ export default function AgentDataFiles({
       max_repairs: value?.max_repairs ?? 1,
     });
   const upload = useMutation({
-    mutationFn: async (selected: File[]) => {
-      if (selected.length + ids.length > 8)
-        throw new Error("Choose up to eight data files.");
-      if (selected.some((item) => item.size > 16 * 1024 * 1024))
-        throw new Error("Each file may be up to 16 MB.");
-      const added: Artifact[] = [];
-      try {
-        for (const item of selected) {
-          const body = new FormData();
-          body.append("file", item);
-          const artifact = await api<Artifact>("/data/uploads", {
-            method: "POST",
-            body,
-          });
-          added.push(artifact);
-          cache.setQueryData(["artifact", artifact.id], artifact);
-        }
-      } finally {
-        // One definition update per batch, including partial success. Conversation
-        // drafts autosave this callback with a version guard.
-        if (added.length) updateIds([...ids, ...added.map((item) => item.id)]);
-      }
-      return added;
-    },
-    onSettled: () => {
-      void cache.invalidateQueries({ queryKey: ["library"] });
-    },
+    mutationFn: (selected: File[]) =>
+      uploadDataFiles(
+        selected,
+        cache,
+        (added) => updateIds([...ids, ...added.map((item) => item.id)]),
+        ids.length,
+        files.reduce((bytes, file) => bytes + (file.data?.size_bytes ?? 0), 0),
+      ),
   });
   useEffect(() => {
     onUploading?.(upload.isPending);

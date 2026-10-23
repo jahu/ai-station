@@ -29,9 +29,16 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it.each(["chat", "work"])(
-  "waits for file inspection before first Send in %s and submits an isolated local scope",
-  async (mode) => {
+it.each([
+  { mode: "chat", entry: "tool" },
+  { mode: "work", entry: "tool" },
+  { mode: "chat", entry: "csv" },
+  { mode: "work", entry: "csv" },
+  { mode: "chat", entry: "xlsx" },
+  { mode: "work", entry: "xlsx" },
+])(
+  "waits for $entry inspection before first Send in $mode and submits only a local data scope",
+  async ({ mode, entry }) => {
     let inspected = false;
     const writes: Record<string, unknown>[] = [];
     const cache = new QueryClient({
@@ -43,7 +50,7 @@ it.each(["chat", "work"])(
       vi.fn(async (path: string, init?: RequestInit) => {
         const artifact = {
           id: "input",
-          original_filename: "sales.csv",
+          original_filename: entry === "xlsx" ? "sales.xlsx" : "sales.csv",
           metadata: { data_input: true, data_inspection_run_id: "inspection" },
         };
         if (path === "/api/data/uploads")
@@ -88,15 +95,39 @@ it.each(["chat", "work"])(
     await screen.findByRole("textbox", { name: "Message" });
     if (mode === "work")
       fireEvent.click(screen.getByRole("button", { name: "Work" }));
-    fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
-      target: { value: "data.analyze" },
-    });
+    if (entry === "csv" && mode === "work") {
+      // Deliberately switching out of project creation must clear that scope.
+      fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
+        target: { value: "project.create_code" },
+      });
+      fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
+        target: { value: "auto" },
+      });
+    }
+    if (entry === "tool")
+      fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
+        target: { value: "data.analyze" },
+      });
     fireEvent.change(screen.getByRole("textbox", { name: "Message" }), {
       target: { value: "Sum the selected sales" },
     });
-    fireEvent.change(screen.getByLabelText("Upload agent data"), {
-      target: { files: [new File(["Total\n27"], "sales.csv")] },
+    const selected =
+      entry === "xlsx"
+        ? new File([new Uint8Array([0, 255, 80, 75])], "sales.xlsx")
+        : new File(["Total\n" + "1\n".repeat(9000)], "sales.csv");
+    Object.defineProperty(selected, "arrayBuffer", {
+      value: () => {
+        throw new Error("Data must never be decoded as an inline attachment");
+      },
     });
+    fireEvent.change(
+      screen.getByLabelText(
+        entry === "tool" ? "Upload agent data" : "Attach files",
+      ),
+      {
+        target: { files: [selected] },
+      },
+    );
     await screen.findByText("Inspecting file…");
     expect(
       (
@@ -133,6 +164,8 @@ it.each(["chat", "work"])(
       content: "Sum the selected sales",
       web_search: { enabled: false },
     });
+    expect(writes[0].attachments).toEqual([]);
+    expect(JSON.stringify(writes[0])).not.toContain("Total\\n1");
     expect(writes[0]).not.toHaveProperty("project_defaults");
     expect(writes[0]).not.toHaveProperty("continuation");
   },
@@ -260,4 +293,75 @@ it("offers a same-file follow-up only from a verified result and retains the sub
       name: "Ask another question about these files",
     }),
   ).toBeNull();
+});
+
+it("keeps partial data uploads and the error visible after the generic attachment control is replaced", async () => {
+  let uploads = 0;
+  const cache = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const accepted = vi.fn();
+  const artifact = {
+    id: "first",
+    original_filename: "sales.csv",
+    metadata: { data_input: true, data_inspection_run_id: "inspection" },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (path === "/api/data/uploads") {
+        if (++uploads === 2)
+          return {
+            ok: false,
+            json: async () => ({ detail: "Second file could not be stored" }),
+          };
+        return { ok: true, json: async () => artifact };
+      }
+      const data = path.endsWith("/preferences")
+        ? { mode: "chat", model: "plain", provider: provider.key, version: 1 }
+        : path.endsWith("/artifacts/first")
+          ? artifact
+          : path.endsWith("/runs/inspection")
+            ? {
+                id: "inspection",
+                status: "succeeded",
+                metadata: { preview_artifact_id: "preview" },
+              }
+            : path.endsWith("/llama")
+              ? { models: [], instances: [] }
+              : [];
+      expect(init?.method).not.toBe("POST");
+      return { ok: true, json: async () => data };
+    }),
+  );
+  render(
+    <QueryClientProvider client={cache}>
+      <MemoryRouter>
+        <NewChat
+          providers={[provider]}
+          provider={provider}
+          onProviderChange={() => {}}
+          onAccepted={accepted}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  const message = await screen.findByRole("textbox", { name: "Message" });
+  fireEvent.change(message, { target: { value: "Keep my question" } });
+  fireEvent.change(screen.getByLabelText("Attach files"), {
+    target: {
+      files: [
+        new File(["Total\n27"], "sales.csv"),
+        new File(["Other\n4"], "other.csv"),
+      ],
+    },
+  });
+  await screen.findByText("Second file could not be stored");
+  await screen.findByText("sales.csv");
+  await screen.findByText("Ready for analysis");
+  expect(screen.queryByLabelText("Attach files")).toBeNull();
+  expect((message as HTMLTextAreaElement).value).toBe("Keep my question");
+  expect(cache.getQueryData(["artifact", "first"])).toEqual(artifact);
+  expect(accepted).not.toHaveBeenCalled();
+  expect(uploads).toBe(2);
 });

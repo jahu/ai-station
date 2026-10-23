@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import TextAttachments, { type TextAttachment } from "./TextAttachments";
 
@@ -107,3 +107,46 @@ it("moves through staged text attachments with arrow keys without sending", asyn
   });
   expect(first.tabIndex).toBe(0);
 });
+
+it.each(["mixed", "existing", "no-scope"])(
+  "rejects a data upload with %s context before reading or storing files",
+  async (mode) => {
+    const upload = vi.fn().mockResolvedValue([]);
+    const edit = vi.fn();
+    const existing =
+      mode === "existing"
+        ? [
+            {
+              name: "notes.txt",
+              content: "Keep my text",
+              kind: "text" as const,
+            },
+          ]
+        : [];
+    render(
+      <TextAttachments
+        attachments={existing}
+        onChange={edit}
+        busy={false}
+        onReading={() => {}}
+        onDataFiles={mode === "no-scope" ? undefined : upload}
+      />,
+    );
+    const files = [
+      new File(["Total\n27"], "sales.csv"),
+      ...(mode === "mixed" ? [new File(["Notes"], "notes.txt")] : []),
+    ];
+    fireEvent.change(screen.getByLabelText("Attach files"), {
+      target: { files },
+    });
+    await screen.findByText(
+      mode === "no-scope"
+        ? "Choose Analyze CSV / Excel in a general conversation to analyse these files locally."
+        : "Choose CSV/Excel separately from text, PDF or image attachments. Your existing files are unchanged.",
+    );
+    expect(upload).not.toHaveBeenCalled();
+    expect(edit).not.toHaveBeenCalled();
+    if (mode === "existing")
+      expect(screen.getByText("Keep my text")).toBeTruthy();
+  },
+);

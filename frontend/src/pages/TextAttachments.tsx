@@ -1,3 +1,4 @@
+import { isDataFile } from "./data-upload";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { Paperclip } from "lucide-react";
 import { Button } from "../components/ui/button";
@@ -126,11 +127,13 @@ export default function TextAttachments({
   onChange,
   busy,
   onReading,
+  onDataFiles,
 }: {
   attachments: TextAttachment[];
   onChange: (items: TextAttachment[]) => void;
   busy: boolean;
   onReading: (reading: boolean) => void;
+  onDataFiles?: (files: File[]) => Promise<unknown>;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -144,7 +147,11 @@ export default function TextAttachments({
         onClick={() => input.current?.click()}
       >
         <Paperclip size={15} />{" "}
-        {reading ? "Reading files…" : "Attach text, PDF, or image"}
+        {reading
+          ? "Reading files…"
+          : onDataFiles
+            ? "Attach files"
+            : "Attach text, PDF, or image"}
       </Button>
       <input
         ref={input}
@@ -152,7 +159,10 @@ export default function TextAttachments({
         aria-label="Attach files"
         type="file"
         multiple
-        accept=".pdf,image/png,image/jpeg,image/webp,text/*,.md,.py,.json,.txt,.html,.css,.js,.ts,.tsx"
+        accept={
+          ".pdf,image/png,image/jpeg,image/webp,text/*,.md,.py,.json,.txt,.html,.css,.js,.ts,.tsx" +
+          (onDataFiles ? ",.csv,.xlsx" : "")
+        }
         disabled={busy || reading}
         onChange={async (event) => {
           const files = Array.from(event.target.files ?? []);
@@ -161,6 +171,18 @@ export default function TextAttachments({
           setReading(true);
           onReading(true);
           try {
+            if (files.some(isDataFile)) {
+              if (!files.every(isDataFile) || attachments.length)
+                throw new Error(
+                  "Choose CSV/Excel separately from text, PDF or image attachments. Your existing files are unchanged.",
+                );
+              if (!onDataFiles)
+                throw new Error(
+                  "Choose Analyze CSV / Excel in a general conversation to analyse these files locally.",
+                );
+              await onDataFiles(files);
+              return;
+            }
             if (attachments.length + files.length > 4)
               throw new Error("Attach up to four files.");
             const added = await Promise.all(
@@ -226,11 +248,20 @@ export default function TextAttachments({
       />
       <details className="chat-attachment-help">
         <summary>Supported files and privacy</summary>
+        {onDataFiles && (
+          <p className="muted">
+            CSV/Excel: up to eight files, 16 MB each and 32 MB total. Analysis
+            uses a local model and offline Python; your files stay on this
+            station, even with an external conversation provider. Review the
+            selected files and Send to start.
+          </p>
+        )}
         <p className="muted">
-          Up to four files. UTF-8 text/code: 16 KB each, 24 KB total. PDFs: 1
-          MiB and 8 pages; only extractable text is sent, not a visual reading.
-          PNG/JPEG/WebP: 2 MiB and 4 megapixels; pixels are stored as artifacts
-          and are not sent to this text model. Vision remains unavailable.
+          Up to four text/PDF/image files. UTF-8 text/code: 16 KB each, 24 KB
+          total. PDFs: 1 MiB and 8 pages; only extractable text is sent, not a
+          visual reading. PNG/JPEG/WebP: 2 MiB and 4 megapixels; pixels are
+          stored as artifacts and are not sent to this text model. Choose
+          Inspect images for local vision.
         </p>
       </details>
       <ErrorNotice error={error} />
