@@ -1,4 +1,5 @@
 import { isImageFile } from "./image-upload";
+import { isRecordingFile } from "./recording-upload";
 import { isDataFile } from "./data-upload";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { Paperclip } from "lucide-react";
@@ -130,6 +131,8 @@ export default function TextAttachments({
   onReading,
   onDataFiles,
   onImageFiles,
+  onRecordingFiles,
+  uploadErrorsHandled = false,
 }: {
   attachments: TextAttachment[];
   onChange: (items: TextAttachment[]) => void;
@@ -137,6 +140,8 @@ export default function TextAttachments({
   onReading: (reading: boolean) => void;
   onDataFiles?: (files: File[]) => Promise<unknown>;
   onImageFiles?: (files: File[]) => Promise<unknown>;
+  onRecordingFiles?: (files: File[]) => Promise<unknown>;
+  uploadErrorsHandled?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -152,7 +157,7 @@ export default function TextAttachments({
         <Paperclip size={15} />{" "}
         {reading
           ? "Reading files…"
-          : onDataFiles || onImageFiles
+          : onDataFiles || onImageFiles || onRecordingFiles
             ? "Attach files"
             : "Attach text, PDF, or image"}
       </Button>
@@ -164,7 +169,8 @@ export default function TextAttachments({
         multiple
         accept={
           ".pdf,image/png,image/jpeg,image/webp,text/*,.md,.py,.json,.txt,.html,.css,.js,.ts,.tsx" +
-          (onDataFiles ? ",.csv,.xlsx" : "")
+          (onDataFiles ? ",.csv,.xlsx" : "") +
+          (onRecordingFiles ? ",.wav,.mp3,.m4a,.ogg,.oga,.webm,.flac" : "")
         }
         disabled={busy || reading}
         onChange={async (event) => {
@@ -173,7 +179,21 @@ export default function TextAttachments({
           setError(null);
           setReading(true);
           onReading(true);
+          let delegated = false;
           try {
+            if (files.some(isRecordingFile)) {
+              if (files.length !== 1 || attachments.length)
+                throw new Error(
+                  "Choose one recording separately from other attachments. Your existing files are unchanged.",
+                );
+              if (!onRecordingFiles)
+                throw new Error(
+                  "Choose Transcribe or Analyze recording in a general conversation to use audio.",
+                );
+              delegated = true;
+              await onRecordingFiles(files);
+              return;
+            }
             if (files.some(isDataFile)) {
               if (!files.every(isDataFile) || attachments.length)
                 throw new Error(
@@ -183,6 +203,7 @@ export default function TextAttachments({
                 throw new Error(
                   "Choose Analyze CSV / Excel in a general conversation to analyse these files locally.",
                 );
+              delegated = true;
               await onDataFiles(files);
               return;
             }
@@ -191,6 +212,7 @@ export default function TextAttachments({
                 throw new Error(
                   "Choose images separately from data, text or PDF attachments. Your existing files are unchanged.",
                 );
+              delegated = true;
               await onImageFiles(files);
               return;
             }
@@ -246,11 +268,12 @@ export default function TextAttachments({
               throw new Error("Combined text attachments exceed 24 KB.");
             onChange(next);
           } catch (cause) {
-            setError(
-              cause instanceof Error
-                ? cause
-                : new Error("Could not read the selected files."),
-            );
+            if (!delegated || !uploadErrorsHandled)
+              setError(
+                cause instanceof Error
+                  ? cause
+                  : new Error("Could not read the selected files."),
+              );
           } finally {
             setReading(false);
             onReading(false);
@@ -259,6 +282,14 @@ export default function TextAttachments({
       />
       <details className="chat-attachment-help">
         <summary>Supported files and privacy</summary>
+        {onRecordingFiles && (
+          <p className="muted">
+            Audio: one WAV, MP3, M4A, Ogg, WebM or FLAC recording, up to 20 MiB
+            and five minutes. Transcription runs locally; summaries and answers
+            use your selected conversation model. Choose audio separately from
+            other files.
+          </p>
+        )}
         {onDataFiles && (
           <p className="muted">
             CSV/Excel: up to eight files, 16 MB each and 32 MB total. Analysis

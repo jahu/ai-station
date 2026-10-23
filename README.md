@@ -1,5 +1,10 @@
 # AI Station
 
+**Attach files** also accepts a single recording (WAV, MP3, M4A, Ogg, WebM or
+FLAC, up to 20 MiB/five minutes). Preview or remove it, then ask for a transcript,
+summary, translation or answer. Transcription runs locally; analysis uses the
+selected conversation model. [Recording conversations](docs/plans/conversation-recordings.md).
+
 After inspecting an uploaded image in Chat, refer to it directly: **“Zmień to zdjęcie
 na portret w zimowym ubraniu”**, **“Powiększ to zdjęcie”**, or **“Opisz ten obraz”**.
 The source link identifies the inspected input. Multiple inputs require an explicit
