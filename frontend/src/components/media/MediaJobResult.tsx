@@ -11,10 +11,12 @@ export default function MediaJobResult({
   id,
   job: initialJob,
   error,
+  allowResume = true,
 }: {
   id: string;
   job?: MediaJob;
   error?: Error | null;
+  allowResume?: boolean;
 }) {
   const cache = useQueryClient();
   const current = useMediaJob(id);
@@ -169,7 +171,7 @@ export default function MediaJobResult({
                 Stop film
               </Button>
             )}
-            {job.resume_allowed && (
+            {allowResume && job.resume_allowed && (
               <Button
                 type="button"
                 variant="secondary"
@@ -201,7 +203,7 @@ export default function MediaJobResult({
           />
           <small className="muted">
             The full film is still being assembled. Finished segments are
-            retained for Resume.
+            retained{allowResume ? " for Resume." : " in execution history."}
           </small>
         </div>
       )}

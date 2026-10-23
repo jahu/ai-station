@@ -1,10 +1,19 @@
 import { useState } from "react";
-import { Image, Music2, AudioLines, Settings2, Plus, X } from "lucide-react";
+import {
+  Image,
+  Music2,
+  AudioLines,
+  Film,
+  Settings2,
+  Plus,
+  X,
+} from "lucide-react";
 import MediaInput from "../components/media/MediaInput";
 import { Button } from "../components/ui/button";
 import { useHardware } from "../api";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import MusicScope from "./MusicScope";
+import AgentVideoScope from "./AgentVideoScope";
 import {
   agentMediaIssue,
   newAgentMedia,
@@ -34,20 +43,24 @@ export default function AgentMediaScopeEditor({
   const scope = value ?? newAgentMedia("image", goal);
   const image = scope.kind === "image" ? scope.request : null;
   const caption =
-    scope.kind === "music"
-      ? scope.request.caption
-      : scope.kind === "speech"
-        ? scope.request.text
-        : image?.mode === "img2img"
-          ? (image.edit_prompt ?? "")
-          : (image?.prompt ?? "");
+    scope.kind === "video"
+      ? scope.request.prompt
+      : scope.kind === "music"
+        ? scope.request.caption
+        : scope.kind === "speech"
+          ? scope.request.text
+          : image?.mode === "img2img"
+            ? (image.edit_prompt ?? "")
+            : (image?.prompt ?? "");
   const issue = agentMediaIssue(scope);
   const OutputIcon =
-    scope.kind === "speech"
-      ? AudioLines
-      : scope.kind === "music"
-        ? Music2
-        : Image;
+    scope.kind === "video"
+      ? Film
+      : scope.kind === "speech"
+        ? AudioLines
+        : scope.kind === "music"
+          ? Music2
+          : Image;
   function updateImage(patch: Partial<ImageMediaRequest>) {
     if (scope.kind === "image")
       onChange({ ...scope, request: { ...scope.request, ...patch } });
@@ -72,7 +85,7 @@ export default function AgentMediaScopeEditor({
       )}
       <fieldset disabled={disabled || uploading}>
         <div className="mode-tabs" aria-label="Media output type">
-          {(["image", "music", "speech"] as const).map((kind) => (
+          {(["image", "music", "speech", "video"] as const).map((kind) => (
             <button
               type="button"
               key={kind}
@@ -85,18 +98,22 @@ export default function AgentMediaScopeEditor({
                 })
               }
             >
-              {kind === "image" ? (
+              {kind === "video" ? (
+                <Film size={16} />
+              ) : kind === "image" ? (
                 <Image size={16} />
               ) : kind === "speech" ? (
                 <AudioLines size={16} />
               ) : (
                 <Music2 size={16} />
               )}
-              {kind === "image"
-                ? "Image"
-                : kind === "speech"
-                  ? "Speech"
-                  : "Music"}
+              {kind === "video"
+                ? "Video"
+                : kind === "image"
+                  ? "Image"
+                  : kind === "speech"
+                    ? "Speech"
+                    : "Music"}
             </button>
           ))}
         </div>
@@ -181,28 +198,41 @@ export default function AgentMediaScopeEditor({
                     ? 512
                     : scope.kind === "speech"
                       ? 1000
-                      : 10000
+                      : scope.kind === "video"
+                        ? 2000
+                        : 10000
                 }
                 value={caption}
                 onChange={(event) =>
-                  scope.kind === "speech"
+                  scope.kind === "video"
                     ? onChange({
                         ...scope,
-                        request: { ...scope.request, text: event.target.value },
+                        request: {
+                          ...scope.request,
+                          prompt: event.target.value,
+                        },
                       })
-                    : scope.kind === "music"
+                    : scope.kind === "speech"
                       ? onChange({
                           ...scope,
                           request: {
                             ...scope.request,
-                            caption: event.target.value,
+                            text: event.target.value,
                           },
                         })
-                      : updateImage(
-                          image?.mode === "img2img"
-                            ? { edit_prompt: event.target.value }
-                            : { prompt: event.target.value },
-                        )
+                      : scope.kind === "music"
+                        ? onChange({
+                            ...scope,
+                            request: {
+                              ...scope.request,
+                              caption: event.target.value,
+                            },
+                          })
+                        : updateImage(
+                            image?.mode === "img2img"
+                              ? { edit_prompt: event.target.value }
+                              : { prompt: event.target.value },
+                          )
                 }
                 placeholder={
                   scope.kind === "speech"
@@ -212,6 +242,17 @@ export default function AgentMediaScopeEditor({
               />
             </label>
           </>
+        )}
+        {scope.kind === "video" && (
+          <AgentVideoScope
+            value={scope.request}
+            onChange={(request) => onChange({ ...scope, request })}
+            disabled={disabled || uploading}
+            onBusy={(busy) => {
+              setUploading(busy);
+              onBusy(busy);
+            }}
+          />
         )}
         {scope.kind === "speech" && (
           <>

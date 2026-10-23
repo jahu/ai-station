@@ -15,17 +15,14 @@ from test_agent_drafts import state, step, submit
 from test_agent_media import implemented_media as implemented_media
 
 
-@pytest.mark.parametrize("kind", ["image", "music"])
+@pytest.mark.parametrize("kind", ["image", "music", "video"])
 def test_media_draft_publishes_disabled_settings_without_generation(model, implemented_media, kind):
     calls, responses = model
-    request = (
-        {"mode": "t2i", "prompt": "New forest illustration"}
-        if kind == "image"
-        else {
-            "caption": "Calm piano",
-            "duration_seconds": 60,
-        }
-    )
+    request = {
+        "image": {"mode": "t2i", "prompt": "New forest illustration"},
+        "music": {"caption": "Calm piano", "duration_seconds": 60},
+        "video": {"prompt": "Quiet forest film", "duration_seconds": 30},
+    }[kind]
     responses[:] = [
         json.dumps(
             {

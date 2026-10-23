@@ -1,7 +1,7 @@
-[Persistent video/avatar output](plans/agent-motion-generation.md) will reuse the
+[Persistent scene-video output](plans/agent-motion-generation.md) reuses the
 existing long-media planner, segments and CPU composition on the agent Task.
-The first prerequisite is optional native-owned expiry for all three executors;
-agent scopes stay unavailable until publication and recovery are fully tested.
+Reviewed sources and one absolute deadline cover every stage. Only the final
+verified film produces the ready notice. Avatar agent output remains planned.
 
 # Architecture
 

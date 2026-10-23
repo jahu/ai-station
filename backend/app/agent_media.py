@@ -40,6 +40,12 @@ def require_profile(scope):
         except (RunnerError, RunnerUnavailable):
             profile = {}
         ready = profile.get("available") and "pl" in profile.get("languages", [])
+    elif scope.kind == "video":
+        try:
+            profile = RunnerClient().request("GET", "/v1/video/capabilities")
+        except (RunnerError, RunnerUnavailable):
+            profile = {}
+        ready = profile.get("available")
     elif scope.kind == "music":
         from app.music import PROFILE_SHA256, capabilities
 
@@ -71,10 +77,20 @@ def runtime_readiness():
             speech = RunnerClient().request("GET", "/v1/audio/capabilities")
         except (RunnerError, RunnerUnavailable):
             pass
+    try:
+        video = RunnerClient().request("GET", "/v1/video/capabilities")
+    except (RunnerError, RunnerUnavailable):
+        video = {}
     image_ready = bool(photo.get("available") and "t2i" in photo.get("modes", []))
     music_ready = bool(music.get("available") and music.get("profile_sha256") == PROFILE_SHA256)
     speech_ready = bool(speech.get("available") and "pl" in speech.get("languages", []))
     return {
+        "video": {
+            "ready": bool(video.get("available")),
+            "reason": None
+            if video.get("available")
+            else "Local video engine is unavailable; inspect Video setup",
+        },
         "image": {
             "ready": image_ready,
             "reason": None if image_ready else "Local image engine is unavailable; inspect Images setup",
@@ -96,15 +112,21 @@ def runtime_readiness():
 
 
 def freeze_inputs(session, scope):
-    if scope.kind == "music":
+    if scope.kind == "music" or scope.kind == "video" and scope.request.image_artifact_id is None:
         return []
     if scope.kind == "speech" and scope.request.reference_artifact_id is None:
         raise ValueError("Select and review a Library voice reference before running speech")
     identifiers = (
-        scope.request.input_artifact_ids if scope.kind == "image" else [scope.request.reference_artifact_id]
+        scope.request.input_artifact_ids
+        if scope.kind == "image"
+        else [scope.request.image_artifact_id]
+        if scope.kind == "video"
+        else [scope.request.reference_artifact_id]
     )
-    expected_type = "image" if scope.kind == "image" else "audio"
+    expected_type = "image" if scope.kind in {"image", "video"} else "audio"
     expected_mimes = {"image/png", "image/jpeg", "image/webp"} if scope.kind == "image" else {"audio/wav"}
+    if scope.kind == "video":
+        expected_mimes = {"image/png", "image/jpeg"}
     frozen = []
     for artifact_id in identifiers:
         artifact = session.get(Artifact, str(artifact_id))
@@ -182,12 +204,30 @@ def verify_files(run):
             raise ValueError("A reviewed source image failed its saved checksum")
 
 
+def verify_published_inputs(session, run):
+    """A queued segment must still read the exact reviewed Library resource."""
+    for item in run.parameters.get("media_inputs", []):
+        artifact = session.get(Artifact, item["id"])
+        if (
+            artifact is None
+            or artifact.trashed_at is not None
+            or artifact.artifact_type != "image"
+            or artifact.mime_type not in {"image/png", "image/jpeg"}
+            or (artifact.relative_path, artifact.size_bytes, artifact.sha256)
+            != (item["path"], item["size"], item["sha256"])
+        ):
+            raise ValueError("The reviewed first frame is unavailable or changed")
+    verify_files(run)
+
+
 class Description(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     description: str = Field(min_length=1, max_length=10000)
 
 
 def description_key(scope):
+    if scope.kind == "video":
+        return "prompt"
     if scope.kind == "speech":
         return "text"
     return (
@@ -249,6 +289,27 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
             parent_run_id=run.id,
             observed_profile=profile,
         )
+    elif prepared_scope.kind == "video":
+        from app.media_jobs import LongVideoRequest, publish_video
+
+        publish_video(
+            session,
+            LongVideoRequest(client_request_id=UUID(run.id), **prepared_scope.request.model_dump()),
+            task=run.task,
+            parent_run_id=run.id,
+            observed_profile=profile,
+            execution_deadline_at=run.parameters["execution_deadline_at"],
+        )
+        child = session.get(Run, run.task.metadata_json["media_plan"]["compose_run_id"])
+        child.operation_key = key
+        for segment_id in run.task.metadata_json["media_plan"]["segment_run_ids"]:
+            segment = session.get(Run, segment_id)
+            segment.parameters = {
+                **segment.parameters,
+                "parent_artifact_ids": [*segment.parameters.get("parent_artifact_ids", []), preparation_id],
+                "media_inputs": list(run.parameters.get("media_inputs", [])),
+            }
+            segment.triggered_by = run.triggered_by
     elif prepared_scope.kind == "speech":
         from app.audio import create_audio_run
         from app.audio_schema import SpeechRequest
@@ -395,8 +456,16 @@ class AgentMediaExecutor:
         if len(content) > 60000:
             raise ValueError("Media preparation context exceeds its bound; narrow the reviewed sources")
         maximum = (
-            512 if definition.media.kind == "music" else 1000 if definition.media.kind == "speech" else 10000
+            512
+            if definition.media.kind == "music"
+            else 1000
+            if definition.media.kind == "speech"
+            else 2000
+            if definition.media.kind == "video"
+            else 10000
         )
+        if definition.media.kind == "video" and definition.media.request.scenes:
+            maximum = min(maximum, 1998 - max(len(scene.prompt) for scene in definition.media.request.scenes))
         speech_guidance = (
             " For speech, description is the exact Polish text to speak, not a description of a voice or performance. No Markdown, directions or a claim that audio exists."
             if definition.media.kind == "speech"

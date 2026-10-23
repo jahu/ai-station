@@ -149,7 +149,7 @@ export default function MediaInput({
             {upload.isPending
               ? "Uploading…"
               : kind === "image"
-                ? "Drop a portrait here"
+                ? "Drop an image here"
                 : "Drop a voice recording here"}
           </strong>
           <span>{hint}</span>

@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.audio_schema import SpeechRequest
 from app.image_schema import ImageRequest
 from app.music_schema import MusicSettings
+from app.video_schema import LongVideoSettings
 
 
 class AgentImageScope(BaseModel):
@@ -51,7 +52,22 @@ class AgentSpeechScope(BaseModel):
     description_source: Literal["fixed", "goal"] = "fixed"
 
 
-AgentMediaScope = Annotated[AgentImageScope | AgentMusicScope | AgentSpeechScope, Field(discriminator="kind")]
+class AgentVideoRequest(LongVideoSettings):
+    # Long settings reject explicitly supplied frames; omit the inherited default
+    # from frozen snapshots so its round-trip preserves that public contract.
+    frames: int = Field(default=49, exclude=True)
+
+
+class AgentVideoScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["video"]
+    request: AgentVideoRequest
+    description_source: Literal["fixed", "goal"] = "fixed"
+
+
+AgentMediaScope = Annotated[
+    AgentImageScope | AgentMusicScope | AgentSpeechScope | AgentVideoScope, Field(discriminator="kind")
+]
 
 
 def fixed_media_only(definition):

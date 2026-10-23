@@ -1,9 +1,9 @@
 # Video and avatar output from persistent agents
 
-Status: the optional native deadline prerequisite is implemented and qualified
-in CPU tests. Image, music and speech agents are delivered.
-Video/avatar agent scopes remain unavailable. Reuse the existing long-media
-controller rather than adding a short-clip-only agent engine.
+Status: scene-video agents are implemented through the existing long-media
+controller. The optional native deadline prerequisite (#366) is deployed.
+Whole-speech avatar agent scopes remain planned; their dedicated workspace works.
+Image, music and speech agents retain their delivered contracts.
 
 The prerequisite adds private optional deadlines to Wan, EchoMimic and CPU
 composition and forwards the frozen Run expiry from their current executors.
@@ -14,12 +14,44 @@ regressions pass. The source and frontend qualification are recorded under
 data/acceptance/motion-media-deadlines-20261023/. No new real GPU video/avatar
 generation is claimed by this transport/lifecycle change.
 
-The complete normal Python/Runner qualification passed all 2436 collected cases:
+The prerequisite release (#366) passed all 2436 normal Python/Runner cases:
 2427 passed, 9 opt-in skips, zero failures. Ruff formatting/lint and Docker/Compose
 checks passed. The frontend is byte-identical to #365, reusing its 596 passed tests,
 formatting/lint/typecheck/build and compiled desktop/phone qualification; the built
 image has those same assets. Final review and rollout evidence remain separate
 from these CPU checks.
+
+## Current implementation increment
+
+Scene-video scopes now reuse the existing long-video settings, preparation
+receipt, same agent Task, segmented Wan Runs and final CPU composition. Pure
+video schemas avoid a settings/executor import cycle. Goal preparation changes
+only the shared prompt; duration, shots, first frame, quality and GPU remain fixed.
+The current profile observation is obtained before locked publication and passed
+explicitly, avoiding native HTTP inside that transaction.
+
+Every segment and final composition receives the same immutable absolute budget.
+Only final composition success emits the ready notice; completed segments remain
+partial results. An agent cannot resume an old film with a fresh budget: Run now
+or the ordinary agent retry creates a new reviewed workflow instead. Sources and
+prepared JSON retain transitive lineage through segment artifacts. Each queued
+segment rechecks first-frame availability, metadata and actual bytes before a
+native dispatch is recorded; changed or trashed sources fail without launching
+GPU work or retaining a reservation.
+
+The editor adds Video, full duration, continuous/shot motion, optional storyboard
+and first-frame selection. Advanced controls reuse local GPU selection. The
+workspace reuses existing long-media progress, playback, Library and Task Stop.
+This increment passed all 2455 normal Python/Runner cases (2446 passed,
+9 opt-in skips, zero failures), Ruff formatting/lint, all 598 UI tests,
+formatting/lint/TypeScript/production build, Docker backend/assets and both Compose
+variants. Compiled 1440px/390px checks cover scene editing, first-frame upload,
+Save/Enable/Run, full playback, Library, reload and Task Stop without overflow.
+These use test native segments and real CPU composition, not a GPU model.
+Review, backed-up rollout and a real normal-worker sample are recorded separately
+in data/acceptance/agent-long-media-output-20261023/.
+Avatar agent output remains planned and unavailable; its existing dedicated
+workspace is unchanged.
 
 ## Delivery sequence
 
