@@ -1,7 +1,7 @@
 # Persistent agents can create media
 
-Status: implemented candidate with compiled UI and real GPU agent qualification;
-full release gates and backed-up rollout remain. The deployed release is Music #361.
+Status: implemented and qualified for PR #362. Backed-up rollout and live
+normal-worker agent acceptance are tracked separately in the deployment evidence.
 
 Image/music scopes, nullable migration 0032, API/duplicate handling, natural
 AI-assisted disabled drafts, editor and inline results reuse existing media
@@ -24,13 +24,20 @@ fixed output without a text model, supplied lyrics, music playback/image results
 Library/refresh, missing-reference validation, whole-Task Stop before native
 launch and no horizontal overflow. These used temporary databases and fake
 native outputs, not real image/music inference. Focused factory/worker tests and
-590 UI tests passed. Real temporary-database agents created a 512×512 Juggernaut
+591 UI tests passed, including the final Upscale editor consistency fix. Real temporary-database agents created a 512×512 Juggernaut
 image and 10-second ACE-Step instrumental through actual native execution, with
 Library artifacts, inherited owned deadlines and released resources. The
 verification resumed the existing successful image after correcting a verifier
 that confused native exited/0 with the domain succeeded state; it did not repeat
 image generation. No active operator LLM needed stopping; that empty ready-model
-state was preserved. Full release gates and deployment remain.
+state was preserved. Release checks include frontend formatting/lint/TypeScript/build, identical
+Docker backend/assets and production/development Compose validation. The complete
+Python/Runner suite recorded 2371 passed, 9 opt-in skips and one obsolete
+maintenance assertion expecting schema 0031. That assertion now expects 0032;
+its entire module passed again (10 tests). Production Python/Runner source was
+unchanged between these checks: all 2381 current cases are covered, with 2372
+passing and 9 skipped across the complete run and corrected module. The original
+failed log is retained; no execution-test failure was waived. Deployment remains.
 Evidence: ignored data/acceptance/agent-media-generation-20261023/.
 
 Automatic lyric writing and agent video/avatar scopes remain separate work.
