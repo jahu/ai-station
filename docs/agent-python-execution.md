@@ -1,11 +1,16 @@
 # Isolated Python execution for agents
 
-Implementation target: the first execution component of the
-[agent-first plan](plans/agent-first-product.md). This increment provides the
-Runner contract and ordinary executor infrastructure. Agent script generation,
-automatic workspace provisioning, spreadsheet upload/preview and agent UI wiring
-remain subsequent parts of the same vertical slice; do not advertise a working
-spreadsheet agent from this component alone.
+This is the shared execution boundary for the [agent-first plan](plans/agent-first-product.md).
+Script generation, private workspaces, CSV/XLSX inspection and result UI are now
+delivered through [data agents](python-data-agents.md) and
+[conversation analysis](plans/conversation-data.md). Real inference qualification
+is separate from the fake-executor tests of this boundary.
+
+[Approved optional outputs](plans/python-optional-outputs.md) extend the same
+contract when the native adapter and installed image advertise support. Missing
+optional files are normal; missing required or unsafe optional files fail. Empty
+defaults preserve old request identity. The existing image build command below
+builds the extension without installing packages into the host or downloading models.
 
 A Python Run freezes an owned project's worktree reservation, a canonical `.py`
 entrypoint and SHA-256, selected stored input artifact identities/hashes/sizes,

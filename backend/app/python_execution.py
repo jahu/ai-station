@@ -8,7 +8,7 @@ import tempfile
 from pathlib import Path
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer, model_validator
 
 from app.artifacts import register_file
 from app.config import get_settings
@@ -36,6 +36,7 @@ class PythonParameters(BaseModel):
     script_artifact_id: UUID | None = None
     input_artifact_ids: list[UUID] = Field(default_factory=list, max_length=8)
     expected_outputs: list[str] = Field(min_length=1, max_length=8)
+    optional_outputs: list[str] = Field(default_factory=list, max_length=8)
     maximum_runtime: int = Field(default=120, ge=1, le=600, strict=True)
 
     @field_validator("script_relative")
@@ -46,7 +47,7 @@ class PythonParameters(BaseModel):
             raise ValueError("Choose a Python source entrypoint")
         return value
 
-    @field_validator("expected_outputs")
+    @field_validator("expected_outputs", "optional_outputs")
     @classmethod
     def outputs(cls, values):
         if len(set(values)) != len(values):
@@ -59,9 +60,41 @@ class PythonParameters(BaseModel):
 
     @model_validator(mode="after")
     def inputs(self):
+        names = self.expected_outputs + self.optional_outputs
+        if len(names) > 8 or len(names) != len(set(names)):
+            raise ValueError("Required and optional outputs must be disjoint and total at most eight")
         if len(set(self.input_artifact_ids)) != len(self.input_artifact_ids):
             raise ValueError("Input artifacts must be unique")
         return self
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_identity(self, handler):
+        value = handler(self)
+        if not self.optional_outputs:
+            value.pop("optional_outputs", None)
+        return value
+
+
+def output_names_match(required, optional, actual):
+    """Validate the native report independently of the execution boundary."""
+    if not all(isinstance(names, list) for names in (required, optional, actual)):
+        return False
+    approved = required + optional
+    if not required or len(approved) > 8 or not all(isinstance(name, str) for name in approved + actual):
+        return False
+    if len(approved) != len(set(approved)):
+        return False
+    if actual[: len(required)] != required or len(actual) < len(required):
+        return False
+    cursor = -1
+    for name in actual[len(required) :]:
+        if name not in optional:
+            return False
+        index = optional.index(name)
+        if index <= cursor:
+            return False
+        cursor = index
+    return True
 
 
 def input_snapshots(session, ids):
@@ -168,6 +201,11 @@ class PythonExecutor(NativeJobExecutor):
                 else {}
             ),
             "permissions": run.effective_permissions,
+            **(
+                {"optional_outputs": run.parameters["optional_outputs"]}
+                if run.parameters.get("optional_outputs")
+                else {}
+            ),
         }
 
     def start(self, runner, payload):
@@ -194,7 +232,11 @@ class PythonExecutor(NativeJobExecutor):
             success != report["succeeded"]
             or (not success and outputs)
             or success
-            and [item.get("name") for item in outputs] != run.parameters["expected_outputs"]
+            and not output_names_match(
+                run.parameters["expected_outputs"],
+                run.parameters.get("optional_outputs", []),
+                [item.get("name") for item in outputs],
+            )
         ):
             raise ValueError("Python report contradicts required outputs")
         paths = []

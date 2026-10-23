@@ -9,6 +9,12 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+[Approved optional Python outputs](plans/python-optional-outputs.md) extend the
+existing typed request with a frozen allowlist. Required files remain mandatory;
+only present approved extras pass through the owned report and existing export
+validation. Native/image feature negotiation and legacy request identity are
+preserved. There is no new executor, permission or schema migration.
+
 [Generated analysis files](plans/data-output-files.md) extend the existing
 Python request's fixed expected-output list. The model declares only supported
 optional names; controller and worker bind the declaration to its source Run.

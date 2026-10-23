@@ -18,6 +18,14 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Optional Python outputs are an explicit controller-owned allowlist, not directory
+discovery. Only a missing optional file is ignored. Unsafe file types/aliases,
+mutations and bounds failures invalidate all outputs. The native stream and
+control-plane adoption each check the required prefix and ordered optional subset.
+All data exports still require inert format validation before usable publication.
+Empty defaults preserve old request digests; unsupported images reject the new
+scope before staging. See [optional outputs](plans/python-optional-outputs.md).
+
 Optional Python analysis exports remain internal until the result worker checks
 the entire declared set. Raw files are excluded from the normal Library and file
 delivery; source/Run metadata remains inspectable. Bounded PNGs are re-encoded;

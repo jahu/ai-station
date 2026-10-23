@@ -73,19 +73,26 @@ def emit(event, **payload):
 
 
 def execute(request):
-    if set(request) != {"maximum_runtime", "expected_outputs", "inputs"}:
+    if set(request) not in (
+        {"maximum_runtime", "expected_outputs", "inputs"},
+        {"maximum_runtime", "expected_outputs", "optional_outputs", "inputs"},
+    ):
         raise ValueError("Unexpected Python execution fields")
     timeout = request["maximum_runtime"]
     outputs = request["expected_outputs"]
+    optional = request.get("optional_outputs", [])
     if (
         type(timeout) is not int
         or not 1 <= timeout <= 600
         or not isinstance(outputs, list)
         or not 1 <= len(outputs) <= MAX_FILES
-        or len(set(outputs)) != len(outputs)
+        or not isinstance(optional, list)
+        or not all(isinstance(name, str) for name in outputs + optional)
+        or len(outputs + optional) > MAX_FILES
+        or len(set(outputs + optional)) != len(outputs + optional)
     ):
         raise ValueError("Invalid Python execution limits")
-    for name in outputs:
+    for name in outputs + optional:
         relative_file(name)
     if not isinstance(request["inputs"], dict) or len(request["inputs"]) > 8:
         raise ValueError("Invalid Python input map")
@@ -139,8 +146,13 @@ def execute(request):
     error = None
     if exit_code == 0:
         try:
-            for name in outputs:
-                data = read_output(name)
+            for name in outputs + optional:
+                try:
+                    data = read_output(name)
+                except FileNotFoundError:
+                    if name in optional:
+                        continue
+                    raise
                 total += len(data)
                 if total > MAX_OUTPUT_TOTAL:
                     raise ValueError("Python outputs exceed their total size limit")
