@@ -132,3 +132,11 @@ choose the zone. Due instants remain UTC; missing wall times are skipped and a
 repeated minute runs only at its first occurrence. Interval elapsed time and
 one-shot UTC inputs are unchanged. Old edit clients preserve a saved custom zone.
 See [the scheduling contract](plans/agent-schedule-timezones.md).
+
+Quick drafting (**Without AI**) recognizes numeric English/Polish intervals in
+seconds, minutes or hours, plus “every minute”/“co minutę” and the existing hourly
+phrases. Units convert to elapsed seconds within the definition's one-minute to
+one-year bounds. “Co 5 minut” therefore saves 300 seconds, never 60 minutes or a
+manual schedule. Unsupported/out-of-range intervals remain disabled manual drafts
+for review; they are never clamped or interpreted as a following clock hour.
+No model inference, activation or existing schedule change occurs during drafting.
