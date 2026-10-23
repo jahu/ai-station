@@ -153,7 +153,10 @@ it("shows the verified chart inline with named file downloads and Library links"
       .getAttribute("src"),
   ).toBe("/api/artifacts/plot/file");
   expect(
-    screen.getByText("View result table").closest("details")?.hasAttribute("open"),
+    screen
+      .getByText("View result table")
+      .closest("details")
+      ?.hasAttribute("open"),
   ).toBe(false);
   expect(
     screen
