@@ -231,3 +231,19 @@ it("hides an old memory observation while stopping the entire job", () => {
   });
   expect(screen.queryByLabelText("Resource wait")).toBeNull();
 });
+
+it("does not promise automatic retry after a composed job failed with remaining children", () => {
+  mount("failed", undefined, {
+    resource_wait: {
+      run_id: "segment",
+      reason: "memory",
+      checked_at: "2026-10-23T12:00:00Z",
+      required_mib: 16384,
+      available_mib: 12288,
+      reserved_mib: 0,
+      headroom_mib: 1024,
+    },
+  });
+  expect(screen.queryByLabelText("Resource wait")).toBeNull();
+  expect(screen.getByText("A segment failed")).toBeTruthy();
+});

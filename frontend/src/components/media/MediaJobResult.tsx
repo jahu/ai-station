@@ -85,9 +85,9 @@ export default function MediaJobResult({
               : "Sequence of shots"}{" "}
             · Local
           </p>
-          {busy && job.status !== "cancel_requested" && (
-            <ResourceWaitNotice wait={job.resource_wait} />
-          )}
+          {["queued", "preparing", "generating", "composing"].includes(
+            job.status,
+          ) && <ResourceWaitNotice wait={job.resource_wait} />}
           <div className="media-job-progress">
             <progress
               max={job.total_segments + 1}
