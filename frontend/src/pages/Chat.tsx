@@ -1,7 +1,4 @@
-import {
-  acceptsDataAttachments,
-  useConversationDataUpload,
-} from "./data-upload";
+import { useConversationAttachmentUpload } from "./attachment-upload";
 import { useDataInputs, type ConversationDataScope } from "./useDataInputs";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import { BrowserPages } from "./BrowserPages";
@@ -28,7 +25,7 @@ import ConversationComposer from "./ConversationComposer";
 import { musicScopeReady } from "./music-scope";
 import ChatModeSwitch from "./ChatModeSwitch";
 import type { ChatProviderInfo } from "./ChatProviders";
-import { emptyOptions } from "./assistant-options";
+import { acceptsLocalAttachments, emptyOptions } from "./assistant-options";
 import AssistantActions, {
   AssistantResults,
   type ActionResult,
@@ -1114,8 +1111,16 @@ function ConversationView({
   const web = useWebSearch(turnMode === "chat" && !attachments.length);
   const webEnabled = !continuing && web.enabled;
   const setWebEnabled = web.setEnabled;
-  const dataUpload = useConversationDataUpload((data) => {
-    setOptions({ ...emptyOptions, action: "data.analyze", data });
+  const attachmentUpload = useConversationAttachmentUpload((selection) => {
+    setOptions(
+      selection.kind === "data"
+        ? { ...emptyOptions, action: "data.analyze", data: selection.scope }
+        : {
+            ...emptyOptions,
+            action: options.action === "chat" ? "chat" : "auto",
+            image_artifact_ids: selection.ids,
+          },
+    );
     setWebEnabled(false);
     setWebQuery("");
     web.setRenderPages(false);
@@ -1290,7 +1295,7 @@ function ConversationView({
     onSuccess: refresh,
   });
   const busy =
-    dataUpload.isPending ||
+    attachmentUpload.isPending ||
     !!conversation.archived_at ||
     archive.isPending ||
     !!conversation.active_run ||
@@ -1619,7 +1624,7 @@ function ConversationView({
         <ErrorNotice
           error={
             send.error ??
-            dataUpload.error ??
+            attachmentUpload.error ??
             stop.error ??
             regenerate.error ??
             settings.error ??
@@ -1715,10 +1720,26 @@ function ConversationView({
                     onReading={setReadingAttachment}
                     onDataFiles={
                       !continuing &&
-                      acceptsDataAttachments(options) &&
+                      acceptsLocalAttachments(options) &&
                       !webQuery.trim() &&
                       !web.renderPages
-                        ? dataUpload.mutateAsync
+                        ? (files) =>
+                            attachmentUpload.mutateAsync({
+                              kind: "data",
+                              files,
+                            })
+                        : undefined
+                    }
+                    onImageFiles={
+                      !continuing &&
+                      acceptsLocalAttachments(options) &&
+                      !webQuery.trim() &&
+                      !web.renderPages
+                        ? (files) =>
+                            attachmentUpload.mutateAsync({
+                              kind: "images",
+                              files,
+                            })
                         : undefined
                     }
                   />

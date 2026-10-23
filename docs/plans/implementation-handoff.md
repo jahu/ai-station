@@ -33,8 +33,13 @@ Same-file follow-up selection is deployed (#373), with 616 UI tests and compiled
 desktop/phone selection/draft/Send/reload checks. Evidence:
 `data/acceptance/conversation-data-followups-20261023`. Backend/native source is
 unchanged; the real #372 acceptance is reused after exact source comparison.
-The active UI increment routes ordinary CSV/XLSX attachments to local data analysis,
-without inline decoding/external sharing or losing partial-upload success/errors.
+Ordinary CSV/XLSX attachment entry is deployed by #374 with 624 UI tests and
+compiled desktop/phone first/saved conversation CSV/XLSX checks; the source-identical
+backend reuses #372 real local-model/native-Python acceptance. Evidence:
+`data/acceptance/conversation-data-attachments-20261023/post-deployment-qualified.json`.
+The active increment is [ordinary image attachments](conversation-images.md),
+reusing local Vision/photo references rather than inline image text attachments.
+Keep both the generic input UX and typed routing/model/privacy contracts in scope.
 The local-music section below is historical qualification, not unfinished #361.
 
 ## Active continuation — local music, 2026-10-23

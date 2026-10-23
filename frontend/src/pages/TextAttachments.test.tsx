@@ -150,3 +150,36 @@ it.each(["mixed", "existing", "no-scope"])(
       expect(screen.getByText("Keep my text")).toBeTruthy();
   },
 );
+
+it.each(["mixed", "existing"])(
+  "keeps %s text/image scope unchanged rather than uploading it implicitly",
+  async (mode) => {
+    const upload = vi.fn().mockResolvedValue([]);
+    const edit = vi.fn();
+    render(
+      <TextAttachments
+        attachments={
+          mode === "existing"
+            ? [{ name: "notes.txt", content: "Keep my text" }]
+            : []
+        }
+        onChange={edit}
+        busy={false}
+        onReading={() => {}}
+        onImageFiles={upload}
+      />,
+    );
+    const files = [
+      new File(["PNG"], "photo.png", { type: "image/png" }),
+      ...(mode === "mixed" ? [new File(["Notes"], "notes.txt")] : []),
+    ];
+    fireEvent.change(screen.getByLabelText("Attach files"), {
+      target: { files },
+    });
+    await screen.findByText(
+      "Choose images separately from data, text or PDF attachments. Your existing files are unchanged.",
+    );
+    expect(upload).not.toHaveBeenCalled();
+    expect(edit).not.toHaveBeenCalled();
+  },
+);

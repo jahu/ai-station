@@ -1,31 +1,5 @@
-import {
-  useMutation,
-  useQueryClient,
-  type QueryClient,
-} from "@tanstack/react-query";
-import type { AssistantOptions } from "./AssistantActions";
+import type { QueryClient } from "@tanstack/react-query";
 import { api, type Artifact } from "../api";
-import type { ConversationDataScope } from "./useDataInputs";
-
-export function acceptsDataAttachments(options: AssistantOptions) {
-  return (
-    ["auto", "chat"].includes(options.action) &&
-    !options.image_artifact_ids.length &&
-    !options.audio_artifact_id &&
-    !options.data &&
-    !options.github &&
-    !options.coding &&
-    !options.new_project &&
-    !options.commit &&
-    !options.publish &&
-    !options.load &&
-    !options.stop &&
-    !options.music &&
-    !options.media &&
-    !options.upscale_result &&
-    !options.speech_text
-  );
-}
 
 export function isDataFile(file: File) {
   return /\.(csv|xlsx)$/i.test(file.name);
@@ -67,21 +41,4 @@ export async function uploadDataFiles(
     void cache.invalidateQueries({ queryKey: ["library"] });
   }
   return added;
-}
-
-export function useConversationDataUpload(
-  onSelected: (scope: ConversationDataScope) => void,
-) {
-  const cache = useQueryClient();
-  return useMutation({
-    mutationFn: (files: File[]) =>
-      uploadDataFiles(files, cache, (artifacts) =>
-        onSelected({
-          input_artifact_ids: artifacts.map((artifact) => artifact.id),
-          max_repairs: 1,
-          model: "auto",
-          maximum_runtime: 600,
-        }),
-      ),
-  });
 }

@@ -274,3 +274,57 @@ def test_oversized_source_is_rejected_without_loading_a_model(vision_runtime):
         step()
         with session_factory()() as session:
             assert not session.scalar(select(Run.id).where(Run.executor_type == "llama_load"))
+
+
+@pytest.mark.parametrize("action", ["auto", "chat"])
+@pytest.mark.parametrize(
+    "prompt",
+    ["Jaki kolor ma ten prostokąt?", "Czy widzisz czerwony kształt?", "How many shapes are visible?"],
+)
+def test_chat_image_questions_use_only_vision_without_a_text_provider_or_prerequisite(
+    vision_runtime, monkeypatch, action, prompt
+):
+    from app import assistant, chat, llama
+
+    model_id, loads = vision_runtime
+    seen = []
+
+    async def stream(self, **params):
+        seen.append(params)
+        yield "A red rectangle."
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    with TestClient(app) as client:
+        cid, image = setup(client)
+
+        def unexpected(*args, **kwargs):
+            raise AssertionError("A selected-image Chat question must not prepare its text provider")
+
+        monkeypatch.setattr(assistant, "snapshot_provider", unexpected)
+        monkeypatch.setattr(chat, "snapshot_provider", unexpected)
+        monkeypatch.setattr(llama, "prepare_consumer", unexpected)
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "content": prompt,
+                "image_artifact_ids": [image],
+                "execution_mode": "chat",
+                "action": action,
+            },
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            root = session.get(Run, response.json()["id"])
+            assert "endpoint" not in root.parameters and "external_ai" not in root.effective_permissions
+            assert not list(session.scalars(select(Run).where(Run.executor_type == "llama_load")))
+        for _ in range(3):
+            assert step()
+        assert len(loads) == len(seen) == 1
+        assert seen[0]["location"] == "local" and seen[0]["model"] == "llamacpp:" + model_id
+        answer = client.get(f"/api/chat/conversations/{cid}").json()["messages"][-1]
+        assert answer["content"] == "A red rectangle."
+        with session_factory()() as session:
+            result = session.scalar(select(Run).where(Run.capability == "chat.vision"))
+            artifact = session.scalar(select(Artifact).where(Artifact.run_id == result.id))
+            assert artifact.parent_artifact_ids == [image]
+            assert result.task_id == response.json()["task_id"] and result.status == "succeeded"

@@ -1,7 +1,4 @@
-import {
-  acceptsDataAttachments,
-  useConversationDataUpload,
-} from "./data-upload";
+import { useConversationAttachmentUpload } from "./attachment-upload";
 import { useDataInputs } from "./useDataInputs";
 import { useChatDraft, chatRequestId, clearChatRequest } from "./chat-draft";
 import { useEffect, useRef, useState } from "react";
@@ -16,7 +13,7 @@ import { useThinking } from "./chat-thinking";
 import ConversationComposer from "./ConversationComposer";
 import { musicScopeReady } from "./music-scope";
 import AssistantActions from "./AssistantActions";
-import { emptyOptions } from "./assistant-options";
+import { acceptsLocalAttachments, emptyOptions } from "./assistant-options";
 import TextAttachments, { type TextAttachment } from "./TextAttachments";
 import { useWebSearch } from "./useWebSearch";
 import { WebSearchControl } from "./ChatWebSearch";
@@ -119,8 +116,16 @@ export default function NewChat({
   const webEnabled = !workTaskId && web.enabled;
   const setWebEnabled = web.setEnabled;
   const [webQuery, setWebQuery] = useState("");
-  const dataUpload = useConversationDataUpload((data) => {
-    setOptions({ ...emptyOptions, action: "data.analyze", data });
+  const attachmentUpload = useConversationAttachmentUpload((selection) => {
+    setOptions(
+      selection.kind === "data"
+        ? { ...emptyOptions, action: "data.analyze", data: selection.scope }
+        : {
+            ...emptyOptions,
+            action: options.action === "chat" ? "chat" : "auto",
+            image_artifact_ids: selection.ids,
+          },
+    );
     setWebEnabled(false);
     setWebQuery("");
     web.setRenderPages(false);
@@ -232,7 +237,7 @@ export default function NewChat({
     },
   });
   const busy =
-    dataUpload.isPending ||
+    attachmentUpload.isPending ||
     send.isPending ||
     web.busy ||
     uploading ||
@@ -431,10 +436,25 @@ export default function NewChat({
                     busy={send.isPending}
                     onReading={setUploading}
                     onDataFiles={
-                      acceptsDataAttachments(options) &&
+                      acceptsLocalAttachments(options) &&
                       !webQuery.trim() &&
                       !web.renderPages
-                        ? dataUpload.mutateAsync
+                        ? (files) =>
+                            attachmentUpload.mutateAsync({
+                              kind: "data",
+                              files,
+                            })
+                        : undefined
+                    }
+                    onImageFiles={
+                      acceptsLocalAttachments(options) &&
+                      !webQuery.trim() &&
+                      !web.renderPages
+                        ? (files) =>
+                            attachmentUpload.mutateAsync({
+                              kind: "images",
+                              files,
+                            })
                         : undefined
                     }
                   />
@@ -480,7 +500,7 @@ export default function NewChat({
       <ErrorNotice
         error={
           send.error ??
-          dataUpload.error ??
+          attachmentUpload.error ??
           web.error ??
           preferences.error ??
           workspace.error

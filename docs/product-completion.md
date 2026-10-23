@@ -47,8 +47,12 @@ and restored the operator model preset. Evidence:
 `data/acceptance/conversation-data-20261023/post-deployment-qualified.json`.
 Explicit same-file follow-up selection is deployed (#373), with 616 UI tests and
 compiled desktop/phone draft/scope/reload checks. The unchanged backend reuses
-the actual #372 acceptance. The current UI increment routes ordinary CSV/XLSX
-attachments into that same local analysis, retaining mixed-scope guards.
+the actual #372 acceptance. Ordinary CSV/XLSX attachments are deployed (#374), with 624 frontend tests,
+compiled desktop/phone first/saved conversation checks and source-identical reuse
+of the actual #372 data pipeline acceptance. Evidence:
+`data/acceptance/conversation-data-attachments-20261023/post-deployment-qualified.json`.
+The current increment unifies ordinary image attachments with local Vision and
+reference editing; see [the image contract](plans/conversation-images.md).
 
 Current evidence summary, 2026-10-22: general-agent research, local Python/data
 execution and website-building workflows are operational. Public research uses

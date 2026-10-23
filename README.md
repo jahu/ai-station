@@ -84,6 +84,13 @@ the same inputs and opens their review beside your next question. Your draft is
 preserved; execution starts only when you Send. You can remove or replace the
 selected files before sending.
 
+Ordinary PNG/JPEG/WebP attachments also use stored, ordered image references.
+Review their previews and Send a question for local Vision, or an edit/reference
+instruction for the local image tools. Up to four images can be attached at once;
+advanced image controls retain their existing reference limits. Pixels stay local.
+Explicit project/other-file scopes retain their own attachment behavior.
+See [conversation image contracts](docs/plans/conversation-images.md).
+
 **Conversation entry:** type immediately at `/` or `/chat`; the first Send creates
 the conversation. Chat supports replies and media tools; Work adds scoped project,
 coding and agent actions. See [first-send contracts](docs/first-send.md).

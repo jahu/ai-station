@@ -1,3 +1,4 @@
+import { uploadImageFiles } from "./image-upload";
 import ConversationDataControls from "./ConversationDataControls";
 import AgentDataResult from "./AgentDataResult";
 import type { ConversationDataScope } from "./useDataInputs";
@@ -647,6 +648,7 @@ export default function AssistantActions({
       >("/connectors"),
     enabled: value.action === "github.inspect",
   });
+  const cache = useQueryClient();
   const [error, setError] = useState<Error | null>(null);
   const recordingInput =
     ["audio.transcribe", "audio.analyze"].includes(value.action) ||
@@ -1019,32 +1021,29 @@ export default function AssistantActions({
   async function upload(files: File[]) {
     if (busy) return;
     setError(null);
-    const imageLimit = value.action === "image.describe" ? 4 : 8;
-    if (files.length + value.image_artifact_ids.length > imageLimit) {
-      setError(new Error(`Attach up to ${imageLimit} images.`));
-      return;
-    }
     onUploading(true);
-    const ids = [...value.image_artifact_ids];
     try {
-      for (const file of files) {
-        if (file.size > 20 * 1024 * 1024)
-          throw new Error("Each image must be at most 20 MiB.");
-        const data = new FormData();
-        data.append("file", file);
-        const artifact = await api<Artifact>("/images/uploads", {
-          method: "POST",
-          body: data,
-        });
-        ids.push(artifact.id);
-        onChange({ ...value, image_artifact_ids: [...ids] });
-      }
+      await uploadImageFiles(
+        files,
+        cache,
+        (added) =>
+          onChange({
+            ...value,
+            image_artifact_ids: [
+              ...value.image_artifact_ids,
+              ...added.map((artifact) => artifact.id),
+            ],
+          }),
+        value.action === "image.describe" ? 4 : 8,
+        value.image_artifact_ids.length,
+      );
     } catch (cause) {
       setError(cause instanceof Error ? cause : new Error("Upload failed"));
     } finally {
       onUploading(false);
     }
   }
+
   return (
     <>
       <fieldset disabled={busy} className="assistant-actions image-form">
