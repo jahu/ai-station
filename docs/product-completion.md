@@ -1,3 +1,10 @@
+> Agent calendar timezone work reuses existing Tasks/scheduler/worker and adds
+> daily-time/custom-cron controls in Agents and the conversation. Existing schedules
+> retain UTC through migration 0033. Contract and qualification state:
+> [agent schedules](plans/agent-schedule-timezones.md),
+> `data/acceptance/agent-schedule-timezones-20261023`. This does not close broader
+> orchestration, real long-media or recognition-quality acceptance.
+
 > 2026-10-22 delivery: persistent CSV/XLSX Python agents and results-first agent
 > workspaces are deployed (#333–#335). Normal-worker CSV Auto loading/generation/
 > execution returned the verified full-file total; see [data agent evidence](python-data-agents.md).

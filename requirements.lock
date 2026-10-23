@@ -96,6 +96,8 @@ typing-inspection==0.4.4
     #   fastapi
     #   pydantic
     #   pydantic-settings
+tzdata==2026.5
+    # via ai-station (backend/pyproject.toml)
 uvicorn==0.53.0
     # via
     #   ai-station (backend/pyproject.toml)

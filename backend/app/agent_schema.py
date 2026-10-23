@@ -14,6 +14,7 @@ from app.data_schema import AgentDataScope
 from app.db import utcnow
 from app.http_fetch import reviewed_urls
 from app.market_schema import MarketScope
+from app.schedule_time import ScheduleTimezone, next_cron
 
 
 class RetryPolicy(BaseModel):
@@ -93,6 +94,7 @@ class AgentSettings(BaseModel):
     memory_scope: Literal["agent"] = "agent"
     trigger: Literal["manual", "cron", "interval", "datetime"] = "manual"
     cron_expr: str = Field(default="", max_length=120)
+    schedule_timezone: ScheduleTimezone = "UTC"
     interval_seconds: int | None = Field(default=None, ge=60, le=31536000)
     run_at: datetime | None = None
     permission_profile: Literal["agent_local", "agent_external_coding"] = "agent_local"
@@ -194,9 +196,9 @@ class AgentSettings(BaseModel):
                 raise ValueError(str(exc)) from exc
         if self.trigger == "cron":
             if len(self.cron_expr.split()) != 5 or not croniter.is_valid(self.cron_expr):
-                raise ValueError("Use a valid five-field UTC cron expression")
+                raise ValueError("Use a valid five-field cron expression")
             try:
-                croniter(self.cron_expr, utcnow(), max_years_between_matches=5).get_next(datetime)
+                next_cron(self.cron_expr, self.schedule_timezone, utcnow())
             except (ValueError, KeyError) as exc:
                 raise ValueError("Cron must have an occurrence within five years") from exc
         elif self.cron_expr:

@@ -1,3 +1,4 @@
+import AgentCronFields from "./AgentCronFields";
 import AgentDraftForm from "./AgentDraftForm";
 import {
   MarketEmailApproval,
@@ -108,6 +109,7 @@ interface Agent {
   skills: string[];
   trigger: Trigger;
   cron_expr: string;
+  schedule_timezone?: string;
   interval_seconds: number | null;
   run_at: string | null;
   maximum_runtime: number;
@@ -156,7 +158,7 @@ const json = (method: string, body: unknown) => ({
 const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
 const schedule = (agent: Agent) =>
   agent.trigger === "cron"
-    ? `${agent.cron_expr} (UTC)`
+    ? `${agent.cron_expr} (${agent.schedule_timezone ?? "UTC"})`
     : agent.trigger === "interval"
       ? `Every ${agent.interval_seconds} seconds`
       : agent.trigger === "datetime"
@@ -1135,11 +1137,20 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           Trigger
           <select
             value={values.trigger}
-            onChange={(e) => update("trigger", e.target.value as Trigger)}
+            onChange={(e) => {
+              const trigger = e.target.value as Trigger;
+              editValues((previous) => ({
+                ...previous,
+                trigger,
+                ...(trigger === "cron" && !previous.cron_expr
+                  ? { cron_expr: "0 9 * * *" }
+                  : {}),
+              }));
+            }}
           >
             <option value="manual">Manual</option>
             <option value="interval">Interval</option>
-            <option value="cron">Cron (UTC)</option>
+            <option value="cron">Daily / custom schedule</option>
             <option value="datetime">One-shot (UTC)</option>
           </select>
         </label>
@@ -1159,15 +1170,13 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           </label>
         )}
         {values.trigger === "cron" && (
-          <label>
-            Cron expression (UTC)
-            <input
-              required
-              value={values.cron_expr}
-              placeholder="0 8 * * *"
-              onChange={(e) => update("cron_expr", e.target.value)}
-            />
-          </label>
+          <AgentCronFields
+            cron={values.cron_expr}
+            timezone={values.schedule_timezone ?? "UTC"}
+            disabled={save.isPending}
+            onCron={(value) => update("cron_expr", value)}
+            onTimezone={(value) => update("schedule_timezone", value)}
+          />
         )}
         {values.trigger === "datetime" && (
           <label>

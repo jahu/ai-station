@@ -229,3 +229,9 @@ it as a current wait. Stop/failed/terminal media results hide it even if another
 child is still queued during cancellation. Existing retry checks, ownership,
 expiry and task-wide Stop are unchanged. Old Runs without a marker keep the
 existing generic queue text. No schema migration or model download is needed.
+
+Calendar cron enumerates local wall-clock minutes and resolves them with ZoneInfo.
+Nonexistent minutes are skipped; repeated minutes execute at the first occurrence
+only. The next instant must be strictly future, within five years and a bounded
+search. Existing atomic claims, no-overlap, coalescing and recovery remain
+authoritative. See [agent schedule semantics](plans/agent-schedule-timezones.md).

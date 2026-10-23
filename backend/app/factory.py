@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from app.http_fetch import prompt_public_urls
 from app.models import Agent
+from app.schedule_time import instruction_timezone
 from app.skills import SkillError, list_skills
 
 _TOOL_CALLING = (
@@ -89,10 +90,23 @@ def _has(lowered: str, phrases: tuple[str, ...]) -> bool:
 
 
 def _clock(lowered: str) -> tuple[int, int] | None:
-    match = re.search(r"(?:at|o)\s+(\d{1,2}):(\d{2})\s*utc", lowered)
+    match = re.search(r"\b(?:at|o)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b", lowered)
     if not match:
         return None
-    hour, minute = int(match.group(1)), int(match.group(2))
+    if (
+        match.group(2) is None
+        and match.group(3) is None
+        and not any(
+            marker in lowered
+            for marker in ("every ", "daily", "codziennie", "co rano", "co wiecz", "dni robocze")
+        )
+    ):
+        return None
+    hour, minute = int(match.group(1)), int(match.group(2) or 0)
+    if match.group(3):
+        if not 1 <= hour <= 12:
+            return None
+        hour = hour % 12 + (12 if match.group(3) == "pm" else 0)
     if 0 <= hour <= 23 and 0 <= minute <= 59:
         return hour, minute
     return None
@@ -161,7 +175,7 @@ def website_build_goal(lowered):
     )
 
 
-def draft_agent(text: str, *, model: str = "") -> Agent:
+def draft_agent(text: str, *, model: str = "", schedule_timezone: str = "UTC") -> Agent:
     lowered = text.lower()
     trigger, cron_expr, interval, run_at = _schedule(lowered, text)
     name = text.strip().split(".")[0][:80] or "New agent"
@@ -305,6 +319,7 @@ def draft_agent(text: str, *, model: str = "") -> Agent:
         skills=[] if market else _mentioned_skills(text),
         trigger=trigger,
         cron_expr=cron_expr,
+        schedule_timezone=instruction_timezone(text, schedule_timezone),
         interval_seconds=interval,
         run_at=run_at,
         permission_profile="agent_external_coding"

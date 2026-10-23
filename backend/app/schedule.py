@@ -1,8 +1,7 @@
-"""Durable UTC scheduling. Only the worker executes agent workloads."""
+"""Durable UTC instants for timezone-aware schedules; workers execute workloads."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
-from croniter import croniter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -15,13 +14,14 @@ from app.local_provider import model_endpoint
 from app.models import Agent, Project, Run
 from app.providers import ProviderError
 from app.runs import create_run, create_task
+from app.schedule_time import next_cron
 from app.state import TERMINAL
 
 
 def compute_next(agent: Agent, *, after=None):
     after = after or utcnow()
     if agent.trigger == "cron" and agent.cron_expr:
-        return croniter(agent.cron_expr, after, max_years_between_matches=5).get_next(datetime)
+        return next_cron(agent.cron_expr, agent.schedule_timezone or "UTC", after)
     if agent.trigger == "interval" and agent.interval_seconds:
         return after + timedelta(seconds=agent.interval_seconds)
     if agent.trigger == "datetime" and agent.run_at and agent.run_at > after:

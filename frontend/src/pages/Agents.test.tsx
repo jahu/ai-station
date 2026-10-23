@@ -65,6 +65,7 @@ it("creates a reviewable draft without enabling or running it", async () => {
   expect(JSON.parse(writes[0][1]!.body as string)).toEqual({
     instruction: "Every morning summarize memory",
     model: "local",
+    schedule_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   });
 });
 it("keeps a draft inactive and makes unsupported tools inspectable and removable", async () => {

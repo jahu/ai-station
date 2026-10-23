@@ -246,6 +246,7 @@ class LocalAgentExecutor:
                 "saved_schedule": {
                     "trigger": definition.trigger,
                     "cron_expr": definition.cron_expr,
+                    "schedule_timezone": definition.schedule_timezone,
                     "interval_seconds": definition.interval_seconds,
                     "run_at": definition.run_at.isoformat() if definition.run_at else None,
                     "planned_only": True,

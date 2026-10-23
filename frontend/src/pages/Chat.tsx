@@ -1,3 +1,4 @@
+import { browserTimezone } from "./AgentCronFields";
 import { copyText } from "../lib/clipboard";
 import { useConversationAttachmentUpload } from "./attachment-upload";
 import { useDataInputs, type ConversationDataScope } from "./useDataInputs";
@@ -1229,6 +1230,9 @@ function ConversationView({
           : {}),
         attachments,
         execution_mode: turnMode,
+        ...(turnMode === "work"
+          ? { schedule_timezone: browserTimezone() }
+          : {}),
         ...(continuing && context
           ? {
               continuation: {
