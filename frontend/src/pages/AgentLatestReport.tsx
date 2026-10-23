@@ -5,9 +5,9 @@ import { ErrorNotice } from "../components/common";
 import AgentReport from "./AgentReport";
 import { AgentSearchSources } from "./AgentSearchSources";
 import { isSearchPageResult } from "./agent-search-result";
-import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
+import { FetchedPages } from "./AgentHttpFetch";
 import { RegistryToolCalls, type RegistryToolCall } from "./AgentToolCalls";
-import { SearchSources, type WebSources } from "./ChatWebSearch";
+import { SearchSources } from "./ChatWebSearch";
 
 import { BrowserPages } from "./BrowserPages";
 import { isBrowserResult } from "./browserResult";
