@@ -1,7 +1,7 @@
 # Persistent agents can create media
 
-Status: implemented candidate, pending full release gates and real GPU agent
-qualification; the deployed release remains Music #361 until backed-up rollout.
+Status: implemented candidate with compiled UI and real GPU agent qualification;
+full release gates and backed-up rollout remain. The deployed release is Music #361.
 
 Image/music scopes, nullable migration 0032, API/duplicate handling, natural
 AI-assisted disabled drafts, editor and inline results reuse existing media
@@ -24,7 +24,13 @@ fixed output without a text model, supplied lyrics, music playback/image results
 Library/refresh, missing-reference validation, whole-Task Stop before native
 launch and no horizontal overflow. These used temporary databases and fake
 native outputs, not real image/music inference. Focused factory/worker tests and
-590 UI tests passed; full gates and real GPU qualification remain release work.
+590 UI tests passed. Real temporary-database agents created a 512×512 Juggernaut
+image and 10-second ACE-Step instrumental through actual native execution, with
+Library artifacts, inherited owned deadlines and released resources. The
+verification resumed the existing successful image after correcting a verifier
+that confused native exited/0 with the domain succeeded state; it did not repeat
+image generation. No active operator LLM needed stopping; that empty ready-model
+state was preserved. Full release gates and deployment remain.
 Evidence: ignored data/acceptance/agent-media-generation-20261023/.
 
 Automatic lyric writing and agent video/avatar scopes remain separate work.
