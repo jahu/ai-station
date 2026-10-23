@@ -1,3 +1,7 @@
+Local research composition is being extended to reviewed search and source-page
+reads through this same handoff. See [the current plan](plans/agent-research-coding.md)
+for contracts and qualification status. The HTTP-only delivery below is retained.
+
 # Build from reviewed public pages
 
 A Local coding agent may also select HTTP fetch and save 1–3 public URLs. Review

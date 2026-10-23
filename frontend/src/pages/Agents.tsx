@@ -47,7 +47,7 @@ import { AgentLatestReport } from "./AgentLatestReport";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import GithubAgentScope from "./GithubAgentScope";
 import { useListKeyboard } from "./useListKeyboard";
-import { activationBlock } from "./agentActivation";
+import { activationBlock, LOCAL_CODING_RESEARCH } from "./agentActivation";
 import { agentSettingsPayload } from "./agentSettings";
 import { AgentLinkedProjectLinks, AgentProjectList } from "./AgentProjectList";
 import ProjectAgents from "./ProjectAgents";
@@ -1407,15 +1407,21 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               {isExternalCoding(values.tools)
                 ? "External coding uses the goal as its task and the selected CLI."
                 : "Local coding uses the goal as its task and the selected local model."}{" "}
+              {values.tools.includes("coding_local") && (
+                <>
+                  Local coding can use a reviewed search query, read search
+                  sources and fetch public pages before building.{" "}
+                </>
+              )}
               Each execution has an isolated branch, diff and validation
               results. Gated mode asks before starting. No automatic commit or
               publication.
             </p>
           )}
           <p className="muted">
-            Context tools become inspectable workflow steps before the report.
-            Remember reports and remember workflow observations run after those
-            successful steps. Unavailable tools prevent activation.
+            Context tools become inspectable workflow steps before the report or
+            local code. Remember reports and remember workflow observations run
+            after those successful steps. Unavailable tools prevent activation.
           </p>
           {!!tools.data?.length && (
             <ToolChoiceList
@@ -1443,16 +1449,19 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                   : addedCoding
                     ? [
                         addedCoding,
-                        ...(addedCoding === "coding_local" &&
-                        names.includes("http_fetch")
-                          ? ["http_fetch"]
+                        ...(addedCoding === "coding_local"
+                          ? names.filter(
+                              (name) =>
+                                name !== "coding_local" &&
+                                LOCAL_CODING_RESEARCH.includes(name),
+                            )
                           : []),
                       ]
                     : names.length === 1 && codingNames.includes(names[0])
                       ? names
                       : names.includes("coding_local") &&
                           names.every((name) =>
-                            ["coding_local", "http_fetch"].includes(name),
+                            LOCAL_CODING_RESEARCH.includes(name),
                           )
                         ? names
                         : names.filter(

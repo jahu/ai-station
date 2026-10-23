@@ -170,7 +170,7 @@ class AgentSettings(BaseModel):
         if set(self.tools).intersection(CODING_TOOLS):
             if not coding_provider(self.tools) or self.tool_calling != "none":
                 raise ValueError(
-                    "Select one coding provider; only Local coding may add reviewed HTTP fetch, without report tool calling"
+                    "Select one coding provider; only Local coding may add reviewed public research, without report tool calling"
                 )
             if len(self.goal) > 10000:
                 raise ValueError("Coding goals must be at most 10000 characters")

@@ -105,3 +105,48 @@ it("continues to require a local model for Local coding", () => {
     ).reason,
   ).toMatch(/local model/);
 });
+
+it("allows reviewed research before local code, with separate query and source requirements", () => {
+  const tools = [
+    ...catalog,
+    ...["web_search", "search_pages", "http_fetch"].map((name) => ({
+      name,
+      description: name,
+      operational: true,
+      required_permissions: ["network_read"],
+    })),
+  ];
+  const agent = {
+    enabled: false,
+    model: "auto",
+    tools: ["coding_local", "web_search", "search_pages"],
+    search_query: "public release notes",
+  };
+  expect(activationBlock(agent, tools)).toEqual({
+    blocked: false,
+    reason: null,
+  });
+  expect(activationBlock({ ...agent, search_query: "" }, tools).reason).toMatch(
+    /public search query/,
+  );
+  expect(
+    activationBlock(
+      { ...agent, tools: ["coding_local", "search_pages"] },
+      tools,
+    ).reason,
+  ).toMatch(/requires web_search/);
+  expect(
+    activationBlock({ ...agent, tools: [...agent.tools, "http_fetch"] }, tools)
+      .reason,
+  ).toMatch(/reviewed public URLs/);
+  expect(
+    activationBlock(
+      {
+        ...agent,
+        tools: [...agent.tools, "http_fetch"],
+        fetch_urls: ["https://example.com/"],
+      },
+      tools,
+    ).blocked,
+  ).toBe(false);
+});

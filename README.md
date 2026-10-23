@@ -58,6 +58,12 @@ assembled video (up to 60 seconds); Stop covers every stage. See
 [the full avatar execution contract](docs/plans/agent-motion-generation.md).
 
 
+Local coding agents can combine **web_search**, **Read search sources** and
+**HTTP fetch** before writing code. Review a public search query and any explicit
+URLs in the same definition; results retain source snapshots and partial-read
+warnings. The existing private workspace, checks and Stop cover the whole task.
+[Research before local code](docs/plans/agent-research-coding.md).
+
 Local coding agents can use an [automatic private workspace](docs/agent-workspaces.md):
 review the goal, model and tools, then enable. A project is created on the first Run;
 manual repository registration remains optional.

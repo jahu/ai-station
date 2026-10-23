@@ -221,7 +221,7 @@ def draft_agent(text: str, *, model: str = "", schedule_timezone: str = "UTC") -
         wants_coding = True
     else:
         wants_coding = False
-    if wants_coding and (not tools or tools == ["http_fetch"]):
+    if wants_coding and set(tools) <= {"web_search", "search_pages", "http_fetch"}:
         chosen = (
             "codex"
             if re.search(r"\bcodex\b", lowered)
@@ -229,7 +229,7 @@ def draft_agent(text: str, *, model: str = "", schedule_timezone: str = "UTC") -
             if re.search(r"\bcursor\b", lowered)
             else "local"
         )
-        tools = ["coding_" + chosen] + (["http_fetch"] if chosen == "local" and fetch_urls else [])
+        tools = ["coding_" + chosen] + (tools if chosen == "local" else [])
     if not tools and re.search(r"\b(excel|xlsx|csv|spreadsheet|arkusz)", lowered):
         tools = ["python_data"]
     market = None

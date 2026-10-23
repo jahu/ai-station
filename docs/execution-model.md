@@ -1,3 +1,7 @@
+[Reviewed research before local agent code](plans/agent-research-coding.md)
+reuses the existing source-bound context handoff, public tools and isolated
+workspace. One reviewed definition and deadline bind every child.
+
 # Execution model
 
 The existing Python contract may freeze optional output names separately from

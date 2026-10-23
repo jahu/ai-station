@@ -10,7 +10,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from app.agent_coding_policy import coding_provider
+from app.agent_coding_policy import coding_provider, coding_research_steps
 from app.agent_schema import AgentSettings
 from app.agent_tools import RETENTION_TOOLS, WORKFLOW_MEMORY_TOOLS, agent_tool
 from app.artifacts import register_file
@@ -49,7 +49,9 @@ def planned_steps(definition: AgentSettings) -> list[dict]:
         ) + [
             {"key": name, "gate": "none"}
             for name in (
-                ["http_fetch", "coding_local"] if "http_fetch" in definition.tools else definition.tools
+                coding_research_steps(definition.tools) + ["coding_local"]
+                if coding_research_steps(definition.tools)
+                else definition.tools
             )
         ]
     steps = []
@@ -262,7 +264,7 @@ def publish_steps(session, parent: Run) -> list[Run]:
             from app.data_agents import publish_data
 
             return [publish_data(session, parent, definition, deadline)]
-        if "http_fetch" in definition.tools:
+        if coding_research_steps(definition.tools):
             from app.agent_page_coding import publish_page_coding
 
             return publish_page_coding(session, parent, definition, deadline_at=deadline)

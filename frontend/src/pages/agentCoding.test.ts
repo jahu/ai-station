@@ -22,7 +22,7 @@ it("does not silently combine coding writes with report tools", () => {
         enabled: false,
         model: "local",
         project_id: "project",
-        tools: ["coding_local", "web_search"],
+        tools: ["coding_local", "system_snapshot"],
       },
       tools,
     ).reason,
