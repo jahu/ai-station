@@ -17,7 +17,7 @@ from app.host_media_executor import HostMediaExecutor
 from app.media_plan import duration_frames, timeline
 from app.models import Artifact, Run, Task
 from app.paths import safe_join
-from app.resources import RESOURCE_WAIT_KEY
+from app.resources import RESOURCE_WAIT_KEY, latest_resource_wait
 from app.runs import create_run, run_dict
 from app.state import TERMINAL
 from app.task_control import cancel_task, lock_task
@@ -226,6 +226,7 @@ def job_view(session, task):
             "queued_segments": 0,
             "active_segments": [],
             "active_run_ids": active,
+            "resource_wait": latest_resource_wait(stages),
             "final_artifact_id": None,
             "resume_allowed": not active
             and not (task.agent_id and plan.get("execution_deadline_at"))
@@ -269,6 +270,7 @@ def job_view(session, task):
             if stages[rid].status not in TERMINAL and stages[rid].status != "queued"
         ],
         "active_run_ids": [r.id for r in active],
+        "resource_wait": latest_resource_wait(active),
         "final_artifact_id": plan.get("final_artifact_id"),
         "resume_allowed": not active
         and not (task.agent_id and plan.get("execution_deadline_at"))

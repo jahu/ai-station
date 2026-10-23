@@ -191,3 +191,43 @@ it("keeps scene readiness separate from final video and inspection starts no wor
   expect(screen.queryByLabelText("Generated full video")).toBeNull();
   expect(writes).toHaveLength(0);
 });
+
+it("reports a measured memory wait during speech preparation without claiming inference started", () => {
+  mount("preparing", undefined, {
+    kind: "avatar",
+    total_segments: 0,
+    completed_segments: 0,
+    resource_wait: {
+      run_id: "speech",
+      reason: "memory",
+      checked_at: "2026-10-23T12:00:00Z",
+      required_mib: 16384,
+      available_mib: 12288,
+      reserved_mib: 0,
+      headroom_mib: 1024,
+    },
+  });
+  expect(screen.getByText("Waiting for memory")).toBeTruthy();
+  expect(
+    screen.getByText(
+      /Queued; generation will start when resources are available/,
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText(/Generating speech and preparing/)).toBeNull();
+  expect(screen.getByRole("button", { name: "Stop film" })).toBeTruthy();
+});
+
+it("hides an old memory observation while stopping the entire job", () => {
+  mount("cancel_requested", undefined, {
+    resource_wait: {
+      run_id: "speech",
+      reason: "memory",
+      checked_at: "2026-10-23T12:00:00Z",
+      required_mib: 16384,
+      available_mib: 12288,
+      reserved_mib: 0,
+      headroom_mib: 1024,
+    },
+  });
+  expect(screen.queryByLabelText("Resource wait")).toBeNull();
+});

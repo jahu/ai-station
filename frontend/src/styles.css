@@ -7024,3 +7024,13 @@ section:has(> .memory-grid) > .dashboard-note {
     grid-column: 1 / -1;
   }
 }
+
+.resource-wait-notice {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+.resource-wait-notice p {
+  margin: 0;
+}

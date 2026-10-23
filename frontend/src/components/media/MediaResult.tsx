@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { api, type Artifact, type Run } from "../../api";
 import { Badge, ErrorNotice } from "../common";
+import ResourceWaitNotice from "../ResourceWaitNotice";
 import { Button } from "../ui/button";
 
 import { mediaBusy } from "./media-run";
@@ -122,9 +123,11 @@ export default function MediaResult({
         : copy[kind];
   const statusText =
     run?.status === "queued"
-      ? kind === "audio" && audioMode === "music"
-        ? "Waiting for an available GPU and enough memory"
-        : "Waiting for an available GPU"
+      ? run.resource_wait
+        ? "Queued; generation has not started"
+        : kind === "audio" && audioMode === "music"
+          ? "Waiting for an available GPU and enough memory"
+          : "Waiting for an available GPU"
       : run?.status === "cancel_requested"
         ? "Stopping generation…"
         : "Creating on your workstation";
@@ -149,6 +152,9 @@ export default function MediaResult({
       <ErrorNotice
         error={error ?? artifacts.error ?? cancel.error ?? retry.error}
       />
+      {run?.status === "queued" && (
+        <ResourceWaitNotice wait={run.resource_wait} />
+      )}
       {steps && (
         <ol
           aria-label={

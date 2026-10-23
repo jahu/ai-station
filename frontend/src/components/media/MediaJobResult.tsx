@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Film, Square, RotateCcw, ArrowUpRight, Download } from "lucide-react";
 import { api, type Artifact } from "../../api";
 import { Badge, ErrorNotice } from "../common";
+import ResourceWaitNotice from "../ResourceWaitNotice";
 import { Button } from "../ui/button";
 import { chatRequestId, clearChatRequest } from "../../pages/chat-draft";
 
@@ -84,6 +85,9 @@ export default function MediaJobResult({
               : "Sequence of shots"}{" "}
             · Local
           </p>
+          {busy && job.status !== "cancel_requested" && (
+            <ResourceWaitNotice wait={job.resource_wait} />
+          )}
           <div className="media-job-progress">
             <progress
               max={job.total_segments + 1}
@@ -97,11 +101,14 @@ export default function MediaJobResult({
             <p>
               {job.status === "composing"
                 ? "Assembling and checking the full video…"
-                : job.status === "preparing"
-                  ? "Generating speech and preparing its full timeline…"
-                  : job.status === "succeeded"
-                    ? "Your full video is ready."
-                    : `${job.completed_segments} of ${job.total_segments} ${job.mode === "shots" ? "shots" : "segments"} complete`}
+                : job.resource_wait &&
+                    (job.status === "queued" || job.status === "preparing")
+                  ? "Queued; generation will start when resources are available."
+                  : job.status === "preparing"
+                    ? "Generating speech and preparing its full timeline…"
+                    : job.status === "succeeded"
+                      ? "Your full video is ready."
+                      : `${job.completed_segments} of ${job.total_segments} ${job.mode === "shots" ? "shots" : "segments"} complete`}
             </p>
           </div>
           {job.kind === "video" &&

@@ -99,12 +99,8 @@ def release_run_locks(session: Session, run_id: str) -> None:
     session.flush()
 
 
-def reserve_memory(session, run, available_mib, required_mib):
-    """Conservative admission: observed available RAM minus other live reservations."""
-    if not required_mib:
-        return True
-    if not isinstance(available_mib, (int, float)) or available_mib < 0:
-        return False
+def memory_observation(session, run, available_mib, required_mib):
+    """The same observed RAM and reservation inputs used by conservative admission."""
     held = list(
         session.scalars(
             select(ResourceLock).where(
@@ -117,10 +113,45 @@ def reserve_memory(session, run, available_mib, required_mib):
         for item in held
         if item.run_id != run.id
     )
-    if available_mib - reserved - 1024 < required_mib:
+    return {
+        "required_mib": required_mib,
+        "available_mib": available_mib
+        if isinstance(available_mib, (int, float)) and available_mib >= 0
+        else None,
+        "reserved_mib": reserved,
+        "headroom_mib": 1024,
+    }
+
+
+def reserve_memory(session, run, available_mib, required_mib):
+    """Conservative admission: observed available RAM minus other live reservations."""
+    if not required_mib:
+        return True
+    observed = memory_observation(session, run, available_mib, required_mib)
+    if observed["available_mib"] is None:
         return False
-    if not any(item.run_id == run.id for item in held):
+    if observed["available_mib"] - observed["reserved_mib"] - observed["headroom_mib"] < required_mib:
+        return False
+    owned = session.scalar(
+        select(ResourceLock).where(
+            ResourceLock.resource_key == "ram:" + run.id, ResourceLock.released_at.is_(None)
+        )
+    )
+    if owned is None:
         session.add(ResourceLock(resource_key="ram:" + run.id, run_id=run.id))
     run.allocated_resources = {**run.allocated_resources, "ram_mib": required_mib}
     session.flush()
     return True
+
+
+def resource_wait(run):
+    """Expose the last admission observation only while this Run is still queued."""
+    if run.status != "queued":
+        return None
+    value = run.metadata_json.get("resource_wait")
+    return {**value, "run_id": run.id} if isinstance(value, dict) else None
+
+
+def latest_resource_wait(runs):
+    observations = [value for run in runs if (value := resource_wait(run))]
+    return max(observations, key=lambda value: value["checked_at"], default=None)

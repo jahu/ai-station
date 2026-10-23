@@ -298,6 +298,8 @@ def request_cancel(session: Session, run: Run) -> Run:
 
 
 def run_dict(run: Run) -> dict[str, Any]:
+    from app.resources import resource_wait
+
     def iso(value):
         return value.isoformat() if value else None
 
@@ -315,6 +317,7 @@ def run_dict(run: Run) -> dict[str, Any]:
         "claimed_at": iso(run.claimed_at),
         "started_at": iso(run.started_at),
         "finished_at": iso(run.finished_at),
+        "resource_wait": resource_wait(run),
         "requested_resources": run.requested_resources,
         "allocated_resources": run.allocated_resources,
         "requested_gpu": run.requested_gpu,

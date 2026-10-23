@@ -1,3 +1,4 @@
+import ResourceWaitNotice from "../components/ResourceWaitNotice";
 import RunTimeline from "./RunTimeline";
 import { useRunEvents } from "./useRunEvents";
 import AgentReport from "./AgentReport";
@@ -508,6 +509,9 @@ export function RunDetail() {
                 Started <b>{time(run.data.started_at)}</b>
               </span>
             </div>
+            {run.data.status === "queued" && (
+              <ResourceWaitNotice wait={run.data.resource_wait} />
+            )}
             {run.data.status === "waiting_for_approval" &&
               run.data.approval?.resolution === "pending" && (
                 <section className="panel">

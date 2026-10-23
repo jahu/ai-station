@@ -210,3 +210,22 @@ hash; it records `chat.page_read` without another HTTP request. Stop cancels an
 in-flight GET before inference. Failed/empty reads produce an inspectable failure,
 not a generic search-snippet substitute. See [page-reader scope and remaining
 rendered acceptance](plans/chat-page-reading.md).
+
+
+## Media resource-wait observations
+
+Host media admission persists its reason and timestamp on the queued Run and in
+its ordinary `run.interrupted` event. RAM observations use the same required,
+observed available, other active reservations and 1024 MiB headroom inputs as
+`reserve_memory`; no admission threshold or GPU policy changes. Missing RAM is
+unknown, never zero. Single-Run and composed media-job views expose the latest
+queued observation without contacting the Runner from HTTP handlers. Speech
+preparation and video/avatar segments share this path. A shot job can show an
+active shot alongside another shot's resource wait.
+
+The observation is a timestamped sample, not live telemetry or a completion ETA.
+Admission removes the stored marker before dispatch; non-queued Runs never expose
+it as a current wait. Stop/failed/terminal media results hide it even if another
+child is still queued during cancellation. Existing retry checks, ownership,
+expiry and task-wide Stop are unchanged. Old Runs without a marker keep the
+existing generic queue text. No schema migration or model download is needed.
