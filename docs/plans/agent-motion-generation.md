@@ -93,3 +93,17 @@ playback and reload. Run the required local full checks, inspect the full PR dif
 and built image, then back up and deploy through develop. Qualify a short actual
 existing-model agent video/avatar only after the complete chain is operational;
 record real duration/profile and preserve the operator's actual model state.
+
+## Whole-avatar agent increment in progress
+
+The feature branch now extracts pure whole-speech avatar settings and carries one
+optional expiry through speech generation, the deferred planner, every avatar
+segment and final assembly. A pending speech handoff is bound to its actual
+planner and completed same-Task audio; an old expiry cannot be replaced. The
+planner observes expiry before publication. Four focused fake-runtime/real-CPU
+cases and 49 existing avatar/video regressions pass.
+
+Avatar agent scopes, readiness, reviewed source snapshots, final-result receipts,
+natural drafts and the editor are still to be connected and qualified. This
+foundation does not advertise an avatar agent output. Preserve ordinary Avatars
+workspace behavior while completing that chain.

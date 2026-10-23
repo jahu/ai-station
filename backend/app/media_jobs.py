@@ -1,7 +1,7 @@
 """Durable segmented video jobs built from existing Runs, dependencies and artifacts."""
 
 import json
-from typing import Annotated, Literal
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.avatar_schema import FullAvatarSettings
 from app.config import get_settings
 from app.db import session_scope, utcnow
 from app.dependencies import depend_on
@@ -44,17 +45,21 @@ def job(session, task_id):
     return task
 
 
+def execution_budget(execution_deadline_at):
+    if execution_deadline_at is None:
+        return {}
+    from datetime import datetime
+
+    deadline = datetime.fromisoformat(execution_deadline_at)
+    if deadline.tzinfo is None or not 0 < (deadline - utcnow()).total_seconds() <= 3600:
+        raise ValueError("Media expiry must be within the next hour with an explicit time zone")
+    return {"execution_deadline_at": execution_deadline_at}
+
+
 def publish_video(
     session, body, *, task=None, parent_run_id=None, observed_profile=None, execution_deadline_at=None
 ):
-    budget = {}
-    if execution_deadline_at is not None:
-        from datetime import datetime
-
-        deadline = datetime.fromisoformat(execution_deadline_at)
-        if deadline.tzinfo is None or not 0 < (deadline - utcnow()).total_seconds() <= 3600:
-            raise ValueError("Media expiry must be within the next hour with an explicit time zone")
-        budget = {"execution_deadline_at": execution_deadline_at}
+    budget = execution_budget(execution_deadline_at)
     prior = session.get(Task, str(body.client_request_id)) if task is None else None
     if prior:
         expected = video_request(body)
@@ -622,25 +627,17 @@ def save_resume(session, task, plan, updated, receipts, key, body):
     return result
 
 
-class FullAvatarRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+class FullAvatarRequest(FullAvatarSettings):
     client_request_id: UUID
-    speech_text: str | None = Field(default=None, min_length=1, max_length=1000)
-    image_artifact_id: UUID
-    audio_artifact_id: UUID
-    prompt: str = Field(default="A person speaking naturally, static camera.", min_length=1, max_length=2000)
-    size: Literal[256, 384, 512] = 384
-    steps: StrictInt = Field(default=8, ge=4, le=30)
-    seed: StrictInt = Field(default=43, ge=0, le=2147483647)
-    gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]{1,12})$")
 
 
-def publish_avatar(session, body, *, task=None, parent_run_id=None):
+def publish_avatar(session, body, *, task=None, parent_run_id=None, execution_deadline_at=None):
     import wave
 
     from app.avatars import AvatarRequest, create_avatar_run
     from app.media_plan import audio_frames
 
+    budget = execution_budget(execution_deadline_at)
     existing = session.get(Task, str(body.client_request_id)) if task is None else None
     request = (
         task.metadata_json.get("media_request", body.model_dump(mode="json"))
@@ -651,6 +648,34 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None):
         if existing.metadata_json.get("media_plan", {}).get("request") != request:
             raise HTTPException(409, "Request ID belongs to another media intent")
         return job_view(session, existing)
+    prior_plan = task.metadata_json.get("media_plan", {}) if task else {}
+    root_parent = prior_plan.get("agent_media_parent_run_id", parent_run_id)
+    if budget and prior_plan:
+        if prior_plan.get("execution_deadline_at") != execution_deadline_at:
+            raise HTTPException(409, "Avatar publication cannot replace its original expiry")
+        if prior_plan.get("request") != request:
+            raise HTTPException(409, "Avatar publication belongs to another request")
+        if body.speech_text is not None or prior_plan.get("timing") is not None:
+            if root_parent != parent_run_id:
+                raise HTTPException(409, "Avatar publication belongs to another reviewed parent")
+            return job_view(session, task)
+        planner = session.get(Run, parent_run_id)
+        speech = session.get(Run, prior_plan.get("speech_run_id"))
+        canonical = session.get(Artifact, str(body.audio_artifact_id))
+        if (
+            planner is None
+            or planner.id != prior_plan.get("planner_run_id")
+            or planner.task_id != task.id
+            or planner.executor_type != "avatar_media_plan"
+            or planner.parameters.get("execution_deadline_at") != execution_deadline_at
+            or speech is None
+            or speech.status != "succeeded"
+            or speech.task_id != task.id
+            or canonical is None
+            or canonical.run_id != speech.id
+            or canonical.trashed_at is not None
+        ):
+            raise HTTPException(409, "Avatar speech handoff is not bound to its owned planner")
     image = session.get(Artifact, str(body.image_artifact_id))
     if not image or image.trashed_at is not None or image.mime_type not in {"image/png", "image/jpeg"}:
         raise HTTPException(422, "Choose an available PNG/JPEG portrait")
@@ -675,7 +700,7 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None):
             task=task,
             parent_run_id=parent_run_id,
         )
-        speech.parameters = {**speech.parameters, "full_avatar_after_speech": request}
+        speech.parameters = {**speech.parameters, **budget, "full_avatar_after_speech": request}
         planner = create_run(
             session,
             task,
@@ -685,7 +710,7 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None):
             execution_target="container",
             operation_key="media:1:plan:attempt:1",
             parent_run_id=parent_run_id,
-            parameters={"speech_run_id": speech.id, "request": request},
+            parameters={**budget, "speech_run_id": speech.id, "request": request},
             permissions=["filesystem_read", "workspace_write"],
             retry_class="inspect",
         )
@@ -693,6 +718,8 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None):
         task.metadata_json = {
             **task.metadata_json,
             "media_plan": {
+                **budget,
+                **({"agent_media_parent_run_id": root_parent} if budget else {}),
                 "version": 1,
                 "revision": 1,
                 "kind": "avatar",
@@ -762,6 +789,7 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None):
         run.requested_resources = {"ram_mib": 16384}
         run.parameters = {
             **run.parameters,
+            **budget,
             "internal_media": True,
             "media_segment": segment.model_dump(),
             "audio_window": {"start_frame": segment.start_frame - segment.first_frame},
@@ -780,6 +808,7 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None):
         execution_target="host",
         operation_key=f"media:{revision}:compose:attempt:1",
         parameters={
+            **budget,
             "stage_run_ids": [r.id for r in runs],
             "timeline": timing.model_dump(mode="json"),
             "width": body.size,
@@ -792,12 +821,15 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None):
         },
         permissions=["filesystem_read", "workspace_write"],
         retry_class="inspect",
+        parent_run_id=parent_run_id,
     )
     for run in runs:
         depend_on(session, compose, run)
     task.metadata_json = {
         **task.metadata_json,
         "media_plan": {
+            **budget,
+            **({"agent_media_parent_run_id": root_parent} if budget else {}),
             "version": 1,
             "revision": revision,
             "kind": "avatar",
@@ -831,6 +863,9 @@ class AvatarPlannerExecutor:
 
         require(run.effective_permissions, "filesystem_read")
         require(run.effective_permissions, "workspace_write")
+        from app.heartbeat import cancel_expired_run
+
+        cancel_expired_run(session, run.id)
         if run.status == "cancel_requested":
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
             return "done"
@@ -845,7 +880,13 @@ class AvatarPlannerExecutor:
         request = FullAvatarRequest.model_validate(
             {**run.parameters["request"], "audio_artifact_id": audio.id, "speech_text": None}
         )
-        publish_avatar(session, request, task=run.task, parent_run_id=run.id)
+        publish_avatar(
+            session,
+            request,
+            task=run.task,
+            parent_run_id=run.id,
+            execution_deadline_at=run.parameters.get("execution_deadline_at"),
+        )
         transition(session, run, RunStatus.RUNNING, event_type="executor.started", payload={})
         transition(
             session,
