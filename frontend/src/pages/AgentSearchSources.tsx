@@ -20,8 +20,8 @@ export function AgentSearchSources({ result }: { result: SearchPageResult }) {
       </p>
       {result.partial && (
         <p className="notice" role="status">
-          Some sources could not be read. The report distinguishes page excerpts
-          from search snippets.
+          Some sources could not be read. Review the available sources before
+          relying on the result.
         </p>
       )}
       <FetchedPages result={result} label="Read search sources" />

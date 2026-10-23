@@ -1,0 +1,62 @@
+import type { Run } from "../api";
+import { AgentSearchSources } from "./AgentSearchSources";
+import { isSearchPageResult } from "./agent-search-result";
+import { FetchedPages } from "./AgentHttpFetch";
+import { SearchSources } from "./ChatWebSearch";
+import { isFetchResult, isWebSources } from "./agentResearchResult";
+
+export default function AgentCodeResearch({
+  runs,
+  taskId,
+}: {
+  runs: Run[];
+  taskId: string;
+}) {
+  const handoff = runs.find(
+    (run) =>
+      run.task_id === taskId && run.executor_type === "agent_page_coding",
+  );
+  if (!handoff) return null;
+  const rawIds = handoff.parameters?.source_run_ids;
+  const ids =
+    Array.isArray(rawIds) && rawIds.every((id) => typeof id === "string")
+      ? rawIds
+      : typeof handoff.parameters?.source_run_id === "string"
+        ? [handoff.parameters.source_run_id]
+        : [];
+  const sources = runs.filter(
+    (run) =>
+      ids.includes(run.id) &&
+      run.task_id === taskId &&
+      run.parent_run_id === handoff.parent_run_id &&
+      run.agent_id === handoff.agent_id &&
+      run.project_id === handoff.project_id &&
+      run.executor_type === "agent_tool" &&
+      run.status === "succeeded",
+  );
+  const search = sources.find((run) => run.parameters?.tool === "web_search")
+    ?.metadata?.web_search;
+  const pages = sources.find((run) => run.parameters?.tool === "search_pages")
+    ?.metadata?.search_pages;
+  const fetched = sources.find((run) => run.parameters?.tool === "http_fetch")
+    ?.metadata?.http_fetch;
+  const hasSearch = isWebSources(search),
+    hasPages = isSearchPageResult(pages),
+    hasFetched = isFetchResult(fetched);
+  if (!hasSearch && !hasPages && !hasFetched) return null;
+  return (
+    <details className="panel" aria-label="Research for this task">
+      <summary>
+        Research sources
+        {hasPages && pages.partial ? " · Some pages unavailable" : ""}
+      </summary>
+      <p className="muted">
+        References for this task. Search results and opened pages are listed
+        separately.
+      </p>
+      {hasSearch && <SearchSources result={search} />}
+      {hasPages && <AgentSearchSources result={pages} />}
+      {hasFetched && <FetchedPages result={fetched} />}
+    </details>
+  );
+}
