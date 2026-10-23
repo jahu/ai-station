@@ -128,11 +128,11 @@ def _schedule(lowered: str, original: str) -> tuple[str, str, int | None, dateti
         (60, r"minutes?|minut[ęey]?"),
         (1, r"seconds?|sekund[ęey]?"),
     ):
-        interval = re.search(rf"\b(?:every|co)\s+(\d+)\s+(?:{units})\b", lowered)
+        interval = re.search(rf"\b(?:every|co)\s+([+-]?\d+(?:[.,]\d+)?)\s+(?:{units})\b", lowered)
         if interval:
             digits = interval.group(1)
             # The API accepts at most a year; bound numeric conversion as well.
-            if len(digits) <= 8:
+            if len(digits) <= 8 and digits.isdecimal():
                 seconds = int(digits) * factor
                 if 60 <= seconds <= 31536000:
                     return "interval", "", seconds, None

@@ -58,7 +58,7 @@ def test_unsupported_interval_is_not_clamped_or_activated(amount):
 
 def test_oversized_numeric_interval_does_not_raise_or_become_a_clock_schedule():
     with TestClient(app) as client:
-        for count in ("0", "9" * 5000):
+        for count in ("0", "-60", "1.5", "9" * 5000):
             response = client.post(
                 "/api/agents/draft",
                 json={"instruction": f"Every {count} minutes at 09:00 check workstation"},

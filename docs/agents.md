@@ -133,7 +133,7 @@ repeated minute runs only at its first occurrence. Interval elapsed time and
 one-shot UTC inputs are unchanged. Old edit clients preserve a saved custom zone.
 See [the scheduling contract](plans/agent-schedule-timezones.md).
 
-Quick drafting (**Without AI**) recognizes numeric English/Polish intervals in
+Quick drafting (**Without AI**) recognizes whole-number English/Polish intervals in
 seconds, minutes or hours, plus “every minute”/“co minutę” and the existing hourly
 phrases. Units convert to elapsed seconds within the definition's one-minute to
 one-year bounds. “Co 5 minut” therefore saves 300 seconds, never 60 minutes or a
