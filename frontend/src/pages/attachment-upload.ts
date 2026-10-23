@@ -13,7 +13,7 @@ export function useConversationAttachmentUpload(
 ) {
   const cache = useQueryClient();
   return useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       kind,
       files,
     }: {
