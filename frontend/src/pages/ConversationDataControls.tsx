@@ -39,6 +39,7 @@ export default function ConversationDataControls({
         <label>
           Local analysis model
           <select
+            aria-label="Local analysis model"
             value={scope.model ?? "auto"}
             disabled={disabled}
             onChange={(event) =>
@@ -59,6 +60,7 @@ export default function ConversationDataControls({
         <label>
           Time limit
           <select
+            aria-label="Analysis time limit"
             value={scope.maximum_runtime ?? 600}
             disabled={disabled}
             onChange={(event) =>

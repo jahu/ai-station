@@ -179,6 +179,32 @@ function ImageStepRetry({
   );
 }
 
+function TaskSteps({
+  steps,
+  busy,
+  onQueued,
+}: {
+  steps: TaskStep[];
+  busy?: boolean;
+  onQueued?: (run: Run) => void;
+}) {
+  return (
+    <>
+      {steps.map((step) => (
+        <div className="content-panel" key={step.id}>
+          <Link to={`/runs/${step.id}`}>{step.capability}</Link>{" "}
+          <Badge status={step.status} />{" "}
+          <span className="chip">{step.location.toUpperCase()}</span>
+          {step.error_message && <p className="notice">{step.error_message}</p>}
+          {imageRetryable(step, steps) && (
+            <ImageStepRetry step={step} busy={busy} onQueued={onQueued} />
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
 export function AssistantResults({
   result,
   inputs,
@@ -218,22 +244,14 @@ export function AssistantResults({
           </p>
         </>
       ) : null}
-      <details open={!result.data_runs?.length}>
-        <summary>Execution details</summary>
-        {result.steps.map((step) => (
-          <div className="content-panel" key={step.id}>
-            <Link to={`/runs/${step.id}`}>{step.capability}</Link>{" "}
-            <Badge status={step.status} />{" "}
-            <span className="chip">{step.location.toUpperCase()}</span>
-            {step.error_message && (
-              <p className="notice">{step.error_message}</p>
-            )}
-            {imageRetryable(step, result.steps ?? []) && (
-              <ImageStepRetry step={step} busy={busy} onQueued={onQueued} />
-            )}
-          </div>
-        ))}
-      </details>
+      {result.data_runs?.length ? (
+        <details>
+          <summary>Execution details</summary>
+          <TaskSteps steps={result.steps} busy={busy} onQueued={onQueued} />
+        </details>
+      ) : (
+        <TaskSteps steps={result.steps} busy={busy} onQueued={onQueued} />
+      )}
       {result.transcriptions?.map((run) => (
         <TranscriptResult key={run.id} run={run} />
       ))}

@@ -262,7 +262,44 @@ def test_invalid_original_never_publishes_workspace(data_environment, change):
                 "data": {"input_artifact_ids": [aid], "model": state["model"]},
             },
         )
-        assert response.status_code == 422, response.text
+        if change == "bytes":
+            # HTTP freezes metadata and enqueues. The worker verifies actual bytes
+            # before it can publish setup, preserving the execution boundary.
+            assert response.status_code == 202, response.text
+            drain()
+            with session_factory()() as session:
+                assert session.get(Run, response.json()["id"]).status == "failed"
+        else:
+            assert response.status_code == 422, response.text
         with session_factory()() as session:
             assert not list(session.scalars(select(Run).where(Run.executor_type == "project_setup")))
         assert not state["calls"] and not state["jobs"]
+
+
+def test_selected_file_followup_stays_in_conversation_and_uses_a_new_private_task(data_environment):
+    state = data_environment
+    with TestClient(app) as client:
+        cid, first = start(client, state)
+        drain()
+        with session_factory()() as session:
+            root = session.get(Run, first["id"])
+            scope = root.parameters["data"]
+            first_project = root.project_id
+        second = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "content": "Recheck the total in this file.",
+                "data": scope,
+            },
+        )
+        assert second.status_code == 202, second.text
+        assert second.json()["task_id"] != first["task_id"]
+        drain()
+        with session_factory()() as session:
+            root = session.get(Run, second.json()["id"])
+            assert root.project_id and root.project_id != first_project
+            assert not list(session.scalars(select(Agent)))
+        messages = client.get(f"/api/chat/conversations/{cid}").json()["messages"]
+        answers = [message for message in messages if message.get("data_runs")]
+        assert len(answers) == 2 and all(message["task_status"] == "succeeded" for message in answers)
+        assert state["calls"] == 2 and len(state["jobs"]) == 2
