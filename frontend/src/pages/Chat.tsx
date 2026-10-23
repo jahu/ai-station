@@ -1012,13 +1012,15 @@ function Transcript({
                     tabIndex={current ? 0 : -1}
                     disabled={!message.content}
                     onClick={() => {
-                      void copyText(message.content).catch(() =>
-                        setClipboardError(
-                          new Error(
-                            "Clipboard unavailable. Select and copy the response text.",
+                      void copyText(message.content)
+                        .then(() => setClipboardError(null))
+                        .catch(() =>
+                          setClipboardError(
+                            new Error(
+                              "Clipboard unavailable. Select and copy the response text.",
+                            ),
                           ),
-                        ),
-                      );
+                        );
                     }}
                   >
                     <Copy size={14} aria-hidden="true" />

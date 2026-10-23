@@ -483,7 +483,10 @@ export function ArtifactDetail() {
                     variant="ghost"
                     onClick={() => {
                       void copyText(prompt)
-                        .then(() => setCopied(true))
+                        .then(() => {
+                          setCopied(true);
+                          setCopyError(null);
+                        })
                         .catch(() =>
                           setCopyError(
                             new Error(
