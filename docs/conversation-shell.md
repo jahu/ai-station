@@ -69,3 +69,14 @@ Qualification evidence for this refinement is stored under
 `data/acceptance/chat-reading-ux-20261015/`. It uses a fake provider with the real
 API and worker, not real model inference. No execution boundary or data schema
 changes are part of this refinement.
+
+## Vision result hierarchy
+
+A completed successful image inspection keeps the answer and file links primary.
+Execution details remain available behind the existing native disclosure; active
+or failed steps retain their visible status/errors. The description artifact's
+Image sources disclosure loads its lineage only when opened, preserving Library
+source inspection while avoiding duplicate source previews and eager lineage
+requests in the normal transcript. Ordinary generated-media/coding behavior and
+Library details retain their existing contracts. Verify native keyboard disclosure,
+source links, reload and reading position in desktop and phone layouts.

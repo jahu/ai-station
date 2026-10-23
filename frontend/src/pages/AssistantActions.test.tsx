@@ -1470,3 +1470,89 @@ it("keeps microphone Finish enabled while the rest of the composer is busy", asy
   );
   expect(stop).toHaveBeenCalled();
 });
+
+it("keeps completed Vision execution and source previews behind explicit disclosure", async () => {
+  const image = {
+    id: "source",
+    type: "image",
+    mime_type: "image/png",
+    original_filename: "Source.png",
+    metadata: {},
+    parent_artifact_ids: [],
+    size_bytes: 129,
+    created_at: "2026-10-23T12:00:00Z",
+    run_id: null,
+  };
+  const description = {
+    ...image,
+    id: "description",
+    type: "markdown",
+    mime_type: "text/markdown",
+    original_filename: "image-description.md",
+    metadata: { operation: "image.describe" },
+    parent_artifact_ids: [image.id],
+    run_id: "vision",
+  };
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ id: description.id, sources: [image], derived: [] }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mountResults({
+    task_status: "succeeded",
+    steps: [
+      {
+        id: "vision",
+        capability: "chat.vision",
+        status: "succeeded",
+        summary: "",
+        error_message: "",
+        location: "local",
+      },
+    ],
+    artifacts: [description],
+  });
+  expect(
+    screen
+      .getByRole("link", { name: "image-description.md" })
+      .getAttribute("href"),
+  ).toBe("/library/description");
+  expect(
+    screen
+      .getByText("Execution details", { selector: "summary" })
+      .closest("details")?.open,
+  ).toBe(false);
+  expect(fetch).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByText("Image sources", { selector: "summary" }));
+  const source = await screen.findByRole("link", {
+    name: "Inspect source Source.png source",
+  });
+  expect(source.getAttribute("href")).toBe("/library/source");
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/artifacts/description/lineage",
+    undefined,
+  );
+});
+
+it("keeps failed Vision errors and inspection actions visible", () => {
+  mountResults({
+    task_status: "failed",
+    steps: [
+      {
+        id: "vision",
+        capability: "chat.vision",
+        status: "failed",
+        summary: "",
+        error_message: "Image source changed. Attach it again.",
+        location: "local",
+      },
+    ],
+    artifacts: [],
+  });
+  expect(
+    screen.getByText("Image source changed. Attach it again."),
+  ).toBeTruthy();
+  expect(
+    screen.queryByText("Execution details", { selector: "summary" }),
+  ).toBeNull();
+});

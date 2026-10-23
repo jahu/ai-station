@@ -31,4 +31,15 @@ full local gate. Reuse real qualified transcription only when the exact existing
 contract and source are unchanged; any new real audio test must be explicitly
 identified and use actual normal worker/native transcription, never fake text.
 
-This increment is active, not a declaration that the complete platform is done.
+Delivered in #377 with 637 UI tests, desktop/390px compiled qualification and an
+exact-source inherited backend/Runner gate (2575 pass, nine opt-in skips). Actual
+normal-worker CPU transcription of the existing generated Polish greeting and a
+selected-local-model summary both passed; the existing runtime/context and source
+were preserved. The transcript contains observed word errors, so perfect word
+accuracy is not claimed. Other formats were not newly hardware-tested here.
+Evidence: `data/acceptance/conversation-audio-attachments-20261023/post-deployment-qualified.json`.
+
+Follow up on recognition quality using the actual saved transcript and known
+spoken text. Inspect installed profiles/models before proposing changes; do not
+silently download a new model or replace a working profile. The full platform
+objective remains active.

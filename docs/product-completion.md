@@ -53,9 +53,13 @@ of the actual #372 data pipeline acceptance. Evidence:
 `data/acceptance/conversation-data-attachments-20261023/post-deployment-qualified.json`.
 Ordinary image attachments with local Vision and reference editing are deployed
 (#375). Actual local Vision answered the known synthetic image correctly; 2550
-Python/Runner tests, nine opt-in skips and 630 UI tests passed. The next increment
-adds verified reuse of inspected uploaded inputs in conversational follow-ups; see
-[the image contract](plans/conversation-images.md).
+Python/Runner tests, nine opt-in skips and 630 UI tests passed. Verified inspected-input follow-ups are deployed in #376, including actual local
+Vision reinspection of the same source and model restoration. See
+[the image contract](plans/conversation-images.md). Ordinary recording entry is
+deployed in #377 with 637 UI tests, compiled desktop/390px checks and actual CPU
+Polish WAV transcription followed by a selected-local-model summary. Source/runtime
+preservation passed; observed recognition word errors remain quality follow-up.
+See [recording conversations](plans/conversation-recordings.md).
 
 Current evidence summary, 2026-10-22: general-agent research, local Python/data
 execution and website-building workflows are operational. Public research uses

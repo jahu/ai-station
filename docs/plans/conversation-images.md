@@ -53,7 +53,7 @@ on a synthetic known image, restore the operator model preset and distinguish it
 from fake photo generation or subjective editing quality. Reuse existing model
 installations; do not claim new real photo generation without running it.
 
-## Inspected input follow-ups — active increment
+## Inspected input follow-ups — delivered #376
 
 Ordinary image entry is deployed by #375. Local checks passed 2550 Python/Runner
 cases/nine opt-in skips and 630 UI cases. Actual local Qwen3.5 9B Vision answered
@@ -61,7 +61,7 @@ cases/nine opt-in skips and 630 UI cases. Actual local Qwen3.5 9B Vision answere
 `data/acceptance/conversation-image-attachments-20261023/post-deployment-qualified.json`.
 No new real photo generation was executed by that qualification.
 
-Extend the existing conversation reference resolver to the exact image input of
+The existing conversation reference resolver reuses the exact image input of
 a completed Vision inspection. Freeze portable ID/path/MIME/size/SHA metadata on
 new orchestration and Vision Runs; verify current bytes in the worker before
 inference and before publishing the description. Persist the same snapshot with
@@ -93,3 +93,9 @@ bytes before publication. Photo/video children retain the frozen selection and
 recheck metadata, canonical paths and hashes before any native dispatch. A source
 changed while queued fails without launching inference; normal explicitly selected
 media and older queued jobs retain their existing contracts.
+
+#376 passed 2575 Python/Runner tests, nine opt-in skips and 632 UI tests. Compiled
+desktop/390px follow-ups, actual local Vision reinspection of the same synthetic
+source, source links and operator-preset restoration passed. No new real photo edit
+was executed. Evidence:
+`data/acceptance/conversation-uploaded-image-followups-20261023/post-deployment-qualified.json`.

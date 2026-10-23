@@ -206,6 +206,16 @@ function TaskSteps({
   );
 }
 
+function InspectedImageSources({ artifact }: { artifact: Artifact }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <details onToggle={(event) => setOpen(event.currentTarget.open)}>
+      <summary>Image sources</summary>
+      {open && <ArtifactLineage artifactId={artifact.id} />}
+    </details>
+  );
+}
+
 export function AssistantResults({
   result,
   inputs,
@@ -270,7 +280,9 @@ export function AssistantResults({
           </p>
         </>
       ) : null}
-      {result.data_runs?.length ? (
+      {result.data_runs?.length ||
+      (result.steps.some((step) => step.capability === "chat.vision") &&
+        result.steps.every((step) => step.status === "succeeded")) ? (
         <details>
           <summary>Execution details</summary>
           <TaskSteps steps={result.steps} busy={busy} onQueued={onQueued} />
@@ -491,7 +503,11 @@ export function AssistantResults({
                     </Button>
                   </div>
                 )}
-              <ArtifactLineage artifactId={artifact.id} />
+              {artifact.metadata?.operation === "image.describe" ? (
+                <InspectedImageSources artifact={artifact} />
+              ) : (
+                <ArtifactLineage artifactId={artifact.id} />
+              )}
             </div>
           ))}
       </div>
