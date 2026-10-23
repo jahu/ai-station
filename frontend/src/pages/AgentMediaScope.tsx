@@ -209,6 +209,9 @@ export default function AgentMediaScopeEditor({
                   onChange({
                     ...scope,
                     description_source: event.target.value as "fixed" | "goal",
+                    ...(scope.kind === "music" && event.target.value === "fixed"
+                      ? { lyrics_source: "fixed" as const }
+                      : {}),
                   })
                 }
               >
@@ -372,9 +375,22 @@ export default function AgentMediaScopeEditor({
             value={scope.request}
             descriptionLength={caption.trim().length}
             allowAutomaticDuration={false}
+            lyricsSource={scope.lyrics_source ?? "fixed"}
+            onLyricsSourceChange={
+              scope.description_source === "goal"
+                ? (lyrics_source) => onChange({ ...scope, lyrics_source })
+                : undefined
+            }
             onChange={(options) =>
               onChange({
                 ...scope,
+                lyrics_source:
+                  options.instrumental !== false
+                    ? "fixed"
+                    : scope.request.instrumental !== false &&
+                        scope.description_source === "goal"
+                      ? "goal"
+                      : (scope.lyrics_source ?? "fixed"),
                 request: {
                   ...scope.request,
                   ...options,

@@ -3,7 +3,7 @@
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-class MusicSettings(BaseModel):
+class MusicOptions(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     lyrics: str = Field(default="", max_length=4096)
     instrumental: bool = True
@@ -11,6 +11,8 @@ class MusicSettings(BaseModel):
     seed: int | None = Field(default=None, ge=0, le=2**31 - 1, strict=True)
     gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]{1,12})$")
 
+
+class MusicSettings(MusicOptions):
     @model_validator(mode="after")
     def lyrics_match_mode(self):
         if self.instrumental and self.lyrics:

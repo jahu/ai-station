@@ -125,3 +125,35 @@ Then run short explicitly opted-in real image/music agent cases using installed
 models, inspect actual artifacts and restore the operator model profile.
 Review the full diff, required local checks and final image before a PR to
 `develop`, squash merge and backed-up deployment. No production branch merges.
+
+
+## Goal-based vocal lyrics — next implementation increment
+
+Add an explicit music `lyrics_source: fixed | goal` (legacy default `fixed`).
+Goal lyrics require a vocal track and the existing goal-based description mode.
+The reviewed goal, style instructions, duration and optional approved research
+feed the same queued local preparation, which returns exactly `description` and
+`lyrics`. Lyrics are non-empty, at most 4096 characters; the music caption keeps
+its 512-character limit. The scope can hold an empty draft lyric only for this
+reviewed generation mode. Ordinary Music/Chat/native requests still require
+supplied non-empty lyrics for vocals.
+
+Both strings are checked again at publication. All other fields, references,
+permissions, duration, quality, GPU and immutable expiry stay frozen. A failed,
+truncated, oversized or canceled preparation cannot publish a music child.
+The existing bounded correction, source provenance, receipts, resource admission,
+Stop and recovery remain authoritative; no new executor or model download.
+Natural proposals may select goal lyrics but cannot invent saved supplied lyrics;
+all proposals remain disabled until reviewed. Persist through the existing Agent
+media JSON, including schedules, duplicates and historical snapshots.
+
+The editor offers **Write lyrics each run** beside **Use my lyrics** only for
+vocal goal-based music. Switching to Instrumental or fixed description clears
+that generation authority. Show the actual generated song text alongside final
+playback and preserve it in Artifact metadata for Library inspection. Qualify
+legacy fixed/supplied behavior, exact field mutation limits, invalid output,
+correction, schedules, cancellation, publication receipts and compiled desktop/
+phone editor/playback. Real hardware delivery is separate, subject to existing
+resource admission and preservation of the operator's current model state.
+Conversational automatic lyrics will reuse this preparation contract as a later
+composition increment; do not advertise them merely from this agent delivery.

@@ -67,6 +67,7 @@ export type AgentMediaScope =
   | {
       kind: "music";
       description_source: "fixed" | "goal";
+      lyrics_source?: "fixed" | "goal";
       request: Omit<MusicScopeOptions, "duration_seconds"> & {
         caption: string;
         duration_seconds: number;
@@ -226,7 +227,16 @@ export function agentMediaIssue(
       p.duration_seconds > 600
     )
       return "Choose a music length from 10 to 600 seconds.";
-    if (p.instrumental === false && !p.lyrics?.trim())
+    if (
+      scope.lyrics_source === "goal" &&
+      (p.instrumental !== false || scope.description_source !== "goal")
+    )
+      return "Generated lyrics require vocals and a goal-based description.";
+    if (
+      p.instrumental === false &&
+      scope.lyrics_source !== "goal" &&
+      !p.lyrics?.trim()
+    )
       return "Add the lyrics for your song.";
     if ((p.lyrics?.length ?? 0) > 4096)
       return "Keep lyrics within 4096 characters.";

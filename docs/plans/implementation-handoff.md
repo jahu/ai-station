@@ -5,6 +5,24 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — goal-based vocal agents, 2026-10-23
+
+Whole-video agents (#367), whole-avatar agents (#368) and explicit resource-wait
+observations (#369) are merged and deployed. Inspect
+`data/acceptance/media-resource-status-20261023/deployed-verification.json` for the
+current release. Native Runner source is unchanged by #369; the current 27B
+operator runtime remains ready with its saved 46080-token context. Preserve it.
+Real new agent video/avatar GPU acceptance is still pending sufficient RAM;
+previous standalone profile qualification is separate.
+
+The next candidate extends music-agent preparation with reviewed original lyric
+writing, using the same media executor, expiry and publication receipt. It adds
+no model download, host access or schema migration. See
+[the lyric contract](agent-media-generation.md#goal-based-vocal-lyrics--next-implementation-increment).
+Qualify and deploy before claiming availability; ordinary Chat/Music requests
+continue to require supplied words until their separate composition is delivered.
+The local-music section below is historical qualification, not unfinished #361.
+
 ## Active continuation — local music, 2026-10-23
 
 The report execution-time correction below is delivered as #359 (develop

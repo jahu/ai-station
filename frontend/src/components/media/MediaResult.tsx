@@ -220,6 +220,15 @@ export default function MediaResult({
               <p>{spokenText}</p>
             </section>
           )}
+          {kind === "audio" &&
+            audioMode === "music" &&
+            typeof run?.parameters.lyrics === "string" &&
+            run.parameters.lyrics.trim() && (
+              <section className="media-spoken-text" aria-label="Song lyrics">
+                <h3>Song lyrics</h3>
+                <p>{run.parameters.lyrics}</p>
+              </section>
+            )}
           <div className="media-result-actions">
             <Button asChild variant="secondary">
               <Link to={`/library/${result.id}`}>

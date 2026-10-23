@@ -32,8 +32,9 @@ supplied-lyrics GPU/Library acceptance and owned native Stop evidence. The
 combined backend/Runner gate passes 2318 tests; release/image qualification is
 recorded under `data/acceptance/local-music-generation-20261023`. This is an
 optional configured runtime, not a claim that every music duration or quality
-profile is qualified. Persistent-agent media tools and automatic lyric writing
-remain composition work.
+profile is qualified. Persistent-agent media tools are delivered through #362–#368.
+Reviewed goal-based lyric writing is the current composition candidate; ordinary
+Chat/Music still require supplied words.
 
 Current evidence summary, 2026-10-22: general-agent research, local Python/data
 execution and website-building workflows are operational. Public research uses
