@@ -113,6 +113,12 @@ Library, Runs, Memory, System and Settings workspaces. Do not force users throug
 Git configuration for the agent happy path. Existing Projects remain available as
 advanced reusable resources.
 
+Navigation increment: Chat and Agents remain primary. **Advanced** opens existing
+Coding conversations/history and Projects; their saved URLs and command-palette
+entries remain stable. Opening this picker only reads history. Work may optionally
+continue a project task; a project selection is not required for general agent
+requests. This moves presentation, not execution, records or permissions.
+
 Qualify: create an agent from a public URL and a rebuilding instruction, approve
 its source/network/workspace scope, fetch/render permitted source context, build
 in its own workspace, validate and return a working isolated preview plus source

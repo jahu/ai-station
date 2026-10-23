@@ -76,7 +76,9 @@ function mount(fail = false) {
 it("fetches only when opened and selecting a task queues no execution", async () => {
   const state = mount();
   expect(state.requests).toEqual([]);
-  fireEvent.click(screen.getByRole("button", { name: "Choose coding task" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Continue a project task" }),
+  );
   fireEvent.click(
     await screen.findByRole("button", {
       name: "Continue Build site in Website",
@@ -104,7 +106,9 @@ it("fetches only when opened and selecting a task queues no execution", async ()
 
 it("preserves the picker after a stale-selection conflict without granting execution", async () => {
   const state = mount(true);
-  fireEvent.click(screen.getByRole("button", { name: "Choose coding task" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Continue a project task" }),
+  );
   fireEvent.click(
     await screen.findByRole("button", {
       name: "Continue Build site in Website",
@@ -120,7 +124,9 @@ it("preserves the picker after a stale-selection conflict without granting execu
 
 it("explicitly selects General Work and searches task/project names without a Run", async () => {
   const state = mount();
-  fireEvent.click(screen.getByRole("button", { name: "Choose coding task" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Continue a project task" }),
+  );
   await screen.findByRole("button", { name: "Continue Build site in Website" });
   fireEvent.change(
     screen.getByRole("textbox", { name: "Find coding task or project" }),
@@ -140,7 +146,9 @@ it("explicitly selects General Work and searches task/project names without a Ru
 
 it("Escape closes the task picker and returns keyboard focus without selecting", async () => {
   const state = mount();
-  const trigger = screen.getByRole("button", { name: "Choose coding task" });
+  const trigger = screen.getByRole("button", {
+    name: "Continue a project task",
+  });
   fireEvent.click(trigger);
   await screen.findByRole("button", { name: "Continue Build site in Website" });
   const search = screen.getByRole("textbox", {

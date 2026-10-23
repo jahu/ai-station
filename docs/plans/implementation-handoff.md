@@ -19,15 +19,24 @@ incorrectly reported success. Preserve that failed semantic acceptance:
 the original model profile was restored. These green Run states do not qualify
 the report.
 
-Active focused fix: `fix/agent-report-finalization`, owned worktree
-`.tools/fix-agent-report-finalization`. Require final prose; allow one tool-free
-correction within the original deadline, then fail closed on repeated raw
-protocol output. Add cancellation/retention/source-scope regressions, run the
-required backend checks, review the full PR to develop and deploy only its tested
-source. Repeat a real manual report on the same paused own QA definition/query
-without changing its goal or treating its earlier invalid report as corrected.
-No new provider, API key or external email is needed. Qualification evidence:
-`data/acceptance/agent-report-finalization-20261023`.
+Report fix delivered as #356 (develop `b5698e9`), qualified source `4cf0c41`.
+2198 Python tests/nine opt-in skips passed; unchanged frontend qualification was
+inherited with source equality. Guarded backed-up rollout and real execution of
+the same QA definition/query passed: free public search, Polish source-linked
+report with snippet-only uncertainty, preserved source hashes and unchanged
+owned runtime profile. QA remains paused; old invalid reports are immutable.
+Evidence: `data/acceptance/agent-report-finalization-20261023/post-deployment-qualified.json`.
+
+Historical fix workspace: `fix/agent-report-finalization`, owned worktree
+`.tools/fix-agent-report-finalization`. Final prose is required; one tool-free
+correction reuses the original deadline and observations, and repeated raw protocol
+fails without a completed report or report memory. No new provider, key or email.
+
+Next UI increment: `feat/agent-first-navigation`, `.tools/agent-first-navigation`.
+Keep Chat/Agents prominent; move preserved Coding/history and Projects into an
+accessible Advanced workspace picker, keeping URLs and command-palette access.
+Clarify optional project-task continuation in Work. No execution/schema change.
+Qualify keyboard/focus, old links, desktop/phone rendering and frontend gates.
 
 ## Current continuation — general agents and website understanding, 2026-10-22
 

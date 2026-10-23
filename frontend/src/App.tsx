@@ -41,7 +41,8 @@ import { Memory, MemoryDetail } from "./pages/Memory";
 import { Models, ModelDetail } from "./pages/Models";
 import { Agents, AgentDetail } from "./pages/Agents";
 import Coding from "./pages/Coding";
-import CodingSession, { CodingNav } from "./pages/CodingSessions";
+import CodingSession from "./pages/CodingSessions";
+import AdvancedWorkspaces from "./components/AdvancedWorkspaces";
 import Chat from "./pages/Chat";
 import Audio from "./pages/Audio";
 import Avatars from "./pages/Avatars";
@@ -74,11 +75,7 @@ const groups: { label: string; items: [string, string, LucideIcon][] }[] = [
   },
   {
     label: "WORKSPACE",
-    items: [
-      ["/coding", "Coding", Code2],
-      ["/projects", "Projects", FolderGit2],
-      ["/agents", "Agents", Bot],
-    ],
+    items: [["/agents", "Agents", Bot]],
   },
   {
     label: "MANAGE",
@@ -92,6 +89,8 @@ const groups: { label: string; items: [string, string, LucideIcon][] }[] = [
 ];
 const destinations = [
   ...groups.flatMap((g) => g.items),
+  ["/coding", "Coding", Code2],
+  ["/projects", "Projects", FolderGit2],
   ["/system", "System", Terminal],
   ["/settings", "Settings", Settings2],
 ] as [string, string, LucideIcon][];
@@ -159,9 +158,20 @@ export default function App() {
       )?.[1] ?? (location.pathname === "/" ? "Chat" : "Workspace"));
   useEffect(() => {
     const listener = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setNavigationOpen(false);
+      if (
+        event.key === "Escape" &&
+        !event.defaultPrevented &&
+        !document.querySelector('[role="dialog"][data-state="open"]')
+      )
+        setNavigationOpen(false);
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
+        if (
+          document.querySelector(
+            '[role="dialog"][data-state="open"]:not(.command-dialog)',
+          )
+        )
+          return;
         setOpen((value) => !value);
       }
     };
@@ -218,30 +228,26 @@ export default function App() {
           {groups.map((group) => (
             <div className="nav-group" key={group.label}>
               {group.label && <div className="nav-label">{group.label}</div>}
-              {group.items.map(([path, label, Icon]) =>
-                path === "/coding" ? (
-                  <CodingNav key={path} />
-                ) : (
-                  <NavLink
-                    end={path === "/"}
-                    to={path}
-                    key={path}
-                    title={label}
-                    className={({ isActive }) =>
-                      isActive ||
-                      (path === "/chat" && location.pathname === "/")
-                        ? "active"
-                        : undefined
-                    }
-                  >
-                    <Icon size={17} />
-                    {label}
-                    {path === "/" && <span className="nav-marker" />}
-                  </NavLink>
-                ),
-              )}
+              {group.items.map(([path, label, Icon]) => (
+                <NavLink
+                  end={path === "/"}
+                  to={path}
+                  key={path}
+                  title={label}
+                  className={({ isActive }) =>
+                    isActive || (path === "/chat" && location.pathname === "/")
+                      ? "active"
+                      : undefined
+                  }
+                >
+                  <Icon size={17} />
+                  {label}
+                  {path === "/" && <span className="nav-marker" />}
+                </NavLink>
+              ))}
             </div>
           ))}
+          <AdvancedWorkspaces />
         </nav>
         <div className="sidebar-bottom">
           <NavLink to="/system" title="System">
@@ -429,7 +435,11 @@ export default function App() {
                     >
                       <Icon size={18} />
                       {label}
-                      <span>Open workspace ↵</span>
+                      <span>
+                        {path === "/coding" || path === "/projects"
+                          ? "Advanced workspace ↵"
+                          : "Open workspace ↵"}
+                      </span>
                     </Command.Item>
                   ))}
                 </Command.Group>

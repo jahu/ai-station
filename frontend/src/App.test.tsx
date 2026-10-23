@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -32,6 +33,20 @@ function mount(path = "/home") {
       ok: true,
       json: async () => {
         const url = String(path);
+        if (url.includes("/coding/sessions")) {
+          const session = {
+            id: "legacy-session",
+            title: "Legacy website",
+            project_name: "Saved site",
+            status: "succeeded",
+            active_run_id: null,
+            latest_proposal_id: null,
+            runs: [],
+          };
+          return url.includes("/coding/sessions/legacy-session")
+            ? session
+            : [session];
+        }
         if (url.includes("/dashboard")) {
           return {
             active_run_count: 0,
@@ -252,4 +267,106 @@ it("opens the command palette from Control K and focuses the workspace after goi
   expect(document.getElementById("route-announcer")?.textContent).toBe(
     "Home workspace",
   );
+});
+
+it("keeps agents primary and loads preserved coding history only through Advanced", async () => {
+  mount();
+  const main = within(
+    screen.getByRole("navigation", { name: "Main navigation" }),
+  );
+  expect(main.getByRole("link", { name: "Agents" })).toBeTruthy();
+  expect(main.queryByRole("link", { name: "Coding" })).toBeNull();
+  expect(main.queryByRole("link", { name: "Projects" })).toBeNull();
+  expect(
+    vi
+      .mocked(fetch)
+      .mock.calls.some(([url]) => String(url).includes("/coding/sessions")),
+  ).toBe(false);
+  const trigger = main.getByRole("button", { name: "Advanced workspaces" });
+  trigger.focus();
+  fireEvent.click(trigger);
+  const dialog = within(
+    await screen.findByRole("dialog", { name: "Advanced workspaces" }),
+  );
+  expect(
+    dialog.getByRole("link", { name: "Coding" }).getAttribute("href"),
+  ).toBe("/coding");
+  expect(
+    dialog.getByRole("link", { name: "Projects" }).getAttribute("href"),
+  ).toBe("/projects");
+  expect(
+    (await dialog.findByRole("link", { name: "Legacy website" })).getAttribute(
+      "href",
+    ),
+  ).toBe("/coding/legacy-session");
+  fireEvent.keyDown(document, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(document.activeElement).toBe(trigger);
+});
+
+it("opens a preserved coding session from Advanced and focuses its workspace", async () => {
+  mount();
+  fireEvent.click(screen.getByRole("button", { name: "Advanced workspaces" }));
+  fireEvent.click(await screen.findByRole("link", { name: "Legacy website" }));
+  await screen.findByRole("heading", { name: "Legacy website" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() =>
+    expect(document.activeElement).toBe(screen.getByRole("main")),
+  );
+  expect(document.title).toBe("Coding · AI Station");
+});
+
+it("keeps direct project URLs and command-palette access to advanced workspaces", async () => {
+  mount("/projects");
+  await screen.findByRole("heading", { name: "Projects" });
+  expect(
+    screen.getByRole("button", { name: "Advanced workspaces" }).className,
+  ).toContain("active");
+  fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+  await screen.findByRole("dialog", { name: "Command palette" });
+  expect(
+    screen.getByRole("option", { name: /Coding.*Advanced workspace/ }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("option", { name: /Projects.*Advanced workspace/ }),
+  ).toBeTruthy();
+});
+
+it("closing Advanced preserves expanded Chat navigation and returns focus", async () => {
+  mount("/chat");
+  fireEvent.click(screen.getByRole("button", { name: "Expand navigation" }));
+  const trigger = screen.getByRole("button", { name: "Advanced workspaces" });
+  trigger.focus();
+  fireEvent.click(trigger);
+  await screen.findByRole("dialog", { name: "Advanced workspaces" });
+  fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+  expect(screen.queryByRole("dialog", { name: "Command palette" })).toBeNull();
+  expect(
+    screen.getByRole("dialog", { name: "Advanced workspaces" }),
+  ).toBeTruthy();
+  fireEvent.keyDown(document, { key: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(
+    screen
+      .getByRole("button", { name: "Collapse navigation" })
+      .getAttribute("aria-expanded"),
+  ).toBe("true");
+  expect(document.activeElement).toBe(trigger);
+});
+
+it("keeps Chat navigation open when a dialog already consumed Escape", () => {
+  mount("/chat");
+  fireEvent.click(screen.getByRole("button", { name: "Expand navigation" }));
+  const event = new KeyboardEvent("keydown", {
+    key: "Escape",
+    bubbles: true,
+    cancelable: true,
+  });
+  event.preventDefault();
+  fireEvent(document, event);
+  expect(
+    screen
+      .getByRole("button", { name: "Collapse navigation" })
+      .getAttribute("aria-expanded"),
+  ).toBe("true");
 });
