@@ -6892,3 +6892,13 @@ section:has(> .memory-grid) > .dashboard-note {
     display: inline;
   }
 }
+
+.agent-search-sources {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.agent-search-sources > .muted {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 12px 0;
+}

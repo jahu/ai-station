@@ -120,6 +120,8 @@ class AgentSettings(BaseModel):
     @model_validator(mode="after")
     def validate_definition(self):
         self.tools = list(dict.fromkeys(self.tools))
+        if "search_pages" in self.tools and "web_search" not in self.tools:
+            raise ValueError("Read search sources requires web_search and its reviewed public query")
         if self.market is not None and self.tools != ["market_watch"]:
             raise ValueError("Market policy belongs only to a deterministic market watch agent")
         if "market_watch" in self.tools:

@@ -32,11 +32,24 @@ Historical fix workspace: `fix/agent-report-finalization`, owned worktree
 correction reuses the original deadline and observations, and repeated raw protocol
 fails without a completed report or report memory. No new provider, key or email.
 
-Next UI increment: `feat/agent-first-navigation`, `.tools/agent-first-navigation`.
-Keep Chat/Agents prominent; move preserved Coding/history and Projects into an
-accessible Advanced workspace picker, keeping URLs and command-palette access.
-Clarify optional project-task continuation in Work. No execution/schema change.
-Qualify keyboard/focus, old links, desktop/phone rendering and frontend gates.
+Agent-first navigation shipped as #357 (develop `5b42b8d`, source `fc17368`),
+with 575 UI tests and compiled desktop/phone focus/routes/visual qualification.
+Coding/history and Projects remain under Advanced, with old URLs and palette
+access. LAN/local asset hashes, authentication, data and native runtime were
+verified after backed-up rollout. Evidence:
+`data/acceptance/agent-first-navigation-20261023/post-deployment-qualified.json`.
+
+Next general-agent capability: `feat/agent-search-source-pages`, owned worktree
+`.tools/agent-search-source-pages`. Optional **Read search sources** composes
+public search → at most three source-bound page reads → report. Only actual
+same-workflow hash-verified search results can supply targets; no model-selected
+URL, recursive page link, credential or JavaScript execution is granted.
+[Design and qualification](../agent-search-pages.md) cover individual source
+failures, deadline/Stop, retention, result provenance and reviewed disabled drafts.
+Finish full backend/Runner/UI checks, compiled desktop/phone source-result
+inspection and PR review before deployment; then qualify real free source reads
+with the same installed local model and pause the own QA agent. No key or new
+provider/model download is required. Broad platform completion remains open.
 
 ## Current continuation — general agents and website understanding, 2026-10-22
 

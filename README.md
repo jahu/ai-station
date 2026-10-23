@@ -23,6 +23,8 @@ and return a verified answer, table and CSV download. Price-watch agents can use
 research uses public search or reviewed pages and the selected local model,
 without a financial-data account. Review the public query or URL before enabling;
 research reports do not promise exact price-threshold alerts or email delivery.
+Optional [Read search sources](docs/agent-search-pages.md) reads up to three public
+result pages from the agent's own reviewed search, preserving source provenance.
 Finnhub accounts are optional advanced configuration for deterministic stock
 alerts; only that integration requires a user-owned key. See
 [the plan](docs/plans/stock-price-agents.md). No real Finnhub account or external
