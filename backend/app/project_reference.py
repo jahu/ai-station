@@ -23,6 +23,8 @@ def resolve_project_reference(session, body, mode):
     keep their own contracts. Names come from this turn, never quoted tool output
     or history. The returned revision is rechecked by normal coding dispatch.
     """
+    if body.data is not None:
+        return body, None
     if (
         mode not in {"work", "orchestrator"}
         or body.action != "auto"

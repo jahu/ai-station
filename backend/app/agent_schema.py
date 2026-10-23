@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, 
 from app.agent_coding_policy import CODING_TOOLS, coding_provider, external_coding
 from app.agent_media_schema import AgentMediaScope, fixed_media_only
 from app.agent_tools import AGENT_TOOLS, agent_tool
+from app.data_schema import AgentDataScope
 from app.db import utcnow
 from app.http_fetch import reviewed_urls
 from app.market_schema import MarketScope
@@ -58,19 +59,6 @@ class AgentGithubScope(BaseModel):
         if value.split("/")[1] in {".", ".."} or value.endswith(".git"):
             raise ValueError("Choose a canonical GitHub repository")
         return value
-
-
-class AgentDataScope(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    input_artifact_ids: list[UUID] = Field(min_length=1, max_length=8)
-    max_repairs: int = Field(default=1, ge=0, le=2, strict=True)
-
-    @field_validator("input_artifact_ids")
-    @classmethod
-    def unique_inputs(cls, values):
-        if len(set(values)) != len(values):
-            raise ValueError("Data inputs must be unique")
-        return values
 
 
 class AgentWorkspacePolicy(BaseModel):

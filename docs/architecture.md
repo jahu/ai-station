@@ -9,6 +9,13 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+[Conversation CSV/Excel analysis](plans/conversation-data.md) composes the existing
+project factory, data workflow, local code generation and offline Python executor
+on one conversation Task. A pure definition configures the shared pipeline without
+creating a persistent Agent. Frozen user/file scope, private workspace ownership
+and one absolute deadline bind every child. The results projection retains
+verified repair history without exposing the internal project as a Coding action.
+
 [Spoken agent output](plans/agent-speech-generation.md) reuses the existing
 Chatterbox executor and reviewed Library voice references.
 Shared scopes, prepared text and owned deadlines use the same media-agent chain;

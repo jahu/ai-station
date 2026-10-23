@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from app.assistant_github import GithubScope
 from app.chat_providers import BUILTIN_KEY, chat_permissions, completion_stream, snapshot_provider
+from app.conversation_data_schema import DataScope
 from app.conversation_music import MusicScope
 from app.db import utcnow
 from app.events import append_event
@@ -40,6 +41,7 @@ Action = Literal[
     "image.generate_video",
     "audio.speech",
     "audio.music",
+    "data.analyze",
     "audio.transcribe",
     "audio.analyze",
     "avatar.animate",
@@ -167,6 +169,7 @@ class AssistantInputs(BaseModel):
         "image.generate_video",
         "audio.speech",
         "audio.music",
+        "data.analyze",
         "audio.transcribe",
         "audio.analyze",
         "avatar.animate",
@@ -188,6 +191,7 @@ class AssistantInputs(BaseModel):
     continuation: ContinuationScope | None = None
     media: VideoScope | None = None
     music: MusicScope | None = None
+    data: DataScope | None = None
     github: GithubScope | None = None
     coding: CodingScope | None = None
     new_project: ProjectBuildScope | None = None
@@ -209,6 +213,8 @@ class Plan(BaseModel):
 
 def assistant_needs_provider(body):
     plan = explicit_plan(body.model_dump(mode="json", exclude={"attachments"}))
+    if plan and plan.action == "data.analyze":
+        return False  # The tool selects its own fitting local model; never send data to the Chat provider.
     if plan and plan.action == "audio.music":
         from app.conversation_music import settings
 
@@ -297,7 +303,9 @@ def planner_context(session, conversation, user):
 
 def enqueue_assistant(session, conversation, user, body, *, commit=True):
     from app.assistant_github import validate_scope
+    from app.conversation_data import prepare_turn as prepare_data_turn
 
+    body = prepare_data_turn(body)
     validate_scope(session, body)
     if body.media and (
         body.action not in {"auto", "video.generate"}
@@ -545,6 +553,17 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         if selected_plan and selected_plan.action == "page.describe"
         else None
     )
+    data_inputs = None
+    data_permissions = None
+    if body.data is not None:
+        from app.data_agents import REQUIRED, freeze_inputs
+
+        data_permissions = list(REQUIRED)
+
+        try:
+            data_inputs = freeze_inputs(session, body.data.files())
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
     needs_provider = assistant_needs_provider(body)
     snapshot = snapshot_provider(session, conversation) if needs_provider else {}
     task = create_task(
@@ -585,10 +604,13 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
                 if body.audio_artifact_id
                 else {}
             ),
+            **({"data_inputs": data_inputs} if data_inputs is not None else {}),
             "planner_context": planner_context(session, conversation, user),
             **snapshot,
         },
-        permissions=chat_permissions(
+        permissions=data_permissions
+        if body.data is not None
+        else chat_permissions(
             snapshot,
             ([] if getattr(body, "execution_mode", None) == "chat" else ["manage_agents"])
             + (["network_read", "github_read"] if body.github else [])
@@ -617,6 +639,12 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
     if explicit_plan(run.parameters) is None:
         prepare_consumer(session, run)
     user.run_id = run.id
+    if body.data is not None:
+        user.metadata_json = {
+            **user.metadata_json,
+            "data_scope": body.data.model_dump(mode="json"),
+            "data_request_run_id": run.id,
+        }
     user.metadata_json = {
         **user.metadata_json,
         "images": images,
@@ -646,6 +674,8 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
 
 
 def explicit_plan(params):
+    if params.get("data") is not None:
+        return Plan(action="data.analyze", reason="Analyze the selected CSV/Excel files locally.")
     from app.chat_page_design import requested_design_page
 
     action = params["action"]
@@ -938,6 +968,16 @@ class AssistantExecutor:
                 action="clarify",
                 reason="Web search can inform a conversation answer or a new image. Turn it off for this action, or ask a separate research question first.",
             )
+        if plan and plan.action == "data.analyze":
+            if not run.parameters.get("data") or run.parameters.get("action") not in {"auto", "data.analyze"}:
+                plan = Plan(
+                    action="clarify", reason="Choose inspected CSV/Excel files for local data analysis."
+                )
+            else:
+                from app.data_agents import require_runtime, verify_inputs
+
+                require_runtime()
+                verify_inputs(session, run.parameters.get("data_inputs"))
         prepared_song = None
         if plan and plan.action == "audio.music":
             from app.conversation_music import settings
@@ -1073,6 +1113,11 @@ class AssistantExecutor:
                         child = create_video_run(session, request, task=run.task, parent_run_id=run.id)
                         run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                         message.content = "Generating your scene locally with Wan 2.2. The video will appear here and in Library."
+        elif plan.action == "data.analyze":
+            from app.conversation_data import publish_workspace
+
+            child = publish_workspace(session, run)
+            message.content = "Analyzing the selected data locally. A private workspace, verified table and CSV result will appear here. Your original files stay unchanged."
         elif plan.action == "audio.music":
             from app.conversation_music import caption as music_caption
             from app.conversation_music import settings as music_settings
@@ -1582,6 +1627,10 @@ def task_results(session, message, run):
             and replacement.parent_run_id == step.id
         ):
             superseded.add(step.id)
+    from app.conversation_data import result_projection
+
+    data, repaired = result_projection(session, run, steps)
+    superseded.update(repaired)
     media = None
     if run.task.metadata_json.get("media_plan"):
         from app.media_jobs import job_view
@@ -1589,6 +1638,7 @@ def task_results(session, message, run):
         media = job_view(session, run.task)
     return {
         **({"media_job": media} if media else {}),
+        **data,
         "steps": [
             {
                 "id": step.id,
@@ -1617,7 +1667,9 @@ def task_results(session, message, run):
             and step.status == "succeeded"
             and step.metadata_json.get("github_snapshot")
         ],
-        "coding_runs": [run_dict(step) for step in steps if step.executor_type in CODING_REVIEW_EXECUTORS],
+        "coding_runs": [
+            run_dict(step) for step in steps if not data and step.executor_type in CODING_REVIEW_EXECUTORS
+        ],
         "created_projects": [
             {
                 "id": project.id,
@@ -1627,6 +1679,7 @@ def task_results(session, message, run):
             }
             for step in steps
             if step.executor_type == "project_setup"
+            and not step.parameters.get("conversation_data_workspace")
             and step.status == "succeeded"
             and step.project_id == step.parameters.get("project_id")
             and (project := session.get(Project, step.project_id)) is not None

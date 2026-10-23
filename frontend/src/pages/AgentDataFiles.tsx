@@ -1,8 +1,9 @@
-import { useId, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { FileSpreadsheet, Upload, X } from "lucide-react";
-import { api, type Artifact } from "../api";
+import { useDataInputs } from "./useDataInputs";
+import { api, type Artifact, type Run } from "../api";
 import { ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import LibraryPicker from "../components/media/LibraryPicker";
@@ -12,10 +13,14 @@ export default function AgentDataFiles({
   value,
   disabled,
   onChange,
+  showInspection = false,
+  onUploading,
 }: {
   value?: DataScope | null;
   disabled: boolean;
   onChange: (value: DataScope) => void;
+  showInspection?: boolean;
+  onUploading?: (busy: boolean) => void;
 }) {
   const id = useId();
   const file = useRef<HTMLInputElement>(null);
@@ -26,6 +31,18 @@ export default function AgentDataFiles({
       queryKey: ["artifact", id],
       queryFn: () => api<Artifact>(`/artifacts/${id}`),
     })),
+  });
+  const inspection = useDataInputs(showInspection ? value : null);
+  const inspect = useMutation({
+    mutationFn: (artifact_id: string) =>
+      api<Run>("/data/inspections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ artifact_id }),
+      }),
+    onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["artifact"] });
+    },
   });
   const updateIds = (next: string[]) =>
     onChange({
@@ -61,7 +78,10 @@ export default function AgentDataFiles({
       void cache.invalidateQueries({ queryKey: ["library"] });
     },
   });
-  const busy = disabled || upload.isPending;
+  useEffect(() => {
+    onUploading?.(upload.isPending);
+  }, [upload.isPending, onUploading]);
+  const busy = disabled || upload.isPending || inspect.isPending;
   return (
     <section className="agent-data-files" aria-labelledby={id}>
       <h3 id={id}>Data to analyse</h3>
@@ -103,7 +123,13 @@ export default function AgentDataFiles({
         />
       </div>
       <ErrorNotice
-        error={upload.error ?? files.find((item) => item.error)?.error ?? null}
+        error={
+          upload.error ??
+          inspect.error ??
+          files.find((item) => item.error)?.error ??
+          inspection.states.find((item) => item.error)?.error ??
+          null
+        }
       />
       {ids.length ? (
         <ul className="agent-data-inputs">
@@ -114,7 +140,28 @@ export default function AgentDataFiles({
                 {files[index]?.data?.title ||
                   files[index]?.data?.original_filename ||
                   "Loading data file…"}
+                {showInspection && (
+                  <small className="muted" role="status">
+                    {inspection.states[index]?.label}
+                  </small>
+                )}
               </span>
+              {showInspection &&
+                inspection.states[index]?.file &&
+                (!inspection.states[index]?.file?.metadata
+                  ?.data_inspection_run_id ||
+                  ["failed", "canceled", "interrupted"].includes(
+                    inspection.states[index]?.run?.status ?? "",
+                  )) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={busy}
+                    onClick={() => inspect.mutate(aid)}
+                  >
+                    Inspect file
+                  </Button>
+                )}
               <Link
                 to={`/library/${aid}`}
                 aria-label={`Preview data file ${index + 1}`}
@@ -155,8 +202,8 @@ export default function AgentDataFiles({
         </select>
       </label>
       <p className="muted">
-        Fixes apply only to confirmed code or output errors, within the agent’s
-        time limit.
+        Fixes apply only to confirmed code or output errors, within the
+        execution time limit.
       </p>
     </section>
   );

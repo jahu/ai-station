@@ -1,3 +1,6 @@
+import ConversationDataControls from "./ConversationDataControls";
+import AgentDataResult from "./AgentDataResult";
+import type { ConversationDataScope } from "./useDataInputs";
 import RecordingButton from "../components/media/RecordingButton";
 import MusicScope from "./MusicScope";
 import type { ConversationMusicOptions as MusicScopeOptions } from "./music-scope";
@@ -75,6 +78,7 @@ export type LoadScope = {
 export type StopScope = { instance_id: string };
 export type GithubScope = { connector_id: string; expected_updated_at: string };
 export type AssistantOptions = {
+  data?: ConversationDataScope | null;
   music?: MusicScopeOptions | null;
   github?: GithubScope | null;
   action: string;
@@ -103,6 +107,8 @@ type TaskStep = {
   location: string;
 };
 export type ActionResult = {
+  data_runs?: Run[];
+  data_model?: string | null;
   github_snapshots?: GithubSnapshot[];
   transcriptions?: Run[];
   media_job?: MediaJob;
@@ -203,17 +209,31 @@ export function AssistantResults({
         <strong>Task</strong>
         {result.task_status && <Badge status={result.task_status} />}
       </div>
-      {result.steps.map((step) => (
-        <div className="content-panel" key={step.id}>
-          <Link to={`/runs/${step.id}`}>{step.capability}</Link>{" "}
-          <Badge status={step.status} />{" "}
-          <span className="chip">{step.location.toUpperCase()}</span>
-          {step.error_message && <p className="notice">{step.error_message}</p>}
-          {imageRetryable(step, result.steps ?? []) && (
-            <ImageStepRetry step={step} busy={busy} onQueued={onQueued} />
-          )}
-        </div>
-      ))}
+      {result.data_runs?.length ? (
+        <>
+          <AgentDataResult runs={result.data_runs} />
+          <p className="muted">
+            LOCAL · {result.data_model || "Automatic local model"} · Originals
+            unchanged
+          </p>
+        </>
+      ) : null}
+      <details open={!result.data_runs?.length}>
+        <summary>Execution details</summary>
+        {result.steps.map((step) => (
+          <div className="content-panel" key={step.id}>
+            <Link to={`/runs/${step.id}`}>{step.capability}</Link>{" "}
+            <Badge status={step.status} />{" "}
+            <span className="chip">{step.location.toUpperCase()}</span>
+            {step.error_message && (
+              <p className="notice">{step.error_message}</p>
+            )}
+            {imageRetryable(step, result.steps ?? []) && (
+              <ImageStepRetry step={step} busy={busy} onQueued={onQueued} />
+            )}
+          </div>
+        ))}
+      </details>
       {result.transcriptions?.map((run) => (
         <TranscriptResult key={run.id} run={run} />
       ))}
@@ -286,6 +306,7 @@ export function AssistantResults({
         {result.artifacts
           ?.filter(
             (artifact) =>
+              !result.data_runs?.length &&
               artifact.metadata?.song_preparation !== true &&
               !result.transcriptions?.some(
                 (run) => run.id === artifact.run_id,
@@ -725,6 +746,26 @@ export default function AssistantActions({
     }
   }
   function resetAction(action: string) {
+    if (action === "data.analyze") {
+      onChange({
+        action,
+        data: {
+          input_artifact_ids: [],
+          max_repairs: 1,
+          model: "auto",
+          maximum_runtime: 600,
+        },
+        image_artifact_ids: [],
+        audio_artifact_id: null,
+        coding: null,
+        new_project: null,
+        commit: null,
+        publish: null,
+        load: null,
+        stop: null,
+      });
+      return;
+    }
     if (action === "audio.music") {
       onChange({
         action,
@@ -747,6 +788,7 @@ export default function AssistantActions({
     if (["audio.transcribe", "audio.analyze"].includes(action)) {
       onChange({
         ...value,
+        data: null,
         action,
         image_artifact_ids: [],
         coding: null,
@@ -786,6 +828,7 @@ export default function AssistantActions({
     if (action === "image.describe") {
       onChange({
         ...value,
+        data: null,
         github: undefined,
         music: null,
         action,
@@ -893,6 +936,7 @@ export default function AssistantActions({
     const selected = parseFilePaths(paths);
     onChange({
       ...value,
+      data: null,
       github: undefined,
       action,
       media: action === "video.generate" ? value.media : null,
@@ -967,6 +1011,14 @@ export default function AssistantActions({
             onChange={resetAction}
           />
         </div>
+        {value.action === "data.analyze" && (
+          <ConversationDataControls
+            value={value.data}
+            disabled={busy}
+            onUploading={onUploading}
+            onChange={(data) => onChange({ ...value, data })}
+          />
+        )}
         {value.audio_artifact_id &&
           value.image_artifact_ids.length === 1 &&
           ["auto", "avatar.animate"].includes(value.action) && (
@@ -1011,11 +1063,21 @@ export default function AssistantActions({
           !value.action.startsWith("runtime.") &&
           value.action !== "system.inspect" &&
           value.action !== "github.inspect" &&
+          value.action !== "data.analyze" &&
           value.action !== "audio.music" &&
           value.action !== "image.generate_video" &&
           value.action !== "project.create" &&
           value.action !== "project.create_code" && (
             <div className="assistant-attachment-toolbar">
+              {["auto", "chat"].includes(value.action) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => resetAction("data.analyze")}
+                >
+                  CSV / Excel
+                </Button>
+              )}
               {!["audio.transcribe", "audio.analyze"].includes(
                 value.action,
               ) && (
@@ -1132,6 +1194,7 @@ export default function AssistantActions({
           value.action !== "image.generate_video" &&
           value.action !== "project.create" &&
           value.action !== "project.create_code" &&
+          value.action !== "data.analyze" &&
           value.action !== "audio.music" &&
           value.action !== "github.inspect") ||
           value.image_artifact_ids.length > 0) && (

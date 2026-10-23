@@ -72,6 +72,14 @@ alerts; only that integration requires a user-owned key. See
 inbox delivery has been tested.
 See [data-agent setup and verification](docs/python-data-agents.md).
 
+CSV/Excel analysis is also being integrated directly into Chat and Work. Choose
+**CSV / Excel** in the attachment tools, select files and wait for **Ready for
+analysis**, then ask your question. The tool uses a fitting local llama.cpp model
+and an offline Python workspace, even when the conversation selects an external
+provider. The result includes an answer, table, CSV download and inspectable Python
+source; no persistent agent or manually configured repository is required.
+See [the delivery and verification plan](docs/plans/conversation-data.md).
+
 **Conversation entry:** type immediately at `/` or `/chat`; the first Send creates
 the conversation. Chat supports replies and media tools; Work adds scoped project,
 coding and agent actions. See [first-send contracts](docs/first-send.md).

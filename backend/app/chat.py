@@ -554,8 +554,10 @@ def submit_message(conversation_id, body, session, *, commit=True):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
     mode = turn_execution_mode(row, body)
+    from app.conversation_data import prepare_turn as prepare_data_turn
     from app.conversation_music import prepare_turn
 
+    body = prepare_data_turn(body)
     if mode in {"chat", "work", "orchestrator"}:
         body = prepare_turn(body)
     from app.conversation_media import resolve_result_reference
@@ -682,6 +684,8 @@ def accept_turn(body: TurnBody, session: DB):
         payload.pop("media")
     if body.music is None:
         payload.pop("music")
+    if body.data is None:
+        payload.pop("data")
     if body.github is None:
         payload.pop("github")
     if body.project_defaults is None:

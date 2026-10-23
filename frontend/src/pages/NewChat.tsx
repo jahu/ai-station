@@ -1,3 +1,4 @@
+import { useDataInputs } from "./useDataInputs";
 import { useChatDraft, chatRequestId, clearChatRequest } from "./chat-draft";
 import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -106,6 +107,8 @@ export default function NewChat({
   const draft = draftState.value,
     setDraft = draftState.update;
   const [options, setOptions] = useState(emptyOptions);
+  const dataInputs = useDataInputs(options.data);
+  const dataReady = options.action !== "data.analyze" || dataInputs.ready;
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const web = useWebSearch(mode === "chat" && !attachments.length);
@@ -172,7 +175,7 @@ export default function NewChat({
         content: draft.trim(),
         attachments,
         ...options,
-        ...(mode === "work"
+        ...(mode === "work" && !options.data
           ? {
               project_defaults: {
                 auto_install_dependencies: true,
@@ -225,6 +228,7 @@ export default function NewChat({
     preferences.isPending ||
     (!!workTaskId && workspace.isPending);
   const canSend =
+    dataReady &&
     musicScopeReady(options, draft) &&
     !!draft.trim() &&
     !!model &&
@@ -407,6 +411,7 @@ export default function NewChat({
                 options.action !== "audio.transcribe" &&
                 options.action !== "audio.analyze" &&
                 options.action !== "audio.music" &&
+                options.action !== "data.analyze" &&
                 !options.image_artifact_ids.length &&
                 !options.audio_artifact_id && (
                   <TextAttachments

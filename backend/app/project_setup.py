@@ -83,6 +83,13 @@ class ProjectSetupExecutor(NativeJobExecutor):
 
             parent, definition, _ = reviewed_workspace(session, run)
             coding_deadline(parent, definition)
+        if "conversation_data_workspace" in run.parameters and run.status not in {
+            "cancel_requested",
+            "canceled",
+        }:
+            from app.conversation_data import reviewed_workspace
+
+            reviewed_workspace(session, run)
         return super().execute(session, run)
 
     def payload(self, run):
@@ -127,6 +134,12 @@ class ProjectSetupExecutor(NativeJobExecutor):
                 run_id=run.id,
                 metadata={"project_id": project.id},
             )
+        if "conversation_data_workspace" in run.parameters:
+            from app.conversation_data import finish_workspace, reviewed_workspace
+
+            data_context = reviewed_workspace(session, run)
+            run.metadata_json = {**run.metadata_json, "project": report}
+            return finish_workspace(session, run, project, data_context)
         if workspace is not None:
             from app.agent_workspace import finish_workspace
 
