@@ -12,6 +12,19 @@ files. Existing source, worktree, input hashes, offline container, resource limi
 deadline, repair, cancellation and recovery contracts remain authoritative.
 No arbitrary paths, extra input access, packages or network are model-selectable.
 
+Observed real-model correction: #384's local model wrote all three requested files
+but omitted their declaration. The two mandatory table files passed, so optional
+files were discarded by the container's expected-output contract. Preserve that
+failed acceptance under `data/acceptance/data-output-files-20261023`; it does not
+qualify model-driven exports. The controller now derives mandatory outputs from
+direct current-user creation instructions (including natural chart/Excel/report
+requests), adds them to the model's runtime contract and freezes their union with
+any optional declaration. Omitting a name can no longer drop a required file.
+A missing actual file uses existing bounded Python/result repair. Unavailable
+image support fails before inference. Worker validation also requires the frozen
+output set to retain the original goal's mandatory files. Quoted/negative requests
+and ordinary analysis of Excel inputs do not themselves require exports.
+
 The optional CPU Python image includes a pinned Matplotlib with the noninteractive
 Agg backend and temporary configuration/cache. An explicit installed-image feature
 label is observed through the existing Runner capability endpoint. Legacy images

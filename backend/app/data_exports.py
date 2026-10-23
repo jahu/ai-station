@@ -36,6 +36,42 @@ class OutputFiles(BaseModel):
         return value
 
 
+def required_exports(goal):
+    """Require current, direct output requests without trusting a model manifest."""
+    from app.chat_pages import _instruction_text
+
+    text = re.sub(r"\s+", " ", _instruction_text(goal)).casefold().strip()
+    writer = r"(?:create|make|generate|prepare|save|export|write|return|draw|plot|stw[oó]rz|utw[oó]rz|wygeneruj|przygotuj|zapisz|wyeksportuj|eksportuj|narysuj|daj|zwr[oó][ćc])"
+    if re.search(r"^(?:do not|don't|nie)\s+" + writer + r"\b", text):
+        return []
+    modifiers = r"(?:(?:a|an|the|new|mi|nowy|nową|nowe|plik|file|result|wynik|results|dane|do|to|as|jako|and|oraz|i|w|formacie|format|bar|line)\s+){0,6}"
+    has_writer = bool(re.search(r"\b" + writer + r"\b", text))
+    result = []
+    for name, target in [
+        ("chart.png", r"(?:charts?|plots?|wykres\w*)"),
+        ("result.xlsx", r"(?:excel\w*|xlsx|workbooks?)"),
+        ("report.txt", r"(?:text reports?|raport\w* tekstow\w*)"),
+    ]:
+        negative = (
+            r"\b(?:without|no|do not|don't|nie|bez)\s+(?:(?:"
+            + writer
+            + r"|tw[oó]rz|rysuj)\s+)?"
+            + target
+            + r"\b"
+        )
+        if re.search(negative, text):
+            continue
+        if (
+            re.search(r"\b" + writer + r"\s+" + modifiers + target + r"\b", text)
+            or has_writer
+            and re.search(r"\b(?:and|oraz|i)\s+" + modifiers + target + r"\b", text)
+            or has_writer
+            and re.search(r"(?<![\w/])" + re.escape(name) + r"\b", text)
+        ):
+            result.append(name)
+    return result
+
+
 def png(data):
     with Image.open(io.BytesIO(data)) as image:
         if (

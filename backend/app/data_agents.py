@@ -18,7 +18,7 @@ from sqlalchemy import select
 from app.agent_schema import AgentDataScope, AgentSettings
 from app.agent_tools import effective_permissions
 from app.artifacts import register_file
-from app.data_exports import FORMATS, OutputFiles
+from app.data_exports import FORMATS, OutputFiles, required_exports
 from app.db import utcnow
 from app.events import append_event
 from app.local_provider import LocalChatProvider, model_endpoint
@@ -334,6 +334,7 @@ chart.png: real chart from the full data; use matplotlib with Agg, savefig, tigh
 result.xlsx: an openpyxl workbook with literal values, clear headings and sensible column widths. No formulas, links, macros, named expressions or embedded objects.
 report.txt: a UTF-8 report. Never declare or create any other export filename.
 Optional exports accompany the mandatory result.csv and result.json, not replace them. Do not claim a file was created unless you declare it and write it.
+Always create EVERY filename in runtime.required_outputs. The controller collects requested exports even if you omit them from the outputs declaration.
 AI_STATION_INPUTS is a JSON STRING containing a direct filename-to-path dictionary, NOT a file, directory, list, or an object with an "inputs" key.
 Start with: inputs = json.loads(os.environ["AI_STATION_INPUTS"])
 Then use: path = inputs[input_name] and open(path), NOT open(os.environ["AI_STATION_INPUTS"]).
@@ -395,6 +396,11 @@ class DataGenerateExecutor:
             skills = skill_prompt(verify_snapshots(workflow.parameters.get("skill_snapshots") or []))
             capability = RunnerClient().request("GET", "/v1/python/capabilities")
             available_outputs = list(FORMATS) if capability.get("data_exports") == 1 else []
+            required = required_exports(definition.goal)
+            if any(name not in available_outputs for name in required):
+                raise ValueError(
+                    "Rebuild the configured AI Station Python image to enable requested file exports"
+                )
             request = json.dumps(
                 {
                     "goal": definition.goal,
@@ -405,7 +411,7 @@ class DataGenerateExecutor:
                             item["input_name"]: "/inputs/" + item["input_name"] for item in previews
                         },
                         "output_dir": "/outputs",
-                        "required_outputs": OUTPUTS,
+                        "required_outputs": OUTPUTS + required,
                         "available_optional_outputs": available_outputs,
                     },
                     "repair": run.parameters.get("repair"),
@@ -427,6 +433,7 @@ class DataGenerateExecutor:
             if LocalAgentExecutor._canceled(session, run):
                 return "done"
             proposal = Script.model_validate_json(text)
+            output_files = [name for name in FORMATS if name in required or name in proposal.outputs]
             script = proposal.script
             if any(name not in available_outputs for name in proposal.outputs):
                 raise ValueError(
@@ -452,8 +459,17 @@ class DataGenerateExecutor:
             run.metadata_json = {
                 **run.metadata_json,
                 "script_artifact_id": artifact.id,
-                "data_output_files": proposal.outputs,
+                "data_output_files": output_files,
+                "required_data_output_files": required,
+                "declared_data_output_files": proposal.outputs,
             }
+            if output_files:
+                append_event(
+                    session,
+                    run.id,
+                    "data.outputs.selected",
+                    {"required": required, "declared": proposal.outputs, "collected": output_files},
+                )
             # Source stays an immutable artifact until the typed Python dispatch
             # snapshots it and records its fixed Run-owned worktree entrypoint.
             session.commit()
@@ -473,7 +489,7 @@ class DataGenerateExecutor:
                         "script_sha256": hashlib.sha256(script.encode()).hexdigest(),
                         "script_artifact_id": artifact.id,
                         "input_artifact_ids": [x["artifact_id"] for x in scope["data_inputs"]],
-                        "expected_outputs": OUTPUTS + proposal.outputs,
+                        "expected_outputs": OUTPUTS + output_files,
                         "maximum_runtime": min(120, remaining),
                     },
                     permissions=run.effective_permissions,
@@ -784,6 +800,9 @@ def validate_python_dispatch(session, run):
         or run.parameters.get("inputs") != inputs
         or run.parameters.get("expected_outputs")
         != OUTPUTS + OutputFiles(outputs=generation.metadata_json.get("data_output_files", [])).outputs
+        or not set(required_exports(definition.goal))
+        <= set(generation.metadata_json.get("data_output_files", []))
+        or generation.metadata_json.get("required_data_output_files", []) != required_exports(definition.goal)
     ):
         raise ValueError("Python dispatch changed from its exact reviewed source and input scope")
     return generation

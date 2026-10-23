@@ -7,6 +7,18 @@ slices. The live release/image/backup record is
 
 ## Current continuation — generated analysis files, 2026-10-23
 
+Real export acceptance found a material #384 issue: the local model wrote PNG,
+XLSX and text but omitted their output declaration, so only the required table/CSV
+were collected. The failed evidence remains under
+`data/acceptance/data-output-files-20261023/production-smoke-result.json`; the
+operator model preset was restored. Do not count that attempt as qualified.
+The fix candidate `.tools/required-data-exports` derives and freezes required
+files from current creation instructions, independently of model declarations.
+Its evidence is under `data/acceptance/required-data-exports-20261023`.
+No new Python-image/native/UI changes are needed for this correction; retain
+their exact-source qualification, run the full backend gate and repeat real
+normal-worker chart/Excel/report acceptance after guarded rollout.
+
 Agent timezone schedules (#381), interval parsing (#382) and natural CSV/XLSX
 follow-ups (#383) are merged and deployed. The latter passed 2679 Python/Runner
 tests, nine opt-in skips, 658 UI tests and compiled desktop/mobile checks. Actual
