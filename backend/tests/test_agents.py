@@ -948,10 +948,13 @@ def test_raw_report_requests_get_one_tool_free_correction(research, monkeypatch,
     assert run["status"] == "succeeded", run
     assert calls == ["llama.cpp latest updates news"]  # No model-invented search was dispatched.
     assert len(received) == 2 and deadlines[0] == deadlines[1]
+    execution = run["parameters"]["report_execution"]
+    assert all(execution["context_prepared_at"] in frame["messages"][0]["content"] for frame in received)
     events = api.get(f"/api/runs/{run['id']}/stream").text
     assert events.count('"event_type": "agent.report.correction_requested"') == 1
     artifacts = api.get("/api/artifacts?run_id=" + run["id"]).json()
     assert len(artifacts) == 1 and artifacts[0]["metadata"]["partial"] is False
+    assert artifacts[0]["metadata"]["report_execution"] == execution
     report = api.get(f"/api/artifacts/{artifacts[0]['id']}/file").text
     assert report.startswith("# Report") and "<tool_call>" not in report
     with session_factory()() as session:
