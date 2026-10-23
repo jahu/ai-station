@@ -210,8 +210,10 @@ def test_music_duration_and_vocals_are_not_silently_changed():
     )
     with pytest.raises(ValueError, match="duration"):
         settings({"content": "Generate music for 30 minutes"})
-    with pytest.raises(ValueError, match="lyrics"):
-        settings({"content": "Create a song with vocals"})
+    vocal = settings({"content": "Create a song with vocals"})
+    assert vocal.lyrics_source == "goal" and not vocal.instrumental and not vocal.lyrics
+    instrumental = settings({"content": "Create a song without vocals"})
+    assert instrumental.instrumental and instrumental.lyrics_source == "fixed"
 
 
 def test_repeated_first_send_publishes_only_one_music_child(music_bridge):

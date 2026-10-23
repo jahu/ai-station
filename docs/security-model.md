@@ -560,3 +560,14 @@ fields; source references, duration, seed, GPU, permissions and expiry cannot
 change. Empty pending lyrics exist only in an agent draft/preparation scope;
 ordinary Music/Chat and native generation still require non-empty supplied words.
 No executor, host access, model download or permission grant is added.
+
+
+Original lyrics in a conversation require a current explicit song-generation
+request or the selected goal-lyrics scope. The selected provider's frozen
+identity/location and effective inference permissions apply; the music child
+stays local. Prior context, quotes or a model plan cannot grant another song.
+Bounded JSON can change only caption and authorized words; supplied lyrics,
+duration, GPU, seed, permissions and receipt identity remain controller-owned.
+Preparation occurs before atomic dispatch, with no Runner/file I/O after that
+boundary. Stop during writing publishes no music child. Default fixed scope
+serialization omits the new mode field to preserve legacy request fingerprints.

@@ -71,6 +71,9 @@ it("selects music in Chat, keeps its typed controls, and clears scope when retur
     target: { value: "120" },
   });
   fireEvent.click(screen.getByRole("button", { name: "With lyrics" }));
+  fireEvent.change(screen.getByLabelText("Song lyrics policy"), {
+    target: { value: "fixed" },
+  });
   fireEvent.change(screen.getByLabelText("Your lyrics"), {
     target: { value: "[Verse]\nQuiet morning" },
   });
@@ -161,6 +164,18 @@ it("plays a music artifact inline with its library link and the correct accessib
           ],
           artifacts: [
             {
+              id: "prep",
+              type: "json",
+              mime_type: "application/json",
+              original_filename: "song-preparation.json",
+              title: "",
+              size_bytes: 50,
+              created_at: "2026-10-23T06:00:00Z",
+              run_id: "parent",
+              parent_artifact_ids: [],
+              metadata: { song_preparation: true },
+            },
+            {
               id: "music",
               type: "audio",
               mime_type: "audio/wav",
@@ -170,13 +185,23 @@ it("plays a music artifact inline with its library link and the correct accessib
               created_at: "2026-10-23T06:00:00Z",
               run_id: "music-run",
               parent_artifact_ids: [],
-              metadata: { capability: "audio.music", duration_seconds: 10 },
+              metadata: {
+                capability: "audio.music",
+                duration_seconds: 10,
+                lyrics: "[Chorus]\nA bright new day",
+              },
             },
           ],
         }}
       />
     </Frame>,
   );
+  expect(
+    screen.getByRole("region", { name: "Song lyrics music" }).textContent,
+  ).toContain("A bright new day");
+  expect(
+    screen.queryByRole("link", { name: "song-preparation.json" }),
+  ).toBeNull();
   expect(screen.getByLabelText("Generated music").getAttribute("src")).toBe(
     "/api/artifacts/music/file",
   );
@@ -188,4 +213,57 @@ it("plays a music artifact inline with its library link and the correct accessib
   ).toBeNull();
   expect(screen.queryByRole("link", { name: /^Use as speech/ })).toBeNull();
   expect(screen.queryByRole("link", { name: /^Use in Audio/ })).toBeNull();
+});
+
+it("writes original lyrics without supplied words only in the selected vocal mode", () => {
+  setup();
+  function Editor() {
+    const [value, setValue] = useState({
+      ...emptyOptions,
+      action: "audio.music" as const,
+      music: {},
+    });
+    return (
+      <>
+        <AssistantActions
+          value={value}
+          onChange={(next) => setValue(next as typeof value)}
+          busy={false}
+          onUploading={() => {}}
+          allowWork={false}
+          description={"x".repeat(600)}
+        />
+        <output aria-label="Song scope">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "With lyrics" }));
+  expect(
+    (screen.getByLabelText("Song lyrics policy") as HTMLSelectElement).value,
+  ).toBe("goal");
+  expect(screen.getByLabelText("Lyrics guidance (optional)")).toBeTruthy();
+  let selected = JSON.parse(
+    screen.getByLabelText("Song scope").textContent || "{}",
+  );
+  expect(musicScopeReady(selected, "x".repeat(600))).toBe(true);
+  expect(screen.queryByRole("alert")).toBeNull();
+  fireEvent.change(screen.getByLabelText("Song lyrics policy"), {
+    target: { value: "fixed" },
+  });
+  selected = JSON.parse(
+    screen.getByLabelText("Song scope").textContent || "{}",
+  );
+  expect(musicScopeReady(selected, "Piano")).toBe(false);
+  expect(screen.getByLabelText("Your lyrics")).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Instrumental" }));
+  selected = JSON.parse(
+    screen.getByLabelText("Song scope").textContent || "{}",
+  );
+  expect(selected.music.lyrics_source).toBe("fixed");
+  expect(screen.queryByLabelText("Song lyrics policy")).toBeNull();
 });

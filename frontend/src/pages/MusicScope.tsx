@@ -9,13 +9,18 @@ export default function MusicScope({
   value,
   onChange,
   descriptionLength,
+  descriptionLimit = 512,
   allowAutomaticDuration = true,
   lyricsSource = "fixed",
   onLyricsSourceChange,
 }: {
   value: MusicScopeOptions;
-  onChange: (value: MusicScopeOptions) => void;
+  onChange: (
+    value: MusicScopeOptions,
+    rememberedSource?: "fixed" | "goal",
+  ) => void;
   descriptionLength?: number;
+  descriptionLimit?: number;
   allowAutomaticDuration?: boolean;
   lyricsSource?: "fixed" | "goal";
   onLyricsSourceChange?: (source: "fixed" | "goal") => void;
@@ -23,26 +28,36 @@ export default function MusicScope({
   const instrumental = value.instrumental !== false;
   const generatedLyrics = lyricsSource === "goal" && !!onLyricsSourceChange;
   const rememberedLyrics = useRef(value.lyrics ?? "");
+  const rememberedSource = useRef<"fixed" | "goal" | undefined>(
+    value.instrumental === false ? lyricsSource : undefined,
+  );
   const hardware = useHardware();
   function vocals(enabled: boolean) {
-    if (!enabled) rememberedLyrics.current = value.lyrics ?? "";
-    onChange({
-      ...value,
-      instrumental: !enabled,
-      lyrics: enabled ? rememberedLyrics.current : "",
-    });
+    if (!enabled) {
+      rememberedLyrics.current = value.lyrics ?? "";
+      rememberedSource.current = lyricsSource;
+    }
+    onChange(
+      {
+        ...value,
+        instrumental: !enabled,
+        lyrics: enabled ? rememberedLyrics.current : "",
+      },
+      enabled ? rememberedSource.current : "fixed",
+    );
   }
   return (
     <section aria-label="Music settings">
       <p className="muted">
         Describe the style, instruments and mood in your message.{" "}
-        {descriptionLength ?? 0} / 512 characters.
+        {descriptionLength ?? 0} / {descriptionLimit} characters.
       </p>
-      {descriptionLength !== undefined && descriptionLength > 512 && (
-        <p role="alert" className="notice">
-          Shorten the music description to 512 characters.
-        </p>
-      )}
+      {descriptionLength !== undefined &&
+        descriptionLength > descriptionLimit && (
+          <p role="alert" className="notice">
+            Shorten the music description to {descriptionLimit} characters.
+          </p>
+        )}
       <label>
         Music length
         <select

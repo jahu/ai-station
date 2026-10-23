@@ -582,3 +582,12 @@ caption and original song text; the existing music Run receives finalized words.
 Supplied lyrics retain their default exact-word contract. UI and Library preserve
 the actual words, while Task ownership, immutable expiry, Stop and publication
 receipts reuse [the media-agent contract](plans/agent-media-generation.md).
+
+
+Conversation original-song writing reuses the existing orchestrator Run before
+its atomic music-child publication. Shared pure text schemas match agent song
+preparation; ordinary provider snapshots, grants, model admission, leases and
+Stop bind creative inference. Prepared JSON and final WAV preserve provenance.
+Instrumental/supplied words retain their no-text-model path. There is no new
+executor, persistent transient agent or native API; see
+[the conversation contract](plans/conversational-music.md).

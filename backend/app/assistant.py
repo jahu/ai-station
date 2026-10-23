@@ -209,6 +209,10 @@ class Plan(BaseModel):
 
 def assistant_needs_provider(body):
     plan = explicit_plan(body.model_dump(mode="json", exclude={"attachments"}))
+    if plan and plan.action == "audio.music":
+        from app.conversation_music import settings
+
+        return settings(body.model_dump(mode="json")).lyrics_source == "goal"
     if plan and plan.action == "coding.local" and body.coding and body.coding.model == "auto":
         return False  # Auto uses its own qualified local provider, never the Chat model.
     if plan and plan.action in {"image.generate", "image.generate_video"} and not body.web_search.enabled:
@@ -934,6 +938,15 @@ class AssistantExecutor:
                 action="clarify",
                 reason="Web search can inform a conversation answer or a new image. Turn it off for this action, or ask a separate research question first.",
             )
+        prepared_song = None
+        if plan and plan.action == "audio.music":
+            from app.conversation_music import settings
+
+            options = settings(run.parameters)
+            if options.lyrics_source == "goal":
+                from app.conversation_song import prepare_song
+
+                prepared_song = asyncio.run(prepare_song(session, run, options))
         session.refresh(run)
         if run.status == "cancel_requested" or plan is None:
             transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
@@ -1061,6 +1074,7 @@ class AssistantExecutor:
                         run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                         message.content = "Generating your scene locally with Wan 2.2. The video will appear here and in Library."
         elif plan.action == "audio.music":
+            from app.conversation_music import caption as music_caption
             from app.conversation_music import settings as music_settings
             from app.music import MusicRequest, create_music_run
             from app.permissions import require
@@ -1070,8 +1084,11 @@ class AssistantExecutor:
             try:
                 request = MusicRequest(
                     client_request_id=UUID(run.id),
-                    caption=params["content"],
-                    **music_settings(params).model_dump(),
+                    caption=prepared_song["description"] if prepared_song else music_caption(params),
+                    **{
+                        **music_settings(params).model_dump(exclude={"lyrics_source"}),
+                        **({"lyrics": prepared_song["lyrics"]} if prepared_song else {}),
+                    },
                 )
                 child = create_music_run(
                     session, request, task=run.task, parent_run_id=run.id, observed_profile=music_profile
@@ -1079,8 +1096,25 @@ class AssistantExecutor:
             except (ValidationError, ValueError, HTTPException) as exc:
                 message.content = str(exc.detail) if isinstance(exc, HTTPException) else str(exc)
             else:
+                if prepared_song:
+                    prior_preparation = child.metadata_json.get("song_preparation_id")
+                    if prior_preparation and prior_preparation != prepared_song["artifact_id"]:
+                        raise ValueError("This music receipt is bound to another song preparation")
+                    child.parameters = {
+                        **child.parameters,
+                        "parent_artifact_ids": [prepared_song["artifact_id"]],
+                    }
+                    child.metadata_json = {
+                        **child.metadata_json,
+                        "song_preparation_id": prepared_song["artifact_id"],
+                        "song_preparation_sha256": prepared_song["sha256"],
+                    }
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
-                message.content = f"Generating {request.duration_seconds} seconds of music locally. The checked WAV will appear here and in Library; no text model is needed."
+                message.content = (
+                    f"Your lyrics are written. Generating {request.duration_seconds} seconds of vocal music locally. The finished track and words will appear here and in Library."
+                    if prepared_song
+                    else f"Generating {request.duration_seconds} seconds of music locally. The checked WAV will appear here and in Library; no text model is needed."
+                )
         elif plan.action in {"audio.transcribe", "audio.analyze"}:
             from app.transcription import TranscriptionRequest, create_transcription_run
 
