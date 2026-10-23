@@ -877,6 +877,23 @@ class AvatarPlannerExecutor:
         )
         if not audio or audio.trashed_at is not None:
             raise ValueError("Completed canonical speech is unavailable")
+        frozen_inputs = list(run.parameters.get("media_inputs", []))
+        if frozen_inputs:
+            from app.agent_media import verify_published_inputs
+
+            verify_published_inputs(session, run)
+            if len(audio.sha256) != 64:
+                raise ValueError("Generated canonical speech has no recorded checksum")
+            frozen_inputs.append(
+                {
+                    "id": audio.id,
+                    "path": audio.relative_path,
+                    "size": audio.size_bytes,
+                    "sha256": audio.sha256,
+                    "type": audio.artifact_type,
+                    "mime": audio.mime_type,
+                }
+            )
         request = FullAvatarRequest.model_validate(
             {**run.parameters["request"], "audio_artifact_id": audio.id, "speech_text": None}
         )
@@ -887,6 +904,19 @@ class AvatarPlannerExecutor:
             parent_run_id=run.id,
             execution_deadline_at=run.parameters.get("execution_deadline_at"),
         )
+        if frozen_inputs:
+            for stage in session.scalars(
+                select(Run).where(Run.task_id == run.task_id, Run.parent_run_id == run.id)
+            ):
+                stage.parameters = {
+                    **stage.parameters,
+                    "media_inputs": frozen_inputs,
+                    "parent_artifact_ids": [
+                        *stage.parameters.get("parent_artifact_ids", []),
+                        run.parameters["agent_media_preparation_id"],
+                    ],
+                }
+                stage.triggered_by = run.triggered_by
         transition(session, run, RunStatus.RUNNING, event_type="executor.started", payload={})
         transition(
             session,

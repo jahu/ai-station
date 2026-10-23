@@ -513,3 +513,160 @@ it("shows full agent film progress and the final artifact instead of a completed
   ).toBeNull();
   expect(writes).toEqual([]);
 });
+
+it("keeps an avatar draft reviewable while awaiting sources and switches to complete recorded speech", () => {
+  responses();
+  function Editor() {
+    const [value, setValue] = useState<AgentMediaScope>(
+      newAgentMedia("avatar", "Welcome me in Polish"),
+    );
+    return (
+      <>
+        <AgentMediaScopeEditor
+          value={value}
+          goal="Welcome me in Polish"
+          disabled={false}
+          onChange={setValue}
+          onBusy={() => {}}
+        />
+        <output aria-label="Media scope">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  let saved = JSON.parse(screen.getByLabelText("Media scope").textContent!);
+  expect(agentMediaIssue(saved)).toMatch(/portrait and a WAV/);
+  expect(agentMediaIssue(saved, { allowMissingSources: true })).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Avatar" }).getAttribute("aria-pressed"),
+  ).toBe("true");
+  fireEvent.change(screen.getByLabelText("Media creative direction"), {
+    target: { value: "Dzień dobry." },
+  });
+  saved = JSON.parse(screen.getByLabelText("Media scope").textContent!);
+  expect(saved.request.speech_text).toBe("Dzień dobry.");
+  fireEvent.change(screen.getByLabelText("Agent avatar speech source"), {
+    target: { value: "recording" },
+  });
+  saved = JSON.parse(screen.getByLabelText("Media scope").textContent!);
+  expect(saved.request.speech_text).toBeNull();
+  expect(screen.getByText(/Uses your entire saved recording/)).toBeTruthy();
+  expect(saved.request.image_artifact_id).toBeNull();
+  expect(saved.request.audio_artifact_id).toBeNull();
+});
+
+it("shows the whole avatar job and saved spoken words while its planner is pending", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url.includes("/media/jobs/")
+          ? {
+              task_id: "avatar-task",
+              revision: 1,
+              kind: "avatar",
+              mode: "continuous",
+              status: "preparing",
+              duration_seconds: null,
+              completed_segments: 0,
+              total_segments: 0,
+              active_run_ids: ["planner"],
+              final_artifact_id: null,
+              resume_allowed: false,
+              error_message: "",
+            }
+          : [],
+    })),
+  );
+  render(
+    <Frame>
+      <AgentMediaResult
+        runs={[
+          {
+            id: "planner",
+            task_id: "avatar-task",
+            executor_type: "avatar_media_plan",
+            status: "queued",
+            parameters: {},
+          } as Run,
+          {
+            id: "speech",
+            task_id: "avatar-task",
+            executor_type: "chatterbox",
+            status: "succeeded",
+            parameters: { text: "Dzień dobry." },
+            project_id: null,
+            parent_run_id: null,
+            capability: "audio.speech",
+            execution_target: "host",
+            created_at: "2026-10-23T00:00:00Z",
+            started_at: null,
+            finished_at: null,
+            requested_gpu: "auto",
+            actual_gpu: null,
+            effective_permissions: ["filesystem_read", "workspace_write"],
+            summary: "Ready",
+            error_type: "",
+            error_message: "",
+            worker_id: null,
+          } satisfies Run,
+        ]}
+      />
+    </Frame>,
+  );
+  await screen.findByText("Your talking avatar");
+  expect(
+    screen.getByRole("region", { name: "Spoken text" }).textContent,
+  ).toContain("Dzień dobry.");
+  expect(screen.queryByLabelText("Generated full video")).toBeNull();
+  expect(screen.queryByLabelText("Generated audio")).toBeNull();
+});
+
+it("requires speech readiness only when the avatar writes new words", () => {
+  const scope = newAgentMedia("avatar", "Welcome");
+  if (scope.kind !== "avatar") throw new Error("Expected avatar scope");
+  const agent = {
+    enabled: false,
+    tools: ["create_media"],
+    model: "",
+    permission_profile: "agent_local",
+    media: {
+      ...scope,
+      description_source: "fixed" as const,
+      request: {
+        ...scope.request,
+        image_artifact_id: "portrait",
+        audio_artifact_id: "voice",
+      },
+    },
+  };
+  const catalog = [
+    {
+      name: "create_media",
+      description: "Create media",
+      operational: true,
+      required_permissions: [],
+      outputs: { avatar: { ready: true, speech_ready: false } },
+    },
+  ];
+  expect(activationBlock(agent, catalog).reason).toMatch(
+    /Polish speech is unavailable/,
+  );
+  expect(
+    activationBlock(
+      {
+        ...agent,
+        media: {
+          ...agent.media,
+          request: { ...agent.media.request, speech_text: null },
+        },
+      },
+      catalog,
+    ).blocked,
+  ).toBe(false);
+});

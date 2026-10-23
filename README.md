@@ -17,6 +17,13 @@ progress and the final verified film. Review the runtime budget for longer/high
 quality output; Stop cancels the entire execution. Retry by running the reviewed
 agent again. [Video-agent contracts](docs/plans/agent-motion-generation.md).
 
+For an **Avatar** output, choose a Library portrait and WAV, then select new Polish
+speech or the complete saved recording. Goal mode prepares words for generated
+speech, or motion direction for a recording; the reviewed sources remain fixed.
+A draft can wait for source selection. Progress covers the whole speech and
+assembled video (up to 60 seconds); Stop covers every stage. See
+[the full avatar execution contract](docs/plans/agent-motion-generation.md).
+
 
 Local coding agents can use an [automatic private workspace](docs/agent-workspaces.md):
 review the goal, model and tools, then enable. A project is created on the first Run;

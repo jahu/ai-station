@@ -71,4 +71,4 @@ def test_unfinished_speech_is_not_in_the_draft_catalog(monkeypatch):
     from app import agent_media
 
     monkeypatch.setattr(agent_media, "SPEECH_AGENTS_ENABLED", False)
-    assert available_media_outputs() == ["image", "music", "video"]
+    assert available_media_outputs() == ["image", "music", "video", "avatar"]

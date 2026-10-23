@@ -709,6 +709,13 @@ def music_run(body: MusicRequest):
         raise HTTPException(422, str(exc)) from exc
 
 
+@app.get("/v1/avatar/capabilities")
+def avatar_capabilities():
+    from ai_station_runner.avatars import capabilities
+
+    return capabilities()
+
+
 @app.post("/v1/runs/avatar")
 def avatar_run(body: AvatarRequest):
     try:

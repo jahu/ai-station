@@ -1,7 +1,11 @@
 [Persistent scene-video output](plans/agent-motion-generation.md) reuses the
 existing long-media planner, segments and CPU composition on the agent Task.
 Reviewed sources and one absolute deadline cover every stage. Only the final
-verified film produces the ready notice. Avatar agent output remains planned.
+verified film produces the ready notice.
+[Whole-avatar agent output](plans/agent-motion-generation.md) additionally reuses
+the existing speech/planner/window pipeline with reviewed portrait/audio sources.
+Generated speech is bound to its actual owned Artifact before animation. No
+additional agent execution engine or model download is introduced.
 
 # Architecture
 

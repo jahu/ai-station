@@ -12,7 +12,12 @@ export type AgentToolSpec = {
   outputs?: Partial<
     Record<
       AgentMediaScope["kind"],
-      { ready: boolean; reason?: string | null; modes?: string[] }
+      {
+        ready: boolean;
+        speech_ready?: boolean;
+        reason?: string | null;
+        modes?: string[];
+      }
     >
   >;
 };
@@ -208,6 +213,16 @@ export function activationBlock(
   const byName = new Map(catalog.map((tool) => [tool.name, tool]));
   if (names.includes("create_media") && agent.media) {
     const output = byName.get("create_media")?.outputs?.[agent.media.kind];
+    if (
+      agent.media.kind === "avatar" &&
+      agent.media.request.speech_text !== null &&
+      output?.speech_ready === false
+    )
+      return {
+        blocked: true,
+        reason:
+          "Polish speech is unavailable; review Audio setup or choose a saved recording.",
+      };
     if (
       output &&
       (!output.ready ||

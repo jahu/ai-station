@@ -52,9 +52,7 @@ def owned(root, relative):
     return path
 
 
-def start_avatar(manager, body):
-    if set(body.permissions) != {"filesystem_read", "workspace_write"}:
-        raise HTTPException(403, "Avatar read/write permissions are required")
+def installation():
     settings = get_settings()
     if not all((settings.echomimic_python, settings.echomimic_dir, settings.echomimic_models)):
         raise HTTPException(
@@ -79,6 +77,28 @@ def start_avatar(manager, body):
         )
     ):
         raise HTTPException(409, "EchoMimic installation or existing model files are incomplete")
+    return settings, python, runtime, models, base, checkpoint
+
+
+def capabilities():
+    try:
+        settings, python, *_ = installation()
+        ready = os.access(python, os.X_OK) and bool(collect(settings.host_data_dir()).get("gpus"))
+        return {
+            "available": ready,
+            "backend": "echomimic-v3",
+            "fps": 25,
+            "max_audio_seconds": 60,
+            "offline": True,
+        }
+    except HTTPException as exc:
+        return {"available": False, "backend": "echomimic-v3", "reason": exc.detail}
+
+
+def start_avatar(manager, body):
+    if set(body.permissions) != {"filesystem_read", "workspace_write"}:
+        raise HTTPException(403, "Avatar read/write permissions are required")
+    settings, python, runtime, models, base, checkpoint = installation()
     root = settings.host_data_dir().resolve()
     portrait, speech = owned(root, body.image_relative), owned(root, body.audio_relative)
     try:

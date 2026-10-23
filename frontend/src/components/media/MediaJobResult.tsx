@@ -12,11 +12,13 @@ export default function MediaJobResult({
   job: initialJob,
   error,
   allowResume = true,
+  spokenText,
 }: {
   id: string;
   job?: MediaJob;
   error?: Error | null;
   allowResume?: boolean;
+  spokenText?: string;
 }) {
   const cache = useQueryClient();
   const current = useMediaJob(id);
@@ -192,6 +194,12 @@ export default function MediaJobResult({
           error ?? current.error ?? artifact.error ?? stop.error ?? resume.error
         }
       />
+      {typeof spokenText === "string" && spokenText.trim() && (
+        <section className="media-spoken-text" aria-label="Spoken text">
+          <h3>Spoken text</h3>
+          <p>{spokenText}</p>
+        </section>
+      )}
       {!job?.final_artifact_id && job?.preview_artifact_id && (
         <div className="media-partial-preview">
           <p className="muted">Latest completed segment · partial preview</p>

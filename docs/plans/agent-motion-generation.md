@@ -94,16 +94,39 @@ and built image, then back up and deploy through develop. Qualify a short actual
 existing-model agent video/avatar only after the complete chain is operational;
 record real duration/profile and preserve the operator's actual model state.
 
-## Whole-avatar agent increment in progress
+## Whole-avatar agent increment
 
-The feature branch now extracts pure whole-speech avatar settings and carries one
-optional expiry through speech generation, the deferred planner, every avatar
-segment and final assembly. A pending speech handoff is bound to its actual
-planner and completed same-Task audio; an old expiry cannot be replaced. The
-planner observes expiry before publication. Four focused fake-runtime/real-CPU
-cases and 49 existing avatar/video regressions pass.
+The candidate reuses ordinary Chatterbox, the deferred avatar planner, EchoMimic
+windows and verified CPU composition. Pure full-avatar settings avoid an import
+cycle. Avatar drafts may wait for a portrait and WAV; both are required for
+activation. A read-only native capability checks the configured existing
+installation and GPU without starting a model. Generated Polish speech also
+requires the existing speech capability.
 
-Avatar agent scopes, readiness, reviewed source snapshots, final-result receipts,
-natural drafts and the editor are still to be connected and qualified. This
-foundation does not advertise an avatar agent output. Preserve ordinary Avatars
-workspace behavior while completing that chain.
+One immutable expiry covers preparation, generated speech, planner, every
+animation window and final assembly. The pending speech handoff must match its
+actual planner and successful same-Task audio; receipts cannot replace a budget
+or duplicate work. The final composition retains its workflow ancestry.
+The planner observes expiry before publication.
+
+Image/audio IDs, paths, sizes, checksums and MIME roles are frozen. Original
+portrait/voice bytes are rechecked before speech/planning. The generated canonical
+audio is bound to the actual successful speech Run and its Artifact; all inputs
+are rechecked again before each animation dispatch. Existing video snapshots
+without MIME roles remain compatible. Only final assembly emits a positive ready
+notice; failed, canceled and incomplete stages preserve evidence without a
+fictional finished avatar.
+
+Goal mode may change only spoken words (Polish, 1000 characters) when generating
+speech, or the motion prompt with an existing recording. Portrait, voice,
+recording, size, steps, seed, GPU and the shared expiry stay fixed. Natural
+proposals leave source IDs null for operator selection. Ordinary workspace
+requests retain their existing contract.
+
+The editor supports both speech modes, separate source previews, draft saving
+before source selection and advanced quality/GPU controls. The workspace shows
+the same full-media progress even while the planner is pending, saved spoken
+words, final playback, Library and Task Stop. Normal CPU checks use fake native
+models and real video composition. Review/full release checks and actual
+hardware qualification are recorded separately; no new real avatar result is
+claimed by these tests.

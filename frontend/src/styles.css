@@ -6931,7 +6931,7 @@ section:has(> .memory-grid) > .dashboard-note {
 }
 .agent-media-scope .mode-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 .agent-media-scope .mode-tabs button {
   display: flex;
@@ -7012,4 +7012,15 @@ section:has(> .memory-grid) > .dashboard-note {
 .agent-video-settings .check-row {
   flex-direction: row;
   align-items: center;
+}
+
+.agent-avatar-settings {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .agent-media-scope .mode-tabs button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }

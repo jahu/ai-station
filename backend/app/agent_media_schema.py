@@ -6,6 +6,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.audio_schema import SpeechRequest
+from app.avatar_schema import FullAvatarSettings
 from app.image_schema import ImageRequest
 from app.music_schema import MusicSettings
 from app.video_schema import LongVideoSettings
@@ -65,8 +66,21 @@ class AgentVideoScope(BaseModel):
     description_source: Literal["fixed", "goal"] = "fixed"
 
 
+class AgentAvatarRequest(FullAvatarSettings):
+    image_artifact_id: UUID | None = None
+    audio_artifact_id: UUID | None = None
+
+
+class AgentAvatarScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["avatar"]
+    request: AgentAvatarRequest
+    description_source: Literal["fixed", "goal"] = "fixed"
+
+
 AgentMediaScope = Annotated[
-    AgentImageScope | AgentMusicScope | AgentSpeechScope | AgentVideoScope, Field(discriminator="kind")
+    AgentImageScope | AgentMusicScope | AgentSpeechScope | AgentVideoScope | AgentAvatarScope,
+    Field(discriminator="kind"),
 ]
 
 

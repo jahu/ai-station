@@ -8,7 +8,11 @@ import MediaJobResult from "../components/media/MediaJobResult";
 export default function AgentMediaResult({ runs }: { runs: Run[] }) {
   const task = runs[0]?.task_id;
   const current = runs.filter((run) => run.task_id === task);
-  const film = current.find((run) => run.executor_type === "media_compose");
+  const film = current.find(
+    (run) =>
+      run.executor_type === "media_compose" ||
+      run.executor_type === "avatar_media_plan",
+  );
   const output = current.find(
     (run) =>
       run.executor_type === "photo_pipe" ||
@@ -18,7 +22,17 @@ export default function AgentMediaResult({ runs }: { runs: Run[] }) {
   const preparation = current.find(
     (run) => run.executor_type === "agent_media",
   );
-  if (film) return <MediaJobResult id={film.task_id} allowResume={false} />;
+  if (film)
+    return (
+      <MediaJobResult
+        id={film.task_id}
+        allowResume={false}
+        spokenText={
+          current.find((run) => run.executor_type === "chatterbox")?.parameters
+            ?.text as string | undefined
+        }
+      />
+    );
   if (output)
     return (
       <MediaResult
@@ -46,7 +60,7 @@ export default function AgentMediaResult({ runs }: { runs: Run[] }) {
     latest.parameters?.definition as { media?: { kind: string } } | undefined
   )?.media;
   const Icon =
-    scope?.kind === "video"
+    scope?.kind === "video" || scope?.kind === "avatar"
       ? Film
       : scope?.kind === "music"
         ? Music2
