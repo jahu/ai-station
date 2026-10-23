@@ -106,133 +106,149 @@ it("sends the first prompt without creating an empty conversation", async () => 
   });
 });
 
-it("moves through messages and identifies a resolved previous image", async () => {
-  const conversation = {
-    id: "conv",
-    title: "Planning",
-    provider: "local-openai-compatible",
-    provider_name: "Local OpenAI-compatible",
-    provider_location: "local",
-    model: "test-model",
-    system_prompt: "",
-    temperature: 0.7,
-    max_tokens: 2048,
-    updated_at: "2026-10-09T12:00:00Z",
-    execution_mode: "local",
-    auto_summary: false,
-    summary_update: null,
-    summary: null,
-    active_run: null,
-    messages: [
-      {
-        id: "user-one",
-        role: "user",
-        content: "Hello",
-        created_at: "2026-10-09T12:00:00Z",
-        run_id: null,
-        run_status: null,
-        error_message: "",
-        metadata: {
-          images: [{ id: "source-image", name: "landscape.png" }],
-          conversation_reference: {
-            artifact_id: "source-image",
-            message_id: "earlier-message",
-            run_id: "source-run",
+it.each([undefined, 1, 2])(
+  "moves through messages and identifies a resolved image (%s)",
+  async (inputCount) => {
+    const conversation = {
+      id: "conv",
+      title: "Planning",
+      provider: "local-openai-compatible",
+      provider_name: "Local OpenAI-compatible",
+      provider_location: "local",
+      model: "test-model",
+      system_prompt: "",
+      temperature: 0.7,
+      max_tokens: 2048,
+      updated_at: "2026-10-09T12:00:00Z",
+      execution_mode: "local",
+      auto_summary: false,
+      summary_update: null,
+      summary: null,
+      active_run: null,
+      messages: [
+        {
+          id: "user-one",
+          role: "user",
+          content: "Hello",
+          created_at: "2026-10-09T12:00:00Z",
+          run_id: null,
+          run_status: null,
+          error_message: "",
+          metadata: {
+            images: [{ id: "source-image", name: "landscape.png" }],
+            conversation_reference: {
+              source_kind: inputCount ? "inspected_input" : undefined,
+              artifact_ids:
+                inputCount === 2
+                  ? ["source-image", "second-image"]
+                  : ["source-image"],
+              artifact_id: "source-image",
+              message_id: "earlier-message",
+              run_id: "source-run",
+            },
           },
         },
-      },
-      {
-        id: "asst-two",
-        role: "assistant",
-        content: "Hi there",
-        created_at: "2026-10-09T12:00:01Z",
-        run_id: "run-ai",
-        run_status: "succeeded",
-        error_message: "",
-        metadata: {
-          transcript_sources: [
-            {
-              source_message_id: "transcript-message",
-              run_id: "transcript-run",
-              artifact_id: "transcript-text",
-              available: true,
-              truncated: true,
-              included_characters: 100,
-              total_characters: 900,
-            },
-          ],
+        {
+          id: "asst-two",
+          role: "assistant",
+          content: "Hi there",
+          created_at: "2026-10-09T12:00:01Z",
+          run_id: "run-ai",
+          run_status: "succeeded",
+          error_message: "",
+          metadata: {
+            transcript_sources: [
+              {
+                source_message_id: "transcript-message",
+                run_id: "transcript-run",
+                artifact_id: "transcript-text",
+                available: true,
+                truncated: true,
+                included_characters: 100,
+                total_characters: 900,
+              },
+            ],
+          },
         },
-      },
-    ],
-  };
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (path: string) => ({
-      ok: true,
-      json: async () =>
-        path.endsWith("/chat/providers")
-          ? [builtin]
-          : path.includes("/chat/providers/")
-            ? builtin
-            : path.endsWith("/llama")
-              ? { models: [], instances: [] }
-              : path.endsWith("/hardware")
-                ? { gpus: [] }
-                : path.endsWith("/chat/conversations")
-                  ? [conversation]
-                  : path.includes("/chat/conversations/")
-                    ? conversation
-                    : [],
-    })),
-  );
-  render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <MemoryRouter initialEntries={["/chat/conv"]}>
-        <Routes>
-          <Route path="/chat/:id" element={<Chat />} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-  const inspect = await screen.findByRole("link", {
-    name: "Inspect run Local AI asst-two",
-  });
-  expect(screen.getByText(/Using the previous image result/)).toBeTruthy();
-  expect(screen.getByText(/Using a stored transcript/)).toBeTruthy();
-  expect(
-    screen
-      .getByRole("link", { name: "Inspect transcript source transcri" })
-      .getAttribute("href"),
-  ).toBe("/runs/transcript-run");
-  expect(
-    screen
-      .getByRole("link", { name: "Inspect referenced image user-one" })
-      .getAttribute("href"),
-  ).toBe("/runs/source-run");
-  expect(screen.getByAltText("Reference 1: landscape.png")).toBeTruthy();
-  const copy = screen.getByRole("button", { name: "Copy Local AI asst-two" });
-  const articles = screen.getAllByRole("article");
-  expect(screen.getByRole("region", { name: "Messages" })).toBeTruthy();
-  expect(articles[0].tabIndex).toBe(-1);
-  expect(articles[1].tabIndex).toBe(0);
-  expect(inspect.tabIndex).toBe(0);
-  expect(copy.tabIndex).toBe(0);
-  fireEvent.keyDown(articles[1].closest(".chat-messages") as HTMLElement, {
-    key: "ArrowUp",
-  });
-  expect(articles[0].tabIndex).toBe(0);
-  expect(articles[1].tabIndex).toBe(-1);
-  expect(inspect.tabIndex).toBe(-1);
-  fireEvent.keyDown(articles[0].closest(".chat-messages") as HTMLElement, {
-    key: "End",
-  });
-  expect(articles[1].tabIndex).toBe(0);
-  expect(inspect.tabIndex).toBe(0);
-});
+      ],
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string) => ({
+        ok: true,
+        json: async () =>
+          path.endsWith("/chat/providers")
+            ? [builtin]
+            : path.includes("/chat/providers/")
+              ? builtin
+              : path.endsWith("/llama")
+                ? { models: [], instances: [] }
+                : path.endsWith("/hardware")
+                  ? { gpus: [] }
+                  : path.endsWith("/chat/conversations")
+                    ? [conversation]
+                    : path.includes("/chat/conversations/")
+                      ? conversation
+                      : [],
+      })),
+    );
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter initialEntries={["/chat/conv"]}>
+          <Routes>
+            <Route path="/chat/:id" element={<Chat />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const inspect = await screen.findByRole("link", {
+      name: "Inspect run Local AI asst-two",
+    });
+    expect(
+      screen.getByText(
+        inputCount
+          ? inputCount === 2
+            ? /Using the inspected images/
+            : /Using the inspected image ·/
+          : /Using the previous image result/,
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(/Using a stored transcript/)).toBeTruthy();
+    expect(
+      screen
+        .getByRole("link", { name: "Inspect transcript source transcri" })
+        .getAttribute("href"),
+    ).toBe("/runs/transcript-run");
+    expect(
+      screen
+        .getByRole("link", { name: "Inspect referenced image user-one" })
+        .getAttribute("href"),
+    ).toBe("/runs/source-run");
+    expect(screen.getByAltText("Reference 1: landscape.png")).toBeTruthy();
+    const copy = screen.getByRole("button", { name: "Copy Local AI asst-two" });
+    const articles = screen.getAllByRole("article");
+    expect(screen.getByRole("region", { name: "Messages" })).toBeTruthy();
+    expect(articles[0].tabIndex).toBe(-1);
+    expect(articles[1].tabIndex).toBe(0);
+    expect(inspect.tabIndex).toBe(0);
+    expect(copy.tabIndex).toBe(0);
+    fireEvent.keyDown(articles[1].closest(".chat-messages") as HTMLElement, {
+      key: "ArrowUp",
+    });
+    expect(articles[0].tabIndex).toBe(0);
+    expect(articles[1].tabIndex).toBe(-1);
+    expect(inspect.tabIndex).toBe(-1);
+    fireEvent.keyDown(articles[0].closest(".chat-messages") as HTMLElement, {
+      key: "End",
+    });
+    expect(articles[1].tabIndex).toBe(0);
+    expect(inspect.tabIndex).toBe(0);
+  },
+);
 
 it("moves through saved transcript attachments without inspecting a Run", async () => {
   const conversation = {

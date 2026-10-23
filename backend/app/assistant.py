@@ -553,6 +553,9 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         images.append({"id": row.id, "name": row.original_filename})
     if images and body.attachments:
         raise HTTPException(422, "Send image references and text documents in separate turns")
+    from app.vision_inputs import freeze as freeze_images
+
+    image_inputs = freeze_images(session, body.image_artifact_ids) if images else None
     from app.chat_page_design import requested_design_page
 
     design_pages = (
@@ -612,6 +615,7 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
                 else {}
             ),
             **({"data_inputs": data_inputs} if data_inputs is not None else {}),
+            **({"image_inputs": image_inputs} if image_inputs is not None else {}),
             "planner_context": planner_context(session, conversation, user),
             **snapshot,
         },
@@ -991,6 +995,10 @@ class AssistantExecutor:
                 require_runtime()
                 verify_inputs(session, run.parameters.get("data_inputs"))
                 verify_source_files(run.parameters["data_inputs"])
+        if plan and (plan.action.startswith("image.") or plan.action == "video.generate"):
+            from app.vision_inputs import inspected_selection
+
+            inspected_selection(session, run)
         prepared_song = None
         if plan and plan.action == "audio.music":
             from app.conversation_music import settings

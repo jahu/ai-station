@@ -47,6 +47,19 @@ def _enqueue_inspection(session, parent, *, page_scope=None):
             or artifact.size_bytes > 20 * 1024 * 1024
         ):
             raise HTTPException(422, "Choose PNG, JPEG or WebP images up to 20 MiB")
+    from app.vision_inputs import freeze, verify
+
+    inputs = parent.parameters.get("image_inputs")
+    if inputs is None:
+        inputs = freeze(session, ids)
+        parent.parameters = {**parent.parameters, "image_inputs": inputs}
+    try:
+        verify(session, inputs)
+        if [item.get("artifact_id") for item in inputs] != ids:
+            raise ValueError("Image inspection differs from its selected source snapshot")
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
     from app.page_vision import scope_for_images
 
     page_scope = page_scope if page_scope is not None else scope_for_images(session, parent, ids)
@@ -132,6 +145,7 @@ def _enqueue_inspection(session, parent, *, page_scope=None):
             "max_tokens": min(conversation.max_tokens, 2048),
             "messages": [{"role": "user", "content": parent.parameters["content"]}],
             "vision_artifact_ids": ids,
+            "vision_inputs": inputs,
             "vision_model_name": model.filename,
             **({"page_read": page_scope} if page_scope else {}),
         },
@@ -221,6 +235,15 @@ def image_context(session, run, messages):
     ):
         raise ProviderError("Image inspection uses only the selected owned local vision runtime")
     ids = run.parameters["vision_artifact_ids"]
+    if "vision_inputs" in run.parameters:
+        from app.vision_inputs import verify
+
+        try:
+            verify(session, run.parameters["vision_inputs"], read_bytes=True)
+            if [item.get("artifact_id") for item in run.parameters["vision_inputs"]] != ids:
+                raise ValueError("Vision sources differ from their frozen selection")
+        except (ValueError, OSError) as exc:
+            raise ProviderError(str(exc)) from exc
     if not 1 <= len(ids) <= 4:
         raise ProviderError("Image inspection accepts one to four images")
     parts = [
@@ -236,6 +259,10 @@ def image_context(session, run, messages):
 
 
 def save_description(session, run, message):
+    if "vision_inputs" in run.parameters:
+        from app.vision_inputs import verify
+
+        verify(session, run.parameters["vision_inputs"], read_bytes=True)
     with tempfile.NamedTemporaryFile(suffix=".md") as output:
         output.write(message.content.encode("utf-8"))
         output.flush()
@@ -253,6 +280,11 @@ def save_description(session, run, message):
                 "model": run.parameters["model"],
                 "model_name": run.parameters["vision_model_name"],
                 "operation": "image.describe",
+                **(
+                    {"vision_inputs": run.parameters["vision_inputs"]}
+                    if "vision_inputs" in run.parameters
+                    else {}
+                ),
                 "location": "local",
             },
         )

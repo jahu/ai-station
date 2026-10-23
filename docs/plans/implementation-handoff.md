@@ -5,7 +5,20 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current continuation — goal-based vocal agents, 2026-10-23
+## Current continuation — inspected image follow-ups, 2026-10-23
+
+Conversation CSV/Excel entry and follow-ups (#372–#374) and ordinary image
+attachments/local Vision (#375) are merged and deployed. The active increment
+resolves explicit edit/upscale/describe/animate commands to verified inspected
+image inputs, preserving current scope, ordered groups, Stop and existing media
+children. New Vision snapshots bind the actual inspected bytes; implicit media
+follow-ups recheck sources at publication and native dispatch. Complete the local,
+compiled UI, image and actual Vision-reinspection qualification before release.
+Evidence: `data/acceptance/conversation-uploaded-image-followups-20261023`.
+The full platform objective remains active; ordinary audio entry and broader media/
+orchestration acceptance remain separate work.
+
+## Earlier continuation — goal-based vocal agents, 2026-10-23
 
 Whole-video agents (#367), whole-avatar agents (#368) and explicit resource-wait
 observations (#369) are merged and deployed. Inspect

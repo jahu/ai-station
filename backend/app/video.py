@@ -43,6 +43,16 @@ def create_video_run(session, body, *, task=None, parent_run_id=None):
     task = task or create_task(
         session, title=body.prompt[:80], prompt=body.prompt, capability="video.generate"
     )
+    parameters = {
+        **body.model_dump(mode="json", exclude={"gpu", "image_artifact_id"}),
+        "image_relative": source.relative_path if source else None,
+        "parent_artifact_ids": [source.id] if source else [],
+        "backend": "wan2.2-5b",
+        "fps": 24,
+    }
+    from app.vision_inputs import pin_media_inputs
+
+    pin_media_inputs(session, parent_run_id, parameters)
     return create_run(
         session,
         task,
@@ -53,13 +63,7 @@ def create_video_run(session, body, *, task=None, parent_run_id=None):
         requested_gpu=body.gpu,
         retry_class="inspect",
         parent_run_id=parent_run_id,
-        parameters={
-            **body.model_dump(mode="json", exclude={"gpu", "image_artifact_id"}),
-            "image_relative": source.relative_path if source else None,
-            "parent_artifact_ids": [source.id] if source else [],
-            "backend": "wan2.2-5b",
-            "fps": 24,
-        },
+        parameters=parameters,
     )
 
 

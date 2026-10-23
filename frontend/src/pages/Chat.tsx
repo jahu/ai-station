@@ -121,6 +121,8 @@ type Message = ActionResult & {
     agent_id?: string;
     images?: { id: string; name: string }[];
     conversation_reference?: {
+      source_kind?: "inspected_input";
+      artifact_ids?: string[];
       artifact_id: string;
       message_id: string;
       run_id: string;
@@ -880,7 +882,14 @@ function Transcript({
               ))}
               {message.metadata.conversation_reference && (
                 <p className="muted">
-                  Using the previous image result ·{" "}
+                  {message.metadata.conversation_reference.source_kind ===
+                  "inspected_input"
+                    ? (message.metadata.conversation_reference.artifact_ids
+                        ?.length ?? 1) > 1
+                      ? "Using the inspected images"
+                      : "Using the inspected image"
+                    : "Using the previous image result"}{" "}
+                  ·{" "}
                   <Link
                     to={`/runs/${message.metadata.conversation_reference.run_id}`}
                     tabIndex={current ? 0 : -1}
