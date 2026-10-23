@@ -361,3 +361,68 @@ def test_stop_reaches_a_running_avatar_and_queued_composition(avatar_agent_runti
             assert rows and all(row.status == "canceled" for row in rows)
             assert not active_locks(session)
         assert not host_app.manager().inspect(active)["alive"]
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("prompt", "An unreviewed different scene"),
+        ("size", 512),
+        ("gpu", "0"),
+        ("image_artifact_id", str(uuid4())),
+    ],
+)
+def test_speech_handoff_cannot_change_reviewed_animation_settings(avatar_agent_runtime, field, value):
+    with TestClient(app) as api:
+        agent = create(api, kind="avatar", request=settings(api))
+        root = start(api, agent)
+        with session_factory()() as session:
+            for _ in range(3):
+                tick(session, "advance")
+            planner = session.scalar(
+                select(Run).where(Run.task_id == root["task_id"], Run.executor_type == "avatar_media_plan")
+            )
+            planner.parameters = {
+                **planner.parameters,
+                "request": {**planner.parameters["request"], field: value},
+            }
+            session.commit()
+            drain(session)
+            session.refresh(planner)
+            assert planner.status == "failed" and "outside its reviewed" in planner.error_message
+            assert not list(session.scalars(select(Run).where(Run.executor_type == "echomimic")))
+        assert not avatar_agent_runtime
+
+
+def test_goal_recording_avatar_changes_motion_without_rewriting_the_saved_audio(
+    avatar_agent_runtime, monkeypatch
+):
+    async def motion(self, messages, **kwargs):
+        yield json.dumps({"description": "A person speaking calmly with natural small gestures."})
+
+    monkeypatch.setattr(LocalChatProvider, "stream", motion)
+    with TestClient(app) as api:
+        body = settings(api, generated=False)
+        agent = create(
+            api,
+            kind="avatar",
+            request=body,
+            model="fake-local",
+            media={"kind": "avatar", "description_source": "goal", "request": body},
+        )
+        root = start(api, agent)
+        with session_factory()() as session:
+            sound = session.get(Artifact, body["audio_artifact_id"])
+            original_sha = sound.sha256
+            drain(session)
+            rows = list(session.scalars(select(Run).where(Run.task_id == root["task_id"])))
+            assert not any(row.executor_type == "chatterbox" for row in rows)
+            nodes = [row for row in rows if row.executor_type == "echomimic"]
+            assert nodes and all(row.status == "succeeded" for row in nodes)
+            assert all(
+                row.parameters["prompt"] == "A person speaking calmly with natural small gestures."
+                for row in nodes
+            )
+            assert all(row.parameters["audio_relative"] == sound.relative_path for row in nodes)
+            session.refresh(sound)
+            assert sound.sha256 == original_sha

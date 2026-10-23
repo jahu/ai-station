@@ -659,6 +659,15 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None, execution_de
             if root_parent != parent_run_id:
                 raise HTTPException(409, "Avatar publication belongs to another reviewed parent")
             return job_view(session, task)
+        expected = FullAvatarRequest.model_validate(
+            {
+                **prior_plan["request"],
+                "speech_text": None,
+                "audio_artifact_id": body.audio_artifact_id,
+            }
+        )
+        if body != expected:
+            raise HTTPException(409, "Avatar handoff changed settings outside its reviewed request")
         planner = session.get(Run, parent_run_id)
         speech = session.get(Run, prior_plan.get("speech_run_id"))
         canonical = session.get(Artifact, str(body.audio_artifact_id))
