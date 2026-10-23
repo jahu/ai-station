@@ -213,6 +213,13 @@ class Plan(BaseModel):
 
 def assistant_needs_provider(body):
     plan = explicit_plan(body.model_dump(mode="json", exclude={"attachments"}))
+    if body.image_artifact_ids and (
+        plan is not None
+        and plan.action == "chat"
+        or plan is None
+        and getattr(body, "execution_mode", None) == "chat"
+    ):
+        return False  # Selected-image conversation fallback uses local Vision, not text inference.
     if plan and plan.action == "data.analyze":
         return False  # The tool selects its own fitting local model; never send data to the Chat provider.
     if plan and plan.action == "audio.music":
@@ -636,7 +643,7 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
 
         prepare_page_browser(session, run)
     # Deterministic actions need no inference; only an LLM plan reserves a model.
-    if explicit_plan(run.parameters) is None:
+    if needs_provider and explicit_plan(run.parameters) is None:
         prepare_consumer(session, run)
     user.run_id = run.id
     if body.data is not None:
@@ -787,6 +794,10 @@ def explicit_plan(params):
             reason="Create a local scene video from your prompt and optional first frame.",
         )
     if _image_request(prompt):
+        if params["image_artifact_ids"]:
+            return Plan(
+                action="image.recompose", reason="Generate from your explicitly selected image references."
+            )
         return Plan(action="image.generate", reason="Generate an image from your instruction.")
     if params["image_artifact_ids"]:
         from app.conversation_media import followup_action

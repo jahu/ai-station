@@ -1102,3 +1102,42 @@ def test_explicit_new_project_conversation_model_choice_stays_explicit():
             "coding_request"
         ]
         assert request["model"] == "test" and request["scope"]["model"] == ""
+
+
+@pytest.mark.parametrize("count", [1, 2])
+@pytest.mark.parametrize("mode", ["chat", "work"])
+def test_natural_generation_from_selected_references_uses_recompose_without_dropping_sources(
+    monkeypatch, count, mode
+):
+    with TestClient(app) as client:
+        cid = create(client)
+        references = [image(client) for _ in range(count)]
+        response = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={
+                "content": "Stwórz grafikę na podstawie tych referencji",
+                "image_artifact_ids": references,
+                "execution_mode": mode,
+            },
+        )
+        assert response.status_code == 202, response.text
+        assert step() == response.json()["id"]
+        with session_factory()() as session:
+            root = session.get(Run, response.json()["id"])
+            child = session.get(Run, root.metadata_json["child_run_id"])
+            assert child.executor_type == "photo_pipe" and child.parameters["mode"] == "recompose"
+            assert child.parameters["parent_artifact_ids"] == references
+            assert child.parent_run_id == root.id and child.task_id == root.task_id
+            assert "endpoint" not in root.parameters
+
+
+def test_ambiguous_work_image_request_still_needs_the_selected_planner():
+    from uuid import uuid4
+
+    from app.assistant import assistant_needs_provider
+    from app.chat import MessageBody
+
+    body = MessageBody(
+        content="How many shapes are visible?", image_artifact_ids=[uuid4()], execution_mode="work"
+    )
+    assert assistant_needs_provider(body)

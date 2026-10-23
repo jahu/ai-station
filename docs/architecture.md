@@ -9,6 +9,12 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+[Ordinary image attachments](plans/conversation-images.md) reuse stored image IDs,
+local Vision and the existing PhotoPipe reference operations. Chat's image-to-Vision
+fallback skips unused text-provider/model preparation; Work can retain its normal
+selected-model planner. A shared conversation upload mutation preserves partial
+batch success and errors across data/image control changes. No new execution engine.
+
 [Conversation CSV/Excel analysis](plans/conversation-data.md) composes the existing
 project factory, data workflow, local code generation and offline Python executor
 on one conversation Task. A pure definition configures the shared pipeline without

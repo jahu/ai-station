@@ -1,3 +1,4 @@
+import { isImageFile } from "./image-upload";
 import { isDataFile } from "./data-upload";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { Paperclip } from "lucide-react";
@@ -128,12 +129,14 @@ export default function TextAttachments({
   busy,
   onReading,
   onDataFiles,
+  onImageFiles,
 }: {
   attachments: TextAttachment[];
   onChange: (items: TextAttachment[]) => void;
   busy: boolean;
   onReading: (reading: boolean) => void;
   onDataFiles?: (files: File[]) => Promise<unknown>;
+  onImageFiles?: (files: File[]) => Promise<unknown>;
 }) {
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -149,7 +152,7 @@ export default function TextAttachments({
         <Paperclip size={15} />{" "}
         {reading
           ? "Reading files…"
-          : onDataFiles
+          : onDataFiles || onImageFiles
             ? "Attach files"
             : "Attach text, PDF, or image"}
       </Button>
@@ -181,6 +184,14 @@ export default function TextAttachments({
                   "Choose Analyze CSV / Excel in a general conversation to analyse these files locally.",
                 );
               await onDataFiles(files);
+              return;
+            }
+            if (onImageFiles && files.some(isImageFile)) {
+              if (!files.every(isImageFile) || attachments.length)
+                throw new Error(
+                  "Choose images separately from data, text or PDF attachments. Your existing files are unchanged.",
+                );
+              await onImageFiles(files);
               return;
             }
             if (attachments.length + files.length > 4)
@@ -257,12 +268,24 @@ export default function TextAttachments({
           </p>
         )}
         <p className="muted">
-          Up to four text/PDF/image files. UTF-8 text/code: 16 KB each, 24 KB
-          total. PDFs: 1 MiB and 8 pages; only extractable text is sent, not a
-          visual reading. PNG/JPEG/WebP: 2 MiB and 4 megapixels; pixels are
-          stored as artifacts and are not sent to this text model. Choose
-          Inspect images for local vision.
+          Up to four text/PDF files. UTF-8 text/code: 16 KB each, 24 KB total.
+          PDFs: 1 MiB and 8 pages; only extractable text is sent, not a visual
+          reading.
         </p>
+        {onImageFiles ? (
+          <p className="muted">
+            Images: up to four PNG/JPEG/WebP files, 20 MiB each. Review their
+            order and Send. Local Vision answers image questions; image edits
+            and reference generation use the local image tools. Pixels are not
+            sent to an external conversation provider.
+          </p>
+        ) : (
+          <p className="muted">
+            PNG/JPEG/WebP: 2 MiB and 4 megapixels; pixels are stored as
+            artifacts and are not sent to this text model. Choose Inspect images
+            for local vision.
+          </p>
+        )}
       </details>
       <ErrorNotice error={error} />
       {attachments.length > 0 && (

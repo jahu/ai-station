@@ -18,6 +18,13 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+[Ordinary image attachments](plans/conversation-images.md) publish only the
+current user's selected stored image IDs. Generic mixed scopes are rejected before
+upload. Chat's ordinary image question uses local Vision without snapshotting or
+preparing the text provider; external image-pixel sharing is not granted. Work's
+optional selected-model planner sees the instruction/reference count, not pixels.
+Existing source/hash/Trash, model ownership and cancellation checks remain required.
+
 [Conversation data analysis](plans/conversation-data.md) requires a current
 explicit CSV/XLSX scope, inspected immutable stored inputs and local-only model
 selection. The root is bound to its actual user message; workspace setup and
