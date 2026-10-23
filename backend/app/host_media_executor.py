@@ -81,7 +81,10 @@ class HostMediaExecutor:
             run.finished_at = None
             run.worker_id = None
             run.lease_expires_at = None
-            if run.status == "queued" and memory_ready and run.requested_gpu != "none":
+            # An idle owned LLM can occupy both GPU and host RAM. Reclaim it
+            # through the same dependency-gated stop even when RAM admission
+            # failed, otherwise neither resource can become available.
+            if run.status == "queued" and run.requested_gpu != "none":
                 from app.llama import evict_idle_models
 
                 evict_idle_models(session, run, indexes)
