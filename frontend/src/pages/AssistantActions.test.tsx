@@ -1530,7 +1530,7 @@ it("keeps completed Vision execution and source previews behind explicit disclos
   expect(source.getAttribute("href")).toBe("/library/source");
   expect(fetch).toHaveBeenCalledWith(
     "/api/artifacts/description/lineage",
-    expect.anything(),
+    undefined,
   );
 });
 
