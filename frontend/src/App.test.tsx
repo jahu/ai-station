@@ -339,6 +339,11 @@ it("closing Advanced preserves expanded Chat navigation and returns focus", asyn
   trigger.focus();
   fireEvent.click(trigger);
   await screen.findByRole("dialog", { name: "Advanced workspaces" });
+  fireEvent.keyDown(document, { key: "k", ctrlKey: true });
+  expect(screen.queryByRole("dialog", { name: "Command palette" })).toBeNull();
+  expect(
+    screen.getByRole("dialog", { name: "Advanced workspaces" }),
+  ).toBeTruthy();
   fireEvent.keyDown(document, { key: "Escape" });
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(

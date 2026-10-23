@@ -165,6 +165,12 @@ export default function App() {
         setNavigationOpen(false);
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
+        if (
+          document.querySelector(
+            '[role="dialog"][data-state="open"]:not(.command-dialog)',
+          )
+        )
+          return;
         setOpen((value) => !value);
       }
     };
