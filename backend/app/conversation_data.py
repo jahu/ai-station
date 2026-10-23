@@ -100,6 +100,20 @@ def root_binding(session, root):
     return scope, deadline
 
 
+def verify_source_files(frozen):
+    """Check actual stored inputs in the worker before creating any workspace."""
+    from app.paths import artifact_relative
+    from app.python_execution import MAX_INPUT, read_owned_file
+
+    for item in frozen:
+        read_owned_file(
+            artifact_relative(item["artifact_id"], item["suffix"]),
+            item["size_bytes"],
+            item["sha256"],
+            limit=MAX_INPUT,
+        )
+
+
 def publish_workspace(session, root):
     from app.data_agents import REQUIRED
     from app.project_setup import ProjectName, enqueue_project

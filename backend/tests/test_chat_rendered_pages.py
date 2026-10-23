@@ -274,6 +274,7 @@ def test_pre_render_option_receipt_replays_but_cannot_gain_a_browser_grant(rende
             "continuation",
             "media",
             "music",
+            "data",
             "github",
             "project_defaults",
         ]:

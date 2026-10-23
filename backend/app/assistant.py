@@ -974,10 +974,12 @@ class AssistantExecutor:
                     action="clarify", reason="Choose inspected CSV/Excel files for local data analysis."
                 )
             else:
+                from app.conversation_data import verify_source_files
                 from app.data_agents import require_runtime, verify_inputs
 
                 require_runtime()
                 verify_inputs(session, run.parameters.get("data_inputs"))
+                verify_source_files(run.parameters["data_inputs"])
         prepared_song = None
         if plan and plan.action == "audio.music":
             from app.conversation_music import settings

@@ -215,6 +215,7 @@ def test_legacy_receipt_replays_after_optional_scope_schema_extension(local):
         legacy.pop("continuation")
         legacy.pop("media")
         legacy.pop("music")
+        legacy.pop("data")
         legacy.pop("github")
         legacy.pop("project_defaults")
         legacy.pop("new_project")
