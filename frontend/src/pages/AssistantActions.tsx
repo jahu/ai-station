@@ -648,6 +648,11 @@ export default function AssistantActions({
       >("/connectors"),
     enabled: value.action === "github.inspect",
   });
+  const selectedAudio = useQuery({
+    queryKey: ["artifact", value.audio_artifact_id],
+    queryFn: () => api<Artifact>(`/artifacts/${value.audio_artifact_id}`),
+    enabled: !!value.audio_artifact_id,
+  });
   const cache = useQueryClient();
   const [error, setError] = useState<Error | null>(null);
   const recordingInput =
@@ -1047,6 +1052,41 @@ export default function AssistantActions({
   return (
     <>
       <fieldset disabled={busy} className="assistant-actions image-form">
+        {value.audio_artifact_id && (
+          <div className="assistant-voice-reference">
+            <span>
+              <Mic size={16} />{" "}
+              {recordingInput ? "Recording" : "Voice reference"}
+              {selectedAudio.data?.original_filename
+                ? ` · ${selectedAudio.data.original_filename}`
+                : ""}
+            </span>
+            <audio
+              controls
+              preload="metadata"
+              src={`/api/artifacts/${value.audio_artifact_id}/file`}
+              aria-label={
+                recordingInput ? "Recording preview" : "Voice reference preview"
+              }
+            />
+            <button
+              type="button"
+              className="icon-button"
+              aria-label={
+                recordingInput ? "Remove recording" : "Remove voice reference"
+              }
+              onClick={() =>
+                onChange({
+                  ...value,
+                  audio_artifact_id: null,
+                  speech_text: null,
+                })
+              }
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
         <div>
           <ActionChoiceList
             value={value.action}
@@ -1205,34 +1245,7 @@ export default function AssistantActions({
             await attachAudio(file);
           }}
         />
-        {value.audio_artifact_id && (
-          <div className="assistant-voice-reference">
-            <span>
-              <Mic size={16} />{" "}
-              {recordingInput ? "Recording" : "Voice reference"}
-            </span>
-            <audio
-              controls
-              preload="metadata"
-              src={`/api/artifacts/${value.audio_artifact_id}/file`}
-              aria-label="Voice reference preview"
-            />
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="Remove voice reference"
-              onClick={() =>
-                onChange({
-                  ...value,
-                  audio_artifact_id: null,
-                  speech_text: null,
-                })
-              }
-            >
-              <X size={16} />
-            </button>
-          </div>
-        )}
+
         {((!value.action.startsWith("coding.") &&
           !value.action.startsWith("runtime.") &&
           value.action !== "image.generate_video" &&

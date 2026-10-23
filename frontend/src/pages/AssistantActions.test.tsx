@@ -199,32 +199,40 @@ it("reuses Library images in selection order, reorders them, and attaches a voic
   const fetch = vi.fn(async (path: string) => ({
     ok: true,
     json: async () =>
-      path.includes("kind=audio")
-        ? [
-            {
-              id: "voice",
-              type: "audio",
-              mime_type: "audio/wav",
-              original_filename: "Voice.wav",
-              metadata: {},
-            },
-          ]
-        : [
-            {
-              id: "person",
-              type: "image",
-              mime_type: "image/png",
-              original_filename: "Person.png",
-              metadata: { width: 512, height: 512 },
-            },
-            {
-              id: "outfit",
-              type: "image",
-              mime_type: "image/jpeg",
-              original_filename: "Outfit.jpg",
-              metadata: { width: 512, height: 512 },
-            },
-          ],
+      path === "/api/artifacts/voice"
+        ? {
+            id: "voice",
+            type: "audio",
+            mime_type: "audio/wav",
+            original_filename: "Voice.wav",
+            metadata: {},
+          }
+        : path.includes("kind=audio")
+          ? [
+              {
+                id: "voice",
+                type: "audio",
+                mime_type: "audio/wav",
+                original_filename: "Voice.wav",
+                metadata: {},
+              },
+            ]
+          : [
+              {
+                id: "person",
+                type: "image",
+                mime_type: "image/png",
+                original_filename: "Person.png",
+                metadata: { width: 512, height: 512 },
+              },
+              {
+                id: "outfit",
+                type: "image",
+                mime_type: "image/jpeg",
+                original_filename: "Outfit.jpg",
+                metadata: { width: 512, height: 512 },
+              },
+            ],
   }));
   vi.stubGlobal("fetch", fetch);
   function Composer() {
@@ -263,7 +271,10 @@ it("reuses Library images in selection order, reorders them, and attaches a voic
     screen.getByLabelText("Voice reference preview").getAttribute("src"),
   ).toBe("/api/artifacts/voice/file");
   expect(
-    fetch.mock.calls.every(([path]) => path.startsWith("/api/artifacts?")),
+    fetch.mock.calls.every(
+      ([path]) =>
+        path.startsWith("/api/artifacts?") || path === "/api/artifacts/voice",
+    ),
   ).toBe(true);
   fireEvent.click(
     screen.getByRole("button", { name: "Remove voice reference" }),

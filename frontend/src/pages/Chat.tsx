@@ -1124,11 +1124,13 @@ function ConversationView({
     setOptions(
       selection.kind === "data"
         ? { ...emptyOptions, action: "data.analyze", data: selection.scope }
-        : {
-            ...emptyOptions,
-            action: options.action === "chat" ? "chat" : "auto",
-            image_artifact_ids: selection.ids,
-          },
+        : selection.kind === "audio"
+          ? { ...emptyOptions, audio_artifact_id: selection.id }
+          : {
+              ...emptyOptions,
+              action: options.action === "chat" ? "chat" : "auto",
+              image_artifact_ids: selection.ids,
+            },
     );
     setWebEnabled(false);
     setWebQuery("");
@@ -1190,6 +1192,7 @@ function ConversationView({
     conversation.model,
     turnMode === "chat" &&
       ["auto", "chat"].includes(options.action) &&
+      !options.audio_artifact_id &&
       !options.image_artifact_ids.length &&
       !attachments.some((item) => item.kind === "image"),
     conversation.max_tokens,
@@ -1723,6 +1726,7 @@ function ConversationView({
                   ) ||
                   attachments.length > 0) && (
                   <TextAttachments
+                    uploadErrorsHandled
                     attachments={attachments}
                     onChange={setAttachments}
                     busy={busy || options.image_artifact_ids.length > 0}
@@ -1747,6 +1751,18 @@ function ConversationView({
                         ? (files) =>
                             attachmentUpload.mutateAsync({
                               kind: "images",
+                              files,
+                            })
+                        : undefined
+                    }
+                    onRecordingFiles={
+                      !continuing &&
+                      acceptsLocalAttachments(options) &&
+                      !webQuery.trim() &&
+                      !web.renderPages
+                        ? (files) =>
+                            attachmentUpload.mutateAsync({
+                              kind: "audio",
                               files,
                             })
                         : undefined
