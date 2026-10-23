@@ -39,17 +39,27 @@ access. LAN/local asset hashes, authentication, data and native runtime were
 verified after backed-up rollout. Evidence:
 `data/acceptance/agent-first-navigation-20261023/post-deployment-qualified.json`.
 
-Next general-agent capability: `feat/agent-search-source-pages`, owned worktree
-`.tools/agent-search-source-pages`. Optional **Read search sources** composes
-public search → at most three source-bound page reads → report. Only actual
-same-workflow hash-verified search results can supply targets; no model-selected
-URL, recursive page link, credential or JavaScript execution is granted.
-[Design and qualification](../agent-search-pages.md) cover individual source
-failures, deadline/Stop, retention, result provenance and reviewed disabled drafts.
-Finish full backend/Runner/UI checks, compiled desktop/phone source-result
-inspection and PR review before deployment; then qualify real free source reads
-with the same installed local model and pause the own QA agent. No key or new
-provider/model download is required. Broad platform completion remains open.
+Source-page reading shipped as #358 (develop `048fac9`, source `aaa06ca`).
+2219 Python tests/nine opt-in skips and 579 UI tests passed; compiled desktop/phone
+activation/workflow/source-result checks and exact Docker assets were verified.
+Real same-goal/query acceptance read three public HTTP 200 pages and used cited
+page details absent from snippets. Source/artifact hashes and lineage passed;
+QA was paused and original tools/native runtime restored. Evidence:
+`data/acceptance/agent-search-source-pages-20261023/post-deployment-qualified.json`.
+
+Semantic inspection caught another issue: the local model labelled that manual
+report 08:00 UTC from the saved cron schedule, despite actual execution earlier.
+Source-reading/attribution passed; complete report-time semantics did not. Preserve
+`semantic-review.json` and the original Markdown; do not silently rewrite history.
+
+Next focused fix: `fix/agent-report-execution-time`, owned worktree
+`.tools/fix-agent-report-execution-time`. Supply frozen trusted Run/trigger/UTC
+context time and label schedules as plans. Save that same context with report
+artifacts; preserve observation timestamps, original deadlines and Stop/retention.
+Qualify manual/scheduler/retry provenance, old-source timestamps, existing report
+correction and cancellation; then repeat the same real QA goal/query with explicit
+source-reading scope. Frontend/native/schema remain unchanged. Broad platform
+completion stays active.
 
 ## Current continuation — general agents and website understanding, 2026-10-22
 
