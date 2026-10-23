@@ -6,16 +6,24 @@ export type MusicScopeOptions = {
   gpu?: string;
 };
 
+export type ConversationMusicOptions = MusicScopeOptions & {
+  lyrics_source?: "fixed" | "goal";
+};
+
 export function musicScopeReady(
-  options: { action: string; music?: MusicScopeOptions | null },
+  options: { action: string; music?: ConversationMusicOptions | null },
   description: string,
 ) {
   if (options.action !== "audio.music") return options.music == null;
   const scope = options.music ?? {};
   return (
     !!description.trim() &&
-    description.trim().length <= 512 &&
-    (scope.instrumental !== false || !!scope.lyrics?.trim()) &&
+    description.trim().length <=
+      (scope.lyrics_source === "goal" ? 16000 : 512) &&
+    (scope.lyrics_source !== "goal" || scope.instrumental === false) &&
+    (scope.instrumental !== false ||
+      scope.lyrics_source === "goal" ||
+      !!scope.lyrics?.trim()) &&
     (scope.lyrics?.length ?? 0) <= 4096 &&
     (scope.duration_seconds == null ||
       (Number.isInteger(scope.duration_seconds) &&

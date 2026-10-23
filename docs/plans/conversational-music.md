@@ -59,3 +59,39 @@ instrumental. The first conversation action accepts instrumental descriptions or
 explicitly supplied lyrics; requests outside that scope must ask for the required
 input. These later chains should reuse ordinary model/Vision Runs and the same
 music child, not another executor or queue.
+
+
+## Original songs from one Send — active increment
+
+Persistent original-lyric agents are deployed (#370). Real local drafting,
+original Polish words, a normal-worker 10-second GPU WAV and restoration of the
+operator's 46080-token model preset passed. Tiny CPU Whisper did not recognize
+the sung words; lyrical intelligibility remains a separate listening check.
+Evidence: `data/acceptance/agent-music-lyrics-20261023`.
+
+Extend the existing conversation Music scope with a reviewed goal-lyric mode.
+Natural current-turn vocal-song generation or **With lyrics → Write lyrics** may
+request it; explicit instrumental/supplied-word choices retain their authority.
+The existing orchestrator Run performs bounded creative inference before its
+atomic music-child publication. Reuse shared pure description/song validation;
+there is no transient persistent agent, second music engine or new Host API.
+The selected conversation model/provider is disclosed and bound through ordinary
+provider snapshots, permissions, model admission, leases and Stop. Only this
+writing mode needs a text model; instrumental and supplied lyrics keep their
+existing no-inference path. Honor qualified reasoning only when model work exists.
+
+Preparation may replace only caption and authorized lyrics. Duration, GPU, seed,
+permissions, current-turn scope and supplied words cannot be changed by output.
+Require exact bounded JSON with at most one correction. Preserve prepared words
+as an owned JSON artifact and provenance on the existing music child; show actual
+song lyrics from the resulting audio metadata beside playback. Do not invent a
+finished track before its checked WAV exists. Stop during writing publishes no
+music child. Recovery/receipts cannot replay uncertain generation.
+
+Default fixed scope serialization must preserve old request fingerprints. Exact
+Web, attachment/Git/project/runtime mixes stay rejected; ordinary default Web is
+normalized off without a search. Quotes, prior context and model plans do not
+authorize a new song. Verify natural/selected entry and follow-up, provider grants,
+legacy receipts, fixed no-inference behavior, immutable fields, invalid/truncated
+output, Stop and actual inline words. Qualify compiled desktop/phone and a short
+real selected-local-model case while preserving the operator's runtime preset.

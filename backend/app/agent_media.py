@@ -9,7 +9,6 @@ from datetime import datetime
 from pathlib import Path
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from app.agent_media_schema import writes_lyrics
@@ -20,6 +19,7 @@ from app.db import utcnow
 from app.events import append_event
 from app.heartbeat import cancel_expired_run
 from app.local_provider import LocalChatProvider
+from app.media_text import Description, SongDescription
 from app.models import Agent, Artifact, Run
 from app.paths import safe_join
 from app.permissions import require
@@ -279,15 +279,6 @@ def verify_published_inputs(session, run):
         ):
             raise ValueError("The reviewed media source is unavailable or changed")
     verify_files(run)
-
-
-class Description(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    description: str = Field(min_length=1, max_length=10000)
-
-
-class SongDescription(Description):
-    lyrics: str = Field(min_length=1, max_length=4096)
 
 
 def description_key(scope):

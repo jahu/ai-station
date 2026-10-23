@@ -381,16 +381,17 @@ export default function AgentMediaScopeEditor({
                 ? (lyrics_source) => onChange({ ...scope, lyrics_source })
                 : undefined
             }
-            onChange={(options) =>
+            onChange={(options, rememberedSource) =>
               onChange({
                 ...scope,
                 lyrics_source:
                   options.instrumental !== false
                     ? "fixed"
-                    : scope.request.instrumental !== false &&
-                        scope.description_source === "goal"
-                      ? "goal"
-                      : (scope.lyrics_source ?? "fixed"),
+                    : (rememberedSource ??
+                      (scope.request.instrumental !== false &&
+                      scope.description_source === "goal"
+                        ? "goal"
+                        : (scope.lyrics_source ?? "fixed"))),
                 request: {
                   ...scope.request,
                   ...options,

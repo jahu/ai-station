@@ -1,6 +1,6 @@
 import RecordingButton from "../components/media/RecordingButton";
 import MusicScope from "./MusicScope";
-import type { MusicScopeOptions } from "./music-scope";
+import type { ConversationMusicOptions as MusicScopeOptions } from "./music-scope";
 import { TRANSCRIPTION_AUDIO_ACCEPT } from "../recording-formats";
 import { TranscriptResult } from "./Transcription";
 import GithubSnapshotResult, {
@@ -286,6 +286,7 @@ export function AssistantResults({
         {result.artifacts
           ?.filter(
             (artifact) =>
+              artifact.metadata?.song_preparation !== true &&
               !result.transcriptions?.some(
                 (run) => run.id === artifact.run_id,
               ) &&
@@ -328,6 +329,18 @@ export function AssistantResults({
                   }
                 />
               )}
+              {artifact.type === "audio" &&
+                artifact.metadata?.capability === "audio.music" &&
+                typeof artifact.metadata.lyrics === "string" &&
+                artifact.metadata.lyrics.trim() && (
+                  <section
+                    className="media-spoken-text"
+                    aria-label={`Song lyrics ${artifact.id}`}
+                  >
+                    <h3>Song lyrics</h3>
+                    <p>{artifact.metadata.lyrics}</p>
+                  </section>
+                )}
               <Link to={`/library/${artifact.id}`}>
                 {artifact.title || artifact.original_filename || artifact.type}
               </Link>
@@ -1202,8 +1215,29 @@ export default function AssistantActions({
         {value.action === "audio.music" && (
           <MusicScope
             value={value.music ?? {}}
+            lyricsSource={value.music?.lyrics_source ?? "fixed"}
+            descriptionLimit={
+              value.music?.lyrics_source === "goal" ? 16000 : 512
+            }
+            onLyricsSourceChange={(lyrics_source) =>
+              onChange({ ...value, music: { ...value.music, lyrics_source } })
+            }
             descriptionLength={description?.trim().length}
-            onChange={(music) => onChange({ ...value, music })}
+            onChange={(music, rememberedSource) =>
+              onChange({
+                ...value,
+                music: {
+                  ...music,
+                  lyrics_source:
+                    music.instrumental !== false
+                      ? "fixed"
+                      : (rememberedSource ??
+                        (value.music?.instrumental !== false
+                          ? "goal"
+                          : (value.music?.lyrics_source ?? "fixed"))),
+                },
+              })
+            }
           />
         )}
         {value.action === "video.generate" && (

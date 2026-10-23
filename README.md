@@ -26,6 +26,13 @@ reservation and safety headroom. Checks repeat automatically; leave the page or
 Stop the task at any time. The notice links to the waiting Run and disappears
 after admission or Stop; it does not claim generation has begun.
 
+In Chat or Work, **Create a song…** can write original lyrics with the selected
+conversation model and then generate the vocal track locally. **Generate music →
+With lyrics** also offers **Write lyrics each run** or **Use my lyrics**. Supplied
+words stay exact; instrumental and supplied-word tracks need no text inference.
+Actual song text appears beside the checked audio result. Stop during writing
+prevents music generation. [Conversation music contracts](docs/plans/conversational-music.md).
+
 For an **Avatar** output, choose a Library portrait and WAV, then select new Polish
 speech or the complete saved recording. Goal mode prepares words for generated
 speech, or motion direction for a recording; the reviewed sources remain fixed.

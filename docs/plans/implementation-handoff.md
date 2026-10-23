@@ -15,12 +15,15 @@ operator runtime remains ready with its saved 46080-token context. Preserve it.
 Real new agent video/avatar GPU acceptance is still pending sufficient RAM;
 previous standalone profile qualification is separate.
 
-The next candidate extends music-agent preparation with reviewed original lyric
-writing, using the same media executor, expiry and publication receipt. It adds
-no model download, host access or schema migration. See
-[the lyric contract](agent-media-generation.md#goal-based-vocal-lyrics--next-implementation-increment).
-Qualify and deploy before claiming availability; ordinary Chat/Music requests
-continue to require supplied words until their separate composition is delivered.
+Original-lyric agents are now merged/deployed in #370. Qualification passed 2497
+Python/Runner tests, nine opt-in skips and 610 UI tests plus desktop/phone
+playback. Real local drafting → original Polish words → 10-second GPU WAV passed;
+the operator's model preset was restored. Tiny ASR could not confirm sung-word
+intelligibility, which remains a separate listening check. Current release and
+proof: `data/acceptance/agent-music-lyrics-20261023`. The active next increment is
+[original songs in the conversation](conversational-music.md#original-songs-from-one-send--active-increment),
+reusing the existing orchestrator and music child. No persistent agent should be
+created for an ordinary one-turn music request.
 The local-music section below is historical qualification, not unfinished #361.
 
 ## Active continuation — local music, 2026-10-23

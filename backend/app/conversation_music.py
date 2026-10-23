@@ -1,12 +1,14 @@
 """Current-turn music intent and typed settings; never a second executor."""
 
 import re
+from typing import Literal
 from uuid import UUID
 
 from fastapi import HTTPException
-from pydantic import Field, ValidationError
+from pydantic import Field, ValidationError, model_serializer, model_validator
 
-from app.music import MusicRequest, MusicSettings
+from app.music import MusicRequest
+from app.music_schema import MusicOptions, MusicSettings
 
 _REQUEST = re.compile(
     r"^(?:(?:please|prosz[eę])\s+)?"
@@ -23,9 +25,31 @@ _OTHER_INTENT = re.compile(
 _SCOPES = ("github", "coding", "new_project", "continuation", "commit", "publish", "load", "stop")
 
 
-class MusicScope(MusicSettings):
+class MusicScope(MusicOptions):
     # None preserves a duration written in the message; otherwise use 30 s.
     duration_seconds: int | None = Field(default=None, ge=10, le=600, strict=True)
+    lyrics_source: Literal["fixed", "goal"] = "fixed"
+
+    @model_validator(mode="after")
+    def reviewed_vocals(self):
+        if self.lyrics_source == "goal":
+            if self.instrumental:
+                raise ValueError("Writing lyrics requires vocal music")
+        else:
+            MusicSettings.model_validate(
+                {
+                    **self.model_dump(exclude={"lyrics_source"}),
+                    "duration_seconds": self.duration_seconds or 30,
+                }
+            )
+        return self
+
+    @model_serializer(mode="wrap")
+    def legacy_scope_receipt(self, serializer):
+        result = serializer(self)
+        if self.lyrics_source == "fixed":
+            result.pop("lyrics_source", None)
+        return result
 
 
 def requested(params):
@@ -77,10 +101,8 @@ def settings(params):
             r"\b(?:instrumental\w*|without vocals|bez wokalu|bez słów)\b", params["content"], re.I
         )
     ):
-        raise ValueError(
-            "For vocals, choose Generate music and supply your lyrics, or request an instrumental"
-        )
-    return MusicSettings(**{**scope.model_dump(), "duration_seconds": duration})
+        scope = scope.model_copy(update={"lyrics_source": "goal", "instrumental": False})
+    return MusicScope.model_validate({**scope.model_dump(), "duration_seconds": duration})
 
 
 def prepare_turn(body):
@@ -109,7 +131,11 @@ def prepare_turn(body):
         raise HTTPException(422, "Send exact Web research separately from local music generation")
     try:
         options = settings(body.model_dump(mode="json"))
-        MusicRequest(client_request_id=UUID(int=0), caption=body.content, **options.model_dump())
+        if options.lyrics_source == "goal":
+            if len(body.content) > 16000:
+                raise ValueError("Keep the song-writing instruction within 16000 characters")
+        else:
+            MusicRequest(client_request_id=UUID(int=0), caption=body.content, **options.model_dump())
     except (ValueError, ValidationError) as exc:
         raise HTTPException(422, str(exc)) from exc
-    return body.model_copy(update={"reasoning": None})
+    return body if options.lyrics_source == "goal" else body.model_copy(update={"reasoning": None})
