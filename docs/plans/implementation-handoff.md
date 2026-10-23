@@ -5,7 +5,7 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current continuation — analysis output qualification, 2026-10-24
+## Current continuation — optional Python outputs, 2026-10-24
 
 Natural CSV/XLSX follow-ups (#383) and inline PNG/Excel/text exports (#384–#385)
 are deployed. Actual normal-worker local inference at131072 context and offline
@@ -17,12 +17,20 @@ The first #384 real attempt missed the model's undeclared files; it remains fail
 in its own evidence. #385 makes current requested files mandatory independently
 of model declarations. Do not repeat the completed implementation.
 
-The current candidate `.tools/data-export-expressions` strengthens the inert-XLSX
-contract for conditional/data-validation expressions and formula-typed thresholds,
-while retaining literal formatting. Its evidence is under
-`data/acceptance/data-export-expressions-20261024`; inspect full qualification and
-the central deployment record before claiming rollout. Recheck the existing real
-workbook by its hash; no new GPU inference, native restart or dependency is needed.
+The stricter inert-XLSX policy (#386) is deployed and qualified under
+`data/acceptance/data-export-expressions-20261024`. It rejects conditional/data-
+validation expressions and formula-typed thresholds while preserving literal
+formatting. The existing actual workbook was rechecked by hash without new inference.
+
+The current candidate `.tools/python-optional-outputs` extends the existing typed
+Python request with an approved optional allowlist. It captures supported files
+actually created despite an empty model manifest, retaining required-file checks,
+legacy digests, owned cleanup and inert artifact validation. Evidence is under
+`data/acceptance/python-optional-outputs-20261024`. A disposable real native/CPU
+container flow with fake inference captured PNG/Excel and accepted an absent
+optional report. Full qualification/rollout and actual local inference are still
+separate. This changes native/image source: use an idle backed-up upgrade, preserve
+the operator's model and verify installed feature negotiation. No new model download.
 
 The full platform goal remains active: broader general-agent orchestration,
 media/resource/quality acceptance and operations/private remote access. Preserve

@@ -1,5 +1,12 @@
 # Execution model
 
+The existing Python contract may freeze optional output names separately from
+required files. Collection after confirmed script exit accepts a required prefix
+followed by the present ordered subset of optional names, under the same count,
+size, identity, cleanup and deadline constraints. Absent optional files are normal;
+invalid files fail. Normal data result/repair and history retain captured extras.
+Feature negotiation and empty-default serialization preserve old images/records.
+
 Optional chart/workbook/report names are frozen on the local data generation Run
 before the existing Python dispatch. All declared files are mandatory in the
 typed request and owned completion report. The result worker validates table/CSV

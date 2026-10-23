@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer, model_validator
 
 from ai_station_runner.browser_runs import CONTAINER, IMAGE, save
 from ai_station_runner.browser_runs import docker as browser_docker
@@ -53,6 +53,7 @@ class PythonRequest(BaseModel):
     script_artifact_id: UUID | None = None
     inputs: list[PythonInput] = Field(default_factory=list, max_length=8)
     expected_outputs: list[str] = Field(min_length=1, max_length=8)
+    optional_outputs: list[str] = Field(default_factory=list, max_length=8)
     maximum_runtime: int = Field(default=120, ge=1, le=600, strict=True)
     permissions: list[str] = Field(max_length=32)
 
@@ -64,7 +65,7 @@ class PythonRequest(BaseModel):
             raise ValueError("A Python source entrypoint is required")
         return value
 
-    @field_validator("expected_outputs")
+    @field_validator("expected_outputs", "optional_outputs")
     @classmethod
     def output_paths(cls, values):
         if len(values) != len(set(values)):
@@ -77,6 +78,9 @@ class PythonRequest(BaseModel):
 
     @model_validator(mode="after")
     def input_limits(self):
+        names = self.expected_outputs + self.optional_outputs
+        if len(names) > 8 or len(names) != len(set(names)):
+            raise ValueError("Required and optional outputs must be disjoint and total at most eight")
         if self.script_artifact_id and self.script_relative != f"analysis-{self.run_id}.py":
             raise ValueError("Artifact source uses only its fixed Run-owned entrypoint")
         if len({item.artifact_id for item in self.inputs}) != len(self.inputs):
@@ -84,6 +88,13 @@ class PythonRequest(BaseModel):
         if sum(item.size_bytes for item in self.inputs) > MAX_INPUT_TOTAL:
             raise ValueError("Python input files exceed the total limit")
         return self
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_identity(self, handler):
+        value = handler(self)
+        if not self.optional_outputs:
+            value.pop("optional_outputs", None)
+        return value
 
 
 def directory(run_id):
@@ -112,6 +123,7 @@ def capabilities():
             "protocol": 1,
             "network": False,
             "artifact_source": True,
+            "optional_outputs": (config.get("Labels") or {}).get("ai-station.python.optional-outputs") == "1",
             "data_exports": 1
             if (config.get("Labels") or {}).get("ai-station.python.data-exports") == "1"
             else 0,
@@ -199,6 +211,8 @@ def start_python(manager, body):
         capability = capabilities()
         if not capability["available"]:
             raise ValueError(capability["reason"])
+        if body.optional_outputs and not capability.get("optional_outputs"):
+            raise ValueError("The installed Python image does not support optional output collection")
         with snapshot_lock(str(body.worktree_run_id)):
             record = inspect_worktree(manager, str(body.worktree_run_id))
             if record["state"] != "ready" or record["project_id"] != str(body.project_id):

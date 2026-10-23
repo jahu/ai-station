@@ -58,6 +58,7 @@ def data_environment(repository, owned_runner, monkeypatch):
         "model_requests": [],
         "exports": {},
         "data_exports": 0,
+        "optional_outputs": False,
     }
 
     async def stream(self, **kwargs):
@@ -83,7 +84,12 @@ def data_environment(repository, owned_runner, monkeypatch):
 
     def request(self, method, path, payload=None):
         if path == "/v1/python/capabilities":
-            return {"available": True, "artifact_source": True, "data_exports": state["data_exports"]}
+            return {
+                "available": True,
+                "artifact_source": True,
+                "data_exports": state["data_exports"],
+                "optional_outputs": state["optional_outputs"],
+            }
         if path == "/v1/llama/" + iid:
             return {"status": "ready", "alive": True, "n_ctx": 131072}
         if path == "/v1/runs/python" and method == "POST":
@@ -117,13 +123,16 @@ def data_environment(repository, owned_runner, monkeypatch):
                 answer = {"answer": "The total is 27.", "columns": ["Total"], "rows": [["27"]]}
                 if state["bad_report"]:
                     answer["rows"] = [["999"]]
-                for index, (name, data) in enumerate(
-                    [
-                        ("result.json", json.dumps(answer).encode()),
-                        ("result.csv", b"Total\n27\n"),
-                        *state["exports"].items(),
-                    ]
-                ):
+                available = {
+                    "result.json": json.dumps(answer).encode(),
+                    "result.csv": b"Total\n27\n",
+                    **state["exports"],
+                }
+                names = payload["expected_outputs"] + [
+                    name for name in payload.get("optional_outputs", []) if name in available
+                ]
+                for index, name in enumerate(names):
+                    data = available[name]
                     suffix = Path(name).suffix
                     relative = f"runtime/python/{payload['run_id']}/output-{index}{suffix}"
                     file = get_settings().data_dir / relative

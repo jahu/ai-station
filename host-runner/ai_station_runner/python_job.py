@@ -12,7 +12,13 @@ import sys
 from contextlib import suppress
 from pathlib import PurePosixPath
 
-from ai_station_runner.python_protocol import MAX_FILE, MAX_LINE, MAX_LOG, MAX_OUTPUT_TOTAL
+from ai_station_runner.python_protocol import (
+    MAX_FILE,
+    MAX_LINE,
+    MAX_LOG,
+    MAX_OUTPUT_TOTAL,
+    output_names_match,
+)
 from ai_station_runner.python_runs import (
     PythonRequest,
     container_identity,
@@ -95,7 +101,8 @@ def collect_output(run_id, body, payload, collected):
     if set(payload) != {"event", "name", "data"} or not isinstance(payload["data"], str):
         raise ValueError("Invalid Python output envelope")
     name = payload["name"]
-    if len(collected) >= len(body.expected_outputs) or name != body.expected_outputs[len(collected)]:
+    names = [item["name"] for item in collected] + [name]
+    if not output_names_match(body.expected_outputs, body.optional_outputs, names, complete=False):
         raise ValueError("Unexpected or duplicate Python output")
     data = base64.b64decode(payload["data"], validate=True)
     if len(data) > MAX_FILE or sum(item["size_bytes"] for item in collected) + len(data) > MAX_OUTPUT_TOTAL:
@@ -146,6 +153,7 @@ async def execute(run_id):
                 "maximum_runtime": body.maximum_runtime,
                 "expected_outputs": body.expected_outputs,
                 "inputs": {item.filename: "/inputs/" + item.filename for item in body.inputs},
+                **({"optional_outputs": body.optional_outputs} if body.optional_outputs else {}),
             }
             proc.stdin.write((json.dumps(request) + "\n").encode())
             await proc.stdin.drain()
@@ -184,7 +192,7 @@ async def execute(run_id):
                     if payload["outputs"] != names or (
                         payload["exit_code"] == 0
                         and payload["error"] is None
-                        and names != body.expected_outputs
+                        and not output_names_match(body.expected_outputs, body.optional_outputs, names)
                     ):
                         raise ValueError("Python completion omitted required outputs")
                     if (payload["exit_code"] != 0 or payload["error"]) and outputs:

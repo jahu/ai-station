@@ -25,7 +25,7 @@ from app.local_provider import LocalChatProvider, model_endpoint
 from app.models import Artifact, Project, Run, RunEvent, RuntimeInstance, Worktree
 from app.permissions import require
 from app.project_activity import project_write_condition
-from app.python_execution import enqueue_python, input_snapshots, read_owned_file
+from app.python_execution import enqueue_python, input_snapshots, output_names_match, read_owned_file
 from app.runner_client import RunnerClient
 from app.runs import create_run, mark_failed, transition
 from app.state import TERMINAL, RunStatus
@@ -335,6 +335,7 @@ result.xlsx: an openpyxl workbook with literal values, clear headings and sensib
 report.txt: a UTF-8 report. Never declare or create any other export filename.
 Optional exports accompany the mandatory result.csv and result.json, not replace them. Do not claim a file was created unless you declare it and write it.
 Always create EVERY filename in runtime.required_outputs. The controller collects requested exports even if you omit them from the outputs declaration.
+When runtime.capture_undeclared_outputs is true, supported files you actually create are also collected even if omitted from outputs. Never claim a file exists unless you write it.
 AI_STATION_INPUTS is a JSON STRING containing a direct filename-to-path dictionary, NOT a file, directory, list, or an object with an "inputs" key.
 Start with: inputs = json.loads(os.environ["AI_STATION_INPUTS"])
 Then use: path = inputs[input_name] and open(path), NOT open(os.environ["AI_STATION_INPUTS"]).
@@ -413,6 +414,8 @@ class DataGenerateExecutor:
                         "output_dir": "/outputs",
                         "required_outputs": OUTPUTS + required,
                         "available_optional_outputs": available_outputs,
+                        "capture_undeclared_outputs": bool(available_outputs)
+                        and capability.get("optional_outputs") is True,
                     },
                     "repair": run.parameters.get("repair"),
                 },
@@ -434,6 +437,11 @@ class DataGenerateExecutor:
                 return "done"
             proposal = Script.model_validate_json(text)
             output_files = [name for name in FORMATS if name in required or name in proposal.outputs]
+            optional_files = (
+                [name for name in available_outputs if name not in output_files]
+                if capability.get("optional_outputs") is True
+                else []
+            )
             script = proposal.script
             if any(name not in available_outputs for name in proposal.outputs):
                 raise ValueError(
@@ -462,13 +470,19 @@ class DataGenerateExecutor:
                 "data_output_files": output_files,
                 "required_data_output_files": required,
                 "declared_data_output_files": proposal.outputs,
+                **({"data_optional_output_files": optional_files} if optional_files else {}),
             }
-            if output_files:
+            if output_files or optional_files:
                 append_event(
                     session,
                     run.id,
                     "data.outputs.selected",
-                    {"required": required, "declared": proposal.outputs, "collected": output_files},
+                    {
+                        "required": required,
+                        "declared": proposal.outputs,
+                        "expected": output_files,
+                        "optional": optional_files,
+                    },
                 )
             # Source stays an immutable artifact until the typed Python dispatch
             # snapshots it and records its fixed Run-owned worktree entrypoint.
@@ -490,6 +504,7 @@ class DataGenerateExecutor:
                         "script_artifact_id": artifact.id,
                         "input_artifact_ids": [x["artifact_id"] for x in scope["data_inputs"]],
                         "expected_outputs": OUTPUTS + output_files,
+                        **({"optional_outputs": optional_files} if optional_files else {}),
                         "maximum_runtime": min(120, remaining),
                     },
                     permissions=run.effective_permissions,
@@ -621,10 +636,11 @@ class DataResultExecutor:
                 session.get(Artifact, aid) for aid in source.metadata_json.get("output_artifact_ids", [])
             ]
             expected = source.parameters["expected_outputs"]
-            if len(outputs) != len(expected) or any(a is None or a.run_id != source.id for a in outputs):
+            optional = source.parameters.get("optional_outputs", [])
+            if any(a is None or a.run_id != source.id for a in outputs):
                 raise ValueError("Missing verified Python output artifacts")
             by_name = {a.metadata_json.get("output_name"): a for a in outputs}
-            if list(by_name) != expected:
+            if len(by_name) != len(outputs) or not output_names_match(expected, optional, list(by_name)):
                 raise ValueError("Python exports differ from their declared filenames")
             report_file, csv_file = by_name["result.json"], by_name["result.csv"]
             report_path = read_owned_file(
@@ -649,7 +665,9 @@ class DataResultExecutor:
             from app.data_exports import validate as validate_export
 
             verified_exports = []
-            for name in expected[2:]:
+            for name in FORMATS:
+                if name not in by_name:
+                    continue
                 item = by_name[name]
                 path = read_owned_file(item.relative_path, item.size_bytes, item.sha256)
                 verified_exports.append((name, item, validate_export(name, path.read_bytes())))
@@ -781,6 +799,15 @@ def validate_python_dispatch(session, run):
         {key: value for key, value in item.items() if key not in {"preview_run_id", "preview_artifact_id"}}
         for item in scope["data_inputs"]
     ]
+    optional = []
+    if generation is not None:
+        runtime = json.loads(generation.parameters["messages"][1]["content"])["runtime"]
+        if runtime.get("capture_undeclared_outputs") is True:
+            if runtime.get("available_optional_outputs") != list(FORMATS):
+                raise ValueError("Optional data capture differs from its approved runtime scope")
+            optional = [
+                name for name in FORMATS if name not in generation.metadata_json.get("data_output_files", [])
+            ]
     if (
         generation is None
         or generation.executor_type != "agent_data_generate"
@@ -803,6 +830,13 @@ def validate_python_dispatch(session, run):
         or not set(required_exports(definition.goal))
         <= set(generation.metadata_json.get("data_output_files", []))
         or generation.metadata_json.get("required_data_output_files", []) != required_exports(definition.goal)
+        or run.parameters.get("optional_outputs", [])
+        != generation.metadata_json.get("data_optional_output_files", [])
+        or run.parameters.get("optional_outputs", []) != optional
+        or any(
+            name not in FORMATS or name in run.parameters.get("expected_outputs", [])
+            for name in run.parameters.get("optional_outputs", [])
+        )
     ):
         raise ValueError("Python dispatch changed from its exact reviewed source and input scope")
     return generation
