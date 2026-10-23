@@ -537,3 +537,12 @@ static build in an offline, CPU-only Chromium container and sends image frames t
 the UI. It does not execute generated JavaScript in the authenticated UI origin.
 The optional adapter remains disabled until its image is configured; see
 [setup, security and verification](docs/agent-site-preview.md).
+
+### Local music setup (in progress)
+
+The [music delivery plan](docs/plans/local-music-generation.md) includes a pinned
+ACE-Step 1.5 checkpoint manifest and explicit setup script. Running
+`scripts/install-music-model.py --destination <new-directory>` only prints an
+offline plan; `--download` explicitly fetches 6.34 GB into a new directory and
+`--verify` checks all file hashes offline. It never overwrites existing models,
+installs dependencies or enables generation. Music is not yet available in Audio.

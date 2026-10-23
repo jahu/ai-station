@@ -1,5 +1,9 @@
 # Architecture
 
+[Local music](plans/local-music-generation.md) is being added through the shared
+media Run/Host Runner boundary. A pinned, explicit model installer is separate
+from inference; installing its weights alone does not enable the capability.
+
 [Research source reading](agent-search-pages.md) composes existing public-search
 and HTTP GET steps with a source-bound optional agent tool. The worker verifies
 the same-workflow search artifact before selecting at most three public targets;
