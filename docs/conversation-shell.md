@@ -84,7 +84,8 @@ source links, reload and reading position in desktop and phone layouts.
 ## One reply for completed image inspection
 
 A successful ordinary image inspection presents the actual Vision answer once,
-with the original Task/results below it. The initial orchestration notice remains
+with the original Task/results below it. The actual Vision model remains visible independently of the selected text model.
+The initial orchestration notice remains
 inside Execution details; the original message/Run/artifact records are unchanged.
 The presentation projection binds exactly one successful Vision child from the
 root's Run steps within the same user turn. Streaming, failed, superseded,

@@ -823,6 +823,11 @@ function Transcript({
                   {time(message.created_at)}
                 </time>
               </div>
+              {execution && message.metadata.vision_model && (
+                <p className="message-model muted">
+                  Vision · {message.metadata.vision_model}
+                </p>
+              )}
               {message.metadata.reasoning_text && (
                 <details className="message-thinking">
                   <summary>Thinking</summary>

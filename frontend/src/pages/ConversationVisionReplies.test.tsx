@@ -119,6 +119,7 @@ it("shows the Vision answer as one assistant reply with inspectable execution, c
     </QueryClientProvider>,
   );
   await screen.findByText("A red rectangle.");
+  expect(screen.getByText("Vision · local-vision")).toBeTruthy();
   const articles = screen.getAllByRole("article");
   expect(articles).toHaveLength(2);
   const inspect = screen.getByRole("link", {
