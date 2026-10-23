@@ -142,3 +142,9 @@ Agent `schedule_timezone` is a persisted IANA identifier, default UTC for existi
 records and API clients. Cron uses local calendar minutes; `next_run_at` remains
 an absolute UTC instant. The frozen Run definition retains the reviewed zone.
 Interval durations and explicit-offset one-shot timestamps remain unchanged.
+
+Natural data follow-ups store a controller-owned `data_reference` in Run parameters
+and matching `conversation_reference` (`source_kind=analyzed_data`) on the user
+message. It binds original input IDs/inspection snapshots, source user/Run and
+bounded prior question/result context. These are portable existing JSON fields;
+no schema migration or persisted Agent is required.

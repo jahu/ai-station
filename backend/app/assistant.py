@@ -574,6 +574,12 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
 
         try:
             data_inputs = freeze_inputs(session, body.data.files())
+            reference = user.metadata_json.get("conversation_reference") or {}
+            if reference.get("source_kind") == "analyzed_data" and (
+                reference.get("data_inputs") != data_inputs
+                or reference.get("data_scope") != body.data.model_dump(mode="json")
+            ):
+                raise ValueError("The referenced data input changed before enqueue")
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from exc
     needs_provider = assistant_needs_provider(body)
@@ -617,6 +623,12 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
                 else {}
             ),
             **({"data_inputs": data_inputs} if data_inputs is not None else {}),
+            **(
+                {"data_reference": user.metadata_json["conversation_reference"]}
+                if body.data is not None
+                and user.metadata_json.get("conversation_reference", {}).get("source_kind") == "analyzed_data"
+                else {}
+            ),
             **({"image_inputs": image_inputs} if image_inputs is not None else {}),
             "planner_context": planner_context(session, conversation, user),
             **snapshot,
@@ -992,8 +1004,10 @@ class AssistantExecutor:
                 )
             else:
                 from app.conversation_data import verify_source_files
+                from app.conversation_data_reference import verify_reference
                 from app.data_agents import require_runtime, verify_inputs
 
+                verify_reference(session, run)
                 require_runtime()
                 verify_inputs(session, run.parameters.get("data_inputs"))
                 verify_source_files(run.parameters["data_inputs"])

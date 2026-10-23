@@ -1143,3 +1143,17 @@ The first UI-only qualification is superseded by
 `ai-station-reviewed-email-ui-final-20261022.service`; backend source remains
 frozen from `effbe6c` and its original full Python service continues unchanged.
 Do not restart that Python service due to this UI-only change.
+
+## Next candidate — natural data references, 2026-10-23
+
+Timezone schedules (#381) and corrected quick interval parsing (#382) are deployed.
+The current candidate is [natural CSV/XLSX follow-ups](conversation-data-references.md)
+on `.tools/conversation-data-references`. Delivery and qualification are tracked under
+`data/acceptance/conversation-data-references-20261023`; inspect that evidence and
+the central live-release record before claiming deployment or repeating work.
+Preserve the original root checkout changes. Qualification requires full local gates, compiled UI, review,
+backed-up rollout and a real synthetic local-model/Python follow-up.
+No larger transcription model has been downloaded: the explicit approval request
+for the pinned Whisper small486MB profile remains pending; its plan/installer are
+under `data/acceptance/transcription-quality-20261023`. Never infer that approval
+from the older ACE-Step consent. The whole platform objective remains active.

@@ -235,3 +235,10 @@ Nonexistent minutes are skipped; repeated minutes execute at the first occurrenc
 only. The next instant must be strictly future, within five years and a bounded
 search. Existing atomic claims, no-overlap, coalescing and recovery remain
 authoritative. See [agent schedule semantics](plans/agent-schedule-timezones.md).
+
+A natural analysed-file follow-up creates a fresh normal Task with the prior
+reviewed local data/model/runtime policy and immutable original input descriptors.
+Its prior question/answer are bounded quoted context; the current instruction
+wins. The worker validates the completed source before creating a workspace and
+uses the existing source/hash checks and graph-wide Stop. Reading old provenance
+does not extend an old deadline or resume its execution.

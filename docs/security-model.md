@@ -592,3 +592,15 @@ duration, GPU, seed, permissions and receipt identity remain controller-owned.
 Preparation occurs before atomic dispatch, with no Runner/file I/O after that
 boundary. Stop during writing publishes no music child. Default fixed scope
 serialization omits the new mode field to preserve legacy request fingerprints.
+
+Natural CSV/XLSX reuse requires a direct current-user analysis/reference request
+and canonical prior user/orchestrator/setup/workflow/Python-result provenance.
+Only original inspected inputs are copied into a fresh local scope; output files
+are not guessed. A failed/unavailable latest analysis never falls back to older
+files. A newer different attachment or explicit scope preserves ordinary routing.
+Read-only provenance may inspect an expired completed workflow; worker execution
+still requires a current budget. The new message and Run freeze the same inputs
+and bounded untrusted prior-question/result context. Enqueue and worker checks
+reject rebindings; actual input bytes are checked before workspace/model/Python
+work. Model text cannot select IDs or external sharing. See
+[the data-reference contract](plans/conversation-data-references.md).

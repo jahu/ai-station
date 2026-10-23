@@ -100,6 +100,11 @@ After a completed analysis, **Ask another question about these files** selects
 the same inputs and opens their review beside your next question. Your draft is
 preserved; execution starts only when you Send. You can remove or replace the
 selected files before sending.
+You can also ask **“Policz średnią z tych danych”** or **“Calculate the average
+from these input files”** after a completed analysis. The same original inputs
+are checked again and used in a new local analysis; the conversation names the
+files and links the source. For one file out of a group, choose it explicitly.
+[Data reference contract](docs/plans/conversation-data-references.md).
 
 Ordinary PNG/JPEG/WebP attachments also use stored, ordered image references.
 Review their previews and Send a question for local Vision, or an edit/reference

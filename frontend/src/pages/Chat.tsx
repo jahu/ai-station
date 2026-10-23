@@ -124,7 +124,8 @@ type Message = ActionResult & {
     agent_id?: string;
     images?: { id: string; name: string }[];
     conversation_reference?: {
-      source_kind?: "inspected_input";
+      source_kind?: "inspected_input" | "analyzed_data";
+      filenames?: string[];
       artifact_ids?: string[];
       artifact_id: string;
       message_id: string;
@@ -892,17 +893,20 @@ function Transcript({
               {message.metadata.conversation_reference && (
                 <p className="muted">
                   {message.metadata.conversation_reference.source_kind ===
-                  "inspected_input"
-                    ? (message.metadata.conversation_reference.artifact_ids
-                        ?.length ?? 1) > 1
-                      ? "Using the inspected images"
-                      : "Using the inspected image"
-                    : "Using the previous image result"}{" "}
+                  "analyzed_data"
+                    ? `Using the analyzed input files · ${message.metadata.conversation_reference.filenames?.join(", ") || "CSV / Excel"}`
+                    : message.metadata.conversation_reference.source_kind ===
+                        "inspected_input"
+                      ? (message.metadata.conversation_reference.artifact_ids
+                          ?.length ?? 1) > 1
+                        ? "Using the inspected images"
+                        : "Using the inspected image"
+                      : "Using the previous image result"}{" "}
                   ·{" "}
                   <Link
                     to={`/runs/${message.metadata.conversation_reference.run_id}`}
                     tabIndex={current ? 0 : -1}
-                    aria-label={`Inspect referenced image ${shortId}`}
+                    aria-label={`Inspect referenced ${message.metadata.conversation_reference.source_kind === "analyzed_data" ? "data" : "image"} ${shortId}`}
                   >
                     Inspect source
                   </Link>
