@@ -68,14 +68,46 @@ def requested(params):
     )
 
 
+_INLINE_LYRICS = re.compile(
+    r"(?:\n|\s)(?:(?:z|ze)\s+)?(?:lyrics|tekst(?:em)?(?:\s+piosenki)?|s[łl]ow(?:a|ami))\s*:\s*(.+)\Z",
+    re.I | re.S,
+)
+_NO_VOCALS = re.compile(r"\b(?:without (?:vocals|lyrics|words)|bez (?:wokalu|tekstu|s[łl][oó]w))\b", re.I)
+_VOCALS = re.compile(r"\b(?:with vocals|with lyrics|z wokalem|z tekstem|ze s[łl]owami)\b", re.I)
+
+
+def inline_lyrics(params):
+    if params.get("music") is not None:
+        return None
+    match = _INLINE_LYRICS.search(params["content"])
+    return (params["content"][: match.start()].rstrip(" .;\n"), match.group(1).strip()) if match else None
+
+
+def caption(params):
+    supplied = inline_lyrics(params)
+    return supplied[0] if supplied else params["content"]
+
+
+def instrumental_intent(text):
+    return bool(
+        _NO_VOCALS.search(text) or re.search(r"\binstrumental\w*\b", text, re.I) and not _VOCALS.search(text)
+    )
+
+
 def settings(params):
-    scope = MusicScope.model_validate(params.get("music") or {})
+    supplied = inline_lyrics(params)
+    text = caption(params)
+    if supplied and instrumental_intent(text):
+        raise ValueError("Choose instrumental music or supplied vocal lyrics")
+    scope = MusicScope.model_validate(
+        {"instrumental": False, "lyrics": supplied[1]} if supplied else params.get("music") or {}
+    )
     duration = scope.duration_seconds
     if duration is None:
         found = re.findall(
             r"(?<![\w.,])(\d{1,4}(?:[.,]\d+)?)\s*[- ]?\s*"
             r"(seconds?|secs?|sekund\w*|sek|minutes?|minut\w*|min|s)\b",
-            params["content"],
+            text,
             re.I,
         )
         if len(found) > 1:
@@ -87,19 +119,17 @@ def settings(params):
             if not value.is_integer() or not 10 <= value <= 600:
                 raise ValueError("Choose a whole music duration between 10 and 600 seconds")
             duration = int(value)
-        elif re.search(r"\d+\s*(?:hours?|godzin\w*)\b", params["content"], re.I):
+        elif re.search(r"\d+\s*(?:hours?|godzin\w*)\b", text, re.I):
             raise ValueError("Music duration must be between 10 and 600 seconds")
     if (
         "instrumental" not in scope.model_fields_set
         and not scope.lyrics
         and re.search(
             r"\b(?:song|piosenk\w*|with vocals|with lyrics|z wokalem|z tekstem|ze słowami)\b",
-            params["content"],
+            text,
             re.I,
         )
-        and not re.search(
-            r"\b(?:instrumental\w*|without vocals|bez wokalu|bez słów)\b", params["content"], re.I
-        )
+        and not instrumental_intent(text)
     ):
         scope = scope.model_copy(update={"lyrics_source": "goal", "instrumental": False})
     return MusicScope.model_validate({**scope.model_dump(), "duration_seconds": duration})
@@ -135,7 +165,11 @@ def prepare_turn(body):
             if len(body.content) > 16000:
                 raise ValueError("Keep the song-writing instruction within 16000 characters")
         else:
-            MusicRequest(client_request_id=UUID(int=0), caption=body.content, **options.model_dump())
+            MusicRequest(
+                client_request_id=UUID(int=0),
+                caption=caption(body.model_dump(mode="json")),
+                **options.model_dump(),
+            )
     except (ValueError, ValidationError) as exc:
         raise HTTPException(422, str(exc)) from exc
     return body if options.lyrics_source == "goal" else body.model_copy(update={"reasoning": None})

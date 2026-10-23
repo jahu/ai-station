@@ -1074,6 +1074,7 @@ class AssistantExecutor:
                         run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                         message.content = "Generating your scene locally with Wan 2.2. The video will appear here and in Library."
         elif plan.action == "audio.music":
+            from app.conversation_music import caption as music_caption
             from app.conversation_music import settings as music_settings
             from app.music import MusicRequest, create_music_run
             from app.permissions import require
@@ -1083,7 +1084,7 @@ class AssistantExecutor:
             try:
                 request = MusicRequest(
                     client_request_id=UUID(run.id),
-                    caption=prepared_song["description"] if prepared_song else params["content"],
+                    caption=prepared_song["description"] if prepared_song else music_caption(params),
                     **{
                         **music_settings(params).model_dump(exclude={"lyrics_source"}),
                         **({"lyrics": prepared_song["lyrics"]} if prepared_song else {}),

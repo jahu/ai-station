@@ -216,3 +216,47 @@ def test_fixed_lyrics_source_does_not_change_legacy_scope_serialization():
     expected = {"lyrics": "", "instrumental": True, "duration_seconds": None, "seed": None, "gpu": "auto"}
     assert MusicScope().model_dump(mode="json") == expected
     assert MusicScope(lyrics_source="fixed").model_dump(mode="json") == expected
+
+
+@pytest.mark.parametrize(
+    "instruction",
+    [
+        "Create a 10 second song with vocals and instrumental accompaniment",
+        "Stwórz 10 sekund piosenki z wokalem oraz instrumentalnym podkładem",
+    ],
+)
+def test_instrumental_accompaniment_does_not_erase_explicit_vocals(instruction):
+    from app.conversation_music import settings
+
+    scope = settings({"content": instruction})
+    assert not scope.instrumental and scope.lyrics_source == "goal"
+
+
+@pytest.mark.parametrize("label", ["Lyrics", "z tekstem", "ze słowami"])
+def test_inline_supplied_words_remain_exact_without_any_model_call(music_bridge, monkeypatch, label):
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Supplied words were rewritten")
+
+    monkeypatch.setattr(conversation_song, "completion_stream", forbidden)
+    with TestClient(app) as client:
+        cid = conversation(client)
+        words = "[Chorus]\nWait thirty days, wait 20 seconds, my friend"
+        posted = client.post(
+            f"/api/chat/conversations/{cid}/messages",
+            json={"content": "Create a 10 second acoustic song. " + label + ": " + words},
+        )
+        assert posted.status_code == 202, posted.text
+        with session_factory()() as session:
+            tick(session, "inline-exact-words")
+            parent = session.get(Run, posted.json()["id"])
+            assert "endpoint" not in parent.parameters
+            child = session.get(Run, parent.metadata_json["child_run_id"])
+            assert child.parameters["lyrics"] == words and child.parameters["duration_seconds"] == 10
+            assert child.parameters["caption"] == "Create a 10 second acoustic song"
+
+
+def test_natural_explicit_no_lyrics_remains_instrumental():
+    from app.conversation_music import settings
+
+    scope = settings({"content": "Create a 10 second song without lyrics"})
+    assert scope.instrumental and scope.lyrics_source == "fixed"
