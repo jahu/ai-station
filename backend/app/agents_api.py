@@ -124,7 +124,7 @@ def apply_settings(agent, body):
     for key, value in body.model_dump().items():
         if key == "project_id" and value is not None:
             value = str(value)
-        if key in {"github", "data", "market"} and value is not None:
+        if key in {"github", "data", "market", "media"} and value is not None:
             value = getattr(body, key).model_dump(mode="json")
         setattr(agent, key, value)
     agent.retry_policy = body.retry_policy.model_dump()
