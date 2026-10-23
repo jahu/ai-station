@@ -137,6 +137,16 @@ class AgentSettings(BaseModel):
             ):
                 raise ValueError("Select and review a Library voice reference before enabling speech")
             if (
+                self.enabled
+                and self.media is not None
+                and self.media.kind == "avatar"
+                and (
+                    self.media.request.image_artifact_id is None
+                    or self.media.request.audio_artifact_id is None
+                )
+            ):
+                raise ValueError("Select and review a portrait and WAV reference before enabling an avatar")
+            if (
                 self.media
                 and self.media.description_source == "fixed"
                 and (not fixed_media_only(self) or self.skills)

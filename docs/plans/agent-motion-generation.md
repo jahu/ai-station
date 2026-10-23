@@ -93,3 +93,56 @@ playback and reload. Run the required local full checks, inspect the full PR dif
 and built image, then back up and deploy through develop. Qualify a short actual
 existing-model agent video/avatar only after the complete chain is operational;
 record real duration/profile and preserve the operator's actual model state.
+
+## Whole-avatar agent increment
+
+The candidate reuses ordinary Chatterbox, the deferred avatar planner, EchoMimic
+windows and verified CPU composition. Pure full-avatar settings avoid an import
+cycle. Avatar drafts may wait for a portrait and WAV; both are required for
+activation. A read-only native capability checks the configured existing
+installation and GPU without starting a model. Generated Polish speech also
+requires the existing speech capability.
+
+One immutable expiry covers preparation, generated speech, planner, every
+animation window and final assembly. The pending speech handoff must match its
+actual planner and successful same-Task audio; receipts cannot replace a budget
+or duplicate work. The final composition retains its workflow ancestry.
+The planner observes expiry before publication.
+
+Image/audio IDs, paths, sizes, checksums and MIME roles are frozen. Original
+portrait/voice bytes are rechecked before speech/planning. The generated canonical
+audio is bound to the actual successful speech Run and its Artifact; all inputs
+are rechecked again before each animation dispatch. Existing video snapshots
+without MIME roles remain compatible. Only final assembly emits a positive ready
+notice; failed, canceled and incomplete stages preserve evidence without a
+fictional finished avatar.
+
+Goal mode may change only spoken words (Polish, 1000 characters) when generating
+speech, or the motion prompt with an existing recording. Portrait, voice,
+recording, size, steps, seed, GPU and the shared expiry stay fixed. Natural
+proposals leave source IDs null for operator selection. Ordinary workspace
+requests retain their existing contract.
+
+The editor supports both speech modes, separate source previews, draft saving
+before source selection and advanced quality/GPU controls. The workspace shows
+the same full-media progress even while the planner is pending, saved spoken
+words, final playback, Library and Task Stop. Normal CPU checks use fake native
+models and real video composition. Review/full release checks and actual
+hardware qualification are recorded separately; no new real avatar result is
+claimed by these tests.
+
+The avatar increment's final normal CPU suite passed all 2485 cases (2476 passed,
+9 opt-in skips, zero failures), including explicit rejection of modified handoff
+settings. All 601 UI tests, format/lint/typecheck/build and compiled 1440px/390px
+checks pass. Browser coverage exercises both speech modes, pending drafts, source
+upload/removal/reselection, enable/run, full playback, Library, reload and Stop;
+it uses fake inference and real CPU composition. Docker/source/assets and Compose
+qualification, review and rollout are recorded under
+data/acceptance/agent-avatar-output-20261023/. Actual new agent GPU qualification
+remains separate from these checks and requires available workstation resources.
+
+The previous real 30-second standalone avatar took about 35 minutes at
+384px/eight steps. Review the agent runtime budget for longer/high-quality jobs;
+the tested whole-output chain does not imply real-time rendering. The software
+preserves existing applications and waits for admitted GPU/RAM rather than
+silently reducing the reviewed quality or resource requirements.

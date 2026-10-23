@@ -1,3 +1,11 @@
+Whole-avatar agents use the same shared expiry across speech, planning,
+animation and final assembly. Reviewed portrait/WAV provenance and actual bytes
+are checked before dispatch; generated canonical audio must belong to the
+successful same-Task speech Run. Models can rewrite only the approved words or
+motion prompt. The native avatar readiness GET reads configured installation
+state without starting inference. Pending drafts do not invent source IDs or
+activate automatically. See [the avatar contract](plans/agent-motion-generation.md).
+
 [Video/avatar agent planning](plans/agent-motion-generation.md) extends the same
 private optional owned-process deadline to Wan, EchoMimic and CPU composition.
 Public Video/Avatar/long-media forms cannot set it. Ordinary calls without a

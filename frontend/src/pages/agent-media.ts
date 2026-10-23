@@ -29,7 +29,22 @@ export type VideoMediaRequest = {
   seed?: number;
   gpu?: string;
 };
+export type AvatarMediaRequest = {
+  image_artifact_id: string | null;
+  audio_artifact_id: string | null;
+  speech_text: string | null;
+  prompt: string;
+  size?: 256 | 384 | 512;
+  steps?: number;
+  seed?: number;
+  gpu?: string;
+};
 export type AgentMediaScope =
+  | {
+      kind: "avatar";
+      description_source: "fixed" | "goal";
+      request: AvatarMediaRequest;
+    }
   | {
       kind: "video";
       description_source: "fixed" | "goal";
@@ -62,6 +77,21 @@ export function newAgentMedia(
   kind: AgentMediaScope["kind"],
   goal: string,
 ): AgentMediaScope {
+  if (kind === "avatar")
+    return {
+      kind,
+      description_source: "goal",
+      request: {
+        image_artifact_id: null,
+        audio_artifact_id: null,
+        speech_text: goal.slice(0, 1000),
+        prompt: "A person speaking naturally, static camera.",
+        size: 384,
+        steps: 8,
+        seed: 43,
+        gpu: "auto",
+      },
+    };
   if (kind === "video")
     return {
       kind,
@@ -131,9 +161,25 @@ export function fixedAgentMedia(agent: {
 
 export function agentMediaIssue(
   scope?: AgentMediaScope | null,
-  options?: { allowMissingVoice?: boolean },
+  options?: { allowMissingVoice?: boolean; allowMissingSources?: boolean },
 ): string | null {
   if (!scope) return "Choose the output and save its creative settings.";
+  if (scope.kind === "avatar") {
+    const p = scope.request;
+    if (
+      (!p.image_artifact_id || !p.audio_artifact_id) &&
+      !options?.allowMissingSources
+    )
+      return "Choose a portrait and a WAV voice or recording before enabling.";
+    if (
+      p.speech_text !== null &&
+      (!p.speech_text.trim() || p.speech_text.length > 1000)
+    )
+      return "Write the Polish words or instructions in 1–1000 characters.";
+    if (!p.prompt.trim() || p.prompt.length > 2000)
+      return "Describe the avatar motion in 1–2000 characters.";
+    return null;
+  }
   if (scope.kind === "video") {
     const p = scope.request;
     if (!p.prompt.trim() || p.prompt.length > 2000)

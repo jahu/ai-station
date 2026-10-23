@@ -40,6 +40,15 @@ def require_profile(scope):
         except (RunnerError, RunnerUnavailable):
             profile = {}
         ready = profile.get("available") and "pl" in profile.get("languages", [])
+    elif scope.kind == "avatar":
+        try:
+            profile = RunnerClient().request("GET", "/v1/avatar/capabilities")
+            ready = profile.get("available")
+            if scope.request.speech_text is not None:
+                speech = RunnerClient().request("GET", "/v1/audio/capabilities")
+                ready = ready and speech.get("available") and "pl" in speech.get("languages", [])
+        except (RunnerError, RunnerUnavailable):
+            profile, ready = {}, False
     elif scope.kind == "video":
         try:
             profile = RunnerClient().request("GET", "/v1/video/capabilities")
@@ -81,10 +90,21 @@ def runtime_readiness():
         video = RunnerClient().request("GET", "/v1/video/capabilities")
     except (RunnerError, RunnerUnavailable):
         video = {}
+    try:
+        avatar = RunnerClient().request("GET", "/v1/avatar/capabilities")
+    except (RunnerError, RunnerUnavailable):
+        avatar = {}
     image_ready = bool(photo.get("available") and "t2i" in photo.get("modes", []))
     music_ready = bool(music.get("available") and music.get("profile_sha256") == PROFILE_SHA256)
     speech_ready = bool(speech.get("available") and "pl" in speech.get("languages", []))
     return {
+        "avatar": {
+            "ready": bool(avatar.get("available")),
+            "speech_ready": bool(speech.get("available") and "pl" in speech.get("languages", [])),
+            "reason": None
+            if avatar.get("available")
+            else "Local avatar engine is unavailable; inspect Avatars setup",
+        },
         "video": {
             "ready": bool(video.get("available")),
             "reason": None
@@ -112,6 +132,46 @@ def runtime_readiness():
 
 
 def freeze_inputs(session, scope):
+    if scope.kind == "avatar":
+        if scope.request.image_artifact_id is None or scope.request.audio_artifact_id is None:
+            raise ValueError("Select a reviewed portrait and WAV reference before running an avatar")
+        from app.audio import MAX_BYTES, wav_metadata
+
+        frozen = []
+        for source_id, expected_type, mimes in (
+            (scope.request.image_artifact_id, "image", {"image/png", "image/jpeg"}),
+            (scope.request.audio_artifact_id, "audio", {"audio/wav"}),
+        ):
+            artifact = session.get(Artifact, str(source_id))
+            if (
+                artifact is None
+                or artifact.trashed_at is not None
+                or artifact.artifact_type != expected_type
+                or artifact.mime_type not in mimes
+                or len(artifact.sha256) != 64
+            ):
+                raise ValueError("Choose an available portrait and PCM WAV with stored checksums")
+            if expected_type == "audio":
+                try:
+                    path = safe_join(get_settings().data_dir, artifact.relative_path)
+                    with path.open("rb") as source:
+                        metadata = wav_metadata(source.read(MAX_BYTES + 1))
+                    if scope.request.speech_text is None and metadata["duration_seconds"] < 0.68:
+                        raise ValueError("Recorded speech must be at least0.68seconds")
+                except (OSError, ValueError) as exc:
+                    raise ValueError("Choose an intact bounded WAV for your avatar") from exc
+            frozen.append(
+                {
+                    "id": artifact.id,
+                    "path": artifact.relative_path,
+                    "size": artifact.size_bytes,
+                    "sha256": artifact.sha256,
+                    "type": artifact.artifact_type,
+                    "mime": artifact.mime_type,
+                }
+            )
+        return frozen
+
     if scope.kind == "music" or scope.kind == "video" and scope.request.image_artifact_id is None:
         return []
     if scope.kind == "speech" and scope.request.reference_artifact_id is None:
@@ -195,13 +255,13 @@ def verify_files(run):
     for item in run.parameters.get("media_inputs", []):
         path = safe_join(get_settings().data_dir, item["path"])
         if not path.is_file() or path.stat().st_size != item["size"]:
-            raise ValueError("A reviewed source image is missing or changed")
+            raise ValueError("A reviewed media source is missing or changed")
         digest = hashlib.sha256()
         with path.open("rb") as handle:
             for block in iter(lambda: handle.read(1024 * 1024), b""):
                 digest.update(block)
         if digest.hexdigest() != item["sha256"]:
-            raise ValueError("A reviewed source image failed its saved checksum")
+            raise ValueError("A reviewed media source failed its saved checksum")
 
 
 def verify_published_inputs(session, run):
@@ -211,12 +271,12 @@ def verify_published_inputs(session, run):
         if (
             artifact is None
             or artifact.trashed_at is not None
-            or artifact.artifact_type != "image"
-            or artifact.mime_type not in {"image/png", "image/jpeg"}
+            or artifact.artifact_type != item.get("type", "image")
+            or artifact.mime_type not in ({item["mime"]} if item.get("mime") else {"image/png", "image/jpeg"})
             or (artifact.relative_path, artifact.size_bytes, artifact.sha256)
             != (item["path"], item["size"], item["sha256"])
         ):
-            raise ValueError("The reviewed first frame is unavailable or changed")
+            raise ValueError("The reviewed media source is unavailable or changed")
     verify_files(run)
 
 
@@ -226,6 +286,8 @@ class Description(BaseModel):
 
 
 def description_key(scope):
+    if scope.kind == "avatar":
+        return "speech_text" if scope.request.speech_text is not None else "prompt"
     if scope.kind == "video":
         return "prompt"
     if scope.kind == "speech":
@@ -310,6 +372,32 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
                 "media_inputs": list(run.parameters.get("media_inputs", [])),
             }
             segment.triggered_by = run.triggered_by
+    elif prepared_scope.kind == "avatar":
+        from app.media_jobs import FullAvatarRequest, publish_avatar
+
+        publish_avatar(
+            session,
+            FullAvatarRequest(client_request_id=UUID(run.id), **prepared_scope.request.model_dump()),
+            task=run.task,
+            parent_run_id=run.id,
+            execution_deadline_at=run.parameters["execution_deadline_at"],
+        )
+        plan = run.task.metadata_json["media_plan"]
+        child = session.get(Run, plan.get("planner_run_id") or plan["compose_run_id"])
+        child.operation_key = key
+        context = {
+            "media_inputs": list(run.parameters.get("media_inputs", [])),
+            "agent_media_preparation_id": preparation_id,
+        }
+        for stage in session.scalars(
+            select(Run).where(Run.task_id == run.task_id, Run.parent_run_id == run.id)
+        ):
+            stage.parameters = {
+                **stage.parameters,
+                **context,
+                "parent_artifact_ids": [*stage.parameters.get("parent_artifact_ids", []), preparation_id],
+            }
+            stage.triggered_by = run.triggered_by
     elif prepared_scope.kind == "speech":
         from app.audio import create_audio_run
         from app.audio_schema import SpeechRequest
@@ -466,9 +554,12 @@ class AgentMediaExecutor:
         )
         if definition.media.kind == "video" and definition.media.request.scenes:
             maximum = min(maximum, 1998 - max(len(scene.prompt) for scene in definition.media.request.scenes))
+        avatar_speech = definition.media.kind == "avatar" and definition.media.request.speech_text is not None
+        if definition.media.kind == "avatar":
+            maximum = 1000 if avatar_speech else 2000
         speech_guidance = (
             " For speech, description is the exact Polish text to speak, not a description of a voice or performance. No Markdown, directions or a claim that audio exists."
-            if definition.media.kind == "speech"
+            if definition.media.kind == "speech" or avatar_speech
             else ""
         )
         messages = [

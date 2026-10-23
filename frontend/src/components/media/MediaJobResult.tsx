@@ -1,7 +1,7 @@
 import { useMediaJob, jobBusy, type MediaJob } from "./media-job";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Film, Square, RotateCcw } from "lucide-react";
+import { Film, Square, RotateCcw, ArrowUpRight, Download } from "lucide-react";
 import { api, type Artifact } from "../../api";
 import { Badge, ErrorNotice } from "../common";
 import { Button } from "../ui/button";
@@ -12,11 +12,13 @@ export default function MediaJobResult({
   job: initialJob,
   error,
   allowResume = true,
+  spokenText,
 }: {
   id: string;
   job?: MediaJob;
   error?: Error | null;
   allowResume?: boolean;
+  spokenText?: string;
 }) {
   const cache = useQueryClient();
   const current = useMediaJob(id);
@@ -192,6 +194,12 @@ export default function MediaJobResult({
           error ?? current.error ?? artifact.error ?? stop.error ?? resume.error
         }
       />
+      {typeof spokenText === "string" && spokenText.trim() && (
+        <section className="media-spoken-text" aria-label="Spoken text">
+          <h3>Spoken text</h3>
+          <p>{spokenText}</p>
+        </section>
+      )}
       {!job?.final_artifact_id && job?.preview_artifact_id && (
         <div className="media-partial-preview">
           <p className="muted">Latest completed segment · partial preview</p>
@@ -215,11 +223,19 @@ export default function MediaJobResult({
             src={`/api/artifacts/${artifact.data.id}/file`}
             aria-label="Generated full video"
           />
-          <div className="row">
-            <a href={`/api/artifacts/${artifact.data.id}/file`} download>
-              Download MP4
-            </a>
-            <Link to={`/library/${artifact.data.id}`}>Open in Library</Link>
+          <div className="media-result-actions">
+            <Button asChild variant="secondary">
+              <Link to={`/library/${artifact.data.id}`}>
+                <ArrowUpRight size={15} />
+                Open in Library
+              </Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <a href={`/api/artifacts/${artifact.data.id}/file`} download>
+                <Download size={15} />
+                Download MP4
+              </a>
+            </Button>
           </div>
         </>
       )}

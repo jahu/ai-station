@@ -897,7 +897,10 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
     ? (values.media ?? newAgentMedia("image", values.goal))
     : null;
   const mediaIssue = values.tools.includes("create_media")
-    ? agentMediaIssue(mediaScope, { allowMissingVoice: !agent.enabled })
+    ? agentMediaIssue(mediaScope, {
+        allowMissingVoice: !agent.enabled,
+        allowMissingSources: !agent.enabled,
+      })
     : null;
   const provider = useQuery({
     queryKey: ["chat-provider"],
