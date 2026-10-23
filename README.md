@@ -9,6 +9,7 @@ generation** cancels the whole execution. Vocal music uses lyrics you supply.
 See [the media-agent contract and qualification](docs/plans/agent-media-generation.md).
 For spoken output, select a Library WAV voice, review the text or goal-based
 writing instructions and enable the agent. A draft can wait for voice selection.
+The saved spoken text appears beside the finished recording in Agents and Audio.
 See [speech-agent setup and verification](docs/plans/agent-speech-generation.md).
 
 

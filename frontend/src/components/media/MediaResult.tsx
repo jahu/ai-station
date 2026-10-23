@@ -129,6 +129,14 @@ export default function MediaResult({
         ? "Stopping generation…"
         : "Creating on your workstation";
   const file = result ? `/api/artifacts/${result.id}/file` : "";
+  const spokenText =
+    kind === "audio" &&
+    audioMode === "speech" &&
+    (run?.capability === "audio.speech" ||
+      run?.executor_type === "chatterbox") &&
+    typeof run?.parameters.text === "string"
+      ? run.parameters.text
+      : null;
   return (
     <aside className="panel media-result">
       <div className="media-result-heading">
@@ -200,6 +208,12 @@ export default function MediaResult({
           <p className="media-result-title">
             {result.title || result.original_filename}
           </p>
+          {spokenText?.trim() && (
+            <section className="media-spoken-text" aria-label="Spoken text">
+              <h3>Spoken text</h3>
+              <p>{spokenText}</p>
+            </section>
+          )}
           <div className="media-result-actions">
             <Button asChild variant="secondary">
               <Link to={`/library/${result.id}`}>
