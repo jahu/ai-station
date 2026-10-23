@@ -82,6 +82,13 @@ def definition(proposal, instruction, model):
     if "create_media" in proposal.tools and proposal.media is None:
         raise ValueError("Create media needs reviewable image or music settings")
     if proposal.media is not None:
+        if proposal.media.kind == "speech":
+            from app.agent_media import SPEECH_AGENTS_ENABLED
+
+            if not SPEECH_AGENTS_ENABLED:
+                raise ValueError("Speech is not an available agent output yet")
+            if proposal.media.request.reference_artifact_id is not None:
+                raise ValueError("Do not invent a voice UUID; leave it null for operator review in Library")
         if proposal.media.kind == "image" and (
             proposal.media.request.mode != "t2i" or proposal.media.request.input_artifact_ids
         ):

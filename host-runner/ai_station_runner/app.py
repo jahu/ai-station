@@ -16,6 +16,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field
 
 from ai_station_runner import __version__
 from ai_station_runner.audio import AudioRequest, start_audio
+from ai_station_runner.audio import capabilities as speech_capabilities
 from ai_station_runner.avatars import AvatarRequest, start_avatar
 from ai_station_runner.browser_runs import BrowserRequest
 from ai_station_runner.codex_runs import CodexRequest, codex_report, start_codex
@@ -678,12 +679,19 @@ def inspect_compose_image():
     return inspect_station_image()
 
 
+@app.get("/v1/audio/capabilities")
+def local_speech_capabilities():
+    return speech_capabilities()
+
+
 @app.post("/v1/runs/audio")
 def audio_run(body: AudioRequest):
     try:
         return {**start_audio(manager(), body), "runner_id": get_settings().runner_id}
     except PathBoundaryError as exc:
         raise HTTPException(403, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @app.get("/v1/music/capabilities")
