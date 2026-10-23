@@ -35,6 +35,7 @@ class AudioInput(MediaInput):
 class ComposeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     run_id: UUID
+    deadline_at: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
     clips: list[ClipInput] = Field(min_length=1, max_length=256)
     fps: Literal[24, 25]
     width: StrictInt = Field(ge=128, le=1280, multiple_of=32)
@@ -122,4 +123,5 @@ def start_composition(manager, body):
         cwd=work,
         executor="media_compose",
         env=environment,
+        **({"deadline_at": body.deadline_at} if body.deadline_at is not None else {}),
     )

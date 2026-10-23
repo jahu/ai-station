@@ -392,6 +392,7 @@ class CompositionExecutor(HostMediaExecutor):
             "/v1/runs/media-compose",
             {
                 "run_id": run.id,
+                **self.native_budget(run),
                 **({"audio": sound} if sound else {}),
                 "permissions": run.effective_permissions,
                 "clips": clips,

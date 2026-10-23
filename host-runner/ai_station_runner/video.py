@@ -25,6 +25,7 @@ class FileObservation(BaseModel):
 class VideoRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     run_id: UUID
+    deadline_at: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
     profile_observation: dict[Literal["wan_model", "wan_text_encoder", "wan_vae"], FileObservation] | None = (
         None
     )
@@ -194,4 +195,5 @@ def start_video(manager, body):
         cwd=work,
         executor="wan_video",
         env=environment,
+        **({"deadline_at": body.deadline_at} if body.deadline_at is not None else {}),
     )

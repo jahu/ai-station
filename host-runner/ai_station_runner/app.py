@@ -715,6 +715,8 @@ def avatar_run(body: AvatarRequest):
         return {**start_avatar(manager(), body), "runner_id": get_settings().runner_id}
     except PathBoundaryError as exc:
         raise HTTPException(403, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @app.post("/v1/runs/reviewed-commit")
@@ -920,6 +922,8 @@ def video_run(body: VideoRequest):
         return {**start_video(manager(), body), "runner_id": get_settings().runner_id}
     except PathBoundaryError as exc:
         raise HTTPException(403, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @app.post("/v1/runs/media-compose")
@@ -928,6 +932,8 @@ def compose_media(body: ComposeRequest):
         return {**start_composition(manager(), body), "runner_id": get_settings().runner_id}
     except PathBoundaryError as exc:
         raise HTTPException(403, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
 
 
 @app.post("/v1/runs/github-read")
