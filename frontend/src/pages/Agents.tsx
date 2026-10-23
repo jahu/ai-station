@@ -1092,6 +1092,33 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             onChange={(e) => update("goal", e.target.value)}
           />
         </label>
+        {values.tools.includes("create_media") && (
+          <div className="agent-wide">
+            <AgentMediaScopeEditor
+              value={mediaScope}
+              goal={values.goal}
+              disabled={active || save.isPending}
+              readiness={
+                tools.data?.find((tool) => tool.name === "create_media")
+                  ?.outputs
+              }
+              onBusy={setMediaBusy}
+              onChange={(media) =>
+                editValues((current) => ({
+                  ...current,
+                  media,
+                  ...(media.description_source === "fixed"
+                    ? {
+                        tools: ["create_media"],
+                        skills: [],
+                        tool_calling: "none" as const,
+                      }
+                    : {}),
+                }))
+              }
+            />
+          </div>
+        )}
         <label className="agent-wide">
           System prompt
           <textarea
@@ -1352,33 +1379,6 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             />
           )}
         </div>
-        {values.tools.includes("create_media") && (
-          <div className="agent-wide">
-            <AgentMediaScopeEditor
-              value={mediaScope}
-              goal={values.goal}
-              disabled={active || save.isPending}
-              readiness={
-                tools.data?.find((tool) => tool.name === "create_media")
-                  ?.outputs
-              }
-              onBusy={setMediaBusy}
-              onChange={(media) =>
-                editValues((current) => ({
-                  ...current,
-                  media,
-                  ...(media.description_source === "fixed"
-                    ? {
-                        tools: ["create_media"],
-                        skills: [],
-                        tool_calling: "none" as const,
-                      }
-                    : {}),
-                }))
-              }
-            />
-          </div>
-        )}
         {values.tools.includes("python_data") && (
           <div className="agent-wide">
             <AgentDataFiles
