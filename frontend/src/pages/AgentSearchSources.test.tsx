@@ -2,11 +2,11 @@ import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AgentSearchSources } from "./AgentSearchSources";
 import {
-  AgentSearchSources,
   isSearchPageResult,
   type SearchPageResult,
-} from "./AgentSearchSources";
+} from "./agent-search-result";
 import { AgentLatestReport } from "./AgentLatestReport";
 import type { Run } from "../api";
 
@@ -78,10 +78,10 @@ it("makes an unreadable source visible without claiming its page text was read",
   expect(screen.getByText("No pages were fetched.")).toBeTruthy();
 });
 it("projects the new page observation into the agent's existing latest report", async () => {
-  const fetch = vi.fn(async (_url: string) => ({
-    ok: true,
-    json: async () => [],
-  }));
+  const fetch = vi.fn(async (url: string) => {
+    expect(url).toContain("/api/artifacts?run_id=report");
+    return { ok: true, json: async () => [] };
+  });
   vi.stubGlobal("fetch", fetch);
   render(
     <QueryClientProvider
