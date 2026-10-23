@@ -15,7 +15,26 @@ export type ImageMediaRequest = {
   seed?: number | null;
   upscale_result?: boolean;
 };
+export type VideoMediaRequest = {
+  prompt: string;
+  negative_prompt?: string;
+  image_artifact_id?: string | null;
+  duration_seconds: number;
+  composition_mode: "continuous" | "shots";
+  scenes?: { prompt: string; duration_seconds: number }[] | null;
+  width?: number;
+  height?: number;
+  steps?: number;
+  cfg?: number;
+  seed?: number;
+  gpu?: string;
+};
 export type AgentMediaScope =
+  | {
+      kind: "video";
+      description_source: "fixed" | "goal";
+      request: VideoMediaRequest;
+    }
   | {
       kind: "speech";
       description_source: "fixed" | "goal";
@@ -43,6 +62,23 @@ export function newAgentMedia(
   kind: AgentMediaScope["kind"],
   goal: string,
 ): AgentMediaScope {
+  if (kind === "video")
+    return {
+      kind,
+      description_source: "goal",
+      request: {
+        prompt: goal.slice(0, 2000),
+        duration_seconds: 15,
+        composition_mode: "continuous",
+        image_artifact_id: null,
+        width: 1280,
+        height: 704,
+        steps: 20,
+        cfg: 5,
+        seed: 43,
+        gpu: "auto",
+      },
+    };
   if (kind === "speech")
     return {
       kind,
@@ -98,6 +134,35 @@ export function agentMediaIssue(
   options?: { allowMissingVoice?: boolean },
 ): string | null {
   if (!scope) return "Choose the output and save its creative settings.";
+  if (scope.kind === "video") {
+    const p = scope.request;
+    if (!p.prompt.trim() || p.prompt.length > 2000)
+      return "Describe the video in 1–2000 characters.";
+    if (
+      !Number.isInteger(p.duration_seconds) ||
+      p.duration_seconds < 1 ||
+      p.duration_seconds > 60
+    )
+      return "Choose a film length from 1 to 60 whole seconds.";
+    if (
+      p.scenes?.length &&
+      (p.composition_mode !== "shots" ||
+        p.scenes.length > 20 ||
+        p.scenes.some(
+          (scene) =>
+            !scene.prompt.trim() ||
+            scene.prompt.length > 1000 ||
+            !Number.isInteger(scene.duration_seconds) ||
+            scene.duration_seconds < 1 ||
+            scene.duration_seconds > 60 ||
+            p.prompt.trim().length + 2 + scene.prompt.trim().length > 2000,
+        ) ||
+        p.scenes.reduce((sum, scene) => sum + scene.duration_seconds, 0) !==
+          p.duration_seconds)
+    )
+      return "Describe each shot and make its lengths add up to the full film.";
+    return null;
+  }
   if (scope.kind === "speech") {
     if (!scope.request.text.trim() || scope.request.text.length > 1000)
       return "Write the spoken text or instructions in 1–1000 characters.";

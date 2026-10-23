@@ -21,6 +21,28 @@ formatting/lint/typecheck/build and compiled desktop/phone qualification; the bu
 image has those same assets. Final review and rollout evidence remain separate
 from these CPU checks.
 
+## Current implementation increment
+
+Scene-video scopes now reuse the existing long-video settings, preparation
+receipt, same agent Task, segmented Wan Runs and final CPU composition. Pure
+video schemas avoid a settings/executor import cycle. Goal preparation changes
+only the shared prompt; duration, shots, first frame, quality and GPU remain fixed.
+The current profile observation is obtained before locked publication and passed
+explicitly, avoiding native HTTP inside that transaction.
+
+Every segment and final composition receives the same immutable absolute budget.
+Only final composition success emits the ready notice; completed segments remain
+partial results. An agent cannot resume an old film with a fresh budget: Run now
+or the ordinary agent retry creates a new reviewed workflow instead. Sources and
+prepared JSON retain transitive lineage through segment artifacts.
+
+The editor adds Video, full duration, continuous/shot motion, optional storyboard
+and first-frame selection. Advanced controls reuse local GPU selection. The
+workspace reuses existing long-media progress, playback, Library and Task Stop.
+This candidate still requires complete release/browser/real-model qualification.
+Avatar agent output remains planned and unavailable; its existing dedicated
+workspace is unchanged.
+
 ## Delivery sequence
 
 1. Carry the existing optional absolute owned-process deadline through Wan,

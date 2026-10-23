@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
-import { Image, Music2, AudioLines, LoaderCircle } from "lucide-react";
+import { Image, Music2, AudioLines, Film, LoaderCircle } from "lucide-react";
 import type { Run } from "../api";
 import { ErrorNotice } from "../components/common";
 import MediaResult from "../components/media/MediaResult";
+import MediaJobResult from "../components/media/MediaJobResult";
 
 export default function AgentMediaResult({ runs }: { runs: Run[] }) {
   const task = runs[0]?.task_id;
   const current = runs.filter((run) => run.task_id === task);
+  const film = current.find((run) => run.executor_type === "media_compose");
   const output = current.find(
     (run) =>
       run.executor_type === "photo_pipe" ||
@@ -16,6 +18,7 @@ export default function AgentMediaResult({ runs }: { runs: Run[] }) {
   const preparation = current.find(
     (run) => run.executor_type === "agent_media",
   );
+  if (film) return <MediaJobResult id={film.task_id} allowResume={false} />;
   if (output)
     return (
       <MediaResult
@@ -43,11 +46,13 @@ export default function AgentMediaResult({ runs }: { runs: Run[] }) {
     latest.parameters?.definition as { media?: { kind: string } } | undefined
   )?.media;
   const Icon =
-    scope?.kind === "music"
-      ? Music2
-      : scope?.kind === "speech"
-        ? AudioLines
-        : Image;
+    scope?.kind === "video"
+      ? Film
+      : scope?.kind === "music"
+        ? Music2
+        : scope?.kind === "speech"
+          ? AudioLines
+          : Image;
   return (
     <section
       className="panel agent-media-pending"

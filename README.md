@@ -1,6 +1,6 @@
 # AI Station
 
-Persistent media agents use the existing Images, Music and Polish speech engines. In **Agents**,
+Persistent media agents use the existing Images, Music, full scene Video and Polish speech engines. In **Agents**,
 attach **Create media**, choose the output and review its settings before enabling.
 An exact saved description runs without loading a text model; goal-based output
 uses the selected local model and any reviewed research sources. Run now and
@@ -11,6 +11,11 @@ For spoken output, select a Library WAV voice, review the text or goal-based
 writing instructions and enable the agent. A draft can wait for voice selection.
 The saved spoken text appears beside the finished recording in Agents and Audio.
 See [speech-agent setup and verification](docs/plans/agent-speech-generation.md).
+Video output supports a complete 1–60 second film, continuous motion or a reviewed
+shot sequence and an optional Library first frame. The workspace shows segment
+progress and the final verified film. Review the runtime budget for longer/high
+quality output; Stop cancels the entire execution. Retry by running the reviewed
+agent again. [Video-agent contracts](docs/plans/agent-motion-generation.md).
 
 
 Local coding agents can use an [automatic private workspace](docs/agent-workspaces.md):

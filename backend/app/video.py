@@ -1,10 +1,8 @@
 """Queued local Wan text/image video generation through the native Runner."""
 
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy.orm import Session
 
 from app.db import session_scope
@@ -13,29 +11,10 @@ from app.models import Artifact
 from app.motion_artifacts import MotionArtifacts
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, run_dict
+from app.video_schema import VideoRequest as VideoRequest
 
 router = APIRouter(prefix="/api/video", tags=["video"])
 DB = Annotated[Session, Depends(session_scope)]
-
-
-class VideoRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    prompt: str = Field(min_length=1, max_length=2000)
-    negative_prompt: str = Field(default="", max_length=2000)
-    image_artifact_id: UUID | None = None
-    width: int = Field(default=1280, ge=128, le=1280, multiple_of=32)
-    height: int = Field(default=704, ge=128, le=1280, multiple_of=32)
-    frames: int = Field(default=49)
-    steps: int = Field(default=20, ge=4, le=40)
-    cfg: float = Field(default=5, ge=1, le=10, allow_inf_nan=False)
-    seed: int = Field(default=43, ge=0, le=2147483647)
-    gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]{1,12})$")
-
-    @model_validator(mode="after")
-    def bounds(self):
-        if self.frames not in {17, 33, 49, 65, 81} or self.width * self.height > 1280 * 704:
-            raise ValueError("Video frames or dimensions exceed the profile limit")
-        return self
 
 
 @router.get("/capabilities")

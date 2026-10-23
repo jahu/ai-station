@@ -396,3 +396,120 @@ it("shows speech playback with the existing voice/Avatar source actions", async 
   expect(screen.getByRole("link", { name: "Open in Library" })).toBeTruthy();
   expect(screen.getByRole("link", { name: /^Use as speech/ })).toBeTruthy();
 });
+
+it("edits full video timing and storyboard without exposing a receipt or short-clip frames", async () => {
+  responses();
+  function Editor() {
+    const [value, setValue] = useState<AgentMediaScope>(
+      newAgentMedia("video", "Quiet forest"),
+    );
+    return (
+      <>
+        <AgentMediaScopeEditor
+          value={value}
+          goal="Quiet forest"
+          disabled={false}
+          onChange={setValue}
+          onBusy={() => {}}
+        />
+        <output aria-label="Media scope">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  expect(
+    screen.getByRole("button", { name: "Video" }).getAttribute("aria-pressed"),
+  ).toBe("true");
+  fireEvent.change(screen.getByLabelText("Agent film length"), {
+    target: { value: "30" },
+  });
+  fireEvent.change(screen.getByLabelText("Agent video motion"), {
+    target: { value: "shots" },
+  });
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: "Plan individual scenes" }),
+  );
+  const description = screen.getByLabelText("Scene 1 prompt");
+  fireEvent.change(description, { target: { value: "Green trees" } });
+  const saved = JSON.parse(screen.getByLabelText("Media scope").textContent!);
+  expect(saved.request.duration_seconds).toBe(30);
+  expect(saved.request.scenes).toEqual([
+    { prompt: "Green trees", duration_seconds: 30 },
+  ]);
+  expect(agentMediaIssue(saved)).toBeNull();
+  expect(saved.request.frames).toBeUndefined();
+  expect(saved.request.client_request_id).toBeUndefined();
+  fireEvent.change(screen.getByLabelText("Agent video motion"), {
+    target: { value: "continuous" },
+  });
+  expect(
+    screen.queryByRole("checkbox", { name: "Plan individual scenes" }),
+  ).toBeNull();
+  expect(
+    JSON.parse(screen.getByLabelText("Media scope").textContent!).request
+      .scenes,
+  ).toBeNull();
+});
+
+it("shows full agent film progress and the final artifact instead of a completed first segment", async () => {
+  const writes: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, options?: RequestInit) => {
+      if (options?.method === "POST") writes.push(url);
+      return {
+        ok: true,
+        json: async () =>
+          url.includes("/media/jobs/")
+            ? {
+                task_id: "film-task",
+                revision: 1,
+                kind: "video",
+                mode: "continuous",
+                status: "succeeded",
+                duration_seconds: 30,
+                completed_segments: 9,
+                total_segments: 9,
+                active_run_ids: [],
+                final_artifact_id: "full-film",
+                resume_allowed: true,
+                error_message: "",
+              }
+            : { id: "full-film", type: "video", mime_type: "video/mp4" },
+      };
+    }),
+  );
+  render(
+    <Frame>
+      <AgentMediaResult
+        runs={[
+          {
+            id: "compose",
+            task_id: "film-task",
+            executor_type: "media_compose",
+            status: "succeeded",
+            parameters: {},
+          } as Run,
+          {
+            id: "segment",
+            task_id: "film-task",
+            executor_type: "wan_video",
+            status: "succeeded",
+            parameters: {},
+          } as Run,
+        ]}
+      />
+    </Frame>,
+  );
+  const player = await screen.findByLabelText("Generated full video");
+  expect(player.getAttribute("src")).toBe("/api/artifacts/full-film/file");
+  expect(screen.getByText("Your full video is ready.")).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Resume unfinished work" }),
+  ).toBeNull();
+  expect(writes).toEqual([]);
+});

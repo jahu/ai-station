@@ -70,7 +70,14 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
     task = session.get(Task, run.task_id) if run.agent_id else None
     coding = task.metadata_json.get("agent_coding_definition") if task else None
     media = None
-    if run.agent_id and run.executor_type in {"agent_media", "photo_pipe", "ace_step_music", "chatterbox"}:
+    if run.agent_id and run.executor_type in {
+        "agent_media",
+        "photo_pipe",
+        "ace_step_music",
+        "chatterbox",
+        "wan_video",
+        "media_compose",
+    }:
         from app.agent_workflow import workflow_parent
 
         root = workflow_parent(session, run)
@@ -80,7 +87,7 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
                 media = definition
     if media and (
         status == "succeeded"
-        and (run.executor_type == "agent_media" or run.metadata_json.get("upscale_run_id"))
+        and (run.executor_type in {"agent_media", "wan_video"} or run.metadata_json.get("upscale_run_id"))
         or status == "interrupted"
         and not run.error_type
         and not run.metadata_json.get("process_confirmed_gone")

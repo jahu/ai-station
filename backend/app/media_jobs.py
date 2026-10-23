@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -21,35 +21,15 @@ from app.runs import create_run, run_dict
 from app.state import TERMINAL
 from app.task_control import cancel_task, lock_task
 from app.video import VideoRequest, capabilities, create_video_run
+from app.video_schema import LongVideoSettings
+from app.video_schema import VideoScene as VideoScene
 
 router = APIRouter(prefix="/api/media/jobs", tags=["media jobs"])
 DB = Annotated[Session, Depends(session_scope)]
 
 
-class VideoScene(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    prompt: str = Field(min_length=1, max_length=1000)
-    duration_seconds: StrictInt = Field(ge=1, le=60)
-
-
-class LongVideoRequest(VideoRequest):
+class LongVideoRequest(LongVideoSettings):
     client_request_id: UUID
-    duration_seconds: StrictInt = Field(default=15, ge=1, le=60)
-    composition_mode: Literal["continuous", "shots"] = "continuous"
-    scenes: list[VideoScene] | None = Field(default=None, min_length=1, max_length=20)
-
-    @model_validator(mode="after")
-    def no_frames(self):
-        if "frames" in self.model_fields_set:
-            raise ValueError("Choose duration or short-clip frames, not both")
-        if self.scenes is not None:
-            if self.composition_mode != "shots":
-                raise ValueError("Individual scenes require an independent shot sequence")
-            if sum(scene.duration_seconds for scene in self.scenes) != self.duration_seconds:
-                raise ValueError("Scene durations must add up to the requested film duration")
-            if any(len(self.prompt + "\n\n" + scene.prompt) > 2000 for scene in self.scenes):
-                raise ValueError("Shared instructions and each scene must fit 2000 characters together")
-        return self
 
 
 def video_request(body):
@@ -64,13 +44,25 @@ def job(session, task_id):
     return task
 
 
-def publish_video(session, body, *, task=None, parent_run_id=None):
+def publish_video(
+    session, body, *, task=None, parent_run_id=None, observed_profile=None, execution_deadline_at=None
+):
+    budget = {}
+    if execution_deadline_at is not None:
+        from datetime import datetime
+
+        deadline = datetime.fromisoformat(execution_deadline_at)
+        if deadline.tzinfo is None or not 0 < (deadline - utcnow()).total_seconds() <= 3600:
+            raise ValueError("Media expiry must be within the next hour with an explicit time zone")
+        budget = {"execution_deadline_at": execution_deadline_at}
     prior = session.get(Task, str(body.client_request_id)) if task is None else None
     if prior:
         expected = video_request(body)
         if prior.metadata_json.get("media_plan", {}).get("request") != expected:
             raise HTTPException(409, "Request ID already belongs to a different media job")
         return job_view(session, prior)
+    # Avoid Runner HTTP inside the caller's locked agent publication.
+    observed_profile = capabilities() if observed_profile is None else observed_profile
     if task is None:
         task = Task(
             id=str(body.client_request_id),
@@ -83,8 +75,14 @@ def publish_video(session, body, *, task=None, parent_run_id=None):
         session.flush()
     lock_task(session, task)
     if task.metadata_json.get("media_plan"):
+        plan = task.metadata_json["media_plan"]
+        if budget and (
+            plan.get("execution_deadline_at") != execution_deadline_at
+            or plan.get("agent_media_parent_run_id") != parent_run_id
+            or plan.get("request") != video_request(body)
+        ):
+            raise HTTPException(409, "Media plan belongs to a different reviewed publication")
         return job_view(session, task)
-    observed_profile = capabilities()
     reservation = observed_profile.get("memory_estimate_mib", 16384)
     timing = timeline(
         frames=duration_frames(body.duration_seconds, 24),
@@ -119,6 +117,7 @@ def publish_video(session, body, *, task=None, parent_run_id=None):
         run.operation_key = f"media:1:segment:{segment.index}:attempt:1"
         run.parameters = {
             **run.parameters,
+            **budget,
             "media_segment": segment.model_dump(),
             "internal_media": True,
             "profile_observation": observed_profile.get("profile_observation"),
@@ -139,6 +138,7 @@ def publish_video(session, body, *, task=None, parent_run_id=None):
         execution_target="host",
         operation_key="media:1:compose:attempt:1",
         parameters={
+            **budget,
             "stage_run_ids": [run.id for run in runs],
             "timeline": timing.model_dump(mode="json"),
             "width": body.width,
@@ -160,6 +160,8 @@ def publish_video(session, body, *, task=None, parent_run_id=None):
     task.metadata_json = {
         **task.metadata_json,
         "media_plan": {
+            **budget,
+            **({"agent_media_parent_run_id": parent_run_id} if budget else {}),
             "version": 1,
             "profile_observation": observed_profile.get("profile_observation"),
             "revision": 1,
@@ -220,7 +222,9 @@ def job_view(session, task):
             "active_segments": [],
             "active_run_ids": active,
             "final_artifact_id": None,
-            "resume_allowed": not active and bool(failed or task.metadata_json.get("stop_requested_at")),
+            "resume_allowed": not active
+            and not (task.agent_id and plan.get("execution_deadline_at"))
+            and bool(failed or task.metadata_json.get("stop_requested_at")),
             "error_message": failed.error_message if failed else "",
         }
     ids = [*plan["segment_run_ids"], plan["compose_run_id"]]
@@ -261,7 +265,9 @@ def job_view(session, task):
         ],
         "active_run_ids": [r.id for r in active],
         "final_artifact_id": plan.get("final_artifact_id"),
-        "resume_allowed": not active and status in {"failed", "canceled"},
+        "resume_allowed": not active
+        and not (task.agent_id and plan.get("execution_deadline_at"))
+        and status in {"failed", "canceled"},
         "error_message": next((r.error_message for r in stages.values() if r.error_message), ""),
     }
 
@@ -459,6 +465,8 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
             raise HTTPException(409, "Resume ID belongs to another request")
         return saved["response"]
     plan = task.metadata_json["media_plan"]
+    if plan.get("execution_deadline_at") and task.agent_id:
+        raise HTTPException(409, "Run the agent again to create a new reviewed execution")
     view = job_view(session, task)
     if plan["revision"] != body.expected_revision:
         raise HTTPException(409, "Media plan changed; refresh before resuming")
