@@ -10,7 +10,8 @@ Python/data pipeline; add no executor, schema migration or model download.
 Only an Auto action in Chat/Work with a current, explicit file/data reference and
 an analysis/calculation instruction may reuse inputs. Explicit data, attachments,
 images/audio, other tools/projects/Work continuations, exact Web queries and
-rendering retain precedence. Bound Work contexts also suppress implicit selection.
+rendering and current URL targets retain precedence. Bound Work contexts also
+suppress implicit selection.
 Ordinary Web availability is disabled for a recognised offline data request.
 Unrelated chat and interpretation of quoted instructions must not start Python.
 

@@ -190,9 +190,15 @@ def resolve(session, conversation, body, mode):
         return body, None
     if not requested(body.content):
         return body, None
+    from app.chat_pages import requested_pages
+
+    if re.search(r"\b(?:https?://|www\.)", instruction(body.content), re.I) or requested_pages(body.content):
+        return body, None
     from app.assistant import explicit_plan
 
-    if explicit_plan(body.model_dump(mode="json", exclude={"attachments"})) is not None:
+    # Ordinary Web availability is not an instruction to research private files.
+    candidate = body.model_copy(update={"web_search": body.web_search.model_copy(update={"enabled": False})})
+    if explicit_plan(candidate.model_dump(mode="json", exclude={"attachments"})) is not None:
         return body, None
     previous = session.execute(
         select(Message, Run)

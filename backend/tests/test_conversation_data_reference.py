@@ -54,6 +54,7 @@ def follow(client, cid, **extra):
         f"/api/chat/conversations/{cid}/messages",
         json={
             "content": "Policz średnią z tych danych",
+            "web_search": {"enabled": True},
             **extra,
         },
     )
@@ -404,3 +405,24 @@ def test_completed_legacy_definition_defaults_are_readable_but_execution_stays_s
         assert response.status_code == 202, response.text
         drain()
         assert data_environment["calls"] == 2 and len(data_environment["jobs"]) == 2
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "Calculate the average in this file: https://example.com/data.csv",
+        "Analyze this file from akademia.ai",
+    ],
+)
+def test_current_network_target_does_not_reuse_an_old_local_dataset(data_environment, content):
+    from app.chat import MessageBody
+    from app.conversation_data_reference import resolve
+    from app.models import Conversation
+
+    with TestClient(app) as client:
+        cid, _ = start(client, data_environment)
+        drain()
+        body = MessageBody(content=content)
+        with session_factory()() as session:
+            selected, reference = resolve(session, session.get(Conversation, cid), body, "chat")
+            assert selected is body and reference is None
