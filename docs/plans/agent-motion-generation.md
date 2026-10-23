@@ -130,3 +130,19 @@ words, final playback, Library and Task Stop. Normal CPU checks use fake native
 models and real video composition. Review/full release checks and actual
 hardware qualification are recorded separately; no new real avatar result is
 claimed by these tests.
+
+The avatar increment's final normal CPU suite passed all 2485 cases (2476 passed,
+9 opt-in skips, zero failures), including explicit rejection of modified handoff
+settings. All 601 UI tests, format/lint/typecheck/build and compiled 1440px/390px
+checks pass. Browser coverage exercises both speech modes, pending drafts, source
+upload/removal/reselection, enable/run, full playback, Library, reload and Stop;
+it uses fake inference and real CPU composition. Docker/source/assets and Compose
+qualification, review and rollout are recorded under
+data/acceptance/agent-avatar-output-20261023/. Actual new agent GPU qualification
+remains separate from these checks and requires available workstation resources.
+
+The previous real 30-second standalone avatar took about 35 minutes at
+384px/eight steps. Review the agent runtime budget for longer/high-quality jobs;
+the tested whole-output chain does not imply real-time rendering. The software
+preserves existing applications and waits for admitted GPU/RAM rather than
+silently reducing the reviewed quality or resource requirements.
