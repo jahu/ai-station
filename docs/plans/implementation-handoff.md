@@ -5,7 +5,7 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current continuation — conversation result hierarchy, 2026-10-23
+## Current continuation — coherent Vision replies, 2026-10-23
 
 Conversation data entry/follow-ups (#372–#374), ordinary image/local Vision entry
 (#375), verified inspected-image follow-ups (#376), and ordinary recording entry
@@ -16,12 +16,19 @@ local model's summary while preserving the existing runtime. The saved transcrip
 contains word errors; improve recognition quality separately after inspecting the
 installed profile, without unapproved downloads.
 
-The active UI increment makes successful Vision replies easier to read: completed
-execution steps and image lineage are explicitly expandable; image lineage loads
-only when requested. Running/failed steps and normal media behavior stay visible.
-Qualify the full UI gate and compiled desktop/phone expand/source/reload flows;
-reuse backend/Runner and actual Vision only after exact source comparison. Evidence:
-`data/acceptance/conversation-result-details-20261023`.
+The result hierarchy is deployed by #378: 639 UI tests, native keyboard disclosure,
+compiled desktop/390px and exact image checks passed. Actual Vision and the full
+backend gate are inherited by exact source comparison; no new GPU inference was
+run for this presentation change. Evidence:
+`data/acceptance/conversation-result-details-20261023/post-deployment-qualified.json`.
+
+The active increment groups a successful ordinary Vision answer with its original
+Task/results instead of displaying a second assistant progress row. Persisted
+messages and source ownership stay unchanged; streaming/failures/richer workflows
+retain their rows. It also removes unsupported Regenerate actions for tool/Work
+user Runs, preserving ordinary text regeneration. Qualify original-record
+preservation, keyboard/copy/source links and compiled desktop/phone/reload. Evidence:
+`data/acceptance/conversation-vision-replies-20261023`.
 
 The full platform objective remains active, including broader orchestration/media
 acceptance and usable, inspectable agent workflows. No milestone here claims the
