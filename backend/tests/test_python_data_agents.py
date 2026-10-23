@@ -72,7 +72,10 @@ def data_environment(repository, owned_runner, monkeypatch):
                 request_cancel(session, running)
                 session.commit()
         yield json.dumps(
-            {"script": SCRIPT + f"# attempt {state['calls']}\n", "outputs": list(state["exports"])}
+            {
+                "script": SCRIPT + f"# attempt {state['calls']}\n",
+                "outputs": state.get("declared_exports", list(state["exports"])),
+            }
         )
 
     monkeypatch.setattr(LocalChatProvider, "stream", stream)
