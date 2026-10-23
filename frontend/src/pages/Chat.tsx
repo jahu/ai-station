@@ -1,3 +1,4 @@
+import { copyText } from "../lib/clipboard";
 import { useConversationAttachmentUpload } from "./attachment-upload";
 import { useDataInputs, type ConversationDataScope } from "./useDataInputs";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
@@ -1011,8 +1012,8 @@ function Transcript({
                     tabIndex={current ? 0 : -1}
                     disabled={!message.content}
                     onClick={() => {
-                      void navigator.clipboard
-                        .writeText(message.content)
+                      void copyText(message.content)
+                        .then(() => setClipboardError(null))
                         .catch(() =>
                           setClipboardError(
                             new Error(

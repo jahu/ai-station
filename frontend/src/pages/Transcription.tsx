@@ -1,3 +1,4 @@
+import { copyText } from "../lib/clipboard";
 import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
@@ -54,7 +55,7 @@ export function TranscriptResult({ run }: { run: Run }) {
           variant="secondary"
           disabled={!transcript.text}
           onClick={() => {
-            void navigator.clipboard.writeText(transcript.text).then(
+            void copyText(transcript.text).then(
               () => {
                 setCopied(true);
                 setCopyError(null);

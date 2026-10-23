@@ -105,3 +105,15 @@ source ambiguity, unchanged input records, transcript keyboard movement, copy of
 the actual answer, both Run links, native detail/source disclosure and reload on
 desktop/phone. Backend and expensive integration evidence may be inherited only
 when the relevant source is identical. The full product objective remains active.
+
+## Clipboard on private LAN HTTP
+
+Chat responses, transcript text and Library prompts use the same user-gesture
+copy helper. Prefer the native Clipboard API; when unavailable or denied, try the
+browser's selection-based copy command, if supported. Copy literal text, restore
+the prior focused control/selection and remove temporary content even on failure.
+If the browser denies both methods, show the existing manual-copy/download guidance
+rather than throwing an unhandled exception or claiming success. No server, Host
+Runner, network access or clipboard reading is involved in normal app behavior.
+Qualify the compiled desktop/phone paths with the native API absent, actual browser
+copy/readback and graceful denial; that does not claim an actual physical-phone test.

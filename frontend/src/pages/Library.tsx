@@ -1,3 +1,4 @@
+import { copyText } from "../lib/clipboard";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   useQuery,
@@ -481,9 +482,11 @@ export function ArtifactDetail() {
                   <Button
                     variant="ghost"
                     onClick={() => {
-                      void navigator.clipboard
-                        .writeText(prompt)
-                        .then(() => setCopied(true))
+                      void copyText(prompt)
+                        .then(() => {
+                          setCopied(true);
+                          setCopyError(null);
+                        })
                         .catch(() =>
                           setCopyError(
                             new Error(
