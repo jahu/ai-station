@@ -25,7 +25,11 @@ def validate_timezone(value):
 
 def instruction_timezone(instruction, selected):
     validate_timezone(selected)
-    explicit_utc = re.search(r"\b(?:at|o)\s+\d{1,2}(?::\d{2})?\s*utc\b(?![+-])", instruction, re.I)
+    explicit_utc = re.search(
+        r"\b(?:at|o)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*utc\b(?!\s*[+-]\s*\d)",
+        instruction,
+        re.I,
+    )
     return "UTC" if explicit_utc else selected
 
 

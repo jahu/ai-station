@@ -183,6 +183,7 @@ def test_quick_factory_uses_reviewed_operator_zone_and_defaults_legacy_to_utc():
         ("Codziennie o 9 sprawdzaj stan stacji", "Europe/Warsaw", "0 9 * * *"),
         ("Every evening at 9 pm check workstation", "Europe/Warsaw", "0 21 * * *"),
         ("Every morning at 09:00 UTC check workstation", "UTC", "0 9 * * *"),
+        ("Every evening at 9 pm UTC check workstation", "UTC", "0 21 * * *"),
     ],
 )
 def test_factory_clock_and_explicit_utc_are_reviewed_correctly(instruction, zone, cron):
