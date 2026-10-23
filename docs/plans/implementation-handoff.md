@@ -5,18 +5,27 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current continuation — inspected image follow-ups, 2026-10-23
+## Current continuation — conversation result hierarchy, 2026-10-23
 
-Conversation CSV/Excel entry and follow-ups (#372–#374) and ordinary image
-attachments/local Vision (#375) are merged and deployed. The active increment
-resolves explicit edit/upscale/describe/animate commands to verified inspected
-image inputs, preserving current scope, ordered groups, Stop and existing media
-children. New Vision snapshots bind the actual inspected bytes; implicit media
-follow-ups recheck sources at publication and native dispatch. Complete the local,
-compiled UI, image and actual Vision-reinspection qualification before release.
-Evidence: `data/acceptance/conversation-uploaded-image-followups-20261023`.
-The full platform objective remains active; ordinary audio entry and broader media/
-orchestration acceptance remain separate work.
+Conversation data entry/follow-ups (#372–#374), ordinary image/local Vision entry
+(#375), verified inspected-image follow-ups (#376), and ordinary recording entry
+(#377) are merged and deployed. The central deployment record remains authoritative.
+#376 qualified actual local Vision plus same-source reinspection and restored the
+operator preset; #377 qualified actual CPU Polish WAV transcription and the selected
+local model's summary while preserving the existing runtime. The saved transcript
+contains word errors; improve recognition quality separately after inspecting the
+installed profile, without unapproved downloads.
+
+The active UI increment makes successful Vision replies easier to read: completed
+execution steps and image lineage are explicitly expandable; image lineage loads
+only when requested. Running/failed steps and normal media behavior stay visible.
+Qualify the full UI gate and compiled desktop/phone expand/source/reload flows;
+reuse backend/Runner and actual Vision only after exact source comparison. Evidence:
+`data/acceptance/conversation-result-details-20261023`.
+
+The full platform objective remains active, including broader orchestration/media
+acceptance and usable, inspectable agent workflows. No milestone here claims the
+entire product is finished.
 
 ## Earlier continuation — goal-based vocal agents, 2026-10-23
 
