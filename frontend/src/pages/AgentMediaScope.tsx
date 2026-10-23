@@ -129,6 +129,34 @@ export default function AgentMediaScopeEditor({
             ),
           )}
         </div>
+        {scope.kind === "avatar" && (
+          <label>
+            Speech source
+            <select
+              aria-label="Agent avatar speech source"
+              value={
+                scope.request.speech_text !== null ? "generated" : "recording"
+              }
+              onChange={(event) =>
+                onChange({
+                  ...scope,
+                  request: {
+                    ...scope.request,
+                    speech_text:
+                      event.target.value === "generated"
+                        ? goal.slice(0, 1000)
+                        : null,
+                  },
+                })
+              }
+            >
+              <option value="generated">Write new speech in Polish</option>
+              <option value="recording">
+                Use the complete saved recording
+              </option>
+            </select>
+          </label>
+        )}
         {image && (
           <label>
             Image operation
@@ -201,7 +229,9 @@ export default function AgentMediaScopeEditor({
               {scope.kind === "speech" ||
               (scope.kind === "avatar" && scope.request.speech_text !== null)
                 ? "Spoken text or writing instructions"
-                : "Creative direction"}
+                : scope.kind === "avatar"
+                  ? "Motion direction"
+                  : "Creative direction"}
               <textarea
                 aria-label="Media creative direction"
                 rows={4}
@@ -273,7 +303,6 @@ export default function AgentMediaScopeEditor({
         {scope.kind === "avatar" && (
           <AgentAvatarScope
             value={scope.request}
-            goal={goal}
             disabled={disabled || uploading}
             onChange={(request) => onChange({ ...scope, request })}
             onBusy={(busy) => {

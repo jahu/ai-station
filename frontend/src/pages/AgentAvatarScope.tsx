@@ -6,13 +6,11 @@ import type { AvatarMediaRequest } from "./agent-media";
 
 export default function AgentAvatarScope({
   value,
-  goal,
   onChange,
   disabled,
   onBusy,
 }: {
   value: AvatarMediaRequest;
-  goal: string;
   onChange: (value: AvatarMediaRequest) => void;
   disabled: boolean;
   onBusy: (busy: boolean) => void;
@@ -23,22 +21,6 @@ export default function AgentAvatarScope({
     onChange({ ...value, ...change });
   return (
     <div className="agent-avatar-settings">
-      <label>
-        Speech source
-        <select
-          aria-label="Agent avatar speech source"
-          value={generated ? "generated" : "recording"}
-          onChange={(event) =>
-            patch({
-              speech_text:
-                event.target.value === "generated" ? goal.slice(0, 1000) : null,
-            })
-          }
-        >
-          <option value="generated">Write new speech in Polish</option>
-          <option value="recording">Use the complete saved recording</option>
-        </select>
-      </label>
       <p className="muted">
         {generated
           ? "Your portrait and voice stay fixed. Goal mode writes fresh Polish words from the goal and reviewed sources; fixed mode speaks the exact text above."
