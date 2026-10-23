@@ -97,6 +97,8 @@ export function agentMediaIssue(scope?: AgentMediaScope | null): string | null {
       return "Choose a whole seed between 0 and 2147483647.";
   } else {
     const p = scope.request;
+    if (p.mode === "upscale" && scope.description_source !== "fixed")
+      return "Upscale uses its exact source image without a generated description.";
     if (
       p.mode !== "upscale" &&
       !(p.mode === "img2img" ? p.edit_prompt : p.prompt)?.trim()

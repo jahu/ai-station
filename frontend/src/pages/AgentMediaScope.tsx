@@ -203,7 +203,7 @@ export default function AgentMediaScopeEditor({
                   ? "Preserves the original image as much as possible."
                   : image.mode === "recompose"
                     ? "Preserves identity while allowing clothing, pose and composition to change."
-                    : "Makes the reviewed image four times larger."}
+                    : "Makes the reviewed image four times larger. Research tools are available with Generate, Edit and Recompose."}
               </p>
             )}
             {image.mode === "t2i" && (

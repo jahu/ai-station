@@ -234,3 +234,26 @@ it("checks the selected engine rather than another installed media kind", () => 
     ).blocked,
   ).toBe(false);
 });
+
+it("keeps Upscale tied to its fixed source instead of a text-model preparation", () => {
+  expect(
+    agentMediaIssue({
+      kind: "image",
+      description_source: "goal",
+      request: {
+        mode: "upscale",
+        input_artifact_ids: ["reviewed-image"],
+      },
+    }),
+  ).toContain("exact source image");
+  expect(
+    agentMediaIssue({
+      kind: "image",
+      description_source: "fixed",
+      request: {
+        mode: "upscale",
+        input_artifact_ids: ["reviewed-image"],
+      },
+    }),
+  ).toBeNull();
+});

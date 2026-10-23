@@ -935,6 +935,9 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
       onChangeCapture={() => {
         if (save.isSuccess) save.reset();
       }}
+      onClickCapture={() => {
+        if (save.isSuccess) save.reset();
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         if (!modelBusy && !mediaBusy && !mediaIssue && !active && !stale)
@@ -1389,9 +1392,14 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           {!!tools.data?.length && (
             <ToolChoiceList
               tools={
-                values.tools.includes("create_media")
-                  ? tools.data.filter((tool) => tool.name !== "remember_report")
-                  : tools.data
+                mediaScope?.kind === "image" &&
+                mediaScope.request.mode === "upscale"
+                  ? tools.data.filter((tool) => tool.name === "create_media")
+                  : values.tools.includes("create_media")
+                    ? tools.data.filter(
+                        (tool) => tool.name !== "remember_report",
+                      )
+                    : tools.data
               }
               selected={values.tools}
               onChange={(names) => {
