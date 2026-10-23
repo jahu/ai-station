@@ -96,3 +96,23 @@ Send. The normal backend then rechecks inspection, Trash, hashes and the current
 scope and creates a fresh private Task/workspace in the same conversation.
 History/model output cannot select files or grant Python on its own. This is UI
 composition of #372; backend/native/schema/dependencies remain unchanged.
+
+## Ordinary attachment entry — active increment
+
+CSV/XLSX selected through the ordinary Attach files control use the same stored
+upload and queued inspection endpoints as the dedicated data selector. They are
+never UTF-8 inline text or sent to the selected conversation provider. Selecting
+files exposes the existing local-analysis controls and retains the question;
+Send stays disabled until inspection succeeds. No inference/Python starts merely
+from selection. Existing text/PDF/image rules stay unchanged.
+
+Reject mixed data/text/image batches before reading or storing any file. Keep
+existing attachments and explicit project/continuation/tool scope; those require
+separate deliberate selection of data analysis. Share upload validation/cache and
+batch publication with the existing data selector. Preserve successfully stored
+files if a later upload fails, and keep that error visible even when choosing data
+replaces the generic attachment control. Reuse inputs through Library/follow-ups.
+No backend, native, schema, dependency or model change is needed. Qualify initial
+Chat/Work and saved conversation entry, CSV/XLSX, inspection/Send, partial failure,
+mixed-scope rejection and unchanged text/PDF/image behavior, including compiled
+desktop/phone. Reuse backend/real acceptance only after exact source equality.

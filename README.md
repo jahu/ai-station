@@ -72,9 +72,9 @@ alerts; only that integration requires a user-owned key. See
 inbox delivery has been tested.
 See [data-agent setup and verification](docs/python-data-agents.md).
 
-Chat and Work also support direct CSV/Excel analysis. Choose
-**CSV / Excel** in the attachment tools, select files and wait for **Ready for
-analysis**, then ask your question. The tool uses a fitting local llama.cpp model
+Chat and Work also support direct CSV/Excel analysis. Use **Attach files** to
+select CSV/XLSX, or choose **CSV / Excel** for the dedicated selector and Library.
+Wait for **Ready for analysis**, then ask your question. The tool uses a fitting local llama.cpp model
 and an offline Python workspace, even when the conversation selects an external
 provider. The result includes an answer, table, CSV download and inspectable Python
 source; no persistent agent or manually configured repository is required.

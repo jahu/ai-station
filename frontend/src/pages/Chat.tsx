@@ -1,3 +1,4 @@
+import { useConversationDataUpload } from "./data-upload";
 import { useDataInputs, type ConversationDataScope } from "./useDataInputs";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import { BrowserPages } from "./BrowserPages";
@@ -1110,6 +1111,12 @@ function ConversationView({
   const web = useWebSearch(turnMode === "chat" && !attachments.length);
   const webEnabled = !continuing && web.enabled;
   const setWebEnabled = web.setEnabled;
+  const dataUpload = useConversationDataUpload((data) => {
+    setOptions({ ...emptyOptions, action: "data.analyze", data });
+    setWebEnabled(false);
+    setWebQuery("");
+    web.setRenderPages(false);
+  });
   const pageVisionWebPreference = useRef<boolean | null>(null);
   const contextReady =
     !continuing ||
@@ -1280,6 +1287,7 @@ function ConversationView({
     onSuccess: refresh,
   });
   const busy =
+    dataUpload.isPending ||
     !!conversation.archived_at ||
     archive.isPending ||
     !!conversation.active_run ||
@@ -1608,6 +1616,7 @@ function ConversationView({
         <ErrorNotice
           error={
             send.error ??
+            dataUpload.error ??
             stop.error ??
             regenerate.error ??
             settings.error ??
@@ -1701,6 +1710,23 @@ function ConversationView({
                     onChange={setAttachments}
                     busy={busy || options.image_artifact_ids.length > 0}
                     onReading={setReadingAttachment}
+                    onDataFiles={
+                      !continuing &&
+                      ["auto", "chat"].includes(options.action) &&
+                      !options.github &&
+                      !options.coding &&
+                      !options.new_project &&
+                      !options.commit &&
+                      !options.publish &&
+                      !options.load &&
+                      !options.stop &&
+                      !options.music &&
+                      !options.media &&
+                      !webQuery.trim() &&
+                      !web.renderPages
+                        ? dataUpload.mutateAsync
+                        : undefined
+                    }
                   />
                 )}
               </>

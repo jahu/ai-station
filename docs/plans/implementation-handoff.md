@@ -29,8 +29,12 @@ Chat → original words → 10-second GPU WAV → inline/Library passed with the
 checks pass. Real normal-worker Auto inference with 131072 context and native
 Python returned the checked full-file total 150; the original Q8/46080 model
 preset was restored. Evidence: `data/acceptance/conversation-data-20261023`.
-The active UI increment is explicit same-file follow-up selection without
-re-upload or automatic execution.
+Same-file follow-up selection is deployed (#373), with 616 UI tests and compiled
+desktop/phone selection/draft/Send/reload checks. Evidence:
+`data/acceptance/conversation-data-followups-20261023`. Backend/native source is
+unchanged; the real #372 acceptance is reused after exact source comparison.
+The active UI increment routes ordinary CSV/XLSX attachments to local data analysis,
+without inline decoding/external sharing or losing partial-upload success/errors.
 The local-music section below is historical qualification, not unfinished #361.
 
 ## Active continuation — local music, 2026-10-23

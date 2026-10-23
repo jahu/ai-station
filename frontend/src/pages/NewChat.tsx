@@ -1,3 +1,4 @@
+import { useConversationDataUpload } from "./data-upload";
 import { useDataInputs } from "./useDataInputs";
 import { useChatDraft, chatRequestId, clearChatRequest } from "./chat-draft";
 import { useEffect, useRef, useState } from "react";
@@ -115,6 +116,12 @@ export default function NewChat({
   const webEnabled = !workTaskId && web.enabled;
   const setWebEnabled = web.setEnabled;
   const [webQuery, setWebQuery] = useState("");
+  const dataUpload = useConversationDataUpload((data) => {
+    setOptions({ ...emptyOptions, action: "data.analyze", data });
+    setWebEnabled(false);
+    setWebQuery("");
+    web.setRenderPages(false);
+  });
   useEffect(() => {
     if (
       workTaskId ||
@@ -222,6 +229,7 @@ export default function NewChat({
     },
   });
   const busy =
+    dataUpload.isPending ||
     send.isPending ||
     web.busy ||
     uploading ||
@@ -419,6 +427,13 @@ export default function NewChat({
                     onChange={setAttachments}
                     busy={send.isPending}
                     onReading={setUploading}
+                    onDataFiles={
+                      ["auto", "chat"].includes(options.action) &&
+                      !webQuery.trim() &&
+                      !web.renderPages
+                        ? dataUpload.mutateAsync
+                        : undefined
+                    }
                   />
                 )}
             </>
@@ -460,7 +475,13 @@ export default function NewChat({
         <p className="muted">Choose an available model to send your message.</p>
       )}
       <ErrorNotice
-        error={send.error ?? web.error ?? preferences.error ?? workspace.error}
+        error={
+          send.error ??
+          dataUpload.error ??
+          web.error ??
+          preferences.error ??
+          workspace.error
+        }
       />
     </section>
   );
