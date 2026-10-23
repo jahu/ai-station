@@ -21,7 +21,9 @@ def test_report_uses_recorded_execution_not_the_planned_cron_time(monkeypatch, t
 
     monkeypatch.setattr(LocalChatProvider, "stream", report)
     api = TestClient(app)
-    agent = create(api, enabled=True, trigger="cron", cron_expr="0 8 * * *")
+    agent = create(
+        api, enabled=True, trigger="cron", cron_expr="0 8 * * *", schedule_timezone="Europe/Warsaw"
+    )
     before = utcnow()
     if triggered_by == "user":
         queued = run_now(api, agent)
@@ -53,6 +55,7 @@ def test_report_uses_recorded_execution_not_the_planned_cron_time(monkeypatch, t
     assert execution["saved_schedule"] == {
         "trigger": "cron",
         "cron_expr": "0 8 * * *",
+        "schedule_timezone": "Europe/Warsaw",
         "interval_seconds": None,
         "run_at": None,
         "planned_only": True,

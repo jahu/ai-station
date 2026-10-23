@@ -522,6 +522,7 @@ class AgentMediaExecutor:
             "saved_schedule": {
                 "trigger": definition.trigger,
                 "cron_expr": definition.cron_expr,
+                "schedule_timezone": definition.schedule_timezone,
                 "planned_only": True,
             },
         }

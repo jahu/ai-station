@@ -144,6 +144,8 @@ def test_goal_description_uses_sources_and_corrects_extra_authority_without_chan
         payload = json.loads(kwargs["messages"][1]["content"])
         assert payload["observations"][0]["tool"] == "system_snapshot"
         assert payload["execution"]["saved_schedule"]["planned_only"] is True
+        assert payload["execution"]["saved_schedule"]["schedule_timezone"] == "America/New_York"
+        assert payload["execution"]["timezone"] == "UTC"
         assert kwargs["json_output"] is True
         yield json.dumps(
             {"description": "Warm acoustic piano", **({"gpu": "0"} if len(requests) == 1 else {})}
@@ -155,6 +157,7 @@ def test_goal_description_uses_sources_and_corrects_extra_authority_without_chan
             api,
             model="fake-local",
             tools=["system_snapshot", "create_media"],
+            schedule_timezone="America/New_York",
             media={
                 "kind": "music",
                 "description_source": "goal",
