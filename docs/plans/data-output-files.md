@@ -41,7 +41,8 @@ Each usable file retains the exact raw output, script and original-input lineage
 
 The inert-workbook contract also rejects formula-bearing XML outside ordinary
 cells, including conditional-formatting expressions and data-validation formula1/
-formula2 elements. The audit reproduced acceptance of harmless expression
+formula2 elements and formula-typed thresholds. Literal conditional formatting
+remains supported. The audit reproduced acceptance of harmless expression
 fixtures before the fix; none were executed. Preserve that evidence under
 `data/acceptance/data-export-expressions-20261024`. Recheck the already qualified
 real literal workbook under the stricter policy; do not rerun model inference for

@@ -131,6 +131,7 @@ def test_literal_workbook_and_text_are_verified_without_evaluation():
         '<conditionalFormatting sqref="A1"><cfRule type="expression" priority="1"><formula>1+1</formula></cfRule></conditionalFormatting>',
         '<dataValidations count="1"><dataValidation type="custom" sqref="A1"><formula1>1+1</formula1></dataValidation></dataValidations>',
         '<dataValidations count="1"><dataValidation type="whole" sqref="A1"><formula2>2+2</formula2></dataValidation></dataValidations>',
+        '<conditionalFormatting sqref="A1"><cfRule type="colorScale" priority="1"><colorScale><cfvo type="formula" val="1+1"/><cfvo type="max"/><color rgb="FFFF0000"/><color rgb="FF00FF00"/></colorScale></cfRule></conditionalFormatting>',
     ],
 )
 def test_generated_excel_rejects_noncell_expression_elements(expression):
@@ -141,6 +142,13 @@ def test_generated_excel_rejects_noncell_expression_elements(expression):
     )
     with pytest.raises(ValueError, match="formulas"):
         validate("result.xlsx", data)
+
+
+def test_generated_excel_retains_literal_conditional_formatting():
+    data = workbook(
+        sheet_xml='<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="1"><c r="A1"><v>27</v></c></row></sheetData><conditionalFormatting sqref="A1"><cfRule type="colorScale" priority="1"><colorScale><cfvo type="num" val="1"/><cfvo type="max"/><color rgb="FFFF0000"/><color rgb="FF00FF00"/></colorScale></cfRule></conditionalFormatting></worksheet>'
+    )
+    assert validate("result.xlsx", data) == data
 
 
 def test_incomplete_or_expanding_excel_is_not_a_usable_export():
