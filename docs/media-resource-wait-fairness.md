@@ -1,5 +1,20 @@
 # Media resource waiting must not hide interactive work
 
+A real goal-based music agent exposed a second handoff problem after #362:
+its local LLM finished the creative description, but the 12 GiB music budget
+plus normal headroom could not fit in available host RAM. Media attempted to
+reclaim the idle owned LLM only after RAM admission succeeded, leaving both
+resources blocked. Resource rejection now requests the same dependency-gated
+owned-model stop even when RAM admission failed. Admission budgets and actual
+capacity checks remain unchanged. Pending model consumers and external services
+still prevent eviction; failed cleanup cannot authorize generation.
+
+A CPU-only regression retains a fake two-GPU owned model and an unrelated
+external runtime, reproduces the low-RAM rejection, verifies no early native
+media dispatch, then completes the exact owned stop before successful media.
+Its active-conversation variant verifies no eviction while a consumer is running.
+
+
 A focused regression reproduces the problem: with a held GPU and eighteen
 independent shot Runs, the next worker tick claims another older GPU-blocked shot
 instead of a newly queued CPU task. The current five-second worker heartbeat can
