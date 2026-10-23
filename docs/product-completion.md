@@ -26,6 +26,15 @@ unchanged. See [Node project dependencies](node-project-dependencies.md).
 
 # Full-product acceptance ledger
 
+[Local music](plans/local-music-generation.md), including direct Chat/Work
+dispatch, now has actual queued 10-second instrumental and 30-second
+supplied-lyrics GPU/Library acceptance and owned native Stop evidence. The
+combined backend/Runner gate passes 2318 tests; release/image qualification is
+recorded under `data/acceptance/local-music-generation-20261023`. This is an
+optional configured runtime, not a claim that every music duration or quality
+profile is qualified. Persistent-agent media tools and automatic lyric writing
+remain composition work.
+
 Current evidence summary, 2026-10-22: general-agent research, local Python/data
 execution and website-building workflows are operational. Public research uses
 free search/reviewed public pages and requires no Finnhub key; finance examples

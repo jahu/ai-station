@@ -1,8 +1,9 @@
 # Music in the main conversation
 
-Status: implemented on the draft Music adapter (#361), not yet deployed. The
-operator approved the weights; offline file verification and native 30-second
-GPU output passed. Complete execution/release qualification follows the
+Status: implemented with the Music adapter (#361). The operator approved the
+weights; offline verification, queued 10/30-second GPU output/Library and native
+Stop passed. The full backend/native gate passes 2318 tests. Release state and
+the concrete acceptance profiles are recorded in the
 [local music plan](local-music-generation.md). No new execution boundary.
 
 ## One message to an audio result

@@ -5,6 +5,32 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Active continuation — local music, 2026-10-23
+
+The report execution-time correction below is delivered as #359 (develop
+`13977e9`); the same QA agent/query passed real execution-time/source acceptance.
+Do not repeat that fix from its historical “next” entry.
+
+The pinned model installer is delivered as #360. Execution and
+[conversation dispatch](conversational-music.md) are delivered in source by #361 on the owned
+`.tools/local-music-execution` worktree. The operator explicitly approved the
+6.34 GB model download; all 16 files passed offline hashes. Actual queued
+10-second instrumental and 30-second supplied-lyrics Runs produced checked WAV
+artifacts in a temporary Library. Native cancellation stopped only its owned
+group and published no WAV. The original operator LLM was restored with its
+saved GPUs/Q8 cache/46080 context. These are concrete short-profile checks,
+not qualification of every length, subjective quality or deployment.
+
+2318 Python/Runner tests and nine opt-in skips pass for runtime source `7d71f5b`;
+586 frontend tests and compiled desktop/phone conversation playback pass for its
+conversation increment. A subsequent UI-only queue label clarifies that GPU and
+host memory admission both matter. Inspect final UI/image/head qualification under
+`data/acceptance/local-music-generation-20261023`, review the full PR diff, then
+perform the backed-up rollout with an idle owned Runner restart. Music changes
+native source, so the previous source-identical deployment assumption does not
+apply. Persistent-agent music tools and automatic lyrics/reference-conditioned
+music remain subsequent composition work.
+
 ## Observed agent acceptance follow-up — 2026-10-23
 
 AI-assisted disabled drafting and compact Work review shipped in #354. Real

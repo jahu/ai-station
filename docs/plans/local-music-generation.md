@@ -1,14 +1,19 @@
 # Local music generation
 
-Status: implementation in progress. Music is not yet an operational capability.
-Existing speech, transcription, video and avatars remain unchanged.
+Status: optional typed adapter implemented and locally qualified for the short
+profiles below. Explicit runtime/model configuration is required; an empty
+configuration leaves Music unavailable. Live release state is recorded separately
+in `data/acceptance/safety-redeploy-20261012/deployment.json`.
 
 The source increment contains the typed native launch, offline wrapper,
 `audio.music` worker adapter, idempotent workspace requests and Audio → Music.
 Focused fake-engine tests cover library publication, invalid output, owned Stop,
-and recovery of a live process without replay. This is not a real music smoke.
-The installer is merged in #360 with 2247 Python tests passing. Execution/UI
-qualification and deployment remain separate from that installer result.
+and recovery of a live process without replay. The installer is merged in #360;
+the combined execution/conversation increment passes 2318 Python/Runner tests.
+Actual 10-second instrumental and 30-second supplied-lyrics worker Runs produce
+48 kHz stereo WAV Library artifacts on GPU 0. Native Stop during generation
+terminates only its owned group and publishes no WAV. These concrete checks do
+not qualify every duration or subjective musical/lyrical quality.
 
 ## Product flow
 
@@ -71,7 +76,8 @@ conversion, signal amplitude and rejection of non-finite samples also passed on
 CPU. On 2026-10-23 the operator explicitly approved the 6.34 GB download. All 16
 files then passed offline SHA-256 verification, and the native adapter generated
 a checked 30-second stereo WAV with supplied lyrics on one RTX 3060 12 GB.
-Full queued execution, cancellation, review and deployment remain separate gates.
+Queued execution/Library publication and owned cancellation also passed. Release
+deployment is a separate gate from these temporary-database acceptance cases.
 Training,
 LoRA, Gradio and the optional music LLM were not installed for this preset.
 
