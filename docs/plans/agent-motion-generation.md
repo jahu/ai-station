@@ -1,8 +1,18 @@
 # Video and avatar output from persistent agents
 
-Status: planned. Image, music and speech agents are delivered; video/avatar
-agent scopes remain unavailable. Reuse the existing long-media controller rather
-than adding a short-clip-only agent engine.
+Status: the optional native deadline prerequisite is implemented; release
+qualification is in progress. Image, music and speech agents are delivered.
+Video/avatar agent scopes remain unavailable. Reuse the existing long-media
+controller rather than adding a short-clip-only agent engine.
+
+The prerequisite adds private optional deadlines to Wan, EchoMimic and CPU
+composition and forwards the frozen Run expiry from their current executors.
+33 new focused CPU cases pass, including actual owned sleeping processes stopped
+without any worker, invalid/expired budgets, worker resource cleanup, composition
+forwarding and public-form rejection. Existing motion and process-ownership
+regressions pass. The source and frontend qualification are recorded under
+data/acceptance/motion-media-deadlines-20261023/. No new real GPU video/avatar
+generation is claimed by this transport/lifecycle change.
 
 ## Delivery sequence
 
