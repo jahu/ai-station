@@ -62,6 +62,9 @@ Local coding agents can combine **web_search**, **Read search sources** and
 **HTTP fetch** before writing code. Review a public search query and any explicit
 URLs in the same definition; results retain source snapshots and partial-read
 warnings. The existing private workspace, checks and Stop cover the whole task.
+With automatic project checks enabled, a local agent may correct failing code
+once within the original time limit. Failed checks remain inspectable; a second
+failure ends the attempt.
 [Research before local code](docs/plans/agent-research-coding.md).
 
 Local coding agents can use an [automatic private workspace](docs/agent-workspaces.md):

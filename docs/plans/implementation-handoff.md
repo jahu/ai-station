@@ -32,14 +32,28 @@ native/CPU execution and fake inference. Current native and control-plane source
 `.tools/ui-python-optional-outputs-20261024`. Evidence:
 `data/acceptance/python-optional-outputs-20261024/post-deployment-qualified.json`.
 
-Current candidate: `.tools/agent-research-coding`, branch
-`feat/agent-research-coding`. Compose reviewed public search, its source-page
-reads and explicit HTTP reads before the existing Local coding/workspace chain.
-The existing HTTP-only operation remains compatible. One definition, parent
-manifest, exact source artifacts, permissions and absolute deadline bind the
-handoff. No new executor, network authority for generated code or model download.
-See [the plan](agent-research-coding.md). Qualification remains separate from this
-implementation; preserve real/fake distinctions and do not claim deployment.
+Reviewed research before local agent code (#388) is merged/deployed at source
+0048617. Complete local checks passed: 2806 normal Python/Runner tests, nine
+opt-in skips and 664 UI tests; compiled desktop/phone, Docker/source/assets and
+Compose checks passed. Actual public search/source reads, local generation at
+131072 context and owned validation/build/preview passed after an explicit
+same-Task model correction. The first generated Node test had incorrect imports
+and failed; it remains immutable in the evidence. The model corrected imports
+without weakening assertions, and the operator Q8/46080 preset was restored.
+Evidence: `data/acceptance/agent-research-coding-20261024/post-deployment-qualified.json`.
+Live control-plane source: `.tools/ui-agent-research-coding-20261024`; native
+source remains `.tools/ui-python-optional-outputs-20261024` and must be retained.
+
+Current candidate: `.tools/agent-validation-repair`, branch
+`fix/agent-validation-repair`. The real failure exposed that local-agent
+publication always inherited a zero automatic-repair budget. With the saved
+project's automatic checks enabled, freeze one correction through the existing
+repair engine. No new executor, permissions or schema. Preserve commands, exact
+workspace/definition, original absolute deadline, Stop and failed history; explicit
+manual Coding defaults are unchanged. Six focused cases pass, including real
+owned Git/validation with fake inference for correction success, exhaustion and
+expiry before publication. Complete release gates, review, deployment and real
+agent qualification remain separate. See [the plan](agent-validation-repair.md).
 
 The full platform goal remains active: broader general-agent orchestration,
 media/resource/quality acceptance and operations/private remote access. Preserve

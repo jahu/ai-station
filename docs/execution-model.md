@@ -1,3 +1,7 @@
+[One bounded local-agent correction](plans/agent-validation-repair.md) reuses
+the existing validation-repair engine when saved automatic project checks are
+enabled. The original deadline, commands, source scope and failed history remain.
+
 [Reviewed research before local agent code](plans/agent-research-coding.md)
 reuses the existing source-bound context handoff, public tools and isolated
 workspace. One reviewed definition and deadline bind every child.
