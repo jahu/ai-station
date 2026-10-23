@@ -5,6 +5,28 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — research plus offline data, 2026-10-24
+
+Agent validation correction (#389) is merged, deployed and real-qualified at
+source 65534ac. All 2812 normal Python/Runner tests, 9 opt-in skips and 664 UI tests,
+compiled 1440/390 flows, Docker/source/assets and unchanged Compose qualification
+passed. Actual same-goal public research/local code failed its generated Node
+test, automatically used exactly one correction on the same Task/worktree and
+then passed checks/build/offline preview. Only test imports changed; test bodies,
+assertions, website/build bytes, commands and original deadline stayed unchanged.
+The QA agent is paused; the operator's GPU/Q8/46080 model preset is restored.
+Evidence: `data/acceptance/agent-validation-repair-20261024/post-deployment-qualified.json`
+and `actual-repair-semantic-review.json`. Live controller source:
+`.tools/ui-agent-validation-repair-20261024`; native source remains
+`.tools/ui-python-optional-outputs-20261024`. Retain both.
+
+Next owned branch/worktree: `feat/agent-research-data`, `.tools/agent-research-data`.
+Read [the concrete plan](agent-research-data.md), then implement using existing
+public-research handoff, private workspace and Python/data chain. No implementation
+is advertised by this plan. Keep original CSV/XLSX and conversation contracts,
+frozen public scope/source hashes, one deadline, Stop and network-disabled Python.
+No new model download or account is needed for the proposed public-source test.
+
 ## Current continuation — optional Python outputs, 2026-10-24
 
 Natural CSV/XLSX follow-ups (#383) and inline PNG/Excel/text exports (#384–#385)
