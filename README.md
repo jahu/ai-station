@@ -72,7 +72,7 @@ alerts; only that integration requires a user-owned key. See
 inbox delivery has been tested.
 See [data-agent setup and verification](docs/python-data-agents.md).
 
-CSV/Excel analysis is also being integrated directly into Chat and Work. Choose
+Chat and Work also support direct CSV/Excel analysis. Choose
 **CSV / Excel** in the attachment tools, select files and wait for **Ready for
 analysis**, then ask your question. The tool uses a fitting local llama.cpp model
 and an offline Python workspace, even when the conversation selects an external

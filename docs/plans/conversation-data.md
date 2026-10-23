@@ -1,6 +1,6 @@
 # CSV and Excel analysis in the conversation
 
-Active implementation, 2026-10-23. Persistent data agents and the actual offline
+Release candidate #372, 2026-10-23. Persistent data agents and the actual offline
 Python executor already work; reuse them. The current main Chat cannot request
 that execution directly. Adding a persistent Agent must remain optional.
 
@@ -68,3 +68,17 @@ checks, frontend gates, Docker/Compose, review and PR to develop before rollout.
 Then qualify one short actual local-model conversation using synthetic full-file
 CSV/XLSX data and preserve the operator's original model preset. No new model or
 Python package download is implied.
+
+## Candidate qualification
+
+Source uses the existing data pipeline without native/schema/dependency changes.
+614 frontend tests, formatting/lint/types/build and compiled 1440/390px checks
+passed. The browser check covers actual HTTP upload, queued inspection, gated
+first Send, private project/worktree creation, inline verified table/CSV download
+and reload. Inference/Python are fake in this check; disposable Git is real.
+Targeted data and receipt regression checks pass, including explicit same-file
+follow-up, bounded repair, immutable bytes, Stop, mismatched authority and legacy
+receipt replay. Final complete CPU checks/review precede merging; live local-model
+acceptance follows the backed-up release. Evidence is under
+`data/acceptance/conversation-data-20261023`; no real conversation-data smoke test
+is claimed by the browser fixture alone.
