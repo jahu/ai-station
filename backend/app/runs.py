@@ -235,10 +235,12 @@ def request_cancel(session: Session, run: Run) -> Run:
             return request_cancel(session, child)
     if run.executor_type == "agent_workflow" and run.status in TERMINAL:
         definition = run.parameters.get("definition") or {}
-        if definition.get("tools") == ["market_watch"] and (definition.get("market") or {}).get("email"):
-            # Threshold publication can fan out into several SMTP children after
-            # the report was queued. Stop the owned Task graph, not just that
-            # earlier queued report, which would leave email able to submit.
+        if definition.get("media") is not None or (
+            definition.get("tools") == ["market_watch"] and (definition.get("market") or {}).get("email")
+        ):
+            # Media preparation and threshold reports can publish later action
+            # children. Stop the whole owned Task under its publication lock so
+            # a late child cannot start after Stop was accepted.
             from app.task_control import cancel_task
 
             active = list(

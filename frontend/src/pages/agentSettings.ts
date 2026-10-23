@@ -1,4 +1,5 @@
 import { DEFAULT_MARKET, type MarketScope } from "./marketScope";
+import type { AgentMediaScope } from "./agent-media";
 export type AgentSettingsInput = {
   updated_at: string;
   name: string;
@@ -13,6 +14,7 @@ export type AgentSettingsInput = {
   };
   market?: MarketScope | null;
   data?: { input_artifact_ids: string[]; max_repairs: number } | null;
+  media?: AgentMediaScope | null;
   permission_profile?: "agent_local" | "agent_external_coding";
   search_query?: string | null;
   fetch_urls?: string[] | null;
@@ -66,6 +68,9 @@ export function agentSettingsPayload(
         }
       : {}),
     ...(next.data !== undefined ? { data: next.data } : {}),
+    ...(next.media !== undefined
+      ? { media: next.tools?.includes("create_media") ? next.media : null }
+      : {}),
     ...(next.permission_profile !== undefined
       ? { permission_profile: next.permission_profile }
       : {}),

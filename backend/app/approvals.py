@@ -104,7 +104,12 @@ def resolve_run_approval(session: Session, run: Run, resolution: str) -> Run:
             session, run, RunStatus.CANCELED, event_type="run.canceled", payload={"approval": "denied"}
         )
         return run
-    if run.executor_type != "agent_workflow":
+    fixed_media = (
+        run.executor_type == "agent_media"
+        and (run.parameters.get("definition", {}).get("media") or {}).get("description_source", "fixed")
+        == "fixed"
+    )
+    if run.executor_type != "agent_workflow" and not fixed_media:
         from app.llama import prepare_consumer
 
         prepare_consumer(session, run)

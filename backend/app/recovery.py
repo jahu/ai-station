@@ -72,6 +72,13 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
     touched: list[str] = []
     for run in stale:
         session.commit()
+        session.refresh(run)
+        if run.status not in INSPECT_STATUSES or run.lease_expires_at is None or run.lease_expires_at >= now:
+            continue
+        from app.heartbeat import cancel_expired_run
+
+        cancel_expired_run(session, run.id)
+        session.commit()
         if run.executor_type in {"llama_load", "llama_stop"}:
             # The native create/start/stop journal is keyed by immutable runtime
             # identity. Resuming it cannot create another container or restart an

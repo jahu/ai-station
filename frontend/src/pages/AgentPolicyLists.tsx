@@ -244,10 +244,12 @@ export function WorkflowModeChoiceList({
   disabled = false,
   tabIndex,
   name = "workflow_mode",
+  output = "report",
 }: {
   mode: "sequential" | "gated";
   onChange: (mode: "sequential" | "gated") => void;
   name?: string;
+  output?: "report" | "media";
 } & ListOptions) {
   const labelId = useId();
   const items = [
@@ -255,13 +257,17 @@ export function WorkflowModeChoiceList({
       key: "sequential" as const,
       title: "Sequential",
       detail:
-        "Context tools then the report. Each step waits for the previous one to succeed.",
+        output === "media"
+          ? "Read the reviewed sources, prepare the creative direction and generate the output."
+          : "Context tools then the report. Each step waits for the previous one to succeed.",
     },
     {
       key: "gated" as const,
       title: "Gated",
       detail:
-        "Same sequence, but the report waits in waiting_for_approval after context tools finish so you can inspect their artifacts first.",
+        output === "media"
+          ? "Review source results before approving creative preparation and generation. The agent runtime limit includes this approval wait."
+          : "Same sequence, but the report waits in waiting_for_approval after context tools finish so you can inspect their artifacts first.",
     },
   ];
   const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
@@ -330,6 +336,7 @@ export function NoticeChoiceList({
   onChange,
   disabled = false,
   tabIndex,
+  output = "report",
 }: {
   policy: {
     on_success: boolean;
@@ -341,6 +348,7 @@ export function NoticeChoiceList({
     on_failure: boolean;
     on_approval: boolean;
   }) => void;
+  output?: "report" | "media";
 } & ListOptions) {
   const labelId = useId();
   const items = [
@@ -348,7 +356,13 @@ export function NoticeChoiceList({
       key: "on_failure" as const,
       title: "When a workflow or report fails or is interrupted",
     },
-    { key: "on_success" as const, title: "When a report succeeds" },
+    {
+      key: "on_success" as const,
+      title:
+        output === "media"
+          ? "When the media is ready"
+          : "When a report succeeds",
+    },
     {
       key: "on_approval" as const,
       title: "When a Run is waiting for approval",

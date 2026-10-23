@@ -31,6 +31,11 @@ class PhotoPipeExecutor(HostMediaExecutor):
         )
         child.effective_permissions = list(run.effective_permissions)
         child.triggered_by = run.triggered_by
+        if run.parameters.get("execution_deadline_at"):
+            child.parameters = {
+                **child.parameters,
+                "execution_deadline_at": run.parameters["execution_deadline_at"],
+            }
         run.metadata_json = {**run.metadata_json, "upscale_run_id": child.id}
         append_event(
             session, run.id, "workflow.step.queued", {"run_id": child.id, "capability": child.capability}
@@ -88,4 +93,5 @@ class PhotoPipeExecutor(HostMediaExecutor):
         }
         payload["prompt_style"] = run.parameters.get("prompt_style", "pipeline")
         payload.update(run_id=run.id, gpu=allocated, output_relative=output)
+        payload.update(self.native_budget(run))
         return runner.start_photo(payload)

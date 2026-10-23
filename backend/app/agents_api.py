@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.agent_media_schema import fixed_media_only
 from app.agent_schema import AgentSettings
 from app.agent_tools import AGENT_TOOLS, agent_tool, effective_permissions
 from app.approvals import run_public
@@ -61,6 +62,14 @@ def get_agent(session, agent_id):
 
 
 def validate_target(body, session, agent=None, *, enabling=False):
+    if body.media is not None and body.enabled:
+        from app.agent_media import freeze_inputs, require_profile
+
+        try:
+            require_profile(body.media)
+            freeze_inputs(session, body.media)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
     if (
         body.market is not None
         and body.market.provider == "finnhub"
@@ -108,7 +117,12 @@ def validate_target(body, session, agent=None, *, enabling=False):
             raise HTTPException(422, str(exc)) from exc
     from app.agent_coding_policy import auto_local_coding, external_coding
 
-    if body.enabled and not external_coding(body.tools) and body.tools != ["market_watch"]:
+    if (
+        body.enabled
+        and not external_coding(body.tools)
+        and body.tools != ["market_watch"]
+        and not fixed_media_only(body)
+    ):
         try:
             if auto_local_coding(body.tools, body.model):
                 from app.coding_model_routing import select_coding_model
@@ -124,7 +138,7 @@ def apply_settings(agent, body):
     for key, value in body.model_dump().items():
         if key == "project_id" and value is not None:
             value = str(value)
-        if key in {"github", "data", "market"} and value is not None:
+        if key in {"github", "data", "market", "media"} and value is not None:
             value = getattr(body, key).model_dump(mode="json")
         setattr(agent, key, value)
     agent.retry_policy = body.retry_policy.model_dump()
@@ -135,13 +149,20 @@ def apply_settings(agent, body):
 
 @router.get("/tools")
 def tools():
+    from app.agent_media import runtime_readiness
     from app.data_agents import runtime_capability
 
     capability = runtime_capability()
+    media = runtime_readiness() if agent_tool("create_media").operational else {}
     return [
         {
             **asdict(agent_tool(name)),
             **({"operational": capability["available"]} if name == "python_data" else {}),
+            **(
+                {"operational": any(value["ready"] for value in media.values()), "outputs": media}
+                if name == "create_media"
+                else {}
+            ),
         }
         for name in AGENT_TOOLS
     ]

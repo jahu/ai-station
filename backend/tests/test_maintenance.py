@@ -24,7 +24,7 @@ def test_upgrade_readiness_is_inspect_only_and_restore_stays_unpublished():
     client = TestClient(app)
     body = client.get("/api/maintenance").json()
     assert body["schema_current_matches_head"] is True
-    assert body["schema_head"] == "0031"
+    assert body["schema_head"] == "0032"
     assert body["restore"] == "unpublished"
     assert body["image_rollout"] == "unpublished"
     assert body["lan_bind_allowed"] is False

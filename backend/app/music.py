@@ -8,7 +8,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -17,6 +17,7 @@ from app.config import get_settings
 from app.db import session_scope
 from app.host_media_executor import HostMediaExecutor
 from app.models import Run, Task
+from app.music_schema import MusicSettings
 from app.paths import safe_join
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, run_dict
@@ -26,23 +27,6 @@ DB = Annotated[Session, Depends(session_scope)]
 MODEL_REVISION = "19671f406d603126926c1b7e2adc169acbcade22"
 CODE_REVISION = "ca1e85fe9430179831e6bc6be790c332190a3866"
 PROFILE_SHA256 = "912b4a5cd50f729d8874dcbd44776d87643f04d199b748ba3706b7181a69c658"
-
-
-class MusicSettings(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    lyrics: str = Field(default="", max_length=4096)
-    instrumental: bool = True
-    duration_seconds: int = Field(default=30, ge=10, le=600, strict=True)
-    seed: int | None = Field(default=None, ge=0, le=2**31 - 1, strict=True)
-    gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]{1,12})$")
-
-    @model_validator(mode="after")
-    def lyrics_match_mode(self):
-        if self.instrumental and self.lyrics:
-            raise ValueError("Choose instrumental or supplied lyrics")
-        if not self.instrumental and not self.lyrics:
-            raise ValueError("Provide lyrics for a song with vocals")
-        return self
 
 
 class MusicRequest(MusicSettings):
@@ -181,6 +165,7 @@ class MusicExecutor(HostMediaExecutor):
                 },
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **self.native_budget(run),
             },
         )
 

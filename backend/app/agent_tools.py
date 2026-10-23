@@ -12,6 +12,17 @@ MAX_TOOL_ROUNDS = 4
 MAX_CALLS_PER_ROUND = 3
 
 AGENT_TOOLS = {
+    "create_media": ToolSpec(
+        name="create_media",
+        description="Create an image or music artifact with the reviewed output settings. Uses existing local media Runs; no shell, model downloads or arbitrary paths.",
+        risk_level="medium",
+        required_permissions=("filesystem_read", "workspace_write"),
+        timeout=3600,
+        execution_target="host",
+        operational=True,
+        input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+        output_schema={"type": "object"},
+    ),
     "search_pages": ToolSpec(
         name="search_pages",
         description="Read search sources: read up to three public result pages from this workflow's own reviewed web_search query. Requires web_search. Source-bound GET only; no caller/model URLs, cookies, credentials, JavaScript or recursive links. Failed sources remain visible.",

@@ -1,9 +1,20 @@
+import {
+  agentMediaIssue,
+  fixedAgentMedia,
+  type AgentMediaScope,
+} from "./agent-media";
 import type { MarketScope } from "./marketScope";
 export type AgentToolSpec = {
   name: string;
   description: string;
   operational: boolean;
   required_permissions: string[];
+  outputs?: Partial<
+    Record<
+      "image" | "music",
+      { ready: boolean; reason?: string | null; modes?: string[] }
+    >
+  >;
 };
 
 export function isAgentToolList(value: unknown): value is AgentToolSpec[] {
@@ -42,6 +53,7 @@ export function activationBlock(
     permission_profile?: string;
     tools?: string[];
     data?: { input_artifact_ids: string[]; max_repairs: number } | null;
+    media?: AgentMediaScope | null;
     data_readiness?: { ready: boolean; reason: string } | null;
     skills?: string[];
     search_query?: string | null;
@@ -99,7 +111,21 @@ export function activationBlock(
         "Review and save the explicit external-coding permission profile before enabling.",
     };
   }
-  if (!external && !market && !(agent.model ?? "").trim()) {
+  if (names.includes("create_media")) {
+    const issue = agentMediaIssue(agent.media);
+    if (issue) return { blocked: true, reason: issue };
+    if (agent.media?.description_source === "fixed" && !fixedAgentMedia(agent))
+      return {
+        blocked: true,
+        reason: "Use a goal-based description with research tools.",
+      };
+  }
+  if (
+    !external &&
+    !market &&
+    !fixedAgentMedia(agent) &&
+    !(agent.model ?? "").trim()
+  ) {
     return {
       blocked: true,
       reason: "Select a local model before enabling.",
@@ -180,6 +206,21 @@ export function activationBlock(
     };
   }
   const byName = new Map(catalog.map((tool) => [tool.name, tool]));
+  if (names.includes("create_media") && agent.media) {
+    const output = byName.get("create_media")?.outputs?.[agent.media.kind];
+    if (
+      output &&
+      (!output.ready ||
+        (agent.media.kind === "image" &&
+          output.modes &&
+          !output.modes.includes(agent.media.request.mode)))
+    )
+      return {
+        blocked: true,
+        reason:
+          output.reason || "The selected local media engine is unavailable.",
+      };
+  }
   const blocked = names.filter((name) => {
     const tool = byName.get(name);
     return !tool || !tool.operational;

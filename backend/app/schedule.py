@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agent_coding_policy import auto_local_coding, coding_provider, external_coding
+from app.agent_media_schema import fixed_media_only
 from app.agent_schema import AgentSettings
 from app.agent_tools import agent_tool, effective_permissions
 from app.db import utcnow
@@ -44,6 +45,8 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
     definition = definition or AgentSettings.model_validate(
         {key: getattr(agent, key) for key in AgentSettings.model_fields} | {"enabled": False}
     )
+    if "create_media" in definition.tools and definition.media is None:
+        raise ValueError("Review media output settings before running this agent")
     from app.market_feeds import stock_permissions, validate_stock_scope
 
     validate_stock_scope(session, definition.market)
@@ -51,6 +54,7 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         not definition.model
         and not external_coding(definition.tools)
         and definition.tools != ["market_watch"]
+        and not fixed_media_only(definition)
     ) or any(not agent_tool(name).operational for name in definition.tools):
         raise ValueError("Agent model or tools are not operational")
     if "web_search" in definition.tools and not definition.search_query:
@@ -73,7 +77,9 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
     else:
         endpoint = (
             ""
-            if external_coding(definition.tools) or definition.tools == ["market_watch"]
+            if external_coding(definition.tools)
+            or definition.tools == ["market_watch"]
+            or fixed_media_only(definition)
             else model_endpoint(definition.model, session)
         )
     data_inputs = None
@@ -82,6 +88,11 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
 
         require_runtime()
         data_inputs = freeze_inputs(session, definition.data)
+    media_inputs = None
+    if definition.media:
+        from app.agent_media import freeze_inputs as freeze_media_inputs
+
+        media_inputs = freeze_media_inputs(session, definition.media)
     market_email_approval = None
     if definition.market is not None and definition.market.email is not None:
         from app.market_email import authorization
@@ -107,6 +118,7 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         execution_target="container",
         parameters={
             "definition": definition.model_dump(mode="json"),
+            **({"media_inputs": media_inputs} if media_inputs is not None else {}),
             **({"data_inputs": data_inputs} if data_inputs is not None else {}),
             **(
                 {

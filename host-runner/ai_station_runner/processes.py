@@ -7,6 +7,8 @@ An unknown exit code is never translated into successful execution.
 from __future__ import annotations
 
 import json
+import logging
+import math
 import os
 import signal
 import subprocess
@@ -45,6 +47,16 @@ def _group_alive(record: dict) -> bool:
     leader = _identity(record["pid"])
     if leader and leader["start_ticks"] != record["start_ticks"]:
         return False
+    if (
+        leader
+        and leader["state"] not in {"Z", "X"}
+        and leader["pgid"] == record["process_group_id"]
+        and leader["session"] == record["pid"]
+    ):
+        # This identity already proves an owned live member. A second /proc
+        # snapshot can otherwise miss both a just-exited leader and its newly
+        # forked child, incorrectly releasing the whole group's ownership.
+        return True
     for path in Path("/proc").iterdir():
         if not path.name.isdigit():
             continue
@@ -67,12 +79,30 @@ class ProcessManager:
         self.path = resolve_child(self.data_dir, "runtime/processes.json")
         self._lock = threading.RLock()
         self._live: dict[str, subprocess.Popen] = {}
+        self._deadline_timers: dict[str, threading.Timer] = {}
         self.path.parent.mkdir(parents=True, exist_ok=True)
         if not self.path.exists():
             self._dump({})
+        # Budgets survive a native service restart. Ownership is checked again
+        # when the timer fires; a stale/reused PID never authorizes a signal.
+        with self._lock:
+            for run_id, record in self._load().items():
+                if (
+                    record.get("deadline_at") is not None
+                    and record["status"] in {"running", "cancel_requested"}
+                    and _group_alive(record)
+                ):
+                    self._arm_deadline(run_id, record["deadline_at"])
 
     def start(
-        self, *, run_id: str, argv: list[str], cwd: Path, executor: str, env: dict | None = None
+        self,
+        *,
+        run_id: str,
+        argv: list[str],
+        cwd: Path,
+        executor: str,
+        env: dict | None = None,
+        deadline_at: float | None = None,
     ) -> dict:
         if str(UUID(run_id)) != run_id:
             raise ValueError("Canonical UUID required")
@@ -84,6 +114,12 @@ class ProcessManager:
                 if records[run_id]["executor"] != executor:
                     raise ValueError("Run already belongs to a different executor")
                 return self.inspect(run_id)
+            if deadline_at is not None and (
+                type(deadline_at) not in {int, float}
+                or not math.isfinite(deadline_at)
+                or not 0 < deadline_at - time.time() <= 3600
+            ):
+                raise ValueError("Owned process deadline must be within the next hour")
             log_dir = resolve_child(self.data_dir, f"runs/{run_id}")
             log_dir.mkdir(parents=True, exist_ok=True)
             out = resolve_child(log_dir, "stdout.log")
@@ -106,6 +142,7 @@ class ProcessManager:
                 "stderr_log": f"runs/{run_id}/stderr.log",
                 "status": "running",
                 "exit_code": None,
+                **({"deadline_at": deadline_at} if deadline_at is not None else {}),
             }
             records[run_id] = record
             try:
@@ -116,7 +153,31 @@ class ProcessManager:
                 raise
             self._live[run_id] = proc
             threading.Thread(target=self._wait, args=(run_id, proc), daemon=True).start()
+            if deadline_at is not None:
+                self._arm_deadline(run_id, deadline_at)
             return dict(record)
+
+    def _arm_deadline(self, run_id: str, deadline_at: float) -> None:
+        timer = threading.Timer(max(0, deadline_at - time.time()), self._expire, (run_id, deadline_at))
+        timer.daemon = True
+        self._deadline_timers[run_id] = timer
+        timer.start()
+
+    def _expire(self, run_id: str, deadline_at: float) -> None:
+        try:
+            with self._lock:
+                records = self._load()
+                record = records.get(run_id)
+                if record is None or record.get("deadline_at") != deadline_at or not _group_alive(record):
+                    return
+                record["deadline_exceeded_at"] = time.time()
+                self._dump(records)
+            self.cancel(run_id)
+        except Exception:
+            logging.exception("Could not confirm owned process deadline cancellation: %s", run_id)
+        finally:
+            with self._lock:
+                self._deadline_timers.pop(run_id, None)
 
     def inspect(
         self, run_id: str, *, stdout_offset: int | None = None, stderr_offset: int | None = None
@@ -143,6 +204,10 @@ class ProcessManager:
                     else "interrupted"
                 )
                 self._dump(records)
+            if not alive and not completion_pending:
+                timer = self._deadline_timers.pop(run_id, None)
+                if timer is not None:
+                    timer.cancel()
             if (
                 record["executor"] in {"browser", "python", "site_preview", "site_preview_action"}
                 and not alive
@@ -253,6 +318,12 @@ class ProcessManager:
                     records[run_id]["exit_code"] = code
                     self._dump(records)
                     self._live.pop(run_id, None)
+                    # A forked descendant may outlive its group leader. Keep
+                    # its budget until the entire owned group is gone.
+                    if not _group_alive(records[run_id]):
+                        timer = self._deadline_timers.pop(run_id, None)
+                        if timer is not None:
+                            timer.cancel()
                     return
             time.sleep(0.05)
 

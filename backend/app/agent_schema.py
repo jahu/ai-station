@@ -8,6 +8,7 @@ from croniter import croniter
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
 from app.agent_coding_policy import CODING_TOOLS, coding_provider, external_coding
+from app.agent_media_schema import AgentMediaScope, fixed_media_only
 from app.agent_tools import AGENT_TOOLS, agent_tool
 from app.db import utcnow
 from app.http_fetch import reviewed_urls
@@ -95,6 +96,7 @@ class AgentSettings(BaseModel):
     market: MarketScope | None = None
     github: AgentGithubScope | None = None
     data: AgentDataScope | None = None
+    media: AgentMediaScope | None = None
     workspace_policy: AgentWorkspacePolicy = Field(default_factory=AgentWorkspacePolicy)
     search_query: str = Field(default="", max_length=500)
     fetch_urls: list[str] = Field(default_factory=list, max_length=3)
@@ -120,6 +122,23 @@ class AgentSettings(BaseModel):
     @model_validator(mode="after")
     def validate_definition(self):
         self.tools = list(dict.fromkeys(self.tools))
+        if self.media is not None and "create_media" not in self.tools:
+            raise ValueError("Media settings require the Create media tool")
+        if "create_media" in self.tools:
+            if set(self.tools).intersection(set(CODING_TOOLS) | {"market_watch"}):
+                raise ValueError("Media generation cannot inherit coding, data or market authority")
+            if self.enabled and self.media is None:
+                raise ValueError("Review media output settings before enabling this agent")
+            if (
+                self.media
+                and self.media.description_source == "fixed"
+                and (not fixed_media_only(self) or self.skills)
+            ):
+                raise ValueError("Research and skills require a media description prepared from the goal")
+            if self.tool_calling != "none" or "remember_report" in self.tools:
+                raise ValueError(
+                    "Media workflows use reviewed steps without report tool calling or report retention"
+                )
         if "search_pages" in self.tools and "web_search" not in self.tools:
             raise ValueError("Read search sources requires web_search and its reviewed public query")
         if self.market is not None and self.tools != ["market_watch"]:
@@ -206,7 +225,12 @@ class AgentSettings(BaseModel):
                 raise ValueError("web_search requires an explicit public search query before activation")
             if {"http_fetch", "browser"}.intersection(self.tools) and not self.fetch_urls:
                 raise ValueError("Page tools require 1 to 3 explicit public URLs before activation")
-            if not self.model and not external_coding(self.tools) and self.tools != ["market_watch"]:
+            if (
+                not self.model
+                and not external_coding(self.tools)
+                and self.tools != ["market_watch"]
+                and not fixed_media_only(self)
+            ):
                 raise ValueError("Select a local model before enabling the agent")
             unavailable = [name for name in self.tools if not agent_tool(name).operational]
             if unavailable:

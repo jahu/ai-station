@@ -128,6 +128,7 @@ class RequestBody(BaseModel):
 
 class PhotoBody(RequestBody):
     run_id: RunId
+    deadline_at: float | None = Field(default=None, gt=0, allow_inf_nan=False, strict=True)
     mode: Literal["t2i", "img2img", "recompose", "upscale"]
     backend: Literal["qwen", "juggernaut"] = "qwen"
     prompt: str = Field(default="", max_length=10000)
@@ -389,6 +390,24 @@ def models_scan():
     return {"models": scan(roots)}
 
 
+@app.get("/v1/photo/capabilities")
+def photo_capabilities():
+    settings = get_settings()
+    python = Path(settings.photo_python).expanduser() if settings.photo_python else None
+    script = Path(settings.photo_script).expanduser() if settings.photo_script else None
+    configured = bool(
+        python and script and python.is_file() and os.access(python, os.X_OK) and script.is_file()
+    )
+    return {
+        "available": configured and bool(collect(_data()).get("gpus")),
+        "configuration_present": configured,
+        "backend": "photo_pipe",
+        "modes": ["t2i", "img2img", "recompose", "upscale"],
+        "backends": ["qwen", "juggernaut"],
+        "requires_gpu": True,
+    }
+
+
 @app.post("/v1/runs/photo")
 def start_photo(body: PhotoBody):
     settings = get_settings()
@@ -449,9 +468,17 @@ def start_photo(body: PhotoBody):
     output.parent.mkdir(parents=True, exist_ok=True)
     # photo_pipe.py maps --device cuda:N itself. Do not also set CUDA_VISIBLE_DEVICES here.
     environment = {**os.environ, "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1", "PYTHONUNBUFFERED": "1"}
-    record = manager().start(
-        run_id=body.run_id, argv=argv, cwd=_data(), executor="photo_pipe", env=environment
-    )
+    try:
+        record = manager().start(
+            run_id=body.run_id,
+            argv=argv,
+            cwd=_data(),
+            executor="photo_pipe",
+            env=environment,
+            **({"deadline_at": body.deadline_at} if body.deadline_at is not None else {}),
+        )
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
     record["runner_id"] = settings.runner_id
     return record
 
@@ -624,6 +651,7 @@ _operational = {
     "/v1/validation/{run_id}",
     "/v1/worktrees/{run_id}",
     "/v1/runs/photo",
+    "/v1/photo/capabilities",
     "/health",
     "/v1/hardware",
     "/v1/gpu-processes",

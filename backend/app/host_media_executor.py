@@ -1,12 +1,14 @@
 """Shared owned-process media lifecycle, GPU scheduling, cancellation and artifacts."""
 
 import time
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
 from app.artifacts import adopt_existing
 from app.db import utcnow
 from app.events import append_event
+from app.heartbeat import cancel_expired_run
 from app.models import Run
 from app.permissions import require
 from app.resources import RESOURCE_WAIT_KEY, release_run_locks, reserve_gpu, reserve_memory
@@ -21,6 +23,16 @@ class HostMediaExecutor:
     suffix = ".bin"
     artifact_type = "document"
     mime_type = "application/octet-stream"
+
+    @staticmethod
+    def native_budget(run):
+        raw = run.parameters.get("execution_deadline_at")
+        if not raw:
+            return {}
+        deadline = datetime.fromisoformat(raw)
+        if deadline.tzinfo is None:
+            raise ValueError("Execution deadlines require an explicit time zone")
+        return {"deadline_at": deadline.timestamp()}
 
     def execute(self, session: Session, run: Run) -> str:
         require(run.effective_permissions, "filesystem_read")
@@ -123,6 +135,7 @@ class HostMediaExecutor:
 
     @staticmethod
     def _cancel_before_dispatch(session, run):
+        cancel_expired_run(session, run.id)
         if run.status in {"canceled", "cancel_requested"}:
             if run.status == "cancel_requested":
                 transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
@@ -134,6 +147,7 @@ class HostMediaExecutor:
         offsets = {"stdout_offset": 0, "stderr_offset": 0}
         while True:
             session.refresh(run)
+            cancel_expired_run(session, run.id)
             cancel = run.status == "cancel_requested"
             session.commit()
             if cancel:

@@ -1,5 +1,16 @@
 # Security model
 
+The [persistent media-agent work](plans/agent-media-generation.md) adds an optional
+internal execution deadline. The controller freezes UTC expiry; typed photo/music
+requests carry its epoch value to the native owned-process manager. Admission
+rejects expired/non-finite budgets or more than one hour. The immutable journal
+retains the original budget; replay cannot extend it. A native timer cancels
+only that verified process group and is restored from ownership records after a
+Runner restart. A forked descendant remains covered after its leader exits.
+Normal requests without a budget keep their existing lifecycle. Public music
+forms cannot inject the internal controller field. Worker expiry/recovery uses
+normal cancellation and retains resources until inspection proves cleanup.
+
 Music setup is an explicit offline plan followed by an opt-in, checksum-pinned
 public download into a new dedicated directory. It cannot overwrite existing
 models, install packages, run downloaded code or enable an executor. Generation

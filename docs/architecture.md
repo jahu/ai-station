@@ -1,5 +1,11 @@
 # Architecture
 
+[Persistent media agents](plans/agent-media-generation.md) compose reviewed research,
+bounded creative preparation and existing image/music children on one Task.
+Fixed descriptions skip text inference. Saved scopes, source hashes and native
+owned deadlines remain inspectable; natural drafts stay disabled for review.
+Release qualification is tracked separately in that plan.
+
 [Local music](plans/local-music-generation.md) is being added through the shared
 media Run/Host Runner boundary. A pinned, explicit model installer is separate
 from inference; installing its weights alone does not enable the capability.

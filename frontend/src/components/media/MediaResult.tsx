@@ -55,6 +55,7 @@ export default function MediaResult({
   steps,
   videoMode = "avatar",
   audioMode = "speech",
+  allowRetry = true,
 }: {
   kind: "audio" | "video" | "image";
   runId: string;
@@ -63,6 +64,7 @@ export default function MediaResult({
   steps?: Run[];
   videoMode?: "scene" | "avatar";
   audioMode?: "speech" | "music";
+  allowRetry?: boolean;
 }) {
   const cache = useQueryClient();
   const [, setSearch] = useSearchParams();
@@ -92,7 +94,8 @@ export default function MediaResult({
       });
     },
   });
-  const canRetry = kind === "image" && !!run && RETRYABLE.has(run.status);
+  const canRetry =
+    allowRetry && kind === "image" && !!run && RETRYABLE.has(run.status);
   const Icon =
     kind === "audio" ? AudioLines : kind === "video" ? Film : ImageIcon;
   const result = artifacts.data?.find((a) => a.type === kind);

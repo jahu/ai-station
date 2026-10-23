@@ -140,6 +140,7 @@ def agent_dict(agent: Agent) -> dict:
         "market": agent.market,
         "github": agent.github,
         "data": agent.data,
+        "media": agent.media,
         "workspace_policy": agent.workspace_policy or {},
         "tools": agent.tools,
         "search_query": agent.search_query,
