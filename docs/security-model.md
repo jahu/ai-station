@@ -1,8 +1,12 @@
 [Video/avatar agent planning](plans/agent-motion-generation.md) extends the same
 private optional owned-process deadline to Wan, EchoMimic and CPU composition.
-Public Video/Avatar/long-media forms cannot set it. No new endpoint, shell,
-filesystem grant or agent output scope is introduced by this prerequisite.
-Ordinary calls without a budget retain their existing lifecycle.
+Public Video/Avatar/long-media forms cannot set it. Ordinary calls without a
+budget retain their existing lifecycle. Persistent scene-video agents publish
+the existing bounded film request with frozen first-frame provenance and a shared
+expiry; each queued segment rechecks actual bytes/metadata before recording any
+dispatch. Models can change only the shared prompt. Only final verified assembly
+is success. Agent film Resume cannot create a new budget; reviewed Run now/retry
+creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
