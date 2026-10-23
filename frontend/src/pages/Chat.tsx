@@ -1,4 +1,4 @@
-import { useDataInputs } from "./useDataInputs";
+import { useDataInputs, type ConversationDataScope } from "./useDataInputs";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
 import { BrowserPages } from "./BrowserPages";
 import { isBrowserResult, type BrowserResult } from "./browserResult";
@@ -709,6 +709,7 @@ function Transcript({
   emptyHint,
   onProject,
   onAnalyzePage,
+  onData,
 }: {
   messages: Message[];
   orchestrator: boolean;
@@ -720,6 +721,7 @@ function Transcript({
   ) => void;
   setClipboardError: (error: Error | null) => void;
   emptyHint: string;
+  onData?: (scope: ConversationDataScope) => void;
   onAnalyzePage?: (imageId: string, url: string) => void;
   onProject?: (project: {
     id: string;
@@ -933,6 +935,7 @@ function Transcript({
                 busy={busy}
                 onQueued={orchestrator ? refresh : undefined}
                 onProject={onProject}
+                onData={onData}
                 onUse={
                   orchestrator
                     ? (artifact) =>
@@ -1070,6 +1073,7 @@ function ConversationView({
   const draft = draftState.value,
     setDraft = draftState.update;
   const [options, setOptions] = useState(emptyOptions);
+  const [toolSelectionKey, setToolSelectionKey] = useState(0);
   const dataInputs = useDataInputs(options.data);
   const dataReady = options.action !== "data.analyze" || dataInputs.ready;
   const [projectSelectionVersion, setProjectSelectionVersion] = useState(0);
@@ -1519,6 +1523,30 @@ function ConversationView({
         refresh={refresh}
         setOptions={setOptions}
         setClipboardError={setClipboardError}
+        onData={
+          !conversation.archived_at &&
+          !attachments.length &&
+          !options.image_artifact_ids.length &&
+          !options.audio_artifact_id &&
+          !options.coding &&
+          !options.new_project &&
+          !options.commit &&
+          !options.publish &&
+          !options.load &&
+          !options.stop
+            ? (scope) => {
+                setOptions({
+                  ...emptyOptions,
+                  action: "data.analyze",
+                  data: scope,
+                });
+                setWebEnabled(false);
+                setWebQuery("");
+                web.setRenderPages(false);
+                setToolSelectionKey((key) => key + 1);
+              }
+            : undefined
+        }
         onAnalyzePage={
           conversation.archived_at
             ? undefined
@@ -1594,6 +1622,7 @@ function ConversationView({
         )}
         {!conversation.archived_at && (
           <ConversationComposer
+            toolSelectionKey={toolSelectionKey}
             permissionNote={
               turnMode === "work"
                 ? "New projects include public package preparation and isolated build/test checks. Advanced project settings can override this."

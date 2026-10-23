@@ -1,6 +1,6 @@
 # CSV and Excel analysis in the conversation
 
-Release candidate #372, 2026-10-23. Persistent data agents and the actual offline
+Delivered #372, 2026-10-23. Persistent data agents and the actual offline
 Python executor already work; reuse them. The current main Chat cannot request
 that execution directly. Adding a persistent Agent must remain optional.
 
@@ -69,16 +69,30 @@ Then qualify one short actual local-model conversation using synthetic full-file
 CSV/XLSX data and preserve the operator's original model preset. No new model or
 Python package download is implied.
 
-## Candidate qualification
+## Release qualification
 
-Source uses the existing data pipeline without native/schema/dependency changes.
-614 frontend tests, formatting/lint/types/build and compiled 1440/390px checks
-passed. The browser check covers actual HTTP upload, queued inspection, gated
+#372 is merged into develop and deployed from qualified source `f79d9d3`.
+2539 normal Python/Runner tests, nine opt-in skips and 614 frontend tests pass,
+with formatting/lint/types/build, Docker/Compose and source/assets verification.
+Compiled 1440/390px checks cover actual HTTP upload, queued inspection, gated
 first Send, private project/worktree creation, inline verified table/CSV download
-and reload. Inference/Python are fake in this check; disposable Git is real.
-Targeted data and receipt regression checks pass, including explicit same-file
-follow-up, bounded repair, immutable bytes, Stop, mismatched authority and legacy
-receipt replay. Final complete CPU checks/review precede merging; live local-model
-acceptance follows the backed-up release. Evidence is under
-`data/acceptance/conversation-data-20261023`; no real conversation-data smoke test
-is claimed by the browser fixture alone.
+and reload; that fixture uses fake inference/Python and disposable real Git.
+Actual normal-worker Auto loading selected a fitting local model with 131072
+context and executed native offline Python. All six source rows produced the
+verified total 150, exceeding the preview sample; source SHA and download match.
+No persistent Agent was created. The operator's previous multi-GPU/Q8/46080
+model preset was restored. Evidence:
+`data/acceptance/conversation-data-20261023/post-deployment-qualified.json`.
+The frontend fixture and actual local execution are separate checks.
+
+## Same-file conversation follow-ups
+
+A verified result offers an explicit reuse action. Clicking it selects the
+original turn's file IDs, local model and bounded repair/time settings, opens
+the review panel and focuses the existing question draft without submitting it.
+No file is copied or re-uploaded. Mixed attachment/project scopes are not
+silently discarded. The user may replace/remove files or change settings before
+Send. The normal backend then rechecks inspection, Trash, hashes and the current
+scope and creates a fresh private Task/workspace in the same conversation.
+History/model output cannot select files or grant Python on its own. This is UI
+composition of #372; backend/native/schema/dependencies remain unchanged.
