@@ -66,3 +66,33 @@ it("keeps Stop independent of Send while an active turn allows typing", () => {
   expect(stop).toHaveBeenCalledOnce();
   expect(send).not.toHaveBeenCalled();
 });
+
+it("opens and focuses selected follow-up tools without changing or submitting the draft", () => {
+  const send = vi.fn();
+  const props = {
+    id: "draft",
+    value: "Keep my next question",
+    onChange: vi.fn(),
+    onSend: send,
+    canSend: true,
+    busy: false,
+    placeholder: "Ask…",
+    tools: <p>Selected sales.csv</p>,
+  };
+  const { rerender } = render(
+    <ConversationComposer {...props} toolSelectionKey={0} />,
+  );
+  expect(screen.getByText("Selected sales.csv").closest("details")?.open).toBe(
+    false,
+  );
+  rerender(<ConversationComposer {...props} toolSelectionKey={1} />);
+  expect(screen.getByText("Selected sales.csv").closest("details")?.open).toBe(
+    true,
+  );
+  const draft = screen.getByRole("textbox", {
+    name: "Message",
+  }) as HTMLTextAreaElement;
+  expect(draft.value).toBe("Keep my next question");
+  expect(document.activeElement).toBe(draft);
+  expect(send).not.toHaveBeenCalled();
+});

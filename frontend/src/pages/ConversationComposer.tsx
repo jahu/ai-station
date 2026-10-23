@@ -17,6 +17,7 @@ export default function ConversationComposer({
   sendButton,
   sendLabel,
   permissionNote,
+  toolSelectionKey = 0,
 }: {
   id: string;
   value: string;
@@ -32,8 +33,16 @@ export default function ConversationComposer({
   sendButton?: ReactNode;
   sendLabel?: string;
   permissionNote?: ReactNode;
+  toolSelectionKey?: number;
 }) {
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const toolPanel = useRef<HTMLDetailsElement>(null);
+  useLayoutEffect(() => {
+    if (toolSelectionKey && toolPanel.current) {
+      toolPanel.current.open = true;
+      textarea.current?.focus();
+    }
+  }, [toolSelectionKey]);
   useLayoutEffect(() => {
     const field = textarea.current;
     if (!field) return;
@@ -86,7 +95,7 @@ export default function ConversationComposer({
       />
       {permissionNote && <p className="muted">{permissionNote}</p>}
       {tools && (
-        <details className="new-chat-tools">
+        <details ref={toolPanel} className="new-chat-tools">
           <summary>
             <Paperclip size={16} aria-hidden="true" />
             <span>Attach files &amp; choose tools</span>

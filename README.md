@@ -79,6 +79,10 @@ and an offline Python workspace, even when the conversation selects an external
 provider. The result includes an answer, table, CSV download and inspectable Python
 source; no persistent agent or manually configured repository is required.
 See [the delivery and verification plan](docs/plans/conversation-data.md).
+After a completed analysis, **Ask another question about these files** selects
+the same inputs and opens their review beside your next question. Your draft is
+preserved; execution starts only when you Send. You can remove or replace the
+selected files before sending.
 
 **Conversation entry:** type immediately at `/` or `/chat`; the first Send creates
 the conversation. Chat supports replies and media tools; Work adds scoped project,

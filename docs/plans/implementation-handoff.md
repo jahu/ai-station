@@ -24,9 +24,13 @@ proof: `data/acceptance/agent-music-lyrics-20261023`. Original songs in the conv
 Python/Runner tests, nine opt-in skips and 611 UI tests pass. Actual selected-model
 Chat → original words → 10-second GPU WAV → inline/Library passed with the original
 46080-token model preset restored; listening quality remains separate. Evidence:
-`data/acceptance/conversation-song-lyrics-20261023`. The next active increment is
-[CSV/Excel in the conversation](conversation-data.md), reusing the existing local
-Python pipeline without requiring a persistent Agent or manual repository.
+`data/acceptance/conversation-song-lyrics-20261023`. [CSV/Excel in the conversation](conversation-data.md) is deployed by #372.
+2539 Python/Runner tests, nine opt-in skips, 614 UI tests and compiled desktop/phone
+checks pass. Real normal-worker Auto inference with 131072 context and native
+Python returned the checked full-file total 150; the original Q8/46080 model
+preset was restored. Evidence: `data/acceptance/conversation-data-20261023`.
+The active UI increment is explicit same-file follow-up selection without
+re-upload or automatic execution.
 The local-music section below is historical qualification, not unfinished #361.
 
 ## Active continuation — local music, 2026-10-23

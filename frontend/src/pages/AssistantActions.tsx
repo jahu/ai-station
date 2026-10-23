@@ -212,8 +212,10 @@ export function AssistantResults({
   onUse,
   onQueued,
   onProject,
+  onData,
 }: {
   result: ActionResult;
+  onData?: (scope: ConversationDataScope) => void;
   inputs?: AssistantOptions;
   busy?: boolean;
   onUse?: (artifact: Artifact) => void;
@@ -229,6 +231,14 @@ export function AssistantResults({
       <MediaJobResult id={result.media_job.task_id} job={result.media_job} />
     );
   if (!result.steps) return null;
+  const dataRoot = result.data_runs?.find(
+    (run) => run.executor_type === "orchestrator",
+  );
+  const dataScope = dataRoot?.parameters.data as
+    ConversationDataScope | undefined;
+  const hasDataResult = result.data_runs?.some(
+    (run) => run.status === "succeeded" && run.metadata?.data_result,
+  );
   return (
     <div className="assistant-results">
       <div className="row">
@@ -238,6 +248,21 @@ export function AssistantResults({
       {result.data_runs?.length ? (
         <>
           <AgentDataResult runs={result.data_runs} />
+          {onData && hasDataResult && dataScope?.input_artifact_ids?.length ? (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy}
+              onClick={() =>
+                onData({
+                  ...dataScope,
+                  input_artifact_ids: [...dataScope.input_artifact_ids],
+                })
+              }
+            >
+              Ask another question about these files
+            </Button>
+          ) : null}
           <p className="muted">
             LOCAL · {result.data_model || "Automatic local model"} · Originals
             unchanged

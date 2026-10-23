@@ -193,3 +193,71 @@ it("shows the verified data table and download before optional execution interna
       .parentElement?.hasAttribute("open"),
   ).toBe(false);
 });
+
+it("offers a same-file follow-up only from a verified result and retains the submitted local scope", () => {
+  const scope = {
+    input_artifact_ids: ["input"],
+    max_repairs: 1,
+    model: "auto",
+    maximum_runtime: 600,
+  };
+  const runs = [
+    {
+      id: "result",
+      executor_type: "agent_data_result",
+      task_id: "task",
+      status: "succeeded",
+      metadata: {
+        data_result: {
+          answer: "Total: 27",
+          columns: [],
+          rows: [],
+          download_artifact_id: "csv",
+          script_artifact_id: "script",
+          attempt: 0,
+        },
+      },
+    },
+    {
+      id: "origin",
+      executor_type: "orchestrator",
+      task_id: "task",
+      status: "succeeded",
+      parameters: { data: scope },
+    },
+  ] as unknown as Run[];
+  const selected = vi.fn();
+  const cache = new QueryClient();
+  const { rerender } = render(
+    <QueryClientProvider client={cache}>
+      <MemoryRouter>
+        <AssistantResults
+          onData={selected}
+          result={{ steps: [], data_runs: runs }}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Ask another question about these files",
+    }),
+  );
+  expect(selected).toHaveBeenCalledExactlyOnceWith(scope);
+  expect(scope.input_artifact_ids).toEqual(["input"]);
+  rerender(
+    <QueryClientProvider client={cache}>
+      <MemoryRouter>
+        <AssistantResults
+          onData={selected}
+          result={{ steps: [], data_runs: [runs[1]] }}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    screen.queryByRole("button", {
+      name: "Ask another question about these files",
+    }),
+  ).toBeNull();
+});

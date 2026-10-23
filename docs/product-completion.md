@@ -38,12 +38,14 @@ ordinary Chat/Work (#371). Actual local writing and short GPU WAV/inline/Library
 chains passed; subjective sung-word intelligibility remains unverified. See
 [conversation music qualification](plans/conversational-music.md).
 
-The current candidate is [conversation CSV/Excel analysis](plans/conversation-data.md),
-PR #372. It reuses the deployed local Python/data pipeline without a persistent
-Agent or manual repository. Compiled desktop/phone upload, inspection-gated Send,
-table/download and reload pass with fake inference/Python and disposable real Git.
-Complete final CPU checks, review and actual local-model conversation acceptance
-remain release gates; this entry does not claim the candidate is deployed.
+[Conversation CSV/Excel analysis](plans/conversation-data.md) is deployed (#372),
+reusing local Python/data without a persistent Agent or manual repository.
+2539 Python/Runner tests, nine opt-in skips, 614 UI tests and compiled desktop/phone
+checks pass. Actual Auto model loading with 131072 context and native offline
+Python produced the checked full-file total 150, preserved the original input,
+and restored the operator model preset. Evidence:
+`data/acceptance/conversation-data-20261023/post-deployment-qualified.json`.
+Explicit same-file follow-up selection is the current UI increment.
 
 Current evidence summary, 2026-10-22: general-agent research, local Python/data
 execution and website-building workflows are operational. Public research uses
