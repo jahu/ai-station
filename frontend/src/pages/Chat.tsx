@@ -71,6 +71,7 @@ import { Badge, Empty, ErrorNotice, Loading } from "../components/common";
 import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
 import { useListKeyboard } from "./useListKeyboard";
+import { visionReplies, canRegenerateResponse } from "./vision-replies";
 import {
   ConversationModeChoiceList,
   ConversationProviderChoiceList,
@@ -738,7 +739,7 @@ function Transcript({
   const viewport = useRef<HTMLElement>(null);
   const followLatest = useRef(true);
   const [readingEarlier, setReadingEarlier] = useState(false);
-  const visible = messages.filter((message) => !message.metadata.routing_only);
+  const { visible, executions } = visionReplies(messages);
   const { listRef, index, onKeyDown, itemProps } = useListKeyboard(
     visible,
     (message) => message.id,
@@ -797,6 +798,7 @@ function Transcript({
       >
         {visible.map((message, i) => {
           const current = i === index;
+          const execution = executions.get(message.id);
           const speaker = speakerName(message, orchestrator);
           const shortId = message.id.slice(0, 8);
           return (
@@ -821,6 +823,11 @@ function Transcript({
                   {time(message.created_at)}
                 </time>
               </div>
+              {execution && message.metadata.vision_model && (
+                <p className="message-model muted">
+                  Vision · {message.metadata.vision_model}
+                </p>
+              )}
               {message.metadata.reasoning_text && (
                 <details className="message-thinking">
                   <summary>Thinking</summary>
@@ -940,7 +947,8 @@ function Transcript({
                 />
               )}
               <AssistantResults
-                result={message}
+                result={execution ?? message}
+                executionNote={execution?.content}
                 inputs={options}
                 busy={busy}
                 onQueued={orchestrator ? refresh : undefined}
@@ -1823,18 +1831,15 @@ function ConversationView({
             }
           />
         )}
-        {!!messages.length &&
-          !busy &&
-          !messages.filter((m) => m.role === "assistant").at(-1)?.metadata
-            .orchestration && (
-            <Button
-              variant="ghost"
-              disabled={regenerate.isPending}
-              onClick={() => regenerate.mutate()}
-            >
-              Regenerate last response
-            </Button>
-          )}
+        {!busy && canRegenerateResponse(messages) && (
+          <Button
+            variant="ghost"
+            disabled={regenerate.isPending}
+            onClick={() => regenerate.mutate()}
+          >
+            Regenerate last response
+          </Button>
+        )}
       </div>
     </div>
   );

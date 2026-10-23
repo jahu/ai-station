@@ -7072,3 +7072,10 @@ section:has(> .memory-grid) > .dashboard-note {
 .conversation-data-controls .agent-data-inputs small {
   display: block;
 }
+
+.message-model {
+  margin: 0 0 10px;
+  font-size: 11px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}

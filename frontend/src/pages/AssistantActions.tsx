@@ -218,6 +218,7 @@ function InspectedImageSources({ artifact }: { artifact: Artifact }) {
 
 export function AssistantResults({
   result,
+  executionNote,
   inputs,
   busy,
   onUse,
@@ -226,6 +227,7 @@ export function AssistantResults({
   onData,
 }: {
   result: ActionResult;
+  executionNote?: string;
   onData?: (scope: ConversationDataScope) => void;
   inputs?: AssistantOptions;
   busy?: boolean;
@@ -285,6 +287,7 @@ export function AssistantResults({
         result.steps.every((step) => step.status === "succeeded")) ? (
         <details>
           <summary>Execution details</summary>
+          {executionNote && <p className="muted">{executionNote}</p>}
           <TaskSteps steps={result.steps} busy={busy} onQueued={onQueued} />
         </details>
       ) : (

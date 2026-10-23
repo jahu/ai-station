@@ -80,3 +80,28 @@ source inspection while avoiding duplicate source previews and eager lineage
 requests in the normal transcript. Ordinary generated-media/coding behavior and
 Library details retain their existing contracts. Verify native keyboard disclosure,
 source links, reload and reading position in desktop and phone layouts.
+
+## One reply for completed image inspection
+
+A successful ordinary image inspection presents the actual Vision answer once,
+with the original Task/results below it. The actual Vision model remains visible independently of the selected text model.
+The initial orchestration notice remains
+inside Execution details; the original message/Run/artifact records are unchanged.
+The presentation projection binds exactly one successful Vision child from the
+root's Run steps within the same user turn. Streaming, failed, superseded,
+ambiguous and richer workflows keep their existing rows and source cards. Do not
+infer ownership from prose, move an answer across another user turn or change
+stored history for presentation. Copy, timestamps and Run inspection target the
+actual answer, and transcript keyboard selection uses the displayed rows.
+
+Regenerate is shown only when the existing API accepts replay of the latest user
+Run. A tool/Work orchestration remains an explicit new instruction, even if its
+routing notice is hidden and a final LLM answer is visible. Ordinary text Chat
+retains regeneration. Image reinspection uses an explicit same-source follow-up
+such as “Opisz ten obraz”; no image/edit/coding execution is silently repeated.
+
+Qualification includes first/saved conversations, streaming/failure fallback,
+source ambiguity, unchanged input records, transcript keyboard movement, copy of
+the actual answer, both Run links, native detail/source disclosure and reload on
+desktop/phone. Backend and expensive integration evidence may be inherited only
+when the relevant source is identical. The full product objective remains active.
