@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import type { Run } from "../api";
+import AgentCodeResearch from "./AgentCodeResearch";
 import { CodingConversation } from "./CodingSessions";
 
 const PROPOSALS = ["local_proposal", "cursor_proposal", "codex_proposal"];
@@ -29,6 +30,7 @@ export default function AgentCodeWorkspace({ runs }: { runs: Run[] }) {
           </Link>
         )}
       </header>
+      <AgentCodeResearch runs={runs} taskId={taskId} />
       {hasConversation ? (
         <CodingConversation key={taskId} id={taskId} embedded />
       ) : (

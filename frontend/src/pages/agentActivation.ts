@@ -4,6 +4,13 @@ import {
   type AgentMediaScope,
 } from "./agent-media";
 import type { MarketScope } from "./marketScope";
+
+export const LOCAL_CODING_RESEARCH = [
+  "coding_local",
+  "web_search",
+  "search_pages",
+  "http_fetch",
+];
 export type AgentToolSpec = {
   name: string;
   description: string;
@@ -163,13 +170,20 @@ export function activationBlock(
   const localPages =
     coding.length === 1 &&
     coding[0] === "coding_local" &&
-    names.every((name) => ["coding_local", "http_fetch"].includes(name));
+    names.every((name) => LOCAL_CODING_RESEARCH.includes(name));
   if (coding.length && names.length !== 1 && !localPages) {
     return {
       blocked: true,
       reason: external
         ? "Select one coding provider alone; reporting tools belong to a separate agent."
         : "Select Local coding alone; reporting tools belong to a separate agent.",
+    };
+  }
+  if (names.includes("search_pages") && !names.includes("web_search")) {
+    return {
+      blocked: true,
+      reason:
+        "Read search sources requires web_search and a reviewed public query.",
     };
   }
   if (names.includes("web_search") && !(agent.search_query ?? "").trim()) {

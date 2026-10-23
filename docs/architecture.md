@@ -1,3 +1,7 @@
+[Reviewed research before local agent code](plans/agent-research-coding.md)
+reuses the existing source-bound context handoff, public tools and isolated
+workspace. One reviewed definition and deadline bind every child.
+
 [Persistent scene-video output](plans/agent-motion-generation.md) reuses the
 existing long-media planner, segments and CPU composition on the agent Task.
 Reviewed sources and one absolute deadline cover every stage. Only the final

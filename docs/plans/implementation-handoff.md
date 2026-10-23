@@ -22,15 +22,24 @@ The stricter inert-XLSX policy (#386) is deployed and qualified under
 validation expressions and formula-typed thresholds while preserving literal
 formatting. The existing actual workbook was rechecked by hash without new inference.
 
-The current candidate `.tools/python-optional-outputs` extends the existing typed
-Python request with an approved optional allowlist. It captures supported files
-actually created despite an empty model manifest, retaining required-file checks,
-legacy digests, owned cleanup and inert artifact validation. Evidence is under
-`data/acceptance/python-optional-outputs-20261024`. A disposable real native/CPU
-container flow with fake inference captured PNG/Excel and accepted an absent
-optional report. Full qualification/rollout and actual local inference are still
-separate. This changes native/image source: use an idle backed-up upgrade, preserve
-the operator's model and verify installed feature negotiation. No new model download.
+Optional Python outputs (#387) are merged, deployed and qualified at source
+d26192a. All2772 normal Python/Runner tests,9 opt-in skips and659 source-identical
+UI tests passed. The actual normal worker/local model at131072 context returned
+the six original rows, CSV and PNG for an unscoped natural plotting follow-up;
+input bytes and the operator's Q8/46080 preset were preserved. That real model
+declared chart.png. Empty-manifest capture was independently exercised with real
+native/CPU execution and fake inference. Current native and control-plane source:
+`.tools/ui-python-optional-outputs-20261024`. Evidence:
+`data/acceptance/python-optional-outputs-20261024/post-deployment-qualified.json`.
+
+Current candidate: `.tools/agent-research-coding`, branch
+`feat/agent-research-coding`. Compose reviewed public search, its source-page
+reads and explicit HTTP reads before the existing Local coding/workspace chain.
+The existing HTTP-only operation remains compatible. One definition, parent
+manifest, exact source artifacts, permissions and absolute deadline bind the
+handoff. No new executor, network authority for generated code or model download.
+See [the plan](agent-research-coding.md). Qualification remains separate from this
+implementation; preserve real/fake distinctions and do not claim deployment.
 
 The full platform goal remains active: broader general-agent orchestration,
 media/resource/quality acceptance and operations/private remote access. Preserve

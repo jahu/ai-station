@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
@@ -3029,3 +3030,104 @@ it("refreshes untouched settings after activation but preserves edits when the s
     "A saved welcome",
   );
 });
+
+it.each(["code-first", "research-first"])(
+  "keeps reviewed local research tools in %s selection order",
+  async (order) => {
+    const agent = {
+      id: "draft",
+      name: "Research builder",
+      description: "",
+      goal: "Build from reviewed research",
+      system_prompt: "",
+      model: "auto",
+      tools: [] as string[],
+      search_query: "",
+      fetch_urls: [] as string[],
+      skills: [],
+      trigger: "manual",
+      cron_expr: "",
+      interval_seconds: null,
+      run_at: null,
+      maximum_runtime: 600,
+      output_expectation: "A website",
+      require_approval: false,
+      workflow_mode: "sequential",
+      tool_calling: "none",
+      retry_policy: { mode: "none" },
+      notification_policy: {},
+      project_id: null,
+      enabled: false,
+      updated_at: "2026-10-24T12:00:00Z",
+      effective_permissions: [],
+      runs: [],
+    };
+    const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
+      ok: true,
+      json: async () => {
+        if (url.endsWith("/agents/draft"))
+          return options
+            ? { ...agent, ...JSON.parse(options.body as string) }
+            : agent;
+        if (url.endsWith("/chat/provider"))
+          return { models: ["local"], default_model: "local" };
+        if (url.endsWith("/llama")) return { models: [], instances: [] };
+        if (url.endsWith("/agents/tools"))
+          return [
+            "coding_local",
+            "web_search",
+            "search_pages",
+            "http_fetch",
+            "memory_search",
+          ].map((name) => ({
+            name,
+            description: name,
+            operational: true,
+            required_permissions: ["network_read"],
+          }));
+        return [];
+      },
+    }));
+    vi.stubGlobal("fetch", fetch);
+    mount(true);
+    await screen.findByRole("heading", { name: "Research builder" });
+    const names =
+      order === "code-first"
+        ? ["coding_local", "web_search", "search_pages", "http_fetch"]
+        : ["web_search", "search_pages", "http_fetch", "coding_local"];
+    for (const name of names)
+      fireEvent.click(
+        within(screen.getByLabelText("Tool " + name)).getByRole("checkbox"),
+      );
+    for (const name of names)
+      expect(
+        (
+          within(screen.getByLabelText("Tool " + name)).getByRole(
+            "checkbox",
+          ) as HTMLInputElement
+        ).checked,
+      ).toBe(true);
+    fireEvent.change(screen.getByLabelText("Public search query"), {
+      target: { value: "public weather reference" },
+    });
+    fireEvent.change(screen.getByLabelText("Public URLs to fetch"), {
+      target: { value: "https://example.com/" },
+    });
+    expect(
+      screen.getByText(/reviewed search query, read search sources/),
+    ).toBeTruthy();
+    expect(fetch.mock.calls.filter((call) => call[1])).toHaveLength(0);
+    fireEvent.click(screen.getByRole("button", { name: "Save definition" }));
+    await waitFor(() =>
+      expect(
+        fetch.mock.calls.filter((call) => call[1]?.method === "PUT"),
+      ).toHaveLength(1),
+    );
+    const write = fetch.mock.calls.find((call) => call[1]?.method === "PUT")!;
+    const saved = JSON.parse(write[1]!.body as string);
+    expect(new Set(saved.tools)).toEqual(new Set(names));
+    expect(saved.search_query).toBe("public weather reference");
+    expect(saved.fetch_urls).toEqual(["https://example.com/"]);
+    expect(saved.enabled).toBe(false);
+  },
+);

@@ -156,7 +156,7 @@ def test_a_single_bounded_correction_is_inspectable(model):
         {"tools": ["read_file"]},
         {"tools": ["imaginary_tool"]},
         {"tools": ["http_fetch"], "fetch_urls": ["https://other.example/"]},
-        {"tools": ["coding_local", "web_search"]},
+        {"tools": ["coding_local", "system_snapshot"]},
         {"tools": ["python_data", "http_fetch"]},
     ],
 )
@@ -552,3 +552,33 @@ def test_assisted_draft_can_review_source_page_reading_without_inventing_urls(mo
         assert not agent["enabled"] and agent["next_run_at"] is None
         assert agent["search_query"] == PROPOSAL["search_query"]
         assert "search_pages" in calls[0]["messages"][1]["content"]
+
+
+@pytest.mark.parametrize(
+    "tools", [["coding_local", "web_search"], ["coding_local", "web_search", "search_pages"]]
+)
+def test_assisted_draft_can_review_research_before_local_code(model, tools):
+    calls, responses = model
+    responses[:] = [
+        json.dumps(
+            {
+                **PROPOSAL,
+                "name": "Research builder",
+                "goal": "Build a small reference website from reviewed public research",
+                "tools": tools,
+            }
+        )
+    ]
+    with TestClient(app) as api:
+        run = submit(
+            api,
+            instruction="Create a local agent to research public weather references and build a small website",
+        )
+        step()
+        done = state(api, run)
+        assert done["status"] == "succeeded", done["error_message"]
+        agent = api.get("/api/agents/" + done["metadata"]["agent_id"]).json()
+        assert agent["tools"] == tools and agent["model"] == "auto"
+        assert not agent["enabled"] and not agent["project_id"]
+        assert agent["search_query"] == PROPOSAL["search_query"]
+        assert len(calls) == 1

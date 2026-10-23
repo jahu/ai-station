@@ -1,3 +1,7 @@
+[Reviewed research before local agent code](plans/agent-research-coding.md)
+reuses the existing source-bound context handoff, public tools and isolated
+workspace. One reviewed definition and deadline bind every child.
+
 Whole-avatar agents use the same shared expiry across speech, planning,
 animation and final assembly. Reviewed portrait/WAV provenance and actual bytes
 are checked before dispatch; generated canonical audio must belong to the

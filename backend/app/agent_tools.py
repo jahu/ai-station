@@ -76,7 +76,7 @@ AGENT_TOOLS = {
     ),
     "coding_local": ToolSpec(
         name="coding_local",
-        description="Build or change the linked project with Local AI in a fresh owned worktree. Runs exploration, proposal and configured validation; preserves the diff for review. Never commits, publishes or edits the original checkout. May combine with HTTP fetch of explicitly reviewed public URLs before coding.",
+        description="Build or change the linked project with Local AI in a fresh owned worktree. Runs exploration, proposal and configured validation; preserves the diff for review. Never commits, publishes or edits the original checkout. May combine with a reviewed public search query, its source-page reads and explicit public URLs before coding. Research stays in separate inspectable Runs.",
         risk_level="medium",
         required_permissions=(
             "filesystem_read",
