@@ -3,6 +3,13 @@
 Status: implementation in progress. Music is not yet an operational capability.
 Existing speech, transcription, video and avatars remain unchanged.
 
+The next source increment contains the typed native launch, offline wrapper,
+`audio.music` worker adapter, idempotent workspace requests and Audio → Music.
+Focused fake-engine tests cover library publication, invalid output, owned Stop,
+and recovery of a live process without replay. This is not a real music smoke.
+The installer is merged in #360 with 2247 Python tests passing. Execution/UI
+qualification and deployment remain separate from that installer result.
+
 ## Product flow
 
 Audio gains a Music mode beside speech and transcription. Describe the music,
@@ -68,6 +75,15 @@ Installing weights does not install a runtime or make Music available.
 - Use a fresh project-owned ACE virtual environment, distinct from photo,
   Chatterbox, transcription and user Python environments. Pin/review dependencies;
   do not install upstream training/UI/vLLM extras merely for no-LM inference.
+  Native configuration is `AI_STATION_MUSIC_PYTHON`,
+  `AI_STATION_MUSIC_SOURCE_DIR`, and `AI_STATION_MUSIC_MODEL_DIR`; empty defaults
+  keep the capability unavailable. Model and source directories must be under
+  configured native allowed roots. Runtime source is hashed against the pinned
+  upstream Python tree before imports. Checkpoint code from that source is
+  copied only into a per-Run view, with approved data files linked read-only by
+  convention; the upstream download/code-sync hooks are replaced with checks.
+  Generation also rejects Python socket connection/DNS events and receives no
+  inherited API tokens. No arbitrary agent-supplied Python is executed here.
 - Validate the entire local checkpoint before importing its trusted model code.
   Pinned upstream initialization automatically downloads missing models and
   synchronizes Python files from its package into checkpoints. The adapter must
@@ -81,6 +97,9 @@ Installing weights does not install a runtime or make Music available.
   preset. Devices are discovered; do not assume two GPUs or combine their VRAM.
   The official guide describes low-VRAM support, but actual admission/maximum
   duration/quality must be qualified on this workstation before advertising it.
+  The initial conservative host-RAM reservation is 16 GiB. Existing resource
+  admission, deferral and lease recovery remain authoritative; no work starts
+  when that reservation cannot be satisfied.
 - Output is an owned UUID PCM WAV plus actual duration/rate/channels, prompt,
   lyrics, seed, preset/revision and allocated GPU metadata. Validate full decoded
   frames in chunks; do not apply the short voice-reference 20 MiB/60 s limit to

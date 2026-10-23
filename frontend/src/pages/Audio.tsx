@@ -9,6 +9,7 @@ import MediaInput from "../components/media/MediaInput";
 import MediaResult from "../components/media/MediaResult";
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import Transcription from "./Transcription";
+import Music from "./Music";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 
 export default function Audio() {
@@ -17,14 +18,18 @@ export default function Audio() {
   // when a generation Run is recorded in the URL.
   const current = useMediaRun(search.get("run") ?? "");
   const busy = mediaBusy(current.data);
+  const music =
+    search.get("mode") === "music" ||
+    current.data?.capability === "audio.music";
+  const speech = search.get("mode") !== "transcribe" && !music;
   return (
     <>
       <nav className="mode-tabs" aria-label="Audio mode">
         <button
           type="button"
           disabled={busy}
-          className={search.get("mode") !== "transcribe" ? "active" : ""}
-          aria-pressed={search.get("mode") !== "transcribe"}
+          className={speech ? "active" : ""}
+          aria-pressed={speech}
           onClick={() => {
             const next = new URLSearchParams();
             if (search.get("input")) next.set("input", search.get("input")!);
@@ -32,6 +37,15 @@ export default function Audio() {
           }}
         >
           Create speech
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          className={music ? "active" : ""}
+          aria-pressed={music}
+          onClick={() => setSearch({ mode: "music" })}
+        >
+          Music
         </button>
         <button
           type="button"
@@ -47,7 +61,12 @@ export default function Audio() {
           Transcription
         </button>
       </nav>
-      {search.get("mode") === "transcribe" ? (
+      {music ? (
+        <Music
+          key={`${current.data?.id ?? ""}:${current.data ? "restored" : ""}`}
+          initialRun={current.data}
+        />
+      ) : search.get("mode") === "transcribe" ? (
         <Transcription key={search.get("input") ?? ""} />
       ) : (
         <AudioForm

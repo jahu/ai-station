@@ -40,6 +40,7 @@ from app.media_jobs import AvatarPlannerExecutor, CompositionExecutor
 from app.model_definitions import ModelInstallExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
+from app.music import MusicExecutor
 from app.paths import safe_join, validate_relative
 from app.photo_executor import PhotoPipeExecutor
 from app.project_checks import ProjectPlanExecutor
@@ -317,6 +318,7 @@ EXECUTORS = {
     "llama_health": LlamaHealthExecutor(),
     "photo_pipe": PhotoPipeExecutor(),
     "chatterbox": AudioExecutor(),
+    "ace_step_music": MusicExecutor(),
     "whisper_transcribe": TranscriptionExecutor(),
     "echomimic": AvatarExecutor(),
     "wan_video": VideoExecutor(),

@@ -545,4 +545,6 @@ ACE-Step 1.5 checkpoint manifest and explicit setup script. Running
 `scripts/install-music-model.py --destination <new-directory>` only prints an
 offline plan; `--download` explicitly fetches 6.34 GB into a new directory and
 `--verify` checks all file hashes offline. It never overwrites existing models,
-installs dependencies or enables generation. Music is not yet available in Audio.
+installs dependencies or enables generation. The Audio → Music workspace and
+typed offline adapter are under qualification; real music generation is not yet
+verified. Empty music configuration keeps generation unavailable.

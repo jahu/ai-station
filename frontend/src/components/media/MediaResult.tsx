@@ -54,6 +54,7 @@ export default function MediaResult({
   error,
   steps,
   videoMode = "avatar",
+  audioMode = "speech",
 }: {
   kind: "audio" | "video" | "image";
   runId: string;
@@ -61,6 +62,7 @@ export default function MediaResult({
   error: Error | null;
   steps?: Run[];
   videoMode?: "scene" | "avatar";
+  audioMode?: "speech" | "music";
 }) {
   const cache = useQueryClient();
   const [, setSearch] = useSearchParams();
@@ -105,7 +107,16 @@ export default function MediaResult({
           idleBody:
             "Describe a scene or choose a first frame. Your video will appear here.",
         }
-      : copy[kind];
+      : kind === "audio" && audioMode === "music"
+        ? {
+            ...copy.audio,
+            title: "Your music, ready to play",
+            label: "Generated music",
+            idleTitle: "Set the mood. Find your sound.",
+            idleBody:
+              "Describe a style, instruments and atmosphere. Your music will appear here.",
+          }
+        : copy[kind];
   const statusText =
     run?.status === "queued"
       ? "Waiting for an available GPU"
@@ -224,7 +235,7 @@ export default function MediaResult({
               </Button>
             </div>
           )}
-          {kind === "audio" && (
+          {kind === "audio" && audioMode === "speech" && (
             <div className="media-result-reuse">
               <Button asChild variant="secondary">
                 <Link
