@@ -1,3 +1,8 @@
+Conversation **Run now** buttons queue a durable, exact-card agent action and
+retain its execution in chat history. The pending composer and saved Chat mode
+remain intact; retries reuse the receipt. Stop follows only the verified owned
+background workflow. [Conversation buttons](docs/plans/conversation-agent-run-button.md).
+
 Follow-up Chat/Work replies can quote a completed conversation-linked agent
 report with verified bytes, bounded context and visible source provenance.
 Unfinished or unavailable reports are identified explicitly; reading a result

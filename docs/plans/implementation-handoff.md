@@ -1,3 +1,16 @@
+> Active candidate: [conversation Run now](conversation-agent-run-button.md),
+> `feat/conversation-agent-run-button`, base qualified #418. Exact-card typed
+> receipts reuse ChatTurnRequest and the ordinary controller without changing old
+> turn schemas/hashes. Most-recent valid operation references preserve intuitive
+> follow-up controls after clicking an older agent card. Pending drafts/mode stay.
+> A stale controller Stop forwards only to its verified owned active workflow;
+> already-running receipts and finished results are left intact. Controller
+> regeneration is rejected. Focused controller47,new button/cancellation20 and
+> UI81 checks pass; a test-only TypeScript option was corrected and typecheck passes.
+> Full candidate image/browser/gates and rollout are pending. Live remains #418.
+> Next: complete this bridge, consolidate Task versus graph-publisher outcomes,
+> then extend verified structured/code/media result reuse. Keep the full goal active.
+
 > Current increment: [conversation agent report context](conversation-agent-results.md),
 > PR #418 / `feat/conversation-agent-results`, base qualified #417. Actual report
 > bytes and source provenance reach Chat/Work follow-ups without re-execution.

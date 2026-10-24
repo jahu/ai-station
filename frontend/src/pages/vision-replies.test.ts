@@ -139,3 +139,18 @@ it("keeps working text regeneration and rejects tool/Work replay even when the r
   messages[1].metadata.routing_only = true;
   expect(canRegenerateResponse(messages)).toBe(false);
 });
+
+it("does not regenerate an agent controller receipt as an ordinary model reply", () => {
+  const rows = fixture();
+  const user = {
+    ...rows[0],
+    run_id: "controller-one",
+    metadata: { agent_control: { operation: "run" } },
+  };
+  const reply = {
+    ...rows[2],
+    run_id: "controller-one",
+    metadata: { agent_control: { operation: "run" } },
+  };
+  expect(canRegenerateResponse([user, reply])).toBe(false);
+});
