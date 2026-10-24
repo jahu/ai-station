@@ -1,4 +1,17 @@
-> Current increment: [selected analysis action](analysis-agent-action.md), PR #414,
+> Current increment: [direct selected-input agents](selected-input-agent-draft.md),
+> PR #415 / `feat/selected-input-agent-draft`, base #414. First Work requests can
+> create a disabled local agent from the current data/document/public scope without
+> first running an analysis. Controller binds files/tools/model/source/runtime;
+> the local model proposes identity/task wording/schedule. New preparation has no
+> network/Python/workspace work. Source and actual child instruction/Task/current
+> message are rechecked before/after inference and at publication. Empty retained
+> project context now correctly allows General Work. UI757/full frontend passed;
+> final CPU/image/browser/actual local drafting status is recorded under
+> `data/acceptance/selected-input-agent-draft-20261024`. Earlier evidence is retained
+> in `before-origin-binding`; check post-deployment qualification and shared live
+> authority before treating #415 as deployed. Root Memory WIP remains untouched.
+
+> Completed increment: [selected analysis action](analysis-agent-action.md), PR #414,
 > branch `feat/analysis-agent-action`, base #413. Completed data results open a
 > focused schedule dialog; the exact clicked older source is retained. The main
 > composer and saved Chat mode are unchanged. Typed references cannot cross

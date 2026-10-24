@@ -29,3 +29,32 @@ restricted proposal correction, replay, no premature jobs, and future execution 
 an owned workspace. Full local gates, image/Compose and compiled desktop/mobile
 first-send flows are required before deployment. Distinguish injected and actual
 local inference/native execution. Preserve current live #414 and root Memory WIP.
+
+## Implemented increment and qualification
+
+PR #415, branch `feat/selected-input-agent-draft`, is based on #414 (`fca17fb`).
+The implementation uses the existing local factory and shared settings mapper.
+It also accepts an explicit agent.create action with plain task instructions.
+The model proposes task wording, so review that goal before enabling the draft.
+
+Focused data/analysis-agent checks passed (59 initial cases, then 31 final selected
+scope cases including parent Task/instruction tamper). Frontend formatting/lint/
+typecheck/production build and 757 tests pass. Compiled 1440/390 cases exercise
+first Work send with PDF or 180,025-character text plus reviewed public data,
+explicit review/enable, two actual scheduler executions per case at forced due
+instants, four actual native offline Python jobs, complete text and fresh captures
+in separate worktrees. Drafting performs no analysis, reads or workspace creation.
+Those browser cases inject inference, catalog and public responses.
+
+A separate actual already-ready llama.cpp inference accepts a Polish daily 09:00
+request, derives the correct summation task and Europe/Warsaw cron, and retains the
+exact selected synthetic CSV/local data model in a disabled definition. It creates
+no preliminary analysis/Python/workspace and preserves the actual model container
+and 46,080-token preset. This is real drafting, not a real full-model data workflow.
+
+The review tightened both source-bound factory paths: child instructions and Task/
+conversation ownership must match the authorized current turn. Earlier complete
+checks are retained under `before-origin-binding`; final complete CPU/image/browser
+and real drafting checks use `0c8b1d9` or an application-identical documentation head.
+Consult `data/acceptance/selected-input-agent-draft-20261024` and its post-deployment
+qualification before treating #415 as live. Full-platform completion is still open.
