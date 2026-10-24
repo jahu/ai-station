@@ -6,6 +6,7 @@ export type RegistryToolCall = {
   tool: string;
   arguments?: Record<string, unknown>;
   round: number;
+  result?: unknown;
 };
 
 export function RegistryToolCalls({ calls }: { calls: RegistryToolCall[] }) {
@@ -20,8 +21,9 @@ export function RegistryToolCalls({ calls }: { calls: RegistryToolCall[] }) {
     <section className="panel" aria-labelledby={headingId}>
       <h2 id={headingId}>Registry tool calls</h2>
       <p className="muted">
-        Bounded calls from the typed agent registry. The model cannot invent
-        tools, URLs, queries or shell commands.
+        {calls.some((call) => call.tool === "read_documents")
+          ? "Document queries and text windows stay within the selected files. Other tools use their reviewed targets. No arbitrary paths or shell commands."
+          : "Bounded calls from the typed agent registry. The model cannot invent tools, URLs, queries or shell commands."}
       </p>
       <p id={labelId} className="dashboard-note">
         Arrow keys choose a registry call while the list is focused. There is no

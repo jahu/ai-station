@@ -148,3 +148,14 @@ and matching `conversation_reference` (`source_kind=analyzed_data`) on the user
 message. It binds original input IDs/inspection snapshots, source user/Run and
 bounded prior question/result context. These are portable existing JSON fields;
 no schema migration or persisted Agent is required.
+
+## Agent document context
+
+Migration0035 adds nullable Agent.documents JSON. Its ordered unique artifact_ids
+and frozen snapshots bind up to four selected original Artifacts by SHA-256, size,
+MIME and display name. None is omitted from AgentSettings serialization so old
+workflow, receipt and consent hashes retain their original identity. Each ordinary
+read_documents context Run owns extracted text and a JSON capture, with explicit
+parents and extraction/truncation metadata. A shorter observation is supplied to
+models; offline Python can adopt the verified complete capture. Tool-call windows
+are stored with the report's exact recorded call and capture artifact.

@@ -26,6 +26,11 @@ import AgentDataFiles, { type DataScope } from "./AgentDataFiles";
 import AgentDataResult from "./AgentDataResult";
 import GithubAgentScope from "./GithubAgentScope";
 import HttpAgentScope from "./HttpAgentScope";
+import AgentDocuments from "./AgentDocuments";
+import {
+  initialDocumentToolMode,
+  type DocumentScope,
+} from "./document-context";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -96,6 +101,8 @@ type AgentDraft = {
   };
   github?: { connector_id: string; repository: string } | null;
   http?: { connector_id: string; connector_revision: string } | null;
+  documents?: DocumentScope | null;
+  document_readiness?: { ready: boolean; reason: string | null } | null;
   http_readiness?: { ready: boolean; reason: string | null } | null;
   search_query?: string;
   fetch_urls?: string[];
@@ -1172,12 +1179,37 @@ export function AssistantAgentDraft({
                     allowResearch={agent.tools.some((name) =>
                       PUBLIC_RESEARCH_TOOLS.includes(name),
                     )}
+                    allowDocuments={agent.tools.includes("read_documents")}
                     allowMemory={agent.tools.some((name) =>
                       SCOPED_MEMORY_TOOLS.includes(name),
                     )}
                     value={agent.data}
                     disabled={editLocked}
                     onChange={(data) => saveSettings.mutate({ data })}
+                  />
+                </dd>
+              </div>
+            )}
+            {agent.tools?.includes("read_documents") && (
+              <div>
+                <dt>Documents</dt>
+                <dd>
+                  <AgentDocuments
+                    value={agent.documents}
+                    disabled={editLocked}
+                    onChange={(documents) =>
+                      saveSettings.mutate({
+                        documents,
+                        tool_calling: initialDocumentToolMode(
+                          agent.tools ?? [],
+                          agent.documents,
+                          agent.tool_calling === true ||
+                            agent.tool_calling === "bounded"
+                            ? "bounded"
+                            : "none",
+                        ),
+                      })
+                    }
                   />
                 </dd>
               </div>

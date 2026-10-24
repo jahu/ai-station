@@ -242,6 +242,7 @@ class Agent(Base):
     market: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     github: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     http: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    documents: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     media: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     workspace_policy: Mapped[dict] = mapped_column(JSON, default=dict)

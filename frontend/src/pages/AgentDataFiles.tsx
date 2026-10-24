@@ -23,6 +23,7 @@ export default function AgentDataFiles({
   onUploading,
   allowResearch = false,
   allowMemory = false,
+  allowDocuments = false,
   showRepairSettings = true,
   showOperation = true,
 }: {
@@ -32,6 +33,7 @@ export default function AgentDataFiles({
   showInspection?: boolean;
   allowResearch?: boolean;
   allowMemory?: boolean;
+  allowDocuments?: boolean;
   showRepairSettings?: boolean;
   showOperation?: boolean;
   onUploading?: (busy: boolean) => void;
@@ -41,7 +43,7 @@ export default function AgentDataFiles({
   const cache = useQueryClient();
   const ids = value?.input_artifact_ids ?? [];
   const creating = value?.operation === "create";
-  const hasContext = allowResearch || allowMemory;
+  const hasContext = allowResearch || allowMemory || allowDocuments;
   const maxFiles = hasContext ? 7 : 8;
   const files = useQueries({
     queries: ids.map((id) => ({
@@ -97,17 +99,20 @@ export default function AgentDataFiles({
           disabled={busy}
           hasResearch={hasContext}
           hasMemory={allowMemory}
+          hasDocuments={allowDocuments}
           onChange={onChange}
         />
       )}
       <p className="muted">
         {creating
           ? "Describe the files and their contents in the instruction. No input files are read."
-          : allowMemory
-            ? "Scoped saved memory is available to this analysis. CSV, Excel or JSON files are optional (up to seven)."
-            : allowResearch
-              ? "Reviewed public sources are available to this analysis. CSV, Excel or JSON files are optional (up to seven)."
-              : "Choose CSV, Excel or JSON files."}{" "}
+          : allowDocuments
+            ? "Selected documents supply text to this analysis. Additional CSV, Excel or JSON files are optional (up to seven)."
+            : allowMemory
+              ? "Scoped saved memory is available to this analysis. CSV, Excel or JSON files are optional (up to seven)."
+              : allowResearch
+                ? "Reviewed public sources are available to this analysis. CSV, Excel or JSON files are optional (up to seven)."
+                : "Choose CSV, Excel or JSON files."}{" "}
         Originals stay unchanged; Python runs locally with no internet access.
       </p>
       {ids.length > maxFiles && (

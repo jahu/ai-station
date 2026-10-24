@@ -1,0 +1,11 @@
+.agent-document-sources,
+.agent-document-sources .source-list li {
+  min-width: 0;
+}
+.agent-document-sources strong {
+  overflow-wrap: anywhere;
+}
+.agent-document-preview {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

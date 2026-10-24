@@ -57,6 +57,11 @@ import { AgentLatestReport } from "./AgentLatestReport";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import GithubAgentScope from "./GithubAgentScope";
 import HttpAgentScope from "./HttpAgentScope";
+import AgentDocuments from "./AgentDocuments";
+import {
+  initialDocumentToolMode,
+  type DocumentScope,
+} from "./document-context";
 import { useListKeyboard } from "./useListKeyboard";
 import {
   activationBlock,
@@ -123,6 +128,8 @@ interface Agent {
   permission_profile?: "agent_local" | "agent_external_coding";
   github?: { connector_id: string; repository: string } | null;
   http?: { connector_id: string; connector_revision: string } | null;
+  documents?: DocumentScope | null;
+  document_readiness?: { ready: boolean; reason: string | null } | null;
   http_readiness?: { ready: boolean; reason: string | null } | null;
   search_query: string;
   fetch_urls: string[];
@@ -190,6 +197,7 @@ function toolTitle(tool: Tool) {
   if (tool.name === "create_media") return "Create media";
   if (tool.name === "python_data") return "Files & data";
   if (tool.name === "search_pages") return "Read search sources";
+  if (tool.name === "read_documents") return "Read documents";
   if (tool.name === "http_connector") return "Connected API";
   return tool.name === "github_read"
     ? "GitHub repository"
@@ -1428,6 +1436,25 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             <span className="chip">Network permission · search only</span>
           </section>
         )}
+        {values.tools.includes("read_documents") && (
+          <div className="agent-wide">
+            <AgentDocuments
+              value={values.documents}
+              disabled={active || save.isPending}
+              onChange={(documents) =>
+                editValues((current) => ({
+                  ...current,
+                  documents,
+                  tool_calling: initialDocumentToolMode(
+                    current.tools,
+                    current.documents,
+                    current.tool_calling,
+                  ),
+                }))
+              }
+            />
+          </div>
+        )}
         {values.tools.includes("http_connector") && (
           <section className="agent-wide agent-search-settings">
             <h3>Connected API</h3>
@@ -1530,6 +1557,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               allowResearch={values.tools.some((name) =>
                 PUBLIC_RESEARCH_TOOLS.includes(name),
               )}
+              allowDocuments={values.tools.includes("read_documents")}
               allowMemory={values.tools.some((name) =>
                 SCOPED_MEMORY_TOOLS.includes(name),
               )}

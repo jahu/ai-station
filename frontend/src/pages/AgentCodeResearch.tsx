@@ -10,6 +10,8 @@ import {
   memoryObservation,
 } from "./agentResearchResult";
 import AgentMemorySources from "./AgentMemorySources";
+import AgentDocumentSources from "./AgentDocumentSources";
+import { documentObservation } from "./document-context";
 import { BrowserPages } from "./BrowserPages";
 import { isBrowserResult } from "./browserResult";
 
@@ -62,6 +64,11 @@ export default function AgentCodeResearch({
         String(run.parameters?.tool),
       ) && memoryObservation(run.metadata?.observation),
   );
+  const documents = sources.filter(
+    (run) =>
+      run.parameters?.tool === "read_documents" &&
+      documentObservation(run.metadata?.observation),
+  );
   const rendered = sources.find((run) => run.parameters?.tool === "browser")
     ?.metadata?.browser;
   const observation = fetchedRun?.metadata?.observation;
@@ -82,26 +89,41 @@ export default function AgentCodeResearch({
     !hasFetched &&
     !hasRendered &&
     !hasConnected &&
-    !memories.length
+    !memories.length &&
+    !documents.length
   )
     return null;
   return (
     <details
       className="panel web-search-sources"
       aria-label={
-        memories.length ? "Context for this task" : "Research for this task"
+        memories.length || documents.length
+          ? "Context for this task"
+          : "Research for this task"
       }
     >
       <summary>
-        {memories.length ? "Sources & saved memory" : "Research sources"}
+        {documents.length
+          ? "Documents & task context"
+          : memories.length
+            ? "Sources & saved memory"
+            : "Research sources"}
         {hasPages && pages.partial ? " · Some pages unavailable" : ""}
       </summary>
       <p className="muted">
-        {memories.length
-          ? "Captured observations for this task. Saved memory and network sources are shown separately."
-          : "References for this task. Search results and opened pages are listed separately."}
+        {documents.length
+          ? "Selected documents and captured observations supplied to this task."
+          : memories.length
+            ? "Captured observations for this task. Saved memory and network sources are shown separately."
+            : "References for this task. Search results and opened pages are listed separately."}
       </p>
       <AgentMemorySources runs={memories} />
+      <AgentDocumentSources
+        captures={documents.map((run) => ({
+          result: run.metadata?.observation,
+          runId: run.id,
+        }))}
+      />
       {hasConnected && (
         <>
           <FetchedPages result={connected} label="Connected API response" />

@@ -337,3 +337,15 @@ consumes the same budget. Replay, native restart or an old media Resume cannot
 renew it. Per-command/Python/browser/single-invocation limits, GPU/RAM admission
 and process ownership remain independent. Selecting a longer budget grants no
 additional tool or filesystem scope. See [budget qualification](plans/long-media-agent-budgets.md).
+
+## Reading selected documents
+
+read_documents is an ordinary agent.step on the existing workflow graph. It has
+filesystem_read permission, shares the workflow deadline, verifies selected bytes,
+extracts through the fixed bounded CPU helper, records reader started/reaped events
+and publishes source-bound text/JSON Artifacts. Stop, deadline, parser failure,
+audit failure and worker loss do not leave an unbounded reader running. Subsequent
+report/code/data/media preparation checks capture provenance and current originals;
+changed or trashed selections fail before model/Python adoption. Pausing a stale
+agent always remains available. Historical capture inspection uses saved provenance.
+No native Runner protocol, model download or second execution engine is introduced.

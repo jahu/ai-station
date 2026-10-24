@@ -1,6 +1,7 @@
 """Explicit provider selection for the shared isolated agent coding workflow."""
 
 MEMORY_CONTEXT_TOOLS = frozenset({"memory_search", "project_memory"})
+DOCUMENT_CONTEXT_TOOLS = frozenset({"read_documents"})
 
 LOCAL_RESEARCH_TOOLS = frozenset({"web_search", "search_pages", "http_fetch", "browser", "http_connector"})
 
@@ -26,6 +27,7 @@ def coding_provider(tools):
             {selected[0]}
             | LOCAL_RESEARCH_TOOLS
             | MEMORY_CONTEXT_TOOLS
+            | DOCUMENT_CONTEXT_TOOLS
             | ({"remember_report"} if selected[0] == "python_data" else set())
         )
     ):
@@ -45,6 +47,7 @@ def coding_research_steps(tools):
     return [
         name
         for name in (
+            "read_documents",
             "memory_search",
             "project_memory",
             "web_search",

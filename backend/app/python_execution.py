@@ -148,7 +148,7 @@ def enqueue_python(session, task, parameters, *, permissions, parent_run_id=None
     return run
 
 
-def read_owned_file(relative, size, digest, *, limit=MAX_FILE):
+def read_owned_file(relative, size, digest, *, limit=MAX_FILE, binary=False):
     path = get_settings().data_dir.resolve() / relative
     if path.resolve() != path or type(size) is not int or not 0 <= size <= limit:
         raise ValueError("Redirected or oversized Python result")
@@ -165,7 +165,7 @@ def read_owned_file(relative, size, digest, *, limit=MAX_FILE):
             after.st_ctime_ns,
         ) or hashlib.sha256(data).hexdigest() != digest:
             raise ValueError("Python result changed before artifact adoption")
-    return path
+    return data if binary else path
 
 
 class PythonExecutor(NativeJobExecutor):
