@@ -1,5 +1,5 @@
 [Optional bounded avatar loading](plans/echo-memory-loading.md) reuses the
-existing native ProcessManager, fixed private11-GiB/zero-swap scope and ordinary
+existing native ProcessManager, fixed private 11-GiB/zero-swap scope and ordinary
 media Task graph. Complete existing weights retain full precision; no upstream
 files or public command/memory controls are added. Default native arguments are unchanged; new Standard jobs reserve the observed
 loader requirement before launch.

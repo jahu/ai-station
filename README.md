@@ -1,7 +1,7 @@
 # AI Station
 
-Avatars and avatar agents can offer **Reduced RAM · full precision** at384×384
-with8+ steps when the optional native profile is locally qualified and enabled.
+Avatars and avatar agents can offer **Reduced RAM · full precision** at 384×384
+with 8+ steps when the optional native profile is locally qualified and enabled.
 The selection remains visible and saved; existing jobs keep their settings.
 [Avatar profile setup and qualification](docs/plans/echo-memory-loading.md).
 

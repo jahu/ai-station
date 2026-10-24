@@ -56,7 +56,7 @@ an engineering qualification, not yet ordinary agent end-to-end acceptance.
 ## Bounded native rendering result
 
 The corrected private native window at source `c093d7e` produced all 81 frames
-at 384×384/eight steps with an audio track in about109 seconds. The owned scope
+at 384×384/eight steps with an audio track in about 109 seconds. The owned scope
 observed the actual11-GiB kernel limit, zero swap and no OOM; process ownership,
 expiry and cleanup remained with ProcessManager. All source bytes, installed
 model observations and the original operator GPU/Q8/46080 preset were preserved.
@@ -71,15 +71,15 @@ the operator preset before correction.
 Expose an optional `bounded_11g` profile only with
 `AI_STATION_ECHO_BOUNDED_PROFILE=true` and working private user memory scopes.
 Keep it disabled by default until local qualification. The same existing full
-BF16 weights are used; this profile is constrained to384×384 and at least8 steps.
+BF16 weights are used; this profile is constrained to 384×384 and at least 8 steps.
 No precision/path/command/memory-limit field is accepted from HTTP. The native
 entry checks its actual canonical Run scope before importing inference.
 
 Short/full/avatar-agent requests freeze the profile, source IDs, quality and
 original expiry. Default serialization omits the field to preserve saved receipts.
 Every bounded segment reserves11264 MiB plus existing headroom; Standard retains
-its native argv and existing records. New Standard jobs reserve24 GiB based on
-the observed loader peak; the previous16-GiB full-job reservation and absent
+its native argv and existing records. New Standard jobs reserve 24 GiB based on
+the observed loader peak; the previous 16-GiB full-job reservation and absent
 short-job reservation could start despite insufficient RAM. Speech handoffs, resume, composition metadata and native
 requests retain the selection. Unavailable profiles fail without a fallback.
 
@@ -100,7 +100,7 @@ platform goal remains open.
 
 At `64cfd15`, the real ordinary agent/worker/native pipeline produced two scoped
 Echo windows, preserved latent continuation and composed125 frames/five seconds
-with the actual source audio at384×384/eight steps. Full video/audio decode,
+with the actual source audio at 384×384/eight steps. Full video/audio decode,
 finite non-silent audio, original source hashes, both scopes, cleanup and exact
 operator preset restoration passed. First/middle/final and join frames retain a
 coherent face. Exact word-level lip-sync and all durations/profiles remain open.
@@ -108,9 +108,24 @@ coherent face. Exact word-level lip-sync and all durations/profiles remain open.
 Review additionally reproduced unsafe Standard admission for both short and
 whole-recording jobs:20 GiB free could start a loader historically measured near
 24 GiB RSS. The two failing-before regressions remain in
-`standard-reservation-before.log`. New Standard jobs now reserve24576 MiB plus
+`standard-reservation-before.log`. New Standard jobs now reserve 24576 MiB plus
 existing headroom; original argv, request identities and existing Run records
 remain. Both regressions pass after correction. A new full Python gate is required
 for this material admission change. The bounded renderer/entry/weight loader and
 its11264-MiB reservation are unchanged; compare exact functions before reusing
 the recorded real bounded output without another inference run.
+
+
+## Final reviewed gates
+
+After the Standard admission correction, the complete normal Python/Runner gate
+collected 3089 cases: 3080 passed and nine opt-in integrations skipped, with zero
+failures. All 707 UI tests, lint/format/typecheck/build, exact backend/image/assets
+and normal/dev/private-LAN Compose checks passed. Compiled 1440/390 real API/SQLite
+checks retain saved profiles, manual Standard, source/seed/enabled state and exact
+agent due instants; explicit workspace Send creates normal queued jobs and Stop
+cancels them without inference. Actual completed native output also plays in the
+compiled agent workspace without media/API mocks. The final native bounded
+renderer, scope, dispatch and media publisher match the actual output source by
+exact file/function comparison; only Standard admission/recommendation changed.
+Backed-up deployment and post-rollout evidence remain required before delivery.

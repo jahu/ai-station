@@ -5,6 +5,29 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — avatar profile ready for release review, 2026-10-24
+
+PR #399 now includes the full optional avatar profile and measured Standard RAM
+admission correction in `.tools/echo-memory-profile`, branch
+`feat/echo-memory-profile` (remote PR head branch remains `feat/echo-memory-loading`).
+Actual source `64cfd15` produced a coherent five-second 384px/eight-step film via
+an ordinary agent, two scoped native windows and CPU composition in about 241s.
+Both scopes, source/model preservation, full audio/video decode and compiled
+1440/390 playback passed; the exact operator GPU/Q8/46080 preset was restored.
+
+Reviewed runtime code `c6e9398` additionally fixes Standard admission: new short/full
+jobs reserve 24 GiB, while bounded jobs retain 11 GiB. Both insufficient-memory
+regressions failed before and pass after correction. All 3089 normal Python/
+Runner cases passed their gate (3080 passes/nine opt-in skips), as did 707 UI cases,
+lint/format/types/build, compiled real API/SQLite saves/queued receipts/Stop/reload,
+image/assets and three Compose configurations. Exact bounded renderer/dispatch/
+loader/publisher comparison reuses the actual recorded output without rerendering.
+Finish full published diff review, squash merge to develop, then backed-up native/
+controller rollout and post-deployment qualification. The live release is still
+#398 until central deployment metadata proves otherwise. Preserve root Memory WIP,
+all live/proof trees and pending Whisper consent. Evidence:
+`data/acceptance/echo-memory-profile-20261024`. Full-platform work remains open.
+
 ## Current continuation — bounded avatar profile candidate, 2026-10-24
 
 The private source `c093d7e` rendered81 actual384px/eight-step frames in109 seconds
