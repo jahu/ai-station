@@ -41,9 +41,20 @@ separate injected drafting from actual local-model or scheduler qualification.
 Worktree `.tools/conversation-data-agent-draft`, branch
 `feat/conversation-data-agent-draft`, base `ed6cab6` (#412). The implementation reuses the existing agent_draft child, shared settings mapper,
 current-message/source/result verification and a restricted identity/schedule schema.
-Focused tests cover standalone/future execution, document/live-page scope, Stop,
-tamper, correction, replay and UI provenance. Final full-gate/release qualification
-is still pending. #412 is fully qualified under
+Qualification at source `45338a6`: all 3424 normal Python/Runner cases were
+collected (3415 passed, nine explicit opt-in skips); frontend formatting, lint,
+typecheck, 752 tests and production build passed. The exact Docker backend and
+compiled assets match, and normal/development/private-LAN Compose validate.
+Compiled 1440/390-pixel browser cases performed four actual native offline Python
+jobs: original document/public analysis, natural Work draft, explicit UI review and
+enable, then a committed scheduler tick at a forced due instant. Each agent used
+its own workspace and re-read the retained public source. Inference, model catalog
+and public responses were injected; this is not new local-model/GPU qualification
+or a five-minute wall-clock test. Stop, source/result/permission tamper, restricted
+proposal correction, receipt replay and legacy drafts passed the normal suite.
+Evidence: `data/acceptance/conversation-data-agent-draft-20261024`. Publication is
+PR #413 to develop; merge and rollout must be checked against the authority below.
+Use `post-deployment-qualified.json` to establish actual live acceptance. #412 is fully qualified under
 `data/acceptance/conversation-document-context-20261024/post-deployment-qualified.json`:
 3391 normal Python/Runner passes, nine opt-in skips, 749 UI tests, exact image/assets,
 and eight actual native offline Python jobs across first/ongoing Chat/Work and

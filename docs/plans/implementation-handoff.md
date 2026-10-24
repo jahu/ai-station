@@ -5,8 +5,12 @@
 > controller freezes original inputs/documents/live public scope/model/goal; the
 > model drafts identity/schedule only. Draft stays disabled; future runs allocate
 > their own workspace. Source/request/result verification, Stop and legacy serialization
-> are covered by focused tests; final full gates, compiled qualification and rollout
-> remain pending. Live #412 remains fully qualified. Preserve root Memory WIP.
+> passed 3415 normal Python/Runner tests (nine opt-in skips), 752 UI tests and exact
+> image/Compose checks. Compiled desktop/mobile draft→review→enable→scheduler flows
+> executed four actual native offline Python jobs with injected inference/catalog/
+> public responses. PR #413 still requires reviewed merge and rollout; check
+> `data/acceptance/conversation-data-agent-draft-20261024/post-deployment-qualified.json`
+> and shared deployment authority for actual live status. Preserve root Memory WIP.
 
 > Current increment #412: `.tools/conversation-document-context`, branch
 > `feat/conversation-document-context`, based on #411 (`5ceff8a`).

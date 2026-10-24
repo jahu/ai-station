@@ -228,6 +228,17 @@ The target is the complete AI Station vision, reconfirmed on 2026-10-13. An impl
 
 ## Current work
 
+PR #413 adds an explicit natural Work request to repeat the latest successful data
+analysis as a disabled persistent agent. Original files/documents, reviewed live
+public sources, goal and local data model stay fixed; the model drafts identity
+and schedule. Exact source/result verification, receipt replay, Stop, a separate
+future workspace and scheduled source recapture are covered. Full gates: 3415
+Python/Runner passes, nine opt-in skips, 752 UI tests, image/Compose and compiled
+1440/390 flows with four native offline Python jobs (inference/catalog/public
+responses injected). Check its post-deployment evidence before treating it as live.
+See [analysis-to-agent](plans/conversation-data-agent-draft.md).
+
+
 Selected PDF/text/Markdown documents for report, offline code/data and goal-based
 media agents are implemented and locally qualified in #411, with upload/Library
 selection and source-bound captured text. #412 adds the same document context to
