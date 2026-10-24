@@ -1,3 +1,10 @@
+> #410 tracks [scoped memory for local agents](agent-data-memory.md): reviewed
+> memory captures before offline code/data, optional atomic data-result retention,
+> and readable captured versions in both workspaces. Its evidence lives under
+> `data/acceptance/agent-data-memory-20261024`. Consult the post-deployment report
+> and the release authority below before treating an increment as live. #409's
+> saved HTTP/API sources are deployed and qualified. Original root WIP is preserved.
+
 > Release authority: `data/acceptance/safety-redeploy-20261012/deployment.json`.
 > #408 delivered explicitly selected generated CSV/XLSX/PNG/text email exports;
 > its private TLS SMTP qualification remains in

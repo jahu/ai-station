@@ -1,6 +1,6 @@
 # Scoped memory in local agent analysis
 
-Current gap: selecting Files & data or Local coding with memory_search or
+Prior gap: selecting Files & data or Local coding with memory_search or
 project_memory is rejected by the exclusive coding-family validator. Thus an
 agent cannot use its saved observations while analysing data. Data results also
 cannot opt into the existing Remember reports tool.
@@ -36,3 +36,13 @@ artifacts, Stop/failure without retention, exact child permissions and legacy
 public/HTTP workflows. Qualify compiled desktop/mobile editing and the real
 native Python path separately from fake inference. Keep #409 live until this
 reviewed feature passes its own gates and release verification.
+
+
+Implementation and focused verification are recorded in PR #410. Thirteen new
+backend cases cover own/project scope, changed/deactivated/tampered captures,
+Stop, failed Python, atomic retention rollback and Local coding handoff. Actual
+native Docker Python ran two consecutive analyses on each compiled desktop/mobile
+case; the second consumed the first retained result. These checks inject inference
+and do not claim new model/GPU qualification. Full-gate and deployment authority
+are in `data/acceptance/agent-data-memory-20261024`, especially
+`workspace-full-check-result.json` and `post-deployment-qualified.json`.
