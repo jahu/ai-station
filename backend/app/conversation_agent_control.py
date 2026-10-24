@@ -365,13 +365,14 @@ def linked_run(session, message, run):
         return None
     if target.task_id != result.get("task_id"):
         return None
-    active = list(
-        session.scalars(
-            select(Run.status).where(Run.task_id == target.task_id, Run.status.not_in(TERMINAL)).limit(1025)
-        )
-    )
-    status = "cancel_requested" if "cancel_requested" in active else (active[0] if active else target.status)
-    return {"id": target.id, "status": status, "agent_id": target.agent_id, "task_id": target.task_id}
+    from app.agent_outcome import workflow_outcome
+
+    return {
+        "id": target.id,
+        "agent_id": target.agent_id,
+        "task_id": target.task_id,
+        **workflow_outcome(session, target),
+    }
 
 
 class ControlCanceled(Exception):

@@ -6,7 +6,12 @@ export default function AgentControlRun({
   result,
   tabIndex = 0,
 }: {
-  run?: { id: string; status: string };
+  run?: {
+    id: string;
+    status: string;
+    delivery_status?: string;
+    delivery_run_id?: string;
+  };
   result: { agent_id: string; outcome: string };
   tabIndex?: number;
 }) {
@@ -30,6 +35,20 @@ export default function AgentControlRun({
             Inspect agent execution
           </Link>
         </>
+      )}
+      {run?.delivery_status && (
+        <span>
+          {" · Email delivery: "}
+          {run.delivery_status.replaceAll("_", " ")}
+          {run.delivery_run_id && (
+            <>
+              {" · "}
+              <Link to={`/runs/${run.delivery_run_id}`} tabIndex={tabIndex}>
+                Inspect delivery
+              </Link>
+            </>
+          )}
+        </span>
       )}
       {run?.status === "cancel_requested" && (
         <span> · Stopping; waiting for owned work to finish.</span>
