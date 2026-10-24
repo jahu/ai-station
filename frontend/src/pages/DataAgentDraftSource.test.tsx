@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DataAgentDraftSource from "./DataAgentDraftSource";
 
@@ -81,6 +81,7 @@ it("identifies current selected inputs as a creation request, without claiming a
   expect(
     screen.getByRole("region", { name: "Selected inputs for this agent" }),
   ).toBeTruthy();
+  fireEvent.click(screen.getByText("Inputs and original request"));
   expect(
     screen
       .getByRole("link", { name: "Inspect agent creation" })
@@ -121,3 +122,26 @@ it.each([
     ).toBeTruthy();
   },
 );
+
+it("keeps the input audit collapsed and lets the user expand the original request", () => {
+  render(
+    <MemoryRouter>
+      <DataAgentDraftSource
+        value={{ ...source, kind: "selected_inputs" }}
+        family="report"
+      />
+    </MemoryRouter>,
+  );
+  const details = screen
+    .getByText("Inputs and original request")
+    .closest("details");
+  expect(details?.open).toBe(false);
+  fireEvent.click(screen.getByText("Inputs and original request"));
+  expect(details?.open).toBe(true);
+  expect(
+    screen.getByRole("link", { name: "Inspect agent creation" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByText("Selected files: sales.csv, contract.pdf"),
+  ).toBeTruthy();
+});

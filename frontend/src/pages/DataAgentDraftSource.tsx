@@ -47,25 +47,8 @@ export default function DataAgentDraftSource({
       ? values.filter((name): name is string => typeof name === "string")
       : [],
   );
-  return (
-    <section
-      className="panel agent-document-sources data-agent-draft-source"
-      aria-label={
-        selected
-          ? "Selected inputs for this agent"
-          : "Original analysis for this agent"
-      }
-    >
-      <h3>
-        {selected
-          ? "Inputs selected for this agent"
-          : "Drafted from this analysis"}
-      </h3>
-      {selected && prepared && (
-        <p className="muted">
-          Prepared agent: {prepared}. Review its task and tools below.
-        </p>
-      )}
+  const sourceDetails = (
+    <>
       <p className="muted">
         {selected
           ? "Saved creation request and input selection."
@@ -112,6 +95,35 @@ export default function DataAgentDraftSource({
       >
         {selected ? "Inspect agent creation" : "Inspect original analysis"}
       </Link>
+    </>
+  );
+  return (
+    <section
+      className="panel agent-document-sources data-agent-draft-source"
+      aria-label={
+        selected
+          ? "Selected inputs for this agent"
+          : "Original analysis for this agent"
+      }
+    >
+      <h3>
+        {selected
+          ? "Inputs selected for this agent"
+          : "Drafted from this analysis"}
+      </h3>
+      {selected && prepared && (
+        <p className="muted">
+          Prepared agent: {prepared}. Review its task and tools below.
+        </p>
+      )}
+      {selected ? (
+        <details className="agent-memory-capture">
+          <summary>Inputs and original request</summary>
+          {sourceDetails}
+        </details>
+      ) : (
+        sourceDetails
+      )}
     </section>
   );
 }
