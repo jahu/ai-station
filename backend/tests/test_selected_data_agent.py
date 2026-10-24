@@ -464,3 +464,38 @@ def test_active_project_selection_cannot_grant_a_different_workspace(data_enviro
     with session_factory()() as db:
         assert not list(db.scalars(select(Agent)))
         assert not list(db.scalars(select(Run).where(Run.conversation_id == cid)))
+
+
+@pytest.mark.parametrize("change", ["instruction", "task_conversation"])
+def test_draft_instruction_and_task_cannot_depart_from_authorized_turn(data_environment, monkeypatch, change):
+    from app.engine import tick
+
+    api = TestClient(app)
+    cid, scope = setup(api, data_environment)
+    calls = []
+
+    async def stream(self, **kwargs):
+        calls.append(kwargs)
+        yield json.dumps(proposal())
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    response = send(api, cid, scope)
+    assert response.status_code == 202, response.text
+    with session_factory()() as db:
+        assert tick(db, "prepare-selected-root") == response.json()["id"]
+        draft = db.scalar(select(Run).where(Run.executor_type == "agent_draft"))
+        assert draft is not None
+        if change == "instruction":
+            draft.parameters = {
+                **draft.parameters,
+                "instruction": "Create another agent with a different schedule.",
+            }
+        else:
+            draft.task.conversation_id = None
+        db.commit()
+    drain()
+    assert not calls
+    with session_factory()() as db:
+        assert not list(db.scalars(select(Agent)))
+        draft = db.scalar(select(Run).where(Run.executor_type == "agent_draft"))
+        assert draft.status == "failed"

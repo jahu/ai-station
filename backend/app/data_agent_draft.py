@@ -231,6 +231,11 @@ def verified(session, draft):
         or parent.executor_type != "orchestrator"
         or parent.status != "succeeded"
         or parent.task_id != draft.task_id
+        or parent.task.conversation_id != draft.conversation_id
+        or parent.task.agent_id is not None
+        or parent.agent_id is not None
+        or draft.agent_id is not None
+        or draft.parameters.get("instruction", "").strip() != parent.parameters["content"].strip()
         or parent.conversation_id != draft.conversation_id
         or parent.parameters.get("policy_mode") != "work"
         or parent.parameters.get("action") != "agent.create"
