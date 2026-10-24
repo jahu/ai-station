@@ -230,7 +230,9 @@ The target is the complete AI Station vision, reconfirmed on 2026-10-13. An impl
 
 Selected PDF/text/Markdown documents for report, offline code/data and goal-based
 media agents are implemented and locally qualified in #411, with upload/Library
-selection and source-bound captured text. See [document scope and qualification](plans/agent-document-context.md).
+selection and source-bound captured text. #412 adds the same document context to
+first and ongoing Chat/Work analysis, without a persistent Agent, with inline
+results/source cards and capture-only follow-ups. See [document scope and qualification](plans/agent-document-context.md).
 Use its exact-head checks and post-deployment evidence before treating it as live.
 
 

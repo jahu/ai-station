@@ -1,12 +1,15 @@
-> Current owned increment: `.tools/conversation-document-context`, branch
+> Current increment #412: `.tools/conversation-document-context`, branch
 > `feat/conversation-document-context`, based on #411 (`5ceff8a`).
-> [Conversation documents](conversation-document-context.md) wires selected PDF/text
-> into Files & data in both main composers, reusing the deployed source/Python graph.
-> Initial Chat/Work, capture-only follow-up, changed-scope/Stop and legacy tests pass;
-> both first-message upload tests pass. Source and regression qualification are still
-> in progress. Follow the actual branch head, PR and evidence rather than treating
-> these targeted checks as full release qualification. The live authority points
-> to qualified #411 until this increment's rollout; preserve original root WIP.
+> [Conversation documents](conversation-document-context.md) brings selected PDF/text
+> to Files & data in both main composers. Full gate: 3391 Python/Runner passes,
+> nine opt-in skips, 749 UI tests, exact image/Compose, and compiled desktop/mobile
+> first/ongoing Chat and Work with eight actual native offline Python jobs.
+> Inference/catalog are injected; no new GPU work. No new Agent, native protocol,
+> schema or dependency change. Current-message/source tamper fails before workspace;
+> follow-ups reuse captured data without renewed source access.
+> Evidence: `data/acceptance/conversation-document-context-20261024`.
+> Read its post-deployment qualification and the shared deployment authority before
+> treating #412 as live. Root Memory WIP remains preserved.
 
 # AI Station implementation handoff
 
