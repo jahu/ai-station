@@ -25,3 +25,20 @@ model, native process option or installation is needed.
 The worker remains authoritative for RAM/GPU locks, idle-owned-model eviction,
 Stop, deadlines and recovery. Apply only after a reviewed PR to develop; preserve
 the healthy native Runner when its code is unchanged.
+
+## Qualification — PR #397
+
+All 3035 normal Python/Runner cases completed: 3026 passed, nine opt-in integrations
+skipped. All 690 UI cases passed; a final visible-copy-only change additionally
+passed 17 Video cases plus lint/typecheck/build and compiled 1440/390 checks.
+Browser checks used a declared capability fixture with actual API/SQLite, proving
+automatic selection, portrait/manual overrides, explicit agent save/reload and
+Standard preservation in a canceled saved job. No native workload was executed
+by these UI checks. Docker/backend/assets and all three Compose configs match.
+
+Exact native-tree and dispatch/publisher AST comparisons match #396. New Chat
+child packets pass the unchanged native request schema; #396's actual two-window
+GPU/continuation/composition proof is reused at that scope, without another GPU
+run or broader media-quality claim. Evidence:
+`data/acceptance/video-memory-recommendation-20261024`. Publish only after final
+diff review; rollout changes the controller while preserving the native Runner.

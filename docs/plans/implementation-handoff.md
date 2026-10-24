@@ -26,8 +26,11 @@ saved requests/receipts and existing agent definitions remain authoritative.
 The choice freezes before dispatch; the worker retains actual admission.
 Native modules/execution are unchanged: reuse #396 GPU proof only after exact
 source and typed-payload comparison, without another expensive sample.
-Finish the full normal gates, compiled desktop/mobile recommendation/override
-checks, published-head review and controller-only rollout. Preserve the healthy
+All 3026 Python/Runner tests passed with nine opt-in skips; 690 UI cases plus
+17 final-copy Video cases, lint/types/build, compiled 1440/390 recommendation/
+overrides/saved Standard and exact image/Compose checks passed. Native execution
+was compared unchanged and its #396 GPU evidence reused, not rerun. Finish final
+published-head review and controller-only rollout. Preserve the healthy
 native Runner, root Memory WIP, all source/proof trees and pending Whisper consent.
 The whole-platform objective remains active and incomplete.
 
