@@ -43,7 +43,13 @@ export default function AgentCodeResearch({
     (run) => run.parameters?.tool === "http_fetch",
   );
   const fetched = fetchedRun?.metadata?.http_fetch;
-  const fetchedSnapshot = fetchedRun?.metadata?.observation?.artifact_id;
+  const observation = fetchedRun?.metadata?.observation;
+  const fetchedSnapshot =
+    observation &&
+    typeof observation === "object" &&
+    "artifact_id" in observation
+      ? observation.artifact_id
+      : undefined;
   const hasSearch = isWebSources(search),
     hasPages = isSearchPageResult(pages),
     hasFetched = isFetchResult(fetched);
