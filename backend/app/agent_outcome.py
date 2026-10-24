@@ -25,6 +25,8 @@ def superseded_failures(runs):
             continue
         if (
             source.executor_type == "project_validation"
+            and source.status == "failed"
+            and source.error_type == "ValidationFailed"
             and repair.executor_type == "local_proposal"
             and repair.parent_run_id == source.id
             and repair.parameters.get("repair_validation_run_id") == source.id
@@ -33,6 +35,8 @@ def superseded_failures(runs):
             if (
                 original
                 and original.executor_type == "local_proposal"
+                and original.status == "succeeded"
+                and original.metadata_json.get("validation_run_id") == source.id
                 and source.parent_run_id == original.id
                 and original.project_id == source.project_id == repair.project_id
                 and original.metadata_json.get("repair_run_id") == repair.id
@@ -43,12 +47,23 @@ def superseded_failures(runs):
             and source.status == "succeeded"
             and repair.executor_type == "agent_data_generate"
             and repair.parent_run_id == source.id
+            and repair.parameters.get("repair")
         ):
             old = source.parameters.get("agent_data") or {}
             new = repair.parameters.get("agent_data") or {}
             if isinstance(old.get("attempt"), int) and new == {**old, "attempt": old["attempt"] + 1}:
                 python = by_id.get(source.parameters.get("python_run_id"))
-                if python and source.parent_run_id == python.id and python.executor_type == "python":
+                if (
+                    python
+                    and source.parent_run_id == python.id
+                    and python.executor_type == "python"
+                    and python.status == "failed"
+                    and python.error_type == "PythonProgramFailed"
+                    and python.metadata_json.get("process_confirmed_gone")
+                    and python.metadata_json.get("data_result_run_id") == source.id
+                    and python.parameters.get("agent_data") == old
+                    and python.project_id == source.project_id == repair.project_id
+                ):
                     ignored.add(python.id)
     return ignored
 
