@@ -41,7 +41,7 @@ execution engine, schema migration, dependency or model download is needed.
    not change old receipts, stored message bindings or read-only projections.
 3. Web availability alone grants no data execution. An explicit analysis action
    selects its typed sources; strong current-user analysis instructions plus
-   explicit current-user URLs in Work may select the same action deterministically.
+   explicit current-user URLs in Chat or Work may select the same action deterministically.
    Quotes, attachments, fetched content, prior replies and model output cannot
    select new public targets. Manual queries retain their authority. Keep ordinary
    Chat page reading/search and the existing offline CSV route unchanged.

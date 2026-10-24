@@ -13,9 +13,9 @@ const ACTIONS = [
   },
   {
     key: "data.analyze",
-    title: "Analyze CSV / Excel",
+    title: "Analyze data",
     detail:
-      "Ask a question about your files. A local model runs the analysis and returns a table and download.",
+      "Analyze CSV, Excel, JSON or reviewed public sources locally. Get an answer, table and generated files.",
   },
   {
     key: "image.describe",

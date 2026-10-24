@@ -1,3 +1,10 @@
+> 2026-10-24 delivery: reviewed public research and offline Python analysis for
+> persistent agents (#390) are deployed and real-qualified with exact captured
+> Coinbase prices and chart. Source scope, original bytes and operator preset were
+> preserved. Evidence: `data/acceptance/agent-research-data-20261024/post-deployment-qualified.json`.
+> The conversation equivalent is candidate #391; inspect its qualification before
+> claiming it is live. The full platform objective remains open.
+
 > 2026-10-24 functional delivery: natural same-file analysis (#383) and actual
 > PNG/Excel/text outputs (#384–#385) are deployed. The real local-model/native
 > Python chain checked all six source rows and total150, preserved original bytes
