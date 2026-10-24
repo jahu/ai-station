@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import "./DataAgentDraftSource.css";
 import "./AgentDocumentSources.css";
 import "./AgentMemorySources.css";
 
@@ -21,7 +22,7 @@ export default function DataAgentDraftSource({ value }: { value: unknown }) {
   );
   return (
     <section
-      className="panel agent-document-sources"
+      className="panel agent-document-sources data-agent-draft-source"
       aria-label="Original analysis for this agent"
     >
       <h3>Drafted from this analysis</h3>

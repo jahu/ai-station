@@ -1,0 +1,13 @@
+.data-agent-draft-source {
+  margin-block: 1rem;
+  padding: 1rem;
+  overflow-wrap: anywhere;
+}
+.data-agent-draft-source h3 {
+  margin: 0 0 0.625rem;
+  font-size: 0.875rem;
+}
+.data-agent-draft-source .text-link {
+  display: inline-block;
+  margin-top: 0.25rem;
+}
