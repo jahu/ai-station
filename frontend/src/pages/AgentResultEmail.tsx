@@ -5,6 +5,13 @@ import { api } from "../api";
 import { ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 
+const DATA_FORMATS = [
+  { kind: "csv", label: "CSV table" },
+  { kind: "xlsx", label: "Excel workbook" },
+  { kind: "png", label: "PNG chart" },
+  { kind: "text", label: "Text report" },
+] as const;
+
 export type ResultEmailScope = {
   connector_id: string;
   connector_revision: string;
@@ -12,6 +19,7 @@ export type ResultEmailScope = {
   mode: "review" | "automatic";
   content: "report" | "summary";
   subject_prefix: string;
+  attachment_kinds?: ("csv" | "xlsx" | "png" | "text")[];
 };
 export type ResultEmailAuthorization = {
   valid: boolean;
@@ -33,6 +41,7 @@ export function ResultEmailSettings(props: {
   value?: ResultEmailScope | null;
   onChange: (value: ResultEmailScope | null) => void;
   summaryOnly?: boolean;
+  dataFiles?: boolean;
   disabled?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -55,11 +64,13 @@ function ResultEmailFields({
   value,
   onChange,
   summaryOnly = false,
+  dataFiles = false,
   disabled = false,
 }: {
   value?: ResultEmailScope | null;
   onChange: (value: ResultEmailScope | null) => void;
   summaryOnly?: boolean;
+  dataFiles?: boolean;
   disabled?: boolean;
 }) {
   const connections = useQuery({
@@ -91,6 +102,9 @@ function ResultEmailFields({
             mode: value?.mode ?? "review",
             content: summaryOnly ? "summary" : (value?.content ?? "report"),
             subject_prefix: value?.subject_prefix ?? "AI Station",
+            ...(value?.attachment_kinds?.length
+              ? { attachment_kinds: value.attachment_kinds }
+              : {}),
           }
         : null,
     );
@@ -157,9 +171,52 @@ function ResultEmailFields({
                 <option value="report" disabled={summaryOnly}>
                   Completed report text
                 </option>
-                <option value="summary">Result summary only</option>
+                <option value="summary">
+                  {value.attachment_kinds?.length
+                    ? "Result summary body"
+                    : "Result summary only"}
+                </option>
               </select>
             </label>
+            {(dataFiles || !!value.attachment_kinds?.length) && (
+              <fieldset
+                aria-label="Generated file attachments"
+                className="email-recipient-choices"
+              >
+                <legend>Generated file attachments · optional</legend>
+                {DATA_FORMATS.map(({ kind, label }) => (
+                  <label className="project-checkbox" key={kind}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Attach ${label}`}
+                      checked={value.attachment_kinds?.includes(kind) ?? false}
+                      disabled={
+                        !dataFiles && !value.attachment_kinds?.includes(kind)
+                      }
+                      onChange={(event) => {
+                        const selected = new Set(value.attachment_kinds ?? []);
+                        if (event.target.checked) selected.add(kind);
+                        else selected.delete(kind);
+                        const kinds = DATA_FORMATS.map(
+                          (item) => item.kind,
+                        ).filter((item) => selected.has(item));
+                        onChange({
+                          ...value,
+                          attachment_kinds: kinds.length ? kinds : undefined,
+                        });
+                      }}
+                    />
+                    {label}
+                  </label>
+                ))}
+                <p className="muted">
+                  Selected formats are created with each result. Up to four
+                  files, 4 MiB each and 16 MiB combined. Generated values will
+                  leave this workstation; original uploads and scripts are not
+                  attached.
+                </p>
+              </fieldset>
+            )}
             <label>
               Subject prefix
               <input
@@ -224,8 +281,10 @@ function ResultEmailFields({
               {value.content === "report"
                 ? "Includes the saved report text (up to 16,000 characters, with an excerpt notice for longer reports)."
                 : "Includes only completion status and saved result IDs."}{" "}
-              No files are attached. Automatic sending requires confirmation
-              when you enable the agent.
+              {value.attachment_kinds?.length
+                ? "Selected generated files are also attached."
+                : "No files are attached."}{" "}
+              Automatic sending requires confirmation when you enable the agent.
             </p>
           </>
         )}
@@ -248,11 +307,13 @@ export function ResultEmailEditor({
   value,
   onSave,
   summaryOnly,
+  dataFiles = false,
   disabled,
 }: {
   value?: ResultEmailScope | null;
   onSave: (scope: ResultEmailScope | null) => void;
   summaryOnly: boolean;
+  dataFiles?: boolean;
   disabled: boolean;
 }) {
   const [draft, setDraft] = useState(value ?? null);
@@ -262,6 +323,7 @@ export function ResultEmailEditor({
         value={draft}
         onChange={setDraft}
         summaryOnly={summaryOnly}
+        dataFiles={dataFiles}
         disabled={disabled}
       />
       <Button
@@ -311,8 +373,23 @@ export function ResultEmailApproval({
         To <strong>{scope.recipients.join(", ")}</strong>.{" "}
         {scope.content === "report"
           ? "The actual completed report text will leave this workstation."
-          : "Only completion status and result IDs will leave this workstation."}
+          : scope.attachment_kinds?.length
+            ? "The email body contains completion status and result IDs."
+            : "Only completion status and result IDs will leave this workstation."}
       </p>
+      {!!scope.attachment_kinds?.length && (
+        <p>
+          Generated files will also leave this workstation:{" "}
+          <strong>
+            {DATA_FORMATS.filter((item) =>
+              scope.attachment_kinds?.includes(item.kind),
+            )
+              .map((item) => item.label)
+              .join(", ")}
+          </strong>
+          . This selection is included in your delivery approval.
+        </p>
+      )}
       {authorization?.ready === false && (
         <p className="notice">{authorization.reason}</p>
       )}

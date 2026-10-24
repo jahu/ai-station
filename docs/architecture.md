@@ -31,6 +31,11 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Generated data email attachments reuse the existing final-result/email Run graph,
+approval hash and conservative SMTP journal. Frozen selected formats require actual
+verified exports; original uploads and scripts are excluded. Empty selections
+preserve legacy identity. See [data attachments](plans/agent-data-email-attachments.md).
+
 Conversation file creation freezes bounded earlier plain text on the current
 message and Run. Source ownership/hashes gate execution; quoted text grants no
 tools, attachment reads or networking. See [creation context](plans/file-creation-conversation-context.md).

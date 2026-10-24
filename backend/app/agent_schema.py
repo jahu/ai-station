@@ -137,6 +137,12 @@ class AgentSettings(BaseModel):
             and (self.media is not None or coding_provider(self.tools) and "python_data" not in self.tools)
         ):
             raise ValueError("Choose a result summary for coding or media email")
+        if (
+            self.notification_policy.report_email
+            and self.notification_policy.report_email.attachment_kinds
+            and "python_data" not in self.tools
+        ):
+            raise ValueError("Clear generated email attachment formats before removing the Files & data tool")
         self.tools = list(dict.fromkeys(self.tools))
         if self.media is not None and "create_media" not in self.tools:
             raise ValueError("Media settings require the Create media tool")

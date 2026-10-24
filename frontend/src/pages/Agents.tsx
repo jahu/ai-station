@@ -1382,6 +1382,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           <div className="agent-wide">
             <ResultEmailSettings
               value={values.notification_policy?.report_email}
+              dataFiles={values.tools.includes("python_data")}
               summaryOnly={
                 values.tools.includes("create_media") ||
                 (isCoding(values.tools) &&

@@ -36,6 +36,13 @@ export type Delivery = {
     subject: string;
     body: string;
     agent_result?: { source_run_id: string };
+    attachments?: {
+      artifact_id: string;
+      filename: string;
+      mime_type: string;
+      size_bytes: number;
+      sha256: string;
+    }[];
   };
   accepted_recipients: string[];
   refused_recipients: string[];
@@ -286,6 +293,32 @@ export function DeliveryPreview({
         </div>
       </dl>
       <pre className="email-body">{delivery.payload.body}</pre>
+      {!!delivery.payload.attachments?.length && (
+        <section aria-label="Email attachments">
+          <h4>Attachments · {delivery.payload.attachments.length}</h4>
+          <ul>
+            {delivery.payload.attachments.map((file) => (
+              <li key={file.artifact_id}>
+                <Link
+                  to={`/library/${file.artifact_id}`}
+                  aria-label={`Inspect attachment ${file.filename}`}
+                >
+                  {file.filename}
+                </Link>
+                {" · "}
+                {file.size_bytes < 1024
+                  ? `${file.size_bytes} B`
+                  : file.size_bytes < 1024 * 1024
+                    ? `${Math.ceil(file.size_bytes / 1024)} KiB`
+                    : `${(file.size_bytes / (1024 * 1024)).toFixed(1)} MiB`}
+              </li>
+            ))}
+          </ul>
+          <p className="muted">
+            These exact generated files are part of the reviewed message.
+          </p>
+        </section>
+      )}
       {delivery.reason && <p className="muted">{delivery.reason}</p>}
       {delivery.accepted_recipients.length > 0 && (
         <p>Server accepted: {delivery.accepted_recipients.join(", ")}</p>

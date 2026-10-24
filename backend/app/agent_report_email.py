@@ -258,6 +258,7 @@ def publish(session, source):
         **envelope,
         "connector_fingerprint": fingerprint(connector),
         "agent_result": reference,
+        **({"attachments": result["attachments"]} if result.get("attachments") else {}),
     }
     child = create_run(
         session,
@@ -275,8 +276,13 @@ def publish(session, source):
             "delivery_id": delivery_id,
             "message": {key: payload[key] for key in ("sender", "recipients", "subject", "body")},
             "agent_result": reference,
+            **({"attachments": result["attachments"]} if result.get("attachments") else {}),
         },
-        permissions=["email_send", "network_external"],
+        permissions=[
+            "email_send",
+            "network_external",
+            *(["filesystem_read"] if result.get("attachments") else []),
+        ],
         retry_class="inspect",
         parent_run_id=source.id,
         triggered_by=source.triggered_by,
@@ -304,6 +310,7 @@ def publish(session, source):
                 "recipients": list(scope.recipients),
                 "sender": settings.sender,
                 "subject": envelope["subject"],
+                **({"attachments": result["attachments"]} if result.get("attachments") else {}),
             },
         )
     append_event(
@@ -376,8 +383,14 @@ def validate_submission(session, run, receipt):
         result = result_snapshot(session, source, root, definition, scope)
     except (ValueError, OSError) as exc:
         raise ReportEmailPolicyError("The completed result changed or is no longer available") from exc
+    if result.get("attachments"):
+        from app.permissions import require
+
+        require(run.effective_permissions, "filesystem_read")
     if (
-        digest(result) != reference["result_hash"]
+        receipt.payload.get("attachments") != result.get("attachments")
+        or run.parameters.get("attachments") != result.get("attachments")
+        or digest(result) != reference["result_hash"]
         or receipt.connector_id != connector.id
         or receipt.payload["sender"] != settings.sender
         or receipt.payload["recipients"] != scope.recipients
@@ -398,6 +411,7 @@ def validate_submission(session, run, receipt):
             or approval.resolution != "granted"
             or approval.action != "email.send"
             or approval.payload.get("payload_hash") != receipt.payload_hash
+            or approval.payload.get("attachments") != result.get("attachments")
         ):
             raise ReportEmailPolicyError("The complete result message needs its own current approval")
     return scope.mode

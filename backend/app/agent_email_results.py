@@ -16,8 +16,8 @@ from app.models import Artifact, Run
 CODING_RESULTS = {"local_proposal", "codex_proposal", "cursor_proposal", "project_validation"}
 
 
-def artifact_content(artifact, *, text=False):
-    limit = 512 * 1024 if text else 2 * 1024**3
+def artifact_content(artifact, *, text=False, binary=False):
+    limit = 512 * 1024 if text else 4 * 1024**2 if binary else 2 * 1024**3
     if artifact is None or artifact.trashed_at is not None or not 0 <= artifact.size_bytes <= limit:
         raise ValueError("The saved result is unavailable or exceeds its verification bound")
     path = safe_join(get_settings().data_dir, artifact.relative_path)
@@ -32,7 +32,7 @@ def artifact_content(artifact, *, text=False):
             if size > limit:
                 raise ValueError("The saved result grew beyond its verification bound")
             digest.update(chunk)
-            if text:
+            if text or binary:
                 data.append(chunk)
         after = os.fstat(handle.fileno())
         if (before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
@@ -41,7 +41,7 @@ def artifact_content(artifact, *, text=False):
             after.st_ctime_ns,
         ) or digest.hexdigest() != artifact.sha256:
             raise ValueError("The saved result changed before email preparation")
-    return b"".join(data).decode("utf-8") if text else None
+    return b"".join(data).decode("utf-8") if text else b"".join(data) if binary else None
 
 
 def result_snapshot(session, source, root, definition, scope):
@@ -213,4 +213,12 @@ def result_snapshot(session, source, root, definition, scope):
         if len(body) > MAX_BODY_CHARS:
             raise ValueError("The result summary exceeds its message bound")
         rendered = {"subject": (scope.subject_prefix + " · " + name)[:200], "body": body, "excerpted": False}
-    return {"family": family, "artifacts": references, "message": rendered}
+    from app.agent_email_attachments import snapshot as attachment_snapshot
+
+    attachments = attachment_snapshot(session, source, scope)
+    return {
+        "family": family,
+        "artifacts": references,
+        "message": rendered,
+        **({"attachments": attachments} if attachments else {}),
+    }

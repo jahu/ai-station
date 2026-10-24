@@ -1348,6 +1348,7 @@ export function AssistantAgentDraft({
                   <ResultEmailEditor
                     key={agent.updated_at}
                     value={agent.notification_policy?.report_email}
+                    dataFiles={!!agent.tools?.includes("python_data")}
                     disabled={busy || active || agent.enabled}
                     summaryOnly={
                       !!agent.media ||
