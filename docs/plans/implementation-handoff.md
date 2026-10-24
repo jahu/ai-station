@@ -16,9 +16,10 @@ successful source capture and rejected result remain in
 passed. Do not rerun the public fetch or mark that release real-qualified.
 
 The correction is `.tools/captured-data-context`, branch
-`fix/captured-data-context`, initially based on the separate Maintenance-policy
-fix `c9b6a71` (PR #392). After #392 is reviewed/merged, rebase only the correction
-onto develop before publishing. [The correction plan](captured-data-context.md)
+`fix/captured-data-context`, rebased onto reviewed/merged Maintenance-policy
+fix #392 (`c363a91`). That small fix passed all 2897 normal Python/Runner cases,
+nine opt-in skips and 674 UI cases plus format/lint/types/build and exact image
+verification. Its rollout is bundled with this correction. [The correction plan](captured-data-context.md)
 reuses checked response excerpts in offline model context. Qualify under
 `data/acceptance/captured-data-context-20261024`, then continue the original saved
 capture for actual acceptance. Root WIP and the unchanged native source stay intact.

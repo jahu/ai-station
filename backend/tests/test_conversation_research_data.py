@@ -531,7 +531,12 @@ def test_captured_preview_shows_response_values_beyond_the_generic_json_cell_pre
         }
         for asset, amount in [("BTC", "80809.255"), ("ETH", "2379.325")]
     ]
-    observations = [{"tool": "http_fetch", "result": {"urls": [p["url"] for p in values], "pages": values}}]
+    observations = [
+        {
+            "tool": "http_fetch",
+            "result": {"urls": [p["url"] for p in values], "pages": values, "partial": True},
+        }
+    ]
     generic = inspect_json(json.dumps({"observations": observations}).encode(), lambda: None)
     assert "80809.255" not in generic["sheets"][0]["preview"][0][1]
     preview = captured_preview(observations)
@@ -539,6 +544,7 @@ def test_captured_preview_shows_response_values_beyond_the_generic_json_cell_pre
     assert [json.loads(p["text"])["data"]["amount"] for p in pages] == ["80809.255", "2379.325"]
     assert preview["excerpted"] is True
     assert preview["full_source_in_input_file"] is True
+    assert preview["observations"][0]["result"]["partial"] is True
 
 
 def test_captured_preview_stays_small_for_multiple_long_unicode_sources():
