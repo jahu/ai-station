@@ -20,9 +20,15 @@ Live source: `.tools/ui-captured-data-context-20261024`; native source remains
 `.tools/ui-python-optional-outputs-20261024`. Preserve both and the root Memory WIP.
 
 Current owned branch/worktree: `feat/offline-database-recovery`,
-`.tools/offline-database-recovery`, based on develop `0279275`. Implement
-[guarded offline recovery](offline-database-recovery.md), beginning with the
-existing backup/launcher contracts and disposable database tests. Recovery must
+`.tools/offline-database-recovery`, based on develop `0279275`. [Guarded offline recovery](offline-database-recovery.md) is implemented in PR #394.
+All 2944 normal Python/Runner cases completed (2935 passed, nine opt-in skips),
+678 UI tests plus lint/format/types/build passed, and actual disposable host CLI
+apply/rollback + isolated HTTP verified history, memory, artifact bytes, current
+password and revoked old sessions. Compiled desktop/phone inspection found and
+fixed a squeezed mobile guide and intercepted summary Enter key. Finish exact
+image/assets qualification, published-diff review, squash merge and backed-up
+controller-only deployment. Do not repeat inference/media tests for unchanged
+adapters. Recovery must
 not replace a live WAL database, resume schedules or revive old sessions/tokens.
 No actual production restore is authorized as a qualification shortcut.
 The platform goal remains open; do not repeat completed public-data acceptance.

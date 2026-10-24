@@ -60,8 +60,10 @@ root, then start an isolated API on the restored copy and inspect retained data
 and authentication. Never restore over the operator's production database for a
 smoke test. Full local checks and reviewed PR-to-develop gates remain required.
 
-Implementation and focused disposable tests now exist on `feat/offline-database-recovery`;
-full validation, review and deployment remain required. Actual host CLI and
+Implementation and 36 focused disposable tests exist in PR #394. The complete
+normal Python/Runner suite passed 2935 cases with nine opt-in skips; all 678 UI
+cases, lint/format/types/build and compiled desktop/phone inspection passed.
+Published-diff review, exact final image qualification and deployment remain required. Actual host CLI and
 isolated HTTP recovery/rollback passed under
 `data/acceptance/offline-recovery-20261024/disposable-cli-result.json`.
 This is not a production database restore. The whole-platform objective
