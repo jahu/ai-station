@@ -19,6 +19,9 @@ import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import Avatars from "./Avatars";
 import VideoSceneEditor from "../components/media/VideoSceneEditor";
+import VideoMemoryProfile, {
+  type VideoProfile,
+} from "../components/media/VideoMemoryProfile";
 import {
   scenePlanError,
   type SceneDraft,
@@ -121,6 +124,9 @@ function VideoForm({
   );
   const sceneError = planningScenes ? scenePlanError(prompt, scenes) : "";
   const [steps, setSteps] = useState(initialRequest?.steps ?? 20);
+  const [memoryProfile, setMemoryProfile] = useState<VideoProfile>(
+    initialRequest?.memory_profile ?? "default",
+  );
   const [seed, setSeed] = useState(initialRequest?.seed ?? 43);
   const [gpu, setGpu] = useState(initialRequest?.gpu ?? "auto");
   const [uploading, setUploading] = useState(false);
@@ -138,6 +144,9 @@ function VideoForm({
     mutationFn: async () => {
       const [width, height] = resolution.split("x").map(Number);
       const values = {
+        ...(memoryProfile !== "default"
+          ? { memory_profile: memoryProfile }
+          : {}),
         prompt,
         negative_prompt: negative,
         width,
@@ -174,6 +183,9 @@ function VideoForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(memoryProfile !== "default"
+            ? { memory_profile: memoryProfile }
+            : {}),
           prompt,
           negative_prompt: negative,
           width,
@@ -308,6 +320,7 @@ function VideoForm({
                 <select
                   aria-label="Format"
                   value={resolution}
+                  disabled={memoryProfile === "bounded_11g"}
                   onChange={(event) => setResolution(event.target.value)}
                 >
                   {!["1280x704", "704x1280", "768x768"].includes(
@@ -407,6 +420,16 @@ function VideoForm({
                 <Settings2 size={15} />
                 Advanced settings<span>Steps, seed & GPU</span>
               </summary>
+              <VideoMemoryProfile
+                value={memoryProfile}
+                onChange={(profile) => {
+                  setMemoryProfile(profile);
+                  if (profile === "bounded_11g") {
+                    setResolution("1280x704");
+                    setSteps((current) => Math.max(20, current));
+                  }
+                }}
+              />
               <label>
                 Negative prompt
                 <textarea
@@ -421,7 +444,7 @@ function VideoForm({
                   Steps
                   <input
                     type="number"
-                    min={4}
+                    min={memoryProfile === "bounded_11g" ? 20 : 4}
                     max={40}
                     value={steps}
                     onChange={(event) => setSteps(Number(event.target.value))}

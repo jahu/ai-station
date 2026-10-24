@@ -1,3 +1,5 @@
+> Candidate reduced-RAM profile: [qualification and rollout state](plans/wan-memory-profile.md). It is disabled by default and must not be treated as production-ready from a successful short encode alone.
+
 # Local general video
 
 The workspace now uses [durable long-media jobs](long-media.md): 1–60-second

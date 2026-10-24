@@ -8,12 +8,17 @@ from pathlib import Path
 MAX_BYTES = 4 * 1024 * 1024
 
 
-def profile_key(paths):
+def profile_key(paths, memory_profile="default"):
     observed = {
         key: {"size_bytes": Path(paths[key]).stat().st_size, "mtime": Path(paths[key]).stat().st_mtime}
         for key in ("wan_model", "wan_text_encoder", "wan_vae")
     }
-    return hashlib.sha256(json.dumps(observed, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    # Old checkpoints must keep their exact identity. Alternative loading
+    # profiles cannot silently consume or publish a default-precision checkpoint.
+    identity = (
+        observed if memory_profile == "default" else {"models": observed, "memory_profile": memory_profile}
+    )
+    return hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
 def validate_checkpoint(path, width, height, expected_profile):

@@ -1,3 +1,5 @@
+> Candidate: the optional [Wan memory scope](plans/wan-memory-profile.md) uses fixed user-level cgroup limits and verifies actual RAM/zero-swap bounds before model import. HTTP cannot select commands, scope properties or precision. The original default launch is unchanged.
+
 [Reviewed research before local agent code](plans/agent-research-coding.md)
 reuses the existing source-bound context handoff, public tools and isolated
 workspace. One reviewed definition and deadline bind every child.

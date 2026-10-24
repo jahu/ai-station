@@ -40,6 +40,7 @@ class Settings(BaseSettings):
     wan_model: str = ""
     wan_text_encoder: str = ""
     wan_vae: str = ""
+    wan_bounded_profile: bool = False
     browser_image: str = ""
     site_preview_image: str = ""
     python_image: str = ""

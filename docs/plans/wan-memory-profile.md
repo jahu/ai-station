@@ -101,3 +101,30 @@ using this prefix and a limited executor environment preserved PID/PGID/session,
 restored durable ownership and the original deadline, then passed targeted Stop:
 `typed-scope-restart-stop.json`. The existing ProcessManager continues to own
 absolute workflow expiry; scope RuntimeMaxSec is only an additional invocation fuse.
+
+## Full-resolution result and candidate integration
+
+The 1280×704/17-frame/20-step text-only FP8 case completed within 11 GiB and zero
+swap, fully decoded, and restored the exact operator preset. First/middle/last
+frames depict the requested coast without the small-geometry banding. This is
+only a short-window visual pass; an 81-frame test has its own active unit and
+evidence. The earlier 512-pixel comparisons remain rejected. `docs/video.md`
+already excludes early low-resolution exploratory outputs from quality acceptance.
+
+The candidate's optional `bounded_11g` selection is frozen in Video/agent requests,
+receipts, output metadata and a separate motion-checkpoint identity. Default fields
+are omitted during serialization to preserve existing receipts and definitions.
+The original default reservation/launch are unchanged. The native process requires
+the actual matching kernel scope before any Comfy/Torch import, uses the fixed
+plain FP8 loader, and never accepts arbitrary precision, memory limits or systemd
+properties from HTTP. Both short and segmented candidate Runs reserve 11264 MiB
+plus existing shared headroom; profile/dimension/sampling validation is identical
+on both sides. CPU composition retains the selection in final metadata.
+
+`AI_STATION_WAN_BOUNDED_PROFILE` defaults to false. Capability publication also
+requires user systemd/cgroup memory support; normal native dispatch rejects an
+unavailable option. The UI only offers it when advertised, preserves a saved
+unavailable selection and keeps a Standard recovery choice. Landscape and 20+
+steps are required. This is **candidate code, not a deployed qualified profile**.
+Finish the real 81-frame observation, native bounded launch/continuation/Stop,
+normal gate, compiled desktop/phone and release review before enabling it.

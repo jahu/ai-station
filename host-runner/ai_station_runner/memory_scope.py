@@ -12,6 +12,20 @@ from uuid import UUID
 APPROVED_LIMITS_MIB = frozenset({11264, 12288})
 
 
+def available() -> bool:
+    """Read-only readiness; each launched child still verifies its actual limits."""
+    try:
+        runtime = Path(scope_environment()["XDG_RUNTIME_DIR"])
+        return bool(
+            os.getuid() != 0
+            and shutil.which("systemd-run")
+            and (runtime / "bus").is_socket()
+            and "memory" in Path("/sys/fs/cgroup/cgroup.controllers").read_text().split()
+        )
+    except OSError:
+        return False
+
+
 def scope_name(run_id: str) -> str:
     if str(UUID(run_id)) != run_id:
         raise ValueError("Memory scopes require a canonical Run UUID")

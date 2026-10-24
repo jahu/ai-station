@@ -8,12 +8,13 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from PIL import Image
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 from ai_station_runner.avatars import owned
 from ai_station_runner.config import get_settings
 from ai_station_runner.media_compose import MediaInput, verified_path
 from ai_station_runner.telemetry import collect
+from ai_station_runner.wan_profiles import BOUNDED, MEMORY_MIB, validate_profile
 
 
 class FileObservation(BaseModel):
@@ -42,9 +43,25 @@ class VideoRequest(BaseModel):
     seed: int = Field(default=43, ge=0, le=2147483647)
     gpu: int = Field(ge=0)
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
+    memory_profile: Literal["default", "bounded_11g"] = "default"
+
+    @model_serializer(mode="wrap")
+    def legacy_identity(self, handler):
+        values = handler(self)
+        if self.memory_profile == "default":
+            values.pop("memory_profile", None)
+        return values
 
     @model_validator(mode="after")
     def area(self):
+        validate_profile(
+            {
+                "memory_profile": self.memory_profile,
+                "width": self.width,
+                "height": self.height,
+                "steps": self.steps,
+            }
+        )
         if self.continuation and self.image_relative:
             raise ValueError("Choose an initial image or preceding motion, not both")
         if self.motion_context and (not self.continuation or self.motion_context.size_bytes > 4 * 1024**2):
@@ -100,15 +117,49 @@ def capabilities():
             "fps": 24,
             "memory_estimate_mib": memory_mib,
             "profile_observation": observation,
+            "memory_profiles": memory_profiles(),
         }
     except HTTPException as exc:
         return {"available": False, "backend": "wan2.2-5b", "reason": exc.detail}
+
+
+def memory_profiles():
+    from ai_station_runner.memory_scope import available
+
+    enabled = get_settings().wan_bounded_profile and available()
+    return [
+        {
+            "id": BOUNDED,
+            "available": enabled,
+            "ram_mib": MEMORY_MIB,
+            "width": 1280,
+            "height": 704,
+            "minimum_steps": 20,
+            **(
+                {}
+                if enabled
+                else {
+                    "reason": "The bounded Wan profile is not enabled or user memory scopes are unavailable"
+                }
+            ),
+        }
+    ]
 
 
 def start_video(manager, body):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise HTTPException(403, "Video read/write permissions are required")
     paths = profile()
+    prefix = []
+    if body.memory_profile == BOUNDED:
+        from ai_station_runner.memory_scope import scope_prefix
+
+        if not memory_profiles()[0]["available"]:
+            raise HTTPException(409, "The bounded Wan memory profile is unavailable")
+        try:
+            prefix = scope_prefix(str(body.run_id), MEMORY_MIB)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
     if body.profile_observation is not None:
         observed = {
             key: {"size_bytes": paths[key].stat().st_size, "mtime": paths[key].stat().st_mtime}
@@ -127,7 +178,7 @@ def start_video(manager, body):
         from ai_station_runner.wan_motion import profile_key, validate_checkpoint
 
         try:
-            validate_checkpoint(motion, body.width, body.height, profile_key(paths))
+            validate_checkpoint(motion, body.width, body.height, profile_key(paths, body.memory_profile))
         except (ValueError, OSError) as exc:
             raise HTTPException(422, "Invalid bounded motion checkpoint") from exc
     image = None
@@ -189,9 +240,13 @@ def start_video(manager, body):
         TORCH_HOME=str(work / "cache" / "torch"),
         TRITON_CACHE_DIR=str(work / "cache" / "triton"),
     )
+    if prefix:
+        from ai_station_runner.memory_scope import scope_environment
+
+        environment.update(scope_environment())
     return manager.start(
         run_id=run_id,
-        argv=[str(paths["video_python"]), "-m", "ai_station_runner.video_job", str(config)],
+        argv=[*prefix, str(paths["video_python"]), "-m", "ai_station_runner.video_job", str(config)],
         cwd=work,
         executor="wan_video",
         env=environment,
