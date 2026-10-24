@@ -249,6 +249,8 @@ function VideoForm({
       >
         Describe the motion, or start with an image. Create a silent video and
         preview it here.
+        {memoryProfile === "bounded_11g" &&
+          " Reduced-RAM landscape profile selected. Change it in Advanced settings."}
       </PageTitle>
       <div className="media-workspace">
         <form
