@@ -1,11 +1,11 @@
-"""Pure future result-delivery policy; not an operational agent adapter yet."""
+"""Reviewed result-delivery policy and legacy-compatible consent identity."""
 
 import hashlib
 import json
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer
 
 from app.email_schema import SMTPSettings, mailbox
 
@@ -22,6 +22,22 @@ class AgentReportEmailScope(BaseModel):
     mode: Literal["review", "automatic"] = "review"
     content: Literal["report", "summary"] = "report"
     subject_prefix: str = Field(default="AI Station", min_length=1, max_length=80, pattern=r"^[^\r\n\x00]+$")
+
+    attachment_kinds: list[Literal["csv", "xlsx", "png", "text"]] = Field(default_factory=list, max_length=4)
+
+    @field_validator("attachment_kinds")
+    @classmethod
+    def unique_attachment_kinds(cls, values):
+        if len(values) != len(set(values)):
+            raise ValueError("Choose each generated attachment format only once")
+        return [kind for kind in ("csv", "xlsx", "png", "text") if kind in values]
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_identity(self, handler):
+        value = handler(self)
+        if not self.attachment_kinds:
+            value.pop("attachment_kinds", None)
+        return value
 
     @field_validator("recipients")
     @classmethod

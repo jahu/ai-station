@@ -52,19 +52,33 @@ The original #404 rejected production attempt remains under
 `data/acceptance/local-file-creation-20261024`; do not relabel it or rerun it.
 Merged remote #404/#405/#406 feature branches were removed after qualification.
 
-## Next implementation work
+## Current owned increment
 
-The previous file-creation/context increment is finished; do not restart it.
-Continue the full product scope from the [delivery ledger](../product-completion.md)
-and [agent-first direction](agent-first-product.md). Prioritize broader useful
-local-agent/tool composition and conversation outcomes. Inspect the actual existing
-adapters before selecting the next implementation; reuse their Task graphs and
-provenance contracts. Maintain honest separation of implemented, fixture-tested
-and real-qualified behavior. SMTP operator-inbox/Tailscale enrollment depend on
-operator configuration; they do not block independent platform implementation.
-Do not repeat already qualified media/model/research jobs because an older plan
-calls them unfinished. Earlier evidence remains linked in the delivery ledger and
-[preserved historical handoff](implementation-handoff-history-20261024.md).
+Branch `feat/agent-data-email-attachments`, `.tools/agent-data-email-attachments`,
+based on docs delivery #407. Read [data email attachments](agent-data-email-attachments.md).
+The existing result email sends only body text/result IDs. Candidate adds explicitly
+selected generated CSV/XLSX/PNG/text, required creation of those formats, exact
+receipt/approval MIME manifests, actual file verification and clear settings,
+activation consent and common delivery preview. Defaults preserve old identity;
+no native, schema or dependency changes. No external mail is authorized for QA.
+
+Initial105 existing mail cases and the complete new MIME path pass. New negative
+cases cover changed/trash files, input-pointer substitution, symlink/hardlink,
+missing permission, post-connect revocation, Stop and unknown-outcome non-replay.
+One test incorrectly expected automatic email before two ordinary created-file
+inspections; its drain is corrected. A nested separate-session Stop fixture hit
+its own SQLite write lock; inject the committed cancellation in the worker session
+for that last-check test. Public post-connect cancellation/authority tests remain
+separate. Finish full gates, actual isolated native-CPU/TLS sink, compiled desktop/
+phone settings/approval/receipt/reload/Stop, full review and develop deployment.
+Live remains #406 until this increment's post-deployment-qualified report passes.
+
+Keep the full platform goal active after delivery. Prioritize useful general-agent
+tool composition, retaining the [product ledger](../product-completion.md) and
+[agent-first direction](agent-first-product.md). Do not repeat prior qualified
+media/model/research jobs. SMTP inbox/Tailscale enrollment requires operator
+configuration and does not block independent implementation. Earlier evidence is
+linked from the ledger and [historical handoff](implementation-handoff-history-20261024.md).
 
 ## Operations and preserved work
 

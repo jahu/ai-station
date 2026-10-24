@@ -395,6 +395,13 @@ def context(session, run):
     return scope, definition, tree, deadline
 
 
+def required_data_exports(definition):
+    from app.agent_email_attachments import required_outputs
+
+    selected = set(required_exports(definition.goal)) | set(required_outputs(definition))
+    return [name for name in FORMATS if name in selected]
+
+
 class Script(OutputFiles):
     script: str = Field(min_length=1, max_length=32000)
 
@@ -506,7 +513,7 @@ class DataGenerateExecutor:
             research = verify_research(session, workflow, scope.get("data_research"), definition)
             capability = RunnerClient().request("GET", "/v1/python/capabilities")
             available_outputs = list(FORMATS) if capability.get("data_exports") == 1 else []
-            required = required_exports(definition.goal)
+            required = required_data_exports(definition)
             if any(name not in available_outputs for name in required):
                 raise ValueError(
                     "Rebuild the configured AI Station Python image to enable requested file exports"
@@ -970,9 +977,9 @@ def validate_python_dispatch(session, run):
         or run.parameters.get("inputs") != inputs
         or run.parameters.get("expected_outputs")
         != OUTPUTS + OutputFiles(outputs=generation.metadata_json.get("data_output_files", [])).outputs
-        or not set(required_exports(definition.goal))
+        or not set(required_data_exports(definition))
         <= set(generation.metadata_json.get("data_output_files", []))
-        or generation.metadata_json.get("required_data_output_files", []) != required_exports(definition.goal)
+        or generation.metadata_json.get("required_data_output_files", []) != required_data_exports(definition)
         or run.parameters.get("optional_outputs", [])
         != generation.metadata_json.get("data_optional_output_files", [])
         or run.parameters.get("optional_outputs", []) != optional

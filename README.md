@@ -18,13 +18,19 @@ public URLs to read JavaScript-rendered text before working offline. Select the
 tool and review the source URLs before enabling; captures and screenshots stay
 inspectable in the execution history. [Rendered research](docs/plans/agent-rendered-research.md).
 
+Data agents can attach their generated **CSV, Excel, PNG chart or text report**
+to result emails. Choose formats in **Notifications → Email delivery**; selected
+formats are created with each result. Delivery review lists the exact files and
+sizes. Automatic activation separately approves those files and recipients.
+[Generated attachment scope](docs/plans/agent-data-email-attachments.md).
+
 Agents can optionally prepare an email from a completed report or a result-only
 summary. In **Agent settings → Notifications → Email delivery**, choose a saved
 mail account and allowed recipients. **Review each message** is the default;
 the complete frozen message appears in the workspace for approval. Automatic
 delivery requires a separate confirmation when enabling the saved definition.
 Pause before editing an automatically approved definition. Code/media emails
-contain status and result IDs, with no file attachments. SMTP acceptance and
+contain status and result IDs. Data attachments require an explicit format selection. SMTP acceptance and
 uncertain outcomes remain separate from the original successful result.
 [Result-email contracts and qualification](docs/plans/agent-report-email.md).
 

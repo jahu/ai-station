@@ -358,6 +358,8 @@ class EmailSendExecutor:
                 raise ValueError("A new reviewed message is required; this receipt cannot be replayed")
             automatic_result = False
             result_delivery = "agent_result" in run.parameters
+            if not result_delivery and ("attachments" in row.payload or "attachments" in run.parameters):
+                raise ValueError("Only a reviewed generated agent result may supply attachments")
             if result_delivery:
                 from app.agent_report_email import validate_submission as validate_result_email
 
@@ -405,8 +407,26 @@ class EmailSendExecutor:
                 return "done"
             if run.parameters.get("market_alert"):
                 validate_submission(session, run, row)
+            if row.payload.get("attachments"):
+                from app.agent_email_attachments import contents
+
+                require(run.effective_permissions, "filesystem_read")
+                for item, data in contents(session, row.payload["attachments"], run.parent_run_id):
+                    maintype, subtype = item["mime_type"].split("/", 1)
+                    message.add_attachment(
+                        data,
+                        maintype=maintype,
+                        subtype=subtype,
+                        filename=item["filename"],
+                        params={"charset": "utf-8"} if maintype == "text" else {},
+                    )
+            wire_bytes = message.as_bytes()
+            if canceled(session, run):
+                return "done"
             if result_delivery:
                 validate_result_email(session, run, row)
+            if canceled(session, run):
+                return "done"
             row.state = "sending"
             row.updated_at = utcnow()
             append_event(
@@ -421,7 +441,7 @@ class EmailSendExecutor:
             )
             session.commit()
             submission_started = True
-            refused = client.sendmail(config.sender, list(row.payload["recipients"]), message.as_bytes())
+            refused = client.sendmail(config.sender, list(row.payload["recipients"]), wire_bytes)
             if not isinstance(refused, dict) or not set(refused).issubset(row.payload["recipients"]):
                 raise ValueError("SMTP returned an unrecognized recipient outcome")
             session.refresh(run)
