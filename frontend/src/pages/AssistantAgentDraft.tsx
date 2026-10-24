@@ -8,7 +8,7 @@ import AgentTimeBudget, { MAX_AGENT_RUNTIME } from "./AgentTimeBudget";
 import AgentVideoSetup from "./AgentVideoSetup";
 import AgentAvatarSetup from "./AgentAvatarSetup";
 import type { AgentMediaScope } from "./agent-media";
-import { PUBLIC_RESEARCH_TOOLS } from "./agentActivation";
+import { PUBLIC_RESEARCH_TOOLS, SCOPED_MEMORY_TOOLS } from "./agentActivation";
 import AgentCronFields from "./AgentCronFields";
 import "./AssistantAgentDraft.css";
 import {
@@ -1171,6 +1171,9 @@ export function AssistantAgentDraft({
                   <AgentDataFiles
                     allowResearch={agent.tools.some((name) =>
                       PUBLIC_RESEARCH_TOOLS.includes(name),
+                    )}
+                    allowMemory={agent.tools.some((name) =>
+                      SCOPED_MEMORY_TOOLS.includes(name),
                     )}
                     value={agent.data}
                     disabled={editLocked}

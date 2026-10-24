@@ -10,7 +10,7 @@ from pathlib import Path
 
 from sqlalchemy import select
 
-from app.agent_coding_policy import coding_provider, coding_research_steps
+from app.agent_coding_policy import CODING_TOOLS, coding_provider, coding_research_steps
 from app.agent_schema import AgentSettings
 from app.agent_tools import RETENTION_TOOLS, WORKFLOW_MEMORY_TOOLS, agent_tool, execution_permissions
 from app.artifacts import register_file
@@ -53,7 +53,7 @@ def planned_steps(definition: AgentSettings) -> list[dict]:
                 coding_research_steps(definition.tools)
                 + ["python_data" if "python_data" in definition.tools else "coding_local"]
                 if coding_research_steps(definition.tools)
-                else definition.tools
+                else [name for name in definition.tools if name in CODING_TOOLS]
             )
         ]
     steps = []

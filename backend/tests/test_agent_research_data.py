@@ -212,7 +212,7 @@ def test_ordinary_data_scope_still_requires_files_and_other_execution_families_c
         "coding_codex",
         "create_media",
         "market_watch",
-        "memory_search",
+        "remember_workflow",
     ]:
         with pytest.raises(ValueError):
             AgentSettings(name="No expansion", goal="Analyze", tools=["python_data", tool])

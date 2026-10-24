@@ -728,3 +728,10 @@ is shared by definitions, proposals and media publication; native owned-process
 admission enforces the same finite ceiling. The shared UI selector preserves
 exact saved seconds. This adds no executor, schema change, permissions or resource
 capacity; child publication and replay keep the original expiry.
+
+## Memory-aware local execution
+
+[Scoped memory context](plans/agent-data-memory.md) reuses existing context child
+Runs, immutable JSON observations and the offline Python/local coding handoff.
+Optional data-result retention uses the existing MemoryEntry service after result
+validation, in the success transaction. No new schema/native executor is added.

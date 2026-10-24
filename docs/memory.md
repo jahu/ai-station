@@ -44,3 +44,18 @@ inference is claimed for this feature.
 Project- and agent-scoped memory provenance provides **Open project/agent** and
 **View runs**, linking to the existing scope-filtered run history. Global memory
 has no project/agent actions. See [scope navigation](memory-scope-navigation.md).
+
+## Scoped context for local code and data
+
+Local coding and Python/data agents can explicitly select own-agent memory or
+their linked project's memory. The normal child Run snapshots enabled entries
+and their provenance; offline execution receives verified JSON, without live
+memory tools or unrelated scopes. Source bytes, entry versions and enablement
+are checked before execution; later edits do not rewrite historical captures.
+
+Python agents may separately select Remember reports. After output validation
+and confirmed cleanup, AI Station stores a bounded readable answer/table with
+the source result and CSV identity. Only the result stage writes memory; model
+generation and Python execution do not gain that permission. Failed or stopped
+results save nothing. Memory remains inspectable/editable/disableable in this page.
+See [the implementation contract](plans/agent-data-memory.md).

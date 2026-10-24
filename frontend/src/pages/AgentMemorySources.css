@@ -1,0 +1,16 @@
+.agent-memory-capture {
+  margin: 0.5rem 0;
+}
+.agent-memory-capture summary {
+  cursor: pointer;
+  font-size: 0.8125rem;
+}
+.agent-memory-capture pre {
+  max-height: 18rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 0.75rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}

@@ -151,3 +151,33 @@ it("reserves a research input slot and refuses an oversized file batch before up
   expect(vi.mocked(api)).not.toHaveBeenCalled();
   expect(change).not.toHaveBeenCalled();
 });
+
+it("labels saved-memory analysis clearly without requiring a dummy uploaded file", () => {
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <AgentDataFiles
+          disabled={false}
+          allowMemory
+          value={{ input_artifact_ids: [], max_repairs: 1 }}
+          onChange={vi.fn()}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    screen.getByRole("option", { name: "Analyze files or saved observations" }),
+  ).toBeTruthy();
+  expect(
+    (
+      screen.getByRole("option", {
+        name: "Create files from instructions",
+      }) as HTMLOptionElement
+    ).disabled,
+  ).toBe(true);
+  expect(screen.getByText(/Scoped saved memory is available/)).toBeTruthy();
+});

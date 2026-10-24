@@ -99,7 +99,7 @@ def execute_context_tool(session, run, definition, name, deadline, arguments=Non
                                     "source_message_id": entry.source_message_id,
                                     "untrusted": True,
                                 }
-                                if name == "project_memory"
+                                if name in {"memory_search", "project_memory"}
                                 else {}
                             ),
                         }

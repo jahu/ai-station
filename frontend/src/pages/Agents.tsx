@@ -61,6 +61,8 @@ import { useListKeyboard } from "./useListKeyboard";
 import {
   activationBlock,
   PUBLIC_RESEARCH_TOOLS,
+  LOCAL_CONTEXT_TOOLS,
+  SCOPED_MEMORY_TOOLS,
   localResearchScope,
 } from "./agentActivation";
 import { resultEmailConsentKey, agentSettingsPayload } from "./agentSettings";
@@ -1528,6 +1530,9 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               allowResearch={values.tools.some((name) =>
                 PUBLIC_RESEARCH_TOOLS.includes(name),
               )}
+              allowMemory={values.tools.some((name) =>
+                SCOPED_MEMORY_TOOLS.includes(name),
+              )}
               disabled={active || save.isPending}
               onChange={(data) => update("data", data)}
             />
@@ -1537,9 +1542,9 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           <h3>Tools</h3>
           {values.tools.includes("python_data") && (
             <p className="notice">
-              Analyse reviewed files and public sources with local Python.
-              Results include an answer, table and downloads; the Python code
-              stays offline.
+              Analyse reviewed files, selected sources or scoped memory with
+              local Python. Results include an answer, table and downloads; the
+              Python code stays offline.
             </p>
           )}
           {isCoding(values.tools) && !values.tools.includes("python_data") && (
@@ -1593,8 +1598,11 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                         ...(["coding_local", "python_data"].includes(
                           addedCoding,
                         )
-                          ? names.filter((name) =>
-                              PUBLIC_RESEARCH_TOOLS.includes(name),
+                          ? names.filter(
+                              (name) =>
+                                LOCAL_CONTEXT_TOOLS.includes(name) ||
+                                (addedCoding === "python_data" &&
+                                  name === "remember_report"),
                             )
                           : []),
                       ]

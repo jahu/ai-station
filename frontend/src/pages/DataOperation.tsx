@@ -4,11 +4,13 @@ export default function DataOperation({
   value,
   disabled,
   hasResearch = false,
+  hasMemory = false,
   onChange,
 }: {
   value?: DataScope | null;
   disabled: boolean;
   hasResearch?: boolean;
+  hasMemory?: boolean;
   onChange: (value: DataScope) => void;
 }) {
   const scope = value ?? { input_artifact_ids: [], max_repairs: 1 };
@@ -29,7 +31,11 @@ export default function DataOperation({
             });
           }}
         >
-          <option value="analyze">Analyze files or public sources</option>
+          <option value="analyze">
+            {hasMemory
+              ? "Analyze files or saved observations"
+              : "Analyze files or public sources"}
+          </option>
           <option value="create" disabled={hasInputs}>
             Create files from instructions
           </option>
@@ -38,7 +44,8 @@ export default function DataOperation({
       {hasInputs && (
         <p className="muted">
           To create from instructions alone, first remove selected files and
-          public sources. Analysis can also create output files.
+          {hasMemory ? "selected context" : "public sources"}. Analysis can also
+          create output files.
         </p>
       )}
     </div>
