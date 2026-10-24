@@ -70,3 +70,35 @@ it("shows unfinished status and uses its original workflow link", () => {
     "/runs/workflow-one",
   );
 });
+
+it.each([
+  ["data", "Using a stored agent data result"],
+  ["coding", "Using a stored coding review"],
+  ["media", "Using published media metadata · contents not inspected"],
+] as const)(
+  "identifies %s result context without claiming another type of inspection",
+  (family, label) => {
+    render(
+      <MemoryRouter>
+        <AgentResultSources sources={[{ ...source, family }]} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(label, { exact: false })).toBeTruthy();
+    expect(screen.getByRole("link").getAttribute("href")).toBe(
+      "/runs/report-one",
+    );
+  },
+);
+
+it("labels an unavailable data result without claiming it is a text report", () => {
+  render(
+    <MemoryRouter>
+      <AgentResultSources
+        sources={[{ ...source, family: "data", available: false }]}
+      />
+    </MemoryRouter>,
+  );
+  expect(
+    screen.getByText("Agent result unavailable", { exact: false }),
+  ).toBeTruthy();
+});

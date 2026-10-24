@@ -6,6 +6,8 @@ export type AgentResultSource = {
   run_id?: string;
   available: boolean;
   status: string;
+  family?: "report" | "data" | "coding" | "media";
+  inspection?: "publication_metadata_only";
   included_characters?: number;
   total_characters?: number;
   truncated?: boolean;
@@ -21,9 +23,17 @@ export default function AgentResultSources({
   return sources?.map((source) => (
     <p className="muted" key={source.source_message_id}>
       {source.available
-        ? "Using a stored agent report"
+        ? source.family === "data"
+          ? "Using a stored agent data result"
+          : source.family === "coding"
+            ? "Using a stored coding review"
+            : source.family === "media"
+              ? "Using published media metadata · contents not inspected"
+              : "Using a stored agent report"
         : source.status === "succeeded"
-          ? "Agent report unavailable"
+          ? source.family && source.family !== "report"
+            ? "Agent result unavailable"
+            : "Agent report unavailable"
           : `Agent execution: ${source.status.replaceAll("_", " ")}`}
       {source.truncated &&
         ` · excerpt ${source.included_characters} / ${source.total_characters} characters`}

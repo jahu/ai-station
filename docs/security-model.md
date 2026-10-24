@@ -1,3 +1,8 @@
+Conversation follow-ups reuse saved data answers and coding reviews with verified
+source bytes. Media references describe published metadata and explicitly do not
+claim content inspection. No new execution or tools are granted.
+[Result families](plans/conversation-agent-result-families.md).
+
 Agent execution status follows actual generation stages, with email approval and
 transport shown separately. Graph publication alone is not a successful result;
 verified bounded repairs preserve their history. [Outcome contracts](plans/agent-workflow-outcomes.md).
