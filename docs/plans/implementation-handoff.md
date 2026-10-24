@@ -45,29 +45,28 @@ Stop, expiry, recovery and shared startup have coverage. Its evidence is
 Do not rebuild eviction/reload or claim a new real GPU handoff smoke.
 No operator-inbox mail delivery or physical-phone test is claimed.
 
-## Next owned task
+## Current increment and required correction
 
-Branch `feat/local-file-creation`, `.tools/local-file-creation`, based on #403.
-Read [local file creation](local-file-creation.md). Existing local data exporters
-require a file or research input; add explicit creation from current instructions
-without dummy inputs, using the same offline Python engine and verified outputs.
-The native/controller Python input lists already allow empty; enforce the new
-intent at the shared data/conversation/agent boundaries rather than weakening
-ordinary analysis validation. Preserve legacy serialization and source/reference
-routing priorities. Do not repeat the rendered-source features or real GPU tests.
+PR #404 merged as `a66163273ab50d4429e4728f0e5e2c7cb359b899`, reviewed source
+`0de3177c6712fa84cb0e944cf8bded97159004c9`. The controller is deployed from
+`.tools/ui-local-file-creation-20261024`, with backup/auth/IDs/native PID preserved.
+Normal 3278 Python cases (3269 pass/nine skip), 724 UI tests, exact image/Compose,
+compiled desktop/mobile and actual CPU creation/repair/workbook follow-up pass.
+However its first actual local-model qualification FAILED before Python: the model
+listed mandatory CSV/JSON in addition to the three allowed optional exports.
+Do not report the whole feature real-qualified. The QA conversation is archived
+and original model preset restored; full failed evidence is retained.
 
-Candidate implementation spans schemas, frozen zero-input validation,
-creation-specific generation, shared Files & data operation controls, clear direct
-routing/disabled drafts and verified created-workbook/CSV follow-ups. Full local
-3278 backend/Runner cases pass (3269 passes/nine opt-in skips), as do Ruff and 724
-UI tests with format/lint/types/build. Exact image/assets/three Compose variants
-and compiled 1440/390 first-send/download/reuse/reload/Stop pass. Real native CPU
-proof uses injected inference: all ten CSV/XLSX rows, PNG, one intentional-failure
-repair and a follow-up total of 55 pass. Original failed verifier assumptions are
-retained; no product failure was waived. Native source is unchanged.
-PR #404 is open against develop. Finish full review/merge, backed-up controller
-rollout and actual local-model creation qualification. Live remains #403 until
-`data/acceptance/local-file-creation-20261024/post-deployment-qualified.json` passes.
+Branch `fix/data-output-declarations`, `.tools/data-output-declarations`, removes
+only redundant exact mandatory names from the generated Script declaration,
+retaining bounded unique input and the same strict native optional allowlist.
+Metadata/event keep the redundant declarations inspectable. Eleven regression
+cases pass. Finish native CPU replay of the saved actual response, full applicable
+local checks, PR review/merge and backed-up controller rollout. Then rerun actual
+local-model zero-input creation and independently check CSV/XLSX cells/PNG; optional
+report.txt is allowed and must not make the verifier falsely reject correct files.
+Proof directory: `data/acceptance/data-output-declarations-20261024`.
+Full-platform goal stays active; no subagents or extra model downloads.
 
 ## Preserved work and operations
 
