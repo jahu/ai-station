@@ -14,6 +14,7 @@ from pydantic import (
 )
 
 from app.data_schema import AgentDataScope, ResearchDataScope
+from app.document_schema import AgentDocumentScope
 from app.http_fetch import reviewed_urls
 
 
@@ -59,6 +60,7 @@ class DataScope(AgentDataScope):
     allow_empty_analysis: ClassVar[bool] = True
     input_artifact_ids: list[UUID] = Field(default_factory=list, max_length=8)
     research: DataResearchSelection | None = None
+    documents: AgentDocumentScope | None = None
     model: str = Field(default="auto", pattern=r"^(auto|llamacpp:[0-9a-f-]{36})$")
     maximum_runtime: int = Field(default=600, ge=5, le=3600, strict=True)
 
@@ -72,9 +74,11 @@ class DataScope(AgentDataScope):
     @model_validator(mode="after")
     def inputs_or_sources(self):
         if self.operation == "create":
-            if self.research is not None:
-                raise ValueError("Create files uses instructions; choose analysis for public sources")
-        elif self.research is not None:
+            if self.context_tools():
+                raise ValueError(
+                    "Create files uses instructions; choose analysis for public sources or documents"
+                )
+        elif self.context_tools():
             ResearchDataScope(input_artifact_ids=self.input_artifact_ids, max_repairs=self.max_repairs)
         elif not self.input_artifact_ids:
             raise ValueError("Choose inspected data files or explicit public research")
@@ -85,12 +89,19 @@ class DataScope(AgentDataScope):
         value = handler(self)
         if self.research is None:
             value.pop("research", None)
+        if self.documents is None:
+            value.pop("documents", None)
         if self.operation == "analyze":
             value.pop("operation", None)
         return value
 
+    def context_tools(self):
+        return (["read_documents"] if self.documents else []) + (
+            self.research.tools() if self.research else []
+        )
+
     def files(self):
-        kind = ResearchDataScope if self.research is not None else AgentDataScope
+        kind = ResearchDataScope if self.context_tools() else AgentDataScope
         return kind(
             input_artifact_ids=self.input_artifact_ids,
             max_repairs=self.max_repairs,

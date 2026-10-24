@@ -123,7 +123,7 @@ def source_reference(session, user, root):
     state = result.parameters.get("agent_data") or {}
     python = session.get(Run, result.parameters.get("python_run_id", ""))
     ids = [str(aid) for aid in scope.input_artifact_ids]
-    if scope.research:
+    if scope.context_tools():
         from app.agent_schema import AgentSettings
         from app.data_research import verify_research
 
@@ -161,7 +161,7 @@ def source_reference(session, user, root):
         raise ValueError("The completed result does not belong to its original inputs")
     original = (
         freeze_inputs(session, scope.files(), research=True)
-        if scope.research
+        if scope.context_tools()
         else freeze_inputs(session, scope.files())
     )
     if original != root.parameters.get("data_inputs"):

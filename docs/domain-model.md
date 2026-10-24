@@ -159,3 +159,11 @@ read_documents context Run owns extracted text and a JSON capture, with explicit
 parents and extraction/truncation metadata. A shorter observation is supplied to
 models; offline Python can adopt the verified complete capture. Tool-call windows
 are stored with the report's exact recorded call and capture artifact.
+
+## Conversation-selected documents
+
+DataScope.documents is an optional AgentDocumentScope, bound to the submitted user
+message and orchestration parameters. Absent scope is omitted to preserve existing
+request/receipt identities. A shared ordered context-tools method allows seven
+optional data files plus one complete captured-JSON input. Context-free creation
+rejects selected documents. No new database table/column or Agent row is required.

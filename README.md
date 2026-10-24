@@ -766,3 +766,14 @@ captured text and the recorded source, with extraction/excerpt limits visible.
 PDF limits: 8 MiB, 64 pages; text/Markdown: 256 KiB. Image-only/scanned PDFs need
 OCR and are rejected here. Uploading/selecting files never starts a workload.
 See [document contracts and qualification](docs/plans/agent-document-context.md).
+
+### Analyze documents in a conversation
+
+Choose **Files & data** in either Chat or Work, expand **PDF & text documents**
+and upload/drop a file or select it from Library. Describe the analysis and Send.
+The existing local workflow returns an answer, table/downloads and document sources
+in the conversation, without creating a persistent Agent. CSV/Excel/JSON inputs
+and reviewed public sources can be added when useful. Send waits for uploads.
+Follow-up analysis reuses the checked capture as offline data; it grants no new
+access to the original documents or websites. See
+[conversation document scope](docs/plans/conversation-document-context.md).

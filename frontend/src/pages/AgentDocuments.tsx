@@ -1,4 +1,4 @@
-import { useId, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { useMutation, useQueries, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { FileText, Upload, X } from "lucide-react";
@@ -12,10 +12,14 @@ export default function AgentDocuments({
   value,
   disabled,
   onChange,
+  onUploading,
+  context = "agent",
 }: {
   value?: DocumentScope | null;
   disabled: boolean;
   onChange: (value: DocumentScope | null) => void;
+  onUploading?: (busy: boolean) => void;
+  context?: "agent" | "analysis";
 }) {
   const id = useId(),
     file = useRef<HTMLInputElement>(null),
@@ -61,6 +65,10 @@ export default function AgentDocuments({
       }
     },
   });
+  useEffect(() => {
+    onUploading?.(upload.isPending);
+    return () => onUploading?.(false);
+  }, [upload.isPending, onUploading]);
   const busy = disabled || upload.isPending;
   return (
     <section
@@ -76,8 +84,11 @@ export default function AgentDocuments({
         <FileText size={17} /> Selected documents
       </h3>
       <p className="muted">
-        Upload or drop PDFs, text and Markdown, or choose stored files. The
-        agent reads only this selection. Originals stay unchanged.
+        Upload or drop PDFs, text and Markdown, or choose stored files. The{" "}
+        {context === "agent"
+          ? "agent reads only this selection."
+          : "analysis reads only this selection."}{" "}
+        Originals stay unchanged.
       </p>
       <div className="row agent-data-actions">
         <input
@@ -86,7 +97,11 @@ export default function AgentDocuments({
           accept=".pdf,.txt,.md"
           multiple
           hidden
-          aria-label="Upload agent documents"
+          aria-label={
+            context === "agent"
+              ? "Upload agent documents"
+              : "Upload analysis documents"
+          }
           disabled={busy || ids.length >= 4}
           onChange={(e) => {
             const selected = Array.from(e.target.files ?? []);
@@ -147,7 +162,11 @@ export default function AgentDocuments({
           })}
         </ul>
       ) : (
-        <p className="muted">Choose documents before enabling this tool.</p>
+        <p className="muted">
+          {context === "agent"
+            ? "Choose documents before enabling this tool."
+            : "Choose documents to supply text to this analysis."}
+        </p>
       )}
       <p className="muted">
         Up to 4 files · PDF: 8 MB, 64 pages · text: 256 KB. Text extraction is
