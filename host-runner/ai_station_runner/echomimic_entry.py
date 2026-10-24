@@ -37,7 +37,8 @@ def main():
     size = int(arguments[arguments.index("--sample_size") + 1])
     from ai_station_runner.echo_motion import flow_sigma, profile_key, validate_checkpoint
 
-    model_root = Path(arguments[arguments.index("--model_name") + 1]).parent
+    base_model = Path(arguments[arguments.index("--model_name") + 1])
+    model_root = base_model.parent
     if options.motion_output and profile_key(options.runtime_dir, model_root) != options.motion_profile:
         raise ValueError("Avatar model/config observation changed before inference")
 
@@ -202,7 +203,7 @@ def main():
     if options.station_mapped_run_id:
         from ai_station_runner.echo_loading import mapped_loading
 
-        loading = mapped_loading(inference, model_root)
+        loading = mapped_loading(inference, base_model)
     with loading:
         inference.main()
     output = Path(options.output_path)
