@@ -1,3 +1,14 @@
+> Current increment: [selected analysis action](analysis-agent-action.md), PR #414,
+> branch `feat/analysis-agent-action`, base #413. Completed data results open a
+> focused schedule dialog; the exact clicked older source is retained. The main
+> composer and saved Chat mode are unchanged. Typed references cannot cross
+> conversation/source boundaries. Compiled 1440/390 flows passed with six actual
+> native offline Python jobs and injected inference/catalog/public responses.
+> Full gate and live status: `data/acceptance/analysis-agent-action-20261024`.
+> #413 was merged and deployed with post-deployment qualification. Use shared
+> `data/acceptance/safety-redeploy-20261012/deployment.json` as live authority.
+> Preserve the root Memory WIP and native Runner/model containers.
+
 > Current owned increment: `.tools/conversation-data-agent-draft`, branch
 > `feat/conversation-data-agent-draft`, base #412 (`ed6cab6`).
 > [Analysis-to-agent](conversation-data-agent-draft.md) reuses the local Agent Factory

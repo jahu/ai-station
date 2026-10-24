@@ -25,3 +25,19 @@ foreign/stale/mixed/wrong-mode scopes fail; receipt replay creates one draft;
 legacy fingerprints stay unchanged. Verify result action/dialog/cancel/failure
 retry and preserved unsent text, then full required gates and compiled desktop/
 mobile flow using isolated storage and actual native offline Python.
+
+## Qualification
+
+Source `feeb82c` passed 31 focused analysis-agent contracts and 37 focused UI
+contracts, including prior Chat/data cases. The exact compiled image passed
+1440/390-pixel browser flows with two completed analyses per conversation: the
+clicked older result was retained, Cancel submitted nothing, and preparing the
+draft preserved unsent composer text and the saved Chat mode. Explicit review and
+enable led to actual scheduler ticks at forced due instants, fresh private agent
+workspaces and fresh reviewed public-source captures. Six actual native offline
+Python jobs completed. Inference/catalog/public HTTP responses were injected;
+no GPU, production-record or physical-phone testing is claimed.
+
+Full normal Python/Runner and frontend gates and final release review are tracked
+under `data/acceptance/analysis-agent-action-20261024`; consult its final gate
+reports and post-deployment qualification before treating PR #414 as live.
