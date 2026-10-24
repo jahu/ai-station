@@ -241,3 +241,20 @@ def test_same_execution_is_not_quoted_twice_after_a_busy_run_receipt(saved, monk
         reply = db.scalar(select(Run).where(Run.executor_type == "chat"))
         assert len(reply.parameters["agent_result_sources"]) == 1
         assert str(reply.parameters["messages"]).count("Agent result reference (") == 1
+
+
+def test_newer_unfinished_execution_does_not_reuse_an_older_completed_report(saved, monkeypatch):
+    completed(saved, monkeypatch)
+    enable(saved, require_approval=True)
+    newer = send(saved)
+    step()
+    waiting = result(saved, newer["id"])["agent_control_run"]
+    assert waiting["status"] == "waiting_for_approval"
+    followup(saved)
+    step()
+    with session_factory()() as db:
+        reply = db.scalar(select(Run).where(Run.executor_type == "chat"))
+        sources = reply.parameters["agent_result_sources"]
+        assert len(sources) == 1 and sources[0]["workflow_run_id"] == waiting["id"]
+        assert not sources[0]["available"]
+        assert REPORT not in str(reply.parameters["messages"])

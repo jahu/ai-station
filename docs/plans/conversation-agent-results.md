@@ -12,8 +12,8 @@ existing bounded canonical/hash-checked artifact reader. Include a bounded quote
 excerpt plus source/control/workflow/report/artifact IDs, checksum and truncation
 metadata in the new Run's frozen context. Missing, changed, unfinished, failed or
 ambiguous sources produce an explicit unavailable/status reference, never invented
-report contents or fallback to an older output. Deduplicate a repeated reference
-to the same execution and retain only sources actually inside the context window.
+report contents or fallback to an older output. Keep the latest referenced execution per agent: a newer unfinished result must
+not fall back to an older completed report. Deduplicate repeated references and retain only sources actually inside the context window.
 
 Reference data grants no tool, model, source-file, host-path or network authority.
 The current instruction and existing Chat/Work policy still decide actions.

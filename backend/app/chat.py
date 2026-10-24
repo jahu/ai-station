@@ -413,10 +413,10 @@ def enqueue(
         agent_result = agent_result_reference(
             session, message, budget=min(12000, max(0, budget - len(content) - 2))
         )
-        if agent_result and agent_result[1]["workflow_run_id"] not in agent_result_seen:
+        if agent_result and agent_result[1]["agent_id"] not in agent_result_seen:
             content += agent_result[0]
             agent_result_sources.append(agent_result[1])
-            agent_result_seen.add(agent_result[1]["workflow_run_id"])
+            agent_result_seen.add(agent_result[1]["agent_id"])
         if len(content) + 2 > budget:
             break
         context.append({"role": message.role, "content": content, "_message_id": message.id})

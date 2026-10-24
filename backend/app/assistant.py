@@ -325,9 +325,9 @@ def planner_context(session, conversation, user):
         agent_result = agent_result_reference(
             session, message, budget=min(2000, max(0, budget - len(content)))
         )
-        if agent_result and agent_result[1]["workflow_run_id"] not in agent_result_seen:
+        if agent_result and agent_result[1]["agent_id"] not in agent_result_seen:
             content += agent_result[0]
-            agent_result_seen.add(agent_result[1]["workflow_run_id"])
+            agent_result_seen.add(agent_result[1]["agent_id"])
         if content:
             context.append({"role": message.role, "content": content})
             budget -= len(content)
