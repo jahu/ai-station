@@ -87,7 +87,7 @@ it("queues an explicit backup and does not offer restore or rollout", async () =
   expect(
     screen.queryByRole("button", { name: /restore|rollout|deploy/i }),
   ).toBeNull();
-  await screen.findByText(/Restore unpublished/);
+  await screen.findByText(/In-app restore unpublished/);
   await screen.findByText(/launcher never passes --volumes/);
   fireEvent.click(screen.getByRole("button", { name: "Back up SQLite" }));
   await waitFor(() => expect(queued).toBe(true));
@@ -493,3 +493,57 @@ it("moves through interrupted Runs with arrow keys", async () => {
   });
   expect(first.tabIndex).toBe(0);
 });
+
+for (const issue of [null, "changed-hash", "failed-integrity", "invalid-id"]) {
+  it(`offers only checked offline recovery instructions (${issue ?? "valid"})`, async () => {
+    const id =
+      issue === "invalid-id"
+        ? "untrusted; echo injected"
+        : "12345678-1234-1234-1234-123456789012";
+    const digest = "a".repeat(64);
+    const fetch = vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path === "/api/maintenance/backups"
+          ? {
+              items: [{ id, status: "succeeded", restore: "unpublished" }],
+              restore: "unpublished",
+            }
+          : path.startsWith("/api/maintenance/backups/")
+            ? {
+                run_id: id,
+                status: "succeeded",
+                integrity_check: issue === "failed-integrity" ? "failed" : "ok",
+                hash_matches: issue !== "changed-hash",
+                sha256: digest,
+                summary: "Inspected copy",
+                relative_path: `backups/${id}.sqlite`,
+              }
+            : readiness,
+    }));
+    mount(fetch);
+    fireEvent.click(
+      await screen.findByRole("button", { name: /Inspect copy/ }),
+    );
+    await screen.findByText(/Inspected copy/);
+    const guide = screen.queryByText("Recover this backup on the workstation");
+    if (issue) expect(guide).toBeNull();
+    else {
+      expect(guide).not.toBeNull();
+      fireEvent.click(guide!);
+      expect(guide!.closest("details")?.open).toBe(true);
+      expect(
+        screen.getByText(`./scripts/restore.sh --backup-run ${id}`),
+      ).not.toBeNull();
+      expect(
+        screen.getByText(
+          `./scripts/restore.sh --backup-run ${id} --apply --expected-sha256 ${digest}`,
+        ),
+      ).not.toBeNull();
+      expect(screen.getByText(/Devices sign in again/)).not.toBeNull();
+    }
+    expect(fetch.mock.calls.every(([path]) => !path.includes("/restore"))).toBe(
+      true,
+    );
+  });
+}

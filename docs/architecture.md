@@ -666,3 +666,13 @@ source snapshot. No persistent Agent row or new execution engine is introduced.
 excerpts when a capture becomes an ordinary offline input. These bounded,
 explicitly partial previews expose response bodies beyond generic nested-cell
 prefixes; code still reads the complete input and inherits no public tool scope.
+
+## Offline metadata recovery
+
+Database replacement belongs to the host operator lifecycle, never a worker or
+request handler. `scripts/station_recovery` separates read-only inspection/private
+normalization, host quiescence, durable atomic replacement and explicit CLI input.
+Alembic supports an injected staging connection without touching the configured
+live engine. Pending receipts cooperate with the launcher lock/startup guard.
+Normal Tasks/Runs/Events/Artifacts remain the workload architecture; recovery
+adds no execution service or shell endpoint. [Recovery contract](plans/offline-database-recovery.md).

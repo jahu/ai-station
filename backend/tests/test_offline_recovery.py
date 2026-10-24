@@ -19,10 +19,10 @@ from app.config import get_settings
 from app.db import session_factory
 from app.models import Agent, Run
 from app.runs import create_run, create_task
+from station_recovery import cli, host, operation, storage
 
-restore = runpy.run_path(str(Path(__file__).resolve().parents[2] / "scripts/restore.py"))
-inspect_backup = restore["inspect_backup"]
-RecoveryError = restore["RecoveryError"]
+inspect_backup = storage.inspect_backup
+RecoveryError = storage.RecoveryError
 
 
 @pytest.fixture
@@ -142,7 +142,10 @@ def test_container_guard_uses_data_mounts_without_reading_secrets_or_stopping_se
         assert ".Mounts" in argv[3] and ".Config" not in argv[3]
         return SimpleNamespace(
             stdout=json.dumps(
-                {"State": {"Running": relationship != "stopped"}, "Mounts": [{"Source": str(source)}]}
+                {
+                    "State": {"Running": relationship != "stopped", "Paused": False, "Restarting": False},
+                    "Mounts": [{"Source": str(source)}],
+                }
             )
             + "\n"
         )
@@ -150,9 +153,9 @@ def test_container_guard_uses_data_mounts_without_reading_secrets_or_stopping_se
     monkeypatch.setattr(subprocess, "run", docker)
     if relationship in {"same", "parent", "child"}:
         with pytest.raises(RecoveryError, match="Stop containers"):
-            restore["assert_no_containers"](root)
+            host.assert_no_containers(root)
     else:
-        restore["assert_no_containers"](root)
+        host.assert_no_containers(root)
     assert [c[1] for c in calls] == ["ps", "inspect"]
 
 
@@ -165,15 +168,15 @@ def test_native_guard_never_assumes_unknown_ownership_means_a_dead_process(backu
     (root / "runtime/processes.json").write_text(json.dumps({"run": record}))
     monkeypatch.setattr(processes, "_group_alive", lambda _record: state == "alive")
     if state == "gone":
-        restore["assert_no_native_groups"](root)
+        host.assert_no_native_groups(root)
     else:
         with pytest.raises(RecoveryError):
-            restore["assert_no_native_groups"](root)
+            host.assert_no_native_groups(root)
 
 
 def test_active_launcher_refuses_recovery_before_host_probes(backup, monkeypatch):
     root, _, _ = backup
-    globals_ = restore["offline_guard"].__wrapped__.__globals__
+    globals_ = host.offline_guard.__wrapped__.__globals__
 
     def unexpected(_root):
         raise AssertionError("Do not inspect or mutate an actively supervised deployment")
@@ -183,7 +186,7 @@ def test_active_launcher_refuses_recovery_before_host_probes(backup, monkeypatch
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         with pytest.raises(RecoveryError, match="supervisor"):
-            with restore["offline_guard"](root):
+            with host.offline_guard(root):
                 raise AssertionError("Recovery must not start")
     finally:
         os.close(fd)
@@ -196,25 +199,26 @@ def test_open_database_handle_blocks_recovery_even_without_a_compose_service(bac
         [sys.executable, "-c", code, str(root / "db/ai-station.sqlite")], stdout=subprocess.PIPE, text=True
     )
     monkeypatch.setitem(
-        restore["assert_no_database_users"].__globals__,
+        host.assert_no_database_users.__globals__,
         "process_entries",
         lambda: [Path("/proc") / str(process.pid)],
     )
     try:
         assert process.stdout.readline().strip() == "ready"
         with pytest.raises(RecoveryError, match="database connection"):
-            restore["assert_no_database_users"](root)
+            host.assert_no_database_users(root)
     finally:
         process.terminate()
         process.wait(timeout=5)
-    restore["assert_no_database_users"](root)
+    host.assert_no_database_users(root)
 
 
 @pytest.fixture
 def fake_host(monkeypatch):
-    globals_ = restore["restore_database"].__globals__
+    globals_ = operation.restore_database.__globals__
     for key in ("assert_no_containers", "assert_no_native_groups", "assert_no_database_users"):
         monkeypatch.setitem(globals_, key, lambda _root: None)
+        monkeypatch.setitem(host.offline_guard.__wrapped__.__globals__, key, lambda _root: None)
     return globals_
 
 
@@ -224,7 +228,7 @@ def test_actual_database_swap_preserves_a_rollback_copy_and_pauses_restored_work
     root, bid, path = backup
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     reset_engine()
-    result = restore["restore_database"](root, bid, digest)
+    result = operation.restore_database(root, bid, digest)
     assert result["applied"] and result["phase"] == "applied" and not result["automatic_replay"]
     assert result["actions"]["agents_paused"] == result["actions"]["runs_interrupted"] == 1
     assert result["rollback_backup_id"] == result["recovery_id"]
@@ -266,9 +270,9 @@ def test_interrupted_swap_retains_its_approved_stage_and_can_finish_without_repl
         patch.setattr(os, "replace", replace)
         patch.setitem(fake_host, "private_json", json_write)
         with pytest.raises(OSError, match="simulated interruption"):
-            restore["restore_database"](root, bid, digest)
-    pending = restore["read_private_json"](root / "runtime/recovery-pending.json")
-    result = restore["resume_recovery"](root, pending["recovery_id"])
+            operation.restore_database(root, bid, digest)
+    pending = operation.read_private_json(root / "runtime/recovery-pending.json")
+    result = operation.resume_recovery(root, pending["recovery_id"])
     assert result["applied"] and result["phase"] == "applied"
     assert not (root / "runtime/recovery-pending.json").exists()
     with closing(sqlite3.connect(root / "db/ai-station.sqlite")) as current:
@@ -276,7 +280,10 @@ def test_interrupted_swap_retains_its_approved_stage_and_can_finish_without_repl
         assert current.execute("SELECT status FROM runs").fetchone() == ("interrupted",)
 
 
-def test_recovery_of_a_corrupt_current_database_keeps_raw_originals_and_requires_new_auth(backup, fake_host):
+@pytest.mark.parametrize("damaged", [b"damaged original", b""])
+def test_recovery_of_a_corrupt_current_database_keeps_raw_originals_and_requires_new_auth(
+    backup, fake_host, damaged
+):
     from app.db import reset_engine
     from app.operator_auth import verify_password
     from sqlalchemy import URL, create_engine
@@ -284,19 +291,54 @@ def test_recovery_of_a_corrupt_current_database_keeps_raw_originals_and_requires
 
     root, bid, path = backup
     reset_engine()
-    (root / "db/ai-station.sqlite").write_bytes(b"damaged original")
+    (root / "db/ai-station.sqlite").write_bytes(damaged)
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     with pytest.raises(RecoveryError, match="fresh operator password"):
-        restore["restore_database"](root, bid, digest)
-    result = restore["restore_database"](root, bid, digest, password="new-disaster-recovery-password")
+        operation.restore_database(root, bid, digest)
+    result = operation.restore_database(root, bid, digest, password="new-disaster-recovery-password")
     assert result["applied"] and result["rollback_backup_id"] is None
-    assert (root / "recovery" / result["recovery_id"] / "original.sqlite").read_bytes() == b"damaged original"
+    assert (root / "recovery" / result["recovery_id"] / "original.sqlite").read_bytes() == damaged
     engine = create_engine(URL.create("sqlite", database=str(root / "db/ai-station.sqlite")))
     try:
         with Session(engine) as session:
             assert verify_password(session, "new-disaster-recovery-password")
     finally:
         engine.dispose()
+
+
+def test_current_future_schema_refuses_replacement_even_with_a_new_password(backup, fake_host):
+    from app.db import reset_engine
+
+    root, bid, path = backup
+    reset_engine()
+    target = root / "db/ai-station.sqlite"
+    with closing(sqlite3.connect(target)) as current:
+        current.execute("UPDATE alembic_version SET version_num='unknown-future-version'")
+        current.commit()
+    original = target.read_bytes()
+    with pytest.raises(RecoveryError, match="compatible with the current database"):
+        operation.restore_database(root, bid, operation.file_hash(path), password="new-operator-password")
+    assert target.read_bytes() == original
+    assert not (root / "runtime/recovery-pending.json").exists()
+
+
+def test_foreign_key_damaged_current_database_retains_raw_copy_without_advertising_rollback(
+    backup, fake_host
+):
+    from app.db import reset_engine
+
+    root, bid, path = backup
+    reset_engine()
+    target = root / "db/ai-station.sqlite"
+    with closing(sqlite3.connect(target)) as current:
+        current.execute("UPDATE runs SET task_id=?", (str(uuid4()),))
+        current.commit()
+    result = operation.restore_database(root, bid, operation.file_hash(path))
+    assert result["applied"] and result["rollback_backup_id"] is None
+    raw = root / "recovery" / result["recovery_id"] / "original.sqlite"
+    with closing(sqlite3.connect(raw)) as original:
+        assert original.execute("PRAGMA foreign_key_check").fetchone() is not None
+    operation.verify_standalone(target, normalized=True)
 
 
 def test_migration_receives_only_the_private_connection_and_supports_known_ancestors(backup):
@@ -308,7 +350,7 @@ def test_migration_receives_only_the_private_connection_and_supports_known_ances
     engine = create_engine(URL.create("sqlite", database=str(stage)))
     try:
         with engine.begin() as connection:
-            config = restore["migration_config"]()
+            config = storage.migration_config()
             config.attributes["connection"] = connection
             command.upgrade(config, "0032")
     finally:
@@ -318,7 +360,7 @@ def test_migration_receives_only_the_private_connection_and_supports_known_ances
     inspected = inspect_backup(root, bid)
     assert inspected["schema_revision"] == "0032"
     assert inspected["target_schema_revision"] == "0033" and inspected["migration_required"]
-    restore["migrate_copy"](stage)
+    storage.migrate_copy(stage)
     with closing(sqlite3.connect(stage)) as connection:
         assert connection.execute("SELECT version_num FROM alembic_version").fetchone() == ("0033",)
         assert connection.execute("SELECT count(*) FROM tasks").fetchone() == (0,)
@@ -368,8 +410,8 @@ def test_staged_recovery_preserves_current_password_and_never_resumes_work_or_ol
             save_secret(session, "current-operator-password")
             session.add(Setting(key="operator_login_budget", value={"attempts": ["current"]}))
             session.commit()
-        security = restore["current_security"](root / "db/ai-station.sqlite")
-        result = restore["normalize_copy"](stage, security, bid)
+        security = storage.current_security(root / "db/ai-station.sqlite")
+        result = storage.normalize_copy(stage, security, bid)
         assert result == {
             "agents_paused": 1,
             "runs_interrupted": 1,
@@ -417,9 +459,9 @@ def test_unreadable_current_security_requires_a_fresh_password_without_reviving_
     shutil.copyfile(source, stage)
     before = stage.read_bytes()
     with pytest.raises(RecoveryError, match="fresh operator password"):
-        restore["normalize_copy"](stage, None, bid)
+        storage.normalize_copy(stage, None, bid)
     assert stage.read_bytes() == before
-    result = restore["normalize_copy"](stage, None, bid, password="fresh-recovery-password")
+    result = storage.normalize_copy(stage, None, bid, password="fresh-recovery-password")
     assert result["operator_password_reset"] and not result["automatic_replay"]
     engine = create_engine(URL.create("sqlite", database=str(stage)))
     try:
@@ -427,3 +469,162 @@ def test_unreadable_current_security_requires_a_fresh_password_without_reviving_
             assert verify_password(session, "fresh-recovery-password")
     finally:
         engine.dispose()
+
+
+def test_changed_digest_stops_before_creating_recovery_files_or_taking_a_lock(backup):
+    root, bid, _ = backup
+    files = sorted(p.relative_to(root) for p in root.rglob("*"))
+    with pytest.raises(RecoveryError, match="digest changed"):
+        operation.restore_database(root, bid, "0" * 64)
+    assert sorted(p.relative_to(root) for p in root.rglob("*")) == files
+
+
+def test_concurrent_source_update_is_preserved_instead_of_overwritten(backup, fake_host, monkeypatch):
+    from app.db import reset_engine
+
+    root, bid, source = backup
+    reset_engine()
+    original = operation.normalize_copy
+
+    def update_during_staging(*args, **kwargs):
+        result = original(*args, **kwargs)
+        with closing(sqlite3.connect(root / "db/ai-station.sqlite")) as connection:
+            connection.execute("UPDATE agents SET name='Concurrent update'")
+            connection.commit()
+        return result
+
+    monkeypatch.setattr(operation, "normalize_copy", update_during_staging)
+    with pytest.raises(RecoveryError, match="changed during preparation"):
+        operation.restore_database(root, bid, operation.file_hash(source))
+    with closing(sqlite3.connect(root / "db/ai-station.sqlite")) as connection:
+        assert connection.execute("SELECT name,enabled FROM agents").fetchone() == ("Concurrent update", 1)
+    assert not (root / "runtime/recovery-pending.json").exists()
+
+
+@pytest.fixture
+def interrupted_recovery(backup, fake_host, monkeypatch):
+    from app.db import reset_engine
+
+    root, bid, path = backup
+    reset_engine()
+    replace = os.replace
+
+    def stop_before_swap(source, target):
+        if Path(source).name.startswith(".restore-"):
+            raise OSError("simulated interruption")
+        return replace(source, target)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(os, "replace", stop_before_swap)
+        with pytest.raises(OSError, match="simulated interruption"):
+            operation.restore_database(root, bid, operation.file_hash(path))
+    return root, operation.pending_recovery(root)
+
+
+def test_abort_keeps_original_state_and_only_removes_its_verified_stage(interrupted_recovery):
+    root, report = interrupted_recovery
+    result = operation.resume_recovery(root, report["recovery_id"], abort=True)
+    assert result["phase"] == "aborted" and not result["applied"]
+    assert not (root / "runtime/recovery-pending.json").exists()
+    assert not (root / report["stage_relative"]).exists()
+    with closing(sqlite3.connect(root / "db/ai-station.sqlite")) as connection:
+        assert connection.execute("SELECT enabled FROM agents").fetchone() == (1,)
+
+
+def test_resume_rejects_changed_receipt_before_replacing_original_database(interrupted_recovery):
+    root, report = interrupted_recovery
+    current = operation.file_hash(root / "db/ai-station.sqlite")
+    report["staged_sha256"] = "0" * 64
+    operation.private_json(root / "recovery" / report["recovery_id"] / "receipt.json", report)
+    with pytest.raises(RecoveryError, match="changed after its original approval"):
+        operation.resume_recovery(root, report["recovery_id"])
+    assert operation.file_hash(root / "db/ai-station.sqlite") == current
+
+
+def test_resume_preserves_a_new_unapproved_wal_instead_of_deleting_it(interrupted_recovery):
+    root, report = interrupted_recovery
+    wal = root / "db/ai-station.sqlite-wal"
+    wal.write_bytes(b"new unknown transaction")
+    with pytest.raises(RecoveryError, match="sidecar changed"):
+        operation.resume_recovery(root, report["recovery_id"])
+    assert wal.read_bytes() == b"new unknown transaction"
+
+
+def test_normal_startup_refuses_pending_or_symlinked_recovery_before_starting_services(backup):
+    root, _, _ = backup
+    launch = runpy.run_path(str(storage.ROOT / "scripts/launch.py"))
+    launch["ensure_recovery_finished"](root / "runtime")
+    marker = root / "runtime/recovery-pending.json"
+    marker.write_text("unreadable pending metadata")
+    with pytest.raises(RuntimeError, match="recovery is unfinished"):
+        launch["ensure_recovery_finished"](root / "runtime")
+    marker.unlink()
+    marker.symlink_to(root / "missing.json")
+    with pytest.raises(RuntimeError, match="recovery is unfinished"):
+        launch["ensure_recovery_finished"](root / "runtime")
+
+
+def test_cli_defaults_to_inspection_and_requires_explicit_apply_digest(backup, capsys):
+    root, bid, path = backup
+    original = path.read_bytes()
+    assert cli.main(["--data-root", str(root), "--backup-run", bid]) == 0
+    output = json.loads(capsys.readouterr().out)
+    assert not output["applied"] and output["sha256"] == hashlib.sha256(original).hexdigest()
+    with pytest.raises(SystemExit) as exit_:
+        cli.main(["--data-root", str(root), "--backup-run", bid, "--apply"])
+    assert exit_.value.code == 2
+    assert path.read_bytes() == original
+
+
+def test_cli_never_logs_private_sql_parameters_when_staging_fails(backup, fake_host, monkeypatch, capsys):
+    from sqlalchemy.exc import SQLAlchemyError
+
+    root, bid, path = backup
+    original = (root / "db/ai-station.sqlite").read_bytes()
+
+    def failed(*_args, **_kwargs):
+        raise SQLAlchemyError("private-password-hash-and-token-values")
+
+    monkeypatch.setattr(operation, "normalize_copy", failed)
+    assert (
+        cli.main(
+            [
+                "--data-root",
+                str(root),
+                "--backup-run",
+                bid,
+                "--apply",
+                "--expected-sha256",
+                operation.file_hash(path),
+            ]
+        )
+        == 1
+    )
+    output = capsys.readouterr()
+    assert "private-password" not in output.err and "private-password" not in output.out
+    assert (root / "db/ai-station.sqlite").read_bytes() == original
+
+
+def test_finish_after_swap_preserves_unknown_wal_instead_of_ignoring_it(backup, fake_host, monkeypatch):
+    from app.db import reset_engine
+
+    root, bid, path = backup
+    reset_engine()
+    original_json = operation.private_json
+
+    def stop_after_swap(path, value):
+        if path.name == "receipt.json" and value["phase"] == "applied":
+            raise OSError("interrupted after actual replacement")
+        original_json(path, value)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(operation, "private_json", stop_after_swap)
+        with pytest.raises(OSError, match="after actual replacement"):
+            operation.restore_database(root, bid, operation.file_hash(path))
+    report = operation.pending_recovery(root)
+    wal = root / "db/ai-station.sqlite-wal"
+    wal.write_bytes(b"unknown post-swap transaction")
+    with pytest.raises(RecoveryError, match="appeared after replacement"):
+        operation.resume_recovery(root, report["recovery_id"])
+    assert wal.read_bytes() == b"unknown post-swap transaction"
+    assert (root / "runtime/recovery-pending.json").exists()

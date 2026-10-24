@@ -60,6 +60,10 @@ root, then start an isolated API on the restored copy and inspect retained data
 and authentication. Never restore over the operator's production database for a
 smoke test. Full local checks and reviewed PR-to-develop gates remain required.
 
-This plan does not claim recovery is implemented. The whole-platform objective
+Implementation and focused disposable tests now exist on `feat/offline-database-recovery`;
+full validation, review and deployment remain required. Actual host CLI and
+isolated HTTP recovery/rollback passed under
+`data/acceptance/offline-recovery-20261024/disposable-cli-result.json`.
+This is not a production database restore. The whole-platform objective
 remains active, including general-agent composition, media/resource quality,
 recognition-quality approval and actual private remote access.

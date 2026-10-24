@@ -15,7 +15,7 @@ Ctrl+C on the owned supervisor stops only that deployment's containers and, if t
 3. Stop the owned supervisor (Ctrl+C) or `docker compose down` without `--volumes`.
 4. Check out a reviewed commit on `develop` in a new isolated worktree if you are replacing a running preview. Do not treat preview `:8765` as containing later PRs.
 5. Rebuild the application image (`./scripts/start.sh`, or `--no-build` only when that image already contains the reviewed commit).
-6. Alembic runs on API startup against the existing database. Migrations are additive. Do not copy a backup over the live file unless you are performing a manual, out-of-band recovery you understand.
+6. Alembic runs on API startup against the existing database. Migrations are additive. For a necessary database recovery, use the stopped-service procedure below; never copy over a live WAL database.
 7. Open `http://127.0.0.1:8765` and confirm health. Existing conversations, Runs, artifacts and settings remain.
 
 This path does not retag unrelated images, migrate other Docker projects, pull GGUFs, or apply a changed checkout automatically.
@@ -28,7 +28,84 @@ This path does not retag unrelated images, migrate other Docker projects, pull G
 
 `POST /api/maintenance/backups` enqueues a Task/Run (`station.backup`, executor `sqlite_backup`) with `manage_station` only. Agents do not receive that permission. After releasing the worker transaction, the executor copies the live SQLite file with `VACUUM INTO` into `backups/<run-id>.sqlite`, runs `PRAGMA integrity_check` on the copy, and stores that file plus a JSON report as artifacts. Cancellation is honored before the copy and before artifact registration; a canceled Run deletes a partial copy. Recovery never restores the copy and never retries the Run automatically (`retry_class=inspect`).
 
-`GET /api/maintenance/backups` lists recent backup Runs and their stored artifacts. That list is one keyboard sequence (arrows, Home, End, Enter inspects the backup Run) with unique Inspect names; Inspect copy and Download copy stay on the selected row. System can download the SQLite copy through the ordinary artifact file endpoint. `GET /api/maintenance/backups/{run_id}` opens the stored copy read-only, repeats `PRAGMA integrity_check`, hashes the file, and reads its Alembic revision. A hash mismatch or failed integrity check is reported; the live database is not replaced. Restore remains unpublished because swapping SQLite while the control plane holds WAL connections is unsafe.
+`GET /api/maintenance/backups` lists recent backup Runs and their stored artifacts. That list is one keyboard sequence (arrows, Home, End, Enter inspects the backup Run) with unique Inspect names; Inspect copy and Download copy stay on the selected row. System can download the SQLite copy through the ordinary artifact file endpoint. `GET /api/maintenance/backups/{run_id}` opens the stored copy read-only, repeats `PRAGMA integrity_check`, hashes the file, and reads its Alembic revision. A hash mismatch or failed integrity check is reported; the live database is not replaced. In-app restore remains unpublished because swapping SQLite while the control plane holds WAL connections is unsafe. After a successful unchanged re-check, the copy displays offline recovery instructions for the workstation.
+
+## Offline database recovery
+
+Recovery is a host administration command, separate from agent tools and HTTP
+execution. Run it from the reviewed AI Station checkout with the **same data
+configuration** as your deployment. An isolated checkout needs its own `.env`,
+an explicit `AI_STATION_DATA_HOST_PATH`, or `--data-root /absolute/path/to/data`.
+Relative configuration resolves from the checkout. Container `/data` is not the
+host data directory.
+
+1. Keep the complete original application data directory. A SQLite copy contains
+   metadata, not artifact bytes, worktrees or model weights. In Settings →
+   Maintenance, **Inspect copy** shows offline instructions only for a successful,
+   unchanged, integrity-checked backup.
+2. Inspect the intended UUID on the host. This default mode does not create files
+   or alter the database:
+
+   ```bash
+   ./scripts/restore.sh --backup-run <backup-run-uuid>
+   ```
+
+   Review its SHA-256, source/target schema, missing artifact files, record counts,
+   agents to pause and uncertain Runs. Missing original artifacts block apply.
+   Compatible older copies migrate only on a private staging connection. An
+   unknown/newer backup or current schema requires a compatible checkout.
+3. Unload AI Station-owned models in Models, finish or stop its tasks, then use
+   Ctrl+C in the owned supervisor terminal. A running launcher, containers mounting
+   this data root (including owned model/preview containers), live native process
+   groups, or open database users block apply. The recovery command inspects them;
+   it does not kill processes or stop unrelated services.
+4. Explicitly apply the exact digest reviewed in step 2:
+
+   ```bash
+   ./scripts/restore.sh --backup-run <backup-run-uuid> --apply --expected-sha256 <reviewed-sha256>
+   ```
+
+   The command preserves private raw original files under
+   `recovery/<recovery-uuid>/`, and creates a standalone rollback copy under
+   `backups/<recovery-uuid>.sqlite` when the original is structurally usable.
+   A corrupt original is retained without claiming a usable rollback copy.
+   It stages, migrates, normalizes and verifies the copy before atomic replacement.
+   A private `receipt.json` records hashes, actions and the rollback ID. No
+   credentials appear in the report; persistent paths remain data-relative.
+5. Run `./scripts/start.sh`. Current operator credentials and login rate budget
+   survive recovery. Device sessions and restored node invitation tokens are
+   revoked. All agents stay paused, pending approvals are denied, nonterminal
+   Runs become `interrupted` with inspection required, and obsolete worker/resource
+   holds are released. No workload, schedule or external side effect replays.
+   Re-enable only the definitions you reviewed; inspect interrupted history.
+
+If the current credentials are unreadable, apply requires a **new** 12–200 character
+operator password. Enter it twice at the terminal prompt, or supply a private
+user-owned `--operator-password-file /path/to/private-file` (0600/0400). Do not put
+passwords in command arguments or chat. Older backup credentials never silently
+replace a readable current password.
+
+### Interrupted recovery
+
+A durable marker prevents ordinary startup from proceeding before a prepared
+recovery is resolved. Use the same stopped-service conditions and data configuration:
+
+```bash
+./scripts/restore.sh --pending
+./scripts/restore.sh --finish <recovery-uuid>
+```
+
+Finish accepts only the originally approved unchanged stage/current file and
+receipt. It can finalize a swap that already happened, without replaying work.
+Unknown or changed WAL files and changed receipts block it. To cancel preparation
+**before replacement**, use `./scripts/restore.sh --abort <recovery-uuid>`; it keeps
+the original database and removes only its verified owned staging file. Once the
+swap happened, do not delete the pending marker or copy original files manually:
+finish first, then explicitly inspect/apply the retained rollback UUID if needed.
+
+Recovery qualification uses disposable databases and a loopback-only API, never
+an experimental restore over the operator's production database. See
+[the recovery contract](plans/offline-database-recovery.md).
 
 ## Interrupted work
 
@@ -45,4 +122,4 @@ Conservative recovery still parks uncertain dispatched work as `interrupted` aft
 - Taking over a running preview deployment
 
 Private LAN publishing is implemented separately by the launcher and Operator
-access settings. It does not enable restore, image rollout or public exposure.
+access settings. It does not enable in-app restore, image rollout or public exposure.

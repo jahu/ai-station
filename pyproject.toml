@@ -7,5 +7,6 @@ exclude = ["reference"]
 select = ["E4", "E7", "E9", "F", "I"]
 
 [tool.pytest.ini_options]
+pythonpath = ["backend", "host-runner", "scripts"]
 testpaths = ["backend/tests", "host-runner/tests"]
 asyncio_mode = "auto"
