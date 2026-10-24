@@ -88,3 +88,20 @@ with backup/persistence/model preservation. A real local-model example may follo
 when the new path needs qualification; preserve the operator preset and do not
 repeat completed rendered-page tests or download new weights. Full-platform work
 remains active after this increment.
+
+## Implemented candidate
+
+The controller omits default analyze operation from serialized scopes. All empty
+input checks use the frozen operation/research contract. One shared task selector
+preserves incompatible selected inputs; direct clear first Send and disabled agent
+drafts derive creation from the current instruction. Native Python is unchanged.
+The result checks/inspects its own CSV and optional workbook; a follow-up reads that
+owned file as ordinary analysis, not a guessed regeneration. Changed bytes, Trash
+or a changed result pointer refuse reuse. Public/current facts and existing-data
+references are not silently routed to instruction-only creation.
+
+Focused verification currently passes 34 backend cases and 28 related UI cases.
+Full-source local gates, image/compiled UI binding, actual native CPU output proof,
+PR review and deployment remain required before claiming release. The CPU proof
+uses deterministic injected Python rather than a claim of model inference; original
+failed verifier diagnostics are retained when correcting its reader assumptions.

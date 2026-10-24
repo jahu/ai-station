@@ -252,7 +252,9 @@ export function AssistantResults({
     ConversationDataScope | undefined;
   const completedData = result.data_runs?.find(
     (run) => run.status === "succeeded" && run.metadata?.data_result,
-  )?.metadata?.data_result as { input_artifact_ids?: string[] } | undefined;
+  )?.metadata?.data_result as
+    | { input_artifact_ids?: string[]; created_input_artifact_ids?: string[] }
+    | undefined;
   const hasDataResult = result.data_runs?.some(
     (run) => run.status === "succeeded" && run.metadata?.data_result,
   );
@@ -272,7 +274,8 @@ export function AssistantResults({
           {onData &&
           hasDataResult &&
           dataScope &&
-          (completedData?.input_artifact_ids?.length ||
+          (completedData?.created_input_artifact_ids?.length ||
+            completedData?.input_artifact_ids?.length ||
             dataScope.input_artifact_ids?.length) ? (
             <Button
               type="button"
@@ -281,17 +284,23 @@ export function AssistantResults({
               onClick={() =>
                 onData({
                   ...dataScope,
+                  ...(dataScope.operation === "create"
+                    ? { operation: undefined }
+                    : {}),
                   ...(dataScope.research ? { research: undefined } : {}),
                   input_artifact_ids: [
-                    ...(completedData?.input_artifact_ids ??
+                    ...(completedData?.created_input_artifact_ids ??
+                      completedData?.input_artifact_ids ??
                       dataScope.input_artifact_ids),
                   ],
                 })
               }
             >
-              {dataScope.research
-                ? "Ask about these captured data"
-                : "Ask another question about these files"}
+              {dataScope.operation === "create"
+                ? "Use the created file"
+                : dataScope.research
+                  ? "Ask about these captured data"
+                  : "Ask another question about these files"}
             </Button>
           ) : null}
           {onData && hasDataResult && dataScope?.research && (
@@ -310,8 +319,10 @@ export function AssistantResults({
             </Button>
           )}
           <p className="muted">
-            LOCAL · {result.data_model || "Automatic local model"} · Originals
-            unchanged
+            LOCAL · {result.data_model || "Automatic local model"} ·{" "}
+            {dataScope?.operation === "create"
+              ? "Created from instructions"
+              : "Originals unchanged"}
           </p>
         </>
       ) : null}
@@ -1211,7 +1222,7 @@ export default function AssistantActions({
                   variant="ghost"
                   onClick={() => resetAction("data.analyze")}
                 >
-                  Data analysis
+                  Files &amp; data
                 </Button>
               )}
               {!["audio.transcribe", "audio.analyze"].includes(

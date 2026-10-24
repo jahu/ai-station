@@ -39,6 +39,12 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Only explicit creation may omit data inputs without public research. It forbids
+input/research scope mixing and preserves legacy analysis identity. Generated
+CSV/XLSX reuse verifies the result owner, bytes and ordinary inspection; generated
+code remains offline with the same output allowlist.
+See [local file creation](plans/local-file-creation.md).
+
 A conversation grants Browser only through its frozen Data research selection,
 with exact root/source permissions and prepare/final-adoption scope validation.
 The default false option is omitted from legacy receipt serialization.

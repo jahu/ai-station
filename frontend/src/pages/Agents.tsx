@@ -183,7 +183,7 @@ const schedule = (agent: Agent) =>
 
 function toolTitle(tool: Tool) {
   if (tool.name === "create_media") return "Create media";
-  if (tool.name === "python_data") return "Data analysis";
+  if (tool.name === "python_data") return "Files & data";
   if (tool.name === "search_pages") return "Read search sources";
   return tool.name === "github_read"
     ? "GitHub repository"

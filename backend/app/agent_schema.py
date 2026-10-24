@@ -210,8 +210,12 @@ class AgentSettings(BaseModel):
         if self.data is not None and "python_data" not in self.tools:
             raise ValueError("Data inputs require the local Python data tool")
         if research_data:
+            if self.data is not None and self.data.operation == "create":
+                raise ValueError(
+                    "File creation cannot add research tools; choose analysis for public sources"
+                )
             self.data = ResearchDataScope.model_validate(self.data.model_dump() if self.data else {})
-        elif self.data is not None and not self.data.input_artifact_ids:
+        elif self.data is not None and self.data.operation != "create" and not self.data.input_artifact_ids:
             raise ValueError("Select data files when no public research is reviewed")
         if self.enabled and "python_data" in self.tools and self.data is None:
             raise ValueError("Select data files before enabling the Python agent")

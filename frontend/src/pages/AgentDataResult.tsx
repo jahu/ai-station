@@ -5,6 +5,7 @@ import { Badge } from "../components/common";
 import { Button } from "../components/ui/button";
 
 type Result = {
+  operation?: "create";
   answer: string;
   columns: string[];
   rows: string[][];
@@ -24,7 +25,9 @@ function ResultTable({ result }: { result: Result }) {
   return (
     <div className="data-preview-table">
       <table>
-        <caption className="sr-only">Analysis results</caption>
+        <caption className="sr-only">
+          {result.operation === "create" ? "Created data" : "Analysis results"}
+        </caption>
         <thead>
           <tr>
             {result.columns.map((column, index) => (
@@ -58,20 +61,43 @@ export default function AgentDataResult({ runs }: { runs: Run[] }) {
       run.metadata?.data_result,
   );
   const result = resultRun?.metadata?.data_result as Result | undefined;
+  const creating =
+    result?.operation === "create" ||
+    current.some((run) => {
+      const p = run.parameters as {
+        data?: { operation?: string };
+        definition?: { data?: { operation?: string } };
+        agent_data?: { definition?: { data?: { operation?: string } } };
+      };
+      return (
+        p?.data?.operation === "create" ||
+        p?.definition?.data?.operation === "create" ||
+        p?.agent_data?.definition?.data?.operation === "create"
+      );
+    });
   const chart = result?.exports?.find((file) => file.mime_type === "image/png");
   const latest = current[0];
   if (!latest) return null;
   const stopped = ["failed", "canceled", "interrupted"].includes(latest.status);
+  const operation = creating ? "File creation" : "Analysis";
   const terminalMessage = {
-    failed: "Analysis failed. Open execution details to inspect the error.",
-    canceled: "Analysis stopped. No new result was published.",
-    interrupted: "Analysis was interrupted. Inspect execution before retrying.",
+    failed: `${operation} failed. Open execution details to inspect the error.`,
+    canceled: `${operation} stopped. No new result was published.`,
+    interrupted: `${operation} was interrupted. Inspect execution before retrying.`,
   }[latest.status];
   return (
-    <section className="agent-data-result" aria-label="Data analysis result">
+    <section
+      className="agent-data-result"
+      aria-label={creating ? "File creation result" : "Data analysis result"}
+    >
       <div className="row spread">
         <h3>
-          <Table2 size={17} /> Data analysis
+          <Table2 size={17} />{" "}
+          {creating
+            ? result
+              ? "Created files"
+              : "File creation"
+            : "Data analysis"}
         </h3>
         <Badge status={result ? "succeeded" : latest.status} />
       </div>
@@ -88,7 +114,11 @@ export default function AgentDataResult({ runs }: { runs: Run[] }) {
               >
                 <img
                   src={`/api/artifacts/${chart.artifact_id}/file`}
-                  alt="Chart generated from the analyzed data"
+                  alt={
+                    creating
+                      ? "Chart created from instructions"
+                      : "Chart generated from the analyzed data"
+                  }
                   loading="lazy"
                 />
               </a>

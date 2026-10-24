@@ -302,6 +302,9 @@ def draft_agent(text: str, *, model: str = "", schedule_timezone: str = "UTC") -
         ),
     }
     build_website = "coding_local" in tools and website_build_goal(lowered)
+    from app.file_creation import requested as file_creation
+
+    create_files = tools == ["python_data"] and file_creation(text, agent=True)
     agent = Agent(
         name=name,
         description=text.strip()[:500],
@@ -312,7 +315,9 @@ def draft_agent(text: str, *, model: str = "", schedule_timezone: str = "UTC") -
             "Use the goal supplied with each execution."
         ),
         market=market,
-        data={"input_artifact_ids": [], "max_repairs": 1}
+        data={"input_artifact_ids": [], "max_repairs": 1, "operation": "create"}
+        if create_files
+        else {"input_artifact_ids": [], "max_repairs": 1}
         if "python_data" in tools and set(tools) != {"python_data"}
         else None,
         model=""

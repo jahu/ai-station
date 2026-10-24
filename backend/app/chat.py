@@ -561,6 +561,11 @@ def submit_message(conversation_id, body, session, *, commit=True):
     from app.conversation_data_reference import resolve as resolve_data_reference
 
     body, data_reference = resolve_data_reference(session, row, body, mode)
+    from app.file_creation import prepare_turn as prepare_file_creation
+
+    work_context = session.get(ChatWorkContext, row.id)
+    if work_context is None or not work_context.task_id:
+        body = prepare_file_creation(body, mode)
     if mode in {"chat", "work", "orchestrator"}:
         body = prepare_turn(body)
     from app.conversation_media import resolve_result_reference
