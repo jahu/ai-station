@@ -1,4 +1,4 @@
-"""Saved agent notification policies emit inspectable in-app notices, never email."""
+"""Publish in-app notices and separate reviewed email from final agent results."""
 
 from __future__ import annotations
 
@@ -67,6 +67,8 @@ def notice_dict(row: Notice, session: Session | None = None) -> dict:
 
 
 def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
+    if run.executor_type == "email_send" and run.parameters.get("agent_result"):
+        return None
     task = session.get(Task, run.task_id) if run.agent_id else None
     coding = task.metadata_json.get("agent_coding_definition") if task else None
     media = None
@@ -111,11 +113,13 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
     ):
         return None
     if coding and run.executor_type != "agent_workflow":
+        from app.agent_email_results import CODING_RESULTS
+
         if status not in {"failed", "interrupted", "succeeded"}:
             return None
         if status == "succeeded" and (
-            run.executor_type not in {"local_proposal", "project_validation", "agent_data_result"}
-            or run.executor_type == "local_proposal"
+            run.executor_type not in CODING_RESULTS | {"agent_data_result"}
+            or run.executor_type in CODING_RESULTS - {"project_validation"}
             and run.parameters.get("commands")
         ):
             return None
@@ -135,6 +139,31 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
     policy = notification_policy(
         (coding or media or run.parameters.get("definition") or {}).get("notification_policy")
     )
+    if status == "succeeded" and policy.report_email:
+        from app.agent_report_email import publish
+
+        try:
+            with session.begin_nested():
+                publish(session, run)
+        except Exception as exc:
+            # Delivery preparation is separate from the completed result. Never
+            # expose exception text (it may contain source content/credentials).
+            run.metadata_json = {
+                **run.metadata_json,
+                "result_email": {
+                    "state": "preparation_failed",
+                    "error_type": type(exc).__name__,
+                },
+            }
+            append_event(
+                session,
+                run.id,
+                "agent.result_email.failed",
+                {
+                    "error_type": type(exc).__name__,
+                    "reason": "Result email could not be prepared; the original result is retained.",
+                },
+            )
     if not getattr(policy, field):
         return None
     existing = session.scalar(

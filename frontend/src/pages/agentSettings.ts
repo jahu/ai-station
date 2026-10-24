@@ -1,4 +1,5 @@
 import { DEFAULT_MARKET, type MarketScope } from "./marketScope";
+import type { ResultEmailScope } from "./AgentResultEmail";
 import type { AgentMediaScope } from "./agent-media";
 export type AgentSettingsInput = {
   updated_at: string;
@@ -34,6 +35,7 @@ export type AgentSettingsInput = {
     on_success?: boolean;
     on_failure?: boolean;
     on_approval?: boolean;
+    report_email?: ResultEmailScope | null;
   };
   github?: { connector_id: string; repository: string } | null;
   project_id?: string | null;
@@ -44,7 +46,14 @@ export function agentSettingsPayload(
   agent: AgentSettingsInput,
   patch: Partial<AgentSettingsInput> = {},
 ) {
-  const next = { ...agent, ...patch };
+  const next = {
+    ...agent,
+    ...patch,
+    notification_policy: {
+      ...agent.notification_policy,
+      ...patch.notification_policy,
+    },
+  };
   const trigger = next.trigger ?? "manual";
   return {
     expected_updated_at: next.updated_at,
@@ -100,6 +109,9 @@ export function agentSettingsPayload(
       on_success: next.notification_policy?.on_success === true,
       on_failure: next.notification_policy?.on_failure === true,
       on_approval: next.notification_policy?.on_approval === true,
+      ...(next.notification_policy?.report_email !== undefined
+        ? { report_email: next.notification_policy.report_email }
+        : {}),
     },
     project_id: next.project_id ?? null,
     enabled:

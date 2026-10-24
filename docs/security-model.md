@@ -1,4 +1,13 @@
 [Optional bounded avatar loading](plans/echo-memory-loading.md) reuses the
+
+[Agent result delivery](plans/agent-report-email.md) freezes reviewed sender,
+allowlisted recipients, connector revision and definition consent. A model
+cannot choose the envelope or obtain mail credentials. Research/code tools do
+not inherit delivery-only permissions. Before connection and SMTP submission,
+the worker reloads consent and source authority, verifies saved result bytes
+and reconstructs the approved message. Per-message review remains the default.
+Automatic private-workspace adoption retains consent only for the exact verified
+controller derivation; it cannot grant a different project or renew the budget.
 existing native ProcessManager, fixed private 11-GiB/zero-swap scope and ordinary
 media Task graph. Complete existing weights retain full precision; no upstream
 files or public command/memory controls are added. Default native arguments are unchanged; new Standard jobs reserve the observed

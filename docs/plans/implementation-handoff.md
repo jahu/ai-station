@@ -5,6 +5,37 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — avatar profile delivered, next result email, 2026-10-24
+
+PR #399 is squash-merged as `737dbd3`, reviewed source `727313a`, and live-qualified.
+Release: `.tools/ui-echo-memory-profile-20261024`; image `1a9214139183`;
+supervisor 2626468. Native source matches fingerprint `83eee0fc`; the existing
+owned model container, GPU/Q8/46080 preset, auth, IDs, 16 paused definitions and
+exact due instants were preserved. The qualified optional Echo profile is enabled
+only in project-local configuration. Backup and checks are authoritative in
+`data/acceptance/echo-memory-profile-20261024/post-deployment-qualified.json` and
+`data/acceptance/safety-redeploy-20261012/deployment.json`.
+
+All final 3089 Python/Runner cases completed (3080 passes/nine opt-in skips), all
+707 UI cases and lint/format/types/build passed, as did exact image/assets and
+three Compose configurations. Actual ordinary agent output is five seconds at
+384px/eight steps, two scoped native windows, 125 frames and complete source audio;
+full decode and actual compiled 1440/390 playback passed. Exact word-level lip-sync
+and broader media quality/durations remain separate acceptance. Do not repeat that
+GPU job: final bounded code matches its actual source; only Standard admission
+was corrected afterward and passed its full new gate.
+
+Current owned implementation: `.tools/agent-report-email`, `feat/agent-report-email`,
+based on develop `737dbd3`. [Result-email plan](agent-report-email.md). Optional
+JSON policy/activation, exact consent, final-result projection, independent SMTP
+child, private workspace binding and compact UI are implemented locally. Focused
+synthetic worker/SMTP tests cover reports, data, code, media and market reports;
+complete gates, compiled desktop/mobile acceptance, full review and deployment
+still need recorded final-head evidence. No real operator email has been sent.
+Do not call this increment deployed or operational until those gates pass.
+Preserve root Memory WIP, all live/proof trees and pending Whisper consent.
+The full platform goal remains active; do not mark it complete from this release.
+
 ## Current continuation — avatar profile ready for release review, 2026-10-24
 
 PR #399 now includes the full optional avatar profile and measured Standard RAM

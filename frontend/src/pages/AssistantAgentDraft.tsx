@@ -1,3 +1,10 @@
+import {
+  ResultEmailEditor,
+  ResultEmailApproval,
+  resultEmailConsentKey,
+  type ResultEmailScope,
+  type ResultEmailAuthorization,
+} from "./AgentResultEmail";
 import AgentTimeBudget, { MAX_AGENT_RUNTIME } from "./AgentTimeBudget";
 import AgentVideoSetup from "./AgentVideoSetup";
 import AgentAvatarSetup from "./AgentAvatarSetup";
@@ -62,6 +69,7 @@ type AgentDraft = {
   market?: MarketScope | null;
   market_readiness?: { ready: boolean; reason: string | null } | null;
   market_email_authorization?: MarketEmailAuthorization | null;
+  report_email_authorization?: ResultEmailAuthorization | null;
   workspace_policy?: WorkspacePolicy;
   data_readiness?: { ready: boolean; reason: string } | null;
   skills?: string[];
@@ -80,6 +88,7 @@ type AgentDraft = {
     on_success?: boolean;
     on_failure?: boolean;
     on_approval?: boolean;
+    report_email?: ResultEmailScope | null;
   };
   github?: { connector_id: string; repository: string } | null;
   search_query?: string;
@@ -603,6 +612,9 @@ export function AssistantAgentDraft({
   const [expanded, setExpanded] = useState(false);
   const [emailConsent, setEmailConsent] = useState<string | null>(null);
   const [emailReady, setEmailReady] = useState(false);
+  const [resultEmailConsent, setResultEmailConsent] = useState<string | null>(
+    null,
+  );
   const shortId = agentId.slice(0, 8);
   const [copy, setCopy] = useState<AgentDraft | null>(null);
   const [modelBusy, setModelBusy] = useState(false);
@@ -619,6 +631,13 @@ export function AssistantAgentDraft({
         body: JSON.stringify({
           expected_updated_at: detail.data!.updated_at,
           enabled,
+          ...(enabled &&
+          detail.data?.notification_policy?.report_email?.mode === "automatic"
+            ? {
+                confirm_report_email:
+                  resultEmailConsent === resultEmailConsentKey(detail.data),
+              }
+            : {}),
           ...(enabled && detail.data?.market?.email
             ? {
                 confirm_market_email:
@@ -630,6 +649,7 @@ export function AssistantAgentDraft({
       }),
     onSuccess: (result) => {
       setEmailConsent(null);
+      setResultEmailConsent(null);
       cache.setQueryData(["agent", agentId], (previous?: AgentDraft) => ({
         ...previous,
         ...result,
@@ -737,7 +757,12 @@ export function AssistantAgentDraft({
       <AgentAvatarSetup
         value={agent.media}
         maximumRuntime={agent.maximum_runtime ?? 600}
-        disabled={busy || active}
+        disabled={
+          busy ||
+          active ||
+          (agent.enabled &&
+            agent.notification_policy?.report_email?.mode === "automatic")
+        }
         tabIndex={tabIndex}
         actionLabel="Apply and save setup"
         onApply={(patch) => saveSettings.mutate(patch)}
@@ -745,7 +770,12 @@ export function AssistantAgentDraft({
       <AgentVideoSetup
         value={agent.media}
         maximumRuntime={agent.maximum_runtime ?? 600}
-        disabled={busy || active}
+        disabled={
+          busy ||
+          active ||
+          (agent.enabled &&
+            agent.notification_policy?.report_email?.mode === "automatic")
+        }
         tabIndex={tabIndex}
         actionLabel="Apply and save setup"
         onApply={(patch) => saveSettings.mutate(patch)}
@@ -860,7 +890,13 @@ export function AssistantAgentDraft({
                   type="button"
                   variant="secondary"
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy ||
+                    active ||
+                    (agent.enabled &&
+                      agent.notification_policy?.report_email?.mode ===
+                        "automatic")
+                  }
                   onClick={() => runNow.mutate()}
                 >
                   Run now
@@ -933,7 +969,13 @@ export function AssistantAgentDraft({
                   maximumRuntime={agent.maximum_runtime ?? 600}
                   outputExpectation={agent.output_expectation ?? ""}
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy ||
+                    active ||
+                    (agent.enabled &&
+                      agent.notification_policy?.report_email?.mode ===
+                        "automatic")
+                  }
                   pending={saveSettings.isPending}
                   onSave={(patch) => saveSettings.mutate(patch)}
                 />
@@ -947,7 +989,13 @@ export function AssistantAgentDraft({
                   agentId={agent.id}
                   description={agent.description ?? ""}
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy ||
+                    active ||
+                    (agent.enabled &&
+                      agent.notification_policy?.report_email?.mode ===
+                        "automatic")
+                  }
                   pending={saveSettings.isPending}
                   onSave={(patch) => saveSettings.mutate(patch)}
                 />
@@ -966,7 +1014,13 @@ export function AssistantAgentDraft({
                   projectId={agent.project_id ?? null}
                   projects={projects.data ?? []}
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy ||
+                    active ||
+                    (agent.enabled &&
+                      agent.notification_policy?.report_email?.mode ===
+                        "automatic")
+                  }
                   onSave={(project_id) => saveSettings.mutate({ project_id })}
                 />
                 <AgentLinkedProjectLinks
@@ -1021,7 +1075,13 @@ export function AssistantAgentDraft({
                   intervalSeconds={agent.interval_seconds ?? null}
                   runAt={agent.run_at ?? null}
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy ||
+                    active ||
+                    (agent.enabled &&
+                      agent.notification_policy?.report_email?.mode ===
+                        "automatic")
+                  }
                   pending={saveSettings.isPending}
                   onSave={(patch) => saveSettings.mutate(patch)}
                 />
@@ -1034,7 +1094,13 @@ export function AssistantAgentDraft({
                   names={agent.tools ?? []}
                   agentId={agent.id}
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy ||
+                    active ||
+                    (agent.enabled &&
+                      agent.notification_policy?.report_email?.mode ===
+                        "automatic")
+                  }
                   pending={saveSettings.isPending}
                   onRemove={(name) =>
                     saveSettings.mutate({
@@ -1095,7 +1161,13 @@ export function AssistantAgentDraft({
                   ids={agent.skills ?? []}
                   agentId={agent.id}
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy ||
+                    active ||
+                    (agent.enabled &&
+                      agent.notification_policy?.report_email?.mode ===
+                        "automatic")
+                  }
                   pending={saveSettings.isPending}
                   onRemove={(id) =>
                     saveSettings.mutate({
@@ -1122,7 +1194,13 @@ export function AssistantAgentDraft({
                       PUBLIC_RESEARCH_TOOLS.includes(name),
                     )}
                     value={agent.data}
-                    disabled={busy || active}
+                    disabled={
+                      busy ||
+                      active ||
+                      (agent.enabled &&
+                        agent.notification_policy?.report_email?.mode ===
+                          "automatic")
+                    }
                     onChange={(data) => saveSettings.mutate({ data })}
                   />
                 </dd>
@@ -1149,7 +1227,13 @@ export function AssistantAgentDraft({
                     agentId={agent.id}
                     query={agent.search_query ?? ""}
                     tabIndex={tabIndex}
-                    disabled={busy || active}
+                    disabled={
+                      busy ||
+                      active ||
+                      (agent.enabled &&
+                        agent.notification_policy?.report_email?.mode ===
+                          "automatic")
+                    }
                     pending={saveSettings.isPending}
                     onSave={(search_query) =>
                       saveSettings.mutate({ search_query })
@@ -1168,7 +1252,13 @@ export function AssistantAgentDraft({
                     agentId={agent.id}
                     urls={agent.fetch_urls ?? []}
                     tabIndex={tabIndex}
-                    disabled={busy || active}
+                    disabled={
+                      busy ||
+                      active ||
+                      (agent.enabled &&
+                        agent.notification_policy?.report_email?.mode ===
+                          "automatic")
+                    }
                     pending={saveSettings.isPending}
                     onSave={(fetch_urls) => saveSettings.mutate({ fetch_urls })}
                   />
@@ -1181,7 +1271,13 @@ export function AssistantAgentDraft({
                 <ApprovalChoiceList
                   checked={Boolean(agent.require_approval)}
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy ||
+                    active ||
+                    (agent.enabled &&
+                      agent.notification_policy?.report_email?.mode ===
+                        "automatic")
+                  }
                   onChange={(require_approval) => {
                     if (require_approval === Boolean(agent.require_approval))
                       return;
@@ -1246,7 +1342,13 @@ export function AssistantAgentDraft({
                   }
                   name={`retry_policy_${shortId}`}
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy ||
+                    active ||
+                    (agent.enabled &&
+                      agent.notification_policy?.report_email?.mode ===
+                        "automatic")
+                  }
                   onChange={(mode) => {
                     const current =
                       agent.retry_policy?.mode === "manual" ? "manual" : "none";
@@ -1267,7 +1369,13 @@ export function AssistantAgentDraft({
                       agent.notification_policy?.on_approval === true,
                   }}
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy ||
+                    active ||
+                    (agent.enabled &&
+                      agent.notification_policy?.report_email?.mode ===
+                        "automatic")
+                  }
                   onChange={(notification_policy) => {
                     const current = {
                       on_success:
@@ -1283,11 +1391,46 @@ export function AssistantAgentDraft({
                       notification_policy.on_approval === current.on_approval
                     )
                       return;
-                    saveSettings.mutate({ notification_policy });
+                    saveSettings.mutate({
+                      notification_policy: {
+                        ...agent.notification_policy,
+                        ...notification_policy,
+                      },
+                    });
                   }}
                 />
               </dd>
             </div>
+            {!agent.market?.email && (
+              <div>
+                <dt>Email delivery</dt>
+                <dd>
+                  <ResultEmailEditor
+                    key={agent.updated_at}
+                    value={agent.notification_policy?.report_email}
+                    disabled={busy || active || agent.enabled}
+                    summaryOnly={
+                      !!agent.media ||
+                      !!agent.tools?.some((name) =>
+                        [
+                          "coding_local",
+                          "coding_codex",
+                          "coding_cursor",
+                        ].includes(name),
+                      )
+                    }
+                    onSave={(report_email) =>
+                      saveSettings.mutate({
+                        notification_policy: {
+                          ...agent.notification_policy,
+                          report_email,
+                        },
+                      })
+                    }
+                  />
+                </dd>
+              </div>
+            )}
             <div>
               <dt>Instructions</dt>
               <dd>
@@ -1297,7 +1440,13 @@ export function AssistantAgentDraft({
                   goal={agent.goal ?? ""}
                   systemPrompt={agent.system_prompt ?? ""}
                   tabIndex={tabIndex}
-                  disabled={busy || active}
+                  disabled={
+                    busy ||
+                    active ||
+                    (agent.enabled &&
+                      agent.notification_policy?.report_email?.mode ===
+                        "automatic")
+                  }
                   pending={saveSettings.isPending}
                   onSave={(patch) => saveSettings.mutate(patch)}
                 />
@@ -1315,11 +1464,17 @@ export function AssistantAgentDraft({
               </dd>
             </div>
           </dl>
-          {agent.tools?.includes("market_watch") && (
+          {(agent.tools?.includes("market_watch") ||
+            agent.notification_policy?.report_email) && (
             <AgentMarketEditor
               key={agent.updated_at}
               value={agent.market}
-              disabled={busy || active}
+              disabled={
+                busy ||
+                active ||
+                (agent.enabled &&
+                  agent.notification_policy?.report_email?.mode === "automatic")
+              }
               onSave={(market) => saveSettings.mutate({ market })}
             />
           )}
@@ -1327,7 +1482,12 @@ export function AssistantAgentDraft({
             <AgentWorkspacePolicy
               value={agent.workspace_policy}
               linkedProject={agent.project_id}
-              disabled={busy || active}
+              disabled={
+                busy ||
+                active ||
+                (agent.enabled &&
+                  agent.notification_policy?.report_email?.mode === "automatic")
+              }
               onChange={(workspace_policy) =>
                 saveSettings.mutate({ workspace_policy })
               }
@@ -1400,6 +1560,24 @@ export function AssistantAgentDraft({
             </p>
           ) : null}
           {block.reason ? <p className="notice">{block.reason}</p> : null}
+          {agent.enabled &&
+            agent.notification_policy?.report_email?.mode === "automatic" && (
+              <p className="muted">
+                Pause this agent before editing its approved definition. Enable
+                it again after saving to approve the new email scope.
+              </p>
+            )}
+          <ResultEmailApproval
+            scope={agent.notification_policy?.report_email}
+            enabled={agent.enabled}
+            authorization={agent.report_email_authorization}
+            checked={resultEmailConsent === resultEmailConsentKey(agent)}
+            onChange={(checked) =>
+              setResultEmailConsent(
+                checked ? resultEmailConsentKey(agent) : null,
+              )
+            }
+          />
           <MarketEmailApproval
             market={agent.market}
             enabled={agent.enabled}
@@ -1420,6 +1598,12 @@ export function AssistantAgentDraft({
               disabled={
                 busy ||
                 block.blocked ||
+                (!agent.enabled &&
+                  agent.report_email_authorization?.ready === false) ||
+                (!agent.enabled &&
+                  agent.notification_policy?.report_email?.mode ===
+                    "automatic" &&
+                  resultEmailConsent !== resultEmailConsentKey(agent)) ||
                 (!agent.enabled &&
                   !!agent.market?.email &&
                   (!emailReady ||
@@ -1447,6 +1631,9 @@ export function AssistantAgentDraft({
                 busy ||
                 !agent.enabled ||
                 active ||
+                (agent.notification_policy?.report_email?.mode ===
+                  "automatic" &&
+                  !agent.report_email_authorization?.valid) ||
                 (!!agent.market?.email &&
                   !agent.market_email_authorization?.valid)
               }
@@ -1456,8 +1643,17 @@ export function AssistantAgentDraft({
             >
               Run now
             </Button>
-            {agent.tools?.includes("market_watch") && (
-              <AgentMarketRunStop agentId={agent.id} runs={history} />
+            {(agent.tools?.includes("market_watch") ||
+              agent.notification_policy?.report_email) && (
+              <AgentMarketRunStop
+                agentId={agent.id}
+                runs={history}
+                subject={
+                  agent.tools?.includes("market_watch")
+                    ? "price check"
+                    : "execution"
+                }
+              />
             )}
             <Button
               type="button"
@@ -1490,19 +1686,23 @@ export function AssistantAgentDraft({
           </div>
           {history.length ? (
             <>
+              {(agent.market ||
+                agent.notification_policy?.report_email ||
+                history.some((run) => run.executor_type === "email_send")) && (
+                <AgentMarketEmailHistory
+                  agentId={agent.id}
+                  runs={history}
+                  title={
+                    agent.notification_policy?.report_email
+                      ? "Result email"
+                      : undefined
+                  }
+                />
+              )}
               {agent.tools?.includes("python_data") ? (
                 <AgentDataResult runs={history} />
               ) : (
                 <>
-                  {(agent.market ||
-                    history.some(
-                      (run) => run.executor_type === "email_send",
-                    )) && (
-                    <AgentMarketEmailHistory
-                      agentId={agent.id}
-                      runs={history}
-                    />
-                  )}
                   <AgentLatestReport runs={history} />
                 </>
               )}

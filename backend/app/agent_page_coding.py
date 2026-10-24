@@ -19,7 +19,7 @@ def publish_page_coding(session, parent, definition, *, deadline_at=None):
     tools = coding_research_steps(definition.tools)
     if coding_provider(definition.tools) != "local" or not tools:
         raise ValueError("Reviewed research requires Local coding and public context tools")
-    from app.agent_tools import effective_permissions
+    from app.agent_tools import effective_permissions, execution_permissions
 
     for permission in effective_permissions(definition.tools):
         require(parent.effective_permissions, permission)
@@ -69,7 +69,7 @@ def publish_page_coding(session, parent, definition, *, deadline_at=None):
             ),
             "step_index": len(sources),
         },
-        permissions=list(parent.effective_permissions),
+        permissions=execution_permissions(parent, definition),
         triggered_by=parent.triggered_by,
     )
     for source in sources:

@@ -1,3 +1,10 @@
+import {
+  ResultEmailSettings,
+  ResultEmailApproval,
+  resultEmailConsentKey,
+  type ResultEmailScope,
+  type ResultEmailAuthorization,
+} from "./AgentResultEmail";
 import AgentTimeBudget from "./AgentTimeBudget";
 import AgentCronFields from "./AgentCronFields";
 import AgentDraftForm from "./AgentDraftForm";
@@ -106,6 +113,7 @@ interface Agent {
   market?: MarketScope | null;
   market_readiness?: { ready: boolean; reason: string | null } | null;
   market_email_authorization?: MarketEmailAuthorization | null;
+  report_email_authorization?: ResultEmailAuthorization | null;
   data?: DataScope | null;
   media?: AgentMediaScope | null;
   workspace_policy?: WorkspacePolicy;
@@ -130,6 +138,7 @@ interface Agent {
     on_success: boolean;
     on_failure: boolean;
     on_approval: boolean;
+    report_email?: ResultEmailScope | null;
   };
   project_id: string | null;
   enabled: boolean;
@@ -551,6 +560,9 @@ export function Agents() {
 export function AgentDetail() {
   const [emailConsent, setEmailConsent] = useState<string | null>(null);
   const [emailReady, setEmailReady] = useState(false);
+  const [resultEmailConsent, setResultEmailConsent] = useState<string | null>(
+    null,
+  );
   const { id } = useParams();
   const [viewParams, setViewParams] = useSearchParams();
   const cache = useQueryClient();
@@ -573,6 +585,13 @@ export function AgentDetail() {
         json("POST", {
           expected_updated_at: detail.data!.updated_at,
           ...(enabled === undefined ? {} : { enabled }),
+          ...(enabled &&
+          detail.data?.notification_policy?.report_email?.mode === "automatic"
+            ? {
+                confirm_report_email:
+                  resultEmailConsent === resultEmailConsentKey(detail.data),
+              }
+            : {}),
           ...(enabled && detail.data?.market?.email
             ? {
                 confirm_market_email:
@@ -584,6 +603,7 @@ export function AgentDetail() {
       ),
     onSuccess: (result, variables) => {
       setEmailConsent(null);
+      setResultEmailConsent(null);
       void cache.invalidateQueries({ queryKey: ["agent", id] });
       void cache.invalidateQueries({ queryKey: ["agents"] });
       if (variables.operation === "run") {
@@ -700,6 +720,15 @@ export function AgentDetail() {
       >
         <p className="agent-workspace-goal">{agent.goal}</p>
         {block.reason ? <p className="notice">{block.reason}</p> : null}
+        <ResultEmailApproval
+          scope={agent.notification_policy?.report_email}
+          enabled={agent.enabled}
+          authorization={agent.report_email_authorization}
+          checked={resultEmailConsent === resultEmailConsentKey(agent)}
+          onChange={(checked) =>
+            setResultEmailConsent(checked ? resultEmailConsentKey(agent) : null)
+          }
+        />
         <MarketEmailApproval
           market={agent.market}
           enabled={agent.enabled}
@@ -719,6 +748,11 @@ export function AgentDetail() {
             disabled={
               action.isPending ||
               block.blocked ||
+              (!agent.enabled &&
+                agent.report_email_authorization?.ready === false) ||
+              (!agent.enabled &&
+                agent.notification_policy?.report_email?.mode === "automatic" &&
+                resultEmailConsent !== resultEmailConsentKey(agent)) ||
               (!agent.enabled &&
                 !!agent.market?.email &&
                 (!emailReady ||
@@ -741,6 +775,8 @@ export function AgentDetail() {
               action.isPending ||
               !agent.enabled ||
               active ||
+              (agent.notification_policy?.report_email?.mode === "automatic" &&
+                !agent.report_email_authorization?.valid) ||
               (!!agent.market?.email &&
                 !agent.market_email_authorization?.valid)
             }
@@ -749,14 +785,17 @@ export function AgentDetail() {
             Run now
           </Button>
           {(agent.tools.includes("market_watch") ||
-            agent.tools.includes("create_media")) && (
+            agent.tools.includes("create_media") ||
+            !!agent.notification_policy?.report_email) && (
             <AgentMarketRunStop
               agentId={agent.id}
               runs={agent.runs ?? []}
               subject={
                 agent.tools.includes("create_media")
                   ? "media generation"
-                  : "price check"
+                  : agent.tools.includes("market_watch")
+                    ? "price check"
+                    : "execution"
               }
             />
           )}
@@ -814,8 +853,17 @@ export function AgentDetail() {
               </>
             )}
             {(agent.market ||
+              agent.notification_policy?.report_email ||
               agent.runs.some((run) => run.executor_type === "email_send")) && (
-              <AgentMarketEmailHistory agentId={agent.id} runs={agent.runs} />
+              <AgentMarketEmailHistory
+                agentId={agent.id}
+                runs={agent.runs}
+                title={
+                  agent.notification_policy?.report_email
+                    ? "Result email"
+                    : undefined
+                }
+              />
             )}
             {!isCoding(agent.tools) && <AgentLatestReport runs={agent.runs} />}
             {isCoding(agent.tools) && !agent.tools.includes("python_data") && (
@@ -963,6 +1011,9 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
     },
   });
   const stale = values.updated_at !== agent.updated_at;
+  const consentLocked =
+    agent.enabled &&
+    agent.notification_policy?.report_email?.mode === "automatic";
   return (
     <form
       className="panel agent-form"
@@ -996,11 +1047,17 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           </Button>
         </div>
       )}
+      {consentLocked && (
+        <p className="notice">
+          Pause the agent before changing its approved definition. Enable it
+          again after saving to approve the new email scope.
+        </p>
+      )}
       {active && (
         <p className="muted">Finish or cancel the active Run before editing.</p>
       )}
       <fieldset
-        disabled={active || save.isPending || mediaBusy}
+        disabled={active || save.isPending || mediaBusy || consentLocked}
         className="agent-fields"
       >
         <label>
@@ -1302,8 +1359,8 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         <fieldset className="agent-wide">
           <legend>Notifications</legend>
           <p className="muted">
-            Notices stay in AI Station. Email, chat and other connectors are not
-            enabled. Existing agents stay silent until you opt in.
+            Choose in-app notices below. Optional email delivery is configured
+            separately.
           </p>
           <NoticeChoiceList
             output={values.tools.includes("create_media") ? "media" : "report"}
@@ -1312,9 +1369,33 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               on_failure: Boolean(values.notification_policy?.on_failure),
               on_approval: Boolean(values.notification_policy?.on_approval),
             }}
-            onChange={(policy) => update("notification_policy", policy)}
+            onChange={(policy) =>
+              update("notification_policy", {
+                ...values.notification_policy,
+                ...policy,
+              })
+            }
           />
         </fieldset>
+        {!values.market?.email && (
+          <div className="agent-wide">
+            <ResultEmailSettings
+              value={values.notification_policy?.report_email}
+              summaryOnly={
+                values.tools.includes("create_media") ||
+                (isCoding(values.tools) &&
+                  !values.tools.includes("python_data"))
+              }
+              disabled={agent.enabled || active}
+              onChange={(report_email) =>
+                update("notification_policy", {
+                  ...values.notification_policy,
+                  report_email,
+                })
+              }
+            />
+          </div>
+        )}
         {values.tools.includes("web_search") && (
           <section className="agent-wide agent-search-settings">
             <h3>Internet research</h3>
@@ -1567,6 +1648,7 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             modelBusy ||
             mediaBusy ||
             !!mediaIssue ||
+            consentLocked ||
             save.isPending
           }
         >

@@ -1,4 +1,10 @@
 [Optional bounded avatar loading](plans/echo-memory-loading.md) reuses the
+
+[Agent result email](plans/agent-report-email.md) publishes a distinct ordinary
+email.send child from a verified final agent result. It reuses SMTP connectors,
+EmailDelivery, Task serialization and approvals; generation and delivery have
+separate outcomes. Optional JSON policy preserves legacy definition identities
+and does not add a schema column or a native execution boundary.
 existing native ProcessManager, fixed private 11-GiB/zero-swap scope and ordinary
 media Task graph. Complete existing weights retain full precision; no upstream
 files or public command/memory controls are added. Default native arguments are unchanged; new Standard jobs reserve the observed

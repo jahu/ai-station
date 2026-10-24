@@ -104,6 +104,12 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         from app.market_email import authorization
 
         market_email_approval = authorization(session, agent, definition.market).id
+    report_email_approval = None
+    if definition.notification_policy.report_email:
+        from app.agent_report_email import authorization
+
+        grant = authorization(session, agent, definition)
+        report_email_approval = grant.id if grant else None
     task = create_task(
         session,
         title=agent.name,
@@ -138,11 +144,18 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
             "endpoint": endpoint,
             "skill_snapshots": skill_snapshots,
             **({"market_email_approval_id": market_email_approval} if market_email_approval else {}),
+            **({"report_email_approval_id": report_email_approval} if report_email_approval else {}),
             "steps": steps,
         },
         permissions=effective_permissions(definition.tools)
         + stock_permissions(definition.market)
-        + (["email_send", "network_external"] if market_email_approval else []),
+        + (
+            ["email_send", "network_external"]
+            if market_email_approval or definition.notification_policy.report_email
+            else []
+        ),
+        # Result delivery is controller-owned; execution children filter these
+        # notification-only grants before reaching typed native tool requests.
         retry_class="inspect",
         triggered_by=triggered_by,
     )

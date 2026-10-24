@@ -348,6 +348,7 @@ class EmailSendExecutor:
         client = None
         row = None
         submission_started = False
+        result_delivery = False
         try:
             require(run.effective_permissions, "email_send")
             require(run.effective_permissions, "network_external")
@@ -355,11 +356,18 @@ class EmailSendExecutor:
             approval = latest_approval(session, run.id)
             if row is None or row.id != run.parameters.get("delivery_id") or row.state != "prepared":
                 raise ValueError("A new reviewed message is required; this receipt cannot be replayed")
+            automatic_result = False
+            result_delivery = "agent_result" in run.parameters
+            if result_delivery:
+                from app.agent_report_email import validate_submission as validate_result_email
+
+                automatic_result = validate_result_email(session, run, row) == "automatic"
             if (
                 run.parameters.get("message")
                 != {key: row.payload[key] for key in ("sender", "recipients", "subject", "body")}
                 or message_hash(row.payload) != row.payload_hash
                 or not run.parameters.get("market_alert")
+                and not automatic_result
                 and (
                     approval is None
                     or approval.resolution != "granted"
@@ -375,6 +383,8 @@ class EmailSendExecutor:
                 from app.market_email import validate_submission
 
                 validate_submission(session, run, row)
+            if result_delivery:
+                validate_result_email(session, run, row)
             config, password = validated_snapshot(session, run)
             if (
                 row.payload["sender"] != config.sender
@@ -395,6 +405,8 @@ class EmailSendExecutor:
                 return "done"
             if run.parameters.get("market_alert"):
                 validate_submission(session, run, row)
+            if result_delivery:
+                validate_result_email(session, run, row)
             row.state = "sending"
             row.updated_at = utcnow()
             append_event(
@@ -488,6 +500,11 @@ class EmailSendExecutor:
                         from app.market_email import MarketEmailPolicyError
 
                         if isinstance(exc, MarketEmailPolicyError):
+                            row.reason = str(exc)
+                    if result_delivery:
+                        from app.agent_report_email import ReportEmailPolicyError
+
+                        if isinstance(exc, ReportEmailPolicyError):
                             row.reason = str(exc)
                 row.updated_at = utcnow()
             session.refresh(run)

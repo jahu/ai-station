@@ -35,6 +35,7 @@ export type Delivery = {
     recipients: string[];
     subject: string;
     body: string;
+    agent_result?: { source_run_id: string };
   };
   accepted_recipients: string[];
   refused_recipients: string[];
@@ -251,7 +252,10 @@ export function DeliveryPreview({
     onSuccess: refresh,
   });
   const stateLabel: Record<string, string> = {
-    prepared: "Review before sending",
+    prepared:
+      delivery.run.status === "waiting_for_approval"
+        ? "Review before sending"
+        : "Ready to send",
     sending: "Submitting to mail server…",
     accepted: "Accepted by mail server",
     accepted_partial: "Some recipients were refused",
@@ -322,6 +326,11 @@ export function DeliveryPreview({
             </Button>
           )}
         <Link to={`/runs/${delivery.run.id}`}>Inspect delivery</Link>
+        {delivery.payload.agent_result && (
+          <Link to={`/runs/${delivery.payload.agent_result.source_run_id}`}>
+            Open source result
+          </Link>
+        )}
       </div>
       <ErrorNotice error={approval.error ?? stop.error} />
     </details>
