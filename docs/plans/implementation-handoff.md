@@ -5,6 +5,27 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Latest continuation — optional Wan memory profile, 2026-10-24
+
+PR #395 is merged as `ca29360` and deployed from `4dbcbb0` in
+`.tools/ui-long-media-budgets-20261024`, now both controller and native source.
+2957 Python/Runner passes (nine opt-in skips), 683 UI passes, all local code/build/
+Compose/image checks and compiled 1440/390 budget saves/reload passed. Live
+credentials, all 16 agent definitions, original IDs and the same owned model
+container at 46080 context survived coordinated restart. Source fingerprint,
+private 0600 socket, worker/scheduler health and 14400-second ceiling/default 600
+were verified. Proof:
+`data/acceptance/long-media-agent-budgets-20261024/post-deployment-qualified.json`.
+No new multi-hour GPU generation was run for that budget contract.
+
+New owned worktree `.tools/wan-memory-profile`, branch `feat/wan-memory-profile`,
+based on develop `ca29360`. [The memory-profile plan](wan-memory-profile.md)
+is grounded in actual read-only headers/installed loader, not lowered admission.
+First inspect native casting support and available owned cgroup qualification;
+do not launch a GPU test before its finite memory/swap/runtime protection and
+operator preset restoration are concrete. Root WIP and every live/proof tree
+stay untouched. Full AI Station remains active and incomplete.
+
 ## Latest continuation — long-media agent budgets, 2026-10-24
 
 PR #394 is merged to develop `3c9473c` and live-qualified. Source
@@ -40,7 +61,7 @@ the cause: a truncated nested JSON preview hid actual response bodies. The same
 saved capture then produced the exact original prices and a correct chart on the
 first local-model/native-Python attempt, without another public read. Generated
 code and plot were reviewed. Actual context was131072; the operator's original
-GPU/Q8/46080 preset is restored, all16agents are paused and no Runs remain active.
+GPU/Q8/46080 preset is restored, all 16 agents are paused and no Runs remain active.
 Proof: `data/acceptance/captured-data-context-20261024/post-deployment-qualified.json`.
 Live source: `.tools/ui-captured-data-context-20261024`; native source remains
 `.tools/ui-python-optional-outputs-20261024`. Preserve both and the root Memory WIP.
