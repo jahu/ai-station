@@ -22,7 +22,7 @@ This path does not retag unrelated images, migrate other Docker projects, pull G
 
 ## Upgrade readiness
 
-`GET /api/maintenance` reports the live Alembic revision versus code head, the application-owned SQLite path, WAL journal mode, active Run count, bind-mount persistence, and interrupted Runs that still need inspection. It is inspect-only. `restore` and `image_rollout` are `unpublished`. A non-loopback bind remains refused. `GET /api/maintenance/backups/{run_id}` re-checks a successful copy without writing. `GET /api/maintenance/image` asks the Host Runner to compare the `ai-station:local` tag with running `ai-station`/`worker`/`scheduler` containers. It never builds, tags, starts, stops or retags.
+`GET /api/maintenance` reports the live Alembic revision versus code head, the application-owned SQLite path, WAL journal mode, active Run count, bind-mount persistence, and interrupted Runs that still need inspection. It is inspect-only. `restore` and `image_rollout` are `unpublished`. Private LAN access is allowed only with the operator password and an explicitly configured private address; its reported status uses the same policy as Operator access. Public binding remains refused. `GET /api/maintenance/backups/{run_id}` re-checks a successful copy without writing. `GET /api/maintenance/image` asks the Host Runner to compare the `ai-station:local` tag with running `ai-station`/`worker`/`scheduler` containers. It never builds, tags, starts, stops or retags. See [private access](private-network-access.md) for configured LAN and optional Tailscale HTTPS access.
 
 ## SQLite backup
 
@@ -43,4 +43,6 @@ Conservative recovery still parks uncertain dispatched work as `interrupted` aft
 - Applying a backup over the live database
 - Building or rolling out `ai-station:local` from the UI
 - Taking over a running preview deployment
-- LAN publish
+
+Private LAN publishing is implemented separately by the launcher and Operator
+access settings. It does not enable restore, image rollout or public exposure.
