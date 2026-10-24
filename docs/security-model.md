@@ -789,3 +789,8 @@ external-AI grant is inherited. Stop remains serialized with publication, and th
 new agent stays disabled until reviewed. Future runs use their own workspace and
 re-read only the retained reviewed live sources; captures stay distinct from live
 research. Provenance is visible in the conversation and definition Artifact lineage.
+
+A selected `analysis_agent_source_run_id` is accepted only with explicit Work/
+agent.create intent. Foreign, missing, stale and incomplete results cannot fall
+back to another source. The UUID grants no additional tools or file access.
+Absent selections are omitted from receipt fingerprints for historical replay.

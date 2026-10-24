@@ -372,3 +372,7 @@ proposal overlays the fixed source definition; only the disabled Agent, definiti
 Artifact and terminal state publish atomically. Stale source/Stop fails without
 creating an Agent or blindly repeating inference. Enabling and executing later uses
 the ordinary agent/data graph with a fresh private workspace and new deadline.
+
+The result action submits an ordinary idempotent conversation Work turn with the
+exact selected analysis root. Its schedule dialog never enables the agent or
+changes the saved conversation mode/model, and preserves the main composer draft.

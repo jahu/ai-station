@@ -66,6 +66,7 @@ class MessageBody(AssistantInputs):
     attachments: list[TextAttachment] = Field(default_factory=list, max_length=4)
     execution_mode: Literal["auto", "local", "orchestrator", "chat", "work"] = "auto"
     reasoning: ReasoningOptions | None = None
+    analysis_agent_source_run_id: UUID | None = None
 
     @model_validator(mode="after")
     def validate_context(self):
@@ -688,6 +689,8 @@ class TurnBody(MessageBody):
 @router.post("/turns", status_code=202)
 def accept_turn(body: TurnBody, session: DB):
     payload = body.model_dump(mode="json")
+    if body.analysis_agent_source_run_id is None:
+        payload.pop("analysis_agent_source_run_id")
     if body.expected_provider_version is None:
         payload.pop("expected_provider_version")
     if body.reasoning is None:

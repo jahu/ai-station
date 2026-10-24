@@ -379,3 +379,76 @@ def test_another_conversation_has_no_authority_to_reuse_the_analysis(data_enviro
     with session_factory()() as s:
         assert not list(s.scalars(select(Agent)))
         assert not list(s.scalars(select(Run).where(Run.executor_type == "agent_draft")))
+
+
+def test_explicit_action_selects_older_analysis_instead_of_latest(data_environment, monkeypatch):
+    api = TestClient(app)
+    cid, first = start(api, data_environment, mode="work")
+    drain()
+    newer = api.post(
+        f"/api/chat/conversations/{cid}/messages",
+        json={"content": "Calculate a newer comparison.", "data": first["parameters"]["data"]},
+    )
+    assert newer.status_code == 202, newer.text
+    drain()
+
+    async def draft(self, **kwargs):
+        yield json.dumps(proposal())
+
+    monkeypatch.setattr(LocalChatProvider, "stream", draft)
+    from uuid import uuid4
+
+    body = {
+        "client_request_id": str(uuid4()),
+        "conversation_id": cid,
+        "expected_settings_version": api.get(f"/api/chat/conversations/{cid}").json()["settings_version"],
+        "content": "Create an agent that repeats this analysis. Every morning at 09:00.",
+        "action": "agent.create",
+        "execution_mode": "work",
+        "analysis_agent_source_run_id": first["id"],
+    }
+    accepted = api.post("/api/chat/turns", json=body)
+    assert accepted.status_code == 202, accepted.text
+    drain()
+    replay = api.post("/api/chat/turns", json=body)
+    assert replay.status_code == 202 and replay.json()["run"]["id"] == accepted.json()["run"]["id"]
+    with session_factory()() as s:
+        assert len(list(s.scalars(select(Agent)))) == 1
+        saved = s.scalar(select(Agent))
+        assert saved.goal == first["parameters"]["content"] != newer.json()["parameters"]["content"]
+        child = s.scalar(select(Run).where(Run.executor_type == "agent_draft"))
+        assert child.parameters["data_agent_source"]["source_run_id"] == first["id"]
+
+
+@pytest.mark.parametrize("invalid", ["foreign", "missing", "trashed", "chat", "auto", "unrelated"])
+def test_explicit_action_never_falls_back_to_another_result(data_environment, invalid):
+    from uuid import uuid4
+
+    from app.db import utcnow
+    from app.models import Artifact
+
+    api = TestClient(app)
+    cid, first = start(api, data_environment, mode="work")
+    drain()
+    if invalid == "foreign":
+        cid = api.post(
+            "/api/chat/conversations", json={"model": "draft-local", "execution_mode": "work"}
+        ).json()["id"]
+    if invalid == "trashed":
+        with session_factory()() as s:
+            aid = first["parameters"]["data"]["input_artifact_ids"][0]
+            s.get(Artifact, aid).trashed_at = utcnow()
+            s.commit()
+    body = {
+        "content": "Explain this analysis"
+        if invalid == "unrelated"
+        else "Create an agent from this analysis.",
+        "action": "auto" if invalid == "auto" else "agent.create",
+        "execution_mode": "chat" if invalid == "chat" else "work",
+        "analysis_agent_source_run_id": str(uuid4()) if invalid == "missing" else first["id"],
+    }
+    response = api.post(f"/api/chat/conversations/{cid}/messages", json=body)
+    assert response.status_code == 422, response.text
+    with session_factory()() as s:
+        assert not list(s.scalars(select(Agent)))
+        assert not list(s.scalars(select(Run).where(Run.executor_type == "agent_draft")))

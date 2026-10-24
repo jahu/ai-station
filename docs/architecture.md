@@ -772,3 +772,8 @@ Publication uses the shared settings mapper, a definition JSON artifact with sou
 lineage and the existing atomic disabled-Agent/terminal-Run transaction. No schema,
 native protocol or separate execution engine is introduced. See
 [analysis-to-agent design](plans/conversation-data-agent-draft.md).
+
+The [selected-analysis action](plans/analysis-agent-action.md) adds an optional typed
+conversation message reference and a focused schedule dialog to the same draft
+service. Exact same-conversation root selection replaces latest-result lookup only
+when explicitly supplied; all existing source verification and execution apply.

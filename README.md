@@ -780,8 +780,12 @@ access to the original documents or websites. See
 
 ### Make a recurring agent from a completed analysis
 
-After a successful Files & data result, switch to **Work** with Local AI selected
-and ask, for example: **“Create an agent that repeats this analysis every morning.”**
+After a successful Files & data result, select **Create an agent from this analysis**.
+Review the original task and describe when to repeat it, then select **Prepare draft**.
+The main composer keeps your unsent text. Each result selects its own analysis,
+including older results. Local AI in a general conversation is required.
+
+You can also switch to **Work** with Local AI selected and ask, for example: **“Create an agent that repeats this analysis every morning.”**
 The existing Agent Factory prepares a disabled draft. Its original task, selected
 files/documents, local analysis model and reviewed public-source scope are retained;
 only identity and schedule are drafted. The conversation links the original analysis
