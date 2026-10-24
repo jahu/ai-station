@@ -1,11 +1,11 @@
 > Active follow-on: [agent outcomes](agent-workflow-outcomes.md),
-> `fix/agent-workflow-outcomes`, based on #419 candidate. Generation is derived
+> `fix/agent-workflow-outcomes`, based on merged #419. Generation is derived
 > from owned stages, final output and valid bounded repairs; email approval and
 > transport are separate. Conversation report reuse can read a finished report
 > during delivery review/failure/Stop without granting delivery. Focused controller,
 > context and button suite103 passes after preserving failed-source provenance;
-> an initial missing run_id regression was fixed, not waived. Final module checks,
-> full gates/image/browser/review/rollout remain pending. Native/schema unchanged.
+> an initial missing run_id regression was fixed, not waived. Final module25 and UI5 focused checks pass; full gates/image/browser/review/rollout
+> remain pending. Native/schema unchanged.
 > Follow #419 qualification and shared deployment authority for actual live state.
 > Next: complete actual outcome delivery, then structured/code/media result reuse
 > and practical multi-step orchestration. Whole-platform goal remains active.
