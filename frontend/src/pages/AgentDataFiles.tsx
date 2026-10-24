@@ -16,17 +16,20 @@ export default function AgentDataFiles({
   onChange,
   showInspection = false,
   onUploading,
+  allowResearch = false,
 }: {
   value?: DataScope | null;
   disabled: boolean;
   onChange: (value: DataScope) => void;
   showInspection?: boolean;
+  allowResearch?: boolean;
   onUploading?: (busy: boolean) => void;
 }) {
   const id = useId();
   const file = useRef<HTMLInputElement>(null);
   const cache = useQueryClient();
   const ids = value?.input_artifact_ids ?? [];
+  const maxFiles = allowResearch ? 7 : 8;
   const files = useQueries({
     queries: ids.map((id) => ({
       queryKey: ["artifact", id],
@@ -51,14 +54,19 @@ export default function AgentDataFiles({
       max_repairs: value?.max_repairs ?? 1,
     });
   const upload = useMutation({
-    mutationFn: (selected: File[]) =>
-      uploadDataFiles(
+    mutationFn: async (selected: File[]) => {
+      if (allowResearch && ids.length + selected.length > maxFiles)
+        throw new Error(
+          "Choose at most seven files when using public research sources.",
+        );
+      return uploadDataFiles(
         selected,
         cache,
         (added) => updateIds([...ids, ...added.map((item) => item.id)]),
         ids.length,
         files.reduce((bytes, file) => bytes + (file.data?.size_bytes ?? 0), 0),
-      ),
+      );
+    },
   });
   useEffect(() => {
     onUploading?.(upload.isPending);
@@ -68,9 +76,17 @@ export default function AgentDataFiles({
     <section className="agent-data-files" aria-labelledby={id}>
       <h3 id={id}>Data to analyse</h3>
       <p className="muted">
-        Choose CSV or Excel files. Originals stay unchanged; analysis runs
-        locally with no internet access.
+        {allowResearch
+          ? "Reviewed public sources are available to this analysis. CSV or Excel files are optional (up to seven)."
+          : "Choose CSV or Excel files."}{" "}
+        Originals stay unchanged; Python runs locally with no internet access.
       </p>
+      {ids.length > maxFiles && (
+        <p className="notice" role="alert">
+          Public research uses one input slot. Remove a file to keep at most
+          seven CSV/Excel inputs.
+        </p>
+      )}
       <div className="row agent-data-actions">
         <input
           ref={file}
@@ -80,7 +96,7 @@ export default function AgentDataFiles({
           hidden
           tabIndex={-1}
           aria-label="Upload agent data"
-          disabled={busy || ids.length >= 8}
+          disabled={busy || ids.length >= maxFiles}
           onChange={(event) => {
             const selected = Array.from(event.target.files ?? []);
             event.target.value = "";
@@ -90,7 +106,7 @@ export default function AgentDataFiles({
         <Button
           type="button"
           variant="secondary"
-          disabled={busy || ids.length >= 8}
+          disabled={busy || ids.length >= maxFiles}
           onClick={() => file.current?.click()}
         >
           <Upload size={15} />
@@ -99,7 +115,7 @@ export default function AgentDataFiles({
         <LibraryPicker
           kind="document"
           existing={ids}
-          limit={8 - ids.length}
+          limit={Math.max(0, maxFiles - ids.length)}
           busy={busy}
           onSelect={(items) => updateIds([...ids, ...items.map((a) => a.id)])}
         />
@@ -163,13 +179,17 @@ export default function AgentDataFiles({
           ))}
         </ul>
       ) : (
-        <p className="muted">No files selected yet.</p>
+        <p className="muted">
+          {allowResearch
+            ? "No files selected · use reviewed public sources."
+            : "No files selected yet."}
+        </p>
       )}
       <label>
         Automatic fixes
         <select
           aria-label="Automatic fixes"
-          disabled={busy || !ids.length}
+          disabled={busy || (!allowResearch && !ids.length)}
           value={value?.max_repairs ?? 1}
           onChange={(event) =>
             onChange({

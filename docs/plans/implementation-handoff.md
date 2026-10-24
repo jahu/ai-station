@@ -1216,3 +1216,23 @@ No larger transcription model has been downloaded: the explicit approval request
 for the pinned Whisper small486MB profile remains pending; its plan/installer are
 under `data/acceptance/transcription-quality-20261023`. Never infer that approval
 from the older ACE-Step consent. The whole platform objective remains active.
+
+
+## Research/data agent candidate, 2026-10-24
+
+Live develop includes #387 optional Python outputs, #388 reviewed research/local
+code and #389 one bounded agent validation correction. Actual local-model code
+repair, unchanged test assertions/commands and exact operator runtime restoration
+are recorded in `data/acceptance/agent-validation-repair-20261024`.
+
+The next candidate is `.tools/agent-research-data`, branch
+`feat/agent-research-data`: reviewed search/page observations become a verified
+read-only JSON input for the existing offline Python workflow, with optional
+CSV/XLSX. Plan: [research/data composition](agent-research-data.md). Evidence:
+`data/acceptance/agent-research-data-20261024`. Real disposable native Git and CPU
+Python, with fake public data/inference, already computed a verified total from
+full captured JSON plus CSV after one bounded program repair, one source fetch
+and unchanged inputs/deadline. Full local gates, compiled desktop/phone, PR review
+and deployment/actual-public-local-model qualification remain required. Do not
+claim this candidate is live until those records prove rollout. Root Memory WIP,
+release branches and original model/data resources remain untouched.

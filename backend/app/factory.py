@@ -230,8 +230,12 @@ def draft_agent(text: str, *, model: str = "", schedule_timezone: str = "UTC") -
             else "local"
         )
         tools = ["coding_" + chosen] + (tools if chosen == "local" else [])
-    if not tools and re.search(r"\b(excel|xlsx|csv|spreadsheet|arkusz)", lowered):
-        tools = ["python_data"]
+    if (
+        not wants_coding
+        and set(tools) <= {"web_search", "search_pages", "http_fetch"}
+        and re.search(r"\b(excel|xlsx|csv|spreadsheet\w*|arkusz\w*|json)\b", lowered)
+    ):
+        tools = ["python_data", *tools]
     market = None
     stock_request = re.search(r"\b(?:stocks?|akcj\w*|giełd\w*|gield\w*)", lowered)
     stock_research = bool(
@@ -308,6 +312,9 @@ def draft_agent(text: str, *, model: str = "", schedule_timezone: str = "UTC") -
             "Use the goal supplied with each execution."
         ),
         market=market,
+        data={"input_artifact_ids": [], "max_repairs": 1}
+        if "python_data" in tools and set(tools) != {"python_data"}
+        else None,
         model=""
         if tools in (["coding_codex"], ["coding_cursor"], ["market_watch"])
         else "auto"

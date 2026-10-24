@@ -104,3 +104,48 @@ it("keeps successfully uploaded files selected when a later upload fails", async
   });
   expect(uploads).toBe(2);
 });
+
+it("allows source-only analysis and repair selection without uploading files", () => {
+  const change = vi.fn();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <AgentDataFiles disabled={false} allowResearch onChange={change} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(screen.getByText(/CSV or Excel files are optional/)).toBeTruthy();
+  expect(
+    (screen.getByLabelText("Automatic fixes") as HTMLSelectElement).disabled,
+  ).toBe(false);
+  fireEvent.change(screen.getByLabelText("Automatic fixes"), {
+    target: { value: "2" },
+  });
+  expect(change).toHaveBeenCalledWith({
+    input_artifact_ids: [],
+    max_repairs: 2,
+  });
+  expect(vi.mocked(api)).not.toHaveBeenCalled();
+});
+
+it("reserves a research input slot and refuses an oversized file batch before upload", async () => {
+  const change = vi.fn();
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <AgentDataFiles disabled={false} allowResearch onChange={change} />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.change(screen.getByLabelText("Upload agent data"), {
+    target: {
+      files: Array.from(
+        { length: 8 },
+        (_, i) => new File(["x\n1\n"], `file-${i}.csv`),
+      ),
+    },
+  });
+  await screen.findByText(/Choose at most seven files/);
+  expect(vi.mocked(api)).not.toHaveBeenCalled();
+  expect(change).not.toHaveBeenCalled();
+});

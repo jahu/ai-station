@@ -640,3 +640,13 @@ current-user file references to a verified completed same-conversation analysis.
 Controller-owned source/context/input snapshots feed the existing private data
 workspace pipeline. Each question has a new Task/deadline; quoted prior context
 adds no tool authority. No new executor or native API is introduced.
+
+## Reviewed research for offline data agents
+
+[Research/data composition](plans/agent-research-data.md) reuses public source
+Runs and their existing verified context handoff before the ordinary Python data
+workflow. One bounded JSON Artifact contains complete saved observations and
+source lineage. It becomes an immutable read-only input beside optional CSV/XLSX
+files; Python remains offline. The original agent definition, Task, private
+workspace, deadline, Stop and repair budget bind every stage. No new executor,
+native API, dependency or database migration is introduced.

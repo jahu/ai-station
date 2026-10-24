@@ -11,6 +11,24 @@ export const LOCAL_CODING_RESEARCH = [
   "search_pages",
   "http_fetch",
 ];
+
+export const PUBLIC_RESEARCH_TOOLS = [
+  "web_search",
+  "search_pages",
+  "http_fetch",
+];
+export function localResearchScope(names: string[]) {
+  const family = names.filter((name) =>
+    ["coding_local", "python_data"].includes(name),
+  );
+  return (
+    family.length === 1 &&
+    names.every(
+      (name) => name === family[0] || PUBLIC_RESEARCH_TOOLS.includes(name),
+    )
+  );
+}
+
 export type AgentToolSpec = {
   name: string;
   description: string;
@@ -97,9 +115,11 @@ export function activationBlock(
     ["coding_local", "coding_cursor", "coding_codex"].includes(name),
   );
   if (names.includes("python_data")) {
+    const research = names.some((name) => PUBLIC_RESEARCH_TOOLS.includes(name));
     if (
-      names.length !== 1 ||
-      !agent.data?.input_artifact_ids.length ||
+      !localResearchScope(names) ||
+      (!research && !agent.data?.input_artifact_ids.length) ||
+      (research && (agent.data?.input_artifact_ids.length ?? 0) > 7) ||
       !agent.data_readiness?.ready
     )
       return {

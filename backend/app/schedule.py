@@ -87,7 +87,13 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         from app.data_agents import freeze_inputs, require_runtime
 
         require_runtime()
-        data_inputs = freeze_inputs(session, definition.data)
+        from app.agent_coding_policy import coding_research_steps
+
+        data_inputs = (
+            freeze_inputs(session, definition.data, research=True)
+            if coding_research_steps(definition.tools)
+            else freeze_inputs(session, definition.data)
+        )
     media_inputs = None
     if definition.media:
         from app.agent_media import freeze_inputs as freeze_media_inputs

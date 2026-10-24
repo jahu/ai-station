@@ -150,3 +150,48 @@ it("allows reviewed research before local code, with separate query and source r
     ).blocked,
   ).toBe(false);
 });
+
+it("activates reviewed source-only Python analysis but preserves file and query requirements", () => {
+  const tools = [
+    "python_data",
+    "web_search",
+    "search_pages",
+    "http_fetch",
+    "coding_local",
+  ].map((name) => ({
+    name,
+    description: name,
+    operational: true,
+    required_permissions: [],
+  }));
+  const agent = {
+    enabled: false,
+    model: "auto",
+    tools: ["python_data", "web_search"],
+    data: { input_artifact_ids: [], max_repairs: 1 },
+    data_readiness: { ready: true, reason: "Reviewed public sources" },
+    search_query: "public numbers",
+  };
+  expect(activationBlock(agent, tools).blocked).toBe(false);
+  expect(
+    activationBlock({ ...agent, tools: ["python_data"] }, tools).blocked,
+  ).toBe(true);
+  expect(activationBlock({ ...agent, search_query: "" }, tools).reason).toMatch(
+    /public search query/,
+  );
+  expect(
+    activationBlock(
+      { ...agent, tools: ["python_data", "coding_local", "web_search"] },
+      tools,
+    ).blocked,
+  ).toBe(true);
+  expect(
+    activationBlock(
+      {
+        ...agent,
+        data: { input_artifact_ids: Array(8).fill("file"), max_repairs: 1 },
+      },
+      tools,
+    ).blocked,
+  ).toBe(true);
+});

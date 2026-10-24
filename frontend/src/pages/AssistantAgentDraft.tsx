@@ -1,3 +1,4 @@
+import { PUBLIC_RESEARCH_TOOLS } from "./agentActivation";
 import AgentCronFields from "./AgentCronFields";
 import "./AssistantAgentDraft.css";
 import {
@@ -1095,6 +1096,9 @@ export function AssistantAgentDraft({
                 <dt>Data inputs</dt>
                 <dd>
                   <AgentDataFiles
+                    allowResearch={agent.tools.some((name) =>
+                      PUBLIC_RESEARCH_TOOLS.includes(name),
+                    )}
                     value={agent.data}
                     disabled={busy || active}
                     onChange={(data) => saveSettings.mutate({ data })}
