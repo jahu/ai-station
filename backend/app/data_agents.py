@@ -12,7 +12,7 @@ from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select
 
 from app.agent_coding_policy import coding_provider, coding_research_steps
@@ -398,6 +398,21 @@ def context(session, run):
 class Script(OutputFiles):
     script: str = Field(min_length=1, max_length=32000)
 
+    @field_validator("outputs", mode="before")
+    @classmethod
+    def fixed_tables_are_not_extra_exports(cls, value):
+        # Both fixed tables are already mandatory; declaring them grants nothing.
+        # Normalize only their exact names before the unchanged optional allowlist.
+        if not isinstance(value, list):
+            return value
+        if len(value) > len(OUTPUTS) + len(FORMATS):
+            raise ValueError("Generated output declaration exceeds its fixed file limit")
+        if not all(isinstance(name, str) for name in value):
+            return value
+        if len(value) != len(set(value)):
+            raise ValueError("Generated output filenames must be unique")
+        return [name for name in value if name not in OUTPUTS]
+
 
 INSTRUCTIONS = """Return exactly one JSON object with a "script" Python string and an "outputs" list (empty for ordinary table/CSV analysis). No markdown or tool calls.
 Use standard Python and openpyxl (no pandas). Actual files are read-only and offline.
@@ -405,6 +420,7 @@ When the goal asks for a file, declare only available_optional_outputs from runt
 chart.png: real chart from the full data; use matplotlib with Agg, savefig, tight_layout and close the figure. Label axes and use a readable restrained style. No show().
 result.xlsx: an openpyxl workbook with literal values, clear headings and sensible column widths. No formulas, links, macros, named expressions or embedded objects.
 report.txt: a UTF-8 report. Never declare or create any other export filename.
+The outputs list names only chart.png, result.xlsx and/or report.txt; never include result.csv or result.json there. For an Excel and chart use "outputs": ["result.xlsx", "chart.png"].
 Optional exports accompany the mandatory result.csv and result.json, not replace them. Do not claim a file was created unless you declare it and write it.
 Always create EVERY filename in runtime.required_outputs. The controller collects requested exports even if you omit them from the outputs declaration.
 When runtime.capture_undeclared_outputs is true, supported files you actually create are also collected even if omitted from outputs. Never claim a file exists unless you write it.
@@ -544,6 +560,7 @@ class DataGenerateExecutor:
             if LocalAgentExecutor._canceled(session, run):
                 return "done"
             proposal = Script.model_validate_json(text)
+            table_declarations = [name for name in json.loads(text).get("outputs", []) if name in OUTPUTS]
             output_files = [name for name in FORMATS if name in required or name in proposal.outputs]
             optional_files = (
                 [name for name in available_outputs if name not in output_files]
@@ -578,8 +595,16 @@ class DataGenerateExecutor:
                 "data_output_files": output_files,
                 "required_data_output_files": required,
                 "declared_data_output_files": proposal.outputs,
+                **({"mandatory_data_output_declarations": table_declarations} if table_declarations else {}),
                 **({"data_optional_output_files": optional_files} if optional_files else {}),
             }
+            if table_declarations:
+                append_event(
+                    session,
+                    run.id,
+                    "data.outputs.mandatory_declared",
+                    {"filenames": table_declarations},
+                )
             if output_files or optional_files:
                 append_event(
                     session,

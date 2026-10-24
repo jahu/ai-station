@@ -110,3 +110,22 @@ total of 55. That CPU proof uses injected inference; it is separate from an actu
 local-model qualification. Corrected verifier assumptions and failed diagnostics
 remain retained. Evidence: `data/acceptance/local-file-creation-20261024`.
 PR #404 review and deployment must finish before claiming this release live.
+
+## Observed local-model declaration correction
+
+PR #404 passed normal/compiled/native-CPU qualification and is deployed, but its
+first actual-model creation was rejected before Python. The valid JSON declared
+both fixed mandatory table files alongside all three approved optional exports.
+The shared optional-only schema rejected five names before source adoption.
+The original failed Run, full model deltas and operator-preset restoration remain
+recorded under `data/acceptance/local-file-creation-20261024`.
+
+The Script parser now removes only the exact already-mandatory `result.json` and
+`result.csv` names before the unchanged optional allowlist. The original list is
+bounded to five unique strings; duplicate, unknown, path, type and overflow errors
+still fail. Fixed declarations are recorded as metadata and a structured event.
+The native request still contains each mandatory file once and only the same
+three supported optional names. No new permissions, filenames or model calls are
+introduced; the prompt explicitly distinguishes the two lists. Replaying the
+retained actual-model response through native offline Python independently checks
+the result, before a new normal-worker/local-model qualification.
