@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from app.api import app
 from app.config import get_settings
 from app.db import session_factory, utcnow
@@ -37,6 +38,33 @@ def test_upgrade_readiness_is_inspect_only_and_restore_stays_unpublished():
     assert client.post("/api/maintenance/rollout", json={}).status_code == 404
     assert client.post("/api/maintenance/image", json={}).status_code == 405
     assert "manage_station" in ALL_PERMISSIONS
+
+
+@pytest.mark.parametrize("password_configured", [True, False])
+def test_maintenance_private_access_matches_operator_policy(monkeypatch, password_configured):
+    from app.config import clear_settings_cache
+    from app.maintenance import readiness
+    from app.operator_auth import public_status
+
+    client = TestClient(app)
+    if password_configured:
+        response = client.put("/api/operator-auth", json={"password": "temporary-operator-password"})
+        assert response.status_code == 200
+    monkeypatch.setenv("AI_STATION_LAN_HOST", "192.168.20.5")
+    clear_settings_cache()
+    with session_factory()() as session:
+        operator = public_status(session)
+        maintenance = readiness(session)
+    assert operator["lan_bind_allowed"] is password_configured
+    assert maintenance["lan_bind_allowed"] is password_configured
+    assert maintenance["lan_exposure"] == operator["lan_exposure"]
+    assert "LAN publish are unpublished" not in maintenance["summary"]
+    assert maintenance["restore"] == maintenance["image_rollout"] == "unpublished"
+    # The report never grants a guest access or relaxes the existing password gate.
+    guest = TestClient(app, base_url="http://192.168.20.5:8765")
+    assert guest.get("/api/maintenance").status_code == 401
+    if password_configured:
+        assert client.get("/api/maintenance").json()["lan_bind_allowed"] is True
 
 
 def test_backup_run_integrity_checks_and_never_restores():

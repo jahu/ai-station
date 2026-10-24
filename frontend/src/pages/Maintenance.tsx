@@ -462,7 +462,7 @@ export default function Maintenance() {
           </div>
           <div>
             <div>
-              <strong>Not enabled</strong>
+              <strong>Recovery and private access</strong>
               <p>
                 Restore {ready.restore} · image rollout {ready.image_rollout}
                 {" · "}

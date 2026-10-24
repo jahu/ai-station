@@ -124,7 +124,7 @@ def readiness(session: Session) -> dict:
         "application_data": "bind-mount",
         "restore": "unpublished",
         "image_rollout": "unpublished",
-        "lan_bind_allowed": False,
+        "lan_bind_allowed": bind["lan_bind_allowed"],
         "lan_exposure": bind["lan_exposure"],
         "last_backup": run_dict(last) if last else None,
         "interrupted_runs": awaiting,
@@ -133,8 +133,8 @@ def readiness(session: Session) -> dict:
             "Upgrade readiness is inspect-only. Compose down without --volumes keeps the bind-mounted "
             "data directory. An explicit backup Run copies SQLite with VACUUM INTO and "
             "integrity-checks the copy. A successful copy can be re-checked in place without "
-            "writing the live database. Restore, image rollout and LAN publish are unpublished. "
-            "Do not treat preview :8765 as this checkout."
+            "writing the live database. Restore and image rollout are unpublished. "
+            "Private access follows the operator password and explicit network configuration."
         ),
     }
 
