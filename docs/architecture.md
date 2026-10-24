@@ -1,10 +1,10 @@
-[Optional bounded avatar loading](plans/echo-memory-loading.md) reuses the
-
 [Agent result email](plans/agent-report-email.md) publishes a distinct ordinary
 email.send child from a verified final agent result. It reuses SMTP connectors,
 EmailDelivery, Task serialization and approvals; generation and delivery have
 separate outcomes. Optional JSON policy preserves legacy definition identities
 and does not add a schema column or a native execution boundary.
+
+[Optional bounded avatar loading](plans/echo-memory-loading.md) reuses the
 existing native ProcessManager, fixed private 11-GiB/zero-swap scope and ordinary
 media Task graph. Complete existing weights retain full precision; no upstream
 files or public command/memory controls are added. Default native arguments are unchanged; new Standard jobs reserve the observed
@@ -30,6 +30,11 @@ Generated speech is bound to its actual owned Artifact before animation. No
 additional agent execution engine or model download is introduced.
 
 # Architecture
+
+[Dependency-bound model restoration](plans/dependent-consumer-eviction.md) uses
+an ordinary database-only preparation Run. Existing dependencies gate future
+consumers across owned stop, media and normal model load, preserving the current
+worker/Runner boundary and atomic claim semantics.
 
 [Approved optional Python outputs](plans/python-optional-outputs.md) extend the
 existing typed request with a frozen allowlist. Required files remain mandatory;

@@ -1,5 +1,3 @@
-[Optional bounded avatar loading](plans/echo-memory-loading.md) reuses the
-
 [Agent result delivery](plans/agent-report-email.md) freezes reviewed sender,
 allowlisted recipients, connector revision and definition consent. A model
 cannot choose the envelope or obtain mail credentials. Research/code tools do
@@ -8,6 +6,8 @@ the worker reloads consent and source authority, verifies saved result bytes
 and reconstructs the approved message. Per-message review remains the default.
 Automatic private-workspace adoption retains consent only for the exact verified
 controller derivation; it cannot grant a different project or renew the budget.
+
+[Optional bounded avatar loading](plans/echo-memory-loading.md) reuses the
 existing native ProcessManager, fixed private 11-GiB/zero-swap scope and ordinary
 media Task graph. Complete existing weights retain full precision; no upstream
 files or public command/memory controls are added. Default native arguments are unchanged; new Standard jobs reserve the observed
@@ -38,6 +38,12 @@ is success. Agent film Resume cannot create a new budget; reviewed Run now/retry
 creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
+
+[Deferred model consumers](plans/dependent-consumer-eviction.md) may yield only
+through verified queued dependencies. Exact model/source/preset and consumer
+identity bind restoration. Active/runnable work and external runtimes stay
+protected. Preparation does no native I/O; Stop/expiry rechecks preserve unrelated
+consumers of a shared owned startup.
 
 Optional Python outputs are an explicit controller-owned allowlist, not directory
 discovery. Only a missing optional file is ignored. Unsafe file types/aliases,

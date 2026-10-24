@@ -39,3 +39,16 @@ def failed_prerequisites(session, run):
             .where(RunDependency.run_id == run.id, Run.status.in_(TERMINAL), Run.status != "succeeded")
         )
     )
+
+
+def active_dependents(session, run, *, other_tasks=False, exclude_run_id=None):
+    query = (
+        select(Run.id)
+        .join(RunDependency, RunDependency.run_id == Run.id)
+        .where(RunDependency.prerequisite_id == run.id, Run.status.not_in(TERMINAL))
+    )
+    if other_tasks:
+        query = query.where(Run.task_id != run.task_id)
+    if exclude_run_id is not None:
+        query = query.where(Run.id != exclude_run_id)
+    return session.scalar(query.limit(1)) is not None

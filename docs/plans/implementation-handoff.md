@@ -5,6 +5,61 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — result email deployed; dependency/GPU handoff regression, 2026-10-24
+
+PR #400 is squash-merged into develop as `1522ef6f15243338efd3caf6b35db798a8c8d7ab`,
+reviewed source `2cc4d9e8dfc92386a506394909141e293e149815`, and deployed/qualified.
+Live release `.tools/ui-agent-report-email-20261024`; image
+`612729d1a3c9c0db8e7904ffd1307502b54b19010c618e0818fa4447dd6c065a`;
+supervisor 2807007. Native PID 2626257 and its old Echo release path/fingerprint
+`83eee0fc` remain unchanged, as does the ready owned model/preset. All original
+IDs, operator auth, sixteen paused definitions and their due instants are preserved.
+Backup: `data/preview-backups/pre-agent-report-email-20261024T110613Z.sqlite`.
+Authoritative evidence:
+`data/acceptance/agent-report-email-20261024/post-deployment-qualified.json` and
+`data/acceptance/safety-redeploy-20261012/deployment.json`. The remote feature
+branch is deleted; preserve its qualification/source trees.
+
+Qualification: all 3160 collected Python/Runner cases (3151 passes, nine opt-in
+skips); 716 UI tests; lint/format/types/build; exact Docker backend/assets and
+normal/dev/private-LAN Compose. Final compiled real API/SQLite desktop/phone
+acceptance submitted four synthetic messages through an actual loopback SMTP
+sink. Only inference/routing are fixtures; public TLS/operator inbox delivery
+was not executed. No new GPU work, accounts, model downloads or live mail.
+
+Next owned branch/worktree: `fix/dependent-consumer-eviction`,
+`.tools/dependent-consumer-eviction`, based on develop `1522ef6`. Read
+[the dependent-consumer plan](dependent-consumer-eviction.md). Existing automatic
+idle-model eviction/reload already exists: do not rebuild it. A new focused fake
+regression demonstrates a valid dependency graph in which queued post-media work
+pins the model/GPU required by its own media prerequisite. Actual base result:
+`instance.status == "ready"`, expected `"stopping"`; one intentional failing test,
+`data/acceptance/dependent-consumer-eviction-regression.log`. The red base evidence is retained; the regression now passes locally. The implementation
+uses ordinary preparation Runs and is not yet published/merged/deployed. Do not
+merge a failing gate.
+Ignoring that consumer alone would leave its stale endpoint; preserve runnable
+and active consumers and plan deferred rebinding through ordinary owned loads.
+The reproduction does not claim every current public media route builds this graph.
+
+Before implementing refresh, inspect the real `prepare_consumer`/`enqueue_load`
+validation calls. Do not put native/network verification under a SQLite writer
+lock or introduce cross-Task cancellation dependencies for unrelated consumers.
+The final design avoids a refresh loop: a database-only preparation Run gates
+the consumer with existing atomic claiming. Idempotence, recovery and
+failed/Stop/expired prerequisite handling are tested together. Current focused
+verification: 191 relevant tests passed before the final sharing-lock refinement;
+38 final focused cases now pass, including concurrent workers and retained shared
+startup under resource pressure. Complete implementation checks now pass: 3190 Python/Runner tests and nine
+opt-in skips, lint/format, exact Docker backend/assets and all three Compose
+configurations. The unchanged frontend reuses PR #400's qualified 716-test
+UI/build gate after exact source comparison. Release
+qualification is being collected in
+`data/acceptance/dependent-consumer-eviction-20261024`; no new release is claimed
+until `post-deployment-qualified.json` passes. Read the plan
+and current source rather than implementing the superseded refresh proposal. The full platform goal remains active; preserve
+root Memory WIP (its functionality was already ported in #319), all live/proof
+worktrees and pending Whisper-small consent.
+
 ## Current continuation — avatar profile delivered, next result email, 2026-10-24
 
 PR #399 is squash-merged as `737dbd3`, reviewed source `727313a`, and live-qualified.

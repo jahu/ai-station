@@ -1,5 +1,3 @@
-[Optional bounded avatar loading](plans/echo-memory-loading.md) reuses the
-
 Agent result email uses a same-Task email.send child after verified completion,
 with an operation identity derived from the root workflow. Review waits for an
 ordinary payload-bound approval; automatic delivery rechecks its frozen grant
@@ -7,6 +5,8 @@ and original runtime budget. Task Stop covers waiting/queued delivery. An
 uncertain sending receipt requires inspection and never blind retry. Delivery
 failure cannot change the successful source result or the agent result status.
 See [result email](plans/agent-report-email.md).
+
+[Optional bounded avatar loading](plans/echo-memory-loading.md) reuses the
 existing native ProcessManager, fixed private 11-GiB/zero-swap scope and ordinary
 media Task graph. Complete existing weights retain full precision; no upstream
 files or public command/memory controls are added. Default native arguments are unchanged; new Standard jobs reserve the observed
@@ -21,6 +21,11 @@ reuses the existing source-bound context handoff, public tools and isolated
 workspace. One reviewed definition and deadline bind every child.
 
 # Execution model
+
+[GPU handoff](plans/dependent-consumer-eviction.md) composes owned stop → media →
+pure model preparation → ordinary model load → queued consumer. Failed
+prerequisites propagate normally; safe preparation recovery cannot replay native
+operations. Reload publication and endpoint rebinding commit atomically.
 
 The existing Python contract may freeze optional output names separately from
 required files. Collection after confirmed script exit accepts a required prefix

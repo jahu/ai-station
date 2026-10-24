@@ -278,7 +278,7 @@ def load(body: LoadModel, session: DB):
     return run_dict(run)
 
 
-def enqueue_load(body, session, *, task=None, allow_stopping=False):
+def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_context=False):
     model = session.get(ModelFile, str(body.model_file_id))
     if not loadable_model(model):
         raise HTTPException(422, "Choose a present language-model GGUF; mmproj files are vision companions")
@@ -295,7 +295,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False):
             "size_bytes": companion.size_bytes,
             "mtime": companion.mtime,
         }
-    if body.cache_type == "q8_0":
+    if body.cache_type == "q8_0" and not _fitted_context:
         body = body.model_copy(
             update={
                 "context_size": coding_context_target(session, model, body.gpus, ceiling=body.context_size)
@@ -601,6 +601,14 @@ class LlamaExecutor:
         if instance is None or instance.ownership != "managed":
             raise ValueError("Owned runtime missing")
         session.refresh(run)
+        if self.operation == "load":
+            from app.llama_handoff import cancel_abandoned_restore
+
+            cancel_abandoned_restore(session, run)
+        elif run.parameters.get("evicted_for_run_id"):
+            from app.llama_handoff import cancel_unneeded_eviction
+
+            cancel_unneeded_eviction(session, run)
         if run.metadata_json.get("cancel_on_resume") and run.status != "cancel_requested":
             transition(session, run, RunStatus.CANCEL_REQUESTED, event_type="run.cancel_requested")
         if run.status == "cancel_requested" and not run.metadata_json.get("dispatch_attempted"):
@@ -667,6 +675,10 @@ class LlamaExecutor:
             run.metadata_json = {**run.metadata_json, "container_id": info.get("container_id")}
             while True:
                 session.refresh(run)
+                if self.operation == "load":
+                    from app.llama_handoff import cancel_abandoned_restore
+
+                    cancel_abandoned_restore(session, run)
                 canceled = run.status == "cancel_requested"
                 session.commit()
                 if canceled or time.monotonic() >= deadline:
@@ -943,21 +955,35 @@ def prepare_consumer(session, run):
 def evict_idle_models(session, run, indexes, *, desired=None):
     """Queue owned idle runtime stops to make room; never touch external services."""
     from app.dependencies import depend_on
+    from app.llama_handoff import eviction_needed
 
+    if not eviction_needed(session, run):
+        return
     if desired is None:
         desired = set(indexes) if run.requested_gpu == "auto" else {int(run.requested_gpu)}
     consumers = list(session.scalars(select(Run).where(Run.status.not_in(TERMINAL))))
     for instance in instances(session):
         if instance.status != "ready" or not desired.intersection(instance.metadata_json.get("gpus", [])):
             continue
-        if any(
-            r.parameters.get("endpoint") == instance.endpoint
-            or r.parameters.get("instance_id") == instance.id
+        references = [
+            r
             for r in consumers
-        ):
+            if (
+                r.parameters.get("endpoint") == instance.endpoint
+                or r.parameters.get("instance_id") == instance.id
+            )
+        ]
+        from app.llama_handoff import can_yield, publish_resumes
+
+        if any(not can_yield(session, consumer, run, instance) for consumer in references):
             continue
-        stop_run = enqueue_stop(session, instance, task=session.get(Task, run.task_id))
+        # Retained shared startup can outlive its original stopped Task. Its
+        # resource support must not create new work in that stopped Task.
+        task = None if run.task.metadata_json.get("stop_requested_at") else run.task
+        stop_run = enqueue_stop(session, instance, task=task)
+        stop_run.parameters = {**stop_run.parameters, "evicted_for_run_id": run.id}
         depend_on(session, run, stop_run)
+        publish_resumes(session, references, run, instance, stop_run)
         append_event(
             session,
             run.id,
