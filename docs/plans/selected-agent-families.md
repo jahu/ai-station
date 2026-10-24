@@ -31,3 +31,37 @@ report without Python/workspace, local code with document context and owned Git
 review, explicit enable, Stop/tamper/replay, legacy absent-family proposals, compiled
 desktop/mobile and actual local inference separately. Qualify final source locally
 before PR to develop and data-preserving deployment. Current live baseline is #415.
+
+## Qualification and release
+
+PR #416, `feat/selected-agent-families`, base #415 (`87dd0f1`). Source `8543af3`
+passed all 3477 normal Python/Runner cases (3468 pass, nine explicit opt-in skips),
+with all eight shard exits zero, Ruff lint/format. The final source-audit collapse
+is UI-only; the full final frontend gate passes 761 tests, formatting, lint,
+typecheck and production build. Exact image/backend/assets and normal/dev/LAN
+Compose qualify independently.
+
+Compiled 1440/390 browser cases cover both report and code: first selected-document
+request, correct family/source audit, explicit review/enable, finished result and
+idle/Run now UI. Reports actually capture/read the document and publish Markdown
+without Python or project/worktree setup. Code actually provisions private Git,
+launches owned local-coding subprocesses through a private test UDS, applies the
+proposal, creates diff artifacts and executes successful stdlib unittest validation.
+Independent Chromium interactions with the generated calculator check 12+15=27.
+Two code jobs, two validation jobs and two reports complete. The model inference
+and model inventory are injected; this is actual native code mechanics, not a
+new real-model coding-quality or real GPU test. All original repository bytes stay.
+
+Two separate actual existing llama.cpp calls select report and code for Polish
+requests and retain exact synthetic document scope in disabled definitions. The
+report schedule is 09:00 Europe/Warsaw; code stays manual with Auto coding policy.
+The existing 46,080-token runtime/container is preserved. This qualifies real family
+drafting, not future report/code inference. No real mail or private files are used.
+
+Evidence: `data/acceptance/selected-agent-families-20261024`. Earlier fixture failures
+are retained: report executor-name/session handling, and a conftest absent.sock
+exceeding Unix-socket length in the native harness (fixed by its explicit private
+short socket). Final UI/body/source-audit screenshots and gates supersede earlier
+passing layouts without changing backend/native source. Use the exact review and
+post-deployment qualification to establish live state. The full platform remains
+an active objective; selected data-file contexts still use data analysis.

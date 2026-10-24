@@ -1,4 +1,17 @@
-> Current increment: [direct selected-input agents](selected-input-agent-draft.md),
+> Current increment: [selected agent families](selected-agent-families.md), PR #416,
+> branch `feat/selected-agent-families`, base #415. Selected documents/public sources
+> can propose Report/Local code/Data; data files/creation retain Data. Controller
+> maps tools/models/workspace policy, preserves snapshots and keeps activation
+> explicit. Child model matches parent. Collapsed source audit keeps the actual
+> draft visible. Final CPU3468+9 opt-in skips, UI761, exact image/Compose and compiled
+> 1440/390 report/native Git+code+unittest/calculator interactions pass, with injected
+> inference/inventory. Two separate actual existing-model Polish family calls pass;
+> future model code/report quality is not implied. Evidence and live gate:
+> `data/acceptance/selected-agent-families-20261024/post-deployment-qualified.json`.
+> Current authority remains `data/acceptance/safety-redeploy-20261012/deployment.json`.
+> Preserve root Memory WIP, native Runner, data/auth and owned model container/preset.
+
+> Completed increment: [direct selected-input agents](selected-input-agent-draft.md),
 > PR #415 / `feat/selected-input-agent-draft`, base #414. First Work requests can
 > create a disabled local agent from the current data/document/public scope without
 > first running an analysis. Controller binds files/tools/model/source/runtime;

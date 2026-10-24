@@ -228,6 +228,16 @@ The target is the complete AI Station vision, reconfirmed on 2026-10-13. An impl
 
 ## Current work
 
+PR #416 extends selected-document/public-source drafts to controller-mapped Report,
+Local code and Data families. Explicit activation uses existing report or owned
+code/data workflows; no new executor/schema. Compiled desktop/mobile completed
+actual document reports and native owned code/diff/unittest checks, with independent
+calculator interactions; inference/inventory were injected. Separate actual local
+inference chose the proper families for Polish tasks. Final CPU3468+9 skips, UI761
+and image/Compose pass. [Contracts and live qualification](plans/selected-agent-families.md)
+remain authoritative; whole-platform completion is not claimed.
+
+
 PR #415 prepares local agents directly from current Files & data selections in
 Work, without a preliminary analysis. Selected CSV/Excel/JSON, PDF/text, reviewed
 public sources, data model and execution limits remain frozen; the model proposes
