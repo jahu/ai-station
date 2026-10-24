@@ -5,6 +5,25 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — GPU handoff deployed; rendered agent sources, 2026-10-24
+
+PR #401 is merged as `d00887d`, reviewed source `df215f9`, and live-qualified
+in `.tools/ui-dependent-consumer-eviction-20261024`. All 3199 normal Python/Runner
+cases completed (3190 passes/nine opt-in skips). Exact unchanged frontend reuses
+716 passing UI tests/build; Docker/backend/assets and three Compose checks pass.
+Live LAN/auth/persistence, all old IDs, paused definitions/due instants, existing
+owned model and native PID were preserved. Authoritative proof:
+`data/acceptance/dependent-consumer-eviction-20261024/post-deployment-qualified.json`.
+This is worker/temporary-DB/fake-runtime handoff coverage, not a new GPU smoke.
+
+Next branch `feat/agent-rendered-research`, `.tools/agent-rendered-research`,
+composes existing Browser with local code/Python agents. Read
+[rendered research](agent-rendered-research.md) before editing. The source format
+has a raw network audit and compact observation: preserve exact projection and
+hash/provenance validation rather than ignoring the difference. Reuse current
+native Browser and offline code boundaries. Preserve root WIP, live/proof trees
+and the pending Whisper-small consent. The full product goal remains active.
+
 ## Current continuation — result email deployed; dependency/GPU handoff regression, 2026-10-24
 
 PR #400 is squash-merged into develop as `1522ef6f15243338efd3caf6b35db798a8c8d7ab`,

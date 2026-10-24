@@ -195,3 +195,34 @@ it("activates reviewed source-only Python analysis but preserves file and query 
     ).blocked,
   ).toBe(true);
 });
+
+it("requires an available Browser and reviewed URLs before local rendered-source work", () => {
+  for (const family of ["coding_local", "python_data"]) {
+    const tools = [family, "browser"].map((name) => ({
+      name,
+      description: name,
+      operational: true,
+      required_permissions: [],
+    }));
+    const agent = {
+      enabled: false,
+      model: "auto",
+      tools: [family, "browser"],
+      data: { input_artifact_ids: [], max_repairs: 1 },
+      data_readiness: { ready: true, reason: "Reviewed sources" },
+      fetch_urls: ["https://example.com/"],
+    };
+    expect(activationBlock(agent, tools).blocked).toBe(false);
+    expect(activationBlock({ ...agent, fetch_urls: [] }, tools).blocked).toBe(
+      true,
+    );
+    expect(
+      activationBlock(
+        agent,
+        tools.map((t) =>
+          t.name === "browser" ? { ...t, operational: false } : t,
+        ),
+      ).blocked,
+    ).toBe(true);
+  }
+});

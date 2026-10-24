@@ -5,6 +5,8 @@ import { isSearchPageResult } from "./agent-search-result";
 import { FetchedPages } from "./AgentHttpFetch";
 import { SearchSources } from "./ChatWebSearch";
 import { isFetchResult, isWebSources } from "./agentResearchResult";
+import { BrowserPages } from "./BrowserPages";
+import { isBrowserResult } from "./browserResult";
 
 export default function AgentCodeResearch({
   runs,
@@ -32,7 +34,9 @@ export default function AgentCodeResearch({
       run.parent_run_id === handoff.parent_run_id &&
       run.agent_id === handoff.agent_id &&
       run.project_id === handoff.project_id &&
-      run.executor_type === "agent_tool" &&
+      (run.executor_type === "agent_tool" ||
+        (run.executor_type === "browser" &&
+          run.parameters?.tool === "browser")) &&
       run.status === "succeeded",
   );
   const search = sources.find((run) => run.parameters?.tool === "web_search")
@@ -43,6 +47,8 @@ export default function AgentCodeResearch({
     (run) => run.parameters?.tool === "http_fetch",
   );
   const fetched = fetchedRun?.metadata?.http_fetch;
+  const rendered = sources.find((run) => run.parameters?.tool === "browser")
+    ?.metadata?.browser;
   const observation = fetchedRun?.metadata?.observation;
   const fetchedSnapshot =
     observation &&
@@ -52,8 +58,9 @@ export default function AgentCodeResearch({
       : undefined;
   const hasSearch = isWebSources(search),
     hasPages = isSearchPageResult(pages),
-    hasFetched = isFetchResult(fetched);
-  if (!hasSearch && !hasPages && !hasFetched) return null;
+    hasFetched = isFetchResult(fetched),
+    hasRendered = isBrowserResult(rendered);
+  if (!hasSearch && !hasPages && !hasFetched && !hasRendered) return null;
   return (
     <details
       className="panel web-search-sources"
@@ -70,6 +77,15 @@ export default function AgentCodeResearch({
       {hasSearch && <SearchSources result={search} />}
       {hasPages && <AgentSearchSources result={pages} />}
       {hasFetched && <FetchedPages result={fetched} />}
+      {hasRendered && (
+        <>
+          <p className="muted">
+            Local work uses captured page text. Screenshots are saved for your
+            inspection; their pixels were not analyzed by the model.
+          </p>
+          <BrowserPages result={rendered} />
+        </>
+      )}
       {hasFetched && typeof fetchedSnapshot === "string" && (
         <Link className="text-link" to={`/library/${fetchedSnapshot}`}>
           Inspect captured pages

@@ -106,3 +106,51 @@ it("does not show another task's or unpublished source observations", () => {
   );
   expect(screen.queryByLabelText("Research for this task")).toBeNull();
 });
+
+it("shows task-bound rendered text and screenshots without claiming pixel inspection", () => {
+  const runs = rows();
+  runs[0].parameters = { source_run_ids: ["browser"] };
+  runs[1] = {
+    ...runs[1],
+    id: "browser",
+    executor_type: "browser",
+    parameters: { tool: "browser" },
+    metadata: {
+      browser: {
+        captured_at: 1792843200,
+        pages: [
+          {
+            url: "https://example.com/",
+            title: "Rendered page",
+            text: "Visible numbers 12 and 15",
+            screenshot_artifact_id: "screenshot",
+            truncated: false,
+            blocked_resource_count: 0,
+          },
+        ],
+      },
+    },
+  } as Run;
+  const view = render(
+    <MemoryRouter>
+      <AgentCodeResearch runs={runs} taskId="task" />
+    </MemoryRouter>,
+  );
+  const details = screen.getByLabelText("Research for this task");
+  expect(details.hasAttribute("open")).toBe(false);
+  fireEvent.click(screen.getByText("Research sources"));
+  expect(screen.getByText(/their pixels were not analyzed/)).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "Open screenshot of Rendered page" })
+      .getAttribute("href"),
+  ).toBe("/api/artifacts/screenshot/file");
+  expect(screen.getByText("Visible numbers 12 and 15")).toBeTruthy();
+  runs[1] = { ...runs[1], parent_run_id: "other-workflow" };
+  view.rerender(
+    <MemoryRouter>
+      <AgentCodeResearch runs={runs} taskId="task" />
+    </MemoryRouter>,
+  );
+  expect(screen.queryByLabelText("Research for this task")).toBeNull();
+});

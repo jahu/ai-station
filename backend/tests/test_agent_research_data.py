@@ -212,7 +212,6 @@ def test_ordinary_data_scope_still_requires_files_and_other_execution_families_c
         "coding_codex",
         "create_media",
         "market_watch",
-        "browser",
         "memory_search",
     ]:
         with pytest.raises(ValueError):

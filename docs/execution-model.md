@@ -22,6 +22,10 @@ workspace. One reviewed definition and deadline bind every child.
 
 # Execution model
 
+Rendered-source work composes Browser → verified context → existing local
+code/Python Runs under one original deadline and Task-wide Stop.
+See [rendered research](plans/agent-rendered-research.md).
+
 [GPU handoff](plans/dependent-consumer-eviction.md) composes owned stop → media →
 pure model preparation → ordinary model load → queued consumer. Failed
 prerequisites propagate normally; safe preparation recovery cannot replay native

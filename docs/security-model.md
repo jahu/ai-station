@@ -39,6 +39,11 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Rendered-source agents require separately reviewed Browser/URL scope. Saved raw
+capture hashes and their exact compact projection bind the offline source input;
+generated code inherits no browser networking or screenshot Vision.
+See [rendered research](plans/agent-rendered-research.md).
+
 [Deferred model consumers](plans/dependent-consumer-eviction.md) may yield only
 through verified queued dependencies. Exact model/source/preset and consumer
 identity bind restoration. Active/runnable work and external runtimes stay

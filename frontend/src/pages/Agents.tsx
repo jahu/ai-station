@@ -1532,7 +1532,8 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               {values.tools.includes("coding_local") && (
                 <>
                   Local coding can use a reviewed search query, read search
-                  sources and fetch public pages before building.{" "}
+                  sources, fetch public pages and read JavaScript-rendered text
+                  before building.{" "}
                 </>
               )}
               Each execution has an isolated branch, diff and validation

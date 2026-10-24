@@ -611,3 +611,33 @@ def test_assisted_data_research_draft_remains_disabled_without_invented_files(mo
         assert agent["data"] == {"input_artifact_ids": [], "max_repairs": 1}
         assert not agent["enabled"] and agent["next_run_at"] is None and not agent["project_id"]
         assert len(calls) == 1
+
+
+@pytest.mark.parametrize("family", ["coding_local", "python_data"])
+def test_assisted_draft_can_review_rendered_sources_for_local_work(model, monkeypatch, family):
+    monkeypatch.setattr("app.browser.available", lambda: {"available": True})
+    calls, responses = model
+    responses[:] = [
+        json.dumps(
+            {
+                **PROPOSAL,
+                "tools": [family, "browser"],
+                "fetch_urls": ["https://example.com/"],
+                "search_query": "",
+            }
+        )
+    ]
+    with TestClient(app) as api:
+        run = submit(
+            api,
+            instruction="Create a local agent to read JavaScript-rendered https://example.com/ and create a CSV"
+            if family == "python_data"
+            else "Create a local agent to build a website from JavaScript-rendered https://example.com/",
+        )
+        step()
+        done = state(api, run)
+        assert done["status"] == "succeeded", done["error_message"]
+        agent = api.get("/api/agents/" + done["metadata"]["agent_id"]).json()
+        assert agent["tools"] == [family, "browser"] and agent["model"] == "auto"
+        assert agent["fetch_urls"] == ["https://example.com/"] and not agent["enabled"]
+        assert agent["next_run_at"] is None and len(calls) == 1

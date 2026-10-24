@@ -10,12 +10,14 @@ export const LOCAL_CODING_RESEARCH = [
   "web_search",
   "search_pages",
   "http_fetch",
+  "browser",
 ];
 
 export const PUBLIC_RESEARCH_TOOLS = [
   "web_search",
   "search_pages",
   "http_fetch",
+  "browser",
 ];
 export function localResearchScope(names: string[]) {
   const family = names.filter((name) =>
