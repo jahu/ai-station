@@ -28,3 +28,9 @@ work. Test bounds, legacy identities, zero-input/repair paths and actual generat
 request content. Run required full local gates and compiled desktop/mobile
 first/follow-up/reload/Stop checks. Reuse unchanged native/source qualifications;
 qualify a small real model/CPU example only after review and backed-up deployment.
+
+Compiled acceptance found an existing user-message timestamp focus shift: its
+heading grew by23px on pointer focus, moving the summary before pointer-up and
+preventing the first click from opening it. Position that timestamp outside the
+message flow, preserving hover/focus visibility without moving interactive text.
+Check an actual single click on desktop/mobile, not an injected open attribute.

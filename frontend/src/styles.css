@@ -5938,14 +5938,20 @@ section:has(> .memory-grid) > .dashboard-note {
 .chat-message:focus-within .message-timestamp {
   opacity: 1;
 }
+.chat-message.user {
+  position: relative;
+}
 .chat-message.user > .message-heading {
+  position: absolute;
+  top: -18px;
+  right: 20px;
   margin: 0;
-  height: 0;
-  overflow: hidden;
+  height: auto;
+  overflow: visible;
+  pointer-events: none;
 }
 .chat-message.user:focus-within > .message-heading {
-  height: auto;
-  margin-bottom: 6px;
+  margin: 0;
 }
 .chat-message .message-actions .icon-button {
   width: 32px;
