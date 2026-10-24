@@ -4,12 +4,14 @@
 > composer and saved Chat mode are unchanged. Typed references cannot cross
 > conversation/source boundaries. Compiled 1440/390 flows passed with six actual
 > native offline Python jobs and injected inference/catalog/public responses.
+> A separate actual existing-model inference passed a Polish 09:00 Warsaw draft
+> with exact retained scope and disabled state; its source analysis was synthetic.
 > Full gate and live status: `data/acceptance/analysis-agent-action-20261024`.
 > #413 was merged and deployed with post-deployment qualification. Use shared
 > `data/acceptance/safety-redeploy-20261012/deployment.json` as live authority.
 > Preserve the root Memory WIP and native Runner/model containers.
 
-> Current owned increment: `.tools/conversation-data-agent-draft`, branch
+> Completed #413 increment: `.tools/conversation-data-agent-draft`, branch
 > `feat/conversation-data-agent-draft`, base #412 (`ed6cab6`).
 > [Analysis-to-agent](conversation-data-agent-draft.md) reuses the local Agent Factory
 > for an explicit Work request referring to the latest successful analysis. The
@@ -23,7 +25,7 @@
 > `data/acceptance/conversation-data-agent-draft-20261024/post-deployment-qualified.json`
 > and shared deployment authority for actual live status. Preserve root Memory WIP.
 
-> Current increment #412: `.tools/conversation-document-context`, branch
+> Completed #412 increment: `.tools/conversation-document-context`, branch
 > `feat/conversation-document-context`, based on #411 (`5ceff8a`).
 > [Conversation documents](conversation-document-context.md) brings selected PDF/text
 > to Files & data in both main composers. Full gate: 3391 Python/Runner passes,
@@ -47,11 +49,11 @@ main/master operations. Preserve original root Memory WIP and all existing servi
 
 LAN UI: http://192.168.1.121:8765. Always read
 `data/acceptance/safety-redeploy-20261012/deployment.json` and the corresponding
-post-deployment qualification before relying on a release name or PID. #410 is the
-previous qualified delivery; #411 is the selected-document increment. Consult
-`data/acceptance/agent-document-context-20261024/post-deployment-qualified.json`
-for actual #411 rollout. Source checkout `.tools/agent-document-context`, branch
-`feat/agent-document-context`; deployment must use its own detached release worktree.
+post-deployment qualification before relying on a release name or PID. #413 is the
+latest qualified deployment; #414 is the selected-analysis-action increment.
+Check `data/acceptance/analysis-agent-action-20261024/post-deployment-qualified.json`
+before treating #414 as live. Deploy into a detached release worktree; preserve the
+native Runner, ready model container/preset, operator login and all original rows.
 
 ## Completed increment: selected documents
 

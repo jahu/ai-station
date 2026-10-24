@@ -41,3 +41,17 @@ no GPU, production-record or physical-phone testing is claimed.
 Full normal Python/Runner and frontend gates and final release review are tracked
 under `data/acceptance/analysis-agent-action-20261024`; consult its final gate
 reports and post-deployment qualification before treating PR #414 as live.
+
+A separate real-model smoke used the already-ready owned llama.cpp instance
+without reloading or changing its 46,080-token preset/container. One actual local
+inference accepted a Polish daily-at-09:00 instruction, produced cron `0 9 * * *`
+in `Europe/Warsaw`, and saved a disabled definition retaining the exact original
+files and goal. Its original analysis/Python execution were synthetic and all
+records were isolated. This qualifies actual drafting separately from the compiled
+browser/native-Python cases. Evidence: `real-local-draft-result.json`.
+
+The initial complete CPU run exposed two outdated historical-receipt fixtures:
+new-schema model_dump included the new optional field while their simulated old
+schema did not remove it. Both fixture snapshots now omit that field. All 36
+contracts in the two files passed; the complete affected shard is repeated, with
+original failures retained. Production code and assertions were not weakened.
