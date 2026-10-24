@@ -61,3 +61,21 @@ those inspected containers, including if the observer disappears. The API,
 Host Runner and unrelated services stay running. Finally also verifies restoration.
 No result or product availability may be claimed until actual execution, peak,
 full decode, inspected frames and restored operator state are recorded.
+
+## First actual probe and quality rejection
+
+A 17-frame 512×288/four-step FP8 probe completed under the kernel-enforced 11 GiB
+limit with zero swap, full decode and exact operator preset restoration. Peak
+reached the cap, so its uncapped memory use is not established. Sampled first,
+middle and final frames show severe banding/distortion and do not satisfy the
+landscape goal. This is a technical execution pass and an overall visual
+qualification failure; the product profile remains unavailable and unchanged
+admission is retained. See `fp8-probe-state.json` and `visual-review.json` in the
+investigation evidence directory. A separate same-settings/default-precision
+A/B probe is now active to distinguish sampling/geometry from FP8 effects.
+
+A real CPU-only `systemd-run --user --scope` probe preserved the exact native
+PID, process group and session while applying memory/swap bounds. Native group
+Stop removed it. This is a viable mechanism to retain existing ProcessManager
+ownership/restart/cancellation if a *visually qualified* profile needs kernel
+memory limits; it is not yet an exposed profile or substitute for its quality gate.
