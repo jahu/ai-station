@@ -5,6 +5,64 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — avatar profile ready for release review, 2026-10-24
+
+PR #399 now includes the full optional avatar profile and measured Standard RAM
+admission correction in `.tools/echo-memory-profile`, branch
+`feat/echo-memory-profile` (remote PR head branch remains `feat/echo-memory-loading`).
+Actual source `64cfd15` produced a coherent five-second 384px/eight-step film via
+an ordinary agent, two scoped native windows and CPU composition in about 241s.
+Both scopes, source/model preservation, full audio/video decode and compiled
+1440/390 playback passed; the exact operator GPU/Q8/46080 preset was restored.
+
+Reviewed runtime code `c6e9398` additionally fixes Standard admission: new short/full
+jobs reserve 24 GiB, while bounded jobs retain 11 GiB. Both insufficient-memory
+regressions failed before and pass after correction. All 3089 normal Python/
+Runner cases passed their gate (3080 passes/nine opt-in skips), as did 707 UI cases,
+lint/format/types/build, compiled real API/SQLite saves/queued receipts/Stop/reload,
+image/assets and three Compose configurations. Exact bounded renderer/dispatch/
+loader/publisher comparison reuses the actual recorded output without rerendering.
+Finish full published diff review, squash merge to develop, then backed-up native/
+controller rollout and post-deployment qualification. The live release is still
+#398 until central deployment metadata proves otherwise. Preserve root Memory WIP,
+all live/proof trees and pending Whisper consent. Evidence:
+`data/acceptance/echo-memory-profile-20261024`. Full-platform work remains open.
+
+## Current continuation — bounded avatar profile candidate, 2026-10-24
+
+The private source `c093d7e` rendered81 actual384px/eight-step frames in109 seconds
+within an observed11-GiB/zero-swap scope, preserved original source/model bytes and
+restored the exact operator preset. Evidence:
+`data/acceptance/echo-memory-loading-20261024/native-window-observer-state.json`.
+The original directory rejection and CPU-CLIP constructor rejection remain.
+
+The product candidate is in `.tools/echo-memory-profile`, branch
+`feat/echo-memory-profile`, based on PR #399's private source. It adds the disabled-
+by-default native setting, frozen request/admission/resume/metadata contracts,
+Avatars/Chat recommendation and explicit agent setup review. The prototype PR
+must stay draft until the complete product/native/image/UI/ordinary-agent proof
+passes. Full evidence: `data/acceptance/echo-memory-profile-20261024`.
+Preserve live `.tools/ui-agent-video-setup-20261024`, native source, root WIP,
+all proof trees and pending Whisper consent. The full platform goal is open.
+
+## Current continuation — avatar model loading, 2026-10-24
+
+PR #398 is merged as `067b2c6` and deployed from reviewed `cec0c72` in
+`.tools/ui-agent-video-setup-20261024`; controller image `4d3212676d0c`.
+Auth/history, 16 paused definitions, exact due instants, native PID and the
+operator model stayed intact. Authoritative proof:
+`data/acceptance/agent-video-setup-20261024/post-deployment-qualified.json`.
+
+Active owned candidate: `feat/echo-memory-loading`, `.tools/echo-memory-loading`.
+[The avatar loading plan](echo-memory-loading.md) addresses the measured high RAM
+loader without changing installed weights/precision. All four CPU-loaded model
+components matched checkpoint tensor values; 45 focused checks pass. Actual GPU
+output remains unqualified. No product option or reduced reservation is enabled;
+private probing requires real-test opt-in and a verified kernel scope. Preserve
+original root WIP, live/native/proof trees, other applications and pending Whisper
+consent. Evidence: `data/acceptance/echo-memory-loading-20261024`.
+The full platform goal remains active.
+
 ## Current continuation — reviewed video-agent setup, 2026-10-24
 
 #397 is merged as `9c0af73` and live-qualified at reviewed `992bb5c`. Controller

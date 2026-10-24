@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     echomimic_python: str = ""
     echomimic_dir: str = ""
     echomimic_models: str = ""
+    echo_bounded_profile: bool = False
     video_python: str = ""
     comfy_dir: str = ""
     wan_model: str = ""

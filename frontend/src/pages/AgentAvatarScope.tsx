@@ -1,5 +1,6 @@
 import { Settings2 } from "lucide-react";
 import MediaInput from "../components/media/MediaInput";
+import AvatarMemoryProfile from "../components/media/AvatarMemoryProfile";
 import { useHardware } from "../api";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import type { AvatarMediaRequest } from "./agent-media";
@@ -55,6 +56,12 @@ export default function AgentAvatarScope({
           <Settings2 size={15} />
           Advanced avatar settings
         </summary>
+        <AvatarMemoryProfile
+          value={value.memory_profile ?? "default"}
+          onChange={(memory_profile) => patch({ memory_profile })}
+          disabled={disabled}
+          supported={(value.size ?? 384) === 384 && (value.steps ?? 8) >= 8}
+        />
         {generated && (
           <label>
             Motion direction

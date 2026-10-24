@@ -8,9 +8,10 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from PIL import Image, ImageOps
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_serializer, model_validator
 
 from ai_station_runner.config import get_settings
+from ai_station_runner.echo_profiles import BOUNDED, MEMORY_MIB, STANDARD_RAM_MIB, validate_profile
 from ai_station_runner.media_inputs import MediaInput
 from ai_station_runner.security import resolve_child
 from ai_station_runner.telemetry import collect
@@ -37,9 +38,18 @@ class AvatarRequest(BaseModel):
     seed: int = Field(default=43, ge=0, le=2147483647)
     gpu: int = Field(ge=0)
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
+    memory_profile: Literal["default", "bounded_11g"] = "default"
+
+    @model_serializer(mode="wrap")
+    def legacy_identity(self, handler):
+        values = handler(self)
+        if self.memory_profile == "default":
+            values.pop("memory_profile", None)
+        return values
 
     @model_validator(mode="after")
     def motion_scope(self):
+        validate_profile(self.memory_profile, self.size, self.steps)
         if self.motion_context and (self.previous_video is None or self.audio_window is None):
             raise ValueError("Avatar motion checkpoint needs a preceding full-job video window")
         return self
@@ -90,15 +100,47 @@ def capabilities():
             "fps": 25,
             "max_audio_seconds": 60,
             "offline": True,
+            "memory_estimate_mib": STANDARD_RAM_MIB,
+            "memory_profiles": memory_profiles(),
         }
     except HTTPException as exc:
         return {"available": False, "backend": "echomimic-v3", "reason": exc.detail}
+
+
+def memory_profiles():
+    from ai_station_runner.memory_scope import available
+
+    enabled = get_settings().echo_bounded_profile and available()
+    return [
+        {
+            "id": BOUNDED,
+            "available": enabled,
+            "ram_mib": MEMORY_MIB,
+            "size": 384,
+            "minimum_steps": 8,
+            **(
+                {}
+                if enabled
+                else {"reason": "The bounded Echo profile or user memory scopes are unavailable"}
+            ),
+        }
+    ]
 
 
 def start_avatar(manager, body):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise HTTPException(403, "Avatar read/write permissions are required")
     settings, python, runtime, models, base, checkpoint = installation()
+    prefix = []
+    if body.memory_profile == BOUNDED:
+        from ai_station_runner.memory_scope import scope_prefix
+
+        if not memory_profiles()[0]["available"]:
+            raise HTTPException(409, "The bounded Echo memory profile is unavailable")
+        try:
+            prefix = scope_prefix(str(body.run_id), MEMORY_MIB)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
     root = settings.host_data_dir().resolve()
     portrait, speech = owned(root, body.image_relative), owned(root, body.audio_relative)
     try:
@@ -230,6 +272,8 @@ def start_avatar(manager, body):
         )
     if motion:
         argv.extend(["--motion-context", str(motion), "--motion-hash", body.motion_context.sha256])
+    if body.memory_profile == BOUNDED:
+        argv.extend(["--station-bounded-run-id", run_id])
     environment = {
         **os.environ,
         "HF_HUB_OFFLINE": "1",
@@ -240,9 +284,13 @@ def start_avatar(manager, body):
         "PYTHONUNBUFFERED": "1",
         "CUDA_VISIBLE_DEVICES": str(body.gpu),
     }
+    if body.memory_profile == BOUNDED:
+        from ai_station_runner.memory_scope import scope_environment
+
+        environment.update(scope_environment())
     return manager.start(
         run_id=run_id,
-        argv=argv,
+        argv=prefix + argv,
         cwd=work,
         executor="echomimic",
         env=environment,

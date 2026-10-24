@@ -9,6 +9,7 @@ import argparse
 import importlib
 import os
 import sys
+from contextlib import nullcontext
 from pathlib import Path
 
 
@@ -23,7 +24,18 @@ def main():
     parser.add_argument("--motion-output")
     parser.add_argument("--motion-profile")
     parser.add_argument("--motion-relative")
+    profile = parser.add_mutually_exclusive_group()
+    profile.add_argument("--station-mapped-run-id")
+    profile.add_argument("--station-bounded-run-id")
     options, arguments = parser.parse_known_args()
+    if options.station_mapped_run_id:
+        from ai_station_runner.echo_loading import qualification_scope
+
+        qualification_scope(options.station_mapped_run_id)
+    elif options.station_bounded_run_id:
+        from ai_station_runner.memory_scope import require_scope
+
+        require_scope(options.station_bounded_run_id, 11264)
     sys.path.insert(0, options.runtime_dir)
     inference = importlib.import_module("infer_flash")
     base = inference.WanFunInpaintAudioPipeline
@@ -31,7 +43,8 @@ def main():
     size = int(arguments[arguments.index("--sample_size") + 1])
     from ai_station_runner.echo_motion import flow_sigma, profile_key, validate_checkpoint
 
-    model_root = Path(arguments[arguments.index("--model_name") + 1]).parent
+    base_model = Path(arguments[arguments.index("--model_name") + 1])
+    model_root = base_model.parent
     if options.motion_output and profile_key(options.runtime_dir, model_root) != options.motion_profile:
         raise ValueError("Avatar model/config observation changed before inference")
 
@@ -192,7 +205,13 @@ def main():
 
     inference.WanFunInpaintAudioPipeline = OffloadedPipeline
     sys.argv = [sys.argv[0], *arguments]
-    inference.main()
+    loading = nullcontext()
+    if options.station_mapped_run_id or options.station_bounded_run_id:
+        from ai_station_runner.echo_loading import mapped_loading
+
+        loading = mapped_loading(inference, base_model)
+    with loading:
+        inference.main()
     output = Path(options.output_path)
     image = Path(arguments[arguments.index("--image_path") + 1])
     directory = Path(arguments[arguments.index("--save_path") + 1])

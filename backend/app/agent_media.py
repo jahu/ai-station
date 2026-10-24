@@ -78,6 +78,15 @@ def require_profile(scope):
             memory_reservation(scope.request, profile)
         except HTTPException as exc:
             raise ValueError(str(exc.detail)) from exc
+    if scope.kind == "avatar" and scope.request.memory_profile != "default":
+        from fastapi import HTTPException
+
+        from app.avatars import memory_reservation
+
+        try:
+            memory_reservation(scope.request, profile)
+        except HTTPException as exc:
+            raise ValueError(str(exc.detail)) from exc
     return profile
 
 

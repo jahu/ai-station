@@ -1,5 +1,6 @@
 import AgentTimeBudget, { MAX_AGENT_RUNTIME } from "./AgentTimeBudget";
 import AgentVideoSetup from "./AgentVideoSetup";
+import AgentAvatarSetup from "./AgentAvatarSetup";
 import type { AgentMediaScope } from "./agent-media";
 import { PUBLIC_RESEARCH_TOOLS } from "./agentActivation";
 import AgentCronFields from "./AgentCronFields";
@@ -732,14 +733,24 @@ export function AssistantAgentDraft({
     modelBusy;
   const active = history.some((run) => !TERMINAL.has(run.status));
   const videoSetup = agent?.tools?.includes("create_media") ? (
-    <AgentVideoSetup
-      value={agent.media}
-      maximumRuntime={agent.maximum_runtime ?? 600}
-      disabled={busy || active}
-      tabIndex={tabIndex}
-      actionLabel="Apply and save setup"
-      onApply={(patch) => saveSettings.mutate(patch)}
-    />
+    <>
+      <AgentAvatarSetup
+        value={agent.media}
+        maximumRuntime={agent.maximum_runtime ?? 600}
+        disabled={busy || active}
+        tabIndex={tabIndex}
+        actionLabel="Apply and save setup"
+        onApply={(patch) => saveSettings.mutate(patch)}
+      />
+      <AgentVideoSetup
+        value={agent.media}
+        maximumRuntime={agent.maximum_runtime ?? 600}
+        disabled={busy || active}
+        tabIndex={tabIndex}
+        actionLabel="Apply and save setup"
+        onApply={(patch) => saveSettings.mutate(patch)}
+      />
+    </>
   ) : null;
   if (compact && !expanded) {
     const external = agent?.tools?.some((tool) =>

@@ -3,10 +3,29 @@
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_serializer, model_validator
+
+STANDARD_RAM_MIB = 24576
 
 
-class FullAvatarSettings(BaseModel):
+class AvatarMemorySettings(BaseModel):
+    memory_profile: Literal["default", "bounded_11g"] = "default"
+
+    @model_serializer(mode="wrap")
+    def legacy_identity(self, handler):
+        values = handler(self)
+        if self.memory_profile == "default":
+            values.pop("memory_profile", None)
+        return values
+
+    @model_validator(mode="after")
+    def bounded_shape(self):
+        if self.memory_profile == "bounded_11g" and (self.size != 384 or self.steps < 8):
+            raise ValueError("The reduced-RAM avatar profile requires 384x384 and at least 8 steps")
+        return self
+
+
+class FullAvatarSettings(AvatarMemorySettings):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     speech_text: str | None = Field(default=None, min_length=1, max_length=1000)
     image_artifact_id: UUID

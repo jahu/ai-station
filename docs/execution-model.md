@@ -1,3 +1,9 @@
+[Optional bounded avatar loading](plans/echo-memory-loading.md) reuses the
+existing native ProcessManager, fixed private 11-GiB/zero-swap scope and ordinary
+media Task graph. Complete existing weights retain full precision; no upstream
+files or public command/memory controls are added. Default native arguments are unchanged; new Standard jobs reserve the observed
+loader requirement before launch.
+
 [One bounded local-agent correction](plans/agent-validation-repair.md) reuses
 the existing validation-repair engine when saved automatic project checks are
 enabled. The original deadline, commands, source scope and failed history remain.

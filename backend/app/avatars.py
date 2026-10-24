@@ -1,22 +1,25 @@
 """Portrait and speech to an inspectable local avatar video Run."""
 
+import math
 from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import ConfigDict, Field
 from sqlalchemy.orm import Session
 
+from app.avatar_schema import STANDARD_RAM_MIB, AvatarMemorySettings
 from app.db import session_scope
 from app.host_media_executor import HostMediaExecutor
 from app.models import Artifact
 from app.motion_artifacts import MotionArtifacts
+from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, run_dict
 
 router = APIRouter(prefix="/api/avatars")
 
 
-class AvatarRequest(BaseModel):
+class AvatarRequest(AvatarMemorySettings):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     speech_text: str | None = Field(default=None, min_length=1, max_length=1000)
     image_artifact_id: UUID
@@ -29,7 +32,45 @@ class AvatarRequest(BaseModel):
     gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]{1,12})$")
 
 
-def create_avatar_run(session, body, *, task=None, parent_run_id=None):
+@router.get("/capabilities")
+def capabilities():
+    try:
+        runner = RunnerClient()
+        profile = runner.request("GET", "/v1/avatar/capabilities")
+        recommended = "default"
+        if profile.get("available") and any(
+            row.get("id") == "bounded_11g" and row.get("available") and row.get("ram_mib") == 11264
+            for row in profile.get("memory_profiles", [])
+        ):
+            try:
+                available = (runner.hardware().get("memory") or {}).get("available_mib")
+                if (
+                    type(available) in (int, float)
+                    and math.isfinite(available)
+                    and 0 <= available < STANDARD_RAM_MIB + 1024
+                ):
+                    recommended = "bounded_11g"
+            except (RunnerError, RunnerUnavailable):
+                pass
+        return {**profile, "recommended_memory_profile": recommended}
+    except (RunnerError, RunnerUnavailable):
+        return {"available": False, "reason": "Host Runner avatar integration is unavailable"}
+
+
+def memory_reservation(body, observed_profile=None):
+    if body.memory_profile == "default":
+        return STANDARD_RAM_MIB
+    observed_profile = capabilities() if observed_profile is None else observed_profile
+    if not observed_profile.get("available") or not any(
+        row.get("id") == "bounded_11g" and row.get("available") and row.get("ram_mib") == 11264
+        for row in observed_profile.get("memory_profiles", [])
+    ):
+        raise HTTPException(409, "The reduced-RAM avatar profile is unavailable; refresh Avatars setup")
+    return 11264
+
+
+def create_avatar_run(session, body, *, task=None, parent_run_id=None, observed_profile=None):
+    reservation = memory_reservation(body, observed_profile)
     image = session.get(Artifact, str(body.image_artifact_id))
     audio = session.get(Artifact, str(body.audio_artifact_id))
     if image is None or image.artifact_type != "image" or image.mime_type not in {"image/png", "image/jpeg"}:
@@ -61,6 +102,7 @@ def create_avatar_run(session, body, *, task=None, parent_run_id=None):
         executor_type="echomimic",
         permissions=["filesystem_read", "workspace_write"],
         requested_gpu=body.gpu,
+        requested_resources={"ram_mib": reservation},
         retry_class="inspect",
         parent_run_id=parent_run_id,
         parameters={
@@ -147,6 +189,11 @@ class AvatarExecutor(MotionArtifacts, HostMediaExecutor):
                 **self.native_budget(run),
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **(
+                    {"memory_profile": run.parameters["memory_profile"]}
+                    if run.parameters.get("memory_profile")
+                    else {}
+                ),
                 **(
                     {"audio_window": run.parameters["audio_window"]}
                     if run.parameters.get("audio_window")
