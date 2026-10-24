@@ -125,6 +125,38 @@ on both sides. CPU composition retains the selection in final metadata.
 requires user systemd/cgroup memory support; normal native dispatch rejects an
 unavailable option. The UI only offers it when advertised, preserves a saved
 unavailable selection and keeps a Standard recovery choice. Landscape and 20+
-steps are required. This is **candidate code, not a deployed qualified profile**.
-Finish the real 81-frame observation, native bounded launch/continuation/Stop,
-normal gate, compiled desktop/phone and release review before enabling it.
+steps are required. Enable the option only after matching local runtime qualification. The exact
+normal-worker result below qualifies the recorded five-second case; longer
+durations, first-frame image quality and every prompt/seed remain separate
+acceptance. Keep the Standard route and existing saved definitions unchanged.
+
+## Normal-worker qualification — PR #396
+
+At code head `d7d9ee9`, an actual persistent fixed-description agent created two
+Wan windows (81/65 frames), reused the bounded latent checkpoint and composed a
+fully decoded 1280×704, 120-frame/five-second MP4. Every stage succeeded on its
+ordinary Task/worker/typed native path; both owned GPU groups observed the 11-GiB
+kernel limit, zero swap and no OOM. The full chain took about 1189 seconds, within
+its reviewed 1800-second deadline. Native processes stopped, the disposable agent
+was paused and the exact prior operator GPU/Q8/46080 model preset was restored.
+
+First/middle/final and adjacent boundary frames retain a coherent coast and
+composition, without the rejected small-format color banding. Soft detail, haze,
+an unrequested foreground person and ghosting remain visible. This is basic
+coherent-scene/continuation qualification, not high-detail fidelity, parity with
+Standard, image-conditioned acceptance or a new 60-second visual pass. The earlier
+600-second engineering timeout remains rejected in its own evidence.
+
+All 3015 collected normal Python/Runner cases completed: 3006 passed, nine opted-out
+integrations skipped. All 686 UI cases, lint/format/types/build, normal/dev/private
+LAN Compose and exact image/backend/assets checks passed. Compiled 1440/390 Video
+selection and actual disabled-agent save/reload passed. Evidence:
+`data/acceptance/media-memory-investigation-20261024`, especially
+`native-agent-observer-state.json`, its owned `result.json`, `browser-result.json`
+and the final published-head/release qualification records.
+
+Next useful integration is a reviewed recommendation for new conversation/agent
+video requests when Standard cannot fit. Preserve existing saved scopes/receipts;
+do not silently rewrite queued Runs or select an unqualified profile. A full
+minute at 20 steps may need more than four hours on this measured configuration;
+first-window timing is an estimate, not proof of full-duration performance.

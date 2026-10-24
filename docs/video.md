@@ -1,4 +1,4 @@
-> Candidate reduced-RAM profile: [qualification and rollout state](plans/wan-memory-profile.md). It is disabled by default and must not be treated as production-ready from a successful short encode alone.
+> Optional reduced-RAM profile: [setup, exact real qualification and rollout state](plans/wan-memory-profile.md). The recorded five-second normal-worker case passed with two windows and full composition; the option is disabled by default for other installations.
 
 # Local general video
 

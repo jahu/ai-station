@@ -5,6 +5,30 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current reviewed increment — PR #396, 2026-10-24
+
+`feat/wan-memory-profile` in `.tools/wan-memory-profile` implements an explicitly
+opted-in, fixed user memory scope for existing Wan Video/agent execution. Code
+head`d7d9ee9` passed all 3006 normal Python/Runner tests (nine opt-in skips), 686 UI
+cases, lint/format/types/build, exact image/source/assets and normal/dev/LAN Compose.
+Compiled 1440/390 profile selection and real disabled-agent save/reload passed.
+A real normal-worker fixed-description agent completed both 81/65-frame GPU windows
+and checked CPU assembly into a five-second 1280×704 film in about 1189 seconds.
+Actual scopes retained 11 GiB/zero swap, original deadlines and no OOM; the exact
+operator GPU/Q8/46080 preset is restored. The private agent/processes are stopped.
+Basic scene/seam inspection passed, with soft detail and foreground ghosting
+explicitly retained in the visual report. No new 60-second or image-mode quality
+claim. Prior low-geometry outputs and the 81-frame 600-second engineering timeout
+remain rejected. [Profile contract](wan-memory-profile.md).
+
+Finish final player/published-head review and guarded rollout before enabling
+`AI_STATION_WAN_BOUNDED_PROFILE`; central deployment metadata remains authoritative.
+The final documentation-only head can reuse code evidence only after source diff
+and exact built-asset comparison. Preserve root Memory WIP, all proof/live trees,
+paused live definitions and pending Whisper-small consent. Continue with a useful
+reviewed recommendation for new video requests; do not rewrite existing scopes.
+Full AI Station remains incomplete and the goal stays active.
+
 ## Latest continuation — optional Wan memory profile, 2026-10-24
 
 PR #395 is merged as `ca29360` and deployed from `4dbcbb0` in
