@@ -435,6 +435,46 @@ def test_model_with_pending_consumer_cannot_be_evicted(managed):
             assert not list(session.scalars(select(Run).where(Run.executor_type == "llama_stop")))
 
 
+def test_consumer_waiting_for_media_cannot_pin_the_gpu_needed_by_its_own_prerequisite(managed):
+    from app.dependencies import depend_on
+    from app.llama import evict_idle_models
+    from app.runs import create_run, create_task
+
+    model_id, _ = managed
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        with session_factory()() as session:
+            instance = instances(session)[0]
+            task = create_task(
+                session, title="Media then explanation", prompt="", capability="image.generate"
+            )
+            image = create_run(
+                session,
+                task,
+                run_type="image",
+                capability="image.generate",
+                executor_type="fake",
+                requested_gpu="auto",
+            )
+            explanation = create_run(
+                session,
+                task,
+                run_type="chat",
+                capability="chat.completion",
+                executor_type="chat",
+                parameters={
+                    "model": "llamacpp:" + model_id,
+                    "endpoint": instance.endpoint,
+                },
+            )
+            depend_on(session, explanation, image)
+            evict_idle_models(session, image, [2, 7])
+            # The explanation cannot run before this image. Treating it as an
+            # active model user pins both GPUs and leaves the graph stuck.
+            assert instance.status == "stopping"
+
+
 def test_loading_another_model_evicts_idle_runtime(managed):
     model_id, _ = managed
     with TestClient(app) as client:
