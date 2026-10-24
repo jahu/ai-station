@@ -47,7 +47,7 @@ AGENT_TOOLS = {
     ),
     "python_data": ToolSpec(
         name="python_data",
-        description="Analyze reviewed CSV/XLSX files or public research observations with a local model and offline Python. May combine with reviewed web_search, search_pages and http_fetch; no file is required when public research is selected. Creates an owned workspace, preserves original files and returns an answer/table/download. No networking or package installation inside generated code.",
+        description="Analyze reviewed CSV/XLSX/JSON files or public research observations with a local model and offline Python. May combine with reviewed web_search, search_pages and http_fetch; no file is required when public research is selected. Creates an owned workspace, preserves original files and returns an answer/table/download. No networking or package installation inside generated code.",
         risk_level="medium",
         required_permissions=(
             "filesystem_read",

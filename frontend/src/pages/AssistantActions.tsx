@@ -1,6 +1,7 @@
 import { uploadImageFiles } from "./image-upload";
 import ConversationDataControls from "./ConversationDataControls";
 import AgentDataResult from "./AgentDataResult";
+import AgentCodeResearch from "./AgentCodeResearch";
 import type { ConversationDataScope } from "./useDataInputs";
 import RecordingButton from "../components/media/RecordingButton";
 import MusicScope from "./MusicScope";
@@ -249,6 +250,9 @@ export function AssistantResults({
   );
   const dataScope = dataRoot?.parameters.data as
     ConversationDataScope | undefined;
+  const completedData = result.data_runs?.find(
+    (run) => run.status === "succeeded" && run.metadata?.data_result,
+  )?.metadata?.data_result as { input_artifact_ids?: string[] } | undefined;
   const hasDataResult = result.data_runs?.some(
     (run) => run.status === "succeeded" && run.metadata?.data_result,
   );
@@ -260,8 +264,37 @@ export function AssistantResults({
       </div>
       {result.data_runs?.length ? (
         <>
+          <AgentCodeResearch
+            runs={result.data_runs}
+            taskId={dataRoot?.task_id ?? ""}
+          />
           <AgentDataResult runs={result.data_runs} />
-          {onData && hasDataResult && dataScope?.input_artifact_ids?.length ? (
+          {onData &&
+          hasDataResult &&
+          dataScope &&
+          (completedData?.input_artifact_ids?.length ||
+            dataScope.input_artifact_ids?.length) ? (
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy}
+              onClick={() =>
+                onData({
+                  ...dataScope,
+                  ...(dataScope.research ? { research: undefined } : {}),
+                  input_artifact_ids: [
+                    ...(completedData?.input_artifact_ids ??
+                      dataScope.input_artifact_ids),
+                  ],
+                })
+              }
+            >
+              {dataScope.research
+                ? "Ask about these captured data"
+                : "Ask another question about these files"}
+            </Button>
+          ) : null}
+          {onData && hasDataResult && dataScope?.research && (
             <Button
               type="button"
               variant="secondary"
@@ -273,9 +306,9 @@ export function AssistantResults({
                 })
               }
             >
-              Ask another question about these files
+              Refresh public sources
             </Button>
-          ) : null}
+          )}
           <p className="muted">
             LOCAL · {result.data_model || "Automatic local model"} · Originals
             unchanged
@@ -1178,7 +1211,7 @@ export default function AssistantActions({
                   variant="ghost"
                   onClick={() => resetAction("data.analyze")}
                 >
-                  CSV / Excel
+                  Data analysis
                 </Button>
               )}
               {!["audio.transcribe", "audio.analyze"].includes(

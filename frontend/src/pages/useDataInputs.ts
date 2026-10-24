@@ -3,11 +3,39 @@ import { api, type Artifact, type Run } from "../api";
 import type { DataScope } from "./AgentDataFiles";
 
 export type ConversationDataScope = DataScope & {
+  research?: {
+    search_query: string;
+    fetch_urls: string[];
+    read_search_pages: boolean;
+  };
   model?: string;
   maximum_runtime?: number;
 };
 const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
-export function useDataInputs(scope?: DataScope | null) {
+function researchDataReady(scope?: ConversationDataScope | null) {
+  const source = scope?.research;
+  if (!source) return false;
+  return (
+    (source.search_query.trim().length > 0 || source.fetch_urls.length > 0) &&
+    source.search_query.length <= 500 &&
+    source.fetch_urls.length <= 3 &&
+    source.fetch_urls.every((url) => {
+      try {
+        const value = new URL(url);
+        return (
+          ["http:", "https:"].includes(value.protocol) &&
+          !!value.hostname &&
+          !value.username &&
+          !value.password
+        );
+      } catch {
+        return false;
+      }
+    }) &&
+    (!source.read_search_pages || !!source.search_query.trim())
+  );
+}
+export function useDataInputs(scope?: ConversationDataScope | null) {
   const ids = scope?.input_artifact_ids ?? [];
   const files = useQueries({
     queries: ids.map((id) => ({
@@ -62,6 +90,10 @@ export function useDataInputs(scope?: DataScope | null) {
   });
   return {
     states,
-    ready: ids.length > 0 && states.every((item) => item.ready),
+    ready:
+      (scope?.research
+        ? researchDataReady(scope) && ids.length <= 7
+        : ids.length > 0 && ids.length <= 8) &&
+      states.every((item) => item.ready),
   };
 }

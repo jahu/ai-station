@@ -3121,7 +3121,7 @@ it.each([
     expect(
       screen.getByText(
         family === "python_data"
-          ? /CSV or Excel files are optional/
+          ? /CSV, Excel or JSON files are optional/
           : /reviewed search query, read search sources/,
       ),
     ).toBeTruthy();

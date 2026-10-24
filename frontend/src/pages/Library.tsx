@@ -165,9 +165,11 @@ export function Library() {
       const audio =
         /\.wav$/i.test(file.name) ||
         ["audio/wav", "audio/x-wav"].includes(file.type);
-      const dataFile = /\.(csv|xlsx)$/i.test(file.name);
+      const dataFile = /\.(csv|xlsx|json)$/i.test(file.name);
       if (!audio && !dataFile && !/\.(png|jpe?g|webp)$/i.test(file.name))
-        throw new Error("Import PNG, JPEG, WebP, PCM WAV, CSV or XLSX files.");
+        throw new Error(
+          "Import PNG, JPEG, WebP, PCM WAV, CSV, XLSX or JSON files.",
+        );
       const body = new FormData();
       body.append("file", file);
       return api<Artifact>(
@@ -203,7 +205,7 @@ export function Library() {
               ref={input}
               hidden
               type="file"
-              accept="image/png,image/jpeg,image/webp,audio/wav,.wav,.csv,.xlsx"
+              accept="image/png,image/jpeg,image/webp,audio/wav,.wav,.csv,.xlsx,.json"
               aria-label="Import artifact"
               onChange={(event) => {
                 const file = event.target.files?.[0];
@@ -320,7 +322,7 @@ export function Library() {
                 ? "Try another name, note or type filter."
                 : view === "trash"
                   ? "Artifacts you move to Trash will appear here."
-                  : "Drop an image, WAV, CSV or XLSX here, or import a file."}
+                  : "Drop an image, WAV, CSV, XLSX or JSON here, or import a file."}
             </p>
             {view !== "trash" && !term && (
               <div>

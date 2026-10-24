@@ -659,3 +659,18 @@ require selected files (up to eight). Sources are captured once and supplied to
 offline Python as a read-only JSON file. Results retain the source history, table,
 CSV and supported generated downloads. Partial reads remain visible; a search
 snippet does not mean a page was opened. See [execution and qualification](docs/plans/agent-research-data.md).
+
+### Data analysis in a conversation
+
+Choose **Data analysis** to attach CSV, Excel or JSON files, or select **Use public
+sources for this analysis** and review a public query/URLs. Files are optional
+with public sources. Strong direct computation requests with explicit public URLs
+and Web enabled can also select this tool automatically. The tool uses a fitting
+local model and offline Python, independently of the conversation's text provider.
+
+The transcript shows task-bound sources, source warnings, the answer, table and
+any generated downloads/chart. Ask another question about the same data to reuse
+the captured observations without fetching again; **Refresh public sources**
+starts a fresh capture. JSON files have a 4 MiB limit; CSV/Excel retain 16 MiB per
+file and all inputs total at most 32 MiB. Original files remain unchanged.
+See [the full contract and qualification](docs/plans/conversation-research-data.md).

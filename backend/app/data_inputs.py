@@ -6,6 +6,7 @@ import os
 import stat
 import tempfile
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Annotated
 from uuid import UUID
@@ -15,10 +16,11 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from app.artifacts import register_file
+from app.data_json_preview import MAX_JSON_BYTES, inspect_json
 from app.data_preview import inspect_csv, inspect_xlsx
-from app.db import session_scope
+from app.db import session_scope, utcnow
 from app.events import append_event
-from app.models import Artifact
+from app.models import Artifact, Run
 from app.permissions import require
 from app.python_execution import MAX_INPUT, input_snapshots, read_owned_file
 from app.runs import create_run, create_task, mark_failed, run_dict, transition
@@ -34,12 +36,20 @@ class DataRequest(BaseModel):
     artifact_id: UUID
 
 
-def enqueue_inspection(session, artifact_id):
+def enqueue_inspection(session, artifact_id, *, task=None, parent_run_id=None):
     snapshot = input_snapshots(session, [artifact_id])[0]
-    if snapshot["suffix"] not in {".csv", ".xlsx"}:
-        raise ValueError("Choose a CSV or XLSX input")
+    if snapshot["suffix"] not in {".csv", ".xlsx", ".json"}:
+        raise ValueError("Choose a CSV, XLSX or JSON input")
+    if snapshot["suffix"] == ".json" and snapshot["size_bytes"] > MAX_JSON_BYTES:
+        raise ValueError("JSON inputs must be at most 4 MiB")
     artifact = session.get(Artifact, str(artifact_id))
-    task = create_task(
+    if (task is None) != (parent_run_id is None):
+        raise ValueError("Child inspection requires its exact Task and parent")
+    if task is not None:
+        parent = session.get(Run, parent_run_id)
+        if parent is None or parent.task_id != task.id or artifact.run_id != parent.id:
+            raise ValueError("Child inspection must belong to its original source Task")
+    task = task or create_task(
         session,
         title=f"Inspect {artifact.original_filename}",
         prompt="Read-only data preview",
@@ -54,7 +64,15 @@ def enqueue_inspection(session, artifact_id):
         execution_target="container",
         permissions=["filesystem_read"],
         retry_class="safe",
-        parameters={"input": snapshot},
+        parent_run_id=parent_run_id,
+        parameters={
+            "input": snapshot,
+            **(
+                {"agent_coding_deadline": parent.parameters["agent_coding_deadline"]}
+                if task is not None and parent_run_id is not None
+                else {}
+            ),
+        },
     )
     artifact.metadata_json = {**artifact.metadata_json, "data_inspection_run_id": run.id}
     return run
@@ -64,11 +82,17 @@ def enqueue_inspection(session, artifact_id):
 def upload(session: DB, file: Annotated[UploadFile, File()]):
     name = Path((file.filename or "").replace("\\", "/")).name[:200]
     suffix = Path(name).suffix.lower()
-    if suffix not in {".csv", ".xlsx"}:
-        raise HTTPException(422, "Import a CSV or XLSX data file")
-    data = file.file.read(MAX_INPUT + 1)
-    if not data or len(data) > MAX_INPUT:
-        raise HTTPException(413, "Data files must contain 1 byte to 16 MiB")
+    if suffix not in {".csv", ".xlsx", ".json"}:
+        raise HTTPException(422, "Import a CSV, XLSX or JSON data file")
+    limit = MAX_JSON_BYTES if suffix == ".json" else MAX_INPUT
+    data = file.file.read(limit + 1)
+    if not data or len(data) > limit:
+        raise HTTPException(
+            413,
+            "JSON files must contain 1 byte to 4 MiB"
+            if suffix == ".json"
+            else "Data files must contain 1 byte to 16 MiB",
+        )
     with tempfile.NamedTemporaryFile(suffix=suffix) as temporary:
         temporary.write(data)
         temporary.flush()
@@ -76,9 +100,11 @@ def upload(session: DB, file: Annotated[UploadFile, File()]):
             session,
             source=Path(temporary.name),
             artifact_type="document",
-            mime_type="text/csv"
-            if suffix == ".csv"
-            else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            mime_type={
+                ".csv": "text/csv",
+                ".json": "application/json",
+                ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            }[suffix],
             original_filename=name,
             run_id=None,
             metadata={"source": "upload", "data_input": True},
@@ -126,6 +152,23 @@ class DataInspectionExecutor:
             snapshot = run.parameters["input"]
             if input_snapshots(session, [snapshot["artifact_id"]])[0] != snapshot:
                 raise ValueError("Data input metadata changed after enqueue")
+            if run.parent_run_id is not None:
+                parent = session.get(Run, run.parent_run_id)
+                original = session.get(Artifact, snapshot["artifact_id"])
+                if (
+                    parent is None
+                    or parent.task_id != run.task_id
+                    or parent.agent_id != run.agent_id
+                    or parent.conversation_id != run.conversation_id
+                    or original.run_id != parent.id
+                    or run.parameters.get("agent_coding_deadline")
+                    != parent.parameters.get("agent_coding_deadline")
+                ):
+                    raise ValueError("Child inspection changed its original source Task")
+                deadline = datetime.fromisoformat(run.parameters["agent_coding_deadline"])
+                if deadline.tzinfo is None or deadline <= utcnow():
+                    raise ValueError("Data analysis deadline expired before source inspection")
+                end = min(end, time.monotonic() + (deadline - utcnow()).total_seconds())
             from app.paths import artifact_relative
 
             path = read_owned_file(
@@ -148,7 +191,8 @@ class DataInspectionExecutor:
                 ):
                     raise ValueError("Data input changed before inspection")
             check()
-            preview = (inspect_csv if snapshot["suffix"] == ".csv" else inspect_xlsx)(data, check)
+            parsers = {".csv": inspect_csv, ".xlsx": inspect_xlsx, ".json": inspect_json}
+            preview = parsers[snapshot["suffix"]](data, check)
             session.refresh(run, attribute_names=["status"])
             if run.status == "cancel_requested":
                 raise InterruptedError("Inspection stopped")

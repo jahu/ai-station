@@ -1,9 +1,11 @@
 # Public data analysis and captured-source follow-ups in conversations
 
-Status: next implementation after deployed/real-qualified research/data agents
-(#390). The implementation worktree is `.tools/conversation-research-data`,
+Status: implementation candidate after deployed/real-qualified research/data
+agents (#390). The implementation worktree is `.tools/conversation-research-data`,
 branch `feat/conversation-research-data`, based on develop `2da23e7`.
-This plan does not advertise a working new conversation capability.
+Qualification is recorded under `data/acceptance/conversation-research-data-20261024`.
+Inspect its records before claiming deployment or actual local-model acceptance.
+Fake inference, real isolated CPU and actual public/local-model checks are separate.
 
 ## User outcome
 
@@ -44,8 +46,9 @@ execution engine, schema migration, dependency or model download is needed.
    select new public targets. Manual queries retain their authority. Keep ordinary
    Chat page reading/search and the existing offline CSV route unchanged.
 4. Freeze the selected scope on the user message and orchestrator Run. Grant
-   exactly the data permissions plus network_read only when new public research
-   was selected. HTTP handlers validate/enqueue; only workers fetch or inspect.
+   exactly the existing data permissions and any separately reviewed research
+   authority. The existing data permission set includes network_read for local
+   provider transport; that flag alone never grants public URL/query selection. HTTP handlers validate/enqueue; only workers fetch or inspect.
    Validate same conversation/message/Task/project and original deadline before
    publishing research or code. Replays must resolve to the same scope and Task.
 5. Agent-free research is accepted only through validate_workflow/root_binding's
@@ -72,7 +75,9 @@ code execution of its own.
 Extend the current same-conversation natural data-reference resolver to adopt the
 completed result's verified input IDs, including its inspected captured-source
 JSON. A reused snapshot becomes an ordinary offline input on the new data Task:
-no research tools, no network_read and no public requests. The controller derives
+no research tools or public requests. Existing local-provider transport
+permissions retain their established meaning; the Python child has no network
+grant. The controller derives
 this scope from the prior successful same-conversation result; it does not trust
 an injected input ID or earlier model prose. Verify original input bytes and source
 lineage before generation and dispatch. Reuse the existing previous-question/

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api";
 import { ErrorNotice } from "../components/common";
 import AgentDataFiles from "./AgentDataFiles";
@@ -16,6 +17,13 @@ export default function ConversationDataControls({
   onUploading: (busy: boolean) => void;
 }) {
   const scope = value ?? { input_artifact_ids: [], max_repairs: 1 };
+  const selectedUrls = scope.research?.fetch_urls.join("\n") ?? "";
+  const [urlDraft, setUrlDraft] = useState({
+    text: selectedUrls,
+    selection: selectedUrls,
+  });
+  const displayedUrls =
+    urlDraft.selection === selectedUrls ? urlDraft.text : selectedUrls;
   const catalog = useQuery({
     queryKey: ["llama-models"],
     queryFn: () =>
@@ -29,11 +37,106 @@ export default function ConversationDataControls({
     >
       <AgentDataFiles
         value={scope}
+        allowResearch={!!scope.research}
         disabled={disabled}
         showInspection
         onUploading={onUploading}
         onChange={(files) => onChange({ ...scope, ...files })}
       />
+      <label className="check">
+        <input
+          type="checkbox"
+          aria-label="Use public sources for analysis"
+          disabled={disabled}
+          checked={!!scope.research}
+          onChange={(event) =>
+            onChange({
+              ...scope,
+              research: event.target.checked
+                ? { search_query: "", fetch_urls: [], read_search_pages: false }
+                : undefined,
+            })
+          }
+        />
+        Use public sources for this analysis
+      </label>
+      {scope.research && (
+        <div className="conversation-data-controls">
+          <p className="muted">
+            Review a public query or up to three URLs. Only these sources are
+            read; Python stays offline. Files are optional.
+          </p>
+          <label>
+            Public search query
+            <input
+              aria-label="Public data search query"
+              maxLength={500}
+              disabled={disabled}
+              value={scope.research.search_query}
+              onChange={(event) =>
+                onChange({
+                  ...scope,
+                  research: {
+                    ...scope.research!,
+                    search_query: event.target.value,
+                    read_search_pages:
+                      !!event.target.value.trim() &&
+                      scope.research!.read_search_pages,
+                  },
+                })
+              }
+            />
+          </label>
+          <label className="check">
+            <input
+              type="checkbox"
+              aria-label="Read data search pages"
+              disabled={disabled || !scope.research.search_query.trim()}
+              checked={scope.research.read_search_pages}
+              onChange={(event) =>
+                onChange({
+                  ...scope,
+                  research: {
+                    ...scope.research!,
+                    read_search_pages: event.target.checked,
+                  },
+                })
+              }
+            />
+            Read pages from search results
+          </label>
+          <label>
+            Public URLs
+            <textarea
+              aria-label="Public data URLs"
+              rows={2}
+              disabled={disabled}
+              placeholder="https://example.com/data.json"
+              value={displayedUrls}
+              onChange={(event) => {
+                setUrlDraft({
+                  text: event.target.value,
+                  selection: event.target.value
+                    .split(/\r?\n/)
+                    .map((item) => item.trim())
+                    .filter(Boolean)
+                    .join("\n"),
+                });
+                onChange({
+                  ...scope,
+                  research: {
+                    ...scope.research!,
+                    fetch_urls: event.target.value
+                      .split(/\r?\n/)
+                      .map((value) => value.trim())
+                      .filter(Boolean),
+                  },
+                });
+              }}
+            />
+          </label>
+        </div>
+      )}
       <details>
         <summary>Analysis settings</summary>
         <label>

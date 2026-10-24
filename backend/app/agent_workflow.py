@@ -235,7 +235,7 @@ class AgentWorkflowExecutor:
 
 def publish_steps(session, parent: Run) -> list[Run]:
     definition = AgentSettings.model_validate(parent.parameters["definition"])
-    if definition.tools == ["python_data"] and parent.agent_id is None:
+    if "python_data" in definition.tools and parent.agent_id is None:
         from app.conversation_data import validate_workflow
 
         validate_workflow(session, parent)
@@ -430,6 +430,10 @@ class AgentToolExecutor:
         session.commit()
         remember = "remember_workflow" in definition.tools and tool in WORKFLOW_MEMORY_TOOLS
         try:
+            if run.agent_id is None:
+                from app.conversation_data import reviewed_research_step
+
+                reviewed_research_step(session, run)
             if remember:
                 from app.permissions import require
 

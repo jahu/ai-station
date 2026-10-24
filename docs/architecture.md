@@ -650,3 +650,14 @@ source lineage. It becomes an immutable read-only input beside optional CSV/XLSX
 files; Python remains offline. The original agent definition, Task, private
 workspace, deadline, Stop and repair budget bind every stage. No new executor,
 native API, dependency or database migration is introduced.
+
+## Public data analysis in conversations
+
+[Conversation research/data](plans/conversation-research-data.md) extends the
+existing file-analysis scope with explicit reviewed public query/URLs. The
+ordinary agent-free workflow reuses verified research, one inspected JSON capture,
+owned project/worktree, local generation and offline Python. Each source child
+checks its exact conversation/message/scope/dependency before a public request.
+Completed captures can become ordinary offline inputs on a later conversation
+Task, with their original attribution rechecked. Explicit refresh creates another
+source snapshot. No persistent Agent row or new execution engine is introduced.

@@ -9,7 +9,7 @@ from sqlalchemy import select
 from app.conversation_data_schema import DataScope
 from app.models import Artifact, ChatWorkContext, Message, Run
 
-GROUP = r"(?:these (?:input |csv |excel |xlsx )?(?:files|spreadsheets|data)|this (?:data|dataset)|te dane|tych danych|te pliki|tych plik[óo]w|tych plikach|te arkusze|tych arkusz[ay]ch|tych arkuszy)"
+GROUP = r"(?:(?:these|those) (?:input |csv |excel |xlsx |json )?(?:files|spreadsheets|data)|this (?:data|dataset)|these observations|those observations|these sources|those sources|te źródła|tych źródeł|tych zrodel|tych obserwacji|te dane|tych danych|te pliki|tych plik[óo]w|tych plikach|te arkusze|tych arkusz[ay]ch|tych arkuszy)"
 SINGLE = r"(?:this (?:input )?(?:file|spreadsheet)|that (?:file|spreadsheet)|ten plik|tego pliku|tym pliku|ten arkusz|tego arkusza|tym arkuszu)"
 ERROR = "The latest data input is unavailable or has no verified completed analysis. Select CSV/Excel files explicitly."
 
@@ -35,7 +35,7 @@ def requested(content):
     operation = r"(?:calculate|compute|sum|average|group|aggregate|analy[sz]e|compare|filter|sort|count|transform|extract|plot|chart|policz(?:y[ćc])?|oblicz(?:y[ćc])?|przelicz(?:y[ćc])?|zsumuj|por[óo]wnaj|pogrupuj|podziel|wylicz|przeanalizuj|posortuj|wyodr[ęe]bnij|narysuj)\b"
     if re.search(
         prefix
-        + r"(?:create|draw|make|stw[oó]rz|utw[oó]rz)\b.{0,50}\b(?:chart|plot|workbook|wykres\w*|raport\w*|excel)\b",
+        + r"(?:create|draw|make|stw[oó]rz|utw[oó]rz|zr[oó]b)\b.{0,50}\b(?:chart|plot|workbook|wykres\w*|raport\w*|excel)\b",
         text,
         re.I,
     ):
@@ -123,6 +123,22 @@ def source_reference(session, user, root):
     state = result.parameters.get("agent_data") or {}
     python = session.get(Run, result.parameters.get("python_run_id", ""))
     ids = [str(aid) for aid in scope.input_artifact_ids]
+    if scope.research:
+        from app.agent_schema import AgentSettings
+        from app.data_research import verify_research
+
+        receipt = state.get("data_research")
+        verify_research(
+            session,
+            workflow,
+            receipt,
+            AgentSettings.model_validate(workflow.parameters["definition"]),
+            for_execution=False,
+        )
+        handoff = session.get(Run, receipt["context_run_id"])
+        if handoff.metadata_json.get("child_run_id") != state.get("worktree_run_id"):
+            raise ValueError("Source capture belongs to a different analysis workspace")
+        ids.append(receipt["input"]["artifact_id"])
     if (
         result.agent_id is not None
         or result.project_id != workflow.project_id
@@ -143,9 +159,25 @@ def source_reference(session, user, root):
         or not python.metadata_json.get("process_confirmed_gone")
     ):
         raise ValueError("The completed result does not belong to its original inputs")
-    frozen = freeze_inputs(session, scope.files())
-    if frozen != root.parameters.get("data_inputs"):
+    original = (
+        freeze_inputs(session, scope.files(), research=True)
+        if scope.research
+        else freeze_inputs(session, scope.files())
+    )
+    if original != root.parameters.get("data_inputs"):
         raise ValueError("The original data input or inspection changed")
+    derived_scope = DataScope(
+        input_artifact_ids=ids,
+        max_repairs=scope.max_repairs,
+        model=scope.model,
+        maximum_runtime=scope.maximum_runtime,
+    )
+    frozen = freeze_inputs(session, derived_scope.files())
+    captured = [
+        {"artifact_id": aid, "captured_at": session.get(Artifact, aid).created_at.isoformat()}
+        for aid in ids
+        if session.get(Artifact, aid).metadata_json.get("agent_data_research") is True
+    ]
     answer = DataAnswer.model_validate(
         {key: result.metadata_json["data_result"][key] for key in DataAnswer.model_fields}
     )
@@ -157,7 +189,8 @@ def source_reference(session, user, root):
         "message_id": messages[0].id,
         "user_message_id": user.id,
         "run_id": root.id,
-        "data_scope": scope.model_dump(mode="json"),
+        "data_scope": derived_scope.model_dump(mode="json"),
+        **({"captured_sources": captured} if captured else {}),
         "data_inputs": frozen,
         "context": quoted_context(root.parameters["content"], answer.answer),
     }

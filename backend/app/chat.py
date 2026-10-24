@@ -557,7 +557,7 @@ def submit_message(conversation_id, body, session, *, commit=True):
     from app.conversation_data import prepare_turn as prepare_data_turn
     from app.conversation_music import prepare_turn
 
-    body = prepare_data_turn(body)
+    body = prepare_data_turn(body, mode=mode)
     from app.conversation_data_reference import resolve as resolve_data_reference
 
     body, data_reference = resolve_data_reference(session, row, body, mode)

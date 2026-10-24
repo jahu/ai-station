@@ -12,6 +12,7 @@ type Sheet = {
   formula_count: number;
   preview: string[][];
   preview_row_numbers?: number[];
+  column_names?: string[];
 };
 type Preview = { sheets: Sheet[]; note?: string };
 
@@ -101,7 +102,7 @@ export default function DataPreview({ artifact }: { artifact: Artifact }) {
                       { length: Math.min(sheet.column_count, 20) },
                       (_, index) => (
                         <th scope="col" key={index}>
-                          {index + 1}
+                          {sheet.column_names?.[index] ?? index + 1}
                         </th>
                       ),
                     )}

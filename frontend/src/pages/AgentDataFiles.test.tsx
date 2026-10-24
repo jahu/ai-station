@@ -114,7 +114,9 @@ it("allows source-only analysis and repair selection without uploading files", (
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  expect(screen.getByText(/CSV or Excel files are optional/)).toBeTruthy();
+  expect(
+    screen.getByText(/CSV, Excel or JSON files are optional/),
+  ).toBeTruthy();
   expect(
     (screen.getByLabelText("Automatic fixes") as HTMLSelectElement).disabled,
   ).toBe(false);
