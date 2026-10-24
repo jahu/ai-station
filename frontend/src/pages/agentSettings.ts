@@ -42,6 +42,7 @@ export type AgentSettingsInput = {
     report_email?: ResultEmailScope | null;
   };
   github?: { connector_id: string; repository: string } | null;
+  http?: { connector_id: string; connector_revision: string } | null;
   project_id?: string | null;
   enabled?: boolean;
 };
@@ -89,6 +90,9 @@ export function agentSettingsPayload(
       ? { permission_profile: next.permission_profile }
       : {}),
     ...(next.github !== undefined ? { github: next.github } : {}),
+    ...(next.http !== undefined
+      ? { http: next.tools?.includes("http_connector") ? next.http : null }
+      : {}),
     search_query: next.search_query ?? "",
     fetch_urls: next.fetch_urls ?? [],
     skills: next.skills ?? [],

@@ -80,6 +80,12 @@ class AgentGithubScope(BaseModel):
         return value
 
 
+class AgentHttpScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    connector_id: UUID
+    connector_revision: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
 class AgentWorkspacePolicy(BaseModel):
     model_config = ConfigDict(extra="forbid")
     auto_install_dependencies: StrictBool = False
@@ -102,6 +108,7 @@ class AgentSettings(BaseModel):
     model: str = Field(default="", max_length=200)
     market: MarketScope | None = None
     github: AgentGithubScope | None = None
+    http: AgentHttpScope | None = None
     data: AgentDataScope | ResearchDataScope | None = None
     media: AgentMediaScope | None = None
     workspace_policy: AgentWorkspacePolicy = Field(default_factory=AgentWorkspacePolicy)
@@ -127,8 +134,19 @@ class AgentSettings(BaseModel):
     notification_policy: NotificationPolicy = Field(default_factory=NotificationPolicy)
     enabled: StrictBool = False
 
+    @model_serializer(mode="wrap")
+    def legacy_identity(self, handler):
+        values = handler(self)
+        if self.http is None:
+            values.pop("http", None)
+        return values
+
     @model_validator(mode="after")
     def validate_definition(self):
+        if self.http is not None and "http_connector" not in self.tools:
+            raise ValueError("Saved HTTP settings require the Connected API tool")
+        if self.enabled and "http_connector" in self.tools and self.http is None:
+            raise ValueError("Choose and review a saved HTTP connection before activation")
         if self.notification_policy.report_email and self.market and self.market.email:
             raise ValueError("Choose ordinary result email or price-alert email for this agent, not both")
         if (

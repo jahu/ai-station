@@ -1,3 +1,15 @@
+> Release authority: `data/acceptance/safety-redeploy-20261012/deployment.json`.
+> #408 delivered explicitly selected generated CSV/XLSX/PNG/text email exports;
+> its private TLS SMTP qualification remains in
+> `data/acceptance/agent-data-email-attachments-20261024/post-deployment-qualified.json`.
+> #409 tracks [saved HTTP/API sources](agent-http-connectors.md), migration0034,
+> both agent editors, exact credential-snapshot consent and source-bound local
+> analysis. Its full-gate/deployment evidence is under
+> `data/acceptance/agent-http-connectors-20261024`; use the exact qualified head
+> and post-deployment report before treating that increment as live.
+> Preserve the root checkout's unrelated Memory WIP.
+
+
 # AI Station implementation handoff
 
 The full platform goal remains active. Prioritize useful local agents and

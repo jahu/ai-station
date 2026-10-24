@@ -10,10 +10,12 @@ export const LOCAL_CODING_RESEARCH = [
   "web_search",
   "search_pages",
   "http_fetch",
+  "http_connector",
   "browser",
 ];
 
 export const PUBLIC_RESEARCH_TOOLS = [
+  "http_connector",
   "web_search",
   "search_pages",
   "http_fetch",
@@ -79,6 +81,8 @@ export function activationBlock(
     market?: MarketScope | null;
     market_readiness?: { ready: boolean; reason: string | null } | null;
     github?: { connector_id: string; repository: string } | null;
+    http?: { connector_id: string; connector_revision: string } | null;
+    http_readiness?: { ready: boolean; reason: string | null } | null;
     maximum_runtime?: number;
     project_id?: string | null;
     model?: string | null;
@@ -181,6 +185,22 @@ export function activationBlock(
       blocked: true,
       reason:
         "Choose a GitHub repository and at least 70 seconds runtime before enabling.",
+    };
+  }
+  if (
+    names.includes("http_connector") &&
+    agent.http_readiness?.ready === false
+  ) {
+    return {
+      blocked: true,
+      reason:
+        agent.http_readiness.reason ?? "Review the saved HTTP connection.",
+    };
+  }
+  if (names.includes("http_connector") && !agent.http) {
+    return {
+      blocked: true,
+      reason: "Choose and review a saved HTTP connection before enabling.",
     };
   }
   if (names.includes("project_memory") && !agent.project_id) {

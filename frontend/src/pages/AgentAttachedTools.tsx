@@ -9,6 +9,7 @@ import { isAgentToolList, type AgentToolSpec } from "./agentActivation";
 type Tool = AgentToolSpec;
 
 function toolTitle(tool: Pick<Tool, "name">) {
+  if (tool.name === "http_connector") return "Connected API";
   return tool.name === "remember_report"
     ? "Remember reports"
     : tool.name === "remember_workflow"

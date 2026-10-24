@@ -31,6 +31,7 @@ CONTEXT_STEPS = frozenset(
         "http_fetch",
         "browser",
         "github_read",
+        "http_connector",
     }
 )
 STEP_KEYS = CONTEXT_STEPS | {"report", "create_media"}
@@ -197,6 +198,11 @@ def sibling_context(session, run: Run) -> list[dict]:
             from app.paths import safe_join
 
             result = json.loads(safe_join(get_settings().data_dir, artifact.relative_path).read_text())
+        if tool == "http_connector":
+            from app.agent_http import verified_result
+
+            definition = AgentSettings.model_validate(run.parameters["definition"])
+            result = verified_result(session, sibling, definition.http)
         if tool == "github_read":
             from app.agent_github import report_context
 
@@ -245,6 +251,10 @@ def publish_steps(session, parent: Run) -> list[Run]:
         from app.market_watch import publish_market_steps
 
         return publish_market_steps(session, parent, definition)
+    if "http_connector" in definition.tools:
+        from app.agent_http import reviewed_connector
+
+        reviewed_connector(session, definition.http)
     github_target = None
     if "github_read" in definition.tools:
         from app.agent_github import reviewed_connector

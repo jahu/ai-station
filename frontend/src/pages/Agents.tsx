@@ -56,6 +56,7 @@ import {
 import { AgentLatestReport } from "./AgentLatestReport";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import GithubAgentScope from "./GithubAgentScope";
+import HttpAgentScope from "./HttpAgentScope";
 import { useListKeyboard } from "./useListKeyboard";
 import {
   activationBlock,
@@ -119,6 +120,8 @@ interface Agent {
   data_readiness?: { ready: boolean; reason: string } | null;
   permission_profile?: "agent_local" | "agent_external_coding";
   github?: { connector_id: string; repository: string } | null;
+  http?: { connector_id: string; connector_revision: string } | null;
+  http_readiness?: { ready: boolean; reason: string | null } | null;
   search_query: string;
   fetch_urls: string[];
   skills: string[];
@@ -185,6 +188,7 @@ function toolTitle(tool: Tool) {
   if (tool.name === "create_media") return "Create media";
   if (tool.name === "python_data") return "Files & data";
   if (tool.name === "search_pages") return "Read search sources";
+  if (tool.name === "http_connector") return "Connected API";
   return tool.name === "github_read"
     ? "GitHub repository"
     : tool.name === "coding_cursor"
@@ -996,6 +1000,9 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           agentSettingsPayload(agent, {
             ...values,
             fetch_urls: parseFetchUrls(fetchText),
+            http: values.tools.includes("http_connector")
+              ? (values.http ?? null)
+              : null,
             ...(values.tools.includes("create_media")
               ? { media: mediaScope }
               : {}),
@@ -1417,6 +1424,16 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               it before enabling the agent.
             </p>
             <span className="chip">Network permission · search only</span>
+          </section>
+        )}
+        {values.tools.includes("http_connector") && (
+          <section className="agent-wide agent-search-settings">
+            <h3>Connected API</h3>
+            <HttpAgentScope
+              value={values.http ?? null}
+              disabled={active || save.isPending}
+              onChange={(http) => update("http", http)}
+            />
           </section>
         )}
         {values.tools.includes("github_read") && (

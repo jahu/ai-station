@@ -137,6 +137,11 @@ def verified_observation(session, source, definition, *, complete=False, for_exe
         urls = [item["url"] for item in sources]
     else:
         urls = definition.fetch_urls
+        if tool == "http_connector":
+            from app.agent_http import verified_result
+
+            verified_result(session, source, definition.http, for_execution=for_execution)
+            urls = data["urls"]
         if tool == "search_pages":
             from app.agent_search_pages import search_source
 
@@ -153,7 +158,7 @@ def verified_observation(session, source, definition, *, complete=False, for_exe
         if data.get("urls") != urls or not isinstance(data.get("pages"), list):
             raise ValueError("Page observations do not match the reviewed URLs")
         pages = data["pages"]
-        if tool in {"http_fetch", "browser"} and len(pages) != len(urls):
+        if tool in {"http_fetch", "browser", "http_connector"} and len(pages) != len(urls):
             raise ValueError("Every reviewed page must be present before coding")
         if len(pages) > 3 or any(
             not isinstance(page, dict)

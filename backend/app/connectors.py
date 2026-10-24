@@ -6,7 +6,6 @@ import asyncio
 import json
 import re
 import tempfile
-from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated, Literal
@@ -22,7 +21,7 @@ from app.db import session_scope, utcnow
 from app.email_schema import SMTPSettings
 from app.events import append_event
 from app.github_connector import repository_name
-from app.http_fetch import fetch_public, public_url
+from app.http_fetch import public_url
 from app.models import Connector, Run
 from app.paths import PathBoundaryError
 from app.providers import ProviderError
@@ -175,6 +174,12 @@ class ConnectorPatch(BaseModel):
         return self
 
 
+def http_policy_revision(row):
+    from app.agent_http import connector_revision
+
+    return connector_revision(row)
+
+
 def email_policy_revision(row):
     from app.market_email import connector_revision
 
@@ -196,6 +201,7 @@ def connector_dict(row: Connector) -> dict:
             if row.kind == "email"
             else {}
         ),
+        **({"http_policy_revision": http_policy_revision(row)} if row.kind == "http" else {}),
         **market_feed_public(row),
         "capabilities": list(row.capabilities),
         "status": row.status,
@@ -411,6 +417,16 @@ def edit(connector_id: UUID, body: ConnectorPatch, session: DB):
 
         rotate_connector_revision(row)
         row.status, row.health, row.last_run_id = "unconfigured", "unknown", None
+    if row.kind == "http" and (
+        body.url is not None
+        or body.secret is not None
+        or body.secret_ref is not None
+        or body.clear_secret
+        or body.enabled is not None
+    ):
+        from uuid import uuid4
+
+        row.config_json = {**row.config_json, "http_policy_version": str(uuid4())}
     apply_secret(row, secret_ref=body.secret_ref, secret=body.secret, clear=body.clear_secret)
     row.updated_at = utcnow()
     session.commit()
@@ -474,6 +490,7 @@ def check(connector_id: UUID, session: DB):
             "url": url,
             "method": "GET",
             "secret_ref": row.secret_ref,
+            "http_scope": {"connector_id": row.id, "connector_revision": http_policy_revision(row)},
         },
         permissions=["network_read"],
         retry_class="inspect",
@@ -529,32 +546,26 @@ async def _check(session, run):
     url = public_url((run.parameters or {}).get("url"))
     if url is None:
         raise ProviderError("HTTP connectors require one public http(s) URL on port 80 or 443")
-    extra = {}
+    from app.agent_http import read_response, reviewed_connector
+    from app.agent_schema import AgentHttpScope
+
     secret_ref = (run.parameters or {}).get("secret_ref") or ""
-    if secret_ref:
-        extra = authorization_headers(secret_ref, required=True)
+    raw_scope = run.parameters.get("http_scope")
+    scope = AgentHttpScope.model_validate(raw_scope) if raw_scope else None
     append_event(
         session, run.id, "connector.requested", {"kind": "http", "url": url, "used_secret": bool(secret_ref)}
     )
     session.commit()
-    pending = asyncio.create_task(fetch_public(url, extra_headers=extra))
-    try:
-        while True:
-            session.refresh(run)
-            canceled = run.status == "cancel_requested"
-            session.commit()
-            if canceled:
-                append_event(session, run.id, "connector.canceled", {"kind": "http"})
-                return None
-            ready, _ = await asyncio.wait([pending], timeout=0.2)
-            if ready:
-                page = pending.result()
-                break
-    finally:
-        if not pending.done():
-            pending.cancel()
-            with suppress(asyncio.CancelledError):
-                await pending
+    page = await read_response(
+        session,
+        run,
+        url,
+        secret_ref,
+        validate=(lambda headers: reviewed_connector(session, scope, headers)) if scope else None,
+    )
+    if page is None:
+        append_event(session, run.id, "connector.canceled", {"kind": "http"})
+        return None
     result = {
         "url": page["url"],
         "status": page["status"],
@@ -566,7 +577,7 @@ async def _check(session, run):
         "checked_at": utcnow().isoformat(),
     }
     if page.get("error"):
-        raise ProviderError(page["error"])
+        raise ProviderError("The reviewed HTTP request failed")
     with tempfile.NamedTemporaryFile(mode="w+", suffix=".json") as handle:
         json.dump(result, handle)
         handle.flush()

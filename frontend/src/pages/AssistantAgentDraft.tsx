@@ -25,6 +25,7 @@ import AgentWorkspacePolicy, {
 import AgentDataFiles, { type DataScope } from "./AgentDataFiles";
 import AgentDataResult from "./AgentDataResult";
 import GithubAgentScope from "./GithubAgentScope";
+import HttpAgentScope from "./HttpAgentScope";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -94,6 +95,8 @@ type AgentDraft = {
     report_email?: ResultEmailScope | null;
   };
   github?: { connector_id: string; repository: string } | null;
+  http?: { connector_id: string; connector_revision: string } | null;
+  http_readiness?: { ready: boolean; reason: string | null } | null;
   search_query?: string;
   fetch_urls?: string[];
   project_id?: string | null;
@@ -1172,6 +1175,18 @@ export function AssistantAgentDraft({
                     value={agent.data}
                     disabled={editLocked}
                     onChange={(data) => saveSettings.mutate({ data })}
+                  />
+                </dd>
+              </div>
+            )}
+            {agent.tools?.includes("http_connector") && (
+              <div>
+                <dt>Connected API</dt>
+                <dd>
+                  <HttpAgentScope
+                    value={agent.http ?? null}
+                    disabled={editLocked}
+                    onChange={(http) => saveSettings.mutate({ http })}
                   />
                 </dd>
               </div>
