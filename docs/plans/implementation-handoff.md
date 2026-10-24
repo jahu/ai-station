@@ -23,7 +23,9 @@ keeps enabled state, existing larger limits, sources, scenes, seed and permissio
 rendering never starts work or edits definitions. The runtime/ceiling stay
 unchanged. Review reproduced a settings API bug that postponed interval and
 overdue cron executions; the same branch now preserves unchanged calendars and
-requires a new full Python gate. All 700 UI cases and real API/SQLite saves at 1440/390 passed; qualify the
+passed a new full 3041-case gate (3032 passes/nine opt-in skips). All 700 UI cases,
+ten final-copy setup cases and real API/SQLite saves at 1440/390 passed, including
+an already-enabled interval definition whose next due instant stayed exact; qualify the
 final shorter helper text and image, review the published diff and finish a
 controller-only rollout. Reuse #397 Python/native evidence by exact source match.
 Keep all live/proof trees, original root Memory WIP and pending Whisper consent.

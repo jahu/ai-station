@@ -63,3 +63,16 @@ explicit calendar change, enable/disable transition or missing due date retains
 normal computation/repair. API regression evidence before/after is retained in
 `data/acceptance/agent-video-setup-20261024/schedule-regression-*.log`. No schema or
 native execution change is involved.
+
+## Final gate after the schedule correction
+
+All 3041 current normal Python/Runner cases passed their gate: 3032 passes and
+nine opt-in skips. The previous two failing due-date cases remain in the before
+log; the corrected full gate covers interval/overdue-cron preservation, explicit
+calendar changes, disabling, missing-date repair and manual-date cleanup.
+Compiled 1440/390 checks additionally saved an already-enabled interval agent
+without changing its exact next due instant, and a disabled conversation draft
+without activating it. All 700 UI cases plus ten final-copy setup cases, lint/
+format/types/build, real API persistence and no-Run checks passed. Native/GPU
+execution is unchanged. Final published-head/image/rollout evidence is retained
+in the acceptance directory; the whole-platform goal remains open.
