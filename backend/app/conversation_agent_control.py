@@ -199,7 +199,7 @@ def enqueue(session, conversation, user, body, scope):
     return run_dict(run)
 
 
-def verified(session, run):
+def verified(session, run, *, lock=False):
     require(run.effective_permissions, "manage_agents")
     scope = run.parameters["scope"]
     user = session.get(Message, run.parameters["user_message_id"])
@@ -224,8 +224,9 @@ def verified(session, run):
         scope["agent_id"],
     ):
         raise ValueError("The referenced agent changed; inspect it and send again")
-    session.execute(update(Agent).where(Agent.id == agent.id).values(updated_at=Agent.updated_at))
-    session.refresh(agent)
+    if lock:
+        session.execute(update(Agent).where(Agent.id == agent.id).values(updated_at=Agent.updated_at))
+        session.refresh(agent)
     if (
         iso(agent.updated_at) != scope["expected_updated_at"]
         or definition_hash(agent) != scope["definition_hash"]
@@ -271,24 +272,62 @@ def linked_run(session, message, run):
     return {"id": target.id, "status": status, "agent_id": target.agent_id, "task_id": target.task_id}
 
 
+class ControlCanceled(Exception):
+    """A durable Stop won the preparation/publication race."""
+
+
 class AgentControlExecutor:
     name = "agent_control"
 
     def execute(self, session, run):
-        lock_task(session, run.task)
         session.refresh(run)
-        if run.status == "cancel_requested" or run.task.metadata_json.get("stop_requested_at"):
+        if run.status == "cancel_requested":
+            transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
+            return "done"
+        agent, scope = verified(session, run)
+        from app.schedule import active_run, launch_agent
+
+        boundary = {}
+
+        def before_publish():
+            # Runtime/model/source preparation above this boundary is read-only.
+            # Release the read transaction and re-read all authority under the
+            # write lock; no SQLite writer is held during Runner metadata I/O.
+            session.commit()
+            session.expire_all()
+            lock_task(session, run.task)
+            session.refresh(run)
+            if (
+                run.status in TERMINAL
+                or run.status == "cancel_requested"
+                or run.task.metadata_json.get("stop_requested_at")
+            ):
+                raise ControlCanceled
+            current, current_scope = verified(session, run, lock=True)
+            response = session.scalar(
+                select(Message).where(Message.run_id == run.id, Message.role == "assistant")
+            )
+            if response is None or response.metadata_json.get("agent_control") != current_scope:
+                raise ValueError("The control response changed; send again")
+            transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
+            transition(session, run, RunStatus.RUNNING, event_type="executor.started")
+            boundary.update(agent=current, scope=current_scope, message=response)
+
+        prepared_root = None
+        try:
+            if scope["operation"] == "run" and agent.enabled and not active_run(session, agent.id):
+                prepared_root = launch_agent(
+                    session, agent, triggered_by="user", before_publish=before_publish
+                )
+            else:
+                before_publish()
+        except ControlCanceled:
+            session.rollback()
+            session.refresh(run)
             if run.status == "cancel_requested":
                 transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
             return "done"
-        agent, scope = verified(session, run)
-        message = session.scalar(select(Message).where(Message.run_id == run.id, Message.role == "assistant"))
-        if message is None or message.metadata_json.get("agent_control") != scope:
-            raise ValueError("The control response changed; send again")
-        transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
-        transition(session, run, RunStatus.RUNNING, event_type="executor.started")
-        from app.schedule import active_run, launch_agent
-
+        agent, scope, message = boundary["agent"], boundary["scope"], boundary["message"]
         op = scope["operation"]
         result = {"operation": op, "agent_id": agent.id}
         if op == "pause":
@@ -298,7 +337,7 @@ class AgentControlExecutor:
             result["outcome"] = "paused"
             text = "Future executions are paused. Current work, if any, continues; use ‘Stop this agent’ to stop it."
         elif op == "run":
-            active_id = active_run(session, agent.id)
+            active_id = active_run(session, agent.id) if prepared_root is None else None
             active = session.get(Run, active_id) if active_id else None
             if active:
                 root = session.scalar(
@@ -310,21 +349,19 @@ class AgentControlExecutor:
                     task_id=active.task_id,
                 )
                 text = "This agent already has an active execution. No additional work was queued."
-            elif not agent.enabled:
+            elif not agent.enabled and prepared_root is None:
                 result["outcome"] = "needs_review"
                 text = "This agent is paused or not yet enabled. Review and enable its definition before running it."
             else:
-                # launch_agent may fail after flushing partial work; a savepoint
-                # prevents any partial graph from escaping a rejected operation.
-                with session.begin_nested():
-                    root_id = launch_agent(session, agent, triggered_by="user")
-                    root = session.get(Run, root_id)
-                    root.metadata_json = {**root.metadata_json, "conversation_control_run_id": run.id}
-                    root.task.metadata_json = {
-                        **root.task.metadata_json,
-                        "conversation_control_run_id": run.id,
-                        "originating_conversation_id": run.conversation_id,
-                    }
+                if prepared_root is None:
+                    raise ValueError("Agent activation changed during preparation; send again")
+                root = session.get(Run, prepared_root)
+                root.metadata_json = {**root.metadata_json, "conversation_control_run_id": run.id}
+                root.task.metadata_json = {
+                    **root.task.metadata_json,
+                    "conversation_control_run_id": run.id,
+                    "originating_conversation_id": run.conversation_id,
+                }
                 result.update(outcome="queued", workflow_run_id=root.id, task_id=root.task_id)
                 text = "Agent execution queued. You can keep using this conversation while it works."
         else:

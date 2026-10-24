@@ -838,7 +838,11 @@ export function AssistantAgentDraft({
             <div className="assistant-agent-brief-head">
               <h3>{agent.name}</h3>
               <span className="assistant-agent-brief-status">
-                {agent.enabled ? "Enabled" : "Disabled draft"}
+                {agent.enabled
+                  ? "Enabled"
+                  : history.length || agent.last_run_at
+                    ? "Paused"
+                    : "Disabled draft"}
               </span>
             </div>
             <p className="assistant-agent-brief-goal">

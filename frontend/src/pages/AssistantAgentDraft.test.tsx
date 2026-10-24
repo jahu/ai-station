@@ -2390,6 +2390,8 @@ it("describes an existing paused agent without claiming it has never run", async
     "Paused. Previous results and history remain in the agent workspace.",
   );
   expect(screen.queryByText(/No agent work has started/)).toBeNull();
+  expect(screen.getByText("Paused", { exact: true })).toBeTruthy();
+  expect(screen.queryByText("Disabled draft", { exact: true })).toBeNull();
 });
 
 it("labels historical external coding explicitly and does not request a local model", async () => {

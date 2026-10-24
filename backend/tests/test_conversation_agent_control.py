@@ -287,7 +287,7 @@ def test_stop_before_control_dispatch_prevents_launch(saved):
     assert response.status_code == 200, response.text
     assert step() is None
     with session_factory()() as db:
-        assert db.get(Run, queued["id"]).status == "canceled"
+        assert db.get(Run, queued["id"]).status == "canceled", db.get(Run, queued["id"]).error_message
         assert not list(db.scalars(select(Run).where(Run.executor_type == "agent_workflow")))
 
 
@@ -439,3 +439,58 @@ def test_failed_launch_rolls_back_every_partial_workflow(saved, monkeypatch):
         assert db.get(Run, queued["id"]).status == "failed"
         assert not list(db.scalars(select(Task).where(Task.title == "Incomplete graph")))
         assert not list(db.scalars(select(Run).where(Run.executor_type == "agent_workflow")))
+
+
+def test_runtime_preparation_does_not_hold_a_sqlite_writer(saved, monkeypatch):
+    enable(saved, require_approval=True)
+    queued = send(saved)
+    import app.schedule as schedule
+    from app.models import Setting
+    from sqlalchemy import text
+
+    original = schedule.model_endpoint
+    observed = []
+
+    def prepare(model, db):
+        with session_factory()() as other:
+            other.execute(text("PRAGMA busy_timeout=100"))
+            other.add(Setting(key="parallel-runtime-observation", value={"okay": True}))
+            other.commit()
+        observed.append(True)
+        return original(model, db)
+
+    monkeypatch.setattr(schedule, "model_endpoint", prepare)
+    assert step() == queued["id"]
+    assert observed, result(saved, queued["id"])
+    assert result(saved, queued["id"])["agent_control_run"]["status"] == "waiting_for_approval"
+
+
+def test_stop_wins_during_read_only_runtime_preparation(saved, monkeypatch):
+    enable(saved)
+    queued = send(saved)
+    import app.schedule as schedule
+    from app.runs import request_cancel
+
+    original = schedule.model_endpoint
+
+    def prepare(model, db):
+        with session_factory()() as other:
+            request_cancel(other, other.get(Run, queued["id"]))
+            other.commit()
+        return original(model, db)
+
+    monkeypatch.setattr(schedule, "model_endpoint", prepare)
+    assert step() == queued["id"]
+    with session_factory()() as db:
+        assert db.get(Run, queued["id"]).status == "canceled", db.get(Run, queued["id"]).error_message
+        assert not list(db.scalars(select(Run).where(Run.executor_type == "agent_workflow")))
+
+
+def test_one_shot_launch_still_links_the_queued_execution_after_auto_disable(saved):
+    enable(saved, require_approval=True, trigger="datetime", run_at=utcnow() + timedelta(hours=1))
+    queued = send(saved)
+    assert step() == queued["id"]
+    message = result(saved, queued["id"])
+    assert message["metadata"]["agent_control_result"]["outcome"] == "queued"
+    assert message["agent_control_run"]["status"] == "waiting_for_approval"
+    assert not saved[0].get(f"/api/agents/{saved[2]}").json()["enabled"]

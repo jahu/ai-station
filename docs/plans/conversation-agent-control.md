@@ -9,7 +9,9 @@ Resolve the latest visible creation result, verify its successful factory/quick
 creation origin, and freeze source message/Run, current request, target definition
 revision and (for Stop) the current Task. Reject missing/changed origins and never
 fall back to an older agent. Recheck authority in the worker under database
-serialization. Disabled definitions require the existing review/activation UI.
+serialization. Read-only runtime preparation releases SQLite before Runner I/O;
+a controller-only before-publication hook rechecks Stop, source and the exact
+saved definition before atomically publishing the workflow and control result. Disabled definitions require the existing review/activation UI.
 Run reuses launch_agent, including approval, source, dependency and email consent
 checks. Pause reuses consent revocation and disables future scheduling without
 canceling current work. Stop uses existing Task-wide cancellation and never stops
