@@ -135,3 +135,16 @@ def test_missing_due_time_is_repaired_instead_of_preserved(scheduled_video):
     assert response.status_code == 200, response.text
     with session_factory()() as db:
         assert db.get(Agent, aid).next_run_at == NOW + timedelta(seconds=300)
+
+
+def test_manual_agent_clears_a_legacy_due_date(scheduled_video):
+    api = scheduled_video
+    aid = create(api, trigger="manual", interval_seconds=None)
+    with session_factory()() as db:
+        row = db.get(Agent, aid)
+        row.next_run_at = NOW
+        db.commit()
+    response = api.put("/api/agents/" + aid, json=update_body(aid))
+    assert response.status_code == 200, response.text
+    with session_factory()() as db:
+        assert db.get(Agent, aid).next_run_at is None

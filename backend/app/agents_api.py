@@ -169,6 +169,7 @@ def apply_settings(agent, body):
         if (
             was_enabled
             and agent.enabled
+            and agent.trigger in {"cron", "interval", "datetime"}
             and previous_due is not None
             and previous_schedule == _schedule_identity(agent)
         ):
