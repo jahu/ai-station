@@ -5,6 +5,27 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Latest continuation — long-media agent budgets, 2026-10-24
+
+PR #394 is merged to develop `3c9473c` and live-qualified. Source
+`.tools/ui-offline-recovery-20261024` serves localhost/private LAN; the native
+source remains `.tools/ui-python-optional-outputs-20261024`. Full 2935 Python
+passes/nine opt-in skips and 678 UI passes, real disposable recovery/rollback,
+compiled 1440/390 inspection and exact image/Compose checks passed. A normal live
+worker backup `a2f3a154-89a5-4e68-b039-769c920d6f51` succeeded and the host CLI
+inspected it read-only with zero missing artifact files. No production database
+was restored. Proof: `data/acceptance/offline-recovery-20261024/post-deployment-qualified.json`.
+Root Memory WIP and all prior source/proof trees are retained.
+
+Current branch/worktree: `feat/long-media-agent-budgets`,
+`.tools/long-media-agent-budgets`. [The budget plan](long-media-agent-budgets.md)
+fixes the one-hour ceiling that contradicts the measured 92-minute 60-second
+Wan result. Keep conservative RAM admission: actual available memory is only
+about13GiB; do not repeat a known blocked GPU attempt or lower its reservation
+without measured qualification. Existing idle-owned-LLM eviction is already
+implemented and must not be reimplemented. Preserve original model presets,
+paused definitions, deadlines, native ownership, root WIP and pending Whisper consent.
+
 ## Latest continuation — offline recovery, 2026-10-24
 
 #391 public-data conversations, #392 accurate Maintenance LAN policy and #393
