@@ -1,8 +1,12 @@
 # Reviewed public research with offline Python/data agents
 
-Status: planned next implementation, 2026-10-24. Research/code composition (#388)
-and one bounded agent validation correction (#389) are delivered; this document
-does not advertise a working research/data combination.
+Implementation: [PR #390](https://github.com/jahu/ai-station/pull/390), 2026-10-24.
+Research/code composition (#388) and one bounded agent validation correction
+(#389) are delivered. Qualification, review and deployment evidence for this
+composition live under `data/acceptance/agent-research-data-20261024`; inspect
+those records before claiming deployment or real integration success. Fake-source
+tests, actual isolated CPU execution and actual public/local-model qualification
+are recorded separately.
 
 ## User outcome
 
