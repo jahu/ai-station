@@ -210,6 +210,7 @@ def test_legacy_receipt_replays_after_optional_scope_schema_extension(local):
         accepted = client.post("/api/chat/turns", json=body)
         assert accepted.status_code == 202
         legacy = TurnBody.model_validate(body).model_dump(mode="json")
+        legacy.pop("analysis_agent_source_run_id")  # Absent in the historical request schema.
         legacy.pop("expected_provider_version")
         legacy.pop("reasoning")
         legacy.pop("continuation")

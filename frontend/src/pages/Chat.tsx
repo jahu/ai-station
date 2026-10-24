@@ -1,3 +1,6 @@
+import AnalysisAgentDialog, {
+  type AnalysisAgentSource,
+} from "./AnalysisAgentDialog";
 import DataAgentDraftSource from "./DataAgentDraftSource";
 import CreationContextNotice, {
   type CreationContext,
@@ -724,7 +727,9 @@ function Transcript({
   onProject,
   onAnalyzePage,
   onData,
+  onRepeatAnalysis,
 }: {
+  onRepeatAnalysis?: (source: AnalysisAgentSource) => void;
   messages: Message[];
   orchestrator: boolean;
   options: AssistantOptions;
@@ -980,6 +985,7 @@ function Transcript({
                 onQueued={orchestrator ? refresh : undefined}
                 onProject={onProject}
                 onData={onData}
+                onRepeatAnalysis={onRepeatAnalysis}
                 onUse={
                   orchestrator
                     ? (artifact) =>
@@ -1117,6 +1123,8 @@ function ConversationView({
   const draft = draftState.value,
     setDraft = draftState.update;
   const [options, setOptions] = useState(emptyOptions);
+  const [analysisAgent, setAnalysisAgent] =
+    useState<AnalysisAgentSource | null>(null);
   const [toolSelectionKey, setToolSelectionKey] = useState(0);
   const dataInputs = useDataInputs(options.data);
   const dataReady = options.action !== "data.analyze" || dataInputs.ready;
@@ -1580,7 +1588,27 @@ function ConversationView({
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+      {analysisAgent && (
+        <AnalysisAgentDialog
+          source={analysisAgent}
+          conversationId={conversation.id}
+          settingsVersion={conversation.settings_version ?? 1}
+          providerVersion={selected.data?.updated_at}
+          onClose={() => setAnalysisAgent(null)}
+          onCreated={() => {
+            setAnalysisAgent(null);
+            refresh();
+          }}
+        />
+      )}
       <Transcript
+        onRepeatAnalysis={
+          !conversation.archived_at &&
+          !context &&
+          conversation.provider === "local-openai-compatible"
+            ? setAnalysisAgent
+            : undefined
+        }
         messages={messages}
         orchestrator={orchestrator}
         options={options}

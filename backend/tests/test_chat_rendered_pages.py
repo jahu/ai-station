@@ -269,6 +269,7 @@ def test_pre_render_option_receipt_replays_but_cannot_gain_a_browser_grant(rende
         # Simulate the canonical receipt from the deployed schema before render_pages existed.
         legacy = TurnBody.model_validate(body).model_dump(mode="json")
         for key in [
+            "analysis_agent_source_run_id",  # Absent in the historical request schema.
             "expected_provider_version",
             "reasoning",
             "continuation",

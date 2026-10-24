@@ -141,6 +141,11 @@ def capture(session, conversation_id, user, root, *, for_execution=False):
 
 
 def resolve(session, conversation, body, mode):
+    selected = getattr(body, "analysis_agent_source_run_id", None)
+    if selected and (
+        mode not in {"work", "orchestrator"} or body.action != "agent.create" or not requested(body.content)
+    ):
+        raise HTTPException(422, "Create an agent from the selected analysis with an explicit Work request")
     if (
         mode not in {"work", "orchestrator"}
         or body.action not in {"auto", "agent.create"}
@@ -185,13 +190,16 @@ def resolve(session, conversation, body, mode):
         or get_provider(session, conversation.provider).location != "local"
     ):
         raise HTTPException(422, "Select Local AI to prepare a source-bound agent draft")
-    rows = session.execute(
+    query = (
         select(Message, Run)
         .outerjoin(Run, Message.run_id == Run.id)
         .where(Message.conversation_id == conversation.id, Message.role == "user")
         .order_by(Message.created_at.desc(), Message.id.desc())
         .limit(64)
     )
+    if selected:
+        query = query.where(Run.id == str(selected))
+    rows = session.execute(query)
     for user, root in rows:
         if user.metadata_json.get("data_scope") or root and root.parameters.get("data"):
             try:

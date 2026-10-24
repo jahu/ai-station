@@ -1,3 +1,4 @@
+import type { AnalysisAgentSource } from "./AnalysisAgentDialog";
 import { uploadImageFiles } from "./image-upload";
 import ConversationDataControls from "./ConversationDataControls";
 import AgentDataResult from "./AgentDataResult";
@@ -226,8 +227,10 @@ export function AssistantResults({
   onQueued,
   onProject,
   onData,
+  onRepeatAnalysis,
 }: {
   result: ActionResult;
+  onRepeatAnalysis?: (source: AnalysisAgentSource) => void;
   executionNote?: string;
   onData?: (scope: ConversationDataScope) => void;
   inputs?: AssistantOptions;
@@ -271,6 +274,26 @@ export function AssistantResults({
             taskId={dataRoot?.task_id ?? ""}
           />
           <AgentDataResult runs={result.data_runs} />
+          {onRepeatAnalysis &&
+            hasDataResult &&
+            dataRoot?.status === "succeeded" &&
+            result.task_status === "succeeded" &&
+            typeof dataRoot.parameters.content === "string" && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() =>
+                  onRepeatAnalysis({
+                    id: dataRoot.id,
+                    goal: String(dataRoot.parameters.content),
+                    liveSources: !!dataScope?.research,
+                  })
+                }
+              >
+                Create an agent from this analysis
+              </Button>
+            )}
           {onData &&
           hasDataResult &&
           dataScope &&
