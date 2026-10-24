@@ -74,7 +74,9 @@ def natural_research(body, mode):
         return body
     urls = prompt_public_urls(text, limit=4)
     query = body.web_search.query.strip()
-    if not urls and not query:
+    # A generic exact Web query retains its existing Chat route. Public
+    # query-only analysis is selected explicitly in the data tool instead.
+    if not urls:
         return body
     if len(urls) > 3:
         raise HTTPException(422, "Review up to three public data URLs per analysis")

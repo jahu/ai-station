@@ -453,3 +453,14 @@ def test_dataset_words_in_a_url_do_not_select_an_analysis_tool():
         web_search={"enabled": True},
     )
     assert prepare_turn(body, mode="work").data is None
+
+
+def test_manual_query_only_keeps_its_existing_chat_authority():
+    from app.chat import MessageBody
+    from app.conversation_data import prepare_turn
+
+    body = MessageBody(
+        content="Calculate the average from those data", web_search={"enabled": True, "query": "public data"}
+    )
+    result = prepare_turn(body, mode="chat")
+    assert result.data is None and result.web_search.query == "public data"
