@@ -35,3 +35,23 @@ Full local review/checks, image/Compose qualification and coordinated native/sou
 rollout are required. No new model downloads or long GPU re-generation are needed
 for this budget contract. Real agent video/avatar output remains separately
 unqualified while available RAM is below its unchanged conservative reservation.
+
+## Qualification checkpoint
+
+Implementation is in PR #395. All 2966 normal Python/Runner cases completed:
+2957 passed, nine opt-in skips, zero failures. Both new and existing deadline,
+ownership, Stop/replay/restart and media suites passed; fake video/avatar
+pipelines preserve exact two-hour deadlines through real CPU composition.
+Native process tests cover accepted two/four-hour deadlines, actual Stop and
+rejected invalid/out-of-range expiry without waiting hours. Full UI checks passed
+683 cases plus format/lint/types/build. Compiled 1440/390 checks saved/reloaded
+7200 seconds in Agents and 14400 seconds from the same conversation definition,
+without enabling the agent or creating Runs. Custom refreshed values and native
+selector keyboard behavior have regressions. The identity editor now uses the
+existing shared form controls/spacing.
+
+Evidence: `data/acceptance/long-media-agent-budgets-20261024`. Final published-diff
+review, exact final image/source qualification and coordinated backed-up
+controller/native rollout remain release gates. No multi-hour GPU generation
+was run for this bounded-deadline change; existing standalone long-media evidence
+is retained. Low available RAM still blocks separate real agent GPU acceptance.

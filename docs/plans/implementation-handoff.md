@@ -20,7 +20,12 @@ Root Memory WIP and all prior source/proof trees are retained.
 Current branch/worktree: `feat/long-media-agent-budgets`,
 `.tools/long-media-agent-budgets`. [The budget plan](long-media-agent-budgets.md)
 fixes the one-hour ceiling that contradicts the measured 92-minute 60-second
-Wan result. Keep conservative RAM admission: actual available memory is only
+Wan result. PR #395 implementation passed all2957normalPython/Runnercases
+withnineopt-in skips and683UIcases plusformat/lint/types/build. Exact image and
+compiled desktop/phone saves/reload are qualified; finish full diff review and
+coordinated controller/native rollout. Only native processes.py changes its
+finite deadline ceiling; existing source, ownership and model state must be
+verified before restart. Keep conservative RAM admission: actual available memory is only
 about13GiB; do not repeat a known blocked GPU attempt or lower its reservation
 without measured qualification. Existing idle-owned-LLM eviction is already
 implemented and must not be reimplemented. Preserve original model presets,
