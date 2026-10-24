@@ -1,3 +1,23 @@
+> Active candidate: [result families](conversation-agent-result-families.md),
+> `feat/conversation-agent-result-families`, base merged/qualified #420. Shared
+> verified-result reader preserves strict SMTP byte validation and legacy rendering.
+> Conversation data reads actual DataAnswer/report; code reads saved review JSON;
+> media quotes publication metadata only and explicitly grants no pixel/audio/video
+> inspection. Source IDs/family/bounds remain visible and no agent reexecutes.
+> Initial report/email/attachment59 tests and family10 checks passed; UI8 and
+> TypeScript passed after fixing exact-text test matching around source links.
+> Additional ordinary-worker data binding/tamper cases (inference/Python transport
+> injected) and malformed review checks,
+> full final gates/image/browser/review/rollout remain pending. Live stays #420 at
+> http://192.168.1.121:8765; authority/evidence: agent-workflow-outcomes-20261025.
+> #419 and #420 were reviewed, merged and deployed with auth/data/native/model
+> preservation. #420 full baseline3576+9 skips, final affected140, UI774 and final
+> compiled image desktop/mobile passed. GraphQL/fetched squash tree verified merge
+> after REST metadata returned422. The first health read saw startup, subsequent
+> ready-state qualification passed; no restart/replay was used to mask that state.
+> Preserve root Memory WIP, native PID/model presets and full-platform goal.
+> Next: finish result-family reuse and practical multi-step orchestration/UX.
+
 > Active follow-on: [agent outcomes](agent-workflow-outcomes.md),
 > `fix/agent-workflow-outcomes`, based on merged #419. Generation is derived
 > from owned stages, final output and valid bounded repairs; email approval and

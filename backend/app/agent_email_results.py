@@ -44,7 +44,7 @@ def artifact_content(artifact, *, text=False, binary=False):
     return b"".join(data).decode("utf-8") if text else b"".join(data) if binary else None
 
 
-def result_snapshot(session, source, root, definition, scope):
+def verified_result(session, source, root, definition, *, media_metadata_only=False):
     if (
         source.status != "succeeded"
         or source.agent_id != root.agent_id
@@ -65,7 +65,7 @@ def result_snapshot(session, source, root, definition, scope):
     )
     if any(item.metadata_json.get("partial") is True for item in artifacts):
         raise ValueError("Partial artifacts cannot be delivered as a completed result")
-    family, report, report_artifact = None, None, None
+    family, report, report_artifact, review = None, None, None, None
     if definition.media:
         kind = definition.media.kind
         expected = {
@@ -135,6 +135,8 @@ def result_snapshot(session, source, root, definition, scope):
         if len(reports) != 1:
             raise ValueError("The coding result is missing its unique verified review report")
         review = json.loads(artifact_content(reports[0], text=True))
+        if not isinstance(review, dict):
+            raise ValueError("The saved coding review is not a structured object")
         if (
             review != source.metadata_json.get("validation" if validation else "coding_review")
             or review.get("run_id") != source.id
@@ -183,7 +185,9 @@ def result_snapshot(session, source, root, definition, scope):
         raise ValueError("The completed agent result has no supported verified output")
     references = []
     for item in artifacts:
-        if item is not report_artifact:
+        # Conversation media context quotes publication metadata only. No image,
+        # audio or video bytes enter inference; SMTP keeps strict byte checks.
+        if item is not report_artifact and not (family == "media" and media_metadata_only):
             artifact_content(item)
         references.append(
             {
@@ -195,6 +199,19 @@ def result_snapshot(session, source, root, definition, scope):
             }
         )
     references.sort(key=lambda value: value["id"])
+    return {
+        "family": family,
+        "artifacts": references,
+        "report": report,
+        "report_artifact": report_artifact,
+        "review": review,
+    }
+
+
+def result_snapshot(session, source, root, definition, scope):
+    result = verified_result(session, source, root, definition)
+    family, references = result["family"], result["artifacts"]
+    report, report_artifact = result["report"], result["report_artifact"]
     if scope.content == "report":
         if report is None or report_artifact is None:
             raise ValueError("Choose a result summary for coding or media output")
