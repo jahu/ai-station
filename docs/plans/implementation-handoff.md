@@ -1,124 +1,67 @@
-> Current owned increment: `.tools/agent-document-context`, branch
-> `feat/agent-document-context`, based on delivered #410 (`a64414e`).
-> [Selected documents](agent-document-context.md) adds upload/Library scope,
-> bounded PDF/text worker extraction, source cards and verified local-agent adoption.
-> Migration0035 preserves absent-scope legacy identities. Targeted CPU/UI and
-> process-loss cases pass; use the eventual full-gate and post-deployment evidence
-> under `data/acceptance/agent-document-context-20261024` before claiming deployment.
-> Live authority remains `data/acceptance/safety-redeploy-20261012/deployment.json`;
-> the running release is #410 until rollout. Preserve the original root WIP.
-
-> #410 tracks [scoped memory for local agents](agent-data-memory.md): reviewed
-> memory captures before offline code/data, optional atomic data-result retention,
-> and readable captured versions in both workspaces. Its evidence lives under
-> `data/acceptance/agent-data-memory-20261024`. Consult the post-deployment report
-> and the release authority below before treating an increment as live. #409's
-> saved HTTP/API sources are deployed and qualified. Original root WIP is preserved.
-
-> Release authority: `data/acceptance/safety-redeploy-20261012/deployment.json`.
-> #408 delivered explicitly selected generated CSV/XLSX/PNG/text email exports;
-> its private TLS SMTP qualification remains in
-> `data/acceptance/agent-data-email-attachments-20261024/post-deployment-qualified.json`.
-> #409 tracks [saved HTTP/API sources](agent-http-connectors.md), migration0034,
-> both agent editors, exact credential-snapshot consent and source-bound local
-> analysis. Its full-gate/deployment evidence is under
-> `data/acceptance/agent-http-connectors-20261024`; use the exact qualified head
-> and post-deployment report before treating that increment as live.
-> Preserve the root checkout's unrelated Memory WIP.
-
-
 # AI Station implementation handoff
 
-The full platform goal remains active. Prioritize useful local agents and
-conversation-first workflows; standalone IDE/external coding expansion is deferred.
-No subagents, unapproved model downloads, driver changes, public exposure or
-main/master operations. Preserve existing services, records and original root WIP.
+The full-platform goal remains active. Prioritize useful local agents and the
+conversation-first assistant, with good desktop/mobile UX. Standalone IDE expansion
+is deferred. No subagents, unapproved downloads, driver changes, public exposure or
+main/master operations. Preserve original root Memory WIP and all existing services.
 
-## Authoritative live state — 2026-10-24
+## Live state and release authority
 
-PR #406 merged to develop as `ee07d34827d3e11ca2ef4c417862f85521b4c89b`, reviewed
-source `4b458a2968b864b8603177df70dce2ba413fa50c`. Live controller release:
-`.tools/ui-file-creation-conversation-context-20261024`.
-LAN UI: http://192.168.1.121:8765. Deployment/image/backup authority:
-`data/acceptance/safety-redeploy-20261012/deployment.json`.
-Latest qualification:
-`data/acceptance/file-creation-conversation-context-20261024/post-deployment-qualified.json`.
+LAN UI: http://192.168.1.121:8765. Always read
+`data/acceptance/safety-redeploy-20261012/deployment.json` and the corresponding
+post-deployment qualification before relying on a release name or PID. #410 is the
+previous qualified delivery; #411 is the selected-document increment. Consult
+`data/acceptance/agent-document-context-20261024/post-deployment-qualified.json`
+for actual #411 rollout. Source checkout `.tools/agent-document-context`, branch
+`feat/agent-document-context`; deployment must use its own detached release worktree.
 
-Delivered: instruction-only CSV/Excel/PNG/text creation in Chat/Work and persistent
-Python agents, explicit Files & data controls, natural clear requests, verified
-created-workbook/CSV reuse, and bounded earlier plain conversation text. The
-collapsed context note shows exactly which text was supplied. Source IDs/hashes
-and matching current-message/Run snapshots gate execution. No attachment reads,
-URL fetches or additional permissions are inherited from earlier text.
+## Completed increment: selected documents
 
-Actual normal-worker local inference at 131072 context created independently
-checked rows 4/16, 7/49, 11/121 using the earlier conversation values and the current
-instruction's heading override. One bounded Python correction was needed; failure
-history is retained. CSV/XLSX/PNG checks pass, original model/GPU/cache/context was
-restored, QA conversation archived and no persistent Agent created. Native Runner
-PID/fingerprint/socket and operator auth/IDs/agent definitions/due instants remain
-preserved; query actual live state before the next rollout. Schema remains 0033.
+Read [document context](agent-document-context.md). Both agent editors upload/drop
+PDF/UTF-8 text/Markdown or select from Library. The server freezes ordered Artifact
+IDs/hash/size/MIME/name; migration0035 preserves absent-scope legacy hashes. A fixed
+CPU reader receives verified bytes and shares Stop/deadlines; owned kill/reap and
+Linux parent-death behavior are tested. Full text/JSON artifacts retain provenance;
+reports and local code see excerpts, offline Python sees complete captured text.
+Goal-based media can use a selected brief. Report queries/windows stay in scope and
+the exact later captures are visible. No native protocol or generated-code authority
+changes; no OCR or pixel understanding is implied.
 
-Full #406 gate: 3298 Python/Runner cases (3289 passes/nine opt-in skips), Ruff,
-727 UI tests, format/lint/types/build, exact image/backend/assets, three Compose
-configurations, compiled 1440/390 single-click context inspection, downloads,
-explicit/natural reuse, reload and Stop. Actual CPU context/replayed-code check
-also verifies all ten sample CSV/XLSX rows, PNG, bounded intentional repair and
-workbook follow-up total 55. This injected-inference check is separate from the
-actual production local-model qualification above.
+Full CPU/Runner suite:3392 cases,3383 passes/nine opt-in skips. UI:747 tests plus
+format/lint/TS/build. Actual application-image PDF/text helpers, private0034→0035
+all-value/18-definition-hash migration, compiled1440/390 editors/conversation/results
+and two native offline Python jobs pass. Inference is injected; no new GPU work.
+Final UI-only correction wraps long excerpts and has its own full UI/image/browser
+checks; backend qualification is carried only with exact byte identity. Failed and
+superseded harness evidence remains in the acceptance directory.
 
-The first compiled click exposed an existing 23px timestamp focus shift. The
-corrected layout passes actual first-click opening at both viewport widths.
-A later rejected coordinate assertion confused expected scroll/expansion with
-focus movement; retained evidence explains the corrected behavioral assertion.
-No physical-phone test or operator-inbox email delivery is claimed.
+## Next useful increments
 
-PR #405 (`7ea7da9`, reviewed `6748bf3`) corrected redundant mandatory CSV/JSON
-names in model manifests without widening the native export allowlist or adding
-model calls. Its actual ten-row local-model example passed in one Python attempt:
-`data/acceptance/data-output-declarations-20261024/post-deployment-qualified.json`.
-The original #404 rejected production attempt remains under
-`data/acceptance/local-file-creation-20261024`; do not relabel it or rerun it.
-Merged remote #404/#405/#406 feature branches were removed after qualification.
+Broaden document reuse and agent creation from the main conversation using the
+existing source-bound graph, rather than adding another execution system. Continue
+practical multi-step local-agent composition, clearer capability discovery and
+quality/reliability of existing media. Real operator-inbox delivery, actual Tailscale
+enrollment/mobile remote acceptance, additional account integrations and execution
+nodes remain separate requirements. Do not repeat existing real60-second Wan,
+30-second EchoMimic,27B/131k-context or installed9B Vision acceptance because an old
+plan labels them unfinished. Those qualify recorded profiles, not every quality case.
 
-## Current owned increment
+## Repository and verification rules
 
-Branch `feat/agent-data-email-attachments`, `.tools/agent-data-email-attachments`,
-based on docs delivery #407. Read [data email attachments](agent-data-email-attachments.md).
-The existing result email sends only body text/result IDs. Candidate adds explicitly
-selected generated CSV/XLSX/PNG/text, required creation of those formats, exact
-receipt/approval MIME manifests, actual file verification and clear settings,
-activation consent and common delivery preview. Defaults preserve old identity;
-no native, schema or dependency changes. No external mail is authorized for QA.
+Root branch `feat/memory-scope-tagged-runs` and its dirty README/Memory/docs files
+are preserved; work only in owned feature worktrees. Feature PRs target develop;
+review the full diff and qualify the exact source before squash merge. Hosted
+Actions are manual under AGENTS.md's local-check exception. `main`/`master` are never
+push, merge or deployment targets. No actual test failures are waived.
 
-Initial105 existing mail cases and the complete new MIME path pass. New negative
-cases cover changed/trash files, input-pointer substitution, symlink/hardlink,
-missing permission, post-connect revocation, Stop and unknown-outcome non-replay.
-One test incorrectly expected automatic email before two ordinary created-file
-inspections; its drain is corrected. A nested separate-session Stop fixture hit
-its own SQLite write lock; inject the committed cancellation in the worker session
-for that last-check test. Public post-connect cancellation/authority tests remain
-separate. Finish full gates, actual isolated native-CPU/TLS sink, compiled desktop/
-phone settings/approval/receipt/reload/Stop, full review and develop deployment.
-Live remains #406 until this increment's post-deployment-qualified report passes.
+Keep all state under app storage; canonical paths, typed Runner calls, app-relative
+artifacts and Task→Run→Events→Artifacts remain fundamental. Use temporary DB/fake
+inference in normal tests; label actual CPU/native/image/browser tests separately.
+Legacy JSON optional defaults must remain omitted for old consent/receipt hashes.
+Rollout requires a fresh SQLite backup, intact auth/IDs/agent due instants, no active
+owned jobs, exact image/assets, unchanged native fingerprint and preserved model
+container IDs. Restarts/deployments are authorized; do not ask again for ordinary
+AI Station development restarts. Do not send real external email for QA.
 
-Keep the full platform goal active after delivery. Prioritize useful general-agent
-tool composition, retaining the [product ledger](../product-completion.md) and
-[agent-first direction](agent-first-product.md). Do not repeat prior qualified
-media/model/research jobs. SMTP inbox/Tailscale enrollment requires operator
-configuration and does not block independent implementation. Earlier evidence is
-linked from the ledger and [historical handoff](implementation-handoff-history-20261024.md).
-
-## Operations and preserved work
-
-Root `feat/memory-scope-tagged-runs` at `6ba096d` retains original README,
-architecture, Memory docs/UI/tests and handoff WIP. Do not edit/reset it; that
-functionality was already ported in #319. Use owned worktrees and keep .venv/
-node_modules links untracked. Node:
-`.tools/node-runtimes/node-v22.23.3-linux-x64/bin`.
-Read AGENTS.md and architecture/security/README. Complete local checks replace
-manual hosted Actions under the user-approved account-credit exception; actual
-failures are never waived. Full diff review and satisfactory checks precede squash
-merge to develop. Controller restarts are authorized; preserve unchanged Runner
-and model. Back up before rollout. Whisper-small consent remains pending; do not
-infer a download approval. The full-platform objective is not complete.
+Earlier history is retained in
+[handoff history](implementation-handoff-history-20261024.md).
