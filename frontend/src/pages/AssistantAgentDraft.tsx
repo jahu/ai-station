@@ -406,7 +406,7 @@ function AgentIdentity({
     trimmedOutcome === outputExpectation;
   return (
     <form
-      className="assistant-agent-search"
+      className="assistant-agent-search agent-form"
       onSubmit={(event) => {
         event.preventDefault();
         if (!valid || unchanged || disabled) return;
