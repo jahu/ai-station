@@ -464,3 +464,49 @@ def test_manual_query_only_keeps_its_existing_chat_authority():
     )
     result = prepare_turn(body, mode="chat")
     assert result.data is None and result.web_search.query == "public data"
+
+
+def test_explicit_browser_reading_is_not_downgraded_to_plain_http_data():
+    from app.chat import MessageBody
+    from app.conversation_data import prepare_turn
+
+    body = MessageBody(
+        content="Calculate totals from JSON at https://data.example.com/numbers",
+        web_search={"enabled": True, "render_pages": True},
+    )
+    selected = prepare_turn(body, mode="chat")
+    assert selected.data is None and selected.web_search.render_pages
+
+
+@pytest.mark.parametrize("bound", [True, False])
+def test_natural_public_analysis_respects_the_bound_work_context(data_environment, sources, bound):
+    from app.chat import MessageBody
+    from app.conversation_data_reference import resolve
+    from app.models import ChatWorkContext, Conversation
+    from app.runs import create_task
+
+    with TestClient(app) as api:
+        created = api.post("/api/chat/conversations", json={"model": "unused", "execution_mode": "work"})
+        assert created.status_code == 201
+        cid = created.json()["id"]
+        with session_factory()() as s:
+            task = create_task(
+                s,
+                title="Existing workspace task",
+                prompt="Preserve this active work selection",
+                capability="coding.local",
+                conversation_id=cid,
+            )
+            s.add(ChatWorkContext(conversation_id=cid, task_id=task.id if bound else None))
+            s.flush()
+            body = MessageBody(
+                content="Calculate totals from JSON at https://data.example.com/numbers",
+                web_search={"enabled": True},
+            )
+            selected, reference = resolve(s, s.get(Conversation, cid), body, "work")
+            if bound:
+                assert selected is body and selected.data is None
+            else:
+                assert selected.data.research.fetch_urls == ["https://data.example.com/numbers"]
+            assert reference is None
+        assert not sources["fetch"] and not data_environment["calls"]

@@ -199,6 +199,14 @@ def source_reference(session, user, root):
 def resolve(session, conversation, body, mode):
     if mode not in {"chat", "work", "orchestrator"} or body.action != "auto" or body.data is not None:
         return body, None
+    context = session.get(ChatWorkContext, conversation.id)
+    if context and context.task_id:
+        return body, None
+    from app.conversation_data import natural_research, prepare_turn
+
+    natural = natural_research(body, mode)
+    if natural.data is not None:
+        return prepare_turn(natural), None
     if (
         any(
             getattr(body, key, None)
@@ -224,9 +232,6 @@ def resolve(session, conversation, body, mode):
         or body.web_search.enabled
         and (body.web_search.query.strip() or body.web_search.render_pages)
     ):
-        return body, None
-    context = session.get(ChatWorkContext, conversation.id)
-    if context and context.task_id:
         return body, None
     if not requested(body.content):
         return body, None

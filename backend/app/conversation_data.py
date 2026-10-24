@@ -24,6 +24,8 @@ def natural_research(body, mode):
         or body.action != "auto"
         or body.data is not None
         or not body.web_search.enabled
+        or body.web_search.query.strip()
+        or body.web_search.render_pages
     ):
         return body
     if any(
@@ -73,14 +75,13 @@ def natural_research(body, mode):
     if not chart and not (compute and data_words):
         return body
     urls = prompt_public_urls(text, limit=4)
-    query = body.web_search.query.strip()
     # A generic exact Web query retains its existing Chat route. Public
     # query-only analysis is selected explicitly in the data tool instead.
     if not urls:
         return body
     if len(urls) > 3:
         raise HTTPException(422, "Review up to three public data URLs per analysis")
-    selection = DataResearchSelection(search_query=query, fetch_urls=urls, read_search_pages=bool(query))
+    selection = DataResearchSelection(fetch_urls=urls)
     return body.model_copy(
         update={
             "data": DataScope(research=selection),
