@@ -114,7 +114,8 @@ def children(pid):
 def alive(pid):
     try:
         return Path(f"/proc/{pid}/stat").read_text().split(") ", 1)[1].split()[0] != "Z"
-    except FileNotFoundError:
+    except (FileNotFoundError, ProcessLookupError):
+        # Linux may return ESRCH if the process exits after /proc is opened.
         return False
 
 
