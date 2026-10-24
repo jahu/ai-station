@@ -1,5 +1,10 @@
 # AI Station
 
+In Chat/Work, choose **Data analysis → Use public sources**, enter the URLs and
+optionally select **Read these pages with JavaScript**. The local browser captures
+text for offline Python analysis; results and sources stay in the conversation.
+No persistent Agent is required. [Direct rendered data](docs/plans/conversation-rendered-data.md).
+
 Local code and Python/data agents can combine **Browser** with their reviewed
 public URLs to read JavaScript-rendered text before working offline. Select the
 tool and review the source URLs before enabling; captures and screenshots stay

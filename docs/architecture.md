@@ -31,6 +31,10 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Conversation Data analysis can explicitly select rendered public URLs. The same
+Browser/source/Python graph runs without a persistent Agent, on the existing
+conversation Task. See [direct rendered data](plans/conversation-rendered-data.md).
+
 Rendered research reuses the native Browser Run before the existing local-agent
 context handoff and isolated code/Python chain. No additional execution engine.
 See [rendered research](plans/agent-rendered-research.md).

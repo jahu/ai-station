@@ -108,27 +108,56 @@ export default function ConversationDataControls({
               placeholder="https://example.com/data.json"
               value={displayedUrls}
               onChange={(event) => {
+                const urls = event.target.value
+                  .split(/\r?\n/)
+                  .map((item) => item.trim())
+                  .filter(Boolean);
                 setUrlDraft({
                   text: event.target.value,
-                  selection: event.target.value
-                    .split(/\r?\n/)
-                    .map((item) => item.trim())
-                    .filter(Boolean)
-                    .join("\n"),
+                  selection: urls.join("\n"),
                 });
                 onChange({
                   ...scope,
                   research: {
                     ...scope.research!,
-                    fetch_urls: event.target.value
-                      .split(/\r?\n/)
-                      .map((value) => value.trim())
-                      .filter(Boolean),
+                    fetch_urls: urls,
+                    ...(scope.research!.render_pages
+                      ? { render_pages: urls.length > 0 ? true : undefined }
+                      : {}),
                   },
                 });
               }}
             />
           </label>
+          {scope.research.fetch_urls.length > 0 && (
+            <>
+              <label className="data-research-toggle">
+                <input
+                  type="checkbox"
+                  aria-label="Read data URLs with JavaScript"
+                  disabled={disabled}
+                  checked={scope.research.render_pages === true}
+                  onChange={(event) =>
+                    onChange({
+                      ...scope,
+                      research: {
+                        ...scope.research!,
+                        render_pages: event.target.checked ? true : undefined,
+                      },
+                    })
+                  }
+                />
+                Read these pages with JavaScript
+              </label>
+              {scope.research.render_pages && (
+                <p className="muted">
+                  Uses the local browser for these public URLs. Captured text
+                  feeds the analysis; screenshots are saved for inspection.
+                  Python stays offline.
+                </p>
+              )}
+            </>
+          )}
         </div>
       )}
       {scope.research ? (

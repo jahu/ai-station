@@ -129,6 +129,12 @@ def prepare_turn(body, *, mode=None):
     return body.model_copy(update={"web_search": SearchOptions(enabled=False), "reasoning": None})
 
 
+def required_permissions(scope):
+    from app.data_agents import REQUIRED
+
+    return [*REQUIRED, *(["browser"] if scope.research and scope.research.render_pages else [])]
+
+
 def definition(root, project_id=None):
     scope = DataScope.model_validate(root.parameters["data"])
     return AgentSettings(
@@ -154,8 +160,6 @@ def definition(root, project_id=None):
 
 
 def root_binding(session, root, *, for_execution=True):
-    from app.data_agents import REQUIRED
-
     if (
         root is None
         or root.executor_type != "orchestrator"
@@ -188,7 +192,7 @@ def root_binding(session, root, *, for_execution=True):
     scope = DataScope.model_validate(root.parameters["data"])
     if user.metadata_json.get("data_scope") != scope.model_dump(mode="json"):
         raise ValueError("Data scope differs from the submitted conversation message")
-    if set(root.effective_permissions) != set(REQUIRED):
+    if set(root.effective_permissions) != set(required_permissions(scope)):
         raise ValueError("Conversation data permissions differ from their exact reviewed grant")
     deadline = datetime.fromisoformat(root.parameters["agent_coding_deadline"])
     if deadline.tzinfo is None or for_execution and deadline <= utcnow():
@@ -211,12 +215,11 @@ def verify_source_files(frozen):
 
 
 def publish_workspace(session, root):
-    from app.data_agents import REQUIRED
     from app.project_setup import ProjectName, enqueue_project
 
-    for permission in REQUIRED:
-        require(root.effective_permissions, permission)
     scope = DataScope.model_validate(root.parameters["data"])
+    for permission in required_permissions(scope):
+        require(root.effective_permissions, permission)
     deadline = (root.started_at or utcnow()) + timedelta(seconds=scope.maximum_runtime)
     if deadline <= utcnow():
         raise ValueError("Data runtime limit exceeded before workspace creation")
@@ -440,12 +443,18 @@ def reviewed_research_step(session, run, *, for_execution=True):
         or run.parameters.get("agent_coding_deadline") != workflow.parameters["agent_coding_deadline"]
         or not context
         and (
-            run.executor_type != "agent_tool"
+            run.executor_type != ("browser" if run.parameters.get("tool") == "browser" else "agent_tool")
             or index == len(tools)
             or run.parameters.get("tool") != tools[index]
         )
         or set(run.effective_permissions)
-        != (set(workflow.effective_permissions) if context else {"network_read"})
+        != (
+            set(workflow.effective_permissions)
+            if context
+            else {"browser", "network_read"}
+            if run.parameters.get("tool") == "browser"
+            else {"network_read"}
+        )
         or index > 0
         and session.get(RunDependency, (run.id, manifest[index - 1])) is None
     ):
