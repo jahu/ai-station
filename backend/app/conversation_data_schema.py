@@ -21,6 +21,7 @@ class DataResearchSelection(BaseModel):
     search_query: str = Field(default="", max_length=500)
     fetch_urls: list[str] = Field(default_factory=list, max_length=3)
     read_search_pages: StrictBool = False
+    render_pages: StrictBool = False
 
     @field_validator("fetch_urls")
     @classmethod
@@ -33,13 +34,22 @@ class DataResearchSelection(BaseModel):
             raise ValueError("Review a public search query or public URLs")
         if self.read_search_pages and not self.search_query:
             raise ValueError("Reading search pages requires a reviewed public query")
+        if self.render_pages and not self.fetch_urls:
+            raise ValueError("Rendering data pages requires explicit reviewed public URLs")
         return self
+
+    @model_serializer(mode="wrap")
+    def preserve_static_identity(self, handler):
+        value = handler(self)
+        if not self.render_pages:
+            value.pop("render_pages", None)
+        return value
 
     def tools(self):
         return (
             (["web_search"] if self.search_query else [])
             + (["search_pages"] if self.read_search_pages else [])
-            + (["http_fetch"] if self.fetch_urls else [])
+            + (["browser" if self.render_pages else "http_fetch"] if self.fetch_urls else [])
         )
 
 

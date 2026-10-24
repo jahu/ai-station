@@ -7,6 +7,7 @@ export type ConversationDataScope = DataScope & {
     search_query: string;
     fetch_urls: string[];
     read_search_pages: boolean;
+    render_pages?: boolean;
   };
   model?: string;
   maximum_runtime?: number;
@@ -32,7 +33,8 @@ function researchDataReady(scope?: ConversationDataScope | null) {
         return false;
       }
     }) &&
-    (!source.read_search_pages || !!source.search_query.trim())
+    (!source.read_search_pages || !!source.search_query.trim()) &&
+    (!source.render_pages || source.fetch_urls.length > 0)
   );
 }
 export function useDataInputs(scope?: ConversationDataScope | null) {

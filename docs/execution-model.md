@@ -22,6 +22,11 @@ workspace. One reviewed definition and deadline bind every child.
 
 # Execution model
 
+Direct rendered-data conversations reuse Browser → source handoff → offline
+Python → verified result. Original expiry and Task Stop bind all stages; an
+offline captured-data follow-up does not regain Browser permission.
+See [direct rendered data](plans/conversation-rendered-data.md).
+
 Rendered-source work composes Browser → verified context → existing local
 code/Python Runs under one original deadline and Task-wide Stop.
 See [rendered research](plans/agent-rendered-research.md).

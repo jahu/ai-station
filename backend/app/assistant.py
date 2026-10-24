@@ -585,9 +585,15 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
     data_inputs = None
     data_permissions = None
     if body.data is not None:
-        from app.data_agents import REQUIRED, freeze_inputs
+        from app.conversation_data import required_permissions
+        from app.data_agents import freeze_inputs
 
-        data_permissions = list(REQUIRED)
+        data_permissions = required_permissions(body.data)
+        if body.data.research and body.data.research.render_pages:
+            from app.browser import available
+
+            if not available()["available"]:
+                raise HTTPException(503, "Browser executor is unavailable; inspect its setup in Diagnostics")
 
         try:
             data_inputs = (

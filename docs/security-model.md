@@ -39,6 +39,11 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+A conversation grants Browser only through its frozen Data research selection,
+with exact root/source permissions and prepare/final-adoption scope validation.
+The default false option is omitted from legacy receipt serialization.
+See [direct rendered data](plans/conversation-rendered-data.md).
+
 Rendered-source agents require separately reviewed Browser/URL scope. Saved raw
 capture hashes and their exact compact projection bind the offline source input;
 generated code inherits no browser networking or screenshot Vision.

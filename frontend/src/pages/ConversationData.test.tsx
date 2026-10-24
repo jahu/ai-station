@@ -375,97 +375,128 @@ it("keeps partial data uploads and the error visible after the generic attachmen
   expect(uploads).toBe(2);
 });
 
-it("reviews public sources without files and preserves a newline while entering several URLs", async () => {
-  const writes: Record<string, unknown>[] = [];
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (path: string, init?: RequestInit) => {
-      if (init?.method === "POST") {
-        writes.push(JSON.parse(String(init.body)));
+it.each([false, true])(
+  "reviews public sources without files and preserves URL drafts with rendering %s",
+  async (renderPages) => {
+    const writes: Record<string, unknown>[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          writes.push(JSON.parse(String(init.body)));
+          return {
+            ok: true,
+            json: async () => ({ conversation_id: "public-data" }),
+          };
+        }
         return {
           ok: true,
-          json: async () => ({ conversation_id: "public-data" }),
+          json: async () =>
+            path.endsWith("/preferences")
+              ? {
+                  mode: "chat",
+                  provider: provider.key,
+                  model: "plain",
+                  version: 1,
+                  web_search_enabled: true,
+                }
+              : path.endsWith("/llama")
+                ? { models: [], instances: [] }
+                : [],
         };
-      }
-      return {
-        ok: true,
-        json: async () =>
-          path.endsWith("/preferences")
-            ? {
-                mode: "chat",
-                provider: provider.key,
-                model: "plain",
-                version: 1,
-                web_search_enabled: true,
-              }
-            : path.endsWith("/llama")
-              ? { models: [], instances: [] }
-              : [],
-      };
-    }),
-  );
-  const accepted = vi.fn();
-  render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <MemoryRouter>
-        <NewChat
-          providers={[provider]}
-          provider={provider}
-          onProviderChange={() => {}}
-          onAccepted={accepted}
-        />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-  await screen.findByRole("textbox", { name: "Message" });
-  fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
-    target: { value: "data.analyze" },
-  });
-  fireEvent.change(screen.getByRole("textbox", { name: "Message" }), {
-    target: { value: "Compare the reviewed public numbers" },
-  });
-  fireEvent.click(screen.getByLabelText("Use public sources for analysis"));
-  const send = screen.getByRole("button", {
-    name: "Send message",
-  }) as HTMLButtonElement;
-  expect(send.disabled).toBe(true);
-  const urls = screen.getByLabelText("Public data URLs") as HTMLTextAreaElement;
-  fireEvent.change(urls, {
-    target: { value: "https://data.example.com/one\n" },
-  });
-  expect(urls.value).toBe("https://data.example.com/one\n");
-  fireEvent.change(urls, {
-    target: {
-      value: "https://data.example.com/one\nhttps://data.example.com/two",
-    },
-  });
-  fireEvent.change(screen.getByLabelText("Public data search query"), {
-    target: { value: "public numbers" },
-  });
-  fireEvent.click(screen.getByLabelText("Read data search pages"));
-  await waitFor(() => expect(send.disabled).toBe(false));
-  expect(writes).toHaveLength(0);
-  fireEvent.click(send);
-  await waitFor(() => expect(accepted).toHaveBeenCalledWith("public-data"));
-  expect(writes).toHaveLength(1);
-  expect(writes[0].data).toMatchObject({
-    input_artifact_ids: [],
-    model: "auto",
-    research: {
-      search_query: "public numbers",
-      read_search_pages: true,
-      fetch_urls: [
-        "https://data.example.com/one",
-        "https://data.example.com/two",
-      ],
-    },
-  });
-  expect(writes[0].web_search).toMatchObject({ enabled: false });
-});
+      }),
+    );
+    const accepted = vi.fn();
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter>
+          <NewChat
+            providers={[provider]}
+            provider={provider}
+            onProviderChange={() => {}}
+            onAccepted={accepted}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("textbox", { name: "Message" });
+    fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
+      target: { value: "data.analyze" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Message" }), {
+      target: { value: "Compare the reviewed public numbers" },
+    });
+    fireEvent.click(screen.getByLabelText("Use public sources for analysis"));
+    const send = screen.getByRole("button", {
+      name: "Send message",
+    }) as HTMLButtonElement;
+    expect(send.disabled).toBe(true);
+    expect(
+      screen.queryByLabelText("Read data URLs with JavaScript"),
+    ).toBeNull();
+    const urls = screen.getByLabelText(
+      "Public data URLs",
+    ) as HTMLTextAreaElement;
+    fireEvent.change(urls, {
+      target: { value: "https://data.example.com/one\n" },
+    });
+    expect(urls.value).toBe("https://data.example.com/one\n");
+    const renderToggle = () =>
+      screen.getByLabelText(
+        "Read data URLs with JavaScript",
+      ) as HTMLInputElement;
+    expect(renderToggle().checked).toBe(false);
+    if (renderPages) {
+      fireEvent.click(renderToggle());
+      expect(screen.getByText(/Python stays offline/)).toBeTruthy();
+      fireEvent.change(urls, { target: { value: "" } });
+      expect(
+        screen.queryByLabelText("Read data URLs with JavaScript"),
+      ).toBeNull();
+      expect(send.disabled).toBe(true);
+      fireEvent.change(urls, {
+        target: { value: "https://data.example.com/one" },
+      });
+      expect(renderToggle().checked).toBe(false);
+      fireEvent.click(renderToggle());
+    }
+
+    fireEvent.change(urls, {
+      target: {
+        value: "https://data.example.com/one\nhttps://data.example.com/two",
+      },
+    });
+    fireEvent.change(screen.getByLabelText("Public data search query"), {
+      target: { value: "public numbers" },
+    });
+    fireEvent.click(screen.getByLabelText("Read data search pages"));
+    await waitFor(() => expect(send.disabled).toBe(false));
+    expect(writes).toHaveLength(0);
+    fireEvent.click(send);
+    await waitFor(() => expect(accepted).toHaveBeenCalledWith("public-data"));
+    expect(writes).toHaveLength(1);
+    expect(writes[0].data).toMatchObject({
+      input_artifact_ids: [],
+      model: "auto",
+      research: {
+        search_query: "public numbers",
+        read_search_pages: true,
+        fetch_urls: [
+          "https://data.example.com/one",
+          "https://data.example.com/two",
+        ],
+      },
+    });
+    const data = writes[0].data as { research: Record<string, unknown> };
+    if (renderPages) expect(data.research.render_pages).toBe(true);
+    else expect(data.research).not.toHaveProperty("render_pages");
+    expect(writes[0].web_search).toMatchObject({ enabled: false });
+  },
+);
 
 it("offers offline captured-data continuation separately from an explicit public refresh", () => {
   const choose = vi.fn();

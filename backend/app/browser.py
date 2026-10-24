@@ -93,9 +93,19 @@ class BrowserExecutor(NativeJobExecutor):
     permissions = ("browser", "network_read")
     error_type = "BrowserFailed"
 
+    def conversation_source(self, run):
+        return run.agent_id is None and (run.capability == "agent.step" or "definition" in run.parameters)
+
+    def prepare(self, session, run):
+        if self.conversation_source(run):
+            from app.conversation_data import reviewed_research_step
+
+            reviewed_research_step(session, run)
+        return True
+
     def payload(self, run):
         maximum_runtime = 165
-        if run.agent_id:
+        if run.agent_id or self.conversation_source(run):
             from app.agent_schema import AgentSettings
 
             definition = AgentSettings.model_validate(run.parameters["definition"])
@@ -122,8 +132,14 @@ class BrowserExecutor(NativeJobExecutor):
         return runner.request("GET", f"/v1/runs/browser/{run_id}/report")
 
     def finish(self, session, run, report):
+        if self.conversation_source(run):
+            from app.conversation_data import reviewed_research_step
+
+            reviewed_research_step(session, run)
         expected = reviewed_urls(
-            run.parameters["definition"]["fetch_urls"] if run.agent_id else run.parameters["urls"]
+            run.parameters["definition"]["fetch_urls"]
+            if run.agent_id or self.conversation_source(run)
+            else run.parameters["urls"]
         )
         if (
             report.get("run_id") != run.id
