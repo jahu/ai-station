@@ -19,6 +19,8 @@ from uuid import UUID
 
 from ai_station_runner.security import resolve_child
 
+MAX_PROCESS_DEADLINE_SECONDS = 4 * 60 * 60
+
 
 class ProcessNotOwned(KeyError):
     pass
@@ -117,9 +119,9 @@ class ProcessManager:
             if deadline_at is not None and (
                 type(deadline_at) not in {int, float}
                 or not math.isfinite(deadline_at)
-                or not 0 < deadline_at - time.time() <= 3600
+                or not 0 < deadline_at - time.time() <= MAX_PROCESS_DEADLINE_SECONDS
             ):
-                raise ValueError("Owned process deadline must be within the next hour")
+                raise ValueError("Owned process deadline must be within the next four hours")
             log_dir = resolve_child(self.data_dir, f"runs/{run_id}")
             log_dir.mkdir(parents=True, exist_ok=True)
             out = resolve_child(log_dir, "stdout.log")

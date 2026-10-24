@@ -293,3 +293,14 @@ offline data: original source bytes/lineage and capture time remain; no search o
 fetch is replayed. A new question owns a new Task/workspace/deadline. The explicit
 refresh action carries the reviewed source selection into a fresh research Task
 and preserves the old result and files.
+
+## Reviewed whole-workflow time budget
+
+Agent definitions and disabled proposals allow an explicit 5-second to 4-hour
+budget. Existing/default values remain unchanged. Media planning and native
+deadline admission share that ceiling; every preparation, generated speech,
+segment and composition keeps the original absolute expiry. Resource waiting
+consumes the same budget. Replay, native restart or an old media Resume cannot
+renew it. Per-command/Python/browser/single-invocation limits, GPU/RAM admission
+and process ownership remain independent. Selecting a longer budget grants no
+additional tool or filesystem scope. See [budget qualification](plans/long-media-agent-budgets.md).

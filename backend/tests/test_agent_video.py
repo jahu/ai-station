@@ -1,7 +1,7 @@
 """Persistent video uses the existing segmented pipeline and final composition."""
 
 import json
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -43,7 +43,8 @@ def drain(session):
 
 
 @pytest.mark.parametrize("mode", ["continuous", "shots"])
-def test_agent_video_finishes_only_with_a_complete_verified_film(bridge, monkeypatch, mode):
+@pytest.mark.parametrize("runtime", [600, 7200])
+def test_agent_video_finishes_only_with_a_complete_verified_film(bridge, monkeypatch, mode, runtime):
     monkeypatch.setattr(LocalChatProvider, "stream", no_text_model)
     with TestClient(app) as api:
         source = image(api)
@@ -65,6 +66,7 @@ def test_agent_video_finishes_only_with_a_complete_verified_film(bridge, monkeyp
                 ),
             ),
             notification_policy={"on_success": True},
+            maximum_runtime=runtime,
         )
         root = start(api, agent)
         with session_factory()() as session:
@@ -78,6 +80,9 @@ def test_agent_video_finishes_only_with_a_complete_verified_film(bridge, monkeyp
             assert compose.status == "queued"
             assert not list(session.scalars(select(Notice)))
             budget = prep.parameters["execution_deadline_at"]
+            assert (
+                datetime.fromisoformat(budget) - session.get(Run, root["id"]).started_at
+            ).total_seconds() == runtime
             for row in session.scalars(select(Run).where(Run.parent_run_id == prep.id)):
                 assert row.parameters["execution_deadline_at"] == budget
                 assert row.task_id == task.id and row.agent_id == agent["id"]

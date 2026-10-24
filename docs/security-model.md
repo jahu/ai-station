@@ -63,7 +63,9 @@ Conversation provider selection grants no external data sharing for this tool.
 The [persistent media-agent work](plans/agent-media-generation.md) adds an optional
 internal execution deadline. The controller freezes UTC expiry; typed photo/music/speech
 requests carry its epoch value to the native owned-process manager. Admission
-rejects expired/non-finite budgets or more than one hour. The immutable journal
+rejects expired/non-finite budgets or more than four hours. The operator explicitly
+selects the whole-workflow budget; existing values/defaults do not increase.
+Individual command/sandbox/invocation bounds and resource admission remain unchanged. The immutable journal
 retains the original budget; replay cannot extend it. A native timer cancels
 only that verified process group and is restored from ownership records after a
 Runner restart. A forked descendant remains covered after its leader exits.

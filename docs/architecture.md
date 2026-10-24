@@ -676,3 +676,10 @@ Alembic supports an injected staging connection without touching the configured
 live engine. Pending receipts cooperate with the launcher lock/startup guard.
 Normal Tasks/Runs/Events/Artifacts remain the workload architecture; recovery
 adds no execution service or shell endpoint. [Recovery contract](plans/offline-database-recovery.md).
+
+[Reviewed multi-hour agent budgets](plans/long-media-agent-budgets.md) extend the
+existing absolute deadline contract to at most four hours. A pure backend limit
+is shared by definitions, proposals and media publication; native owned-process
+admission enforces the same finite ceiling. The shared UI selector preserves
+exact saved seconds. This adds no executor, schema change, permissions or resource
+capacity; child publication and replay keep the original expiry.

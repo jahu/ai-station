@@ -34,8 +34,12 @@ See [speech-agent setup and verification](docs/plans/agent-speech-generation.md)
 Video output supports a complete 1–60 second film, continuous motion or a reviewed
 shot sequence and an optional Library first frame. The workspace shows segment
 progress and the final verified film. Review the runtime budget for longer/high
-quality output; Stop cancels the entire execution. Retry by running the reviewed
-agent again. [Video-agent contracts](docs/plans/agent-motion-generation.md).
+quality output; Stop cancels the entire execution. **Time limit** offers readable
+10/30-minute and 1/2/4-hour choices in Agents and the conversation editor;
+**Custom duration** preserves exact seconds. The budget includes resource waiting
+and every generation/assembly stage. A longer film can take longer than an hour
+to generate; playback duration is separate. Existing saved/default limits stay
+unchanged until you edit them. Retry by running the reviewed agent again. [Video-agent contracts](docs/plans/agent-motion-generation.md).
 
 Media jobs that cannot start show **Waiting for memory** or **Waiting for an
 available GPU**. The RAM notice includes the last observed availability, required

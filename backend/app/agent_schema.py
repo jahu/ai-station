@@ -12,6 +12,7 @@ from app.agent_media_schema import AgentMediaScope, fixed_media_only
 from app.agent_tools import AGENT_TOOLS, agent_tool
 from app.data_schema import AgentDataScope, ResearchDataScope
 from app.db import utcnow
+from app.execution_limits import MAX_AGENT_RUNTIME
 from app.http_fetch import reviewed_urls
 from app.market_schema import MarketScope
 from app.schedule_time import ScheduleTimezone, next_cron
@@ -100,7 +101,7 @@ class AgentSettings(BaseModel):
     permission_profile: Literal["agent_local", "agent_external_coding"] = "agent_local"
     project_id: UUID | None = None
     execution_target: Literal["container"] = "container"
-    maximum_runtime: int = Field(default=600, ge=5, le=3600)
+    maximum_runtime: int = Field(default=600, ge=5, le=MAX_AGENT_RUNTIME)
     output_expectation: str = Field(default="A concise, factual report.", max_length=4000)
     require_approval: StrictBool = False
     workflow_mode: Literal["sequential", "gated"] = "sequential"

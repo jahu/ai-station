@@ -108,7 +108,7 @@ def test_deadline_never_signals_a_reused_or_unverifiable_pid(tmp_path):
 @pytest.mark.parametrize("deadline", [True, 0, -1, float("inf"), float("nan"), "later"])
 def test_invalid_budgets_are_rejected_before_any_process_is_launched(tmp_path, deadline):
     manager = ProcessManager(tmp_path)
-    with pytest.raises(ValueError, match="within the next hour"):
+    with pytest.raises(ValueError, match="within the next four hours"):
         launch(manager, tmp_path, deadline=deadline)
     assert json.loads(manager.path.read_text()) == {}
 
@@ -135,3 +135,33 @@ def test_verified_live_leader_is_not_lost_in_a_later_fork_exit_snapshot(monkeypa
     # both members. The already verified live identity remains authoritative.
     monkeypatch.setattr(processes.Path, "iterdir", lambda self: iter(()))
     assert processes._group_alive(record)
+
+
+@pytest.mark.parametrize("offset", [7200, 14400])
+def test_multi_hour_deadline_is_persisted_and_replay_cannot_renew_it(tmp_path, offset):
+    manager = ProcessManager(tmp_path, grace_seconds=0.03)
+    deadline = time.time() + offset
+    try:
+        record = launch(manager, tmp_path, deadline=deadline)
+        assert record["deadline_at"] == deadline
+        replay = manager.start(
+            run_id=record["run_id"],
+            argv=[sys.executable, "-c", "raise AssertionError('replayed')"],
+            cwd=tmp_path,
+            executor="deadline-test",
+            deadline_at=time.time() + 14400,
+        )
+        assert replay["pid"] == record["pid"] and replay["deadline_at"] == deadline
+        assert json.loads(manager.path.read_text())[record["run_id"]]["deadline_at"] == deadline
+        manager.cancel(record["run_id"])
+        result = stopped(manager, record["run_id"])
+        assert result["status"] == "canceled" and result["deadline_at"] == deadline
+    finally:
+        manager.shutdown()
+
+
+def test_deadline_beyond_four_hours_is_rejected_before_launch(tmp_path):
+    manager = ProcessManager(tmp_path)
+    with pytest.raises(ValueError, match="within the next four hours"):
+        launch(manager, tmp_path, deadline=time.time() + 14401)
+    assert json.loads(manager.path.read_text()) == {}
