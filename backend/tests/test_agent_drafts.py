@@ -582,3 +582,32 @@ def test_assisted_draft_can_review_research_before_local_code(model, tools):
         assert not agent["enabled"] and not agent["project_id"]
         assert agent["search_query"] == PROPOSAL["search_query"]
         assert len(calls) == 1
+
+
+@pytest.mark.parametrize(
+    "tools", [["python_data", "http_fetch"], ["python_data", "web_search", "search_pages"]]
+)
+def test_assisted_data_research_draft_remains_disabled_without_invented_files(model, tools):
+    calls, responses = model
+    responses[:] = [
+        json.dumps(
+            {
+                **PROPOSAL,
+                "goal": "Compute a CSV from reviewed public numbers",
+                "tools": tools,
+                "fetch_urls": ["https://data.example.com/numbers"] if "http_fetch" in tools else [],
+            }
+        )
+    ]
+    with TestClient(app) as api:
+        run = submit(
+            api, instruction="Analyse public JSON from https://data.example.com/numbers and create a CSV"
+        )
+        step()
+        done = state(api, run)
+        assert done["status"] == "succeeded", done["error_message"]
+        agent = api.get("/api/agents/" + done["metadata"]["agent_id"]).json()
+        assert agent["tools"] == tools and agent["model"] == "auto"
+        assert agent["data"] == {"input_artifact_ids": [], "max_repairs": 1}
+        assert not agent["enabled"] and agent["next_run_at"] is None and not agent["project_id"]
+        assert len(calls) == 1

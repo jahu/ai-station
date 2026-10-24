@@ -25,6 +25,7 @@ import {
   type AgentMediaScope,
 } from "./agent-media";
 import AgentDataResult from "./AgentDataResult";
+import AgentCodeResearch from "./AgentCodeResearch";
 import AgentCodeWorkspace from "./AgentCodeWorkspace";
 import { useId, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -47,7 +48,11 @@ import { AgentLatestReport } from "./AgentLatestReport";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import GithubAgentScope from "./GithubAgentScope";
 import { useListKeyboard } from "./useListKeyboard";
-import { activationBlock, LOCAL_CODING_RESEARCH } from "./agentActivation";
+import {
+  activationBlock,
+  PUBLIC_RESEARCH_TOOLS,
+  localResearchScope,
+} from "./agentActivation";
 import { agentSettingsPayload } from "./agentSettings";
 import { AgentLinkedProjectLinks, AgentProjectList } from "./AgentProjectList";
 import ProjectAgents from "./ProjectAgents";
@@ -167,6 +172,7 @@ const schedule = (agent: Agent) =>
 
 function toolTitle(tool: Tool) {
   if (tool.name === "create_media") return "Create media";
+  if (tool.name === "python_data") return "Data analysis";
   if (tool.name === "search_pages") return "Read search sources";
   return tool.name === "github_read"
     ? "GitHub repository"
@@ -796,7 +802,13 @@ export function AgentDetail() {
               <AgentMediaResult runs={agent.runs ?? []} />
             )}
             {agent.tools.includes("python_data") && (
-              <AgentDataResult runs={agent.runs ?? []} />
+              <>
+                <AgentCodeResearch
+                  runs={agent.runs ?? []}
+                  taskId={agent.runs[0]?.task_id ?? ""}
+                />
+                <AgentDataResult runs={agent.runs ?? []} />
+              </>
             )}
             {(agent.market ||
               agent.runs.some((run) => run.executor_type === "email_send")) && (
@@ -1016,9 +1028,15 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           <>
             {isCoding(values.tools) && (
               <label>
-                Coding model policy
+                {values.tools.includes("python_data")
+                  ? "Analysis model policy"
+                  : "Coding model policy"}
                 <select
-                  aria-label="Coding model policy"
+                  aria-label={
+                    values.tools.includes("python_data")
+                      ? "Analysis model policy"
+                      : "Coding model policy"
+                  }
                   disabled={modelBusy || active || save.isPending}
                   value={values.model === "auto" ? "auto" : "explicit"}
                   onChange={(event) =>
@@ -1395,6 +1413,9 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
           <div className="agent-wide">
             <AgentDataFiles
               value={values.data}
+              allowResearch={values.tools.some((name) =>
+                PUBLIC_RESEARCH_TOOLS.includes(name),
+              )}
               disabled={active || save.isPending}
               onChange={(data) => update("data", data)}
             />
@@ -1402,7 +1423,14 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         )}
         <div className="agent-wide">
           <h3>Tools</h3>
-          {isCoding(values.tools) && (
+          {values.tools.includes("python_data") && (
+            <p className="notice">
+              Analyse reviewed files and public sources with local Python.
+              Results include an answer, table and downloads; the Python code
+              stays offline.
+            </p>
+          )}
+          {isCoding(values.tools) && !values.tools.includes("python_data") && (
             <p className="notice">
               {isExternalCoding(values.tools)
                 ? "External coding uses the goal as its task and the selected CLI."
@@ -1449,20 +1477,17 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
                   : addedCoding
                     ? [
                         addedCoding,
-                        ...(addedCoding === "coding_local"
-                          ? names.filter(
-                              (name) =>
-                                name !== "coding_local" &&
-                                LOCAL_CODING_RESEARCH.includes(name),
+                        ...(["coding_local", "python_data"].includes(
+                          addedCoding,
+                        )
+                          ? names.filter((name) =>
+                              PUBLIC_RESEARCH_TOOLS.includes(name),
                             )
                           : []),
                       ]
                     : names.length === 1 && codingNames.includes(names[0])
                       ? names
-                      : names.includes("coding_local") &&
-                          names.every((name) =>
-                            LOCAL_CODING_RESEARCH.includes(name),
-                          )
+                      : localResearchScope(names)
                         ? names
                         : names.filter(
                             (name) =>

@@ -648,3 +648,14 @@ same offline adapter, queued Runs, Stop and playable Library artifacts. Actual
 were verified. Longer lengths and subjective quality are not qualified by those
 cases. Follow the plan to configure its separate Python/source/model paths and
 allowed roots; empty configuration keeps Music unavailable.
+
+### Agents that analyse public data
+
+In an agent's settings, select **Data analysis** together with public search,
+search-page reading or public page fetching. Review its query or URLs, save and
+enable the definition, then choose **Run now** or a schedule. CSV/Excel files are
+optional with reviewed public sources (up to seven); file-only analyses still
+require selected files (up to eight). Sources are captured once and supplied to
+offline Python as a read-only JSON file. Results retain the source history, table,
+CSV and supported generated downloads. Partial reads remain visible; a search
+snippet does not mean a page was opened. See [execution and qualification](docs/plans/agent-research-data.md).

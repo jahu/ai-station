@@ -16,3 +16,9 @@ class AgentDataScope(BaseModel):
         if len(set(values)) != len(values):
             raise ValueError("Data inputs must be unique")
         return values
+
+
+class ResearchDataScope(AgentDataScope):
+    """Optional files only when an AgentSettings definition grants public research."""
+
+    input_artifact_ids: list[UUID] = Field(default_factory=list, max_length=7)

@@ -5,6 +5,28 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — research plus offline data, 2026-10-24
+
+Agent validation correction (#389) is merged, deployed and real-qualified at
+source 65534ac. All 2812 normal Python/Runner tests, 9 opt-in skips and 664 UI tests,
+compiled 1440/390 flows, Docker/source/assets and unchanged Compose qualification
+passed. Actual same-goal public research/local code failed its generated Node
+test, automatically used exactly one correction on the same Task/worktree and
+then passed checks/build/offline preview. Only test imports changed; test bodies,
+assertions, website/build bytes, commands and original deadline stayed unchanged.
+The QA agent is paused; the operator's GPU/Q8/46080 model preset is restored.
+Evidence: `data/acceptance/agent-validation-repair-20261024/post-deployment-qualified.json`
+and `actual-repair-semantic-review.json`. Live controller source:
+`.tools/ui-agent-validation-repair-20261024`; native source remains
+`.tools/ui-python-optional-outputs-20261024`. Retain both.
+
+Next owned branch/worktree: `feat/agent-research-data`, `.tools/agent-research-data`.
+Read [the concrete plan](agent-research-data.md), then implement using existing
+public-research handoff, private workspace and Python/data chain. No implementation
+is advertised by this plan. Keep original CSV/XLSX and conversation contracts,
+frozen public scope/source hashes, one deadline, Stop and network-disabled Python.
+No new model download or account is needed for the proposed public-source test.
+
 ## Current continuation — optional Python outputs, 2026-10-24
 
 Natural CSV/XLSX follow-ups (#383) and inline PNG/Excel/text exports (#384–#385)
@@ -1194,3 +1216,23 @@ No larger transcription model has been downloaded: the explicit approval request
 for the pinned Whisper small486MB profile remains pending; its plan/installer are
 under `data/acceptance/transcription-quality-20261023`. Never infer that approval
 from the older ACE-Step consent. The whole platform objective remains active.
+
+
+## Research/data agent candidate, 2026-10-24
+
+Live develop includes #387 optional Python outputs, #388 reviewed research/local
+code and #389 one bounded agent validation correction. Actual local-model code
+repair, unchanged test assertions/commands and exact operator runtime restoration
+are recorded in `data/acceptance/agent-validation-repair-20261024`.
+
+The next candidate is `.tools/agent-research-data`, branch
+`feat/agent-research-data`: reviewed search/page observations become a verified
+read-only JSON input for the existing offline Python workflow, with optional
+CSV/XLSX. Plan: [research/data composition](agent-research-data.md). Evidence:
+`data/acceptance/agent-research-data-20261024`. Real disposable native Git and CPU
+Python, with fake public data/inference, already computed a verified total from
+full captured JSON plus CSV after one bounded program repair, one source fetch
+and unchanged inputs/deadline. Full local gates, compiled desktop/phone, PR review
+and deployment/actual-public-local-model qualification remain required. Do not
+claim this candidate is live until those records prove rollout. Root Memory WIP,
+release branches and original model/data resources remain untouched.

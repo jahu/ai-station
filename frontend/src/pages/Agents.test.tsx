@@ -3031,9 +3031,14 @@ it("refreshes untouched settings after activation but preserves edits when the s
   );
 });
 
-it.each(["code-first", "research-first"])(
-  "keeps reviewed local research tools in %s selection order",
-  async (order) => {
+it.each([
+  { family: "coding_local", order: "code-first" },
+  { family: "coding_local", order: "research-first" },
+  { family: "python_data", order: "code-first" },
+  { family: "python_data", order: "research-first" },
+])(
+  "keeps reviewed $family research tools in $order selection order",
+  async ({ family, order }) => {
     const agent = {
       id: "draft",
       name: "Research builder",
@@ -3074,7 +3079,7 @@ it.each(["code-first", "research-first"])(
         if (url.endsWith("/llama")) return { models: [], instances: [] };
         if (url.endsWith("/agents/tools"))
           return [
-            "coding_local",
+            family,
             "web_search",
             "search_pages",
             "http_fetch",
@@ -3093,8 +3098,8 @@ it.each(["code-first", "research-first"])(
     await screen.findByRole("heading", { name: "Research builder" });
     const names =
       order === "code-first"
-        ? ["coding_local", "web_search", "search_pages", "http_fetch"]
-        : ["web_search", "search_pages", "http_fetch", "coding_local"];
+        ? [family, "web_search", "search_pages", "http_fetch"]
+        : ["web_search", "search_pages", "http_fetch", family];
     for (const name of names)
       fireEvent.click(
         within(screen.getByLabelText("Tool " + name)).getByRole("checkbox"),
@@ -3114,7 +3119,18 @@ it.each(["code-first", "research-first"])(
       target: { value: "https://example.com/" },
     });
     expect(
-      screen.getByText(/reviewed search query, read search sources/),
+      screen.getByText(
+        family === "python_data"
+          ? /CSV or Excel files are optional/
+          : /reviewed search query, read search sources/,
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(
+        family === "python_data"
+          ? "Analysis model policy"
+          : "Coding model policy",
+      ),
     ).toBeTruthy();
     expect(fetch.mock.calls.filter((call) => call[1])).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "Save definition" }));

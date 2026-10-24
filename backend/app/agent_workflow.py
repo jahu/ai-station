@@ -49,7 +49,8 @@ def planned_steps(definition: AgentSettings) -> list[dict]:
         ) + [
             {"key": name, "gate": "none"}
             for name in (
-                coding_research_steps(definition.tools) + ["coding_local"]
+                coding_research_steps(definition.tools)
+                + ["python_data" if "python_data" in definition.tools else "coding_local"]
                 if coding_research_steps(definition.tools)
                 else definition.tools
             )
@@ -253,21 +254,25 @@ def publish_steps(session, parent: Run) -> list[Run]:
         validate_workspace_binding(session, parent)
         deadline = coding_deadline(parent, definition)
         parent.parameters = {**parent.parameters, "agent_coding_deadline": deadline.isoformat()}
-        if definition.tools == ["python_data"]:
+        if "python_data" in definition.tools:
             from app.data_agents import require_runtime, verify_inputs
 
             require_runtime()
-            verify_inputs(session, parent.parameters.get("data_inputs"))
+            verify_inputs(
+                session,
+                parent.parameters.get("data_inputs"),
+                allow_empty=bool(coding_research_steps(definition.tools)),
+            )
         if coding_provider(definition.tools) == "local" and not definition.project_id:
             return [publish_workspace(session, parent, definition, deadline)]
-        if "python_data" in definition.tools:
-            from app.data_agents import publish_data
-
-            return [publish_data(session, parent, definition, deadline)]
         if coding_research_steps(definition.tools):
             from app.agent_page_coding import publish_page_coding
 
             return publish_page_coding(session, parent, definition, deadline_at=deadline)
+        if "python_data" in definition.tools:
+            from app.data_agents import publish_data
+
+            return [publish_data(session, parent, definition, deadline)]
         from app.agent_coding import publish_coding
 
         return [publish_coding(session, parent, definition, deadline_at=deadline)]

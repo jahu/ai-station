@@ -41,7 +41,9 @@ def definition_dict(agent, session=None):
     email_authorization = market_email_authorization(session, agent)
     return {
         **agent_dict(agent),
-        "data_readiness": data_readiness(session, agent.data) if "python_data" in agent.tools else None,
+        "data_readiness": data_readiness(session, agent.data, agent.tools)
+        if "python_data" in agent.tools
+        else None,
         "market_email_authorization": email_authorization,
         "market_readiness": stock_readiness(session, agent.market),
         "created_at": agent.created_at.isoformat(),
@@ -105,7 +107,12 @@ def validate_target(body, session, agent=None, *, enabling=False):
 
         try:
             require_runtime()
-            freeze_inputs(session, body.data)
+            from app.agent_coding_policy import coding_research_steps
+
+            if coding_research_steps(body.tools):
+                freeze_inputs(session, body.data, research=True)
+            else:
+                freeze_inputs(session, body.data)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
     if body.github is not None:

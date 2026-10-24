@@ -7,10 +7,10 @@ from uuid import UUID
 from croniter import croniter
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
 
-from app.agent_coding_policy import CODING_TOOLS, coding_provider, external_coding
+from app.agent_coding_policy import CODING_TOOLS, coding_provider, coding_research_steps, external_coding
 from app.agent_media_schema import AgentMediaScope, fixed_media_only
 from app.agent_tools import AGENT_TOOLS, agent_tool
-from app.data_schema import AgentDataScope
+from app.data_schema import AgentDataScope, ResearchDataScope
 from app.db import utcnow
 from app.http_fetch import reviewed_urls
 from app.market_schema import MarketScope
@@ -84,7 +84,7 @@ class AgentSettings(BaseModel):
     model: str = Field(default="", max_length=200)
     market: MarketScope | None = None
     github: AgentGithubScope | None = None
-    data: AgentDataScope | None = None
+    data: AgentDataScope | ResearchDataScope | None = None
     media: AgentMediaScope | None = None
     workspace_policy: AgentWorkspacePolicy = Field(default_factory=AgentWorkspacePolicy)
     search_query: str = Field(default="", max_length=500)
@@ -170,7 +170,7 @@ class AgentSettings(BaseModel):
         if set(self.tools).intersection(CODING_TOOLS):
             if not coding_provider(self.tools) or self.tool_calling != "none":
                 raise ValueError(
-                    "Select one coding provider; only Local coding may add reviewed public research, without report tool calling"
+                    "Select one coding provider; only Local coding or Python data may add reviewed public research, without report tool calling"
                 )
             if len(self.goal) > 10000:
                 raise ValueError("Coding goals must be at most 10000 characters")
@@ -180,9 +180,14 @@ class AgentSettings(BaseModel):
             raise ValueError(
                 "External coding requires its explicit external-coding permission profile; local agents cannot inherit it"
             )
-        if self.data is not None and self.tools != ["python_data"]:
-            raise ValueError("Data inputs belong to an exclusive local Python data agent")
-        if self.enabled and self.tools == ["python_data"] and self.data is None:
+        research_data = "python_data" in self.tools and bool(coding_research_steps(self.tools))
+        if self.data is not None and "python_data" not in self.tools:
+            raise ValueError("Data inputs require the local Python data tool")
+        if research_data:
+            self.data = ResearchDataScope.model_validate(self.data.model_dump() if self.data else {})
+        elif self.data is not None and not self.data.input_artifact_ids:
+            raise ValueError("Select data files when no public research is reviewed")
+        if self.enabled and "python_data" in self.tools and self.data is None:
             raise ValueError("Select data files before enabling the Python agent")
         self.skills = list(dict.fromkeys(self.skills))
         if self.skills:

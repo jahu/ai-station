@@ -118,3 +118,18 @@ def test_price_data_in_a_spreadsheet_stays_an_offline_python_task(subject):
     agent = draft_agent(f"Analyze {subject} prices in this CSV spreadsheet")
     assert agent.tools == ["python_data"] and agent.model == "auto"
     assert agent.market is None and not agent.search_query and not agent.fetch_urls
+
+
+@pytest.mark.parametrize(
+    "instruction",
+    [
+        "Analyse JSON from https://data.example.com/numbers and create CSV",
+        "Przeanalizuj dane z https://data.example.com/numbers i dodaj je do arkusza",
+    ],
+)
+def test_quick_data_research_draft_retains_reviewed_urls_without_inventing_files(instruction):
+    agent = draft_agent(instruction, model="fake-local")
+    assert agent.tools == ["python_data", "http_fetch"]
+    assert agent.fetch_urls == ["https://data.example.com/numbers"]
+    assert agent.data == {"input_artifact_ids": [], "max_repairs": 1}
+    assert not agent.enabled and agent.next_run_at is None and not agent.project_id

@@ -264,3 +264,16 @@ Its prior question/answer are bounded quoted context; the current instruction
 wins. The worker validates the completed source before creating a workspace and
 uses the existing source/hash checks and graph-wide Stop. Reading old provenance
 does not extend an old deadline or resume its execution.
+
+## Research followed by offline data analysis
+
+For reviewed public-research/data definitions, the normal agent workflow runs
+selected search, search-page reading and explicit HTTP reads in source order.
+The existing context handoff verifies their provenance and saves one immutable
+JSON input before publishing the normal owned-worktree data preparation. Local
+generation receives bounded previews and a UUID-named full read-only JSON file;
+execution and result adoption bind that file alongside any selected CSV/XLSX
+inputs. Confirmed Python failures may use the saved bounded repair budget without
+repeating research. Task cancellation and conservative recovery retain the
+existing contracts. Source warnings, outputs and transitive lineage remain
+inspectable in the agent workspace and Library.

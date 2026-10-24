@@ -18,8 +18,8 @@ def coding_provider(tools):
         return None
     if (
         len(tools) == 1
-        or selected == ["coding_local"]
-        and set(tools) <= {"coding_local"} | LOCAL_RESEARCH_TOOLS
+        or selected[0] in {"coding_local", "python_data"}
+        and set(tools) <= {selected[0]} | LOCAL_RESEARCH_TOOLS
     ):
         return CODING_TOOLS[selected[0]]
     return None

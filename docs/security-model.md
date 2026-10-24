@@ -625,3 +625,18 @@ and bounded untrusted prior-question/result context. Enqueue and worker checks
 reject rebindings; actual input bytes are checked before workspace/model/Python
 work. Model text cannot select IDs or external sharing. See
 [the data-reference contract](plans/conversation-data-references.md).
+
+## Public observations as offline analysis inputs
+
+A Python/data agent may combine only the existing reviewed public-search/page
+tools with its local data tool. Source-only analysis is allowed only with that
+explicit scope. Selected URLs/queries, source Runs, dependencies, permissions,
+Artifact bytes/hashes and handoff ownership are rechecked before generation,
+every repair and native dispatch. A maximum 128 KiB JSON snapshot carries the
+complete bounded observations and their partial/truncation flags. The snapshot
+uses one of the existing eight read-only input slots, leaving seven for optional
+inspected CSV/XLSX files. File-only agents retain the eight-file/minimum-one
+contract. Snapshot lineage and values must match the original source artifacts.
+Public content cannot add tools, commands, URLs or permissions. Python has no
+network access; repair reuses the same captured sources and absolute deadline.
+See [the plan and qualification contract](plans/agent-research-data.md).

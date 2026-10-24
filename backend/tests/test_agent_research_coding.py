@@ -296,7 +296,7 @@ def test_auto_workspace_preserves_research_scope_and_original_deadline(research)
         api.post(f"/api/runs/{parent['id']}/cancel")
 
 
-@pytest.mark.parametrize("provider", ["coding_cursor", "coding_codex", "python_data"])
+@pytest.mark.parametrize("provider", ["coding_cursor", "coding_codex"])
 def test_other_execution_scopes_cannot_inherit_research(provider):
     from app.agent_schema import AgentSettings
 
