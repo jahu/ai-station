@@ -1,3 +1,4 @@
+import type { DocumentScope } from "./document-context";
 import { DEFAULT_MARKET, type MarketScope } from "./marketScope";
 import type { ResultEmailScope } from "./AgentResultEmail";
 import type { AgentMediaScope } from "./agent-media";
@@ -43,6 +44,7 @@ export type AgentSettingsInput = {
   };
   github?: { connector_id: string; repository: string } | null;
   http?: { connector_id: string; connector_revision: string } | null;
+  documents?: DocumentScope | null;
   project_id?: string | null;
   enabled?: boolean;
 };
@@ -90,6 +92,13 @@ export function agentSettingsPayload(
       ? { permission_profile: next.permission_profile }
       : {}),
     ...(next.github !== undefined ? { github: next.github } : {}),
+    ...(next.documents !== undefined
+      ? {
+          documents: next.tools?.includes("read_documents")
+            ? next.documents
+            : null,
+        }
+      : {}),
     ...(next.http !== undefined
       ? { http: next.tools?.includes("http_connector") ? next.http : null }
       : {}),

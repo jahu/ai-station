@@ -12,6 +12,12 @@ from app.python_execution import input_snapshots, read_owned_file
 MAX_SNAPSHOT_BYTES = 128 * 1024
 
 
+def snapshot_limit(definition):
+    from app.document_schema import MAX_CAPTURE_JSON
+
+    return MAX_CAPTURE_JSON if definition.documents else MAX_SNAPSHOT_BYTES
+
+
 def snapshot_research(session, handoff, definition):
     from app.agent_page_coding import verified_sources
 
@@ -23,7 +29,7 @@ def snapshot_research(session, handoff, definition):
     if "python_data" not in definition.tools:
         raise ValueError("Research data requires its reviewed Python workflow")
     payload = json.dumps({"observations": observations}, ensure_ascii=False).encode()
-    if len(payload) > MAX_SNAPSHOT_BYTES:
+    if len(payload) > snapshot_limit(definition):
         raise ValueError("Public research exceeds the bounded offline input; review fewer sources")
     with tempfile.NamedTemporaryFile(suffix=".json") as handle:
         handle.write(payload)
@@ -83,7 +89,7 @@ def verify_research(session, workflow, receipt, definition, *, for_execution=Tru
     ]:
         raise ValueError("Research snapshot changed its source lineage")
     path = read_owned_file(
-        artifact.relative_path, artifact.size_bytes, artifact.sha256, limit=MAX_SNAPSHOT_BYTES
+        artifact.relative_path, artifact.size_bytes, artifact.sha256, limit=snapshot_limit(definition)
     )
     if json.loads(path.read_bytes()) != {"observations": observations}:
         raise ValueError("Research snapshot differs from the original public observations")
@@ -150,6 +156,11 @@ def captured_preview(observations):
                         {"url": clip(item.get("url", ""), limit), field: clip(item.get(field, ""), limit)}
                         for item in source[key][: (1 if limit == 16 else 3)]
                     ]
+            if "documents" in source:
+                sample["documents"] = [
+                    {"name": clip(item.get("name", ""), limit), "text": clip(item.get("text", ""), limit)}
+                    for item in source["documents"][: (1 if limit == 16 else 3)]
+                ]
             if "entries" in source:
                 sample["scope"] = source.get("scope")
                 sample["entries"] = [

@@ -21,6 +21,7 @@ from app.agent_media_schema import AgentMediaScope, fixed_media_only
 from app.agent_tools import AGENT_TOOLS, agent_tool
 from app.data_schema import AgentDataScope, ResearchDataScope
 from app.db import utcnow
+from app.document_schema import AgentDocumentScope
 from app.execution_limits import MAX_AGENT_RUNTIME
 from app.http_fetch import reviewed_urls
 from app.market_schema import MarketScope
@@ -109,6 +110,7 @@ class AgentSettings(BaseModel):
     market: MarketScope | None = None
     github: AgentGithubScope | None = None
     http: AgentHttpScope | None = None
+    documents: AgentDocumentScope | None = None
     data: AgentDataScope | ResearchDataScope | None = None
     media: AgentMediaScope | None = None
     workspace_policy: AgentWorkspacePolicy = Field(default_factory=AgentWorkspacePolicy)
@@ -139,10 +141,16 @@ class AgentSettings(BaseModel):
         values = handler(self)
         if self.http is None:
             values.pop("http", None)
+        if self.documents is None:
+            values.pop("documents", None)
         return values
 
     @model_validator(mode="after")
     def validate_definition(self):
+        if self.documents is not None and "read_documents" not in self.tools:
+            raise ValueError("Selected documents require the Read documents tool")
+        if self.enabled and "read_documents" in self.tools and self.documents is None:
+            raise ValueError("Choose and review documents before activation")
         if self.http is not None and "http_connector" not in self.tools:
             raise ValueError("Saved HTTP settings require the Connected API tool")
         if self.enabled and "http_connector" in self.tools and self.http is None:

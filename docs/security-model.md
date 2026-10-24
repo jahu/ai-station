@@ -740,3 +740,22 @@ Generated Python/model stages receive frozen observations and cannot access the
 Memory API. Optional result retention grants memory_write to the result inspection
 stage; success and the saved observation publish atomically. Metadata dispatch
 stages retain reviewed workflow authority. See [the contract](plans/agent-data-memory.md).
+
+## Operator-selected documents
+
+The read_documents tool grants filesystem_read only to selected app-owned Artifact
+IDs. The server freezes hash/size/MIME/name snapshots. Canonical UUID storage paths,
+no symlinks/hardlinks, bounded regular-file reads and original hashes are checked
+before capture and again before report/code/data adoption. Original, extracted text
+and full JSON captures retain source lineage and immutable byte checks. Historical
+captures remain inspectable without requiring the original to remain active.
+
+PDF parsing runs in a fixed subprocess in the control plane, with stripped
+credential environment, address-space/CPU limits, a short shared deadline and
+Linux parent-death SIGKILL. Stop/audit errors kill and reap only that process group.
+It accepts bytes over stdin and fixed pdf/text modes; neither models nor documents
+supply commands or paths. This is resource isolation of the installed parser, not
+a claim of a separate container/network sandbox. Document contents are untrusted
+reference text. No OCR, pixel understanding, filesystem browsing or networking tool
+is granted. Bounded model queries/windows remain inside the frozen selection;
+complete captured text reaches Python through the existing offline input contract.

@@ -735,3 +735,16 @@ capacity; child publication and replay keep the original expiry.
 Runs, immutable JSON observations and the offline Python/local coding handoff.
 Optional data-result retention uses the existing MemoryEntry service after result
 validation, in the success transaction. No new schema/native executor is added.
+
+## Selected agent documents
+
+[Read documents](plans/agent-document-context.md) adds a scoped registry context
+step to existing report, offline code/data and goal-based media workflows. API
+handlers validate/store uploads and enqueue as usual; only the worker extracts.
+A fixed short-lived Python helper receives verified bytes on stdin, fixed format
+arguments and a minimal environment. CPU/address-space/wall/input/output limits,
+owned process-group Stop/reap and Linux parent-death signaling bound its lifecycle.
+This is a fixed parser inside the control plane, not a generated-code executor or
+new host filesystem API. The existing native offline Python receives only verified
+captured text. Migration0035 adds nullable agents.documents; absent scope is omitted
+from frozen definitions to preserve legacy consent/receipt identities.

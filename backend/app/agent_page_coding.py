@@ -80,6 +80,10 @@ def publish_page_coding(session, parent, definition, *, deadline_at=None):
 def verified_observation(session, source, definition, *, complete=False, for_execution=True):
     """Adopt only exact, bounded saved bytes belonging to this context step."""
     tool = source.parameters["tool"]
+    if tool == "read_documents":
+        from app.agent_documents import verified_documents
+
+        return verified_documents(session, source, definition, complete=complete, for_execution=for_execution)
     if tool in {"memory_search", "project_memory"}:
         from app.agent_memory_context import verified_memory
 
@@ -288,6 +292,7 @@ class AgentPageCodingExecutor:
                         for item in observation["result"].get("sources", [])
                         + observation["result"].get("pages", [])
                         + observation["result"].get("entries", [])
+                        + observation["result"].get("documents", [])
                         for key in ("snippet", "text", "content")
                         if len(item.get(key, "")) > 100
                     ]

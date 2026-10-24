@@ -3,12 +3,14 @@ import {
   fixedAgentMedia,
   type AgentMediaScope,
 } from "./agent-media";
+import type { DocumentScope } from "./document-context";
 import type { MarketScope } from "./marketScope";
 
 export const SCOPED_MEMORY_TOOLS = ["memory_search", "project_memory"];
 
 export const LOCAL_CODING_RESEARCH = [
   ...SCOPED_MEMORY_TOOLS,
+  "read_documents",
   "coding_local",
   "web_search",
   "search_pages",
@@ -25,6 +27,7 @@ export const PUBLIC_RESEARCH_TOOLS = [
   "browser",
 ];
 export const LOCAL_CONTEXT_TOOLS = [
+  "read_documents",
   ...PUBLIC_RESEARCH_TOOLS,
   ...SCOPED_MEMORY_TOOLS,
 ];
@@ -93,6 +96,8 @@ export function activationBlock(
     market_readiness?: { ready: boolean; reason: string | null } | null;
     github?: { connector_id: string; repository: string } | null;
     http?: { connector_id: string; connector_revision: string } | null;
+    documents?: DocumentScope | null;
+    document_readiness?: { ready: boolean; reason: string | null } | null;
     http_readiness?: { ready: boolean; reason: string | null } | null;
     maximum_runtime?: number;
     project_id?: string | null;
@@ -206,6 +211,18 @@ export function activationBlock(
       blocked: true,
       reason:
         agent.http_readiness.reason ?? "Review the saved HTTP connection.",
+    };
+  }
+  if (
+    names.includes("read_documents") &&
+    (!agent.documents?.artifact_ids.length ||
+      agent.document_readiness?.ready === false)
+  ) {
+    return {
+      blocked: true,
+      reason:
+        agent.document_readiness?.reason ??
+        "Choose and review documents before enabling.",
     };
   }
   if (names.includes("http_connector") && !agent.http) {

@@ -9,6 +9,8 @@ import { FetchedPages } from "./AgentHttpFetch";
 import { RegistryToolCalls, type RegistryToolCall } from "./AgentToolCalls";
 import { SearchSources } from "./ChatWebSearch";
 
+import AgentDocumentSources from "./AgentDocumentSources";
+
 import { BrowserPages } from "./BrowserPages";
 import { isBrowserResult } from "./browserResult";
 
@@ -98,8 +100,17 @@ export function AgentLatestReport({ runs }: { runs: Run[] }) {
     "browser",
     isBrowserResult,
   );
+  const context = reportRun.parameters?.tool_context;
+  const documents = Array.isArray(context)
+    ? context
+        .filter((item) => item?.tool === "read_documents")
+        .map((item) => ({ result: item.result }))
+    : [];
   const recordedCalls = reportRun.metadata?.tool_calls;
   const calls = isRegistryToolCalls(recordedCalls) ? recordedCalls : [];
+  const documentCalls = calls
+    .filter((call) => call.tool === "read_documents")
+    .map((call) => ({ result: call.result }));
   return (
     <>
       <ErrorNotice error={artifacts.error} />
@@ -114,6 +125,7 @@ export function AgentLatestReport({ runs }: { runs: Run[] }) {
           excerpted={reportRun.metadata?.memory_excerpted === true}
         />
       ) : null}
+      <AgentDocumentSources captures={[...documents, ...documentCalls]} />
       {search ? <SearchSources result={search} /> : null}
       {pages ? <FetchedPages result={pages} /> : null}
       {searchPages ? <AgentSearchSources result={searchPages} /> : null}

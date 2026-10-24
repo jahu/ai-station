@@ -228,6 +228,12 @@ The target is the complete AI Station vision, reconfirmed on 2026-10-13. An impl
 
 ## Current work
 
+Selected PDF/text/Markdown documents for report, offline code/data and goal-based
+media agents are the next owned increment, with upload/Library selection and
+source-bound captured text. See [document scope and qualification](plans/agent-document-context.md).
+Do not treat it as deployed until its exact-head checks and rollout evidence exist.
+
+
 Actual longer-media acceptance exists and must not be repeated because an older
 plan calls it unfinished. The 60-second Wan draft produced 1440 frames at
 1280×704 with four steps; see

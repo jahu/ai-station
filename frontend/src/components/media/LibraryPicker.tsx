@@ -1,3 +1,4 @@
+import { canReadDocument } from "../../pages/document-context";
 import { TRANSCRIPTION_AUDIO_TYPES } from "../../recording-formats";
 import { useEffect, useId, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
@@ -18,6 +19,7 @@ import { useListKeyboard } from "../../pages/useListKeyboard";
 export default function LibraryPicker({
   kind,
   audioMode = "voice",
+  documentMode = "data",
   existing,
   limit,
   busy,
@@ -25,6 +27,7 @@ export default function LibraryPicker({
 }: {
   kind: "image" | "audio" | "document";
   audioMode?: "voice" | "transcription";
+  documentMode?: "data" | "reference";
   existing: string[];
   limit: number;
   busy: boolean;
@@ -39,12 +42,12 @@ export default function LibraryPicker({
     return () => clearTimeout(timer);
   }, [search]);
   const query = useInfiniteQuery({
-    queryKey: ["library", "picker", kind, term],
+    queryKey: ["library", "picker", kind, term, documentMode],
     enabled: open,
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
       api<Artifact[]>(
-        `/artifacts?${new URLSearchParams({ kind, search: term, limit: "40", offset: String(pageParam) })}`,
+        `/artifacts?${new URLSearchParams({ kind: kind === "document" && documentMode === "reference" ? "references" : kind, search: term, limit: "40", offset: String(pageParam) })}`,
       ),
     getNextPageParam: (last, pages) =>
       last.length === 40 ? pages.length * 40 : undefined,
@@ -59,8 +62,10 @@ export default function LibraryPicker({
           a.metadata.duration_seconds <=
             (audioMode === "transcription" ? 300 : 60))
       : kind === "document"
-        ? a.metadata.data_input === true &&
-          /\.(csv|xlsx|json)$/i.test(a.original_filename)
+        ? documentMode === "reference"
+          ? canReadDocument(a.mime_type, a.size_bytes)
+          : a.metadata.data_input === true &&
+            /\.(csv|xlsx|json)$/i.test(a.original_filename)
         : ["image/png", "image/jpeg", "image/webp"].includes(a.mime_type),
   );
   const headingId = useId();
@@ -85,7 +90,9 @@ export default function LibraryPicker({
         <Button type="button" variant="ghost" disabled={busy || limit < 1}>
           <Library size={15} />{" "}
           {kind === "document"
-            ? "Data from Library"
+            ? documentMode === "reference"
+              ? "Documents from Library"
+              : "Data from Library"
             : kind === "image"
               ? "Images from Library"
               : audioMode === "transcription"
@@ -99,7 +106,9 @@ export default function LibraryPicker({
           <div className="library-dialog-heading">
             <Dialog.Title>
               {kind === "document"
-                ? "Choose data files"
+                ? documentMode === "reference"
+                  ? "Choose documents"
+                  : "Choose data files"
                 : kind === "image"
                   ? "Choose image references"
                   : audioMode === "transcription"
@@ -115,7 +124,9 @@ export default function LibraryPicker({
           </div>
           <Dialog.Description>
             {kind === "document"
-              ? "Choose stored CSV, Excel or JSON inputs. Original files remain unchanged."
+              ? documentMode === "reference"
+                ? "Choose stored PDF, text or Markdown files. Reading starts only when the agent runs."
+                : "Choose stored CSV, Excel or JSON inputs. Original files remain unchanged."
               : kind === "image"
                 ? "Select images in the order you want the assistant to use them. Existing files are reused without another upload."
                 : audioMode === "transcription"
@@ -200,9 +211,13 @@ export default function LibraryPicker({
                             : kind === "image"
                               ? `${a.metadata.width ?? "?"} × ${a.metadata.height ?? "?"}`
                               : kind === "document"
-                                ? /\.json$/i.test(a.original_filename)
-                                  ? "JSON"
-                                  : "CSV / Excel"
+                                ? documentMode === "reference"
+                                  ? a.mime_type === "application/pdf"
+                                    ? "PDF"
+                                    : "Text / Markdown"
+                                  : /\.json$/i.test(a.original_filename)
+                                    ? "JSON"
+                                    : "CSV / Excel"
                                 : "PCM WAV"}
                       </small>
                       {(chosen >= 0 || attached) && (

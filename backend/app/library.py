@@ -77,6 +77,10 @@ def artifacts(
         statement = statement.where(Artifact.metadata_json["internal_data_output"].as_boolean().is_not(True))
     if kind == "files":
         statement = statement.where(Artifact.artifact_type.not_in(["image", "audio", "video"]))
+    elif kind == "references":
+        statement = statement.where(
+            Artifact.mime_type.in_(["application/pdf", "text/plain", "text/markdown"])
+        )
     elif kind:
         statement = statement.where(Artifact.artifact_type == kind)
     if search.strip():

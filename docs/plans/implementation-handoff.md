@@ -1,3 +1,13 @@
+> Current owned increment: `.tools/agent-document-context`, branch
+> `feat/agent-document-context`, based on delivered #410 (`a64414e`).
+> [Selected documents](agent-document-context.md) adds upload/Library scope,
+> bounded PDF/text worker extraction, source cards and verified local-agent adoption.
+> Migration0035 preserves absent-scope legacy identities. Targeted CPU/UI and
+> process-loss cases pass; use the eventual full-gate and post-deployment evidence
+> under `data/acceptance/agent-document-context-20261024` before claiming deployment.
+> Live authority remains `data/acceptance/safety-redeploy-20261012/deployment.json`;
+> the running release is #410 until rollout. Preserve the original root WIP.
+
 > #410 tracks [scoped memory for local agents](agent-data-memory.md): reviewed
 > memory captures before offline code/data, optional atomic data-result retention,
 > and readable captured versions in both workspaces. Its evidence lives under

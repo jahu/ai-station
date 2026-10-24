@@ -5,7 +5,32 @@ import { ErrorNotice } from "../components/common";
 import MediaResult from "../components/media/MediaResult";
 import MediaJobResult from "../components/media/MediaJobResult";
 
+import AgentDocumentSources from "./AgentDocumentSources";
+
 export default function AgentMediaResult({ runs }: { runs: Run[] }) {
+  const task = runs[0]?.task_id;
+  const prepared = runs.find(
+    (run) => run.task_id === task && run.executor_type === "agent_media",
+  );
+  const snapshot = prepared?.parameters?.media_context_snapshot;
+  const context =
+    snapshot && typeof snapshot === "object" && "observations" in snapshot
+      ? snapshot.observations
+      : null;
+  const documents = Array.isArray(context)
+    ? context
+        .filter((item) => item?.tool === "read_documents")
+        .map((item) => ({ result: item.result }))
+    : [];
+  return (
+    <>
+      <AgentDocumentSources captures={documents} />
+      <AgentMediaOutput runs={runs} />
+    </>
+  );
+}
+
+function AgentMediaOutput({ runs }: { runs: Run[] }) {
   const task = runs[0]?.task_id;
   const current = runs.filter((run) => run.task_id === task);
   const film = current.find(

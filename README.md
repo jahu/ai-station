@@ -750,3 +750,19 @@ project. Select **Remember reports** to save validated data answers for later
 executions. Files are optional with selected memory context. Python stays offline.
 Results link to saved memory; source cards show the exact captured versions.
 See [scope and verification](docs/plans/agent-data-memory.md).
+
+### Selected documents for agents
+
+Attach **Read documents** in an agent's tools, then upload/drop a PDF, UTF-8 text
+or Markdown file under **Selected documents**, or choose it from Library. Save the
+definition, review its scope and enable the agent. Up to four files are selected
+explicitly; the agent cannot browse host paths or choose additional files.
+
+Reports receive identified excerpts and can search/request text windows when
+bounded tool calling is enabled. Local code/data agents can combine these sources
+with their existing offline workspace; Python receives the complete captured text.
+Goal-based media agents can use a selected brief. Results link to originals, full
+captured text and the recorded source, with extraction/excerpt limits visible.
+PDF limits: 8 MiB, 64 pages; text/Markdown: 256 KiB. Image-only/scanned PDFs need
+OCR and are rejected here. Uploading/selecting files never starts a workload.
+See [document contracts and qualification](docs/plans/agent-document-context.md).

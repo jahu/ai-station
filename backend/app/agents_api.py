@@ -46,6 +46,21 @@ def http_readiness(session, agent):
     return {"ready": True, "reason": None}
 
 
+def document_readiness(session, agent):
+    if session is None or "read_documents" not in agent.tools:
+        return None
+    from app.agent_documents import reviewed_scope
+    from app.document_schema import AgentDocumentScope
+
+    try:
+        reviewed_scope(
+            session, AgentDocumentScope.model_validate(agent.documents) if agent.documents else None
+        )
+    except ValueError as exc:
+        return {"ready": False, "reason": str(exc)}
+    return {"ready": True, "reason": None}
+
+
 def definition_dict(agent, session=None):
     from app.data_agents import data_readiness
     from app.market_feeds import stock_permissions, stock_readiness
@@ -58,6 +73,8 @@ def definition_dict(agent, session=None):
     return {
         **agent_dict(agent),
         "http": agent.http,
+        "documents": agent.documents,
+        "document_readiness": document_readiness(session, agent),
         "http_readiness": http_readiness(session, agent),
         "data_readiness": data_readiness(session, agent.data, agent.tools)
         if "python_data" in agent.tools
@@ -148,6 +165,13 @@ def validate_target(body, session, agent=None, *, enabling=False):
                 freeze_inputs(session, body.data)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
+    if body.documents is not None and (not enabling or body.enabled):
+        from app.agent_documents import reviewed_scope
+
+        try:
+            reviewed_scope(session, body.documents, freeze=not enabling)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
     if body.http is not None and (not enabling or body.enabled):
         from app.agent_http import reviewed_connector
 
@@ -200,10 +224,11 @@ def apply_settings(agent, body):
             continue
         if key == "project_id" and value is not None:
             value = str(value)
-        if key in {"github", "http", "data", "market", "media"} and value is not None:
+        if key in {"github", "http", "documents", "data", "market", "media"} and value is not None:
             value = getattr(body, key).model_dump(mode="json")
         setattr(agent, key, value)
     agent.http = body.http.model_dump(mode="json") if body.http else None
+    agent.documents = body.documents.model_dump(mode="json") if body.documents else None
     agent.retry_policy = body.retry_policy.model_dump()
     agent.notification_policy = body.notification_policy.model_dump(mode="json")
     try:

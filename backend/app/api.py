@@ -17,6 +17,7 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
+from app.agent_documents import router as document_router
 from app.agent_drafts import router as agent_draft_router
 from app.agents_api import router as agent_router
 from app.approvals import resolve_run_approval, run_public
@@ -97,6 +98,7 @@ async def local_requests(request: Request, call_next):
             "/api/audio/uploads",
             "/api/audio/transcription/uploads",
             "/api/data/uploads",
+            "/api/documents/uploads",
         }
         and request.method == "POST"
     ):
@@ -398,6 +400,7 @@ app.include_router(operator_auth_router)
 app.include_router(nodes_router)
 app.include_router(model_definition_router)
 app.include_router(model_router)
+app.include_router(document_router)
 app.include_router(agent_router)
 app.include_router(agent_draft_router)
 app.include_router(notice_router)
