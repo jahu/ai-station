@@ -27,7 +27,8 @@ passed a new full 3041-case gate (3032 passes/nine opt-in skips). All 700 UI cas
 ten final-copy setup cases and real API/SQLite saves at 1440/390 passed, including
 an already-enabled interval definition whose next due instant stayed exact; qualify the
 final shorter helper text and image, review the published diff and finish a
-controller-only rollout. Reuse #397 Python/native evidence by exact source match.
+controller-only rollout. Use the new Python gate for schedule changes; reuse only
+unchanged native/media evidence from #397 by exact source match.
 Keep all live/proof trees, original root Memory WIP and pending Whisper consent.
 The broad platform goal remains open.
 

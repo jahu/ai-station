@@ -23,8 +23,8 @@ not speed estimates or promises that every duration finishes within them.
   not add a native adapter, new profile, model download or higher global timeout.
 - Verify both review surfaces, no writes before operator action, exact saved
   patch, no activation/Run, pending/active disablement and compiled 1440/390 layout.
-  Reuse #397 backend/native evidence only after exact source comparison; this is
-  an editor improvement, not another expensive media qualification.
+  Reuse #397 native/media evidence only after exact source comparison. The
+  controller schedule correction below requires its own full Python gate.
 
 Live #397 is reviewed `992bb5c`, merged `9c0af73`, controller source
 `.tools/ui-video-memory-recommendation-20261024`; native remains
