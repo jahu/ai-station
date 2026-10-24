@@ -15,6 +15,10 @@ import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import MediaInput from "../components/media/MediaInput";
 import MediaResult from "../components/media/MediaResult";
+import AvatarMemoryProfile, {
+  useAvatarCapabilities,
+  type AvatarProfile,
+} from "../components/media/AvatarMemoryProfile";
 import {
   mediaBusy,
   useMediaRun,
@@ -74,6 +78,18 @@ function AvatarForm({
   const [steps, setSteps] = useState(initialRequest?.steps ?? 8);
   const [seed, setSeed] = useState(initialRequest?.seed ?? 43);
   const [gpu, setGpu] = useState(initialRequest?.gpu ?? "auto");
+  const capability = useAvatarCapabilities();
+  const [chosenProfile, setChosenProfile] = useState<AvatarProfile | null>(
+    initialRequest ? (initialRequest.memory_profile ?? "default") : null,
+  );
+  const supportedProfile = size === 384 && steps >= 8;
+  const memoryProfile =
+    chosenProfile ??
+    (supportedProfile
+      ? (capability.data?.recommended_memory_profile ?? "default")
+      : "default");
+  const profileParameters =
+    memoryProfile === "default" ? {} : { memory_profile: memoryProfile };
   const hardware = useHardware();
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
@@ -85,6 +101,7 @@ function AvatarForm({
     mutationFn: async () => {
       if (fullRecording) {
         const body = {
+          ...profileParameters,
           image_artifact_id: image,
           audio_artifact_id: audio,
           prompt,
@@ -105,6 +122,7 @@ function AvatarForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...profileParameters,
           image_artifact_id: image,
           audio_artifact_id: audio,
           prompt,
@@ -289,6 +307,13 @@ function AvatarForm({
                 <Settings2 size={15} />
                 Advanced settings<span>Steps, seed, GPU</span>
               </summary>
+              <AvatarMemoryProfile
+                value={memoryProfile}
+                onChange={setChosenProfile}
+                disabled={busy || uploading}
+                supported={supportedProfile}
+                recommended={chosenProfile === null}
+              />
               <div className="media-field-pair">
                 <label>
                   Steps
@@ -330,6 +355,7 @@ function AvatarForm({
                 !image ||
                 !audio ||
                 !prompt.trim() ||
+                (memoryProfile === "bounded_11g" && !supportedProfile) ||
                 (voiceMode === "text" && !speechText.trim()) ||
                 uploading ||
                 busy

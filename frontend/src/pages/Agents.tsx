@@ -19,6 +19,7 @@ import AgentWorkspacePolicy, {
 import AgentDataFiles, { type DataScope } from "./AgentDataFiles";
 import AgentMediaScopeEditor from "./AgentMediaScope";
 import AgentVideoSetup from "./AgentVideoSetup";
+import AgentAvatarSetup from "./AgentAvatarSetup";
 import AgentMediaResult from "./AgentMediaResult";
 import {
   agentMediaIssue,
@@ -1119,6 +1120,14 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         </label>
         {values.tools.includes("create_media") && (
           <div className="agent-wide">
+            <AgentAvatarSetup
+              value={mediaScope}
+              maximumRuntime={values.maximum_runtime}
+              disabled={active || save.isPending}
+              onApply={(patch) =>
+                editValues((current) => ({ ...current, ...patch }))
+              }
+            />
             <AgentVideoSetup
               value={mediaScope}
               maximumRuntime={values.maximum_runtime}

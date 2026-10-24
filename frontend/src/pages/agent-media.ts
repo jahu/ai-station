@@ -31,6 +31,7 @@ export type VideoMediaRequest = {
   gpu?: string;
 };
 export type AvatarMediaRequest = {
+  memory_profile?: "default" | "bounded_11g";
   image_artifact_id: string | null;
   audio_artifact_id: string | null;
   speech_text: string | null;
@@ -168,6 +169,11 @@ export function agentMediaIssue(
   if (!scope) return "Choose the output and save its creative settings.";
   if (scope.kind === "avatar") {
     const p = scope.request;
+    if (
+      p.memory_profile === "bounded_11g" &&
+      ((p.size ?? 384) !== 384 || (p.steps ?? 8) < 8)
+    )
+      return "Use 384 × 384 with at least 8 steps for Reduced RAM, or choose Standard.";
     if (
       (!p.image_artifact_id || !p.audio_artifact_id) &&
       !options?.allowMissingSources

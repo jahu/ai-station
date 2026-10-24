@@ -485,7 +485,12 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
         raise HTTPException(409, "Inspect active/completed work before resuming")
     profile = capabilities() if plan["kind"] == "video" else {}
     if plan.get("request", {}).get("memory_profile", "default") != "default":
-        memory_reservation(LongVideoRequest.model_validate(plan["request"]), profile)
+        if plan["kind"] == "avatar":
+            from app.avatars import memory_reservation as avatar_memory
+
+            avatar_memory(FullAvatarRequest.model_validate(plan["request"]))
+        else:
+            memory_reservation(LongVideoRequest.model_validate(plan["request"]), profile)
     observed = profile.get("profile_observation")
     if plan.get("profile_observation") and observed != plan["profile_observation"]:
         raise HTTPException(409, "Runtime model files changed; start a new media job")
@@ -644,6 +649,8 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None, execution_de
     import wave
 
     from app.avatars import AvatarRequest, create_avatar_run
+    from app.avatars import capabilities as avatar_capabilities
+    from app.avatars import memory_reservation as avatar_memory
     from app.media_plan import audio_frames
 
     budget = execution_budget(execution_deadline_at)
@@ -694,6 +701,8 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None, execution_de
             or canonical.trashed_at is not None
         ):
             raise HTTPException(409, "Avatar speech handoff is not bound to its owned planner")
+    avatar_profile = avatar_capabilities() if body.memory_profile != "default" else None
+    reservation = avatar_memory(body, avatar_profile)
     image = session.get(Artifact, str(body.image_artifact_id))
     if not image or image.trashed_at is not None or image.mime_type not in {"image/png", "image/jpeg"}:
         raise HTTPException(422, "Choose an available PNG/JPEG portrait")
@@ -801,10 +810,13 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None, execution_de
             seed=segment.seed,
             gpu=body.gpu,
             frames=segment.generated_frames,
+            memory_profile=body.memory_profile,
         )
-        run = create_avatar_run(session, settings, task=task, parent_run_id=parent_run_id)
+        run = create_avatar_run(
+            session, settings, task=task, parent_run_id=parent_run_id, observed_profile=avatar_profile
+        )
         run.operation_key = f"media:{revision}:segment:{segment.index}:attempt:1"
-        run.requested_resources = {"ram_mib": 16384}
+        run.requested_resources = {"ram_mib": reservation}
         run.parameters = {
             **run.parameters,
             **budget,
@@ -833,6 +845,7 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None, execution_de
             "height": body.size,
             "backend": "echomimic-v3",
             "composition_mode": "continuous",
+            **({"memory_profile": body.memory_profile} if body.memory_profile != "default" else {}),
             "canonical_audio_id": audio.id,
             "audio_samples": samples,
             "audio_rate": rate,

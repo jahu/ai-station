@@ -5,6 +5,23 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — bounded avatar profile candidate, 2026-10-24
+
+The private source `c093d7e` rendered81 actual384px/eight-step frames in109 seconds
+within an observed11-GiB/zero-swap scope, preserved original source/model bytes and
+restored the exact operator preset. Evidence:
+`data/acceptance/echo-memory-loading-20261024/native-window-observer-state.json`.
+The original directory rejection and CPU-CLIP constructor rejection remain.
+
+The product candidate is in `.tools/echo-memory-profile`, branch
+`feat/echo-memory-profile`, based on PR #399's private source. It adds the disabled-
+by-default native setting, frozen request/admission/resume/metadata contracts,
+Avatars/Chat recommendation and explicit agent setup review. The prototype PR
+must stay draft until the complete product/native/image/UI/ordinary-agent proof
+passes. Full evidence: `data/acceptance/echo-memory-profile-20261024`.
+Preserve live `.tools/ui-agent-video-setup-20261024`, native source, root WIP,
+all proof trees and pending Whisper consent. The full platform goal is open.
+
 ## Current continuation — avatar model loading, 2026-10-24
 
 PR #398 is merged as `067b2c6` and deployed from reviewed `cec0c72` in

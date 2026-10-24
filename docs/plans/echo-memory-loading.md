@@ -52,3 +52,43 @@ zero-swap kernel scope before importing inference. Default arguments are
 unchanged. Focused loader, motion and scope checks passed 45 cases. The next test
 uses the existing owned ProcessManager and a bounded actual native window; it is
 an engineering qualification, not yet ordinary agent end-to-end acceptance.
+
+## Bounded native rendering result
+
+The corrected private native window at source `c093d7e` produced all 81 frames
+at 384×384/eight steps with an audio track in about109 seconds. The owned scope
+observed the actual11-GiB kernel limit, zero swap and no OOM; process ownership,
+expiry and cleanup remained with ProcessManager. All source bytes, installed
+model observations and the original operator GPU/Q8/46080 preset were preserved.
+First/middle/final frames retain the clothed synthetic portrait and coherent face,
+with visible mouth movement. This is a short technical/coherent-face result,
+not a claim of exact lip-sync, Standard output parity or every size/duration.
+The initial directory-validation rejection is retained separately and restored
+the operator preset before correction.
+
+## Product integration candidate
+
+Expose an optional `bounded_11g` profile only with
+`AI_STATION_ECHO_BOUNDED_PROFILE=true` and working private user memory scopes.
+Keep it disabled by default until local qualification. The same existing full
+BF16 weights are used; this profile is constrained to384×384 and at least8 steps.
+No precision/path/command/memory-limit field is accepted from HTTP. The native
+entry checks its actual canonical Run scope before importing inference.
+
+Short/full/avatar-agent requests freeze the profile, source IDs, quality and
+original expiry. Default serialization omits the field to preserve saved receipts.
+Every bounded segment reserves11264 MiB plus existing headroom; Standard retains
+its old reservation/argv. Speech handoffs, resume, composition metadata and native
+requests retain the selection. Unavailable profiles fail without a fallback.
+
+Fresh Avatars/Chat can recommend the available bounded profile when measured free
+RAM is insufficient for Standard. Manual/saved settings stay authoritative.
+Agents/conversation review offers a separate explicit profile/time suggestion;
+it preserves source IDs, enabled state, existing larger limits and schedules.
+No render writes, auto-activation or Run is introduced by the editor.
+
+Before merge: full normal Python/Runner and UI gates, exact image/Compose checks,
+compiled real API/SQLite1440/390 review, actual ordinary agent→native windows→
+verified full output, visual review and controller/native backed-up rollout.
+Product evidence: `data/acceptance/echo-memory-profile-20261024`. The complete
+platform goal remains open.

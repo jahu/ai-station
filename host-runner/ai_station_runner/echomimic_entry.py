@@ -24,12 +24,18 @@ def main():
     parser.add_argument("--motion-output")
     parser.add_argument("--motion-profile")
     parser.add_argument("--motion-relative")
-    parser.add_argument("--station-mapped-run-id")
+    profile = parser.add_mutually_exclusive_group()
+    profile.add_argument("--station-mapped-run-id")
+    profile.add_argument("--station-bounded-run-id")
     options, arguments = parser.parse_known_args()
     if options.station_mapped_run_id:
         from ai_station_runner.echo_loading import qualification_scope
 
         qualification_scope(options.station_mapped_run_id)
+    elif options.station_bounded_run_id:
+        from ai_station_runner.memory_scope import require_scope
+
+        require_scope(options.station_bounded_run_id, 11264)
     sys.path.insert(0, options.runtime_dir)
     inference = importlib.import_module("infer_flash")
     base = inference.WanFunInpaintAudioPipeline
@@ -200,7 +206,7 @@ def main():
     inference.WanFunInpaintAudioPipeline = OffloadedPipeline
     sys.argv = [sys.argv[0], *arguments]
     loading = nullcontext()
-    if options.station_mapped_run_id:
+    if options.station_mapped_run_id or options.station_bounded_run_id:
         from ai_station_runner.echo_loading import mapped_loading
 
         loading = mapped_loading(inference, base_model)

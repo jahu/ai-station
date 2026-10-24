@@ -1125,18 +1125,21 @@ class AssistantExecutor:
                     run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                     message.content = "Reading the selected repository's open issues and pull requests. Its snapshot will appear here; no changes are made on GitHub."
         elif plan.action == "avatar.animate":
+            from app.avatars import capabilities as avatar_capabilities
             from app.media_jobs import FullAvatarRequest, publish_avatar
 
             if len(images) != 1 or not params.get("audio_artifact_id"):
                 message.content = "Attach exactly one portrait and one speech WAV to animate an avatar."
             else:
                 try:
+                    avatar_profile = avatar_capabilities().get("recommended_memory_profile", "default")
                     request = FullAvatarRequest(
                         client_request_id=UUID(run.id),
                         image_artifact_id=images[0],
                         audio_artifact_id=params["audio_artifact_id"],
                         prompt=params["content"][:2000],
                         speech_text=params.get("speech_text") or avatar_speech_text(params["content"]),
+                        memory_profile=avatar_profile,
                     )
                     publish_avatar(session, request, task=run.task, parent_run_id=run.id)
                 except (ValidationError, HTTPException) as exc:
@@ -1146,7 +1149,15 @@ class AssistantExecutor:
                         else "Use a portrait, intact WAV and spoken text of up to 1000 characters."
                     )
                 else:
-                    message.content = "Animating the complete recording locally. The full talking avatar will appear here and in Library."
+                    message.content = (
+                        "Animating the complete recording locally. "
+                        + (
+                            "Using the reduced-RAM profile at full model precision. "
+                            if avatar_profile != "default"
+                            else ""
+                        )
+                        + "The full talking avatar will appear here and in Library."
+                    )
         elif plan.action == "video.generate":
             from app.media_jobs import LongVideoRequest, publish_video
             from app.video import VideoRequest, capabilities, create_video_run
