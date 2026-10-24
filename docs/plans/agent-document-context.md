@@ -38,21 +38,21 @@ Qualify real CPU PDF/Python paths separately from fake inference. Release remain
 
 ## Reviewed qualification — PR #411
 
-The complete CPU/Runner gate collected3392 cases:3383 passed and nine explicitly
-opt-in integrations skipped. Frontend format/lint/types/build and747 UI tests pass.
+The complete CPU/Runner gate collected 3392 cases: 3383 passed and nine explicitly
+opt-in integrations skipped. Frontend format/lint/types/build and 747 UI tests pass.
 The final UI-only correction wraps long text inside source cards and identifies
 text documents separately from PDF page counts; backend bytes remain identical
 to the full CPU-tested head. Exact image/source/assets and normal/dev/private-LAN
 Compose checks are recorded alongside all gate logs under
 `data/acceptance/agent-document-context-20261024`.
 
-Actual compiled1440/390 browser runs cover upload/save/reload, report PDF sources,
+Actual compiled 1440/390 browser runs cover upload/save/reload, report PDF sources,
 conversation-editor autosave and offline Python results. Two native Docker Python
-jobs each consumed the complete180025-character capture and calculated27 from its
+jobs each consumed the complete 180025-character capture and calculated 27 from its
 last line. Inference was injected; this is not a new GPU/model qualification.
 The actual non-root/read-only application image also extracts PDF/text with its
-normal seccomp/prctl behavior and no mounts/networking. The private0034→0035
-migration preserves every original table value and all18 legacy definition hashes.
+normal seccomp/prctl behavior and no mounts/networking. The private 0034→0035
+migration preserves every original table value and all 18 legacy definition hashes.
 
 Failed initial browser harness attempts are retained: one incorrectly treated
 workflow publication as completion; another used an external API pause while
