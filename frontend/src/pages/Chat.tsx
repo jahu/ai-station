@@ -2,6 +2,7 @@ import AnalysisAgentDialog, {
   type AnalysisAgentSource,
 } from "./AnalysisAgentDialog";
 import DataAgentDraftSource from "./DataAgentDraftSource";
+import AgentControlRun from "./AgentControlRun";
 import CreationContextNotice, {
   type CreationContext,
 } from "./CreationContextNotice";
@@ -110,6 +111,7 @@ type Message = ActionResult & {
   created_at: string;
   run_id: string | null;
   run_status: string | null;
+  agent_control_run?: { id: string; status: string };
   error_message: string;
   metadata: {
     transcript_sources?: {
@@ -979,6 +981,12 @@ function Transcript({
                     }
                   />
                 )}
+              {message.role === "assistant" && message.agent_control_run && (
+                <AgentControlRun
+                  run={message.agent_control_run}
+                  tabIndex={current ? 0 : -1}
+                />
+              )}
               {message.metadata.agent_id && (
                 <AssistantAgentDraft
                   agentId={message.metadata.agent_id}

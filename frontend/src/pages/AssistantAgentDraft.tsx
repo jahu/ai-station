@@ -879,6 +879,13 @@ export function AssistantAgentDraft({
               ) : null}
             </dl>
             {videoSetup}
+            {agent.enabled && (
+              <p className="muted assistant-agent-brief-note">
+                In Work, say “Run this agent”, “Pause this agent” or “Stop this
+                agent” to control the latest agent created in this conversation.
+                Pause turns off future runs; Stop targets its current execution.
+              </p>
+            )}
             {!agent.enabled && (
               <p className="muted assistant-agent-brief-note">
                 {history.length || agent.last_run_at

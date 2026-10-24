@@ -379,6 +379,12 @@ class EnableBody(VersionBody):
 def set_enabled(agent_id: UUID, body: EnableBody, session: DB):
     agent = get_agent(session, agent_id)
     version(agent, body.expected_updated_at)
+    if not body.enabled:
+        from app.agent_lifecycle import pause_agent
+
+        pause_agent(session, agent)
+        session.commit()
+        return definition_dict(agent, session)
     from pydantic import ValidationError
 
     try:

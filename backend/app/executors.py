@@ -25,6 +25,7 @@ from app.codex_coding import CodexProposalExecutor
 from app.commit_executor import ReviewedCommitExecutor
 from app.config import get_settings
 from app.connectors import HttpConnectorExecutor
+from app.conversation_agent_control import AgentControlExecutor
 from app.cursor_executor import CursorProposalExecutor
 from app.data_agents import DataGenerateExecutor, DataResultExecutor
 from app.data_inputs import DataInspectionExecutor
@@ -347,6 +348,7 @@ EXECUTORS = {
     "agent_workflow": AgentWorkflowExecutor(),
     "agent_media": AgentMediaExecutor(),
     "agent_draft": AgentDraftExecutor(),
+    "agent_control": AgentControlExecutor(),
     "agent_tool": AgentToolExecutor(),
     "agent_market": MarketExecutor(),
     "market_feed": MarketFeedExecutor(),

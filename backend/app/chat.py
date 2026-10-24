@@ -252,6 +252,7 @@ def detail(conversation_id: UUID, session: DB):
         .order_by(Run.created_at.desc(), Run.id.desc())
         .limit(1)
     )
+    from app.conversation_agent_control import linked_run
     from app.work_context import project_context
 
     return {
@@ -269,6 +270,11 @@ def detail(conversation_id: UUID, session: DB):
                 "run_status": runs[m.run_id].status if m.run_id in runs else None,
                 "error_message": runs[m.run_id].error_message if m.run_id in runs else "",
                 **task_results(session, m, runs.get(m.run_id)),
+                **(
+                    {"agent_control_run": linked}
+                    if (linked := linked_run(session, m, runs.get(m.run_id)))
+                    else {}
+                ),
             }
             for m in reversed(messages)
         ],
@@ -555,6 +561,9 @@ def submit_message(conversation_id, body, session, *, commit=True):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
     mode = turn_execution_mode(row, body)
+    from app.conversation_agent_control import prepare as prepare_agent_control
+
+    body, agent_control = prepare_agent_control(session, row, body, mode)
     from app.conversation_data import prepare_turn as prepare_data_turn
     from app.conversation_music import prepare_turn
     from app.selected_data_agent import prepare as prepare_selected_agent
@@ -596,7 +605,11 @@ def submit_message(conversation_id, body, session, *, commit=True):
     if mode in {"chat", "work"}:
         body = body.model_copy(update={"execution_mode": mode})
     # Deterministic host inspection/runtime control does not contact an LLM.
-    if body.continuation is None and (not use_assistant or assistant_needs_provider(body)):
+    if (
+        agent_control is None
+        and body.continuation is None
+        and (not use_assistant or assistant_needs_provider(body))
+    ):
         snapshot_provider(session, row)  # Validate the selected provider before attachments.
     user = Message(
         conversation_id=row.id,
@@ -640,7 +653,11 @@ def submit_message(conversation_id, body, session, *, commit=True):
         "execution_mode": mode,
         "execution_mode_override": body.execution_mode,
     }
-    if body.continuation is not None:
+    if agent_control is not None:
+        from app.conversation_agent_control import enqueue as enqueue_agent_control
+
+        result = enqueue_agent_control(session, row, user, body, agent_control)
+    elif body.continuation is not None:
         from app.work_context import enqueue_continuation
 
         result = enqueue_continuation(session, row, user, body)

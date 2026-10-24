@@ -1,3 +1,7 @@
+> Active increment: conversation agent run/pause/Stop, `feat/conversation-agent-control`,
+> based on qualified #416. See [contracts](conversation-agent-control.md).
+> Qualification and deployment are pending; the current live release remains #416.
+
 > Current increment: [selected agent families](selected-agent-families.md), PR #416,
 > branch `feat/selected-agent-families`, base #415. Selected documents/public sources
 > can propose Report/Local code/Data; data files/creation retain Data. Controller
@@ -75,10 +79,10 @@ main/master operations. Preserve original root Memory WIP and all existing servi
 
 LAN UI: http://192.168.1.121:8765. Always read
 `data/acceptance/safety-redeploy-20261012/deployment.json` and the corresponding
-post-deployment qualification before relying on a release name or PID. #413 is the
-latest qualified deployment; #414 is the selected-analysis-action increment.
-Check `data/acceptance/analysis-agent-action-20261024/post-deployment-qualified.json`
-before treating #414 as live. Deploy into a detached release worktree; preserve the
+post-deployment qualification before relying on a release name or PID. #416 is the
+latest qualified deployment. Check
+`data/acceptance/selected-agent-families-20261024/post-deployment-qualified.json`
+for its exact qualification. Deploy into a detached release worktree; preserve the
 native Runner, ready model container/preset, operator login and all original rows.
 
 ## Completed increment: selected documents

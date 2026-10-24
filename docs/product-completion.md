@@ -1,3 +1,7 @@
+> Active increment: [conversation agent controls](plans/conversation-agent-control.md)
+> connect explicit Work commands to the existing reviewed lifecycle without blocking
+> the conversation. Candidate verification is pending; #416 remains the live baseline.
+
 > Saved HTTP/API sources are implemented for explicitly reviewed agent workflows,
 > including report preparation and offline local code/data analysis. Authenticated
 > reads use server-only credentials and exact policy snapshots; out-of-band key
