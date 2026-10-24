@@ -115,7 +115,7 @@ function OfflineRecoveryGuide({ copy }: { copy: BackupInspect }) {
   )
     return null;
   return (
-    <details className="mt">
+    <details className="maintenance-recovery-guide mt">
       <summary>Recover this backup on the workstation</summary>
       <p className="muted">
         Use a terminal in the same AI Station checkout and data configuration.
@@ -225,6 +225,8 @@ function BackupCards({
   );
   const selected = items[index];
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    // The recovery disclosure owns its native keys, rather than opening a Run.
+    if ((event.target as HTMLElement).closest("details")) return;
     onKeyDown(event);
     if (event.key !== "Enter" || event.defaultPrevented) return;
     const target = event.target as HTMLElement;
@@ -257,7 +259,11 @@ function BackupCards({
             (item) => item.filename === "ai-station.sqlite",
           );
           return (
-            <div key={row.id} {...itemProps(i, row.id)}>
+            <div
+              className="maintenance-backup-row"
+              key={row.id}
+              {...itemProps(i, row.id)}
+            >
               <div>
                 <strong>{row.summary || "SQLite backup"}</strong>
                 <p>

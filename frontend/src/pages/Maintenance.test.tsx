@@ -532,6 +532,8 @@ for (const issue of [null, "changed-hash", "failed-integrity", "invalid-id"]) {
       expect(guide).not.toBeNull();
       fireEvent.click(guide!);
       expect(guide!.closest("details")?.open).toBe(true);
+      expect(fireEvent.keyDown(guide!, { key: "Enter" })).toBe(true);
+      expect(screen.queryByRole("heading", { name: "Backup Run" })).toBeNull();
       expect(
         screen.getByText(`./scripts/restore.sh --backup-run ${id}`),
       ).not.toBeNull();
