@@ -96,6 +96,7 @@ export default function AgentDataFiles({
           value={value}
           disabled={busy}
           hasResearch={hasContext}
+          hasMemory={allowMemory}
           onChange={onChange}
         />
       )}

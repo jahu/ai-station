@@ -66,7 +66,9 @@ it("shows captured own memory, recorded versions, origin and API sources in the 
   );
   const context = screen.getByLabelText("Context for this task");
   fireEvent.click(context.querySelector("summary")!);
-  expect(screen.getByText("Observed values 12 and 15")).toBeTruthy();
+  expect(
+    screen.getByText("Observed values 12 and 15", { selector: "p" }),
+  ).toBeTruthy();
   expect(
     screen.getByRole("link", { name: "Inspect memory" }).getAttribute("href"),
   ).toBe("/memory/entry");

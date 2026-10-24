@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import type { Run } from "../api";
 
 import { memoryObservation } from "./agentResearchResult";
+import "./AgentMemorySources.css";
 
 export default function AgentMemorySources({ runs }: { runs: Run[] }) {
   return (
@@ -34,9 +35,15 @@ export default function AgentMemorySources({ runs }: { runs: Run[] }) {
                 {value.entries.map((entry) => (
                   <li key={entry.id}>
                     <p>
-                      {entry.content.slice(0, 400)}
-                      {entry.content.length > 400 ? "…" : ""}
+                      {entry.content.split("\n\n", 1)[0].slice(0, 300)}
+                      {entry.content.split("\n\n", 1)[0].length > 300
+                        ? "…"
+                        : ""}
                     </p>
+                    <details className="agent-memory-capture">
+                      <summary>Captured content</summary>
+                      <pre>{entry.content}</pre>
+                    </details>
                     <p className="muted">
                       Saved version ·{" "}
                       {new Date(entry.updated_at).toLocaleString()}

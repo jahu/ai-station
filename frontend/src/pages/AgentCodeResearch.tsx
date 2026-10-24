@@ -97,8 +97,9 @@ export default function AgentCodeResearch({
         {hasPages && pages.partial ? " · Some pages unavailable" : ""}
       </summary>
       <p className="muted">
-        References for this task. Search results and opened pages are listed
-        separately.
+        {memories.length
+          ? "Captured observations for this task. Saved memory and network sources are shown separately."
+          : "References for this task. Search results and opened pages are listed separately."}
       </p>
       <AgentMemorySources runs={memories} />
       {hasConnected && (
