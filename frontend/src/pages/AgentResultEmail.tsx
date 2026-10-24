@@ -104,6 +104,7 @@ function ResultEmailFields({
         <label>
           Deliver results to
           <select
+            aria-label="Deliver results to"
             value={value?.connector_id ?? ""}
             onChange={(event) =>
               select(rows.find((row) => row.id === event.target.value))
@@ -128,6 +129,7 @@ function ResultEmailFields({
             <label>
               Sending mode
               <select
+                aria-label="Sending mode"
                 value={value.mode}
                 onChange={(event) =>
                   onChange({
@@ -143,6 +145,7 @@ function ResultEmailFields({
             <label>
               Email content
               <select
+                aria-label="Email content"
                 value={value.content}
                 onChange={(event) =>
                   onChange({
@@ -327,6 +330,7 @@ export function ResultEmailApproval({
       ) : (
         <label className="project-checkbox">
           <input
+            aria-label="Subject prefix"
             type="checkbox"
             disabled={authorization?.ready === false}
             checked={checked}
