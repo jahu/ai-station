@@ -1,90 +1,80 @@
 # AI Station implementation handoff
 
-The full platform goal stays active. Work on useful general local agents and
-conversation-first workflows; standalone IDE/external coding expansion remains
-deferred. Preserve existing services and records. No subagents, unapproved model
-downloads, driver changes, public exposure or main/master operations.
+The full platform goal stays active. Prioritize useful local agents and
+conversation-first workflows; standalone IDE/external coding expansion is deferred.
+No subagents, unapproved model downloads, driver changes, public exposure or
+main/master operations. Preserve existing services, user records and root WIP.
 
 ## Authoritative live state — 2026-10-24
 
-PR #403 is squash-merged to develop as `a3610c7d5f5b987cb81d26853712c0e9705b1571`,
-reviewed source `3181519c9f73ceffb6a6cdac7f2dfa6608dfe2a8`.
-Release: `.tools/ui-conversation-rendered-data-20261024`.
-The source/image/backup/launcher authority is
-`data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before
-another rollout. LAN UI: http://192.168.1.121:8765 (password preserved).
-Qualification: `data/acceptance/conversation-rendered-data-20261024/post-deployment-qualified.json`.
+PR #405 merged to develop as `7ea7da9a321fa007a49751eac22548227a7a506f`, reviewed
+source `6748bf350199fa9f296e92c9a8c767b2db87f871`. Controller release:
+`.tools/ui-data-output-declarations-20261024`. LAN UI: http://192.168.1.121:8765.
+The deployment/image/backup authority remains
+`data/acceptance/safety-redeploy-20261012/deployment.json`.
+Qualification: `data/acceptance/data-output-declarations-20261024/post-deployment-qualified.json`.
 
-Delivered: Chat/Work's explicit Data analysis can read reviewed URLs with
-JavaScript before offline Python, without creating an Agent. Static GET remains
-the default, false flags preserve receipt identity, and the exact frozen scope
-binds native prepare/final-adoption. Offline captured-data follow-up grants no
-Browser; refresh retains the explicit reviewed option. Compiled desktop/phone
-first/follow-up/refresh/download/reload/Stop and source UI pass. Actual public
-JavaScript capture → Local Auto at 131072 context → native Python returned the
-independently checked count 10 and exact CSV, in one Python attempt. The original
-model/GPU/cache/context was restored, native PID unchanged, QA conversation
-archived, no persistent Agent created and original checkout preserved.
+Delivered: instruction-only CSV/Excel/PNG/text creation in Chat/Work and persistent
+Python agents, explicit Files & data controls, natural clear first Send, generated
+workbook reuse and original input preservation. Actual normal-worker local model
+at 131072 context created exact independently checked ten-row CSV/XLSX and PNG in
+one Python attempt. Operator preset restored; ready instance now
+`7668f4c4-7da0-41d9-afcb-265205a8f76d`. QA conversation
+`f0f36541-0e2b-46bc-acb9-d5c69f707e72` archived. No Agent was created.
 
-Full #403 gate: 3240 Python/Runner cases (3231 passes/nine explicit opt-in skips),
-719 UI tests, Ruff, UI format/lint/types/build, exact image/backend/assets and
-normal/dev/private-LAN Compose. Compiled API/SQLite/disposable-Git checks use
-fixture Browser/model/Python; actual normal-worker qualification is separate.
+Native service PID `2626257` stays unchanged in
+`.tools/ui-echo-memory-profile-20261024`, source fingerprint
+`83eee0fc6ffc234ab185a4fb15fbc03cedd5846f57f1c21dca5e45057ab20644`.
+Socket remains0600; schema0033, auth/IDs/agent definitions/due instants preserved.
+All QA agents are paused. Query actual live state before another rollout.
 
-PR #402 (`e05d1c6`, reviewed `e434d65`) delivers the equivalent persistent
-local-code/Python agent research. Real Browser/local-model/Python count 10 used
-two bounded Python attempts; operator preset restored and QA agents paused.
-Evidence: `data/acceptance/agent-rendered-research-20261024/post-deployment-qualified.json`.
-The initial QA marker was absent and correctly returned zero; rejected test
-assumptions and corrected independent checks remain preserved. Do not repeat it.
+Full #405 gate: 3289 Python/Runner cases (3280 pass/nine opt-in skips), Ruff,
+724 UI tests reused under exact unchanged frontend-source comparison, exact Docker
+backend/assets, three Compose configurations and new compiled1440/390 API/SQLite
+flows. CPU replay of the original real-model response also verifies bounded
+intentional repair, all ten CSV/XLSX rows, PNG and workbook follow-up total55.
+The first #404 actual-model test failed because its manifest redundantly listed
+mandatory CSV/JSON. That failed evidence remains under
+`data/acceptance/local-file-creation-20261024`; #405 corrects it without expanding
+the output allowlist or adding model calls. Do not relabel the failure.
+Remote merged #404/#405 feature branches were deleted after qualification.
 
-PR #401 (`d00887d`, reviewed `df215f9`) fixes dependency-pinned GPU model consumers
-with ordinary preparation/load Runs. Active/unrelated consumers remain protected;
-Stop, expiry, recovery and shared startup have coverage. Its evidence is
-`data/acceptance/dependent-consumer-eviction-20261024/post-deployment-qualified.json`.
-Do not rebuild eviction/reload or claim a new real GPU handoff smoke.
-No operator-inbox mail delivery or physical-phone test is claimed.
+Earlier rendered public-page/local-code/data, agent result-email, owned model
+restoration and media deliveries remain recorded in
+[product status](../product-completion.md) and the preserved
+[historical handoff](implementation-handoff-history-20261024.md).
+Do not repeat their GPU jobs or treat historical next labels as new work.
 
-## Current increment and required correction
+## Current owned increment
 
-PR #404 merged as `a66163273ab50d4429e4728f0e5e2c7cb359b899`, reviewed source
-`0de3177c6712fa84cb0e944cf8bded97159004c9`. The controller is deployed from
-`.tools/ui-local-file-creation-20261024`, with backup/auth/IDs/native PID preserved.
-Normal 3278 Python cases (3269 pass/nine skip), 724 UI tests, exact image/Compose,
-compiled desktop/mobile and actual CPU creation/repair/workbook follow-up pass.
-However its first actual local-model qualification FAILED before Python: the model
-listed mandatory CSV/JSON in addition to the three allowed optional exports.
-Do not report the whole feature real-qualified. The QA conversation is archived
-and original model preset restored; full failed evidence is retained.
+Branch `feat/file-creation-conversation-context`,
+`.tools/file-creation-conversation-context`, based on #405.
+Read [creation context](file-creation-conversation-context.md).
+The actual API/worker regression proved plain prior conversation values were lost
+before generation. Initial red evidence:
+`data/acceptance/creation-conversation-context-red.log`.
 
-Branch `fix/data-output-declarations`, `.tools/data-output-declarations`, removes
-only redundant exact mandatory names from the generated Script declaration,
-retaining bounded unique input and the same strict native optional allowlist.
-Metadata/event keep the redundant declarations inspectable. Eleven regression
-cases pass. Finish native CPU replay of the saved actual response, full applicable
-local checks, PR review/merge and backed-up controller rollout. Then rerun actual
-local-model zero-input creation and independently check CSV/XLSX cells/PNG; optional
-report.txt is allowed and must not make the verifier falsely reject correct files.
-Proof directory: `data/acceptance/data-output-declarations-20261024`.
-Full-platform goal stays active; no subagents or extra model downloads.
+Candidate adds bounded same-conversation plain-text snapshots with source IDs,
+hashes and explicit omission/excerpt flags, bound on current message/root Run.
+The existing data definition quotes the text to the local generator; current goal
+retains priority and no files/permissions/URLs are inherited. Worker scope/source
+validation precedes execution. Chat's collapsed context note exposes the exact
+text without active HTML. No native, schema or dependency changes.
 
-## Preserved work and operations
+Seventy focused backend cases and20 related UI tests/types pass. Full-source
+gates are next; inspect their actual handles/logs before restarting. Complete full gates, exact image/compiled UI,
+review and develop rollout, then a small real-context creation qualification.
+Live remains #405 until the next post-deployment-qualified report passes.
 
-Root checkout `feat/memory-scope-tagged-runs` at `6ba096d` has original README,
-architecture, Memory docs/UI/tests and handoff WIP. Leave it untouched; that
-functionality was already ported in #319. Use owned feature/release worktrees.
-Keep .venv/node_modules links untracked. Node runtime:
-`.tools/node-runtimes/node-v22.23.3-linux-x64/bin`.
+## Operations and preserved work
 
+Root `feat/memory-scope-tagged-runs` at `6ba096d` retains original README,
+architecture, Memory docs/UI/tests and handoff WIP. Do not edit/reset it; that
+functionality was already ported in #319. Keep .venv/node_modules links untracked.
+Node: `.tools/node-runtimes/node-v22.23.3-linux-x64/bin`.
 Read AGENTS.md and architecture/security/README. Complete local checks replace
-manual hosted Actions under the explicit account-credit exception; failing tests
-are not waived. Full diff self-review and satisfactory checks precede squash
-merge to develop. Controller restarts are authorized; unchanged Runner/model
-should stay running. Back up and preserve IDs/auth/definitions/due instants.
-Whisper-small download consent remains pending. Do not infer its approval.
-
-The [product ledger](../product-completion.md) retains full scope and acceptance.
-The [agent-first direction](agent-first-product.md) supersedes IDE expansion.
-This handoff replaces a long historical timeline for efficient continuation;
-[all earlier notes remain preserved](implementation-handoff-history-20261024.md).
-Historical current/next labels there are evidence, not new instructions.
+manual hosted Actions under the user-approved account-credit exception; actual
+failures are never waived. Full diff review and satisfactory checks precede squash
+merge to develop. Controller restarts are authorized; preserve unchanged Runner
+and model. Back up before rollout. Whisper-small consent remains pending; do not
+infer a download approval. No operator-inbox email or physical-phone test claim.

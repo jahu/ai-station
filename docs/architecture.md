@@ -31,6 +31,10 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Conversation file creation freezes bounded earlier plain text on the current
+message and Run. Source ownership/hashes gate execution; quoted text grants no
+tools, attachment reads or networking. See [creation context](plans/file-creation-conversation-context.md).
+
 Explicit file creation reuses the existing local Python/data graph with zero
 input files. Its frozen operation and ordinary output inspection bind later reuse.
 See [local file creation](plans/local-file-creation.md).

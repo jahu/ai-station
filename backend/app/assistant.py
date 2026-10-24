@@ -609,6 +609,13 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
                 raise ValueError("The referenced data input changed before enqueue")
         except ValueError as exc:
             raise HTTPException(422, str(exc)) from exc
+    from app.creation_context import freeze as freeze_creation_context
+
+    creation_context = (
+        freeze_creation_context(session, conversation, user)
+        if body.data is not None and body.data.operation == "create"
+        else None
+    )
     needs_provider = assistant_needs_provider(body)
     snapshot = snapshot_provider(session, conversation) if needs_provider else {}
     task = create_task(
@@ -650,6 +657,7 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
                 else {}
             ),
             **({"data_inputs": data_inputs} if data_inputs is not None else {}),
+            **({"data_creation_context": creation_context} if creation_context else {}),
             **(
                 {"data_reference": user.metadata_json["conversation_reference"]}
                 if body.data is not None
@@ -696,6 +704,7 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
             **user.metadata_json,
             "data_scope": body.data.model_dump(mode="json"),
             "data_request_run_id": run.id,
+            **({"creation_context": creation_context} if creation_context else {}),
         }
     user.metadata_json = {
         **user.metadata_json,
