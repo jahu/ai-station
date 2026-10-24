@@ -15,6 +15,9 @@ export default function DataAgentDraftSource({ value }: { value: unknown }) {
     !definition.tools.every((name) => typeof name === "string")
   )
     return null;
+  const selected = source.kind === "selected_inputs";
+  const data = definition.data as Record<string, unknown> | undefined;
+  const creation = data?.operation === "create";
   const labels = [source.input_names, source.documents].flatMap((values) =>
     Array.isArray(values)
       ? values.filter((name): name is string => typeof name === "string")
@@ -23,12 +26,22 @@ export default function DataAgentDraftSource({ value }: { value: unknown }) {
   return (
     <section
       className="panel agent-document-sources data-agent-draft-source"
-      aria-label="Original analysis for this agent"
+      aria-label={
+        selected
+          ? "Selected inputs for this agent"
+          : "Original analysis for this agent"
+      }
     >
-      <h3>Drafted from this analysis</h3>
+      <h3>
+        {selected
+          ? "Inputs selected for this agent"
+          : "Drafted from this analysis"}
+      </h3>
       <p className="muted">
-        Saved source snapshot. Later edits to the agent definition do not
-        rewrite it.
+        {selected
+          ? "Saved creation request and input selection."
+          : "Saved source snapshot."}{" "}
+        Later edits to the agent definition do not rewrite it.
       </p>
       <p className="agent-document-preview">
         {definition.goal.slice(0, 600)}
@@ -36,7 +49,9 @@ export default function DataAgentDraftSource({ value }: { value: unknown }) {
       </p>
       {definition.goal.length > 600 && (
         <details className="agent-memory-capture">
-          <summary>Original analysis instruction</summary>
+          <summary>
+            {selected ? "Creation request" : "Original analysis instruction"}
+          </summary>
           <pre>{definition.goal}</pre>
         </details>
       )}
@@ -46,18 +61,20 @@ export default function DataAgentDraftSource({ value }: { value: unknown }) {
         </p>
       )}
       <p className="muted">
-        {source.live_public_sources === true
-          ? "At creation, the draft retained live public sources for each execution."
-          : "At creation, the draft retained selected saved files or captured data."}{" "}
-        A new private workspace is created for the agent. Review the schedule
-        and enable it when ready.
+        {creation
+          ? "At creation, the draft selected file creation from instructions, without reading existing files."
+          : source.live_public_sources === true
+            ? "At creation, the draft retained live public sources for each execution."
+            : "At creation, the draft retained selected saved files or captured data."}{" "}
+        The agent will use its own private workspace. Review the schedule and
+        enable it when ready.
       </p>
       <p className="muted">Retained tools: {definition.tools.join(", ")}</p>
       <Link
         className="text-link"
         to={`/runs/${encodeURIComponent(source.source_run_id)}`}
       >
-        Inspect original analysis
+        {selected ? "Inspect agent creation" : "Inspect original analysis"}
       </Link>
     </section>
   );

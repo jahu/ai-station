@@ -376,3 +376,10 @@ the ordinary agent/data graph with a fresh private workspace and new deadline.
 The result action submits an ordinary idempotent conversation Work turn with the
 exact selected analysis root. Its schedule dialog never enables the agent or
 changes the saved conversation mode/model, and preserves the main composer draft.
+
+Selected-input agent creation reuses the existing Agent Factory child. API
+normalization captures metadata only and clears one-off data execution. The worker
+verifies actual current request and frozen source bytes, performs bounded local
+JSON drafting and publishes a disabled definition/artifact atomically with terminal
+Run state. Stop/replay and lease recovery stay unchanged. Source tools, Python and
+owned workspace creation occur only during later explicit agent activation/run.

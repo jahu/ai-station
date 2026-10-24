@@ -682,6 +682,11 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         else chat_permissions(
             snapshot,
             ([] if getattr(body, "execution_mode", None) == "chat" else ["manage_agents"])
+            + (
+                ["filesystem_read"]
+                if user.metadata_json.get("selected_data_agent", {}).get("artifact_ids")
+                else []
+            )
             + (["network_read", "github_read"] if body.github else [])
             + (["filesystem_read", "workspace_write"] if body.audio_artifact_id else [])
             + (
@@ -698,6 +703,14 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
             ),
         ),
     )
+    if user.metadata_json.get("selected_data_agent"):
+        selected = {
+            **user.metadata_json["selected_data_agent"],
+            "source_run_id": run.id,
+            "source_user_message_id": user.id,
+        }
+        run.parameters = {**run.parameters, "selected_data_agent": selected}
+        user.metadata_json = {**user.metadata_json, "selected_data_agent": selected}
     from app.llama import prepare_consumer
 
     if design_pages:
@@ -1435,6 +1448,11 @@ class AssistantExecutor:
                     schedule_timezone=params.get("schedule_timezone") or "UTC",
                 )
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                if params.get("selected_data_agent"):
+                    message.metadata_json = {
+                        **message.metadata_json,
+                        "selected_data_agent": params["selected_data_agent"],
+                    }
                 if params.get("data_agent_source"):
                     message.metadata_json = {
                         **message.metadata_json,

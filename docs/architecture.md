@@ -777,3 +777,9 @@ The [selected-analysis action](plans/analysis-agent-action.md) adds an optional 
 conversation message reference and a focused schedule dialog to the same draft
 service. Exact same-conversation root selection replaces latest-result lookup only
 when explicitly supplied; all existing source verification and execution apply.
+
+[Direct selected-input drafts](plans/selected-input-agent-draft.md) normalize an
+explicit Work creation request before one-off analysis dispatch. Existing data
+selection becomes frozen user/orchestrator/agent_draft metadata. The existing
+factory proposes bounded identity/task wording/schedule and publishes a disabled
+Agent. No new executor, native protocol, database table or preliminary data Run.

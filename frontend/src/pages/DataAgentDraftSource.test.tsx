@@ -71,3 +71,23 @@ it("does not turn incomplete or invented metadata into a source claim", () => {
   );
   expect(screen.queryByRole("region")).toBeNull();
 });
+
+it("identifies current selected inputs as a creation request, without claiming a previous analysis", () => {
+  render(
+    <MemoryRouter>
+      <DataAgentDraftSource value={{ ...source, kind: "selected_inputs" }} />
+    </MemoryRouter>,
+  );
+  expect(
+    screen.getByRole("region", { name: "Selected inputs for this agent" }),
+  ).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect agent creation" })
+      .getAttribute("href"),
+  ).toBe("/runs/original-analysis");
+  expect(screen.queryByText("Drafted from this analysis")).toBeNull();
+  expect(
+    screen.getByText(/Saved creation request and input selection/),
+  ).toBeTruthy();
+});

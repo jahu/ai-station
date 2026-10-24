@@ -183,7 +183,8 @@ def resolve(session, conversation, body, mode):
     from app.chat_providers import BUILTIN_KEY, get_provider
     from app.models import ChatWorkContext
 
-    if session.get(ChatWorkContext, conversation.id):
+    binding = session.get(ChatWorkContext, conversation.id)
+    if binding is not None and binding.task_id:
         raise HTTPException(422, "Open General Work to create an agent from an analysis")
     if (
         conversation.provider != BUILTIN_KEY

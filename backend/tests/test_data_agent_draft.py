@@ -452,3 +452,27 @@ def test_explicit_action_never_falls_back_to_another_result(data_environment, in
     with session_factory()() as s:
         assert not list(s.scalars(select(Agent)))
         assert not list(s.scalars(select(Run).where(Run.executor_type == "agent_draft")))
+
+
+def test_repeat_analysis_after_project_selection_was_cleared(data_environment, monkeypatch):
+    from app.models import ChatWorkContext
+
+    api = TestClient(app)
+    cid, _ = start(api, data_environment, mode="work")
+    drain()
+    with session_factory()() as db:
+        db.add(ChatWorkContext(conversation_id=cid, task_id=None))
+        db.commit()
+
+    async def stream(self, **kwargs):
+        yield json.dumps(proposal())
+
+    monkeypatch.setattr(LocalChatProvider, "stream", stream)
+    response = api.post(
+        f"/api/chat/conversations/{cid}/messages",
+        json={"content": "Create an agent that repeats this analysis every five minutes."},
+    )
+    assert response.status_code == 202, response.text
+    drain()
+    with session_factory()() as db:
+        assert db.scalar(select(Agent)) is not None

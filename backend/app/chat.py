@@ -557,7 +557,9 @@ def submit_message(conversation_id, body, session, *, commit=True):
     mode = turn_execution_mode(row, body)
     from app.conversation_data import prepare_turn as prepare_data_turn
     from app.conversation_music import prepare_turn
+    from app.selected_data_agent import prepare as prepare_selected_agent
 
+    body, selected_data_agent = prepare_selected_agent(session, row, body, mode)
     body = prepare_data_turn(body)
     from app.conversation_data_reference import resolve as resolve_data_reference
 
@@ -602,6 +604,8 @@ def submit_message(conversation_id, body, session, *, commit=True):
         content=message_content(body.content, body.attachments),
         metadata_json={"user_text": body.content} if body.attachments else {},
     )
+    if selected_data_agent:
+        user.metadata_json = {**user.metadata_json, "selected_data_agent": selected_data_agent}
     if data_agent_source:
         user.metadata_json = {**user.metadata_json, "data_agent_source": data_agent_source}
     if result_reference:
