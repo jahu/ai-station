@@ -1,11 +1,18 @@
-> Active candidate: [conversation agent report context](conversation-agent-results.md),
-> branch `feat/conversation-agent-results`, base qualified #417. New Chat/Work
-> replies quote only exact source-bound completed report artifacts, with bounded
-> context and visible provenance. No execution or source/tool authority is inherited.
-> Focused report/transcript regression checks pass; full candidate qualification
-> and rollout are pending. Live authority still points to qualified #417.
+> Current increment: [conversation agent report context](conversation-agent-results.md),
+> PR #418 / `feat/conversation-agent-results`, base qualified #417. Actual report
+> bytes and source provenance reach Chat/Work follow-ups without re-execution.
+> Latest referenced execution per agent prevents stale fallback; failed/stopped
+> report states stay explicit. Complete normal gate:3532 passes/nine opt-in skips,
+> final source-matched17 context tests,UI769,image/Compose. Compiled desktop/mobile
+> completes four Chat/Work follow-ups with injected inference/model listing.
+> See `data/acceptance/conversation-agent-results-20261025` and its post-deployment
+> qualification; shared authority determines the current live image. Preserve WIP,
+> native Runner, data/auth and model presets. Whole-platform goal remains open.
+> Next: extend verified result reuse to data/code/media and consolidate Task outcome
+> projection so a successful graph publisher is distinct from its failed child.
 
-> Current increment: [conversation agent controls](conversation-agent-control.md),
+
+> Completed increment: [conversation agent controls](conversation-agent-control.md),
 > PR #417 / `feat/conversation-agent-control`, based on qualified #416. Explicit
 > Work run/pause/Stop uses source-bound ordinary lifecycle operations, preserves
 > approvals/consents and leaves the main composer usable. Runtime preparation

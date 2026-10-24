@@ -32,4 +32,20 @@ Verify actual report bytes in Chat and Work context, history/provenance bounds,
 source hash/owner/Task tampering, partial/deleted/failed/active results, repeat
 reference deduplication, mode/permissions and malicious quoted instructions.
 Qualify compiled desktop/mobile follow-up/reload separately from real inference.
-Current live baseline: qualified #417; this candidate is not deployed yet.
+The previous live baseline is qualified #417; use the shared deployment record
+and this increment’s post-deployment qualification for the actual running image.
+
+## Qualification
+
+PR #418:3532 normal Python/Runner passes, nine explicit opt-in skips,769 UI tests,
+format/lint/typecheck/build and exact image/backend/assets plus normal/dev/LAN
+Compose. The final failed/stopped-state disclosure changes only the result reader
+and its test; all17 context tests passed against source-hashed exact final bytes.
+All other baseline backend/Runner/tests are unchanged. No failed check is waived.
+
+Application-image desktop1440/mobile390 flows exercise four Chat/Work follow-up
+replies against two ordinary completed report artifacts. Scope, exact source link,
+latest-run selection, no repeat agent execution and reload pass. Model listing,
+report inference and reply/planner inference are injected. No new GPU work or
+real-model answer-quality claim is made. Evidence:
+`data/acceptance/conversation-agent-results-20261025`.
