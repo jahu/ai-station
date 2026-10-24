@@ -383,3 +383,11 @@ verifies actual current request and frozen source bytes, performs bounded local
 JSON drafting and publishes a disabled definition/artifact atomically with terminal
 Run state. Stop/replay and lease recovery stay unchanged. Source tools, Python and
 owned workspace creation occur only during later explicit agent activation/run.
+
+Selected document/public drafts choose an allowed data/report/local-code family
+inside the existing bounded JSON preparation. The controller creates the normal
+disabled AgentSettings; no preliminary source read or workload occurs. After
+activation, reports use the ordinary source/report graph without Python/project
+setup, while code uses selected source context, owned project/worktree, proposal,
+validation and review through existing executors. Output family metadata is only
+an inspectable preparation snapshot, not a new execution architecture.

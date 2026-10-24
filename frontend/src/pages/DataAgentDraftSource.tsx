@@ -3,7 +3,13 @@ import "./DataAgentDraftSource.css";
 import "./AgentDocumentSources.css";
 import "./AgentMemorySources.css";
 
-export default function DataAgentDraftSource({ value }: { value: unknown }) {
+export default function DataAgentDraftSource({
+  value,
+  family,
+}: {
+  value: unknown;
+  family?: unknown;
+}) {
   if (!value || typeof value !== "object") return null;
   const source = value as Record<string, unknown>;
   const definition = source.definition as Record<string, unknown> | undefined;
@@ -18,25 +24,31 @@ export default function DataAgentDraftSource({ value }: { value: unknown }) {
   const selected = source.kind === "selected_inputs";
   const data = definition.data as Record<string, unknown> | undefined;
   const creation = data?.operation === "create";
+  const prepared =
+    family === "report"
+      ? "Report"
+      : family === "code"
+        ? "Local code"
+        : family === "data"
+          ? "Data analysis"
+          : null;
+  const readerLabels: Record<string, string> = {
+    read_documents: "Documents",
+    http_fetch: "Public pages",
+    web_search: "Public search",
+    search_pages: "Search pages",
+    browser: "Rendered pages",
+  };
+  const readers = definition.tools.filter(
+    (name: string) => name !== "python_data",
+  );
   const labels = [source.input_names, source.documents].flatMap((values) =>
     Array.isArray(values)
       ? values.filter((name): name is string => typeof name === "string")
       : [],
   );
-  return (
-    <section
-      className="panel agent-document-sources data-agent-draft-source"
-      aria-label={
-        selected
-          ? "Selected inputs for this agent"
-          : "Original analysis for this agent"
-      }
-    >
-      <h3>
-        {selected
-          ? "Inputs selected for this agent"
-          : "Drafted from this analysis"}
-      </h3>
+  const sourceDetails = (
+    <>
       <p className="muted">
         {selected
           ? "Saved creation request and input selection."
@@ -66,16 +78,52 @@ export default function DataAgentDraftSource({ value }: { value: unknown }) {
           : source.live_public_sources === true
             ? "At creation, the draft retained live public sources for each execution."
             : "At creation, the draft retained selected saved files or captured data."}{" "}
-        The agent will use its own private workspace. Review the schedule and
-        enable it when ready.
+        {selected
+          ? "Review the task, sources and schedule, then enable it when ready. Code and data jobs use a private workspace; reports read only the reviewed sources."
+          : "The agent will use its own private workspace. Review the schedule and enable it when ready."}
       </p>
-      <p className="muted">Retained tools: {definition.tools.join(", ")}</p>
+      <p className="muted">
+        {selected
+          ? readers.length
+            ? `Selected readers: ${readers.map((name: string) => readerLabels[name] ?? name).join(", ")}`
+            : "Selected scope: saved data files or instructions."
+          : `Retained tools: ${definition.tools.join(", ")}`}
+      </p>
       <Link
         className="text-link"
         to={`/runs/${encodeURIComponent(source.source_run_id)}`}
       >
         {selected ? "Inspect agent creation" : "Inspect original analysis"}
       </Link>
+    </>
+  );
+  return (
+    <section
+      className="panel agent-document-sources data-agent-draft-source"
+      aria-label={
+        selected
+          ? "Selected inputs for this agent"
+          : "Original analysis for this agent"
+      }
+    >
+      <h3>
+        {selected
+          ? "Inputs selected for this agent"
+          : "Drafted from this analysis"}
+      </h3>
+      {selected && prepared && (
+        <p className="muted">
+          Prepared agent: {prepared}. Review its task and tools below.
+        </p>
+      )}
+      {selected ? (
+        <details className="agent-memory-capture">
+          <summary>Inputs and original request</summary>
+          {sourceDetails}
+        </details>
+      ) : (
+        sourceDetails
+      )}
     </section>
   );
 }

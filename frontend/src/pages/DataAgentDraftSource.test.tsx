@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DataAgentDraftSource from "./DataAgentDraftSource";
 
@@ -81,6 +81,7 @@ it("identifies current selected inputs as a creation request, without claiming a
   expect(
     screen.getByRole("region", { name: "Selected inputs for this agent" }),
   ).toBeTruthy();
+  fireEvent.click(screen.getByText("Inputs and original request"));
   expect(
     screen
       .getByRole("link", { name: "Inspect agent creation" })
@@ -89,5 +90,58 @@ it("identifies current selected inputs as a creation request, without claiming a
   expect(screen.queryByText("Drafted from this analysis")).toBeNull();
   expect(
     screen.getByText(/Saved creation request and input selection/),
+  ).toBeTruthy();
+});
+
+it.each([
+  ["report", "Report"],
+  ["code", "Local code"],
+  ["data", "Data analysis"],
+])(
+  "labels the reviewed %s recipe without claiming an executed workspace",
+  (family, label) => {
+    render(
+      <MemoryRouter>
+        <DataAgentDraftSource
+          value={{ ...source, kind: "selected_inputs" }}
+          family={family}
+        />
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByText(
+        `Prepared agent: ${label}. Review its task and tools below.`,
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Selected readers: Documents, Public pages"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Retained tools:/)).toBeNull();
+    expect(
+      screen.getByText(/reports read only the reviewed sources/),
+    ).toBeTruthy();
+  },
+);
+
+it("keeps the input audit collapsed and lets the user expand the original request", () => {
+  render(
+    <MemoryRouter>
+      <DataAgentDraftSource
+        value={{ ...source, kind: "selected_inputs" }}
+        family="report"
+      />
+    </MemoryRouter>,
+  );
+  const details = screen
+    .getByText("Inputs and original request")
+    .closest("details");
+  expect(details?.open).toBe(false);
+  fireEvent.click(screen.getByText("Inputs and original request"));
+  expect(details?.open).toBe(true);
+  expect(
+    screen.getByRole("link", { name: "Inspect agent creation" }),
+  ).toBeTruthy();
+  expect(
+    screen.getByText("Selected files: sales.csv, contract.pdf"),
   ).toBeTruthy();
 });

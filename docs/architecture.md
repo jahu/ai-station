@@ -783,3 +783,10 @@ explicit Work creation request before one-off analysis dispatch. Existing data
 selection becomes frozen user/orchestrator/agent_draft metadata. The existing
 factory proposes bounded identity/task wording/schedule and publishes a disabled
 Agent. No new executor, native protocol, database table or preliminary data Run.
+
+[Selected-agent families](plans/selected-agent-families.md) extends only the source-
+bound factory proposal. Document/public-only scope admits controller-mapped data,
+report or local-code recipes; data files and instruction-only creation retain the
+data recipe. Source snapshots and existing AgentSettings remain unchanged. The
+controller maps tools/models/workspace policy, and normal explicit activation
+starts the existing report or code/data workflow. No new execution system/schema.

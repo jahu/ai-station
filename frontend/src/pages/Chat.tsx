@@ -131,6 +131,7 @@ type Message = ActionResult & {
     agent_id?: string;
     data_agent_source?: unknown;
     selected_data_agent?: unknown;
+    selected_data_family?: unknown;
     images?: { id: string; name: string }[];
     creation_context?: CreationContext;
     conversation_reference?: {
@@ -971,6 +972,7 @@ function Transcript({
                   message.metadata.selected_data_agent
                 ) && (
                   <DataAgentDraftSource
+                    family={message.metadata.selected_data_family}
                     value={
                       message.metadata.data_agent_source ||
                       message.metadata.selected_data_agent
