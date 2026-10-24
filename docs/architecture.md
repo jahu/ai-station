@@ -661,3 +661,8 @@ checks its exact conversation/message/scope/dependency before a public request.
 Completed captures can become ordinary offline inputs on a later conversation
 Task, with their original attribution rechecked. Explicit refresh creates another
 source snapshot. No persistent Agent row or new execution engine is introduced.
+
+[Captured-source context](plans/captured-data-context.md) reuses verified response
+excerpts when a capture becomes an ordinary offline input. These bounded,
+explicitly partial previews expose response bodies beyond generic nested-cell
+prefixes; code still reads the complete input and inherits no public tool scope.

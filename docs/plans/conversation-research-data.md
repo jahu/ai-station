@@ -1,6 +1,12 @@
 # Public data analysis and captured-source follow-ups in conversations
 
-Status: implementation candidate after deployed/real-qualified research/data
+Status update: #391 is merged/deployed. Local gates passed, but real-model
+qualification rejected an offline follow-up that invented values after misreading
+the generic truncated capture preview. See [the context correction](captured-data-context.md)
+and actual failed evidence before claiming real acceptance. Original source reads
+and first analysis succeeded; their saved capture must be reused for qualification.
+
+Original implementation: candidate after deployed/real-qualified research/data
 agents (#390). The implementation worktree is `.tools/conversation-research-data`,
 branch `feat/conversation-research-data`, based on develop `2da23e7`.
 Qualification is recorded under `data/acceptance/conversation-research-data-20261024`.
