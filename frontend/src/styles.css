@@ -7139,3 +7139,36 @@ section:has(> .memory-grid) > .dashboard-note {
   .new-chat-tools[open]:has(.conversation-data-controls) {
   max-height: 65dvh;
 }
+
+.diagnostic-list > .maintenance-backup-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+.maintenance-backup-row > div {
+  min-width: 0;
+}
+.maintenance-backup-row > .row {
+  flex-wrap: wrap;
+}
+.maintenance-recovery-guide {
+  max-width: 78ch;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.maintenance-recovery-guide summary {
+  cursor: pointer;
+  color: var(--text);
+}
+.maintenance-recovery-guide ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+  margin-top: 12px;
+}
+.maintenance-recovery-guide li + li {
+  margin-top: 14px;
+}
+.maintenance-recovery-guide pre {
+  margin-top: 8px;
+  font-size: 11px;
+}

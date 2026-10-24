@@ -5,6 +5,36 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Latest continuation — offline recovery, 2026-10-24
+
+#391 public-data conversations, #392 accurate Maintenance LAN policy and #393
+captured-response context are merged and deployed. The initial #391 real chart
+follow-up invented values and remains rejected in its evidence. #393 corrected
+the cause: a truncated nested JSON preview hid actual response bodies. The same
+saved capture then produced the exact original prices and a correct chart on the
+first local-model/native-Python attempt, without another public read. Generated
+code and plot were reviewed. Actual context was131072; the operator's original
+GPU/Q8/46080 preset is restored, all16agents are paused and no Runs remain active.
+Proof: `data/acceptance/captured-data-context-20261024/post-deployment-qualified.json`.
+Live source: `.tools/ui-captured-data-context-20261024`; native source remains
+`.tools/ui-python-optional-outputs-20261024`. Preserve both and the root Memory WIP.
+
+Current owned branch/worktree: `feat/offline-database-recovery`,
+`.tools/offline-database-recovery`, based on develop `0279275`. [Guarded offline recovery](offline-database-recovery.md) is implemented in PR #394.
+All 2944 normal Python/Runner cases completed (2935 passed, nine opt-in skips),
+678 UI tests plus lint/format/types/build passed, and actual disposable host CLI
+apply/rollback + isolated HTTP verified history, memory, artifact bytes, current
+password and revoked old sessions. Compiled desktop/phone inspection found and
+fixed a squeezed mobile guide and intercepted summary Enter key. Finish exact
+image/assets qualification, published-diff review, squash merge and backed-up
+controller-only deployment. Do not repeat inference/media tests for unchanged
+adapters. Recovery must
+not replace a live WAL database, resume schedules or revive old sessions/tokens.
+No actual production restore is authorized as a qualification shortcut.
+The platform goal remains open; do not repeat completed public-data acceptance.
+
+The continuation sections below preserve earlier implementation history.
+
 ## Latest continuation — conversational public-data analysis, 2026-10-24
 
 Update: #391 is merged as `fa25a16` and deployed from `d5e15bc`. Full local

@@ -82,6 +82,15 @@ def data_preserving_compose_down(compose: list[str]) -> list[str]:
     return command
 
 
+def ensure_recovery_finished(runtime: Path) -> None:
+    marker = runtime / "recovery-pending.json"
+    if marker.exists() or marker.is_symlink():
+        raise RuntimeError(
+            "An offline database recovery is unfinished. Inspect ./scripts/restore.sh --pending, "
+            "then finish or abort that recovery before starting AI Station."
+        )
+
+
 def stop_runner(proc: subprocess.Popen | None) -> None:
     if proc is not None and proc.poll() is None:
         proc.terminate()
@@ -125,6 +134,7 @@ def main() -> None:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             raise RuntimeError("AI Station is already supervised for this data directory")
+        ensure_recovery_finished(runtime)
         # Never attach cleanup ownership to a pre-existing Compose deployment.
         if run("ps", "--all", "--quiet", capture_output=True, text=True).stdout.strip():
             raise RuntimeError(

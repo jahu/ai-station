@@ -661,3 +661,18 @@ inspection child with the original deadline before their data preparation.
 Reused captures retain hash-checked original source lineage, while a follow-up
 gets a fresh execution deadline and no public research children. Unreadable or
 changed inputs stop before code generation. See [the execution contract](plans/conversation-research-data.md).
+
+## Offline recovery administration
+
+The operator host command `scripts/restore.sh` is not an agent Tool or HTTP
+operation. Default inspection is read-only. Explicit apply binds a reviewed
+backup digest, the ordinary launcher lock and inspected container/native/open-FD
+quiescence. Staging uses an explicit Alembic connection, validates paths and
+retained artifact files, preserves raw originals and atomically replaces only
+the offline application database. Durable pending identity blocks startup until
+finish/abort validates the prepared bytes. No recovery command stops other
+services. Current credentials/rate budgets survive; restored sessions and node
+tokens are revoked, agents paused, approvals denied and uncertain Runs parked
+for inspection. Corrupt current credentials require a new private password.
+Receipt paths are data-relative and contain no credential values. See
+[operator procedure](operations.md#offline-database-recovery).

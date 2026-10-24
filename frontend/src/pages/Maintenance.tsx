@@ -64,6 +64,7 @@ type BackupInspect = {
   replay: boolean;
   summary: string;
   relative_path: string;
+  sha256?: string;
 };
 
 type ImageInspect = {
@@ -101,6 +102,59 @@ const json = (method: string, body: unknown) => ({
 
 type ComposeContainer = ImageInspect["containers"][number];
 type BackupRow = Run & { restore: string; artifacts?: BackupArtifact[] };
+
+function OfflineRecoveryGuide({ copy }: { copy: BackupInspect }) {
+  if (
+    copy.status !== "succeeded" ||
+    copy.integrity_check !== "ok" ||
+    !copy.hash_matches ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      copy.run_id,
+    ) ||
+    !/^[0-9a-f]{64}$/i.test(copy.sha256 ?? "")
+  )
+    return null;
+  return (
+    <details className="maintenance-recovery-guide mt">
+      <summary>Recover this backup on the workstation</summary>
+      <p className="muted">
+        Use a terminal in the same AI Station checkout and data configuration.
+        This database copy needs the original application data folder, including
+        its artifacts and worktrees.
+      </p>
+      <ol>
+        <li>
+          Inspect the copy first. This command does not change your database.
+          <pre className="whitespace-pre-wrap break-all">
+            <code>{`./scripts/restore.sh --backup-run ${copy.run_id}`}</code>
+          </pre>
+        </li>
+        <li>
+          Unload AI Station models in Models, finish or stop active tasks, then
+          stop the AI Station supervisor with Ctrl+C in its terminal.
+        </li>
+        <li>
+          After reviewing the inspection, apply this exact copy:
+          <pre className="whitespace-pre-wrap break-all">
+            <code>{`./scripts/restore.sh --backup-run ${copy.run_id} --apply --expected-sha256 ${copy.sha256}`}</code>
+          </pre>
+        </li>
+        <li>
+          Start AI Station with <code>./scripts/start.sh</code>. Your current
+          password stays in place. Devices sign in again, agents stay paused and
+          interrupted tasks wait for inspection. A private recovery receipt
+          records the result and retained original files.
+        </li>
+      </ol>
+      <p className="muted">
+        If recovery is interrupted, run{" "}
+        <code>./scripts/restore.sh --pending</code> before starting again.
+        Follow the recovery guide in <code>docs/operations.md</code> to finish
+        or abort that operation.
+      </p>
+    </details>
+  );
+}
 
 function ContainerCards({ containers }: { containers: ComposeContainer[] }) {
   const headingId = useId();
@@ -171,6 +225,8 @@ function BackupCards({
   );
   const selected = items[index];
   const handleKey = (event: KeyboardEvent<HTMLDivElement>) => {
+    // The recovery disclosure owns its native keys, rather than opening a Run.
+    if ((event.target as HTMLElement).closest("details")) return;
     onKeyDown(event);
     if (event.key !== "Enter" || event.defaultPrevented) return;
     const target = event.target as HTMLElement;
@@ -203,7 +259,11 @@ function BackupCards({
             (item) => item.filename === "ai-station.sqlite",
           );
           return (
-            <div key={row.id} {...itemProps(i, row.id)}>
+            <div
+              className="maintenance-backup-row"
+              key={row.id}
+              {...itemProps(i, row.id)}
+            >
               <div>
                 <strong>{row.summary || "SQLite backup"}</strong>
                 <p>
@@ -212,7 +272,7 @@ function BackupCards({
                     ? ` · recorded integrity_check=${recorded.integrity_check}`
                     : ""}
                   {recheck ? ` · re-check ${recheck.integrity_check}` : ""}
-                  {" · restore "}
+                  {" · in-app restore "}
                   {row.restore}
                 </p>
                 {recheck ? (
@@ -227,6 +287,7 @@ function BackupCards({
                     {` · ${recheck.relative_path}`}
                   </p>
                 ) : null}
+                {recheck ? <OfflineRecoveryGuide copy={recheck} /> : null}
               </div>
               <div className="row">
                 {row.status === "succeeded" ? (
@@ -404,7 +465,7 @@ export default function Maintenance() {
         <div>
           <h2>Backup and upgrade readiness</h2>
           <p className="muted">
-            Inspect a verified copy · restore and image rollout stay unpublished
+            Verified backups · offline recovery · deployment inspection
           </p>
         </div>
         <Badge
@@ -464,7 +525,8 @@ export default function Maintenance() {
             <div>
               <strong>Recovery and private access</strong>
               <p>
-                Restore {ready.restore} · image rollout {ready.image_rollout}
+                In-app restore {ready.restore} · image rollout{" "}
+                {ready.image_rollout}
                 {" · "}
                 LAN bind {ready.lan_bind_allowed ? "allowed" : "refused"}
               </p>
