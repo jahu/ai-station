@@ -29,6 +29,11 @@ Docker/native execution boundaries and backup Runs remain unchanged.
   mounting this data directory (including owned model/preview containers), owned
   native process groups, open database users or unconfirmed inspection. Inspect
   only; never stop unrelated services or expose Docker through an API.
+  Descriptor inspection excludes protected desktop Chromium/PAM/service-manager processes, which
+  are not database executors; AI Station-owned Chromium jobs remain covered by
+  container mounts and native process ownership. Unknown inaccessible executors
+  must still block recovery. Do not claim visibility into arbitrary protected
+  host applications or require stopping the operator's desktop for recovery.
 - Preserve current operator credentials and login budget when readable. Revoke
   restored device sessions and node invitation tokens. If the current database
   is unreadable, require a fresh operator password through a private file or
