@@ -1,5 +1,10 @@
 # AI Station
 
+Local code and Python/data agents can combine **Browser** with their reviewed
+public URLs to read JavaScript-rendered text before working offline. Select the
+tool and review the source URLs before enabling; captures and screenshots stay
+inspectable in the execution history. [Rendered research](docs/plans/agent-rendered-research.md).
+
 Agents can optionally prepare an email from a completed report or a result-only
 summary. In **Agent settings → Notifications → Email delivery**, choose a saved
 mail account and allowed recipients. **Review each message** is the default;

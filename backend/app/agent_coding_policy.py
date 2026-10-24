@@ -1,6 +1,6 @@
 """Explicit provider selection for the shared isolated agent coding workflow."""
 
-LOCAL_RESEARCH_TOOLS = frozenset({"web_search", "search_pages", "http_fetch"})
+LOCAL_RESEARCH_TOOLS = frozenset({"web_search", "search_pages", "http_fetch", "browser"})
 
 CODING_TOOLS = {
     "coding_local": "local",
@@ -34,4 +34,4 @@ def auto_local_coding(tools, model):
 
 
 def coding_research_steps(tools):
-    return [name for name in ("web_search", "search_pages", "http_fetch") if name in tools]
+    return [name for name in ("web_search", "search_pages", "http_fetch", "browser") if name in tools]

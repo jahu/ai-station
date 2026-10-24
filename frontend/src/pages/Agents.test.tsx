@@ -3083,6 +3083,7 @@ it.each([
             "web_search",
             "search_pages",
             "http_fetch",
+            "browser",
             "memory_search",
           ].map((name) => ({
             name,
@@ -3098,8 +3099,8 @@ it.each([
     await screen.findByRole("heading", { name: "Research builder" });
     const names =
       order === "code-first"
-        ? [family, "web_search", "search_pages", "http_fetch"]
-        : ["web_search", "search_pages", "http_fetch", family];
+        ? [family, "web_search", "search_pages", "http_fetch", "browser"]
+        : ["web_search", "search_pages", "http_fetch", "browser", family];
     for (const name of names)
       fireEvent.click(
         within(screen.getByLabelText("Tool " + name)).getByRole("checkbox"),
@@ -3115,7 +3116,7 @@ it.each([
     fireEvent.change(screen.getByLabelText("Public search query"), {
       target: { value: "public weather reference" },
     });
-    fireEvent.change(screen.getByLabelText("Public URLs to fetch"), {
+    fireEvent.change(screen.getByLabelText("Public URLs to browse"), {
       target: { value: "https://example.com/" },
     });
     expect(

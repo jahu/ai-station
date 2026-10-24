@@ -19,7 +19,7 @@ def publish_page_coding(session, parent, definition, *, deadline_at=None):
     tools = coding_research_steps(definition.tools)
     if coding_provider(definition.tools) != "local" or not tools:
         raise ValueError("Reviewed research requires Local coding and public context tools")
-    from app.agent_tools import effective_permissions, execution_permissions
+    from app.agent_tools import agent_tool, effective_permissions, execution_permissions
 
     for permission in effective_permissions(definition.tools):
         require(parent.effective_permissions, permission)
@@ -40,12 +40,12 @@ def publish_page_coding(session, parent, definition, *, deadline_at=None):
             parent.task,
             run_type="agent",
             capability="agent.step",
-            executor_type="agent_tool",
-            execution_target="container",
+            executor_type="browser" if tool == "browser" else "agent_tool",
+            execution_target="host" if tool == "browser" else "container",
             retry_class="inspect",
             parent_run_id=parent.id,
             parameters={**shared, "tool": tool, "gate": "none", "step_index": index},
-            permissions=["network_read"],
+            permissions=list(agent_tool(tool).required_permissions),
             triggered_by=parent.triggered_by,
         )
         if sources:
@@ -95,7 +95,13 @@ def verified_observation(session, source, definition, *, complete=False, for_exe
         raise ValueError("Research context is missing its original source artifact")
     path = read_owned_file(artifact.relative_path, artifact.size_bytes, artifact.sha256, limit=1000000)
     data = json.loads(path.read_bytes())
-    if data != {key: value for key, value in observation.items() if key != "artifact_id"}:
+    if tool == "browser":
+        from app.browser import compact_observation
+
+        expected = compact_observation(data, artifact.id)
+    else:
+        expected = {**data, "artifact_id": artifact.id}
+    if expected != observation:
         raise ValueError("Research context source changed after observation")
     if tool == "web_search":
         from app.http_fetch import public_url
@@ -147,7 +153,7 @@ def verified_observation(session, source, definition, *, complete=False, for_exe
         if data.get("urls") != urls or not isinstance(data.get("pages"), list):
             raise ValueError("Page observations do not match the reviewed URLs")
         pages = data["pages"]
-        if tool == "http_fetch" and len(pages) != len(urls):
+        if tool in {"http_fetch", "browser"} and len(pages) != len(urls):
             raise ValueError("Every reviewed page must be present before coding")
         if len(pages) > 3 or any(
             not isinstance(page, dict)
@@ -171,6 +177,7 @@ def verified_observation(session, source, definition, *, complete=False, for_exe
             "partial": data.get("partial", False),
             "errors": data.get("errors", []),
             "fetched_at": data.get("fetched_at"),
+            **({"captured_at": data.get("captured_at"), "rendered": True} if tool == "browser" else {}),
         }
     return artifact, data if complete else context, urls
 
@@ -212,7 +219,7 @@ def verified_sources(session, run, definition, *, complete=False, for_execution=
         if (
             source is None
             or source.status != "succeeded"
-            or source.executor_type != "agent_tool"
+            or source.executor_type != ("browser" if tool == "browser" else "agent_tool")
             or source.parent_run_id != parent.id
             or source.task_id != parent.task_id
             or source.agent_id != parent.agent_id
@@ -226,6 +233,8 @@ def verified_sources(session, run, definition, *, complete=False, for_execution=
         ):
             raise ValueError("Research source changed its reviewed workflow, dependency or deadline")
         require(source.effective_permissions, "network_read")
+        if tool == "browser":
+            require(source.effective_permissions, "browser")
         artifact, context, urls = verified_observation(
             session, source, definition, complete=complete, for_execution=for_execution
         )

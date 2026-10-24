@@ -22,6 +22,24 @@ from app.state import RunStatus
 router = APIRouter(prefix="/api/browser", tags=["browser"])
 
 
+def compact_observation(result, artifact_id):
+    """Project the saved raw audit to the exact observation supplied to models."""
+    return {
+        **result,
+        "artifact_id": artifact_id,
+        "pages": [
+            {
+                **{key: value for key, value in page.items() if key not in {"requests", "links"}},
+                "links": page.get("links", [])[:3],
+                "request_count": len(page.get("requests", [])),
+                "blocked_resource_count": page.get("blocked_request_count", 0)
+                + sum(1 for request in page.get("requests", []) if request.get("error")),
+            }
+            for page in result["pages"]
+        ],
+    }
+
+
 def available():
     if not get_settings().browser_enabled:
         return {"available": False, "reason": "Enable the optional browser executor after building its image"}
@@ -161,18 +179,8 @@ class BrowserExecutor(NativeJobExecutor):
                 run_id=run.id,
                 metadata={"tool": "browser"},
             )
-        result["artifact_id"] = artifact.id
         # Full network audit stays in JSON; inference receives bounded page text.
-        result["pages"] = [
-            {
-                **{key: value for key, value in page.items() if key not in {"requests", "links"}},
-                "links": page.get("links", [])[:3],
-                "request_count": len(page.get("requests", [])),
-                "blocked_resource_count": page.get("blocked_request_count", 0)
-                + sum(1 for request in page.get("requests", []) if request.get("error")),
-            }
-            for page in pages
-        ]
+        result = compact_observation(result, artifact.id)
         if run.agent_id and "remember_workflow" in run.parameters["definition"]["tools"]:
             from app.agent_executor import persist_agent_memory
 

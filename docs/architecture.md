@@ -31,6 +31,10 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Rendered research reuses the native Browser Run before the existing local-agent
+context handoff and isolated code/Python chain. No additional execution engine.
+See [rendered research](plans/agent-rendered-research.md).
+
 [Dependency-bound model restoration](plans/dependent-consumer-eviction.md) uses
 an ordinary database-only preparation Run. Existing dependencies gate future
 consumers across owned stop, media and normal model load, preserving the current
