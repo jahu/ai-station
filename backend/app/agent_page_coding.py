@@ -77,7 +77,7 @@ def publish_page_coding(session, parent, definition, *, deadline_at=None):
     return [*sources, dispatch]
 
 
-def verified_observation(session, source, definition, *, complete=False):
+def verified_observation(session, source, definition, *, complete=False, for_execution=True):
     """Adopt only exact, bounded saved bytes belonging to this context step."""
     tool = source.parameters["tool"]
     observation = source.metadata_json.get("observation")
@@ -134,7 +134,9 @@ def verified_observation(session, source, definition, *, complete=False):
         if tool == "search_pages":
             from app.agent_search_pages import search_source
 
-            search, saved_search, _, urls = search_source(session, source, definition)
+            search, saved_search, _, urls = search_source(
+                session, source, definition, for_execution=for_execution
+            )
             if (
                 data.get("query") != definition.search_query
                 or data.get("search_run_id") != search.id
@@ -173,7 +175,11 @@ def verified_observation(session, source, definition, *, complete=False):
     return artifact, data if complete else context, urls
 
 
-def verified_sources(session, run, definition, *, complete=False):
+def verified_sources(session, run, definition, *, complete=False, for_execution=True):
+    if run.agent_id is None:
+        from app.conversation_data import reviewed_research_step
+
+        reviewed_research_step(session, run, for_execution=for_execution)
     parent = session.get(Run, run.parent_run_id)
     tools = coding_research_steps(definition.tools)
     ids = run.parameters.get("source_run_ids", [run.parameters.get("source_run_id")])
@@ -220,7 +226,9 @@ def verified_sources(session, run, definition, *, complete=False):
         ):
             raise ValueError("Research source changed its reviewed workflow, dependency or deadline")
         require(source.effective_permissions, "network_read")
-        artifact, context, urls = verified_observation(session, source, definition, complete=complete)
+        artifact, context, urls = verified_observation(
+            session, source, definition, complete=complete, for_execution=for_execution
+        )
         observations.append({"source_run_id": source.id, "tool": tool, "result": context})
         provenance.append({"run_id": source.id, "artifact_ids": [artifact.id], "urls": urls})
     return parent, observations, provenance
@@ -281,6 +289,11 @@ class AgentPageCodingExecutor:
                     receipt = snapshot_research(session, run, definition)
                     parent.parameters = {**parent.parameters, "data_research": receipt}
                     child = publish_data(session, parent, definition, deadline)
+                    snapshot = session.get(Artifact, receipt["input"]["artifact_id"])
+                    from app.data_inputs import enqueue_inspection
+
+                    inspection = enqueue_inspection(session, snapshot.id, task=run.task, parent_run_id=run.id)
+                    depend_on(session, child, inspection)
                 else:
                     child = publish_coding(
                         session,

@@ -277,3 +277,19 @@ inputs. Confirmed Python failures may use the saved bounded repair budget withou
 repeating research. Task cancellation and conservative recovery retain the
 existing contracts. Source warnings, outputs and transitive lineage remain
 inspectable in the agent workspace and Library.
+
+## Conversation source analysis and offline continuations
+
+A typed conversation data scope can select reviewed search/page tools alongside
+optional CSV/Excel/JSON files. It still creates only ordinary queued Runs and a
+private app-owned workspace. The existing research handoff snapshots complete
+bounded observations. An inspection child verifies that JSON input and gates
+worktree preparation before local generation/Python. Every stage inherits the
+original deadline and Task Stop.
+
+Natural same-data follow-ups derive their actual input IDs from one verified
+completed same-conversation result. Captured source JSON is reused as inspected
+offline data: original source bytes/lineage and capture time remain; no search or
+fetch is replayed. A new question owns a new Task/workspace/deadline. The explicit
+refresh action carries the reviewed source selection into a fresh research Task
+and preserves the old result and files.

@@ -1,12 +1,13 @@
 """One-turn data analysis composes the existing owned project/data execution graph."""
 
+import re
 from datetime import datetime, timedelta
 from uuid import UUID
 
 from fastapi import HTTPException
 
 from app.agent_schema import AgentSettings
-from app.conversation_data_schema import DataScope
+from app.conversation_data_schema import DataResearchSelection, DataScope
 from app.db import utcnow
 from app.models import Message, Run
 from app.permissions import require
@@ -16,10 +17,85 @@ from app.task_control import lock_task
 from app.web_search import SearchOptions
 
 
-def prepare_turn(body):
+def natural_research(body, mode):
+    """Only current explicit computation/source instructions select public analysis."""
+    if (
+        mode not in {"chat", "work", "orchestrator"}
+        or body.action != "auto"
+        or body.data is not None
+        or not body.web_search.enabled
+        or body.web_search.query.strip()
+        or body.web_search.render_pages
+    ):
+        return body
+    if any(
+        getattr(body, name, None)
+        for name in (
+            "attachments",
+            "image_artifact_ids",
+            "audio_artifact_id",
+            "speech_text",
+            "music",
+            "media",
+            "github",
+            "coding",
+            "new_project",
+            "continuation",
+            "commit",
+            "publish",
+            "load",
+            "stop",
+            "upscale_result",
+        )
+    ):
+        return body
+    from app.conversation_data_reference import instruction
+    from app.http_fetch import prompt_public_urls
+
+    text = instruction(body.content)
+    prefix = r"^(?:(?:please|now|then|and|proszę|prosze|teraz|następnie|nastepnie)\s+){0,3}"
+    compute = re.search(
+        prefix
+        + r"(?:calculate|compute|sum|average|analy[sz]e|compare|count|extract|policz|oblicz|zsumuj|przelicz|przeanalizuj|por[oó]wnaj|wyodr[ęe]bnij)\b",
+        text,
+        re.I,
+    )
+    chart = re.search(
+        prefix
+        + r"(?:create|draw|make|plot|chart|stw[oó]rz|utw[oó]rz|narysuj|zr[oó]b)\s+(?:(?:a|an|bar|line|pie|słupkowy|slupkowy|liniowy)\s+){0,3}(?:chart|plot|wykres)\b",
+        text,
+        re.I,
+    )
+    semantic_text = re.sub(r"https?://\S+", " ", text, flags=re.I)
+    data_words = re.search(
+        r"\b(?:json|csv|xlsx|data|dataset|table|total|sum|average|prices?|amounts?|values?|chart|plot|dane|danych|tabel\w*|sum\w*|średni\w*|sredni\w*|cen[ayę]|kurs\w*|kwot\w*|warto[śs]ci|wykres\w*)\b",
+        semantic_text,
+        re.I,
+    )
+    if not chart and not (compute and data_words):
+        return body
+    urls = prompt_public_urls(text, limit=4)
+    # A generic exact Web query retains its existing Chat route. Public
+    # query-only analysis is selected explicitly in the data tool instead.
+    if not urls:
+        return body
+    if len(urls) > 3:
+        raise HTTPException(422, "Review up to three public data URLs per analysis")
+    selection = DataResearchSelection(fetch_urls=urls)
+    return body.model_copy(
+        update={
+            "data": DataScope(research=selection),
+            "project_defaults": None,
+            "web_search": SearchOptions(enabled=False),
+        }
+    )
+
+
+def prepare_turn(body, *, mode=None):
+    body = natural_research(body, mode)
     if body.data is None:
         if body.action == "data.analyze":
-            raise HTTPException(422, "Choose inspected CSV/Excel files before sending")
+            raise HTTPException(422, "Choose inspected data files or reviewed public sources before sending")
         return body
     if body.action not in {"auto", "data.analyze"} or any(
         getattr(body, key, None)
@@ -43,7 +119,8 @@ def prepare_turn(body):
         )
     ):
         raise HTTPException(
-            422, "Data analysis uses selected CSV/Excel files without other tool or project scopes"
+            422,
+            "Data analysis uses selected data files and reviewed sources without other tool or project scopes",
         )
     if body.web_search.enabled and (body.web_search.query.strip() or body.web_search.render_pages):
         raise HTTPException(422, "Send exact Web research separately from offline data analysis")
@@ -66,7 +143,9 @@ def definition(root, project_id=None):
             if root.parameters.get("data_reference")
             else ""
         ),
-        tools=["python_data"],
+        tools=["python_data", *(scope.research.tools() if scope.research else [])],
+        search_query=scope.research.search_query if scope.research else "",
+        fetch_urls=scope.research.fetch_urls if scope.research else [],
         data=scope.files(),
         project_id=project_id,
         maximum_runtime=scope.maximum_runtime,
@@ -327,3 +406,48 @@ def result_projection(session, root, steps):
         "data_runs": [run_dict(step) for step in reversed(current)],
         "data_model": model_name,
     }, repaired
+
+
+def reviewed_research_step(session, run, *, for_execution=True):
+    """No agent-free public request without the exact reviewed conversation scope."""
+    from app.models import RunDependency
+
+    workflow = session.get(Run, run.parent_run_id)
+    if workflow is None:
+        raise ValueError("Conversation research lost its workflow")
+    root = validate_workflow(session, workflow, for_execution=for_execution)
+    scope = DataScope.model_validate(root.parameters["data"])
+    research = scope.research
+    if research is None:
+        raise ValueError("Conversation analysis has no reviewed public research")
+    tools = research.tools()
+    manifest = workflow.metadata_json.get("child_run_ids")
+    context = run.executor_type == "agent_page_coding"
+    index = len(tools) if context else run.parameters.get("step_index")
+    if (
+        not isinstance(manifest, list)
+        or len(manifest) != len(tools) + 1
+        or len(set(manifest)) != len(manifest)
+        or type(index) is not int
+        or not 0 <= index <= len(tools)
+        or manifest[index] != run.id
+        or run.task_id != workflow.task_id
+        or run.agent_id is not None
+        or run.conversation_id != workflow.conversation_id
+        or run.project_id != workflow.project_id
+        or run.parameters.get("definition") != workflow.parameters["definition"]
+        or run.parameters.get("deadline_at") != workflow.parameters["agent_coding_deadline"]
+        or run.parameters.get("agent_coding_deadline") != workflow.parameters["agent_coding_deadline"]
+        or not context
+        and (
+            run.executor_type != "agent_tool"
+            or index == len(tools)
+            or run.parameters.get("tool") != tools[index]
+        )
+        or set(run.effective_permissions)
+        != (set(workflow.effective_permissions) if context else {"network_read"})
+        or index > 0
+        and session.get(RunDependency, (run.id, manifest[index - 1])) is None
+    ):
+        raise ValueError("Conversation research changed its selected source, scope or dependency")
+    return root

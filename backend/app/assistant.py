@@ -573,7 +573,11 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         data_permissions = list(REQUIRED)
 
         try:
-            data_inputs = freeze_inputs(session, body.data.files())
+            data_inputs = (
+                freeze_inputs(session, body.data.files(), research=True)
+                if body.data.research
+                else freeze_inputs(session, body.data.files())
+            )
             reference = user.metadata_json.get("conversation_reference") or {}
             if reference.get("source_kind") == "analyzed_data" and (
                 reference.get("data_inputs") != data_inputs
@@ -1009,7 +1013,11 @@ class AssistantExecutor:
 
                 verify_reference(session, run)
                 require_runtime()
-                verify_inputs(session, run.parameters.get("data_inputs"))
+                verify_inputs(
+                    session,
+                    run.parameters.get("data_inputs"),
+                    allow_empty=bool(DataScope.model_validate(run.parameters["data"]).research),
+                )
                 verify_source_files(run.parameters["data_inputs"])
         if plan and (plan.action.startswith("image.") or plan.action == "video.generate"):
             from app.vision_inputs import inspected_selection

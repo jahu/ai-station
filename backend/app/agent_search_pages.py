@@ -22,7 +22,11 @@ MAX_SOURCE_BYTES = 128 * 1024
 MAX_RESULT_CHARS = 20000
 
 
-def search_source(session, run, definition):
+def search_source(session, run, definition, *, for_execution=True):
+    if run.agent_id is None:
+        from app.conversation_data import reviewed_research_step
+
+        reviewed_research_step(session, run, for_execution=for_execution)
     if set(definition.tools).intersection({"web_search", "search_pages"}) != {"web_search", "search_pages"}:
         raise ValueError("Read search sources requires the reviewed web_search tool")
     parent = session.get(Run, run.parent_run_id) if run.parent_run_id else None
@@ -31,7 +35,6 @@ def search_source(session, run, definition):
         or parent.executor_type != "agent_workflow"
         or parent.status != "succeeded"
         or parent.task_id != run.task_id
-        or not run.agent_id
         or parent.agent_id != run.agent_id
         or parent.parameters.get("definition") != run.parameters.get("definition")
     ):

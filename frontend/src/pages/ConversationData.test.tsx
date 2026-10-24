@@ -36,6 +36,8 @@ it.each([
   { mode: "work", entry: "csv" },
   { mode: "chat", entry: "xlsx" },
   { mode: "work", entry: "xlsx" },
+  { mode: "chat", entry: "json" },
+  { mode: "work", entry: "json" },
 ])(
   "waits for $entry inspection before first Send in $mode and submits only a local data scope",
   async ({ mode, entry }) => {
@@ -50,7 +52,12 @@ it.each([
       vi.fn(async (path: string, init?: RequestInit) => {
         const artifact = {
           id: "input",
-          original_filename: entry === "xlsx" ? "sales.xlsx" : "sales.csv",
+          original_filename:
+            entry === "json"
+              ? "sales.json"
+              : entry === "xlsx"
+                ? "sales.xlsx"
+                : "sales.csv",
           metadata: { data_input: true, data_inspection_run_id: "inspection" },
         };
         if (path === "/api/data/uploads")
@@ -112,9 +119,11 @@ it.each([
       target: { value: "Sum the selected sales" },
     });
     const selected =
-      entry === "xlsx"
-        ? new File([new Uint8Array([0, 255, 80, 75])], "sales.xlsx")
-        : new File(["Total\n" + "1\n".repeat(9000)], "sales.csv");
+      entry === "json"
+        ? new File([JSON.stringify({ records: [12, 15] })], "sales.json")
+        : entry === "xlsx"
+          ? new File([new Uint8Array([0, 255, 80, 75])], "sales.xlsx")
+          : new File(["Total\n" + "1\n".repeat(9000)], "sales.csv");
     Object.defineProperty(selected, "arrayBuffer", {
       value: () => {
         throw new Error("Data must never be decoded as an inline attachment");
@@ -364,4 +373,159 @@ it("keeps partial data uploads and the error visible after the generic attachmen
   expect(cache.getQueryData(["artifact", "first"])).toEqual(artifact);
   expect(accepted).not.toHaveBeenCalled();
   expect(uploads).toBe(2);
+});
+
+it("reviews public sources without files and preserves a newline while entering several URLs", async () => {
+  const writes: Record<string, unknown>[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        writes.push(JSON.parse(String(init.body)));
+        return {
+          ok: true,
+          json: async () => ({ conversation_id: "public-data" }),
+        };
+      }
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/preferences")
+            ? {
+                mode: "chat",
+                provider: provider.key,
+                model: "plain",
+                version: 1,
+                web_search_enabled: true,
+              }
+            : path.endsWith("/llama")
+              ? { models: [], instances: [] }
+              : [],
+      };
+    }),
+  );
+  const accepted = vi.fn();
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <NewChat
+          providers={[provider]}
+          provider={provider}
+          onProviderChange={() => {}}
+          onAccepted={accepted}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("textbox", { name: "Message" });
+  fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
+    target: { value: "data.analyze" },
+  });
+  fireEvent.change(screen.getByRole("textbox", { name: "Message" }), {
+    target: { value: "Compare the reviewed public numbers" },
+  });
+  fireEvent.click(screen.getByLabelText("Use public sources for analysis"));
+  const send = screen.getByRole("button", {
+    name: "Send message",
+  }) as HTMLButtonElement;
+  expect(send.disabled).toBe(true);
+  const urls = screen.getByLabelText("Public data URLs") as HTMLTextAreaElement;
+  fireEvent.change(urls, {
+    target: { value: "https://data.example.com/one\n" },
+  });
+  expect(urls.value).toBe("https://data.example.com/one\n");
+  fireEvent.change(urls, {
+    target: {
+      value: "https://data.example.com/one\nhttps://data.example.com/two",
+    },
+  });
+  fireEvent.change(screen.getByLabelText("Public data search query"), {
+    target: { value: "public numbers" },
+  });
+  fireEvent.click(screen.getByLabelText("Read data search pages"));
+  await waitFor(() => expect(send.disabled).toBe(false));
+  expect(writes).toHaveLength(0);
+  fireEvent.click(send);
+  await waitFor(() => expect(accepted).toHaveBeenCalledWith("public-data"));
+  expect(writes).toHaveLength(1);
+  expect(writes[0].data).toMatchObject({
+    input_artifact_ids: [],
+    model: "auto",
+    research: {
+      search_query: "public numbers",
+      read_search_pages: true,
+      fetch_urls: [
+        "https://data.example.com/one",
+        "https://data.example.com/two",
+      ],
+    },
+  });
+  expect(writes[0].web_search).toMatchObject({ enabled: false });
+});
+
+it("offers offline captured-data continuation separately from an explicit public refresh", () => {
+  const choose = vi.fn();
+  const scope = {
+    input_artifact_ids: [],
+    model: "auto",
+    max_repairs: 1,
+    maximum_runtime: 600,
+    research: {
+      search_query: "",
+      fetch_urls: ["https://data.example.com/numbers"],
+      read_search_pages: false,
+    },
+  };
+  const root = {
+    id: "root",
+    task_id: "task",
+    executor_type: "orchestrator",
+    parameters: { data: scope },
+  } as unknown as Run;
+  const final = {
+    id: "final",
+    task_id: "task",
+    executor_type: "agent_data_result",
+    status: "succeeded",
+    metadata: {
+      data_result: {
+        answer: "Observed total:27",
+        columns: ["Total"],
+        rows: [["27"]],
+        download_artifact_id: "csv",
+        script_artifact_id: "script",
+        input_artifact_ids: ["capture"],
+        attempt: 0,
+      },
+    },
+  } as unknown as Run;
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <AssistantResults
+          result={{
+            steps: [],
+            data_runs: [final, root],
+            data_model: "Local",
+            task_status: "succeeded",
+            artifacts: [],
+          }}
+          onData={choose}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Ask about these captured data" }),
+  );
+  expect(choose.mock.calls[0][0].input_artifact_ids).toEqual(["capture"]);
+  expect(choose.mock.calls[0][0].research).toBeUndefined();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Refresh public sources" }),
+  );
+  expect(choose.mock.calls[1][0]).toEqual(scope);
 });

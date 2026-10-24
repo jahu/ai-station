@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api";
 import { ErrorNotice } from "../components/common";
 import AgentDataFiles from "./AgentDataFiles";
@@ -16,6 +17,13 @@ export default function ConversationDataControls({
   onUploading: (busy: boolean) => void;
 }) {
   const scope = value ?? { input_artifact_ids: [], max_repairs: 1 };
+  const selectedUrls = scope.research?.fetch_urls.join("\n") ?? "";
+  const [urlDraft, setUrlDraft] = useState({
+    text: selectedUrls,
+    selection: selectedUrls,
+  });
+  const displayedUrls =
+    urlDraft.selection === selectedUrls ? urlDraft.text : selectedUrls;
   const catalog = useQuery({
     queryKey: ["llama-models"],
     queryFn: () =>
@@ -27,13 +35,133 @@ export default function ConversationDataControls({
       className="conversation-data-controls"
       aria-label="Local data analysis"
     >
-      <AgentDataFiles
-        value={scope}
-        disabled={disabled}
-        showInspection
-        onUploading={onUploading}
-        onChange={(files) => onChange({ ...scope, ...files })}
-      />
+      <label className="data-research-toggle">
+        <input
+          type="checkbox"
+          aria-label="Use public sources for analysis"
+          disabled={disabled}
+          checked={!!scope.research}
+          onChange={(event) =>
+            onChange({
+              ...scope,
+              research: event.target.checked
+                ? { search_query: "", fetch_urls: [], read_search_pages: false }
+                : undefined,
+            })
+          }
+        />
+        Use public sources for this analysis
+      </label>
+      {scope.research && (
+        <div className="conversation-data-sources">
+          <p className="muted">
+            Review a public query or up to three URLs, one per line. Only these
+            sources are read.
+          </p>
+          <label>
+            Public search query
+            <input
+              aria-label="Public data search query"
+              maxLength={500}
+              disabled={disabled}
+              value={scope.research.search_query}
+              onChange={(event) =>
+                onChange({
+                  ...scope,
+                  research: {
+                    ...scope.research!,
+                    search_query: event.target.value,
+                    read_search_pages:
+                      !!event.target.value.trim() &&
+                      scope.research!.read_search_pages,
+                  },
+                })
+              }
+            />
+          </label>
+          {scope.research.search_query.trim() && (
+            <label className="data-research-toggle">
+              <input
+                type="checkbox"
+                aria-label="Read data search pages"
+                disabled={disabled || !scope.research.search_query.trim()}
+                checked={scope.research.read_search_pages}
+                onChange={(event) =>
+                  onChange({
+                    ...scope,
+                    research: {
+                      ...scope.research!,
+                      read_search_pages: event.target.checked,
+                    },
+                  })
+                }
+              />
+              Read pages from search results
+            </label>
+          )}
+          <label>
+            Public URLs
+            <textarea
+              aria-label="Public data URLs"
+              rows={2}
+              disabled={disabled}
+              placeholder="https://example.com/data.json"
+              value={displayedUrls}
+              onChange={(event) => {
+                setUrlDraft({
+                  text: event.target.value,
+                  selection: event.target.value
+                    .split(/\r?\n/)
+                    .map((item) => item.trim())
+                    .filter(Boolean)
+                    .join("\n"),
+                });
+                onChange({
+                  ...scope,
+                  research: {
+                    ...scope.research!,
+                    fetch_urls: event.target.value
+                      .split(/\r?\n/)
+                      .map((value) => value.trim())
+                      .filter(Boolean),
+                  },
+                });
+              }}
+            />
+          </label>
+        </div>
+      )}
+      {scope.research ? (
+        <details className="conversation-data-files">
+          <summary>
+            Add files · optional
+            {scope.input_artifact_ids.length
+              ? ` · ${scope.input_artifact_ids.length} selected`
+              : ""}
+          </summary>
+          <AgentDataFiles
+            value={scope}
+            allowResearch={!!scope.research}
+            disabled={disabled}
+            showInspection
+            showRepairSettings={false}
+            onUploading={onUploading}
+            onChange={(files) => onChange({ ...scope, ...files })}
+          />
+        </details>
+      ) : (
+        <>
+          <AgentDataFiles
+            value={scope}
+            allowResearch={!!scope.research}
+            disabled={disabled}
+            showInspection
+            showRepairSettings={false}
+            onUploading={onUploading}
+            onChange={(files) => onChange({ ...scope, ...files })}
+          />
+        </>
+      )}
       <details>
         <summary>Analysis settings</summary>
         <label>
@@ -54,6 +182,21 @@ export default function ConversationDataControls({
                   {model.name}
                 </option>
               ))}
+          </select>
+        </label>
+        <label>
+          Automatic fixes
+          <select
+            aria-label="Automatic fixes"
+            disabled={disabled}
+            value={scope.max_repairs ?? 1}
+            onChange={(event) =>
+              onChange({ ...scope, max_repairs: Number(event.target.value) })
+            }
+          >
+            <option value={0}>Off</option>
+            <option value={1}>One attempt</option>
+            <option value={2}>Two attempts</option>
           </select>
         </label>
         <ErrorNotice error={catalog.error} />
@@ -78,8 +221,7 @@ export default function ConversationDataControls({
         </label>
       </details>
       <p className="muted">
-        Your files stay on this station, even if the conversation uses an
-        external model. Analysis may load a local model automatically.
+        Analysis uses a local model. Your files stay on this station.
       </p>
     </section>
   );

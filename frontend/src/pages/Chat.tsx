@@ -126,6 +126,7 @@ type Message = ActionResult & {
     conversation_reference?: {
       source_kind?: "inspected_input" | "analyzed_data";
       filenames?: string[];
+      captured_sources?: { artifact_id: string; captured_at: string }[];
       artifact_ids?: string[];
       artifact_id: string;
       message_id: string;
@@ -894,7 +895,10 @@ function Transcript({
                 <p className="muted">
                   {message.metadata.conversation_reference.source_kind ===
                   "analyzed_data"
-                    ? `Using the analyzed input files · ${message.metadata.conversation_reference.filenames?.join(", ") || "CSV / Excel"}`
+                    ? message.metadata.conversation_reference.captured_sources
+                        ?.length
+                      ? `Using captured public data · ${new Date(message.metadata.conversation_reference.captured_sources[0].captured_at).toLocaleString()}`
+                      : `Using the analyzed input files · ${message.metadata.conversation_reference.filenames?.join(", ") || "Data files"}`
                     : message.metadata.conversation_reference.source_kind ===
                         "inspected_input"
                       ? (message.metadata.conversation_reference.artifact_ids

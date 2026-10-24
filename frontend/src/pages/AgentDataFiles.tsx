@@ -17,12 +17,14 @@ export default function AgentDataFiles({
   showInspection = false,
   onUploading,
   allowResearch = false,
+  showRepairSettings = true,
 }: {
   value?: DataScope | null;
   disabled: boolean;
   onChange: (value: DataScope) => void;
   showInspection?: boolean;
   allowResearch?: boolean;
+  showRepairSettings?: boolean;
   onUploading?: (busy: boolean) => void;
 }) {
   const id = useId();
@@ -77,21 +79,21 @@ export default function AgentDataFiles({
       <h3 id={id}>Data to analyse</h3>
       <p className="muted">
         {allowResearch
-          ? "Reviewed public sources are available to this analysis. CSV or Excel files are optional (up to seven)."
-          : "Choose CSV or Excel files."}{" "}
+          ? "Reviewed public sources are available to this analysis. CSV, Excel or JSON files are optional (up to seven)."
+          : "Choose CSV, Excel or JSON files."}{" "}
         Originals stay unchanged; Python runs locally with no internet access.
       </p>
       {ids.length > maxFiles && (
         <p className="notice" role="alert">
           Public research uses one input slot. Remove a file to keep at most
-          seven CSV/Excel inputs.
+          seven data files.
         </p>
       )}
       <div className="row agent-data-actions">
         <input
           ref={file}
           type="file"
-          accept=".csv,.xlsx"
+          accept=".csv,.xlsx,.json"
           multiple
           hidden
           tabIndex={-1}
@@ -110,7 +112,7 @@ export default function AgentDataFiles({
           onClick={() => file.current?.click()}
         >
           <Upload size={15} />
-          {upload.isPending ? "Uploading…" : "Upload CSV / Excel"}
+          {upload.isPending ? "Uploading…" : "Upload data"}
         </Button>
         <LibraryPicker
           kind="document"
@@ -138,6 +140,11 @@ export default function AgentDataFiles({
                 {files[index]?.data?.title ||
                   files[index]?.data?.original_filename ||
                   "Loading data file…"}
+                {files[index]?.data?.metadata.agent_data_research === true && (
+                  <small className="muted">
+                    Captured public data · original sources are not refreshed
+                  </small>
+                )}
                 {showInspection && (
                   <small className="muted" role="status">
                     {inspection.states[index]?.label}
@@ -185,28 +192,32 @@ export default function AgentDataFiles({
             : "No files selected yet."}
         </p>
       )}
-      <label>
-        Automatic fixes
-        <select
-          aria-label="Automatic fixes"
-          disabled={busy || (!allowResearch && !ids.length)}
-          value={value?.max_repairs ?? 1}
-          onChange={(event) =>
-            onChange({
-              input_artifact_ids: ids,
-              max_repairs: Number(event.target.value),
-            })
-          }
-        >
-          <option value={0}>Off</option>
-          <option value={1}>One attempt</option>
-          <option value={2}>Two attempts</option>
-        </select>
-      </label>
-      <p className="muted">
-        Fixes apply only to confirmed code or output errors, within the
-        execution time limit.
-      </p>
+      {showRepairSettings && (
+        <>
+          <label>
+            Automatic fixes
+            <select
+              aria-label="Automatic fixes"
+              disabled={busy || (!allowResearch && !ids.length)}
+              value={value?.max_repairs ?? 1}
+              onChange={(event) =>
+                onChange({
+                  input_artifact_ids: ids,
+                  max_repairs: Number(event.target.value),
+                })
+              }
+            >
+              <option value={0}>Off</option>
+              <option value={1}>One attempt</option>
+              <option value={2}>Two attempts</option>
+            </select>
+          </label>
+          <p className="muted">
+            Fixes apply only to confirmed code or output errors, within the
+            execution time limit.
+          </p>
+        </>
+      )}
     </section>
   );
 }

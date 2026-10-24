@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { api, type Artifact } from "../api";
 
 export function isDataFile(file: File) {
-  return /\.(csv|xlsx)$/i.test(file.name);
+  return /\.(csv|xlsx|json)$/i.test(file.name);
 }
 
 export async function uploadDataFiles(
@@ -15,7 +15,13 @@ export async function uploadDataFiles(
   if (selected.length + existingCount > 8)
     throw new Error("Choose up to eight data files.");
   if (selected.some((file) => !isDataFile(file)))
-    throw new Error("Choose CSV or XLSX files for local data analysis.");
+    throw new Error("Choose CSV, XLSX or JSON files for local data analysis.");
+  if (
+    selected.some(
+      (file) => /\.json$/i.test(file.name) && file.size > 4 * 1024 * 1024,
+    )
+  )
+    throw new Error("JSON files may be up to 4 MB.");
   if (selected.some((file) => file.size > 16 * 1024 * 1024))
     throw new Error("Each file may be up to 16 MB.");
   if (

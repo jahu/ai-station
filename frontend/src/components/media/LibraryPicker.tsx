@@ -60,7 +60,7 @@ export default function LibraryPicker({
             (audioMode === "transcription" ? 300 : 60))
       : kind === "document"
         ? a.metadata.data_input === true &&
-          /\.(csv|xlsx)$/i.test(a.original_filename)
+          /\.(csv|xlsx|json)$/i.test(a.original_filename)
         : ["image/png", "image/jpeg", "image/webp"].includes(a.mime_type),
   );
   const headingId = useId();
@@ -115,7 +115,7 @@ export default function LibraryPicker({
           </div>
           <Dialog.Description>
             {kind === "document"
-              ? "Choose stored CSV or Excel inputs. Original files remain unchanged."
+              ? "Choose stored CSV, Excel or JSON inputs. Original files remain unchanged."
               : kind === "image"
                 ? "Select images in the order you want the assistant to use them. Existing files are reused without another upload."
                 : audioMode === "transcription"
@@ -200,7 +200,9 @@ export default function LibraryPicker({
                             : kind === "image"
                               ? `${a.metadata.width ?? "?"} × ${a.metadata.height ?? "?"}`
                               : kind === "document"
-                                ? "CSV / Excel"
+                                ? /\.json$/i.test(a.original_filename)
+                                  ? "JSON"
+                                  : "CSV / Excel"
                                 : "PCM WAV"}
                       </small>
                       {(chosen >= 0 || attached) && (

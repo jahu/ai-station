@@ -640,3 +640,24 @@ contract. Snapshot lineage and values must match the original source artifacts.
 Public content cannot add tools, commands, URLs or permissions. Python has no
 network access; repair reuses the same captured sources and absolute deadline.
 See [the plan and qualification contract](plans/agent-research-data.md).
+
+## Conversation public-data scopes and captured inputs
+
+Public data analysis requires a typed research selection or a strong current-user
+computation instruction with explicit public sources and Web enabled. URL words,
+quoted instructions, prior replies and Web availability alone cannot select it.
+Ordinary Chat page/visual questions keep their existing route. Source query/URLs
+are frozen on the exact user message and rechecked before every agent-free source
+request and handoff. Missing/foreign manifests, dependencies, permissions or
+conversation bindings stop before public reads. The existing data permission set
+includes network_read for local provider transport; that flag alone grants no
+new public targets. Python itself remains network-disabled.
+
+JSON inspection supports bounded objects/arrays (4 MiB, 32 levels, 100000 values),
+rejecting duplicate keys, invalid Unicode and non-finite numbers. A worker reads
+and hashes the original app-owned bytes and creates a literal bounded preview;
+no instructions, scripts or formulas are executed. Captures use an ordinary
+inspection child with the original deadline before their data preparation.
+Reused captures retain hash-checked original source lineage, while a follow-up
+gets a fresh execution deadline and no public research children. Unreadable or
+changed inputs stop before code generation. See [the execution contract](plans/conversation-research-data.md).

@@ -141,8 +141,8 @@ it.each(["mixed", "existing", "no-scope"])(
     });
     await screen.findByText(
       mode === "no-scope"
-        ? "Choose Analyze CSV / Excel in a general conversation to analyse these files locally."
-        : "Choose CSV/Excel separately from text, PDF or image attachments. Your existing files are unchanged.",
+        ? "Choose Data analysis in a general conversation to analyse these files locally."
+        : "Choose CSV/Excel/JSON separately from text, PDF or image attachments. Your existing files are unchanged.",
     );
     expect(upload).not.toHaveBeenCalled();
     expect(edit).not.toHaveBeenCalled();

@@ -5,7 +5,32 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
-## Current continuation — research plus offline data, 2026-10-24
+## Latest continuation — conversational public-data analysis, 2026-10-24
+
+Research/data agents (#390) are merged, deployed and real-qualified. Actual
+public Coinbase observations, local generation and native offline Python returned
+the exact captured prices and a checked chart. The QA agent is paused and the
+operator model preset is restored. Evidence:
+`data/acceptance/agent-research-data-20261024/post-deployment-qualified.json`.
+
+Current candidate: PR #391, branch `feat/conversation-research-data`, worktree
+`.tools/conversation-research-data`. It composes that same pipeline directly in
+Chat/Work, adds bounded JSON input inspection, and supports natural offline
+follow-ups from the exact original capture. Read [the contract](conversation-research-data.md).
+All 2904 normal Python/Runner cases passed (2895 passed, nine opt-in skips).
+Frontend, compiled desktop/phone, image/source and disposable native CPU results
+are under `data/acceptance/conversation-research-data-20261024`; verify their
+exact reviewed head before merge/deployment. A final copy change requires renewed
+UI/image/browser qualification; backend evidence may be reused only after an
+exact source comparison. Real public/local-model conversation acceptance and
+backed-up rollout are still pending until the evidence records prove them.
+
+The central deployment record remains authoritative. Keep the native Runner
+source `.tools/ui-python-optional-outputs-20261024`, original root Memory WIP and
+prior live/proof worktrees. Do not repeat completed #390 acceptance or infer
+Whisper-download consent. The full platform goal remains active.
+
+## Previous continuation — research plus offline data, 2026-10-24
 
 Agent validation correction (#389) is merged, deployed and real-qualified at
 source 65534ac. All 2812 normal Python/Runner tests, 9 opt-in skips and 664 UI tests,

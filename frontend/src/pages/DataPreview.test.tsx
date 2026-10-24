@@ -14,7 +14,7 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-function mount(failed = false) {
+function mount(failed = false, jsonFormat = false) {
   const writes: unknown[] = [];
   vi.stubGlobal(
     "fetch",
@@ -32,7 +32,8 @@ function mount(failed = false) {
                 data_preview: {
                   sheets: [
                     {
-                      name: "Sales",
+                      name: jsonFormat ? "JSON" : "Sales",
+                      column_names: jsonFormat ? ["Key", "Value"] : undefined,
                       row_count: 50,
                       column_count: 2,
                       formula_count: 0,
@@ -105,4 +106,13 @@ it("shows a failed inspection and retries only the selected input after an expli
   expect(writes).toEqual([]);
   fireEvent.click(screen.getByRole("button", { name: "Inspect data" }));
   await waitFor(() => expect(writes).toEqual([{ artifact_id: "input" }]));
+});
+
+it("uses real JSON field headers and renders source text without evaluation", async () => {
+  mount(false, true);
+  await screen.findByRole("table", { name: "JSON data preview" });
+  expect(screen.getByRole("columnheader", { name: "Key" })).toBeTruthy();
+  expect(screen.getByRole("columnheader", { name: "Value" })).toBeTruthy();
+  expect(screen.getByText("<script>alert(1)</script>")).toBeTruthy();
+  expect(document.querySelector("script")).toBeNull();
 });

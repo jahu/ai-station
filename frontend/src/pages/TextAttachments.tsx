@@ -197,11 +197,11 @@ export default function TextAttachments({
             if (files.some(isDataFile)) {
               if (!files.every(isDataFile) || attachments.length)
                 throw new Error(
-                  "Choose CSV/Excel separately from text, PDF or image attachments. Your existing files are unchanged.",
+                  "Choose CSV/Excel/JSON separately from text, PDF or image attachments. Your existing files are unchanged.",
                 );
               if (!onDataFiles)
                 throw new Error(
-                  "Choose Analyze CSV / Excel in a general conversation to analyse these files locally.",
+                  "Choose Data analysis in a general conversation to analyse these files locally.",
                 );
               delegated = true;
               await onDataFiles(files);
@@ -292,10 +292,10 @@ export default function TextAttachments({
         )}
         {onDataFiles && (
           <p className="muted">
-            CSV/Excel: up to eight files, 16 MB each and 32 MB total. Analysis
-            uses a local model and offline Python; your files stay on this
-            station, even with an external conversation provider. Review the
-            selected files and Send to start.
+            Data: up to eight files, 16 MB each (JSON: 4 MB) and 32 MB total.
+            Analysis uses a local model and offline Python; your files stay on
+            this station, even with an external conversation provider. Review
+            the selected files and Send to start.
           </p>
         )}
         <p className="muted">

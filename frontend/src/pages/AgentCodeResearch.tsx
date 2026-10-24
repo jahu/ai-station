@@ -1,4 +1,5 @@
 import type { Run } from "../api";
+import { Link } from "react-router-dom";
 import { AgentSearchSources } from "./AgentSearchSources";
 import { isSearchPageResult } from "./agent-search-result";
 import { FetchedPages } from "./AgentHttpFetch";
@@ -38,8 +39,17 @@ export default function AgentCodeResearch({
     ?.metadata?.web_search;
   const pages = sources.find((run) => run.parameters?.tool === "search_pages")
     ?.metadata?.search_pages;
-  const fetched = sources.find((run) => run.parameters?.tool === "http_fetch")
-    ?.metadata?.http_fetch;
+  const fetchedRun = sources.find(
+    (run) => run.parameters?.tool === "http_fetch",
+  );
+  const fetched = fetchedRun?.metadata?.http_fetch;
+  const observation = fetchedRun?.metadata?.observation;
+  const fetchedSnapshot =
+    observation &&
+    typeof observation === "object" &&
+    "artifact_id" in observation
+      ? observation.artifact_id
+      : undefined;
   const hasSearch = isWebSources(search),
     hasPages = isSearchPageResult(pages),
     hasFetched = isFetchResult(fetched);
@@ -60,6 +70,11 @@ export default function AgentCodeResearch({
       {hasSearch && <SearchSources result={search} />}
       {hasPages && <AgentSearchSources result={pages} />}
       {hasFetched && <FetchedPages result={fetched} />}
+      {hasFetched && typeof fetchedSnapshot === "string" && (
+        <Link className="text-link" to={`/library/${fetchedSnapshot}`}>
+          Inspect captured pages
+        </Link>
+      )}
     </details>
   );
 }
