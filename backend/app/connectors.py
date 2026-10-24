@@ -561,7 +561,7 @@ async def _check(session, run):
         run,
         url,
         secret_ref,
-        validate=(lambda: reviewed_connector(session, scope)) if scope else None,
+        validate=(lambda headers: reviewed_connector(session, scope, headers)) if scope else None,
     )
     if page is None:
         append_event(session, run.id, "connector.canceled", {"kind": "http"})

@@ -8,7 +8,8 @@ code/data processing or goal-based media preparation.
 An optional agent scope freezes the connector ID and a policy revision. Migration
 0034 adds its nullable JSON column; absent scopes serialize exactly like legacy
 definitions. Address, authentication or enablement edits rotate authority;
-health checks and display-name edits do not. Changed, disabled or removed sources
+health checks and display-name edits do not. Credential fingerprints also detect
+out-of-band environment/file changes and bind the exact sent header snapshot. Changed, disabled or removed sources
 stop execution and require reselection. Secrets are resolved server-side only,
 sent over HTTPS and scrubbed from captured responses before storage or inference.
 

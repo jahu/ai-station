@@ -17,35 +17,55 @@ from app.models import Artifact, Connector
 from app.permissions import require
 from app.providers import ProviderError
 from app.python_execution import read_owned_file
-from app.secrets import authorization_headers, secret_present
+from app.secrets import authorization_headers
+
+
+def _credential_hash(headers):
+    return hashlib.sha256(headers.get("Authorization", "").encode()).hexdigest()
 
 
 def connector_revision(row):
+    try:
+        headers = authorization_headers(row.secret_ref, required=True) if row.secret_ref else {}
+        secret_hash = _credential_hash(headers)
+    except Exception:
+        secret_hash = None
+    return _revision(row, secret_hash)
+
+
+def _revision(row, secret_hash):
     policy = {
         "id": row.id,
         "kind": row.kind,
         "url": (row.config_json or {}).get("url"),
         "method": "GET",
         "secret_ref": row.secret_ref or "",
+        "credential_hash": secret_hash,
         "enabled": row.enabled,
         "version": (row.config_json or {}).get("http_policy_version", "legacy"),
     }
     return hashlib.sha256(json.dumps(policy, sort_keys=True).encode()).hexdigest()
 
 
-def reviewed_connector(session, scope):
+def reviewed_connector(session, scope, headers=None):
     if scope is None:
         raise ValueError("Choose and review a saved HTTP connection before activation")
     row = session.get(Connector, str(scope.connector_id), populate_existing=True)
     if row is None or row.kind != "http" or not row.enabled:
         raise ValueError("The reviewed HTTP connection is unavailable; select a connection again")
     url = public_url((row.config_json or {}).get("url"))
-    if url is None or connector_revision(row) != scope.connector_revision:
+    if url is None:
         raise ValueError("HTTP connection changed; review and select it again")
     if row.secret_ref and not url.startswith("https://"):
         raise ValueError("Authenticated HTTP connections require HTTPS")
-    if row.secret_ref and not secret_present(row.secret_ref):
-        raise ValueError("The saved HTTP credential is missing; update the connection")
+    try:
+        current_headers = authorization_headers(row.secret_ref, required=True) if row.secret_ref else {}
+    except Exception:
+        raise ValueError("The saved HTTP credential is missing; update the connection") from None
+    if _revision(row, _credential_hash(current_headers)) != scope.connector_revision or (
+        headers is not None and _revision(row, _credential_hash(headers)) != scope.connector_revision
+    ):
+        raise ValueError("HTTP credential changed; review and select the connection again")
     return row
 
 
@@ -82,7 +102,7 @@ async def read_response(session, run, url, secret_ref, *, deadline=None, validat
     except Exception:
         raise ProviderError("The configured HTTP credential is unavailable") from None
     if validate:
-        validate()
+        validate(headers)
     end = min(deadline or float("inf"), time.monotonic() + 25)
     pending = None
     try:
@@ -93,7 +113,7 @@ async def read_response(session, run, url, secret_ref, *, deadline=None, validat
             if time.monotonic() >= end:
                 raise ProviderError("HTTP connection runtime limit exceeded")
             if validate:
-                validate()
+                validate(headers)
             session.commit()
             if pending is None:
                 pending = asyncio.create_task(fetch_public(url, extra_headers=headers))
@@ -109,7 +129,7 @@ async def read_response(session, run, url, secret_ref, *, deadline=None, validat
                 if time.monotonic() >= end:
                     raise ProviderError("HTTP connection runtime limit exceeded")
                 if validate:
-                    validate()
+                    validate(headers)
                 if page.get("error"):
                     # Transport errors can contain arbitrary credential echoes as well.
                     raise ProviderError("The reviewed HTTP request failed")
@@ -136,7 +156,7 @@ async def execute_source(session, run, scope, deadline):
         url,
         row.secret_ref,
         deadline=deadline,
-        validate=lambda: reviewed_connector(session, scope),
+        validate=lambda headers: reviewed_connector(session, scope, headers),
     )
     if page is None:
         return None

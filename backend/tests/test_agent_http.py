@@ -386,3 +386,68 @@ def test_stop_racing_with_finished_error_consumes_secret_bearing_task_exception(
 
         asyncio.run(scenario())
     assert not observed, observed
+
+
+@pytest.mark.parametrize("source", ["environment", "file"])
+def test_out_of_band_credential_change_revokes_reviewed_scope(network, monkeypatch, source):
+    from app.secrets import store_secret_file
+
+    api = TestClient(app)
+    if source == "environment":
+        monkeypatch.setenv("QA_HTTP_TOKEN", TOKEN)
+        row = connection(api, secret=None, secret_ref="env:QA_HTTP_TOKEN")
+    else:
+        row = connection(api)
+    agent = saved_agent(api, row)
+    queued = run_now(api, agent)
+    if source == "environment":
+        monkeypatch.setenv("QA_HTTP_TOKEN", "different-account-token")
+    else:
+        store_secret_file(row["id"], "different-account-token")
+    assert (
+        api.get("/api/connectors/" + row["id"]).json()["http_policy_revision"] != row["http_policy_revision"]
+    )
+    with session_factory()() as s:
+        drain(s)
+    assert api.get("/api/runs/" + queued["id"]).json()["status"] == "failed"
+    assert not network
+
+
+def test_exact_sent_credential_is_bound_even_if_secret_changes_between_reads(network, monkeypatch):
+    from app.agent_http import read_response, reviewed_connector
+
+    api = TestClient(app)
+    row = connection(api)
+    definition = AgentSettings(name="Scope", goal="Read", tools=["http_connector"], http=scope(row))
+    reads = []
+
+    def rotating_headers(*args, **kwargs):
+        reads.append(True)
+        return {"Authorization": "Bearer " + ("unexpected-account" if len(reads) == 1 else TOKEN)}
+
+    monkeypatch.setattr("app.agent_http.authorization_headers", rotating_headers)
+    with session_factory()() as s:
+        task = create_task(s, title="Read", prompt="Read", capability="agent.step")
+        run = create_run(
+            s,
+            task,
+            run_type="agent",
+            capability="agent.step",
+            executor_type="agent_tool",
+            execution_target="container",
+            permissions=["network_read"],
+            parameters={},
+        )
+        run.status = "running"
+        s.commit()
+        with pytest.raises(ValueError, match="changed"):
+            asyncio.run(
+                read_response(
+                    s,
+                    run,
+                    row["url"],
+                    "file:secrets/" + row["id"],
+                    validate=lambda headers: reviewed_connector(s, definition.http, headers),
+                )
+            )
+    assert not network
