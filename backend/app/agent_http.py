@@ -115,9 +115,12 @@ async def read_response(session, run, url, secret_ref, *, deadline=None, validat
                     raise ProviderError("The reviewed HTTP request failed")
                 return page
     finally:
-        if pending is not None and not pending.done():
-            pending.cancel()
-            with suppress(asyncio.CancelledError):
+        if pending is not None:
+            if not pending.done():
+                pending.cancel()
+            # Retrieve finished failures too: a concurrent Stop/scope change must
+            # not leave an unobserved Task exception containing a credential echo.
+            with suppress(asyncio.CancelledError, Exception):
                 await pending
 
 

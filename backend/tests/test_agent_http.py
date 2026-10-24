@@ -342,3 +342,47 @@ def test_health_check_also_redacts_echoed_credentials(network):
     assert TOKEN not in json.dumps(result) and "[redacted]" in json.dumps(result)
     current = api.get("/api/connectors/" + row["id"]).json()
     assert current["http_policy_revision"] == row["http_policy_revision"]
+
+
+def test_stop_racing_with_finished_error_consumes_secret_bearing_task_exception(network, monkeypatch):
+    from app.agent_http import read_response
+
+    api = TestClient(app)
+    connection(api)
+    observed = []
+    with session_factory()() as s:
+        task = create_task(s, title="Stop race", prompt="Read", capability="agent.step")
+        run = create_run(
+            s,
+            task,
+            run_type="agent",
+            capability="agent.step",
+            executor_type="agent_tool",
+            execution_target="container",
+            permissions=["network_read"],
+            parameters={},
+        )
+        run.status = "running"
+        s.commit()
+
+        async def failed(*args, **kwargs):
+            raise RuntimeError("transport echo " + TOKEN)
+
+        async def completed_between_polls(tasks, **kwargs):
+            # A completed Task remains unconsumed while Stop wins the next poll.
+            await asyncio.sleep(0.01)
+            assert next(iter(tasks)).done()
+            request_cancel(s, run)
+            s.commit()
+            return set(), set(tasks)
+
+        monkeypatch.setattr("app.agent_http.fetch_public", failed)
+        monkeypatch.setattr("app.agent_http.asyncio.wait", completed_between_polls)
+
+        async def scenario():
+            asyncio.get_running_loop().set_exception_handler(lambda loop, context: observed.append(context))
+            assert await read_response(s, run, "https://data.example.com/", "") is None
+            await asyncio.sleep(0)
+
+        asyncio.run(scenario())
+    assert not observed, observed
