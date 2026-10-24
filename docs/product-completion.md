@@ -1,6 +1,9 @@
-> Active increment: [conversation agent controls](plans/conversation-agent-control.md)
-> connect explicit Work commands to the existing reviewed lifecycle without blocking
-> the conversation. Candidate verification is pending; #416 remains the live baseline.
+> [Conversation agent controls](plans/conversation-agent-control.md), PR #417,
+> bind Work run/pause/Stop to ordinary reviewed lifecycle operations. Background
+> execution leaves the composer usable; compact receipts show the exact Run/status.
+> Qualification and actual live state are recorded in
+> `data/acceptance/conversation-agent-control-20261024` and shared deployment authority.
+> This increment does not close the whole-platform objective.
 
 > Saved HTTP/API sources are implemented for explicitly reviewed agent workflows,
 > including report preparation and offline local code/data analysis. Authenticated

@@ -1,8 +1,17 @@
-> Active increment: conversation agent run/pause/Stop, `feat/conversation-agent-control`,
-> based on qualified #416. See [contracts](conversation-agent-control.md).
-> Qualification and deployment are pending; the current live release remains #416.
+> Current increment: [conversation agent controls](conversation-agent-control.md),
+> PR #417 / `feat/conversation-agent-control`, based on qualified #416. Explicit
+> Work run/pause/Stop uses source-bound ordinary lifecycle operations, preserves
+> approvals/consents and leaves the main composer usable. Runtime preparation
+> releases SQLite; authority/Stop are rechecked before atomic graph publication.
+> Small receipts link the exact execution without duplicating the full agent card.
+> Read `data/acceptance/conversation-agent-control-20261024` for exact gates and
+> post-deployment qualification; shared deployment authority determines live state.
+> Next useful increment: source-bound follow-up questions about the completed
+> agent result in the main conversation, reusing actual report/artifact provenance
+> without starting another execution or silently expanding source/tool scope.
+> Preserve root Memory WIP, native Runner, operator data and owned model presets.
 
-> Current increment: [selected agent families](selected-agent-families.md), PR #416,
+> Completed increment: [selected agent families](selected-agent-families.md), PR #416,
 > branch `feat/selected-agent-families`, base #415. Selected documents/public sources
 > can propose Report/Local code/Data; data files/creation retain Data. Controller
 > maps tools/models/workspace policy, preserves snapshots and keeps activation
@@ -79,10 +88,9 @@ main/master operations. Preserve original root Memory WIP and all existing servi
 
 LAN UI: http://192.168.1.121:8765. Always read
 `data/acceptance/safety-redeploy-20261012/deployment.json` and the corresponding
-post-deployment qualification before relying on a release name or PID. #416 is the
-latest qualified deployment. Check
-`data/acceptance/selected-agent-families-20261024/post-deployment-qualified.json`
-for its exact qualification. Deploy into a detached release worktree; preserve the
+post-deployment qualification before relying on a release name or PID. Use the current increment’s
+`post-deployment-qualified.json` for exact rollout evidence; a merged PR alone
+is not proof that its image is running. Deploy into a detached release worktree; preserve the
 native Runner, ready model container/preset, operator login and all original rows.
 
 ## Completed increment: selected documents

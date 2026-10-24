@@ -32,3 +32,26 @@ and permission tampering, turn replay, pause consent revocation, cancellation
 before dispatch, exact-Task Stop, concurrent scheduler behavior and an unblocked
 conversation. Qualify compiled desktop/mobile source → control → result paths
 with isolated data and fake inference; report that separately from real models.
+
+## Qualification scope
+
+PR #417 builds on #416 with no schema/native/model change. Normal verification
+includes the complete backend/Runner suite and all 47 controller tests, including
+source/revision/permission tampering, replay, approval, one-shot schedules,
+concurrent metadata writing, Stop during preparation and exact-Task cancellation.
+The final composer-default/compact-receipt correction has a complete affected
+controller-module recheck; all other baseline backend/Runner/test files are
+byte-identical. Exact heads and successful coverage remain in the gate reports.
+
+Compiled application-image desktop (1440px) and mobile viewport (390px) checks
+exercise ten actual Send/worker controls, ordinary approval, pause without cancel,
+Stop without disabling schedules, two completed report/artifact workflows and
+reload. Model listing and report inference are injected. Controls call no model;
+no new GPU/media generation or physical-phone qualification is claimed. A control
+receipt does not repeat the full agent card; the existing source card retains live
+results and the receipt links the specific execution and agent workspace.
+
+Evidence: `data/acceptance/conversation-agent-control-20261024`. Earlier harness
+failures and the deliberately interrupted superseded suite are retained and are
+not passing gates. Use the post-deployment qualification and shared deployment
+record to establish the actual live image. Whole-platform completion remains open.
