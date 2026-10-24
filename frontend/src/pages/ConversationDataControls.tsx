@@ -35,15 +35,7 @@ export default function ConversationDataControls({
       className="conversation-data-controls"
       aria-label="Local data analysis"
     >
-      <AgentDataFiles
-        value={scope}
-        allowResearch={!!scope.research}
-        disabled={disabled}
-        showInspection
-        onUploading={onUploading}
-        onChange={(files) => onChange({ ...scope, ...files })}
-      />
-      <label className="check">
+      <label className="data-research-toggle">
         <input
           type="checkbox"
           aria-label="Use public sources for analysis"
@@ -61,10 +53,10 @@ export default function ConversationDataControls({
         Use public sources for this analysis
       </label>
       {scope.research && (
-        <div className="conversation-data-controls">
+        <div className="conversation-data-sources">
           <p className="muted">
-            Review a public query or up to three URLs. Only these sources are
-            read; Python stays offline. Files are optional.
+            Review a public query or up to three URLs, one per line. Only these
+            sources are read.
           </p>
           <label>
             Public search query
@@ -87,24 +79,26 @@ export default function ConversationDataControls({
               }
             />
           </label>
-          <label className="check">
-            <input
-              type="checkbox"
-              aria-label="Read data search pages"
-              disabled={disabled || !scope.research.search_query.trim()}
-              checked={scope.research.read_search_pages}
-              onChange={(event) =>
-                onChange({
-                  ...scope,
-                  research: {
-                    ...scope.research!,
-                    read_search_pages: event.target.checked,
-                  },
-                })
-              }
-            />
-            Read pages from search results
-          </label>
+          {scope.research.search_query.trim() && (
+            <label className="data-research-toggle">
+              <input
+                type="checkbox"
+                aria-label="Read data search pages"
+                disabled={disabled || !scope.research.search_query.trim()}
+                checked={scope.research.read_search_pages}
+                onChange={(event) =>
+                  onChange({
+                    ...scope,
+                    research: {
+                      ...scope.research!,
+                      read_search_pages: event.target.checked,
+                    },
+                  })
+                }
+              />
+              Read pages from search results
+            </label>
+          )}
           <label>
             Public URLs
             <textarea
@@ -137,6 +131,37 @@ export default function ConversationDataControls({
           </label>
         </div>
       )}
+      {scope.research ? (
+        <details className="conversation-data-files">
+          <summary>
+            Add files · optional
+            {scope.input_artifact_ids.length
+              ? ` · ${scope.input_artifact_ids.length} selected`
+              : ""}
+          </summary>
+          <AgentDataFiles
+            value={scope}
+            allowResearch={!!scope.research}
+            disabled={disabled}
+            showInspection
+            showRepairSettings={false}
+            onUploading={onUploading}
+            onChange={(files) => onChange({ ...scope, ...files })}
+          />
+        </details>
+      ) : (
+        <>
+          <AgentDataFiles
+            value={scope}
+            allowResearch={!!scope.research}
+            disabled={disabled}
+            showInspection
+            showRepairSettings={false}
+            onUploading={onUploading}
+            onChange={(files) => onChange({ ...scope, ...files })}
+          />
+        </>
+      )}
       <details>
         <summary>Analysis settings</summary>
         <label>
@@ -157,6 +182,21 @@ export default function ConversationDataControls({
                   {model.name}
                 </option>
               ))}
+          </select>
+        </label>
+        <label>
+          Automatic fixes
+          <select
+            aria-label="Automatic fixes"
+            disabled={disabled}
+            value={scope.max_repairs ?? 1}
+            onChange={(event) =>
+              onChange({ ...scope, max_repairs: Number(event.target.value) })
+            }
+          >
+            <option value={0}>Off</option>
+            <option value={1}>One attempt</option>
+            <option value={2}>Two attempts</option>
           </select>
         </label>
         <ErrorNotice error={catalog.error} />
@@ -181,8 +221,7 @@ export default function ConversationDataControls({
         </label>
       </details>
       <p className="muted">
-        Your files stay on this station, even if the conversation uses an
-        external model. Analysis may load a local model automatically.
+        Analysis uses a local model. Your files stay on this station.
       </p>
     </section>
   );
