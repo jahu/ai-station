@@ -3,6 +3,9 @@ import AnalysisAgentDialog, {
 } from "./AnalysisAgentDialog";
 import DataAgentDraftSource from "./DataAgentDraftSource";
 import AgentControlRun from "./AgentControlRun";
+import AgentResultSources, {
+  type AgentResultSource,
+} from "./AgentResultSources";
 import CreationContextNotice, {
   type CreationContext,
 } from "./CreationContextNotice";
@@ -114,6 +117,7 @@ type Message = ActionResult & {
   agent_control_run?: { id: string; status: string };
   error_message: string;
   metadata: {
+    agent_result_sources?: AgentResultSource[];
     transcript_sources?: {
       source_message_id: string;
       run_id?: string;
@@ -907,6 +911,10 @@ function Transcript({
                   )}
                 </p>
               ))}
+              <AgentResultSources
+                sources={message.metadata.agent_result_sources}
+                tabIndex={current ? 0 : -1}
+              />
               <CreationContextNotice
                 value={message.metadata.creation_context}
                 active={current}

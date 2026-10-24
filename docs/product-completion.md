@@ -1,3 +1,9 @@
+> [Agent report follow-up context](plans/conversation-agent-results.md), PR #418,
+> lets Chat/Work use actual verified completed reports with visible provenance and
+> no repeated execution. Newer unfinished work does not inherit an older report.
+> Qualification/live evidence: `data/acceptance/conversation-agent-results-20261025`.
+> Broader structured/code/media result reuse and whole-platform completion remain open.
+
 > [Conversation agent controls](plans/conversation-agent-control.md), PR #417,
 > bind Work run/pause/Stop to ordinary reviewed lifecycle operations. Background
 > execution leaves the composer usable; compact receipts show the exact Run/status.

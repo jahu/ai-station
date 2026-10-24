@@ -1,3 +1,9 @@
+Follow-up Chat/Work replies can quote a completed conversation-linked agent
+report with verified bytes, bounded context and visible source provenance.
+Unfinished or unavailable reports are identified explicitly; reading a result
+does not start another agent or grant tools.
+See [agent report context](docs/plans/conversation-agent-results.md).
+
 Work can operate the last agent created in the conversation: **Run this agent**,
 **Pause this agent** (future runs) and **Stop this agent** (current execution).
 Existing review/enable, approvals, permissions and Task-wide Stop remain in force.
