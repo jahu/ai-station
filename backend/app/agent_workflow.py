@@ -257,13 +257,13 @@ def publish_steps(session, parent: Run) -> list[Run]:
         deadline = coding_deadline(parent, definition)
         parent.parameters = {**parent.parameters, "agent_coding_deadline": deadline.isoformat()}
         if "python_data" in definition.tools:
-            from app.data_agents import require_runtime, verify_inputs
+            from app.data_agents import allows_empty_inputs, require_runtime, verify_inputs
 
             require_runtime()
             verify_inputs(
                 session,
                 parent.parameters.get("data_inputs"),
-                allow_empty=bool(coding_research_steps(definition.tools)),
+                allow_empty=allows_empty_inputs(definition),
             )
         if coding_provider(definition.tools) == "local" and not definition.project_id:
             return [publish_workspace(session, parent, definition, deadline)]

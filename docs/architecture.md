@@ -31,6 +31,10 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Explicit file creation reuses the existing local Python/data graph with zero
+input files. Its frozen operation and ordinary output inspection bind later reuse.
+See [local file creation](plans/local-file-creation.md).
+
 Conversation Data analysis can explicitly select rendered public URLs. The same
 Browser/source/Python graph runs without a persistent Agent, on the existing
 conversation Task. See [direct rendered data](plans/conversation-rendered-data.md).

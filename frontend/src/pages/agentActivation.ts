@@ -84,7 +84,11 @@ export function activationBlock(
     model?: string | null;
     permission_profile?: string;
     tools?: string[];
-    data?: { input_artifact_ids: string[]; max_repairs: number } | null;
+    data?: {
+      input_artifact_ids: string[];
+      max_repairs: number;
+      operation?: "analyze" | "create";
+    } | null;
     media?: AgentMediaScope | null;
     data_readiness?: { ready: boolean; reason: string } | null;
     skills?: string[];
@@ -120,7 +124,11 @@ export function activationBlock(
     const research = names.some((name) => PUBLIC_RESEARCH_TOOLS.includes(name));
     if (
       !localResearchScope(names) ||
-      (!research && !agent.data?.input_artifact_ids.length) ||
+      (agent.data?.operation === "create" &&
+        (research || !!agent.data.input_artifact_ids.length)) ||
+      (!research &&
+        agent.data?.operation !== "create" &&
+        !agent.data?.input_artifact_ids.length) ||
       (research && (agent.data?.input_artifact_ids.length ?? 0) > 7) ||
       !agent.data_readiness?.ready
     )

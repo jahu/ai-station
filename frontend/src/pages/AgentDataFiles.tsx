@@ -1,3 +1,4 @@
+import DataOperation from "./DataOperation";
 import { uploadDataFiles } from "./data-upload";
 import { useEffect, useId, useRef } from "react";
 import { Link } from "react-router-dom";
@@ -9,7 +10,11 @@ import { ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import LibraryPicker from "../components/media/LibraryPicker";
 
-export type DataScope = { input_artifact_ids: string[]; max_repairs: number };
+export type DataScope = {
+  input_artifact_ids: string[];
+  max_repairs: number;
+  operation?: "analyze" | "create";
+};
 export default function AgentDataFiles({
   value,
   disabled,
@@ -18,6 +23,7 @@ export default function AgentDataFiles({
   onUploading,
   allowResearch = false,
   showRepairSettings = true,
+  showOperation = true,
 }: {
   value?: DataScope | null;
   disabled: boolean;
@@ -25,12 +31,14 @@ export default function AgentDataFiles({
   showInspection?: boolean;
   allowResearch?: boolean;
   showRepairSettings?: boolean;
+  showOperation?: boolean;
   onUploading?: (busy: boolean) => void;
 }) {
   const id = useId();
   const file = useRef<HTMLInputElement>(null);
   const cache = useQueryClient();
   const ids = value?.input_artifact_ids ?? [];
+  const creating = value?.operation === "create";
   const maxFiles = allowResearch ? 7 : 8;
   const files = useQueries({
     queries: ids.map((id) => ({
@@ -52,6 +60,7 @@ export default function AgentDataFiles({
   });
   const updateIds = (next: string[]) =>
     onChange({
+      ...value,
       input_artifact_ids: next,
       max_repairs: value?.max_repairs ?? 1,
     });
@@ -76,11 +85,21 @@ export default function AgentDataFiles({
   const busy = disabled || upload.isPending || inspect.isPending;
   return (
     <section className="agent-data-files" aria-labelledby={id}>
-      <h3 id={id}>Data to analyse</h3>
+      <h3 id={id}>{creating ? "Create files" : "Data to analyse"}</h3>
+      {showOperation && (
+        <DataOperation
+          value={value}
+          disabled={busy}
+          hasResearch={allowResearch}
+          onChange={onChange}
+        />
+      )}
       <p className="muted">
-        {allowResearch
-          ? "Reviewed public sources are available to this analysis. CSV, Excel or JSON files are optional (up to seven)."
-          : "Choose CSV, Excel or JSON files."}{" "}
+        {creating
+          ? "Describe the files and their contents in the instruction. No input files are read."
+          : allowResearch
+            ? "Reviewed public sources are available to this analysis. CSV, Excel or JSON files are optional (up to seven)."
+            : "Choose CSV, Excel or JSON files."}{" "}
         Originals stay unchanged; Python runs locally with no internet access.
       </p>
       {ids.length > maxFiles && (
@@ -89,108 +108,118 @@ export default function AgentDataFiles({
           seven data files.
         </p>
       )}
-      <div className="row agent-data-actions">
-        <input
-          ref={file}
-          type="file"
-          accept=".csv,.xlsx,.json"
-          multiple
-          hidden
-          tabIndex={-1}
-          aria-label="Upload agent data"
-          disabled={busy || ids.length >= maxFiles}
-          onChange={(event) => {
-            const selected = Array.from(event.target.files ?? []);
-            event.target.value = "";
-            if (selected.length) upload.mutate(selected);
-          }}
-        />
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={busy || ids.length >= maxFiles}
-          onClick={() => file.current?.click()}
-        >
-          <Upload size={15} />
-          {upload.isPending ? "Uploading…" : "Upload data"}
-        </Button>
-        <LibraryPicker
-          kind="document"
-          existing={ids}
-          limit={Math.max(0, maxFiles - ids.length)}
-          busy={busy}
-          onSelect={(items) => updateIds([...ids, ...items.map((a) => a.id)])}
-        />
-      </div>
-      <ErrorNotice
-        error={
-          upload.error ??
-          inspect.error ??
-          files.find((item) => item.error)?.error ??
-          inspection.states.find((item) => item.error)?.error ??
-          null
-        }
-      />
-      {ids.length ? (
-        <ul className="agent-data-inputs">
-          {ids.map((aid, index) => (
-            <li key={aid}>
-              <FileSpreadsheet size={18} aria-hidden="true" />
-              <span>
-                {files[index]?.data?.title ||
-                  files[index]?.data?.original_filename ||
-                  "Loading data file…"}
-                {files[index]?.data?.metadata.agent_data_research === true && (
-                  <small className="muted">
-                    Captured public data · original sources are not refreshed
-                  </small>
-                )}
-                {showInspection && (
-                  <small className="muted" role="status">
-                    {inspection.states[index]?.label}
-                  </small>
-                )}
-              </span>
-              {showInspection &&
-                inspection.states[index]?.file &&
-                (!inspection.states[index]?.file?.metadata
-                  ?.data_inspection_run_id ||
-                  ["failed", "canceled", "interrupted"].includes(
-                    inspection.states[index]?.run?.status ?? "",
-                  )) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    disabled={busy}
-                    onClick={() => inspect.mutate(aid)}
+      {!creating && (
+        <>
+          <div className="row agent-data-actions">
+            <input
+              ref={file}
+              type="file"
+              accept=".csv,.xlsx,.json"
+              multiple
+              hidden
+              tabIndex={-1}
+              aria-label="Upload agent data"
+              disabled={busy || ids.length >= maxFiles}
+              onChange={(event) => {
+                const selected = Array.from(event.target.files ?? []);
+                event.target.value = "";
+                if (selected.length) upload.mutate(selected);
+              }}
+            />
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={busy || ids.length >= maxFiles}
+              onClick={() => file.current?.click()}
+            >
+              <Upload size={15} />
+              {upload.isPending ? "Uploading…" : "Upload data"}
+            </Button>
+            <LibraryPicker
+              kind="document"
+              existing={ids}
+              limit={Math.max(0, maxFiles - ids.length)}
+              busy={busy}
+              onSelect={(items) =>
+                updateIds([...ids, ...items.map((a) => a.id)])
+              }
+            />
+          </div>
+          <ErrorNotice
+            error={
+              upload.error ??
+              inspect.error ??
+              files.find((item) => item.error)?.error ??
+              inspection.states.find((item) => item.error)?.error ??
+              null
+            }
+          />
+          {ids.length ? (
+            <ul className="agent-data-inputs">
+              {ids.map((aid, index) => (
+                <li key={aid}>
+                  <FileSpreadsheet size={18} aria-hidden="true" />
+                  <span>
+                    {files[index]?.data?.title ||
+                      files[index]?.data?.original_filename ||
+                      "Loading data file…"}
+                    {files[index]?.data?.metadata.agent_data_research ===
+                      true && (
+                      <small className="muted">
+                        Captured public data · original sources are not
+                        refreshed
+                      </small>
+                    )}
+                    {showInspection && (
+                      <small className="muted" role="status">
+                        {inspection.states[index]?.label}
+                      </small>
+                    )}
+                  </span>
+                  {showInspection &&
+                    inspection.states[index]?.file &&
+                    (!inspection.states[index]?.file?.metadata
+                      ?.data_inspection_run_id ||
+                      ["failed", "canceled", "interrupted"].includes(
+                        inspection.states[index]?.run?.status ?? "",
+                      )) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={busy}
+                        onClick={() => inspect.mutate(aid)}
+                      >
+                        Inspect file
+                      </Button>
+                    )}
+                  <Link
+                    to={`/library/${aid}`}
+                    aria-label={`Preview data file ${index + 1}`}
                   >
-                    Inspect file
-                  </Button>
-                )}
-              <Link
-                to={`/library/${aid}`}
-                aria-label={`Preview data file ${index + 1}`}
-              >
-                Preview
-              </Link>
-              <button
-                className="icon-button"
-                type="button"
-                disabled={busy}
-                aria-label={`Remove data file ${index + 1}`}
-                onClick={() => updateIds(ids.filter((item) => item !== aid))}
-              >
-                <X size={16} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="muted">
-          {allowResearch
-            ? "No files selected · use reviewed public sources."
-            : "No files selected yet."}
-        </p>
+                    Preview
+                  </Link>
+                  <button
+                    className="icon-button"
+                    type="button"
+                    disabled={busy}
+                    aria-label={`Remove data file ${index + 1}`}
+                    onClick={() =>
+                      updateIds(ids.filter((item) => item !== aid))
+                    }
+                  >
+                    <X size={16} />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">
+              {allowResearch
+                ? "No files selected · use reviewed public sources."
+                : "No files selected yet."}
+            </p>
+          )}
+        </>
       )}
       {showRepairSettings && (
         <>
@@ -198,10 +227,11 @@ export default function AgentDataFiles({
             Automatic fixes
             <select
               aria-label="Automatic fixes"
-              disabled={busy || (!allowResearch && !ids.length)}
+              disabled={busy || (!creating && !allowResearch && !ids.length)}
               value={value?.max_repairs ?? 1}
               onChange={(event) =>
                 onChange({
+                  ...value,
                   input_artifact_ids: ids,
                   max_repairs: Number(event.target.value),
                 })

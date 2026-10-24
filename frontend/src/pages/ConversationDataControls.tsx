@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api";
 import { ErrorNotice } from "../components/common";
+import DataOperation from "./DataOperation";
 import AgentDataFiles from "./AgentDataFiles";
 import type { ConversationDataScope } from "./useDataInputs";
 
@@ -35,130 +36,152 @@ export default function ConversationDataControls({
       className="conversation-data-controls"
       aria-label="Local data analysis"
     >
-      <label className="data-research-toggle">
-        <input
-          type="checkbox"
-          aria-label="Use public sources for analysis"
-          disabled={disabled}
-          checked={!!scope.research}
-          onChange={(event) =>
-            onChange({
-              ...scope,
-              research: event.target.checked
-                ? { search_query: "", fetch_urls: [], read_search_pages: false }
-                : undefined,
-            })
-          }
-        />
-        Use public sources for this analysis
-      </label>
-      {scope.research && (
-        <div className="conversation-data-sources">
-          <p className="muted">
-            Review a public query or up to three URLs, one per line. Only these
-            sources are read.
-          </p>
-          <label>
-            Public search query
+      <DataOperation
+        value={scope}
+        disabled={disabled}
+        hasResearch={!!scope.research}
+        onChange={(next) => onChange({ ...scope, ...next })}
+      />
+      {scope.operation === "create" ? (
+        <p className="muted">
+          Describe the workbook, table or chart in your message. Files are
+          created locally from your instructions, without reading existing files
+          or visiting websites.
+        </p>
+      ) : (
+        <>
+          <label className="data-research-toggle">
             <input
-              aria-label="Public data search query"
-              maxLength={500}
+              type="checkbox"
+              aria-label="Use public sources for analysis"
               disabled={disabled}
-              value={scope.research.search_query}
+              checked={!!scope.research}
               onChange={(event) =>
                 onChange({
                   ...scope,
-                  research: {
-                    ...scope.research!,
-                    search_query: event.target.value,
-                    read_search_pages:
-                      !!event.target.value.trim() &&
-                      scope.research!.read_search_pages,
-                  },
+                  research: event.target.checked
+                    ? {
+                        search_query: "",
+                        fetch_urls: [],
+                        read_search_pages: false,
+                      }
+                    : undefined,
                 })
               }
             />
+            Use public sources for this analysis
           </label>
-          {scope.research.search_query.trim() && (
-            <label className="data-research-toggle">
-              <input
-                type="checkbox"
-                aria-label="Read data search pages"
-                disabled={disabled || !scope.research.search_query.trim()}
-                checked={scope.research.read_search_pages}
-                onChange={(event) =>
-                  onChange({
-                    ...scope,
-                    research: {
-                      ...scope.research!,
-                      read_search_pages: event.target.checked,
-                    },
-                  })
-                }
-              />
-              Read pages from search results
-            </label>
-          )}
-          <label>
-            Public URLs
-            <textarea
-              aria-label="Public data URLs"
-              rows={2}
-              disabled={disabled}
-              placeholder="https://example.com/data.json"
-              value={displayedUrls}
-              onChange={(event) => {
-                const urls = event.target.value
-                  .split(/\r?\n/)
-                  .map((item) => item.trim())
-                  .filter(Boolean);
-                setUrlDraft({
-                  text: event.target.value,
-                  selection: urls.join("\n"),
-                });
-                onChange({
-                  ...scope,
-                  research: {
-                    ...scope.research!,
-                    fetch_urls: urls,
-                    ...(scope.research!.render_pages
-                      ? { render_pages: urls.length > 0 ? true : undefined }
-                      : {}),
-                  },
-                });
-              }}
-            />
-          </label>
-          {scope.research.fetch_urls.length > 0 && (
-            <>
-              <label className="data-research-toggle">
+          {scope.research && (
+            <div className="conversation-data-sources">
+              <p className="muted">
+                Review a public query or up to three URLs, one per line. Only
+                these sources are read.
+              </p>
+              <label>
+                Public search query
                 <input
-                  type="checkbox"
-                  aria-label="Read data URLs with JavaScript"
+                  aria-label="Public data search query"
+                  maxLength={500}
                   disabled={disabled}
-                  checked={scope.research.render_pages === true}
+                  value={scope.research.search_query}
                   onChange={(event) =>
                     onChange({
                       ...scope,
                       research: {
                         ...scope.research!,
-                        render_pages: event.target.checked ? true : undefined,
+                        search_query: event.target.value,
+                        read_search_pages:
+                          !!event.target.value.trim() &&
+                          scope.research!.read_search_pages,
                       },
                     })
                   }
                 />
-                Read these pages with JavaScript
               </label>
-              {scope.research.render_pages && (
-                <p className="muted">
-                  Uses the local browser for these public URLs. Captured text
-                  feeds the analysis; screenshots are saved for inspection.
-                  Python stays offline.
-                </p>
+              {scope.research.search_query.trim() && (
+                <label className="data-research-toggle">
+                  <input
+                    type="checkbox"
+                    aria-label="Read data search pages"
+                    disabled={disabled || !scope.research.search_query.trim()}
+                    checked={scope.research.read_search_pages}
+                    onChange={(event) =>
+                      onChange({
+                        ...scope,
+                        research: {
+                          ...scope.research!,
+                          read_search_pages: event.target.checked,
+                        },
+                      })
+                    }
+                  />
+                  Read pages from search results
+                </label>
               )}
-            </>
+              <label>
+                Public URLs
+                <textarea
+                  aria-label="Public data URLs"
+                  rows={2}
+                  disabled={disabled}
+                  placeholder="https://example.com/data.json"
+                  value={displayedUrls}
+                  onChange={(event) => {
+                    const urls = event.target.value
+                      .split(/\r?\n/)
+                      .map((item) => item.trim())
+                      .filter(Boolean);
+                    setUrlDraft({
+                      text: event.target.value,
+                      selection: urls.join("\n"),
+                    });
+                    onChange({
+                      ...scope,
+                      research: {
+                        ...scope.research!,
+                        fetch_urls: urls,
+                        ...(scope.research!.render_pages
+                          ? { render_pages: urls.length > 0 ? true : undefined }
+                          : {}),
+                      },
+                    });
+                  }}
+                />
+              </label>
+              {scope.research.fetch_urls.length > 0 && (
+                <>
+                  <label className="data-research-toggle">
+                    <input
+                      type="checkbox"
+                      aria-label="Read data URLs with JavaScript"
+                      disabled={disabled}
+                      checked={scope.research.render_pages === true}
+                      onChange={(event) =>
+                        onChange({
+                          ...scope,
+                          research: {
+                            ...scope.research!,
+                            render_pages: event.target.checked
+                              ? true
+                              : undefined,
+                          },
+                        })
+                      }
+                    />
+                    Read these pages with JavaScript
+                  </label>
+                  {scope.research.render_pages && (
+                    <p className="muted">
+                      Uses the local browser for these public URLs. Captured
+                      text feeds the analysis; screenshots are saved for
+                      inspection. Python stays offline.
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
           )}
-        </div>
+        </>
       )}
       {scope.research ? (
         <details className="conversation-data-files">
@@ -173,6 +196,7 @@ export default function ConversationDataControls({
             allowResearch={!!scope.research}
             disabled={disabled}
             showInspection
+            showOperation={false}
             showRepairSettings={false}
             onUploading={onUploading}
             onChange={(files) => onChange({ ...scope, ...files })}
@@ -185,6 +209,7 @@ export default function ConversationDataControls({
             allowResearch={!!scope.research}
             disabled={disabled}
             showInspection
+            showOperation={false}
             showRepairSettings={false}
             onUploading={onUploading}
             onChange={(files) => onChange({ ...scope, ...files })}

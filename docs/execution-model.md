@@ -22,6 +22,11 @@ workspace. One reviewed definition and deadline bind every child.
 
 # Execution model
 
+Instruction-based creation follows the existing workspace → generation → Python
+→ verified result graph. Ordinary read-only inspection prepares the created
+workbook/CSV for a new analysis, without extending the original budget.
+See [local file creation](plans/local-file-creation.md).
+
 Direct rendered-data conversations reuse Browser → source handoff → offline
 Python → verified result. Original expiry and Task Stop bind all stages; an
 offline captured-data follow-up does not regain Browser permission.

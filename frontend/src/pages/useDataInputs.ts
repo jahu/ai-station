@@ -93,9 +93,11 @@ export function useDataInputs(scope?: ConversationDataScope | null) {
   return {
     states,
     ready:
-      (scope?.research
-        ? researchDataReady(scope) && ids.length <= 7
-        : ids.length > 0 && ids.length <= 8) &&
+      (scope?.operation === "create"
+        ? ids.length === 0 && !scope.research
+        : scope?.research
+          ? researchDataReady(scope) && ids.length <= 7
+          : ids.length > 0 && ids.length <= 8) &&
       states.every((item) => item.ready),
   };
 }

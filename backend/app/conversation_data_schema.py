@@ -1,5 +1,6 @@
 """One-turn local data authority; no host paths, project IDs or arbitrary tools."""
 
+from typing import ClassVar
 from uuid import UUID
 
 from pydantic import (
@@ -55,6 +56,7 @@ class DataResearchSelection(BaseModel):
 
 class DataScope(AgentDataScope):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    allow_empty_analysis: ClassVar[bool] = True
     input_artifact_ids: list[UUID] = Field(default_factory=list, max_length=8)
     research: DataResearchSelection | None = None
     model: str = Field(default="auto", pattern=r"^(auto|llamacpp:[0-9a-f-]{36})$")
@@ -69,7 +71,10 @@ class DataScope(AgentDataScope):
 
     @model_validator(mode="after")
     def inputs_or_sources(self):
-        if self.research is not None:
+        if self.operation == "create":
+            if self.research is not None:
+                raise ValueError("Create files uses instructions; choose analysis for public sources")
+        elif self.research is not None:
             ResearchDataScope(input_artifact_ids=self.input_artifact_ids, max_repairs=self.max_repairs)
         elif not self.input_artifact_ids:
             raise ValueError("Choose inspected data files or explicit public research")
@@ -80,8 +85,14 @@ class DataScope(AgentDataScope):
         value = handler(self)
         if self.research is None:
             value.pop("research", None)
+        if self.operation == "analyze":
+            value.pop("operation", None)
         return value
 
     def files(self):
         kind = ResearchDataScope if self.research is not None else AgentDataScope
-        return kind(input_artifact_ids=self.input_artifact_ids, max_repairs=self.max_repairs)
+        return kind(
+            input_artifact_ids=self.input_artifact_ids,
+            max_repairs=self.max_repairs,
+            operation=self.operation,
+        )

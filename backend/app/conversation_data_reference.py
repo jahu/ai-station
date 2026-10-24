@@ -35,7 +35,7 @@ def requested(content):
     operation = r"(?:calculate|compute|sum|average|group|aggregate|analy[sz]e|compare|filter|sort|count|transform|extract|plot|chart|policz(?:y[ćc])?|oblicz(?:y[ćc])?|przelicz(?:y[ćc])?|zsumuj|por[óo]wnaj|pogrupuj|podziel|wylicz|przeanalizuj|posortuj|wyodr[ęe]bnij|narysuj)\b"
     if re.search(
         prefix
-        + r"(?:create|draw|make|stw[oó]rz|utw[oó]rz|zr[oó]b)\b.{0,50}\b(?:chart|plot|workbook|wykres\w*|raport\w*|excel)\b",
+        + r"(?:create|draw|make|stw[oó]rz|utw[oó]rz|zr[oó]b)\b.{0,50}\b(?:chart|plot|workbook|spreadsheet|csv|xlsx|arkusz\w*|wykres\w*|raport\w*|excel)\b",
         text,
         re.I,
     ):
@@ -166,6 +166,10 @@ def source_reference(session, user, root):
     )
     if original != root.parameters.get("data_inputs"):
         raise ValueError("The original data input or inspection changed")
+    if scope.operation == "create":
+        from app.data_agents import created_input_ids
+
+        ids = created_input_ids(session, result)
     derived_scope = DataScope(
         input_artifact_ids=ids,
         max_repairs=scope.max_repairs,
@@ -183,6 +187,7 @@ def source_reference(session, user, root):
     )
     return {
         "source_kind": "analyzed_data",
+        **({"created_from_instructions": True} if scope.operation == "create" else {}),
         "artifact_id": ids[0],
         "artifact_ids": ids,
         "filenames": [session.get(Artifact, aid).original_filename for aid in ids],

@@ -49,8 +49,8 @@ def required_exports(goal):
     result = []
     for name, target in [
         ("chart.png", r"(?:charts?|plots?|wykres\w*)"),
-        ("result.xlsx", r"(?:excel\w*|xlsx|workbooks?)"),
-        ("report.txt", r"(?:text reports?|raport\w* tekstow\w*)"),
+        ("result.xlsx", r"(?:excel\w*|xlsx|workbooks?|spreadsheets?|arkusz\w*(?:\s+excel)?)"),
+        ("report.txt", r"(?:text (?:reports?|files?)|raport\w* tekstow\w*|plik(?:u)? tekstow\w*)"),
     ]:
         negative = (
             r"\b(?:without|no|do not|don't|nie|bez)\s+(?:(?:"

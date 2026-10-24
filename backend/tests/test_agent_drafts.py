@@ -641,3 +641,26 @@ def test_assisted_draft_can_review_rendered_sources_for_local_work(model, monkey
         assert agent["tools"] == [family, "browser"] and agent["model"] == "auto"
         assert agent["fetch_urls"] == ["https://example.com/"] and not agent["enabled"]
         assert agent["next_run_at"] is None and len(calls) == 1
+
+
+def test_assisted_creation_draft_uses_controller_bound_empty_scope(model):
+    calls, responses = model
+    responses[:] = [
+        json.dumps(
+            {
+                **PROPOSAL,
+                "goal": "Create a CSV table with the integers 1 to 10",
+                "tools": ["python_data"],
+                "search_query": "",
+            }
+        )
+    ]
+    with TestClient(app) as api:
+        run = submit(api, instruction="Create an agent that creates a CSV table with the integers 1 to 10")
+        step()
+        done = state(api, run)
+        assert done["status"] == "succeeded", done["error_message"]
+        agent = api.get("/api/agents/" + done["metadata"]["agent_id"]).json()
+        assert agent["data"] == {"input_artifact_ids": [], "max_repairs": 1, "operation": "create"}
+        assert agent["data_readiness"]["ready"] and not agent["enabled"] and agent["model"] == "auto"
+        assert json.loads(calls[0]["messages"][1]["content"])["file_creation"] is True

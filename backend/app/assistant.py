@@ -1039,7 +1039,8 @@ class AssistantExecutor:
                 verify_inputs(
                     session,
                     run.parameters.get("data_inputs"),
-                    allow_empty=bool(DataScope.model_validate(run.parameters["data"]).research),
+                    allow_empty=bool(DataScope.model_validate(run.parameters["data"]).research)
+                    or DataScope.model_validate(run.parameters["data"]).operation == "create",
                 )
                 verify_source_files(run.parameters["data_inputs"])
         if plan and (plan.action.startswith("image.") or plan.action == "video.generate"):
@@ -1212,7 +1213,11 @@ class AssistantExecutor:
             from app.conversation_data import publish_workspace
 
             child = publish_workspace(session, run)
-            message.content = "Analyzing the selected data locally. A private workspace, verified table and CSV result will appear here. Your original files stay unchanged."
+            message.content = (
+                "Creating files locally from your instructions. Verified files and a result table will appear here."
+                if DataScope.model_validate(run.parameters["data"]).operation == "create"
+                else "Analyzing the selected data locally. A private workspace, verified table and CSV result will appear here. Your original files stay unchanged."
+            )
         elif plan.action == "audio.music":
             from app.conversation_music import caption as music_caption
             from app.conversation_music import settings as music_settings

@@ -201,7 +201,7 @@ export default function TextAttachments({
                 );
               if (!onDataFiles)
                 throw new Error(
-                  "Choose Data analysis in a general conversation to analyse these files locally.",
+                  "Choose Files & data in a general conversation to analyse these files locally.",
                 );
               delegated = true;
               await onDataFiles(files);

@@ -1,6 +1,12 @@
 # AI Station
 
-In Chat/Work, choose **Data analysis → Use public sources**, enter the URLs and
+Ask **“Create a CSV table…”** or **“Utwórz arkusz Excel…”**, or choose
+**Files & data → Create files from instructions** in Chat/Work or an agent.
+Describe the contents; no dummy upload or repository setup is needed. Verified
+files appear inline and in Library. **Use the created file** starts a new analysis
+of the checked output. [Creation contracts](docs/plans/local-file-creation.md).
+
+In Chat/Work, choose **Files & data → Use public sources**, enter the URLs and
 optionally select **Read these pages with JavaScript**. The local browser captures
 text for offline Python analysis; results and sources stay in the conversation.
 No persistent Agent is required. [Direct rendered data](docs/plans/conversation-rendered-data.md).

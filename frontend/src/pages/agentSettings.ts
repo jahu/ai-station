@@ -14,7 +14,11 @@ export type AgentSettingsInput = {
     auto_validate?: boolean;
   };
   market?: MarketScope | null;
-  data?: { input_artifact_ids: string[]; max_repairs: number } | null;
+  data?: {
+    input_artifact_ids: string[];
+    max_repairs: number;
+    operation?: "analyze" | "create";
+  } | null;
   media?: AgentMediaScope | null;
   permission_profile?: "agent_local" | "agent_external_coding";
   search_query?: string | null;
