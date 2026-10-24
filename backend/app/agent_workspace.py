@@ -5,7 +5,7 @@ from uuid import UUID
 
 from app.agent_coding_policy import coding_provider
 from app.agent_schema import AgentSettings
-from app.agent_tools import effective_permissions
+from app.agent_tools import effective_permissions, execution_permissions
 from app.db import utcnow
 from app.events import append_event
 from app.models import Agent, Run
@@ -136,7 +136,7 @@ def finish_workspace(session, run, project, context):
             "endpoint": parent.parameters.get("endpoint"),
             "skill_snapshots": parent.parameters.get("skill_snapshots") or [],
         },
-        permissions=list(parent.effective_permissions),
+        permissions=execution_permissions(parent, definition),
         parent_run_id=run.id,
         retry_class="inspect",
         triggered_by=parent.triggered_by,

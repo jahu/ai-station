@@ -279,14 +279,21 @@ export function MarketEmailApproval({
 export function AgentMarketEmailHistory({
   agentId,
   runs,
+  title = "Price-alert email",
 }: {
   agentId: string;
   runs: Run[];
+  title?: string;
 }) {
   const updates = runs
     .filter((run) => run.executor_type === "email_send")
     .map((run) => `${run.id}:${run.status}`)
     .join(",");
+  const preparationFailures = runs.filter(
+    (run) =>
+      (run.metadata?.result_email as { state?: string } | undefined)?.state ===
+      "preparation_failed",
+  );
   const history = useQuery({
     queryKey: ["agent-email-deliveries", agentId, updates],
     queryFn: () => api<Delivery[]>(`/email/deliveries?agent_id=${agentId}`),
@@ -300,12 +307,15 @@ export function AgentMarketEmailHistory({
         ? 2000
         : false,
   });
-  return history.data?.length || history.error ? (
-    <section
-      className="panel email-connector"
-      aria-label="Price-alert email history"
-    >
-      <h3>Price-alert email</h3>
+  return history.data?.length || history.error || preparationFailures.length ? (
+    <section className="panel email-connector" aria-label={`${title} history`}>
+      <h3>{title}</h3>
+      {preparationFailures.map((run) => (
+        <p key={run.id} className="notice">
+          The result is ready, but its email could not be prepared.{" "}
+          <Link to={`/runs/${run.id}`}>Inspect result</Link>.
+        </p>
+      ))}
       <ErrorNotice error={history.error} />
       {history.data?.map((row) => (
         <DeliveryPreview

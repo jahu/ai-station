@@ -1,5 +1,15 @@
 # AI Station
 
+Agents can optionally prepare an email from a completed report or a result-only
+summary. In **Agent settings → Notifications → Email delivery**, choose a saved
+mail account and allowed recipients. **Review each message** is the default;
+the complete frozen message appears in the workspace for approval. Automatic
+delivery requires a separate confirmation when enabling the saved definition.
+Pause before editing an automatically approved definition. Code/media emails
+contain status and result IDs, with no file attachments. SMTP acceptance and
+uncertain outcomes remain separate from the original successful result.
+[Result-email contracts and qualification](docs/plans/agent-report-email.md).
+
 Avatars and avatar agents can offer **Reduced RAM · full precision** at 384×384
 with 8+ steps when the optional native profile is locally qualified and enabled.
 The selection remains visible and saved; existing jobs keep their settings.

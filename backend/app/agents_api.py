@@ -39,19 +39,28 @@ def definition_dict(agent, session=None):
     from app.market_schema import MarketScope
 
     email_authorization = market_email_authorization(session, agent)
+    from app.agent_report_email import authorization_public as report_email_status
+
+    report_authorization = report_email_status(session, agent)
     return {
         **agent_dict(agent),
         "data_readiness": data_readiness(session, agent.data, agent.tools)
         if "python_data" in agent.tools
         else None,
         "market_email_authorization": email_authorization,
+        "report_email_authorization": report_authorization,
         "market_readiness": stock_readiness(session, agent.market),
         "created_at": agent.created_at.isoformat(),
         "updated_at": agent.updated_at.isoformat(),
         "effective_permissions": effective_permissions([name for name in agent.tools if name in AGENT_TOOLS])
         + stock_permissions(MarketScope.model_validate(agent.market) if agent.market else None)
         + (
-            ["email_send", "network_external"] if email_authorization and email_authorization["valid"] else []
+            ["email_send", "network_external"]
+            if email_authorization
+            and email_authorization["valid"]
+            or report_authorization
+            and report_authorization["valid"]
+            else []
         ),
     }
 
@@ -64,6 +73,15 @@ def get_agent(session, agent_id):
 
 
 def validate_target(body, session, agent=None, *, enabling=False):
+    if body.notification_policy.report_email:
+        from app.agent_report_email import authorization, target
+
+        try:
+            target(session, body.notification_policy.report_email)
+            if body.enabled and not enabling and body.notification_policy.report_email.mode == "automatic":
+                authorization(session, agent, body)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
     if body.media is not None and body.enabled:
         from app.agent_media import freeze_inputs, require_profile
 
@@ -164,7 +182,7 @@ def apply_settings(agent, body):
             value = getattr(body, key).model_dump(mode="json")
         setattr(agent, key, value)
     agent.retry_policy = body.retry_policy.model_dump()
-    agent.notification_policy = body.notification_policy.model_dump()
+    agent.notification_policy = body.notification_policy.model_dump(mode="json")
     try:
         if (
             was_enabled
@@ -286,6 +304,14 @@ def edit(agent_id: UUID, body: AgentUpdate, session: DB):
     except ValidationError as exc:
         raise HTTPException(422, "; ".join(error["msg"] for error in exc.errors())) from exc
     validate_target(settings, session, agent)
+    if (
+        not settings.enabled
+        or not settings.notification_policy.report_email
+        or settings.notification_policy.report_email.mode != "automatic"
+    ):
+        from app.agent_report_email import revoke as revoke_report_email
+
+        revoke_report_email(session, agent.id)
     if not settings.enabled or settings.market is None or settings.market.email is None:
         from app.market_email import revoke
 
@@ -298,6 +324,7 @@ def edit(agent_id: UUID, body: AgentUpdate, session: DB):
 class EnableBody(VersionBody):
     enabled: StrictBool
     confirm_market_email: StrictBool = False
+    confirm_report_email: StrictBool = False
 
 
 @router.post("/{agent_id}/enabled")
@@ -322,6 +349,20 @@ def set_enabled(agent_id: UUID, body: EnableBody, session: DB):
             raise HTTPException(409, str(exc)) from exc
     else:
         revoke(session, agent.id)
+    from app.agent_report_email import grant as grant_report_email
+    from app.agent_report_email import revoke as revoke_report_email
+
+    if (
+        body.enabled
+        and settings.notification_policy.report_email
+        and settings.notification_policy.report_email.mode == "automatic"
+    ):
+        try:
+            grant_report_email(session, agent, settings, confirmed=body.confirm_report_email)
+        except ValueError as exc:
+            raise HTTPException(409, str(exc)) from exc
+    else:
+        revoke_report_email(session, agent.id)
     agent.enabled = body.enabled
     agent.next_run_at = compute_next(agent) if body.enabled else None
     agent.updated_at = utcnow()

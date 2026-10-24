@@ -76,7 +76,7 @@ export function WorkflowStepCards({
           ? "The report may request selected registry tools; invented tools fail closed. "
           : ""}
         {workflow.steps.some((step) => step.key === "email.send")
-          ? "Stop on this price workflow cancels all of its active steps, including email submissions. Individual mail cards stop only that submission."
+          ? "Stop on this workflow cancels all of its active steps, including email submissions. Individual mail cards stop only that submission."
           : extra}
       </p>
       {workflow.steps.length ? (

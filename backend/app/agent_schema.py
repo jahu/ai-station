@@ -5,9 +5,18 @@ from typing import Literal
 from uuid import UUID
 
 from croniter import croniter
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from app.agent_coding_policy import CODING_TOOLS, coding_provider, coding_research_steps, external_coding
+from app.agent_email_schema import AgentReportEmailScope
 from app.agent_media_schema import AgentMediaScope, fixed_media_only
 from app.agent_tools import AGENT_TOOLS, agent_tool
 from app.data_schema import AgentDataScope, ResearchDataScope
@@ -37,6 +46,14 @@ class NotificationPolicy(BaseModel):
     on_success: StrictBool = False
     on_failure: StrictBool = False
     on_approval: StrictBool = False
+    report_email: AgentReportEmailScope | None = None
+
+    @model_serializer(mode="wrap")
+    def legacy_identity(self, handler):
+        values = handler(self)
+        if self.report_email is None:
+            values.pop("report_email", None)
+        return values
 
     @model_validator(mode="before")
     @classmethod
@@ -44,7 +61,7 @@ class NotificationPolicy(BaseModel):
         if value is None or value == {}:
             return {}
         if isinstance(value, dict) and not any(
-            key in value for key in ("on_success", "on_failure", "on_approval")
+            key in value for key in ("on_success", "on_failure", "on_approval", "report_email")
         ):
             return {"on_success": False, "on_failure": False, "on_approval": False}
         return value
@@ -112,6 +129,14 @@ class AgentSettings(BaseModel):
 
     @model_validator(mode="after")
     def validate_definition(self):
+        if self.notification_policy.report_email and self.market and self.market.email:
+            raise ValueError("Choose ordinary result email or price-alert email for this agent, not both")
+        if (
+            self.notification_policy.report_email
+            and self.notification_policy.report_email.content == "report"
+            and (self.media is not None or coding_provider(self.tools) and "python_data" not in self.tools)
+        ):
+            raise ValueError("Choose a result summary for coding or media email")
         self.tools = list(dict.fromkeys(self.tools))
         if self.media is not None and "create_media" not in self.tools:
             raise ValueError("Media settings require the Create media tool")

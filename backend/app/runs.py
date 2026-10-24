@@ -124,7 +124,7 @@ def transition(
         RunStatus.INTERRUPTED,
     }:
         run.finished_at = now
-    if run.agent_id:
+    if run.agent_id and not (run.executor_type == "email_send" and run.parameters.get("agent_result")):
         agent = session.get(Agent, run.agent_id)
         if agent is not None and not (
             run.executor_type == "agent_workflow" and target == RunStatus.SUCCEEDED

@@ -5,6 +5,43 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — avatar profile delivered, next result email, 2026-10-24
+
+PR #399 is squash-merged as `737dbd3`, reviewed source `727313a`, and live-qualified.
+Release: `.tools/ui-echo-memory-profile-20261024`; image `1a9214139183`;
+supervisor 2626468. Native source matches fingerprint `83eee0fc`; the existing
+owned model container, GPU/Q8/46080 preset, auth, IDs, 16 paused definitions and
+exact due instants were preserved. The qualified optional Echo profile is enabled
+only in project-local configuration. Backup and checks are authoritative in
+`data/acceptance/echo-memory-profile-20261024/post-deployment-qualified.json` and
+`data/acceptance/safety-redeploy-20261012/deployment.json`.
+
+All final 3089 Python/Runner cases completed (3080 passes/nine opt-in skips), all
+707 UI cases and lint/format/types/build passed, as did exact image/assets and
+three Compose configurations. Actual ordinary agent output is five seconds at
+384px/eight steps, two scoped native windows, 125 frames and complete source audio;
+full decode and actual compiled 1440/390 playback passed. Exact word-level lip-sync
+and broader media quality/durations remain separate acceptance. Do not repeat that
+GPU job: final bounded code matches its actual source; only Standard admission
+was corrected afterward and passed its full new gate.
+
+PR #400 carries general agent result email in `.tools/agent-report-email`, branch
+`feat/agent-report-email`, based on develop `737dbd3`. [Delivery contract](agent-report-email.md).
+It reuses SMTP/approvals and saved final outcomes, with optional review or separately
+approved automatic delivery. Code/media use metadata-only summaries. Private
+workspace adoption preserves its exact original consent; notification-only rights
+do not reach execution tools. The original successful result survives mail failure.
+
+The complete unchanged Python/Runner suite passed: 3151 tests, nine opt-in skips.
+Compiled desktop/mobile acceptance uses actual API/SQLite and a loopback SMTP sink
+with four synthetic messages; no operator email or GPU inference. Final UI,
+source/image, review and deployment records are in
+`data/acceptance/agent-report-email-20261024`. Inspect `post-deployment-qualified.json`
+and the authoritative live deployment record for installation status. Root source
+and the PR #399 native profile/model configuration are preserved.
+Preserve root Memory WIP, all live/proof trees and pending Whisper consent.
+The full platform goal remains active; do not mark it complete from this release.
+
 ## Current continuation — avatar profile ready for release review, 2026-10-24
 
 PR #399 now includes the full optional avatar profile and measured Standard RAM

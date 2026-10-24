@@ -3,8 +3,10 @@
 The operator-reviewed SMTP foundation is merged and deployed in PR #342. It
 passed 1945 Python tests (nine opt-in skips), 540 frontend tests, all local gates,
 compiled desktop/phone acceptance and deployment/persistence verification.
-The next candidate adds [activation-scoped price alerts](agent-market-watch.md);
-it remains under qualification and is not deployed. No real account or external
+[Activation-scoped price alerts](agent-market-watch.md) are deployed in PR #343.
+[General agent result delivery](plans/agent-report-email.md) extends this same
+foundation in PR #400; its qualification and live deployment record are kept
+under `data/acceptance/agent-report-email-20261024`. No real account or external
 recipient is configured by tests.
 
 SMTP configuration lives on the existing Connector: host, TLS transport (465 SSL
@@ -34,7 +36,7 @@ Normal tests use synthetic credentials, fake transports and an isolated local
 mail sink. Live external delivery requires a separately reviewed configuration,
 recipient and explicit opt-in. Before publication qualify permissions, approval,
 Stop, recovery, deduplication, redaction, API validation, UI and the local protocol
-integration. Stock-provider support and activation-scoped unattended agent email
-remain separate follow-up work.
+integration. Automatic price alerts and ordinary result reports retain distinct
+reviewed scopes; neither grants a model control over recipients or credentials.
 
 Transport semantics: [Python SMTP client](https://docs.python.org/3.12/library/smtplib.html).

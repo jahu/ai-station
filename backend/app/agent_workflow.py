@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from app.agent_coding_policy import coding_provider, coding_research_steps
 from app.agent_schema import AgentSettings
-from app.agent_tools import RETENTION_TOOLS, WORKFLOW_MEMORY_TOOLS, agent_tool
+from app.agent_tools import RETENTION_TOOLS, WORKFLOW_MEMORY_TOOLS, agent_tool, execution_permissions
 from app.artifacts import register_file
 from app.db import utcnow
 from app.dependencies import depend_on
@@ -102,6 +102,7 @@ def workflow_view(session, run: Run) -> dict | None:
     if (
         coding_provider(definition.get("tools", [])) is not None
         or definition.get("media") is not None
+        or (definition.get("notification_policy") or {}).get("report_email")
         or definition.get("tools") == ["market_watch"]
         and (definition.get("market") or {}).get("email")
     ):
@@ -147,6 +148,7 @@ def active_workflow_child(session, run: Run) -> Run | None:
     if (
         coding_provider(parent.parameters.get("definition", {}).get("tools", [])) is not None
         or parent.parameters.get("definition", {}).get("media") is not None
+        or (parent.parameters.get("definition", {}).get("notification_policy") or {}).get("report_email")
     ):
         children = list(
             session.scalars(
@@ -346,7 +348,7 @@ def publish_steps(session, parent: Run) -> list[Run]:
             },
             permissions=[p for p in parent.effective_permissions if p in {"network_read", "github_read"}]
             if key == "github_read"
-            else list(parent.effective_permissions),
+            else execution_permissions(parent, definition),
             retry_class="inspect",
             triggered_by=parent.triggered_by,
             agent_id=parent.agent_id,

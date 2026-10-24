@@ -190,6 +190,15 @@ def effective_permissions(tools):
     return sorted({permission for name in tools for permission in AGENT_TOOLS[name].required_permissions})
 
 
+def execution_permissions(parent, definition):
+    """Delivery authority stays with the workflow, never a native tool body."""
+    permissions = list(parent.effective_permissions)
+    if definition.notification_policy.report_email:
+        delivery_only = {"email_send", "network_external"} - set(effective_permissions(definition.tools))
+        return [value for value in permissions if value not in delivery_only]
+    return permissions
+
+
 AGENT_TOOLS["web_search"] = TOOLS["web_search"]
 AGENT_TOOLS["http_fetch"] = TOOLS["http_fetch"]
 AGENT_TOOLS["browser"] = TOOLS["browser"]

@@ -1,4 +1,12 @@
 [Optional bounded avatar loading](plans/echo-memory-loading.md) reuses the
+
+Agent result email uses a same-Task email.send child after verified completion,
+with an operation identity derived from the root workflow. Review waits for an
+ordinary payload-bound approval; automatic delivery rechecks its frozen grant
+and original runtime budget. Task Stop covers waiting/queued delivery. An
+uncertain sending receipt requires inspection and never blind retry. Delivery
+failure cannot change the successful source result or the agent result status.
+See [result email](plans/agent-report-email.md).
 existing native ProcessManager, fixed private 11-GiB/zero-swap scope and ordinary
 media Task graph. Complete existing weights retain full precision; no upstream
 files or public command/memory controls are added. Default native arguments are unchanged; new Standard jobs reserve the observed
