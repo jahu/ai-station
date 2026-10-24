@@ -1,3 +1,4 @@
+import DataAgentDraftSource from "./DataAgentDraftSource";
 import CreationContextNotice, {
   type CreationContext,
 } from "./CreationContextNotice";
@@ -125,6 +126,7 @@ type Message = ActionResult & {
     orchestration?: boolean;
     routing_only?: boolean;
     agent_id?: string;
+    data_agent_source?: unknown;
     images?: { id: string; name: string }[];
     creation_context?: CreationContext;
     conversation_reference?: {
@@ -957,6 +959,12 @@ function Transcript({
               {message.role === "assistant" && message.metadata.web_search && (
                 <SearchSources result={message.metadata.web_search} />
               )}
+              {message.role === "assistant" &&
+                !!message.metadata.data_agent_source && (
+                  <DataAgentDraftSource
+                    value={message.metadata.data_agent_source}
+                  />
+                )}
               {message.metadata.agent_id && (
                 <AssistantAgentDraft
                   agentId={message.metadata.agent_id}

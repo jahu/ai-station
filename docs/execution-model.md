@@ -360,3 +360,15 @@ result. Every child remains on the conversation Task with no persistent Agent.
 Source permissions and dependency order match the frozen scope. Stop/recovery and
 capture reuse follow the existing data/document contracts. Historical follow-ups
 consume immutable captured data, without re-fetching or renewing source access.
+
+## Analysis-to-agent preparation
+
+The controller resolves a current explicit reference to a successful analysis,
+freezes its definition/source/result snapshot on the new Work request and enqueues
+the existing local agent_draft Run. No source tool or Python job is executed during
+preparation. The worker verifies the request and source before local inference,
+after inference and under the publication Task lock. A restricted identity/schedule
+proposal overlays the fixed source definition; only the disabled Agent, definition
+Artifact and terminal state publish atomically. Stale source/Stop fails without
+creating an Agent or blindly repeating inference. Enabling and executing later uses
+the ordinary agent/data graph with a fresh private workspace and new deadline.

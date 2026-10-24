@@ -777,3 +777,15 @@ and reviewed public sources can be added when useful. Send waits for uploads.
 Follow-up analysis reuses the checked capture as offline data; it grants no new
 access to the original documents or websites. See
 [conversation document scope](docs/plans/conversation-document-context.md).
+
+### Make a recurring agent from a completed analysis
+
+After a successful Files & data result, switch to **Work** with Local AI selected
+and ask, for example: **“Create an agent that repeats this analysis every morning.”**
+The existing Agent Factory prepares a disabled draft. Its original task, selected
+files/documents, local analysis model and reviewed public-source scope are retained;
+only identity and schedule are drafted. The conversation links the original analysis
+and shows whether future executions read live public sources or saved captures.
+Review/edit the definition and explicitly enable it. The agent gets a fresh private
+workspace; it does not take over the conversation's workspace or gain email access.
+See [analysis-to-agent contracts](docs/plans/conversation-data-agent-draft.md).
