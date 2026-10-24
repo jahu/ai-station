@@ -661,6 +661,11 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
                 else {}
             ),
             **({"data_inputs": data_inputs} if data_inputs is not None else {}),
+            **(
+                {"data_agent_source": user.metadata_json["data_agent_source"]}
+                if user.metadata_json.get("data_agent_source")
+                else {}
+            ),
             **({"data_creation_context": creation_context} if creation_context else {}),
             **(
                 {"data_reference": user.metadata_json["conversation_reference"]}
@@ -1430,6 +1435,11 @@ class AssistantExecutor:
                     schedule_timezone=params.get("schedule_timezone") or "UTC",
                 )
                 run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
+                if params.get("data_agent_source"):
+                    message.metadata_json = {
+                        **message.metadata_json,
+                        "data_agent_source": params["data_agent_source"],
+                    }
                 message.content = "Preparing an agent draft with your selected local model. Review its tools and schedule before enabling it."
             else:
                 from app.factory import draft_agent

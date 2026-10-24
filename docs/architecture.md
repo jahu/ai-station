@@ -760,3 +760,15 @@ the existing data reference service, without renewed document/network authority.
 Absent document scope is omitted from legacy identities. No migration, native
 protocol or second execution engine is added; see
 [conversation documents](plans/conversation-document-context.md).
+
+## Source-bound analysis agents
+
+An explicit Work request to repeat the latest completed conversation analysis uses
+the existing agent_draft child Run. The controller freezes and rechecks the visible
+same-conversation result, source scope, input/inspection snapshots, verified result
+artifacts and original definition. A restricted model proposal supplies identity and
+schedule; source tools, local data model, goal and inputs remain controller-owned.
+Publication uses the shared settings mapper, a definition JSON artifact with source
+lineage and the existing atomic disabled-Agent/terminal-Run transaction. No schema,
+native protocol or separate execution engine is introduced. See
+[analysis-to-agent design](plans/conversation-data-agent-draft.md).

@@ -167,3 +167,12 @@ message and orchestration parameters. Absent scope is omitted to preserve existi
 request/receipt identities. A shared ordered context-tools method allows seven
 optional data files plus one complete captured-JSON input. Context-free creation
 rejects selected documents. No new database table/column or Agent row is required.
+
+## Repeated-analysis draft provenance
+
+Optional controller-owned data_agent_source metadata binds the current user message,
+orchestrator and agent_draft child to a completed original analysis and its exact
+source definition, input snapshots, result hash and artifact manifests. It is not a
+model/request field and grants no tools by itself. Identity/schedule proposals cannot
+rewrite the frozen scope. The definition Artifact retains source/result parents.
+No database migration is needed; ordinary drafts and request hashes stay unchanged.

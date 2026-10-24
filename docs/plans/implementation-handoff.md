@@ -1,3 +1,13 @@
+> Current owned increment: `.tools/conversation-data-agent-draft`, branch
+> `feat/conversation-data-agent-draft`, base #412 (`ed6cab6`).
+> [Analysis-to-agent](conversation-data-agent-draft.md) reuses the local Agent Factory
+> for an explicit Work request referring to the latest successful analysis. The
+> controller freezes original inputs/documents/live public scope/model/goal; the
+> model drafts identity/schedule only. Draft stays disabled; future runs allocate
+> their own workspace. Source/request/result verification, Stop and legacy serialization
+> are covered by focused tests; final full gates, compiled qualification and rollout
+> remain pending. Live #412 remains fully qualified. Preserve root Memory WIP.
+
 > Current increment #412: `.tools/conversation-document-context`, branch
 > `feat/conversation-document-context`, based on #411 (`5ceff8a`).
 > [Conversation documents](conversation-document-context.md) brings selected PDF/text

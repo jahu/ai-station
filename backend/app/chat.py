@@ -561,6 +561,9 @@ def submit_message(conversation_id, body, session, *, commit=True):
     from app.conversation_data_reference import resolve as resolve_data_reference
 
     body, data_reference = resolve_data_reference(session, row, body, mode)
+    from app.data_agent_draft import resolve as resolve_data_agent
+
+    body, data_agent_source = resolve_data_agent(session, row, body, mode)
     from app.file_creation import prepare_turn as prepare_file_creation
 
     work_context = session.get(ChatWorkContext, row.id)
@@ -598,6 +601,8 @@ def submit_message(conversation_id, body, session, *, commit=True):
         content=message_content(body.content, body.attachments),
         metadata_json={"user_text": body.content} if body.attachments else {},
     )
+    if data_agent_source:
+        user.metadata_json = {**user.metadata_json, "data_agent_source": data_agent_source}
     if result_reference:
         user.metadata_json = {**user.metadata_json, "conversation_reference": result_reference}
     if project_reference:

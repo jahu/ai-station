@@ -771,3 +771,21 @@ and immutable capture verifier remain the execution boundary. A later analysis
 may use an already verified captured JSON input without reopening a trashed original
 or granting new document/network access. Source and capture provenance remain
 inspectable. Upload progress gates Send in both shared conversation composers.
+
+## Repeating a completed analysis
+
+Only a current explicit Work instruction can inherit the latest completed visible
+analysis from that conversation. Quotes, negation, other actions and other
+conversations do not grant its sources. General Work project defaults are cleared;
+selected project/media/file/tool scopes cannot be mixed into this request. A local
+built-in provider is required for drafting. Existing turn receipts remain unchanged.
+
+The frozen source is checked against the new message, parent and draft Run before
+inference and publication. Original bytes, result artifact ownership/hash, result
+metadata and current source state remain bound; a changed source is not a formatting
+error and cannot cause another correction call. The model's restricted schema cannot
+change tools, goal, input IDs, URLs, permissions or execution project. No email or
+external-AI grant is inherited. Stop remains serialized with publication, and the
+new agent stays disabled until reviewed. Future runs use their own workspace and
+re-read only the retained reviewed live sources; captures stay distinct from live
+research. Provenance is visible in the conversation and definition Artifact lineage.
