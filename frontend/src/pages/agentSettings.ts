@@ -120,3 +120,10 @@ export function agentSettingsPayload(
         JSON.stringify(patch.market) === JSON.stringify(agent.market)),
   };
 }
+
+export function resultEmailConsentKey(agent: {
+  id: string;
+  updated_at: string;
+}) {
+  return `${agent.id}:${agent.updated_at}`;
+}

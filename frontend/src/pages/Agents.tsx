@@ -1,7 +1,6 @@
 import {
   ResultEmailSettings,
   ResultEmailApproval,
-  resultEmailConsentKey,
   type ResultEmailScope,
   type ResultEmailAuthorization,
 } from "./AgentResultEmail";
@@ -63,7 +62,7 @@ import {
   PUBLIC_RESEARCH_TOOLS,
   localResearchScope,
 } from "./agentActivation";
-import { agentSettingsPayload } from "./agentSettings";
+import { resultEmailConsentKey, agentSettingsPayload } from "./agentSettings";
 import { AgentLinkedProjectLinks, AgentProjectList } from "./AgentProjectList";
 import ProjectAgents from "./ProjectAgents";
 import {

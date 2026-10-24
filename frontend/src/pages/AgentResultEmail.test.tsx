@@ -12,10 +12,9 @@ import { MemoryRouter } from "react-router-dom";
 import {
   ResultEmailSettings,
   ResultEmailApproval,
-  resultEmailConsentKey,
   type ResultEmailScope,
 } from "./AgentResultEmail";
-import { agentSettingsPayload } from "./agentSettings";
+import { resultEmailConsentKey, agentSettingsPayload } from "./agentSettings";
 import { AgentMarketEmailHistory } from "./AgentMarketEmail";
 import type { Run } from "../api";
 
@@ -54,10 +53,11 @@ function mount(element: ReactElement) {
   );
 }
 function fetchAccounts() {
-  const fetch = vi.fn(async (_url: string, _options?: RequestInit) => ({
-    ok: true,
-    json: async () => [connection],
-  }));
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => {
+    expect(url).toBe("/api/connectors");
+    expect(options?.method).toBeUndefined();
+    return { ok: true, json: async () => [connection] };
+  });
   vi.stubGlobal("fetch", fetch);
   return fetch;
 }

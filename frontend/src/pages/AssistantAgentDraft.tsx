@@ -1,7 +1,6 @@
 import {
   ResultEmailEditor,
   ResultEmailApproval,
-  resultEmailConsentKey,
   type ResultEmailScope,
   type ResultEmailAuthorization,
 } from "./AgentResultEmail";
@@ -42,7 +41,11 @@ import { AgentAttachedSkills } from "./AgentAttachedSkills";
 import { AgentAttachedTools } from "./AgentAttachedTools";
 import { AgentLastWorkflowSteps } from "./AgentWorkflowSteps";
 import { activationBlock } from "./agentActivation";
-import { agentSettingsPayload, type AgentSettingsInput } from "./agentSettings";
+import {
+  resultEmailConsentKey,
+  agentSettingsPayload,
+  type AgentSettingsInput,
+} from "./agentSettings";
 import {
   ApprovalChoiceList,
   NoticeChoiceList,

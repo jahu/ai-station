@@ -28,12 +28,6 @@ type Connection = {
   email_policy_revision: string;
   smtp?: { sender: string; allowed_recipients: string[] };
 };
-export function resultEmailConsentKey(agent: {
-  id: string;
-  updated_at: string;
-}) {
-  return `${agent.id}:${agent.updated_at}`;
-}
 
 export function ResultEmailSettings(props: {
   value?: ResultEmailScope | null;
