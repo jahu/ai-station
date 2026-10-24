@@ -1,3 +1,10 @@
+> Deployed and real-qualified in PR #406 (`ee07d348`), source `4b458a2`.
+> Evidence: `data/acceptance/file-creation-conversation-context-20261024/post-deployment-qualified.json`.
+> Actual prior values 4, 7, 11, current heading override, CSV/XLSX/PNG and one bounded
+> correction passed; operator model/native Runner and original records preserved.
+> Full gate: 3298 Python cases (3289 pass/nine skips), 727 UI tests and actual compiled
+> desktop/mobile first-click/reuse/reload/Stop flows. No physical-phone claim.
+
 # Create files from the current conversation
 
 Observed regression: a user supplies values in ordinary Chat, then asks for an

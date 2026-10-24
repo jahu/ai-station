@@ -1,3 +1,14 @@
+> 2026-10-24: instruction-only CSV/Excel/chart/text creation and bounded earlier
+> conversation context are deployed and real-qualified through PRs #404–#406.
+> A 131072-context local model used prior values 4, 7, 11, applied the current heading
+> override and produced independently checked CSV/XLSX/PNG after one bounded Python
+> correction. All 3298 Python cases (3289 pass/nine opt-in skips), 727 UI tests,
+> image/Compose and compiled desktop/mobile flows pass. Native Runner and original
+> model preset were preserved. See [file creation](plans/local-file-creation.md),
+> [conversation context](plans/file-creation-conversation-context.md) and
+> `data/acceptance/file-creation-conversation-context-20261024/post-deployment-qualified.json`.
+> This completes those workflows; the full-platform objective remains open.
+
 > 2026-10-24 avatar qualification: an ordinary fixed-description agent produced a
 > complete five-second 384px/eight-step film from two native Echo windows, using
 > the original full-precision models under observed 11-GiB/zero-swap scopes.
