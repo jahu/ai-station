@@ -674,7 +674,9 @@ export function AgentDetail() {
   const block = activationBlock(agent, catalog.data, skillsCatalog.data);
   const active = agent.runs?.some((run) => !terminal.has(run.status)) ?? false;
   const waiting = agent.runs?.find(
-    (run) => run.status === "waiting_for_approval",
+    (run) =>
+      run.status === "waiting_for_approval" &&
+      !(run.executor_type === "email_send" && run.parameters?.agent_result),
   );
   return (
     <>

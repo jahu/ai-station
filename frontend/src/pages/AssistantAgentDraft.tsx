@@ -745,7 +745,9 @@ export function AssistantAgentDraft({
     ? `Pause agent ${shortId}`
     : `Enable saved definition ${shortId}`;
   const waiting = agent?.runs?.find(
-    (run) => run.status === "waiting_for_approval",
+    (run) =>
+      run.status === "waiting_for_approval" &&
+      !(run.executor_type === "email_send" && run.parameters?.agent_result),
   );
   const history = agent?.runs ?? [];
   const busy =

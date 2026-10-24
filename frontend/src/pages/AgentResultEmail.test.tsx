@@ -272,6 +272,7 @@ it("keeps Run now available in a compact conversation after automatic delivery w
     json: async () => {
       if (options?.method === "POST") return { id: "queued" };
       if (url.includes("/agents/agent-one")) return agent;
+      if (url.endsWith("/llama")) return { models: [], instances: [] };
       if (url.includes("/chat/provider"))
         return { models: ["fixture"], default_model: "fixture" };
       return [];
@@ -294,57 +295,70 @@ it("keeps Run now available in a compact conversation after automatic delivery w
   );
 });
 
-it("shows pending result-mail review directly in the compact conversation", async () => {
-  const agent = {
-    id: "agent-one",
-    name: "Daily report",
-    goal: "Summarize observations",
-    updated_at: "now",
-    enabled: true,
-    model: "fixture",
-    tools: ["memory_search"],
-    runs: [
-      {
-        id: "mail-run",
-        executor_type: "email_send",
-        status: "waiting_for_approval",
-      },
-    ],
-    notification_policy: { report_email: scope },
-  };
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (url: string) => ({
-      ok: true,
-      json: async () => {
-        if (url.includes("/agents/agent-one")) return agent;
-        if (url.includes("/email/deliveries"))
-          return [
-            {
-              id: "delivery",
-              state: "prepared",
-              reason: "",
-              payload: {
-                sender: "station@example.com",
-                recipients: scope.recipients,
-                subject: "Daily report",
-                body: "Actual report to review.",
+it.each([false, true])(
+  "shows result-mail review without pretending report execution has not started (compact=%s)",
+  async (compact) => {
+    const agent = {
+      id: "agent-one",
+      name: "Daily report",
+      goal: "Summarize observations",
+      updated_at: "now",
+      enabled: true,
+      model: "fixture",
+      tools: ["memory_search"],
+      runs: [
+        {
+          id: "mail-run",
+          executor_type: "email_send",
+          status: "waiting_for_approval",
+          capability: "email.send",
+          parameters: { agent_result: { source_run_id: "report" } },
+        },
+      ],
+      notification_policy: { report_email: scope },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string) => ({
+        ok: true,
+        json: async () => {
+          if (url.includes("/agents/agent-one")) return agent;
+          if (url.includes("/email/deliveries"))
+            return [
+              {
+                id: "delivery",
+                state: "prepared",
+                reason: "",
+                payload: {
+                  sender: "station@example.com",
+                  recipients: scope.recipients,
+                  subject: "Daily report",
+                  body: "Actual report to review.",
+                },
+                accepted_recipients: [],
+                refused_recipients: [],
+                run: agent.runs[0],
               },
-              accepted_recipients: [],
-              refused_recipients: [],
-              run: agent.runs[0],
-            },
-          ];
-        if (url.includes("/chat/provider"))
-          return { models: ["fixture"], default_model: "fixture" };
-        return [];
-      },
-    })),
-  );
-  mount(<AssistantAgentDraft agentId={agent.id} compact />);
-  await screen.findByText("Actual report to review.");
-  expect(screen.getByRole("button", { name: "Approve and send" })).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: "Edit in conversation" }),
-  ).toBeTruthy();
-});
+            ];
+          if (url.endsWith("/llama")) return { models: [], instances: [] };
+          if (url.includes("/chat/provider"))
+            return { models: ["fixture"], default_model: "fixture" };
+          return [];
+        },
+      })),
+    );
+    mount(<AssistantAgentDraft agentId={agent.id} compact={compact} />);
+    await screen.findByText("Actual report to review.");
+    expect(
+      screen.queryByText(/tools and inference have not started/),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Approve and send" }),
+    ).toBeTruthy();
+    expect(
+      compact
+        ? screen.getByRole("button", { name: "Edit in conversation" })
+        : screen.getByText("Open in Agents"),
+    ).toBeTruthy();
+  },
+);

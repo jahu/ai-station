@@ -25,14 +25,20 @@ and broader media quality/durations remain separate acceptance. Do not repeat th
 GPU job: final bounded code matches its actual source; only Standard admission
 was corrected afterward and passed its full new gate.
 
-Current owned implementation: `.tools/agent-report-email`, `feat/agent-report-email`,
-based on develop `737dbd3`. [Result-email plan](agent-report-email.md). Optional
-JSON policy/activation, exact consent, final-result projection, independent SMTP
-child, private workspace binding and compact UI are implemented locally. Focused
-synthetic worker/SMTP tests cover reports, data, code, media and market reports;
-complete gates, compiled desktop/mobile acceptance, full review and deployment
-still need recorded final-head evidence. No real operator email has been sent.
-Do not call this increment deployed or operational until those gates pass.
+PR #400 carries general agent result email in `.tools/agent-report-email`, branch
+`feat/agent-report-email`, based on develop `737dbd3`. [Delivery contract](agent-report-email.md).
+It reuses SMTP/approvals and saved final outcomes, with optional review or separately
+approved automatic delivery. Code/media use metadata-only summaries. Private
+workspace adoption preserves its exact original consent; notification-only rights
+do not reach execution tools. The original successful result survives mail failure.
+
+The complete unchanged Python/Runner suite passed: 3151 tests, nine opt-in skips.
+Compiled desktop/mobile acceptance uses actual API/SQLite and a loopback SMTP sink
+with four synthetic messages; no operator email or GPU inference. Final UI,
+source/image, review and deployment records are in
+`data/acceptance/agent-report-email-20261024`. Inspect `post-deployment-qualified.json`
+and the authoritative live deployment record for installation status. Root source
+and the PR #399 native profile/model configuration are preserved.
 Preserve root Memory WIP, all live/proof trees and pending Whisper consent.
 The full platform goal remains active; do not mark it complete from this release.
 

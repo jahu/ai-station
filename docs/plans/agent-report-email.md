@@ -83,8 +83,11 @@ up rollout. Real operator-inbox acceptance requires the operator's configured
 connector; never infer it from a private test sink.
 
 Current worktree: `.tools/agent-report-email`, branch `feat/agent-report-email`,
-based on develop `737dbd3` (deployed PR #399). Implementation is local and still undergoing complete qualification; it has not
-yet been merged or deployed. The full platform objective remains active.
+based on develop `737dbd3` (deployed PR #399). PR #400 carries the implementation.
+Qualification evidence is recorded under
+`data/acceptance/agent-report-email-20261024`; inspect its
+`post-deployment-qualified.json` and the authoritative live deployment record
+before assuming the increment is installed. The full platform objective remains active.
 
 ## Implemented qualification notes
 
@@ -106,3 +109,16 @@ source mutation during connection are covered independently of pre-queue checks.
 Local synthetic tests are not real inbox delivery or a new media GPU smoke test.
 The live PR #399 native/media qualification remains unchanged by controller-only
 email work. Real account/inbox acceptance still requires configured operator SMTP.
+
+Compiled UI acceptance covers real API/SQLite persistence at 1440 and 390 pixels,
+per-message preview/approval, separate automatic confirmation and reload. The
+ordinary worker submits four synthetic messages through an actual loopback SMTP
+sink. Only inference and transport routing are fixtures; this is not public SMTP
+TLS or real operator-inbox acceptance. The compact conversation keeps pending
+mail review visible and approved Run now available. A pending email does not
+claim that the already-completed agent report has not started.
+
+Normal backend/Runner qualification includes all 3160 collected cases: 3151
+passes and nine explicit integration opt-ins skipped. Later UI-only corrections
+retain exact Python/native source; their complete checks and image/asset binding
+are recorded separately with the qualified commit. No new GPU inference is needed.
