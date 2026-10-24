@@ -4,6 +4,7 @@ import { api } from "../api";
 import { ErrorNotice } from "../components/common";
 import DataOperation from "./DataOperation";
 import AgentDataFiles from "./AgentDataFiles";
+import AgentDocuments from "./AgentDocuments";
 import type { ConversationDataScope } from "./useDataInputs";
 
 export default function ConversationDataControls({
@@ -39,7 +40,8 @@ export default function ConversationDataControls({
       <DataOperation
         value={scope}
         disabled={disabled}
-        hasResearch={!!scope.research}
+        hasResearch={!!scope.research || !!scope.documents}
+        hasDocuments={!!scope.documents}
         onChange={(next) => onChange({ ...scope, ...next })}
       />
       {scope.operation === "create" ? (
@@ -50,6 +52,24 @@ export default function ConversationDataControls({
         </p>
       ) : (
         <>
+          <details
+            className="conversation-data-files"
+            open={scope.documents ? true : undefined}
+          >
+            <summary>
+              PDF &amp; text documents
+              {scope.documents
+                ? ` · ${scope.documents.artifact_ids.length} selected`
+                : " · optional"}
+            </summary>
+            <AgentDocuments
+              context="analysis"
+              value={scope.documents}
+              disabled={disabled}
+              onUploading={onUploading}
+              onChange={(documents) => onChange({ ...scope, documents })}
+            />
+          </details>
           <label className="data-research-toggle">
             <input
               type="checkbox"
@@ -183,7 +203,7 @@ export default function ConversationDataControls({
           )}
         </>
       )}
-      {scope.research ? (
+      {scope.research || scope.documents ? (
         <details className="conversation-data-files">
           <summary>
             Add files · optional
@@ -194,6 +214,7 @@ export default function ConversationDataControls({
           <AgentDataFiles
             value={scope}
             allowResearch={!!scope.research}
+            allowDocuments={!!scope.documents}
             disabled={disabled}
             showInspection
             showOperation={false}
@@ -207,6 +228,7 @@ export default function ConversationDataControls({
           <AgentDataFiles
             value={scope}
             allowResearch={!!scope.research}
+            allowDocuments={!!scope.documents}
             disabled={disabled}
             showInspection
             showOperation={false}

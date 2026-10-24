@@ -596,9 +596,13 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
                 raise HTTPException(503, "Browser executor is unavailable; inspect its setup in Diagnostics")
 
         try:
+            if body.data.documents:
+                from app.agent_documents import reviewed_scope
+
+                reviewed_scope(session, body.data.documents, freeze=True)
             data_inputs = (
                 freeze_inputs(session, body.data.files(), research=True)
-                if body.data.research
+                if body.data.context_tools()
                 else freeze_inputs(session, body.data.files())
             )
             reference = user.metadata_json.get("conversation_reference") or {}
@@ -1039,16 +1043,17 @@ class AssistantExecutor:
                     action="clarify", reason="Choose inspected CSV/Excel files for local data analysis."
                 )
             else:
-                from app.conversation_data import verify_source_files
+                from app.conversation_data import verify_document_sources, verify_source_files
                 from app.conversation_data_reference import verify_reference
                 from app.data_agents import require_runtime, verify_inputs
 
                 verify_reference(session, run)
+                verify_document_sources(session, DataScope.model_validate(run.parameters["data"]), root=run)
                 require_runtime()
                 verify_inputs(
                     session,
                     run.parameters.get("data_inputs"),
-                    allow_empty=bool(DataScope.model_validate(run.parameters["data"]).research)
+                    allow_empty=bool(DataScope.model_validate(run.parameters["data"]).context_tools())
                     or DataScope.model_validate(run.parameters["data"]).operation == "create",
                 )
                 verify_source_files(run.parameters["data_inputs"])

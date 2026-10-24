@@ -759,3 +759,15 @@ a claim of a separate container/network sandbox. Document contents are untrusted
 reference text. No OCR, pixel understanding, filesystem browsing or networking tool
 is granted. Bounded model queries/windows remain inside the frozen selection;
 complete captured text reaches Python through the existing offline input contract.
+
+## Current-turn document scope
+
+Conversation document selection is frozen before the message/Run binding is saved.
+The worker checks that exact message, snapshot and permissions before any workspace
+or model work; changed bytes fail closed. Each read_documents source retains only
+filesystem_read, while optional public sources retain their existing network
+permissions and exact dependency positions. The fixed deployed document reader
+and immutable capture verifier remain the execution boundary. A later analysis
+may use an already verified captured JSON input without reopening a trashed original
+or granting new document/network access. Source and capture provenance remain
+inspectable. Upload progress gates Send in both shared conversation composers.

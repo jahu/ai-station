@@ -560,3 +560,102 @@ it("offers offline captured-data continuation separately from an explicit public
   );
   expect(choose.mock.calls[1][0]).toEqual(scope);
 });
+
+it.each(["chat", "work"])(
+  "submits selected documents from the first %s composer and waits for upload",
+  async (mode) => {
+    let release: (() => void) | undefined;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let submitted: Record<string, unknown> | undefined;
+    const document = {
+      id: "document",
+      mime_type: "application/pdf",
+      size_bytes: 100,
+      original_filename: "contract.pdf",
+      metadata: {},
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init?: RequestInit) => {
+        if (path === "/api/documents/uploads") {
+          await pending;
+          return { ok: true, json: async () => document };
+        }
+        if (init?.method === "POST") {
+          submitted = JSON.parse(String(init.body));
+          return { ok: true, json: async () => ({ conversation_id: "saved" }) };
+        }
+        const data = path.endsWith("/preferences")
+          ? { mode, provider: provider.key, model: "plain", version: 1 }
+          : path.endsWith("/llama")
+            ? { models: [], instances: [] }
+            : path.endsWith("/artifacts/document")
+              ? document
+              : [];
+        return { ok: true, json: async () => data };
+      }),
+    );
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter>
+          <NewChat
+            providers={[provider]}
+            provider={provider}
+            onProviderChange={() => {}}
+            onAccepted={() => {}}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByRole("textbox", { name: "Message" });
+    if (mode === "work")
+      fireEvent.click(screen.getByRole("button", { name: "Work" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
+      target: { value: "data.analyze" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Message" }), {
+      target: { value: "Calculate the total in this document." },
+    });
+    fireEvent.click(screen.getByText("PDF & text documents · optional"));
+    fireEvent.change(screen.getByLabelText("Upload analysis documents"), {
+      target: {
+        files: [
+          new File(["%PDF data"], "contract.pdf", { type: "application/pdf" }),
+        ],
+      },
+    });
+    await screen.findByText("Uploading…");
+    expect(
+      (
+        screen.getByRole("button", {
+          name: "Send message",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    release!();
+    await screen.findByRole("link", { name: "contract.pdf" });
+    await waitFor(() =>
+      expect(
+        (
+          screen.getByRole("button", {
+            name: "Send message",
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(false),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await waitFor(() => expect(submitted).toBeTruthy());
+    expect(submitted!.data).toMatchObject({
+      input_artifact_ids: [],
+      documents: { artifact_ids: ["document"] },
+    });
+    expect(submitted!.attachments ?? []).toEqual([]);
+    expect(submitted!.action).toBe("data.analyze");
+  },
+);

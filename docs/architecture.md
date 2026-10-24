@@ -748,3 +748,15 @@ This is a fixed parser inside the control plane, not a generated-code executor o
 new host filesystem API. The existing native offline Python receives only verified
 captured text. Migration0035 adds nullable agents.documents; absent scope is omitted
 from frozen definitions to preserve legacy consent/receipt identities.
+
+## Conversation document analysis
+
+The existing Files & data turn can carry the same selected-document scope as an
+Agent. Metadata snapshots bind the current message and orchestration Run; worker
+byte checks precede workspace creation. The ordinary source/context/Python graph
+runs with no Agent row. Context tools order documents before public research and
+retain per-source permissions. Follow-ups adopt immutable capture inputs through
+the existing data reference service, without renewed document/network authority.
+Absent document scope is omitted from legacy identities. No migration, native
+protocol or second execution engine is added; see
+[conversation documents](plans/conversation-document-context.md).

@@ -1,8 +1,10 @@
 import { useQueries } from "@tanstack/react-query";
 import { api, type Artifact, type Run } from "../api";
 import type { DataScope } from "./AgentDataFiles";
+import { canReadDocument, type DocumentScope } from "./document-context";
 
 export type ConversationDataScope = DataScope & {
+  documents?: DocumentScope | null;
   research?: {
     search_query: string;
     fetch_urls: string[];
@@ -45,6 +47,24 @@ export function useDataInputs(scope?: ConversationDataScope | null) {
       queryFn: () => api<Artifact>(`/artifacts/${id}`),
     })),
   });
+  const documentIds = scope?.documents?.artifact_ids ?? [];
+  const documents = useQueries({
+    queries: documentIds.map((id) => ({
+      queryKey: ["artifact", id],
+      queryFn: () => api<Artifact>(`/artifacts/${id}`),
+    })),
+  });
+  const documentReady =
+    !scope?.documents ||
+    (documentIds.length > 0 &&
+      documentIds.length <= 4 &&
+      new Set(documentIds).size === documentIds.length &&
+      documents.every(
+        (query) =>
+          query.data &&
+          !query.data.trashed_at &&
+          canReadDocument(query.data.mime_type, query.data.size_bytes),
+      ));
   const inspections = useQueries({
     queries: files.map((file) => {
       const id = file.data?.metadata?.data_inspection_run_id as
@@ -94,9 +114,11 @@ export function useDataInputs(scope?: ConversationDataScope | null) {
     states,
     ready:
       (scope?.operation === "create"
-        ? ids.length === 0 && !scope.research
-        : scope?.research
-          ? researchDataReady(scope) && ids.length <= 7
+        ? ids.length === 0 && !scope.research && !scope.documents
+        : scope?.documents || scope?.research
+          ? documentReady &&
+            (!scope?.research || researchDataReady(scope)) &&
+            ids.length <= 7
           : ids.length > 0 && ids.length <= 8) &&
       states.every((item) => item.ready),
   };

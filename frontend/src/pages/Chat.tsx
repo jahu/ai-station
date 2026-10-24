@@ -905,7 +905,7 @@ function Transcript({
                   "analyzed_data"
                     ? message.metadata.conversation_reference.captured_sources
                         ?.length
-                      ? `Using captured public data · ${new Date(message.metadata.conversation_reference.captured_sources[0].captured_at).toLocaleString()}`
+                      ? `Using captured source data · ${new Date(message.metadata.conversation_reference.captured_sources[0].captured_at).toLocaleString()}`
                       : `Using the analyzed input files · ${message.metadata.conversation_reference.filenames?.join(", ") || "Data files"}`
                     : message.metadata.conversation_reference.source_kind ===
                         "inspected_input"

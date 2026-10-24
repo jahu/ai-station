@@ -153,7 +153,8 @@ def definition(root, project_id=None):
             if root.parameters.get("data_reference")
             else ""
         ),
-        tools=["python_data", *(scope.research.tools() if scope.research else [])],
+        tools=["python_data", *scope.context_tools()],
+        documents=scope.documents,
         search_query=scope.research.search_query if scope.research else "",
         fetch_urls=scope.research.fetch_urls if scope.research else [],
         data=scope.files(),
@@ -196,6 +197,8 @@ def root_binding(session, root, *, for_execution=True):
     scope = DataScope.model_validate(root.parameters["data"])
     if user.metadata_json.get("data_scope") != scope.model_dump(mode="json"):
         raise ValueError("Data scope differs from the submitted conversation message")
+    if for_execution:
+        verify_document_sources(session, scope)
     if set(root.effective_permissions) != set(required_permissions(scope)):
         raise ValueError("Conversation data permissions differ from their exact reviewed grant")
     from app.creation_context import verify as verify_creation_context
@@ -205,6 +208,29 @@ def root_binding(session, root, *, for_execution=True):
     if deadline.tzinfo is None or for_execution and deadline <= utcnow():
         raise ValueError("Data analysis runtime limit exceeded")
     return scope, deadline
+
+
+def verify_document_sources(session, scope, *, root=None):
+    if scope.documents:
+        if root is not None:
+            user = session.get(Message, root.parameters.get("user_message_id"))
+            if (
+                user is None
+                or user.role != "user"
+                or user.run_id != root.id
+                or user.conversation_id != root.conversation_id
+                or user.metadata_json.get("data_request_run_id") != root.id
+                or user.metadata_json.get("data_scope") != scope.model_dump(mode="json")
+                or user.metadata_json.get("user_text", user.content).strip()
+                != root.parameters["content"].strip()
+                or set(root.effective_permissions) != set(required_permissions(scope))
+            ):
+                raise ValueError("Document analysis differs from its submitted conversation scope")
+        from app.agent_documents import original_bytes, reviewed_scope
+
+        reviewed_scope(session, scope.documents)
+        for snapshot in scope.documents.snapshots:
+            original_bytes(session, snapshot)
 
 
 def verify_source_files(frozen):
@@ -427,10 +453,9 @@ def reviewed_research_step(session, run, *, for_execution=True):
         raise ValueError("Conversation research lost its workflow")
     root = validate_workflow(session, workflow, for_execution=for_execution)
     scope = DataScope.model_validate(root.parameters["data"])
-    research = scope.research
-    if research is None:
+    tools = scope.context_tools()
+    if not tools:
         raise ValueError("Conversation analysis has no reviewed public research")
-    tools = research.tools()
     manifest = workflow.metadata_json.get("child_run_ids")
     context = run.executor_type == "agent_page_coding"
     index = len(tools) if context else run.parameters.get("step_index")
@@ -458,6 +483,8 @@ def reviewed_research_step(session, run, *, for_execution=True):
         != (
             set(workflow.effective_permissions)
             if context
+            else {"filesystem_read"}
+            if run.parameters.get("tool") == "read_documents"
             else {"browser", "network_read"}
             if run.parameters.get("tool") == "browser"
             else {"network_read"}

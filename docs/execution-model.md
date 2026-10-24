@@ -349,3 +349,14 @@ report/code/data/media preparation checks capture provenance and current origina
 changed or trashed selections fail before model/Python adoption. Pausing a stale
 agent always remains available. Historical capture inspection uses saved provenance.
 No native Runner protocol, model download or second execution engine is introduced.
+
+## Selected documents from Chat/Work
+
+A data-analysis turn may select documents alongside inspected data files and
+reviewed public sources. The controller freezes metadata only; workers check the
+current message and original bytes, create the existing private project/worktree,
+then execute source → context → local generation → offline Python → inspected
+result. Every child remains on the conversation Task with no persistent Agent.
+Source permissions and dependency order match the frozen scope. Stop/recovery and
+capture reuse follow the existing data/document contracts. Historical follow-ups
+consume immutable captured data, without re-fetching or renewing source access.

@@ -1,3 +1,13 @@
+> Current owned increment: `.tools/conversation-document-context`, branch
+> `feat/conversation-document-context`, based on #411 (`5ceff8a`).
+> [Conversation documents](conversation-document-context.md) wires selected PDF/text
+> into Files & data in both main composers, reusing the deployed source/Python graph.
+> Initial Chat/Work, capture-only follow-up, changed-scope/Stop and legacy tests pass;
+> both first-message upload tests pass. Source and regression qualification are still
+> in progress. Follow the actual branch head, PR and evidence rather than treating
+> these targeted checks as full release qualification. The live authority points
+> to qualified #411 until this increment's rollout; preserve original root WIP.
+
 # AI Station implementation handoff
 
 The full-platform goal remains active. Prioritize useful local agents and the
