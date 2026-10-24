@@ -1,3 +1,10 @@
+> Delivered through PRs #404–#406. Exact instruction-only creation, generated-file
+> follow-up and earlier-conversation context are real-qualified. The current
+> [handoff](implementation-handoff.md) and
+> `data/acceptance/file-creation-conversation-context-20261024/post-deployment-qualified.json`
+> supersede historical candidate/pending labels below. Original failed attempts
+> remain retained and are not relabeled as successful.
+
 # Create useful files from instructions
 
 ## Observed gap and user outcome
