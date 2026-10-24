@@ -7120,6 +7120,7 @@ section:has(> .memory-grid) > .dashboard-note {
 }
 .conversation-data-controls .data-research-toggle {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 0.65rem;
   line-height: 1.4;
