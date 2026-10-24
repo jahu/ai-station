@@ -106,7 +106,7 @@ def test_motion_native_expiry_stops_owned_work_without_any_worker(kind, request)
 
 
 @pytest.mark.parametrize("kind", ["video", "avatar", "media-compose"])
-@pytest.mark.parametrize("offset", [-1, 7200])
+@pytest.mark.parametrize("offset", [-1, 14401])
 def test_expired_and_unbounded_native_motion_requests_return_validation_errors(kind, offset, request):
     host, payload = native_case(kind, request)
     response = host.post("/v1/runs/" + kind, json={**payload, "deadline_at": time.time() + offset})

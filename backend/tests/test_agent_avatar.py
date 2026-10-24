@@ -1,6 +1,7 @@
 """Avatar agents use ordinary speech, whole-audio segments and final assembly."""
 
 import json
+from datetime import datetime
 from uuid import uuid4
 
 import pytest
@@ -44,13 +45,20 @@ def drain(session):
 
 
 @pytest.mark.parametrize("generated", [True, False])
+@pytest.mark.parametrize("runtime", [600, 7200])
 def test_avatar_agent_returns_the_entire_verified_video_and_only_final_ready_notice(
-    avatar_agent_runtime, monkeypatch, generated
+    avatar_agent_runtime, monkeypatch, generated, runtime
 ):
     monkeypatch.setattr(LocalChatProvider, "stream", no_text_model)
     with TestClient(app) as api:
         inputs = settings(api, generated=generated)
-        agent = create(api, kind="avatar", request=inputs, notification_policy={"on_success": True})
+        agent = create(
+            api,
+            kind="avatar",
+            request=inputs,
+            notification_policy={"on_success": True},
+            maximum_runtime=runtime,
+        )
         root = start(api, agent)
         with session_factory()() as session:
             tick(session, "parent")
@@ -75,6 +83,9 @@ def test_avatar_agent_returns_the_entire_verified_video_and_only_final_ready_not
             assert artifact and artifact.metadata_json["verified"] and artifact.metadata_json["frames"] == 125
             assert final.agent_id == agent["id"] and final.parent_run_id
             budget = prep.parameters["execution_deadline_at"]
+            assert (
+                datetime.fromisoformat(budget) - session.get(Run, root["id"]).started_at
+            ).total_seconds() == runtime
             assert all(
                 row.parameters["execution_deadline_at"] == budget
                 for row in rows

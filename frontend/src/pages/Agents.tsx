@@ -1,3 +1,4 @@
+import AgentTimeBudget from "./AgentTimeBudget";
 import AgentCronFields from "./AgentCronFields";
 import AgentDraftForm from "./AgentDraftForm";
 import {
@@ -1212,17 +1213,10 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
             />
           </label>
         )}
-        <label>
-          Maximum runtime (seconds)
-          <input
-            type="number"
-            required
-            min={5}
-            max={3600}
-            value={values.maximum_runtime}
-            onChange={(e) => update("maximum_runtime", Number(e.target.value))}
-          />
-        </label>
+        <AgentTimeBudget
+          value={values.maximum_runtime}
+          onChange={(seconds) => update("maximum_runtime", Number(seconds))}
+        />
         {!isCoding(values.tools) && !values.tools.includes("create_media") && (
           <label className="agent-wide">
             Expected output

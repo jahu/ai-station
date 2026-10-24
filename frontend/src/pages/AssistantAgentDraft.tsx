@@ -1,3 +1,4 @@
+import AgentTimeBudget, { MAX_AGENT_RUNTIME } from "./AgentTimeBudget";
 import { PUBLIC_RESEARCH_TOOLS } from "./agentActivation";
 import AgentCronFields from "./AgentCronFields";
 import "./AssistantAgentDraft.css";
@@ -397,7 +398,7 @@ function AgentIdentity({
     trimmedName.length <= 200 &&
     Number.isInteger(runtime) &&
     runtime >= 5 &&
-    runtime <= 3600 &&
+    runtime <= MAX_AGENT_RUNTIME &&
     trimmedOutcome.length <= 4000;
   const unchanged =
     trimmedName === name &&
@@ -428,20 +429,13 @@ function AgentIdentity({
           onChange={(event) => setNextName(event.target.value)}
         />
       </label>
-      <label>
-        Time limit (seconds)
-        <input
-          type="number"
-          required
-          min={5}
-          max={3600}
-          value={limit}
-          tabIndex={tabIndex}
-          aria-label={`Time limit ${shortId}`}
-          disabled={disabled}
-          onChange={(event) => setLimit(event.target.value)}
-        />
-      </label>
+      <AgentTimeBudget
+        value={limit}
+        label={`Time limit ${shortId}`}
+        disabled={disabled}
+        tabIndex={tabIndex}
+        onChange={setLimit}
+      />
       <label>
         Expected outcome
         <textarea

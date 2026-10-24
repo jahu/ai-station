@@ -23,6 +23,7 @@ from app.chat_providers import BUILTIN_KEY, completion_stream, snapshot_provider
 from app.chat_reasoning import CompletionFinished
 from app.db import session_scope, utcnow
 from app.events import append_event
+from app.execution_limits import MAX_AGENT_RUNTIME
 from app.factory import draft_agent
 from app.http_fetch import prompt_public_urls, reviewed_urls
 from app.llama import prepare_consumer
@@ -80,7 +81,7 @@ class Proposal(BaseModel):
     cron_expr: str = Field(default="", max_length=120)
     interval_seconds: int | None = None
     run_at: datetime | None = None
-    maximum_runtime: int = Field(default=600, ge=5, le=3600)
+    maximum_runtime: int = Field(default=600, ge=5, le=MAX_AGENT_RUNTIME)
     output_expectation: str = Field(default="A concise, factual report.", max_length=4000)
     media: AgentMediaScope | None = None
 

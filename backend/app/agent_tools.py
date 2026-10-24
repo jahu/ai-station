@@ -3,6 +3,7 @@
 import json
 from dataclasses import replace
 
+from app.execution_limits import MAX_AGENT_RUNTIME
 from app.tools import TOOLS, ToolSpec, get_tool
 
 CALLABLE_TOOLS = frozenset({"system_snapshot", "memory_search", "project_memory", "web_search", "http_fetch"})
@@ -17,7 +18,7 @@ AGENT_TOOLS = {
         description="Create an image, music, full scene video, talking avatar or Polish speech artifact with the reviewed output settings. Speech requires an operator-selected Library WAV voice. Uses existing local media Runs; no shell, model downloads or arbitrary paths.",
         risk_level="medium",
         required_permissions=("filesystem_read", "workspace_write"),
-        timeout=3600,
+        timeout=MAX_AGENT_RUNTIME,
         execution_target="host",
         operational=True,
         input_schema={"type": "object", "properties": {}, "additionalProperties": False},

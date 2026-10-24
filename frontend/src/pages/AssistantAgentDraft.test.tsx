@@ -687,6 +687,9 @@ it("saves identity from the conversation without Enable or Run now", async () =>
   ).toBe("A concise, factual report.");
   fireEvent.change(name, { target: { value: "Idle GPU brief" } });
   fireEvent.change(screen.getByLabelText("Time limit agent-on"), {
+    target: { value: "custom" },
+  });
+  fireEvent.change(screen.getByLabelText("Time limit agent-on seconds"), {
     target: { value: "900" },
   });
   fireEvent.change(screen.getByLabelText("Expected outcome agent-on"), {
