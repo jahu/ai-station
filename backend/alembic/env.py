@@ -19,7 +19,16 @@ if context.is_offline_mode():
     with context.begin_transaction():
         context.run_migrations()
 else:
-    with get_engine().connect() as connection:
+
+    def run_online(connection):
         context.configure(connection=connection, target_metadata=Base.metadata, include_object=include_object)
         with context.begin_transaction():
             context.run_migrations()
+
+    supplied = context.config.attributes.get("connection")
+    if supplied is not None:
+        # Recovery migrates a private staging copy, never the configured live DB.
+        run_online(supplied)
+    else:
+        with get_engine().connect() as connection:
+            run_online(connection)

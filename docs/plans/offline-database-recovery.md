@@ -23,7 +23,9 @@ Docker/native execution boundaries and backup Runs remain unchanged.
 ## Required guards
 
 - Accept only a canonical UUID backup under this configured data root. Reject
-  symlink escapes, unexpected hard links, changed bytes and incompatible schema.
+  symlink escapes, unexpected hard links, changed bytes and unknown/future schema.
+  Known ancestor revisions migrate through Alembic on the private staging copy,
+  using an explicit connection rather than the configured live database engine.
   Require an integrity/foreign-key checked copy and its retained artifact files.
 - Hold the same launcher lock through the whole apply. Refuse live containers
   mounting this data directory (including owned model/preview containers), owned
@@ -38,7 +40,7 @@ Docker/native execution boundaries and backup Runs remain unchanged.
   restored device sessions and node invitation tokens. If the current database
   is unreadable, require a fresh operator password through a private file or
   terminal input rather than reviving an old credential silently.
-- Pause restored agents, park nonterminal Runs, clear stale workers/leases and
+- Pause restored agents, park nonterminal Runs, deny stale pending approvals, clear stale workers/leases and
   release obsolete resource holds. Mark historical managed runtimes stopped only
   after the host guard has proved that no owned model container remains alive.
   Preserve completed history, memory, settings, artifacts and owned worktrees.
