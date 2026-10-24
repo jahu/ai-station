@@ -23,9 +23,9 @@ export default function AgentTimeBudget({
   disabled?: boolean;
   tabIndex?: number;
 }) {
-  const [custom, setCustom] = useState(
-    !presets.some(([seconds]) => seconds === Number(value)),
-  );
+  const [custom, setCustom] = useState(false);
+  const showCustom =
+    custom || !presets.some(([seconds]) => seconds === Number(value));
   return (
     <div
       className="agent-time-budget"
@@ -34,7 +34,7 @@ export default function AgentTimeBudget({
       <label>
         Time limit
         <select
-          value={custom ? "custom" : String(value)}
+          value={showCustom ? "custom" : String(value)}
           aria-label={label}
           disabled={disabled}
           tabIndex={tabIndex}
@@ -52,7 +52,7 @@ export default function AgentTimeBudget({
           <option value="custom">Custom duration…</option>
         </select>
       </label>
-      {custom ? (
+      {showCustom ? (
         <label>
           Exact duration (seconds)
           <input

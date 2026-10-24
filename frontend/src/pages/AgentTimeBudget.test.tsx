@@ -73,3 +73,15 @@ it("native selector keys do not navigate the enclosing agent list", () => {
   ).toBe(true);
   expect(parent).not.toHaveBeenCalled();
 });
+
+it("shows an exact custom duration when refreshed saved data replaces a preset", () => {
+  const changed = vi.fn();
+  const { rerender } = render(
+    <AgentTimeBudget value={600} onChange={changed} />,
+  );
+  rerender(<AgentTimeBudget value={917} onChange={changed} />);
+  expect(
+    (screen.getByLabelText("Time limit seconds") as HTMLInputElement).value,
+  ).toBe("917");
+  expect(changed).not.toHaveBeenCalled();
+});
