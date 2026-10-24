@@ -27,5 +27,14 @@ fake inference, actual public HTTP and private authenticated test fixtures.
 
 Implementation now includes nullable scope migration 0034, activation/readiness,
 server-side credential redaction shared with Check GET, fixed tool calling,
-immutable report/research adoption and both agent editors. Qualification is still
-pending; the live release remains #408 until the new reviewed head passes gates.
+immutable report/research adoption and both agent editors. Verification includes 26 new backend cases, 735 UI tests, a real public keyless
+HTTPS read, private TLS/Bearer response redaction, and compiled desktop/mobile
+save/reload/report flows. The real schema0033 backup upgrade preserved all original
+table data and definition identities. Inference is injected in these HTTP checks;
+no new GPU or external inbox test is claimed.
+
+Full-gate and deployment authority are recorded under
+`data/acceptance/agent-http-connectors-20261024`, particularly
+`workspace-full-check-result.json` and `post-deployment-qualified.json`. These
+reports identify the exact qualified source/image and deployed release; a draft
+PR or implementation alone is not deployment acceptance.

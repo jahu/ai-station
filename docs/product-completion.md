@@ -1,3 +1,9 @@
+> Saved HTTP/API sources are implemented for explicitly reviewed agent workflows,
+> including report preparation and offline local code/data analysis. Authenticated
+> reads use server-only credentials and exact policy snapshots; out-of-band key
+> changes require review. See [scope and verification](plans/agent-http-connectors.md).
+> Release acceptance remains tied to the exact full-gate and deployment reports.
+
 > 2026-10-24: instruction-only CSV/Excel/chart/text creation and bounded earlier
 > conversation context are deployed and real-qualified through PRs #404–#406.
 > A 131072-context local model used prior values 4, 7, 11, applied the current heading
