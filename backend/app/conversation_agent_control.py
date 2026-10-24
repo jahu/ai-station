@@ -116,7 +116,6 @@ def prepare(session, conversation, body, mode):
             "github",
             "coding",
             "new_project",
-            "project_defaults",
             "commit",
             "publish",
             "load",
@@ -152,7 +151,9 @@ def prepare(session, conversation, body, mode):
     }
     from app.web_search import SearchOptions
 
-    return body.model_copy(update={"web_search": SearchOptions(enabled=False), "reasoning": None}), scope
+    return body.model_copy(
+        update={"web_search": SearchOptions(enabled=False), "reasoning": None, "project_defaults": None}
+    ), scope
 
 
 def definition_hash(agent):

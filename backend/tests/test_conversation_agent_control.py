@@ -135,7 +135,11 @@ def test_disabled_agent_requires_review_and_does_not_activate(saved):
 
 def test_run_uses_normal_workflow_with_approval_and_does_not_lock_conversation(saved):
     enabled = enable(saved, require_approval=True)
-    queued = send(saved, web_search={"enabled": True})
+    queued = send(
+        saved,
+        web_search={"enabled": True},
+        project_defaults={"auto_install_dependencies": True, "auto_validate": True},
+    )
     assert step() == queued["id"]
     message = result(saved, queued["id"])
     linked = message["agent_control_run"]
@@ -147,6 +151,10 @@ def test_run_uses_normal_workflow_with_approval_and_does_not_lock_conversation(s
         assert root.task.conversation_id is None and root.parent_run_id is None
         assert root.parameters["definition"]["require_approval"]
         assert root.parameters["definition"]["model"] == "fake-local"
+        assert root.parameters["definition"]["workspace_policy"] == {
+            "auto_install_dependencies": False,
+            "auto_validate": False,
+        }
         assert root.metadata_json["conversation_control_run_id"] == queued["id"]
         assert root.task.metadata_json["originating_conversation_id"] == saved[1]
         assert db.get(Run, queued["id"]).parameters["scope"]["expected_updated_at"] == enabled["updated_at"]
