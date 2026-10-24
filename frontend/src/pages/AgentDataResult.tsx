@@ -175,6 +175,14 @@ export default function AgentDataResult({ runs }: { runs: Run[] }) {
             >
               <FileCode size={15} /> View Python source
             </Link>
+            {typeof resultRun.metadata?.memory_entry_id === "string" && (
+              <Link
+                to={`/memory/${resultRun.metadata.memory_entry_id}`}
+                className="text-link"
+              >
+                View saved result memory
+              </Link>
+            )}
             <Link to={`/runs/${resultRun.id}`} className="text-link">
               Execution details
             </Link>

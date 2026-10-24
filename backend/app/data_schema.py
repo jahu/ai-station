@@ -38,7 +38,7 @@ class AgentDataScope(BaseModel):
 
 
 class ResearchDataScope(AgentDataScope):
-    """Optional files only when an AgentSettings definition grants public research."""
+    """Optional files only when an AgentSettings definition grants reviewed research/memory context."""
 
     allow_empty_analysis: ClassVar[bool] = True
     input_artifact_ids: list[UUID] = Field(default_factory=list, max_length=7)

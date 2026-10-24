@@ -22,6 +22,7 @@ export default function AgentDataFiles({
   showInspection = false,
   onUploading,
   allowResearch = false,
+  allowMemory = false,
   showRepairSettings = true,
   showOperation = true,
 }: {
@@ -30,6 +31,7 @@ export default function AgentDataFiles({
   onChange: (value: DataScope) => void;
   showInspection?: boolean;
   allowResearch?: boolean;
+  allowMemory?: boolean;
   showRepairSettings?: boolean;
   showOperation?: boolean;
   onUploading?: (busy: boolean) => void;
@@ -39,7 +41,8 @@ export default function AgentDataFiles({
   const cache = useQueryClient();
   const ids = value?.input_artifact_ids ?? [];
   const creating = value?.operation === "create";
-  const maxFiles = allowResearch ? 7 : 8;
+  const hasContext = allowResearch || allowMemory;
+  const maxFiles = hasContext ? 7 : 8;
   const files = useQueries({
     queries: ids.map((id) => ({
       queryKey: ["artifact", id],
@@ -66,9 +69,11 @@ export default function AgentDataFiles({
     });
   const upload = useMutation({
     mutationFn: async (selected: File[]) => {
-      if (allowResearch && ids.length + selected.length > maxFiles)
+      if (hasContext && ids.length + selected.length > maxFiles)
         throw new Error(
-          "Choose at most seven files when using public research sources.",
+          allowMemory
+            ? "Choose at most seven files when using saved memory context."
+            : "Choose at most seven files when using public research sources.",
         );
       return uploadDataFiles(
         selected,
@@ -90,21 +95,23 @@ export default function AgentDataFiles({
         <DataOperation
           value={value}
           disabled={busy}
-          hasResearch={allowResearch}
+          hasResearch={hasContext}
           onChange={onChange}
         />
       )}
       <p className="muted">
         {creating
           ? "Describe the files and their contents in the instruction. No input files are read."
-          : allowResearch
-            ? "Reviewed public sources are available to this analysis. CSV, Excel or JSON files are optional (up to seven)."
-            : "Choose CSV, Excel or JSON files."}{" "}
+          : allowMemory
+            ? "Scoped saved memory is available to this analysis. CSV, Excel or JSON files are optional (up to seven)."
+            : allowResearch
+              ? "Reviewed public sources are available to this analysis. CSV, Excel or JSON files are optional (up to seven)."
+              : "Choose CSV, Excel or JSON files."}{" "}
         Originals stay unchanged; Python runs locally with no internet access.
       </p>
       {ids.length > maxFiles && (
         <p className="notice" role="alert">
-          Public research uses one input slot. Remove a file to keep at most
+          Selected context uses one input slot. Remove a file to keep at most
           seven data files.
         </p>
       )}

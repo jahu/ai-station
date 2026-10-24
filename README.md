@@ -741,3 +741,12 @@ the captured observations without fetching again; **Refresh public sources**
 starts a fresh capture. JSON files have a 4 MiB limit; CSV/Excel retain 16 MiB per
 file and all inputs total at most 32 MiB. Original files remain unchanged.
 See [the full contract and qualification](docs/plans/conversation-research-data.md).
+
+### Memory-aware data agents
+
+In an agent's settings, combine **Files & data** with **memory_search** to use
+its own saved observations, or **Project memory** for its explicitly linked
+project. Select **Remember reports** to save validated data answers for later
+executions. Files are optional with selected memory context. Python stays offline.
+Results link to saved memory; source cards show the exact captured versions.
+See [scope and verification](docs/plans/agent-data-memory.md).

@@ -150,6 +150,12 @@ def captured_preview(observations):
                         {"url": clip(item.get("url", ""), limit), field: clip(item.get(field, ""), limit)}
                         for item in source[key][: (1 if limit == 16 else 3)]
                     ]
+            if "entries" in source:
+                sample["scope"] = source.get("scope")
+                sample["entries"] = [
+                    {"id": item.get("id"), "content": clip(item.get("content", ""), limit)}
+                    for item in source["entries"][: (1 if limit == 16 else 3)]
+                ]
             result.append({"tool": observation["tool"], "result": sample})
         preview = {"observations": result, "excerpted": True, "full_source_in_input_file": True}
         if len(json.dumps(preview, ensure_ascii=False).encode()) <= 2048:

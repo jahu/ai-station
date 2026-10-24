@@ -4,7 +4,12 @@ import { AgentSearchSources } from "./AgentSearchSources";
 import { isSearchPageResult } from "./agent-search-result";
 import { FetchedPages } from "./AgentHttpFetch";
 import { SearchSources } from "./ChatWebSearch";
-import { isFetchResult, isWebSources } from "./agentResearchResult";
+import {
+  isFetchResult,
+  isWebSources,
+  memoryObservation,
+} from "./agentResearchResult";
+import AgentMemorySources from "./AgentMemorySources";
 import { BrowserPages } from "./BrowserPages";
 import { isBrowserResult } from "./browserResult";
 
@@ -47,6 +52,16 @@ export default function AgentCodeResearch({
     (run) => run.parameters?.tool === "http_fetch",
   );
   const fetched = fetchedRun?.metadata?.http_fetch;
+  const connectedRun = sources.find(
+    (run) => run.parameters?.tool === "http_connector",
+  );
+  const connected = connectedRun?.metadata?.http_connector;
+  const memories = sources.filter(
+    (run) =>
+      ["memory_search", "project_memory"].includes(
+        String(run.parameters?.tool),
+      ) && memoryObservation(run.metadata?.observation),
+  );
   const rendered = sources.find((run) => run.parameters?.tool === "browser")
     ?.metadata?.browser;
   const observation = fetchedRun?.metadata?.observation;
@@ -60,20 +75,49 @@ export default function AgentCodeResearch({
     hasPages = isSearchPageResult(pages),
     hasFetched = isFetchResult(fetched),
     hasRendered = isBrowserResult(rendered);
-  if (!hasSearch && !hasPages && !hasFetched && !hasRendered) return null;
+  const hasConnected = isFetchResult(connected);
+  if (
+    !hasSearch &&
+    !hasPages &&
+    !hasFetched &&
+    !hasRendered &&
+    !hasConnected &&
+    !memories.length
+  )
+    return null;
   return (
     <details
       className="panel web-search-sources"
-      aria-label="Research for this task"
+      aria-label={
+        memories.length ? "Context for this task" : "Research for this task"
+      }
     >
       <summary>
-        Research sources
+        {memories.length ? "Sources & saved memory" : "Research sources"}
         {hasPages && pages.partial ? " · Some pages unavailable" : ""}
       </summary>
       <p className="muted">
         References for this task. Search results and opened pages are listed
         separately.
       </p>
+      <AgentMemorySources runs={memories} />
+      {hasConnected && (
+        <>
+          <FetchedPages result={connected} label="Connected API response" />
+          {typeof connectedRun?.metadata?.http_connector === "object" &&
+            connectedRun.metadata.http_connector !== null &&
+            "artifact_id" in connectedRun.metadata.http_connector &&
+            typeof connectedRun.metadata.http_connector.artifact_id ===
+              "string" && (
+              <Link
+                className="text-link"
+                to={`/library/${connectedRun.metadata.http_connector.artifact_id}`}
+              >
+                Inspect captured API response
+              </Link>
+            )}
+        </>
+      )}
       {hasSearch && <SearchSources result={search} />}
       {hasPages && <AgentSearchSources result={pages} />}
       {hasFetched && <FetchedPages result={fetched} />}

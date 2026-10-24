@@ -731,3 +731,12 @@ tokens are revoked, agents paused, approvals denied and uncertain Runs parked
 for inspection. Corrupt current credentials require a new private password.
 Receipt paths are data-relative and contain no credential values. See
 [operator procedure](operations.md#offline-database-recovery).
+
+## Scoped memory during local execution
+
+A selected memory tool reads only this agent or its explicitly linked project.
+The captured bytes/entry versions and provenance are checked before local use.
+Generated Python/model stages receive frozen observations and cannot access the
+Memory API. Optional result retention grants memory_write to the result inspection
+stage; success and the saved observation publish atomically. Metadata dispatch
+stages retain reviewed workflow authority. See [the contract](plans/agent-data-memory.md).

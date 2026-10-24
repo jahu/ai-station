@@ -63,7 +63,7 @@ AGENT_TOOLS = {
     ),
     "python_data": ToolSpec(
         name="python_data",
-        description="Analyze reviewed CSV/XLSX/JSON files or public research observations, or explicitly create new files from instructions, with a local model and offline Python. May combine with reviewed web_search, search_pages, http_fetch and JavaScript browser text; no file is required when public research is selected. Creates an owned workspace, preserves original files and returns an answer/table/download. No networking or package installation inside generated code.",
+        description="Analyze reviewed CSV/XLSX/JSON files, scoped own/linked-project memories or public research observations, or explicitly create new files from instructions, with a local model and offline Python. May combine with reviewed web_search, search_pages, http_fetch and JavaScript browser text; no file is required with reviewed research or memory context. Explicit remember_report saves only verified final answers in this agent's memory. Creates an owned workspace, preserves original files and returns an answer/table/download. No networking or package installation inside generated code.",
         risk_level="medium",
         required_permissions=(
             "filesystem_read",
@@ -121,7 +121,7 @@ AGENT_TOOLS = {
     ),
     "remember_report": ToolSpec(
         name="remember_report",
-        description="Save successful reports as observations in this agent's own memory, with source Run provenance. Nothing is saved on failure or cancellation.",
+        description="Save successful reports or validated Python data answers as observations in this agent's own memory, with source Run provenance. Nothing is saved on failure or cancellation.",
         risk_level="low",
         required_permissions=("memory_write",),
         timeout=5,

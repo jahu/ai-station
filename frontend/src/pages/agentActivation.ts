@@ -5,7 +5,10 @@ import {
 } from "./agent-media";
 import type { MarketScope } from "./marketScope";
 
+export const SCOPED_MEMORY_TOOLS = ["memory_search", "project_memory"];
+
 export const LOCAL_CODING_RESEARCH = [
+  ...SCOPED_MEMORY_TOOLS,
   "coding_local",
   "web_search",
   "search_pages",
@@ -21,6 +24,11 @@ export const PUBLIC_RESEARCH_TOOLS = [
   "http_fetch",
   "browser",
 ];
+export const LOCAL_CONTEXT_TOOLS = [
+  ...PUBLIC_RESEARCH_TOOLS,
+  ...SCOPED_MEMORY_TOOLS,
+];
+
 export function localResearchScope(names: string[]) {
   const family = names.filter((name) =>
     ["coding_local", "python_data"].includes(name),
@@ -28,7 +36,10 @@ export function localResearchScope(names: string[]) {
   return (
     family.length === 1 &&
     names.every(
-      (name) => name === family[0] || PUBLIC_RESEARCH_TOOLS.includes(name),
+      (name) =>
+        name === family[0] ||
+        LOCAL_CONTEXT_TOOLS.includes(name) ||
+        (family[0] === "python_data" && name === "remember_report"),
     )
   );
 }
@@ -125,7 +136,7 @@ export function activationBlock(
     ["coding_local", "coding_cursor", "coding_codex"].includes(name),
   );
   if (names.includes("python_data")) {
-    const research = names.some((name) => PUBLIC_RESEARCH_TOOLS.includes(name));
+    const research = names.some((name) => LOCAL_CONTEXT_TOOLS.includes(name));
     if (
       !localResearchScope(names) ||
       (agent.data?.operation === "create" &&
