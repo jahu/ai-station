@@ -49,8 +49,11 @@ the consumer with existing atomic claiming. Idempotence, recovery and
 failed/Stop/expired prerequisite handling are tested together. Current focused
 verification: 191 relevant tests passed before the final sharing-lock refinement;
 38 final focused cases now pass, including concurrent workers and retained shared
-startup under resource pressure. Complete final-head checks and release
-qualification are being collected in
+startup under resource pressure. Complete implementation checks now pass: 3190 Python/Runner tests and nine
+opt-in skips, lint/format, exact Docker backend/assets and all three Compose
+configurations. The unchanged frontend reuses PR #400's qualified 716-test
+UI/build gate after exact source comparison. Release
+qualification is being collected in
 `data/acceptance/dependent-consumer-eviction-20261024`; no new release is claimed
 until `post-deployment-qualified.json` passes. Read the plan
 and current source rather than implementing the superseded refresh proposal. The full platform goal remains active; preserve
