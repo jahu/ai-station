@@ -143,7 +143,7 @@ def captured_preview(observations):
         result = []
         for observation in observations:
             source = observation["result"]
-            sample = {}
+            sample = {"partial": bool(source.get("partial", False))}
             for key, field in (("pages", "text"), ("sources", "snippet")):
                 if key in source:
                     sample[key] = [
