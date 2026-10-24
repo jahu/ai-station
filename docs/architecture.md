@@ -1,3 +1,8 @@
+Saved HTTP connections can be explicitly attached to agents as **Connected API**.
+The saved target revision, server-only credentials, bounded capture and normal
+Stop/permission contracts reuse the existing worker. Local Python receives only
+verified captured data. See [saved API sources](plans/agent-http-connectors.md).
+
 [Agent result email](plans/agent-report-email.md) publishes a distinct ordinary
 email.send child from a verified final agent result. It reuses SMTP connectors,
 EmailDelivery, Task serialization and approvals; generation and delivery have

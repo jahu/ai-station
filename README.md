@@ -1,3 +1,8 @@
+Saved HTTP connections can be explicitly attached to agents as **Connected API**.
+The saved target revision, server-only credentials, bounded capture and normal
+Stop/permission contracts reuse the existing worker. Local Python receives only
+verified captured data. See [saved API sources](docs/plans/agent-http-connectors.md).
+
 # AI Station
 
 Ask **“Create a CSV table…”** or **“Utwórz arkusz Excel…”**, or choose

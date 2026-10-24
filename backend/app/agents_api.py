@@ -33,6 +33,19 @@ def market_email_authorization(session, agent):
     return authorization_public(session, agent)
 
 
+def http_readiness(session, agent):
+    if session is None or "http_connector" not in agent.tools:
+        return None
+    from app.agent_http import reviewed_connector
+    from app.agent_schema import AgentHttpScope
+
+    try:
+        reviewed_connector(session, AgentHttpScope.model_validate(agent.http) if agent.http else None)
+    except ValueError as exc:
+        return {"ready": False, "reason": str(exc)}
+    return {"ready": True, "reason": None}
+
+
 def definition_dict(agent, session=None):
     from app.data_agents import data_readiness
     from app.market_feeds import stock_permissions, stock_readiness
@@ -44,6 +57,8 @@ def definition_dict(agent, session=None):
     report_authorization = report_email_status(session, agent)
     return {
         **agent_dict(agent),
+        "http": agent.http,
+        "http_readiness": http_readiness(session, agent),
         "data_readiness": data_readiness(session, agent.data, agent.tools)
         if "python_data" in agent.tools
         else None,
@@ -133,6 +148,13 @@ def validate_target(body, session, agent=None, *, enabling=False):
                 freeze_inputs(session, body.data)
         except ValueError as exc:
             raise HTTPException(409, str(exc)) from exc
+    if body.http is not None and (not enabling or body.enabled):
+        from app.agent_http import reviewed_connector
+
+        try:
+            reviewed_connector(session, body.http)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from exc
     if body.github is not None:
         from app.agent_github import reviewed_connector
 
@@ -178,9 +200,10 @@ def apply_settings(agent, body):
             continue
         if key == "project_id" and value is not None:
             value = str(value)
-        if key in {"github", "data", "market", "media"} and value is not None:
+        if key in {"github", "http", "data", "market", "media"} and value is not None:
             value = getattr(body, key).model_dump(mode="json")
         setattr(agent, key, value)
+    agent.http = body.http.model_dump(mode="json") if body.http else None
     agent.retry_policy = body.retry_policy.model_dump()
     agent.notification_policy = body.notification_policy.model_dump(mode="json")
     try:

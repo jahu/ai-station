@@ -1,3 +1,11 @@
+> Current delivery: #408 is live and qualified. Agents can email explicitly
+> selected generated CSV/XLSX/PNG/text exports, with exact-source receipt and
+> private TLS SMTP qualification. Evidence:
+> `data/acceptance/agent-data-email-attachments-20261024/post-deployment-qualified.json`.
+> Active feature: [saved HTTP/API sources](agent-http-connectors.md), migration
+> 0034 and both agent editors. This feature is not deployed until its gates and
+> release verification pass. Preserve the root checkout's unrelated Memory WIP.
+
 # AI Station implementation handoff
 
 The full platform goal remains active. Prioritize useful local agents and

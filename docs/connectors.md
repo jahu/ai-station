@@ -6,7 +6,14 @@ An HTTP connector stores a unique key, display name, public `http`/`https` URL o
 
 **Check GET** queues an ordinary Task/Run (`http_connector`) with `network_read`. The worker repeats the public-address checks, optionally sends `Authorization: Bearer <secret>`, records events and a JSON artifact, then updates `status`/`health`. A missing secret fails closed before enqueue. Cancellation of a queued or running check does not invent a healthy result. Retry is inspect-and-new-Run only; the same check is never silently replayed.
 
-Agents do not receive model-selected connectors in this increment. Chat/agent search is unchanged.
+Agents can explicitly add **Connected API**, then choose one saved HTTP connection
+in the agent settings or conversation card. Its address/authentication revision is
+frozen on the definition. This source may feed a report, local code/data analysis
+or goal-based media preparation. Credentials stay server-side, require HTTPS and
+are scrubbed from response echoes before storage or inference. The model cannot
+choose connections, URLs or headers. Address/credential/enablement changes require
+reselection; display-name changes and health checks do not. History preserves its
+original captured data. See [execution and verification](plans/agent-http-connectors.md).
 
 Normal tests mock HTTP and never call the public internet.
 

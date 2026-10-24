@@ -39,6 +39,7 @@ def execute_context_tool(session, run, definition, name, deadline, arguments=Non
             "project_memory",
             "web_search",
             "http_fetch",
+            "http_connector",
             "search_pages",
         }
         or not spec.operational
@@ -47,6 +48,12 @@ def execute_context_tool(session, run, definition, name, deadline, arguments=Non
     arguments = arguments or {}
     for permission in spec.required_permissions:
         require(run.effective_permissions, permission)
+    if name == "http_connector":
+        if arguments:
+            raise ValueError("Connected API does not accept model-selected arguments")
+        from app.agent_http import execute_source
+
+        return asyncio.run(execute_source(session, run, definition.http, deadline))
     if name == "search_pages":
         if arguments:
             raise ValueError("Search-page targets cannot be supplied by the model")

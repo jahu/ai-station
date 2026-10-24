@@ -1,3 +1,8 @@
+Saved HTTP connections can be explicitly attached to agents as **Connected API**.
+The saved target revision, server-only credentials, bounded capture and normal
+Stop/permission contracts reuse the existing worker. Local Python receives only
+verified captured data. See [saved API sources](plans/agent-http-connectors.md).
+
 [Agent result delivery](plans/agent-report-email.md) freezes reviewed sender,
 allowlisted recipients, connector revision and definition consent. A model
 cannot choose the envelope or obtain mail credentials. Research/code tools do
