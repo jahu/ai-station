@@ -9,7 +9,16 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictInt, ValidationError, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictInt,
+    ValidationError,
+    model_serializer,
+    model_validator,
+)
 from sqlalchemy import select
 
 from app.assistant_github import GithubScope
@@ -138,6 +147,14 @@ class VideoScope(BaseModel):
     model_config = ConfigDict(extra="forbid")
     duration_seconds: StrictInt = Field(ge=1, le=60)
     composition_mode: Literal["continuous", "shots"] = "continuous"
+    memory_profile: Literal["default", "bounded_11g"] | None = None
+
+    @model_serializer(mode="wrap")
+    def legacy_identity(self, handler):
+        values = handler(self)
+        if self.memory_profile is None:
+            values.pop("memory_profile", None)
+        return values
 
 
 def video_scope(params):
@@ -1132,7 +1149,7 @@ class AssistantExecutor:
                     message.content = "Animating the complete recording locally. The full talking avatar will appear here and in Library."
         elif plan.action == "video.generate":
             from app.media_jobs import LongVideoRequest, publish_video
-            from app.video import VideoRequest, create_video_run
+            from app.video import VideoRequest, capabilities, create_video_run
 
             if len(images) > 1 or params.get("audio_artifact_id"):
                 message.content = "Use a scene prompt and at most one first-frame image for a silent video."
@@ -1142,22 +1159,38 @@ class AssistantExecutor:
                 except ValueError as exc:
                     message.content = str(exc)
                 else:
+                    profile = capabilities()
+                    selected_profile = "default"
+                    if scope and scope.memory_profile is not None:
+                        selected_profile = scope.memory_profile
+                    elif not images:
+                        selected_profile = profile.get("recommended_memory_profile", "default")
+                    settings = {"memory_profile": selected_profile} if selected_profile != "default" else {}
                     if scope:
                         request = LongVideoRequest(
                             client_request_id=UUID(run.id),
                             prompt=params["content"][:2000],
                             image_artifact_id=images[0] if images else None,
-                            **scope.model_dump(),
+                            **scope.model_dump(exclude={"memory_profile"}),
+                            **settings,
                         )
-                        publish_video(session, request, task=run.task, parent_run_id=run.id)
+                        publish_video(
+                            session, request, task=run.task, parent_run_id=run.id, observed_profile=profile
+                        )
                         message.content = f"Generating your {scope.duration_seconds}-second video locally. Finished segments are preserved; the checked full MP4 appears here and in Library."
                     else:
                         request = VideoRequest(
-                            prompt=params["content"][:2000], image_artifact_id=images[0] if images else None
+                            prompt=params["content"][:2000],
+                            image_artifact_id=images[0] if images else None,
+                            **settings,
                         )
-                        child = create_video_run(session, request, task=run.task, parent_run_id=run.id)
+                        child = create_video_run(
+                            session, request, task=run.task, parent_run_id=run.id, observed_profile=profile
+                        )
                         run.metadata_json = {**run.metadata_json, "child_run_id": child.id}
                         message.content = "Generating your scene locally with Wan 2.2. The video will appear here and in Library."
+                    if selected_profile == "bounded_11g":
+                        message.content += " Using the reduced-RAM landscape profile."
         elif plan.action == "data.analyze":
             from app.conversation_data import publish_workspace
 
