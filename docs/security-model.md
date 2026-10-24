@@ -1,3 +1,9 @@
+Work can operate the last agent created in the conversation: **Run this agent**,
+**Pause this agent** (future runs) and **Stop this agent** (current execution).
+Existing review/enable, approvals, permissions and Task-wide Stop remain in force.
+The background execution does not block further conversation.
+See [conversation agent controls](plans/conversation-agent-control.md).
+
 Saved HTTP connections can be explicitly attached to agents as **Connected API**.
 The saved target revision, server-only credentials, bounded capture and normal
 Stop/permission contracts reuse the existing worker. Local Python receives only

@@ -838,7 +838,11 @@ export function AssistantAgentDraft({
             <div className="assistant-agent-brief-head">
               <h3>{agent.name}</h3>
               <span className="assistant-agent-brief-status">
-                {agent.enabled ? "Enabled" : "Disabled draft"}
+                {agent.enabled
+                  ? "Enabled"
+                  : history.length || agent.last_run_at
+                    ? "Paused"
+                    : "Disabled draft"}
               </span>
             </div>
             <p className="assistant-agent-brief-goal">
@@ -879,6 +883,13 @@ export function AssistantAgentDraft({
               ) : null}
             </dl>
             {videoSetup}
+            {agent.enabled && (
+              <p className="muted assistant-agent-brief-note">
+                In Work, say “Run this agent”, “Pause this agent” or “Stop this
+                agent” to control the latest agent created in this conversation.
+                Pause turns off future runs; Stop targets its current execution.
+              </p>
+            )}
             {!agent.enabled && (
               <p className="muted assistant-agent-brief-note">
                 {history.length || agent.last_run_at

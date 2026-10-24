@@ -35,7 +35,9 @@ def active_run(session, agent_id):
     )
 
 
-def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definition=None) -> str:
+def launch_agent(
+    session: Session, agent: Agent, *, triggered_by: str, definition=None, before_publish=None
+) -> str:
     if not agent.enabled:
         raise ValueError("Enable the reviewed definition before running this agent")
     if active_run(session, agent.id):
@@ -69,6 +71,10 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
         steps = planned_steps(definition)
     except SkillError as exc:
         raise ValueError(str(exc)) from exc
+    if before_publish is not None:
+        # This controller-only preparation has not changed durable state. SQLite
+        # uses BEGIN IMMEDIATE even for reads; release it before Runner metadata.
+        session.commit()
     if auto_local_coding(definition.tools, definition.model):
         from app.coding_model_routing import select_coding_model
 
@@ -86,6 +92,8 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
     if "python_data" in definition.tools:
         from app.data_agents import freeze_inputs, require_runtime
 
+        if before_publish is not None:
+            session.commit()
         require_runtime()
         from app.agent_coding_policy import coding_research_steps
 
@@ -110,6 +118,12 @@ def launch_agent(session: Session, agent: Agent, *, triggered_by: str, definitio
 
         grant = authorization(session, agent, definition)
         report_email_approval = grant.id if grant else None
+    if before_publish is not None:
+        # Internal controllers can recheck current authority after read-only
+        # runtime/source preparation, before any execution graph is published.
+        before_publish()
+        if not agent.enabled or active_run(session, agent.id):
+            raise ValueError("Agent activation or active execution changed during preparation")
     task = create_task(
         session,
         title=agent.name,
