@@ -5,6 +5,24 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — avatar model loading, 2026-10-24
+
+PR #398 is merged as `067b2c6` and deployed from reviewed `cec0c72` in
+`.tools/ui-agent-video-setup-20261024`; controller image `4d3212676d0c`.
+Auth/history, 16 paused definitions, exact due instants, native PID and the
+operator model stayed intact. Authoritative proof:
+`data/acceptance/agent-video-setup-20261024/post-deployment-qualified.json`.
+
+Active owned candidate: `feat/echo-memory-loading`, `.tools/echo-memory-loading`.
+[The avatar loading plan](echo-memory-loading.md) addresses the measured high RAM
+loader without changing installed weights/precision. All four CPU-loaded model
+components matched checkpoint tensor values; 45 focused checks pass. Actual GPU
+output remains unqualified. No product option or reduced reservation is enabled;
+private probing requires real-test opt-in and a verified kernel scope. Preserve
+original root WIP, live/native/proof trees, other applications and pending Whisper
+consent. Evidence: `data/acceptance/echo-memory-loading-20261024`.
+The full platform goal remains active.
+
 ## Current continuation — reviewed video-agent setup, 2026-10-24
 
 #397 is merged as `9c0af73` and live-qualified at reviewed `992bb5c`. Controller
