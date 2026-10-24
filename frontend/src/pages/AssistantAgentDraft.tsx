@@ -1,4 +1,6 @@
 import AgentTimeBudget, { MAX_AGENT_RUNTIME } from "./AgentTimeBudget";
+import AgentVideoSetup from "./AgentVideoSetup";
+import type { AgentMediaScope } from "./agent-media";
 import { PUBLIC_RESEARCH_TOOLS } from "./agentActivation";
 import AgentCronFields from "./AgentCronFields";
 import "./AssistantAgentDraft.css";
@@ -54,6 +56,7 @@ type AgentDraft = {
   goal?: string;
   system_prompt?: string;
   tools?: string[];
+  media?: AgentMediaScope | null;
   data?: DataScope | null;
   market?: MarketScope | null;
   market_readiness?: { ready: boolean; reason: string | null } | null;
@@ -728,6 +731,16 @@ export function AssistantAgentDraft({
     saveSettings.isPending ||
     modelBusy;
   const active = history.some((run) => !TERMINAL.has(run.status));
+  const videoSetup = agent?.tools?.includes("create_media") ? (
+    <AgentVideoSetup
+      value={agent.media}
+      maximumRuntime={agent.maximum_runtime ?? 600}
+      disabled={busy || active}
+      tabIndex={tabIndex}
+      actionLabel="Apply and save setup"
+      onApply={(patch) => saveSettings.mutate(patch)}
+    />
+  ) : null;
   if (compact && !expanded) {
     const external = agent?.tools?.some((tool) =>
       ["coding_cursor", "coding_codex"].includes(tool),
@@ -766,7 +779,9 @@ export function AssistantAgentDraft({
         className="assistant-agent-brief"
         aria-label="Agent draft summary"
       >
-        <ErrorNotice error={detail.error ?? runNow.error} />
+        <ErrorNotice
+          error={detail.error ?? runNow.error ?? saveSettings.error}
+        />
         {agent ? (
           <>
             <div className="assistant-agent-brief-head">
@@ -812,6 +827,7 @@ export function AssistantAgentDraft({
                 </div>
               ) : null}
             </dl>
+            {videoSetup}
             {!agent.enabled && (
               <p className="muted assistant-agent-brief-note">
                 {history.length || agent.last_run_at
@@ -894,6 +910,7 @@ export function AssistantAgentDraft({
             <strong>{agent.name}</strong>
             {agent.enabled ? " · Enabled" : " · Disabled draft"}
           </p>
+          {videoSetup}
           <dl className="assistant-agent-definition">
             <div>
               <dt>Identity</dt>
