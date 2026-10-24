@@ -111,12 +111,8 @@ it("shows a failed inspection and retries only the selected input after an expli
 it("uses real JSON field headers and renders source text without evaluation", async () => {
   mount(false, true);
   await screen.findByRole("table", { name: "JSON data preview" });
-  expect(
-    screen.getByRole("columnheader", { name: "Key", exact: true }),
-  ).toBeTruthy();
-  expect(
-    screen.getByRole("columnheader", { name: "Value", exact: true }),
-  ).toBeTruthy();
+  expect(screen.getByRole("columnheader", { name: "Key" })).toBeTruthy();
+  expect(screen.getByRole("columnheader", { name: "Value" })).toBeTruthy();
   expect(screen.getByText("<script>alert(1)</script>")).toBeTruthy();
   expect(document.querySelector("script")).toBeNull();
 });
