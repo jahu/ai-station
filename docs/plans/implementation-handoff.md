@@ -7,60 +7,61 @@ downloads, driver changes, public exposure or main/master operations.
 
 ## Authoritative live state — 2026-10-24
 
-PR #402 is merged to develop as `e05d1c624cd128c8f96fc08e1956c26fa0c4110c`,
-reviewed source `e434d659d62a02591955b74529b64ff057de1ff9`.
-Release: `.tools/ui-agent-rendered-research-20261024`.
+PR #403 is squash-merged to develop as `a3610c7d5f5b987cb81d26853712c0e9705b1571`,
+reviewed source `3181519c9f73ceffb6a6cdac7f2dfa6608dfe2a8`.
+Release: `.tools/ui-conversation-rendered-data-20261024`.
 The source/image/backup/launcher authority is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before
 another rollout. LAN UI: http://192.168.1.121:8765 (password preserved).
-Qualification: `data/acceptance/agent-rendered-research-20261024/post-deployment-qualified.json`.
+Qualification: `data/acceptance/conversation-rendered-data-20261024/post-deployment-qualified.json`.
 
-Delivered: persistent local-code/Python agents can use reviewed Browser sources.
-The exact original raw capture, compact projection, URLs, workflow and deadline
-are bound before local work. Source UI includes rendered text/screenshots without
-claiming pixel inspection. Actual public JavaScript page → Local Auto 131072
-context → native offline Python returned the independently checked count 10.
-The existing bounded repair used two Python attempts. An initial QA marker was
-absent from the page and correctly returned zero; that rejected test assumption
-and proof are retained separately. Original model/GPU/cache/context restored,
-native PID unchanged, QA agents paused, original checkout preserved.
+Delivered: Chat/Work's explicit Data analysis can read reviewed URLs with
+JavaScript before offline Python, without creating an Agent. Static GET remains
+the default, false flags preserve receipt identity, and the exact frozen scope
+binds native prepare/final-adoption. Offline captured-data follow-up grants no
+Browser; refresh retains the explicit reviewed option. Compiled desktop/phone
+first/follow-up/refresh/download/reload/Stop and source UI pass. Actual public
+JavaScript capture → Local Auto at 131072 context → native Python returned the
+independently checked count 10 and exact CSV, in one Python attempt. The original
+model/GPU/cache/context was restored, native PID unchanged, QA conversation
+archived, no persistent Agent created and original checkout preserved.
 
-Full gate: 3218 Python/Runner cases (3209 passes/nine explicit opt-in skips),
-718 UI tests, Ruff, UI format/lint/types/build, exact image/backend/assets and
-normal/dev/private-LAN Compose. Compiled 1440/390 actual API/SQLite/disposable Git
-acceptance used fake Browser/model/Python; actual live integration is separate.
-No operator-inbox mail qualification is claimed.
+Full #403 gate: 3240 Python/Runner cases (3231 passes/nine explicit opt-in skips),
+719 UI tests, Ruff, UI format/lint/types/build, exact image/backend/assets and
+normal/dev/private-LAN Compose. Compiled API/SQLite/disposable-Git checks use
+fixture Browser/model/Python; actual normal-worker qualification is separate.
 
-PR #401 (`d00887d`, reviewed `df215f9`) is also deployed/qualified. Queued consumers
-may yield their managed model for verified media prerequisites and restore the
-exact preset through ordinary preparation/load Runs. Active/unrelated consumers
-remain protected; Stop, expiry, recovery and shared startup have coverage. Its
-3190 Python passes/nine skips and source-identical 716 UI qualification are in
+PR #402 (`e05d1c6`, reviewed `e434d65`) delivers the equivalent persistent
+local-code/Python agent research. Real Browser/local-model/Python count 10 used
+two bounded Python attempts; operator preset restored and QA agents paused.
+Evidence: `data/acceptance/agent-rendered-research-20261024/post-deployment-qualified.json`.
+The initial QA marker was absent and correctly returned zero; rejected test
+assumptions and corrected independent checks remain preserved. Do not repeat it.
+
+PR #401 (`d00887d`, reviewed `df215f9`) fixes dependency-pinned GPU model consumers
+with ordinary preparation/load Runs. Active/unrelated consumers remain protected;
+Stop, expiry, recovery and shared startup have coverage. Its evidence is
 `data/acceptance/dependent-consumer-eviction-20261024/post-deployment-qualified.json`.
-Do not rebuild that eviction/reload engine or claim a new real GPU handoff smoke.
+Do not rebuild eviction/reload or claim a new real GPU handoff smoke.
+No operator-inbox mail delivery or physical-phone test is claimed.
 
 ## Next owned task
 
-Branch `feat/conversation-rendered-data`, `.tools/conversation-rendered-data`,
-based on develop #402. Read [direct rendered data](conversation-rendered-data.md).
-Reuse the now-qualified Browser → source handoff → offline data pipeline directly
-from Chat/Work's explicit Data controls, without creating a persistent Agent.
+Branch `feat/local-file-creation`, `.tools/local-file-creation`, based on #403.
+Read [local file creation](local-file-creation.md). Existing local data exporters
+require a file or research input; add explicit creation from current instructions
+without dummy inputs, using the same offline Python engine and verified outputs.
+The native/controller Python input lists already allow empty; enforce the new
+intent at the shared data/conversation/agent boundaries rather than weakening
+ordinary analysis validation. Preserve legacy serialization and source/reference
+routing priorities. Do not repeat the rendered-source features or real GPU tests.
 
-Implementation is in progress; live remains #402 until new qualification.
-The original regression failed because `DataResearchSelection` rejected the new
-`render_pages` field. The candidate now adds typed scope/legacy serialization,
-exact root permissions, native prepare/final-adoption binding and an explicit
-composer option. First actual worker/temporary-DB/fake-runner Chat and Work cases
-pass; relevant existing Browser/static-data and UI cases also pass.
-Normal full gates, compiled desktop/mobile, review/PR/deployment remain required.
-
-Original boundaries to preserve in review:
-conversation data roots previously required exact fixed `data_agents.REQUIRED`;
-`reviewed_research_step` previously permitted only agent_tool network_read sources; native
-Browser payload/finish treats missing agent_id as a standalone URLs request.
-Update these together using the existing prepare hook and final source binding.
-Preserve old request receipt serialization by omitting a false new option.
-Do not broaden ordinary Web permission or automatic routing implicitly.
+The first candidate regressions document the currently rejected creation scope.
+They are intentionally red until implementation; no failing candidate may merge.
+Inspect source before editing: AgentDataScope min-input constraints, ResearchDataScope
+empty-source exception, AgentSettings activation validation, freeze/verify call
+sites in data_agents.py, DataScope.files, generation/repair/result binding and
+shared data input/model UI all participate. No implementation is claimed yet.
 
 ## Preserved work and operations
 
