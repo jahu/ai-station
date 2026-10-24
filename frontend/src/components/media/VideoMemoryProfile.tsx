@@ -2,23 +2,27 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api";
 
 export type VideoProfile = "default" | "bounded_11g";
+export type VideoCapabilities = {
+  available: boolean;
+  reason?: string;
+  recommended_memory_profile?: VideoProfile;
+  memory_profiles?: { id: string; available: boolean }[];
+};
 
 export default function VideoMemoryProfile({
   value,
   onChange,
   disabled,
+  recommended,
 }: {
   value: VideoProfile;
   onChange: (value: VideoProfile) => void;
   disabled?: boolean;
+  recommended?: boolean;
 }) {
   const capability = useQuery({
     queryKey: ["video-capabilities"],
-    queryFn: () =>
-      api<{
-        available: boolean;
-        memory_profiles?: { id: string; available: boolean }[];
-      }>("/video/capabilities"),
+    queryFn: () => api<VideoCapabilities>("/video/capabilities"),
   });
   const ready =
     capability.data?.available &&
@@ -41,6 +45,10 @@ export default function VideoMemoryProfile({
         </option>
       </select>
       <small className="muted">
+        {recommended &&
+          ready &&
+          value === "bounded_11g" &&
+          "Selected for the currently available memory. "}
         {value === "bounded_11g"
           ? ready
             ? "Limits system RAM to 11 GB without swap. Uses 1280 × 704 and at least 20 steps; generation may take longer."

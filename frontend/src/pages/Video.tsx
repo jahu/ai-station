@@ -21,6 +21,7 @@ import Avatars from "./Avatars";
 import VideoSceneEditor from "../components/media/VideoSceneEditor";
 import VideoMemoryProfile, {
   type VideoProfile,
+  type VideoCapabilities,
 } from "../components/media/VideoMemoryProfile";
 import {
   scenePlanError,
@@ -124,17 +125,27 @@ function VideoForm({
   );
   const sceneError = planningScenes ? scenePlanError(prompt, scenes) : "";
   const [steps, setSteps] = useState(initialRequest?.steps ?? 20);
-  const [memoryProfile, setMemoryProfile] = useState<VideoProfile>(
-    initialRequest?.memory_profile ?? "default",
+  const [profileChoice, setProfileChoice] = useState<VideoProfile | null>(
+    initialRequest ? (initialRequest.memory_profile ?? "default") : null,
   );
   const [seed, setSeed] = useState(initialRequest?.seed ?? 43);
   const [gpu, setGpu] = useState(initialRequest?.gpu ?? "auto");
   const [uploading, setUploading] = useState(false);
   const capability = useQuery({
     queryKey: ["video-capabilities"],
-    queryFn: () =>
-      api<{ available: boolean; reason?: string }>("/video/capabilities"),
+    queryFn: () => api<VideoCapabilities>("/video/capabilities"),
   });
+  const memoryProfile: VideoProfile =
+    profileChoice ??
+    (mode === "generate" &&
+    resolution === "1280x704" &&
+    steps >= 20 &&
+    capability.data?.memory_profiles?.some(
+      (row) => row.id === "bounded_11g" && row.available,
+    ) &&
+    capability.data.recommended_memory_profile === "bounded_11g"
+      ? "bounded_11g"
+      : "default");
   const hardware = useHardware();
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
@@ -251,8 +262,10 @@ function VideoForm({
               !sceneError &&
               prompt.trim() &&
               (mode !== "animate" || image)
-            )
+            ) {
+              setProfileChoice(memoryProfile);
               generate.mutate();
+            }
           }}
         >
           <div className="media-composer-heading">
@@ -320,7 +333,7 @@ function VideoForm({
                 <select
                   aria-label="Format"
                   value={resolution}
-                  disabled={memoryProfile === "bounded_11g"}
+                  disabled={profileChoice === "bounded_11g"}
                   onChange={(event) => setResolution(event.target.value)}
                 >
                   {!["1280x704", "704x1280", "768x768"].includes(
@@ -422,8 +435,9 @@ function VideoForm({
               </summary>
               <VideoMemoryProfile
                 value={memoryProfile}
+                recommended={profileChoice === null}
                 onChange={(profile) => {
-                  setMemoryProfile(profile);
+                  setProfileChoice(profile);
                   if (profile === "bounded_11g") {
                     setResolution("1280x704");
                     setSteps((current) => Math.max(20, current));
@@ -444,7 +458,7 @@ function VideoForm({
                   Steps
                   <input
                     type="number"
-                    min={memoryProfile === "bounded_11g" ? 20 : 4}
+                    min={profileChoice === "bounded_11g" ? 20 : 4}
                     max={40}
                     value={steps}
                     onChange={(event) => setSteps(Number(event.target.value))}

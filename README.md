@@ -1,5 +1,12 @@
 # AI Station
 
+New text-only Video and Chat/Work requests can select the available reduced-RAM
+profile when Standard's reservation exceeds currently observed free memory.
+The selected profile stays visible and is frozen on Send; manual choices and
+saved jobs retain their settings. Image animation keeps its existing default.
+The worker still checks actual RAM/GPU availability before starting.
+[Recommendation behavior](docs/plans/video-memory-recommendation.md).
+
 Video and video agents offer **Advanced settings → Generation profile → Reduced
 RAM** when explicitly enabled for the configured native runtime. It uses an
 11-GiB, zero-swap limit, existing weights and 1280×704 landscape output with 20+ steps. Standard

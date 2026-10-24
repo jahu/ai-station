@@ -1,5 +1,6 @@
 """Queued local Wan text/image video generation through the native Runner."""
 
+import math
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,10 +18,40 @@ router = APIRouter(prefix="/api/video", tags=["video"])
 DB = Annotated[Session, Depends(session_scope)]
 
 
+def recommended_profile(profile, available_mib):
+    standard = profile.get("memory_estimate_mib")
+    bounded = any(
+        row.get("id") == "bounded_11g" and row.get("available") and row.get("ram_mib") == 11264
+        for row in profile.get("memory_profiles", [])
+    )
+    if (
+        profile.get("available")
+        and bounded
+        and type(standard) in (int, float)
+        and math.isfinite(standard)
+        and standard > 11264
+        and type(available_mib) in (int, float)
+        and math.isfinite(available_mib)
+        and 0 <= available_mib < standard + 1024
+    ):
+        return "bounded_11g"
+    return "default"
+
+
 @router.get("/capabilities")
 def capabilities():
     try:
-        return RunnerClient().request("GET", "/v1/video/capabilities")
+        runner = RunnerClient()
+        profile = runner.request("GET", "/v1/video/capabilities")
+        available = None
+        if profile.get("available") and any(
+            row.get("available") for row in profile.get("memory_profiles", [])
+        ):
+            try:
+                available = (runner.hardware().get("memory") or {}).get("available_mib")
+            except (RunnerError, RunnerUnavailable):
+                pass
+        return {**profile, "recommended_memory_profile": recommended_profile(profile, available)}
     except (RunnerError, RunnerUnavailable):
         return {
             "available": False,

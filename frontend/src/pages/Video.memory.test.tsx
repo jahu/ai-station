@@ -17,7 +17,7 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-function mount(available: boolean, saved = false) {
+function mount(available: boolean, saved = false, recommended = "default") {
   const writes: Record<string, unknown>[] = [];
   vi.stubGlobal(
     "fetch",
@@ -30,6 +30,7 @@ function mount(available: boolean, saved = false) {
             ? {
                 available: true,
                 memory_profiles: [{ id: "bounded_11g", available }],
+                recommended_memory_profile: recommended,
               }
             : url.endsWith("/hardware")
               ? { gpus: [] }
@@ -100,4 +101,62 @@ it("preserves a saved unavailable choice and gives a clear recovery action", asy
       .value,
   ).toBe("bounded_11g");
   expect(screen.getByRole("option", { name: "Standard" })).toBeTruthy();
+});
+
+it("preselects a visible recommendation and freezes it on Send", async () => {
+  const writes = mount(true, false, "bounded_11g");
+  await screen.findByText(/Selected for the currently available memory/);
+  expect(
+    (screen.getByLabelText("Video generation profile") as HTMLSelectElement)
+      .value,
+  ).toBe("bounded_11g");
+  fireEvent.change(screen.getByLabelText("Scene and motion"), {
+    target: { value: "Coast at dawn" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Generate video" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0].memory_profile).toBe("bounded_11g");
+});
+
+it("honors a manual Standard override of the recommendation", async () => {
+  const writes = mount(true, false, "bounded_11g");
+  await screen.findByText(/Selected for the currently available memory/);
+  fireEvent.change(screen.getByLabelText("Video generation profile"), {
+    target: { value: "default" },
+  });
+  expect((screen.getByLabelText("Format") as HTMLSelectElement).disabled).toBe(
+    false,
+  );
+  fireEvent.change(screen.getByLabelText("Scene and motion"), {
+    target: { value: "Coast at dawn" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Generate video" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).not.toHaveProperty("memory_profile");
+});
+
+it("does not silently apply the text-only recommendation to image animation", async () => {
+  mount(true, false, "bounded_11g");
+  await screen.findByText(/Selected for the currently available memory/);
+  fireEvent.click(screen.getByRole("radio", { name: "Animate an image" }));
+  expect(
+    (screen.getByLabelText("Video generation profile") as HTMLSelectElement)
+      .value,
+  ).toBe("default");
+  expect((screen.getByLabelText("Format") as HTMLSelectElement).disabled).toBe(
+    false,
+  );
+});
+
+it("lets a new format override an automatic landscape recommendation", async () => {
+  mount(true, false, "bounded_11g");
+  await screen.findByText(/Selected for the currently available memory/);
+  const format = screen.getByLabelText("Format") as HTMLSelectElement;
+  expect(format.disabled).toBe(false);
+  fireEvent.change(format, { target: { value: "704x1280" } });
+  expect(format.value).toBe("704x1280");
+  expect(
+    (screen.getByLabelText("Video generation profile") as HTMLSelectElement)
+      .value,
+  ).toBe("default");
 });

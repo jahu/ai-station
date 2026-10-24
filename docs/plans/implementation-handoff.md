@@ -5,6 +5,32 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — video memory recommendation, 2026-10-24
+
+PR #396 is merged as `8fb343d` and live-qualified from reviewed `3ea8168` in
+`.tools/ui-wan-memory-profile-20261024` for both controller and native Runner.
+The image is `e65ac0d1ef0d`; supervisor 2145251. Backup, all 16 paused definitions,
+original IDs/credentials and the restored owned model preset survived rollout.
+Native source/socket, worker/scheduler and localhost/private LAN checks passed.
+Exact evidence: `data/acceptance/media-memory-investigation-20261024/post-deployment-qualified.json`.
+Native scopes are enabled in this workstation's project config; other installs
+remain opt-in. Keep the exact short/coherent-scene quality scope and rejected
+small-format/600-second cases. No additional full-minute or image-quality claim.
+
+New owned worktree `.tools/video-memory-recommendation`, branch
+`feat/video-memory-recommendation`, is based on develop `8fb343d`.
+[The recommendation plan](video-memory-recommendation.md) and implementation
+select the already-qualified profile for new eligible text-only Video/Chat work
+when Standard cannot fit observed free RAM. Explicit Standard, image defaults,
+saved requests/receipts and existing agent definitions remain authoritative.
+The choice freezes before dispatch; the worker retains actual admission.
+Native modules/execution are unchanged: reuse #396 GPU proof only after exact
+source and typed-payload comparison, without another expensive sample.
+Finish the full normal gates, compiled desktop/mobile recommendation/override
+checks, published-head review and controller-only rollout. Preserve the healthy
+native Runner, root Memory WIP, all source/proof trees and pending Whisper consent.
+The whole-platform objective remains active and incomplete.
+
 ## Current reviewed increment — PR #396, 2026-10-24
 
 `feat/wan-memory-profile` in `.tools/wan-memory-profile` implements an explicitly
