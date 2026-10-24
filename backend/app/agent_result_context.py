@@ -35,8 +35,10 @@ def reference(session, message, *, budget=12000):
         "status": linked["status"],
         "available": False,
     }
+    if linked.get("result_run_id"):
+        value["run_id"] = linked["result_run_id"]
     text = ""
-    stopped = root.task.metadata_json.get("stop_requested_at")
+    stopped = root.task.metadata_json.get("stop_requested_at") and not linked.get("delivery_status")
     if stopped and linked["status"] == "succeeded":
         value["status"] = "canceled"
     if linked["status"] != "succeeded" or stopped:

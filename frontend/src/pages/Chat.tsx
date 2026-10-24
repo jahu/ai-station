@@ -114,7 +114,12 @@ type Message = ActionResult & {
   created_at: string;
   run_id: string | null;
   run_status: string | null;
-  agent_control_run?: { id: string; status: string };
+  agent_control_run?: {
+    id: string;
+    status: string;
+    delivery_status?: string;
+    delivery_run_id?: string;
+  };
   error_message: string;
   metadata: {
     agent_result_sources?: AgentResultSource[];

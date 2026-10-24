@@ -73,3 +73,24 @@ it("offers explicit review for a disabled definition without inventing an execut
     screen.queryByRole("link", { name: "Inspect agent execution" }),
   ).toBeNull();
 });
+
+it("separates a ready result from pending email review", () => {
+  render(
+    <MemoryRouter>
+      <AgentControlRun
+        result={{ agent_id: "agent-one", outcome: "queued" }}
+        run={{
+          id: "workflow",
+          status: "succeeded",
+          delivery_status: "waiting_for_approval",
+          delivery_run_id: "email-one",
+        }}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText("succeeded")).toBeTruthy();
+  expect(screen.getByText(/Email delivery: waiting for approval/)).toBeTruthy();
+  expect(
+    screen.getByRole("link", { name: "Inspect delivery" }).getAttribute("href"),
+  ).toBe("/runs/email-one");
+});
