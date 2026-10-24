@@ -27,9 +27,18 @@ def cancel_task(session, task):
     canceled = []
     retained = []
     for run in active:
+        if run.status in TERMINAL:
+            # Stopping a parent can already have canceled its owned child.
+            if run.status == "canceled":
+                canceled.append(run.id)
+            continue
         # Model startup may be shared by conversations outside this Task.
         # Stopping its original consumer must not break their prerequisite.
-        if run.executor_type == "llama_load" and session.scalar(
+        if (
+            run.executor_type == "llama_load"
+            or run.executor_type == "llama_stop"
+            and run.parameters.get("evicted_for_run_id")
+        ) and session.scalar(
             select(Run.id)
             .join(RunDependency, RunDependency.run_id == Run.id)
             .where(

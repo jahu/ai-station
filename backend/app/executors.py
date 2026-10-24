@@ -33,6 +33,7 @@ from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
 from app.github_connector import GithubReadExecutor
 from app.llama import LlamaExecutor, LlamaHealthExecutor
+from app.llama_handoff import LlamaResumeConsumerExecutor
 from app.local_coding import LocalProposalExecutor
 from app.maintenance import SqliteBackupExecutor
 from app.market_feeds import MarketFeedExecutor
@@ -317,6 +318,7 @@ EXECUTORS = {
     "llama_load": LlamaExecutor("load"),
     "llama_stop": LlamaExecutor("stop"),
     "llama_health": LlamaHealthExecutor(),
+    "llama_resume_consumer": LlamaResumeConsumerExecutor(),
     "photo_pipe": PhotoPipeExecutor(),
     "chatterbox": AudioExecutor(),
     "ace_step_music": MusicExecutor(),

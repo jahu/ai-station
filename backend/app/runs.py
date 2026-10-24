@@ -207,6 +207,17 @@ def mark_failed(session: Session, run: Run, error_type: str, message: str) -> No
 
 
 def request_cancel(session: Session, run: Run) -> Run:
+    handoff = run.metadata_json.get("runtime_handoff")
+    resume = session.get(Run, handoff.get("resume_run_id")) if isinstance(handoff, dict) else None
+    if (
+        resume is not None
+        and resume.executor_type == "llama_resume_consumer"
+        and resume.parent_run_id == run.id
+        and resume.task_id == run.task_id
+        and resume.parameters.get("consumer_run_id") == run.id
+        and resume.status not in TERMINAL
+    ):
+        request_cancel(session, resume)
     if (
         run.executor_type == "chat"
         or run.executor_type == "orchestrator"

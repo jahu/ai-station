@@ -34,8 +34,9 @@ idle-model eviction/reload already exists: do not rebuild it. A new focused fake
 regression demonstrates a valid dependency graph in which queued post-media work
 pins the model/GPU required by its own media prerequisite. Actual base result:
 `instance.status == "ready"`, expected `"stopping"`; one intentional failing test,
-`data/acceptance/dependent-consumer-eviction-regression.log`. This next increment
-is not implemented, published, merged or deployed. Do not merge a failing gate.
+`data/acceptance/dependent-consumer-eviction-regression.log`. The red base evidence is retained; the regression now passes locally. The implementation
+uses ordinary preparation Runs and is not yet published/merged/deployed. Do not
+merge a failing gate.
 Ignoring that consumer alone would leave its stale endpoint; preserve runnable
 and active consumers and plan deferred rebinding through ordinary owned loads.
 The reproduction does not claim every current public media route builds this graph.
@@ -43,8 +44,16 @@ The reproduction does not claim every current public media route builds this gra
 Before implementing refresh, inspect the real `prepare_consumer`/`enqueue_load`
 validation calls. Do not put native/network verification under a SQLite writer
 lock or introduce cross-Task cancellation dependencies for unrelated consumers.
-Atomic claim exclusion, idempotent refresh and failed/Stop/expired prerequisite
-resolution need coverage together. The full platform goal remains active; preserve
+The final design avoids a refresh loop: a database-only preparation Run gates
+the consumer with existing atomic claiming. Idempotence, recovery and
+failed/Stop/expired prerequisite handling are tested together. Current focused
+verification: 191 relevant tests passed before the final sharing-lock refinement;
+38 final focused cases now pass, including concurrent workers and retained shared
+startup under resource pressure. Complete final-head checks and release
+qualification are being collected in
+`data/acceptance/dependent-consumer-eviction-20261024`; no new release is claimed
+until `post-deployment-qualified.json` passes. Read the plan
+and current source rather than implementing the superseded refresh proposal. The full platform goal remains active; preserve
 root Memory WIP (its functionality was already ported in #319), all live/proof
 worktrees and pending Whisper-small consent.
 
