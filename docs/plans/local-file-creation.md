@@ -100,8 +100,13 @@ owned file as ordinary analysis, not a guessed regeneration. Changed bytes, Tras
 or a changed result pointer refuse reuse. Public/current facts and existing-data
 references are not silently routed to instruction-only creation.
 
-Focused verification currently passes 34 backend cases and 28 related UI cases.
-Full-source local gates, image/compiled UI binding, actual native CPU output proof,
-PR review and deployment remain required before claiming release. The CPU proof
-uses deterministic injected Python rather than a claim of model inference; original
-failed verifier diagnostics are retained when correcting its reader assumptions.
+Full-source local verification passes 3278 backend/Runner cases (3269 passed,
+nine explicit opt-in skips), Ruff and 724 UI tests with format/lint/types/build.
+The exact image/backend/assets and three Compose configurations pass. Compiled
+1440/390 API/SQLite flows verify natural first Send, created downloads, explicit
+and natural follow-up, reload and Stop. Actual owned offline Python creates and
+checks all ten CSV/XLSX rows, PNG, one intentional-failure repair and a follow-up
+total of 55. That CPU proof uses injected inference; it is separate from an actual
+local-model qualification. Corrected verifier assumptions and failed diagnostics
+remain retained. Evidence: `data/acceptance/local-file-creation-20261024`.
+PR #404 review and deployment must finish before claiming this release live.

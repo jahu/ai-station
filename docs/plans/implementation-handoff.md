@@ -56,17 +56,18 @@ intent at the shared data/conversation/agent boundaries rather than weakening
 ordinary analysis validation. Preserve legacy serialization and source/reference
 routing priorities. Do not repeat the rendered-source features or real GPU tests.
 
-Candidate implementation now spans schemas, frozen zero-input validation,
+Candidate implementation spans schemas, frozen zero-input validation,
 creation-specific generation, shared Files & data operation controls, clear direct
-routing/disabled drafts and verified created-workbook/CSV follow-ups. Focused 34
-backend and 28 UI checks pass. Review current source rather than repeating the
-initial intentionally red regressions. The native runner is unchanged. Complete
-full-source gates, exact image, compiled desktop/mobile, actual CPU zero-input/
-repair/output/follow-up proof and review/develop rollout; live remains #403 until
+routing/disabled drafts and verified created-workbook/CSV follow-ups. Full local
+3278 backend/Runner cases pass (3269 passes/nine opt-in skips), as do Ruff and 724
+UI tests with format/lint/types/build. Exact image/assets/three Compose variants
+and compiled 1440/390 first-send/download/reuse/reload/Stop pass. Real native CPU
+proof uses injected inference: all ten CSV/XLSX rows, PNG, one intentional-failure
+repair and a follow-up total of 55 pass. Original failed verifier assumptions are
+retained; no product failure was waived. Native source is unchanged.
+PR #404 is open against develop. Finish full review/merge, backed-up controller
+rollout and actual local-model creation qualification. Live remains #403 until
 `data/acceptance/local-file-creation-20261024/post-deployment-qualified.json` passes.
-The first native CPU execution produced files, but its verifier assumed an XLSX
-reader list instead of the actual sheets dictionary; correct the proof and retain
-its failed record, do not claim the whole check passed before rerunning it.
 
 ## Preserved work and operations
 
