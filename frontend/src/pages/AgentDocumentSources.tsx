@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { documentObservation } from "./document-context";
 import "./AgentMemorySources.css";
+import "./AgentDocumentSources.css";
 
 export default function AgentDocumentSources({
   captures,
@@ -13,7 +14,7 @@ export default function AgentDocumentSources({
         if (!documentObservation(result)) return null;
         return (
           <section
-            className="web-search-sources"
+            className="web-search-sources agent-document-sources"
             key={result.artifact_id}
             aria-label="Captured document sources"
           >
@@ -33,7 +34,9 @@ export default function AgentDocumentSources({
                 <li key={doc.source_artifact_id}>
                   <strong>{doc.name}</strong>
                   <p className="muted">
-                    {doc.page_count} page{doc.page_count === 1 ? "" : "s"}
+                    {doc.mime_type === "application/pdf"
+                      ? `${doc.page_count} page${doc.page_count === 1 ? "" : "s"}`
+                      : "Text document"}
                     {doc.truncated ? " · Extraction limit reached" : ""}
                     {doc.excerpted
                       ? " · Model received an excerpt"
@@ -42,7 +45,7 @@ export default function AgentDocumentSources({
                   {doc.query_found === false && (
                     <p className="muted">No matching text in this capture.</p>
                   )}
-                  <p>
+                  <p className="agent-document-preview">
                     {doc.text.slice(0, 300)}
                     {doc.text.length > 300 ? "…" : ""}
                   </p>

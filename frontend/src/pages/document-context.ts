@@ -48,6 +48,7 @@ export type DocumentObservation = {
     source_artifact_id: string;
     text_artifact_id: string;
     name: string;
+    mime_type?: string;
     text: string;
     page_count: number;
     truncated: boolean;
