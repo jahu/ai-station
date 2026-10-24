@@ -7,6 +7,24 @@ slices. The live release/image/backup record is
 
 ## Latest continuation — conversational public-data analysis, 2026-10-24
 
+Update: #391 is merged as `fa25a16` and deployed from `d5e15bc`. Full local
+checks and compiled desktop/phone acceptance passed, but actual local-model
+qualification failed: the first table was correct; the offline follow-up
+misread the truncated JSON preview and its repair invented `1` prices. Both
+successful source capture and rejected result remain in
+`data/acceptance/conversation-research-data-20261024`. Operator preset restoration
+passed. Do not rerun the public fetch or mark that release real-qualified.
+
+The correction is `.tools/captured-data-context`, branch
+`fix/captured-data-context`, initially based on the separate Maintenance-policy
+fix `c9b6a71` (PR #392). After #392 is reviewed/merged, rebase only the correction
+onto develop before publishing. [The correction plan](captured-data-context.md)
+reuses checked response excerpts in offline model context. Qualify under
+`data/acceptance/captured-data-context-20261024`, then continue the original saved
+capture for actual acceptance. Root WIP and the unchanged native source stay intact.
+
+The following pre-release notes are historical; the update above is authoritative.
+
 Research/data agents (#390) are merged, deployed and real-qualified. Actual
 public Coinbase observations, local generation and native offline Python returned
 the exact captured prices and a checked chart. The QA agent is paused and the

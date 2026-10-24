@@ -2,8 +2,10 @@
 > persistent agents (#390) are deployed and real-qualified with exact captured
 > Coinbase prices and chart. Source scope, original bytes and operator preset were
 > preserved. Evidence: `data/acceptance/agent-research-data-20261024/post-deployment-qualified.json`.
-> The conversation equivalent is candidate #391; inspect its qualification before
-> claiming it is live. The full platform objective remains open.
+> Conversation equivalent #391 is deployed, but real qualification rejected a
+> follow-up that invented values after misreading its truncated capture preview.
+> [The correction](plans/captured-data-context.md) is in progress; successful Runs
+> are not proof of correct answers. The full platform objective remains open.
 
 > 2026-10-24 functional delivery: natural same-file analysis (#383) and actual
 > PNG/Excel/text outputs (#384–#385) are deployed. The real local-model/native

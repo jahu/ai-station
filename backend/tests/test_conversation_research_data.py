@@ -1,5 +1,6 @@
 """Reviewed sources and their offline follow-ups stay bound to one conversation."""
 
+import json
 from datetime import timedelta
 from uuid import uuid4
 
@@ -144,6 +145,13 @@ def test_natural_followups_reuse_captured_json_without_research_even_after_origi
         ]
         assert not any(r.executor_type in {"agent_tool", "agent_page_coding"} for r in rows)
         assert next(r for r in rows if r.executor_type == "python").parameters["inputs"] == original
+        generation = next(r for r in rows if r.executor_type == "agent_data_generate")
+        request = json.loads(generation.parameters["messages"][1]["content"])
+        assert "research" not in request
+        captured = request["inputs"][0]
+        assert captured["source_capture"] is True
+        assert captured["source_preview"]["full_source_in_input_file"] is True
+        assert captured["source_preview"]["observations"][0]["result"]["pages"][0]["text"]
         assert sources["fetch"] == ["https://data.example.com/numbers"]
         response = api.post(
             "/api/chat/conversations/" + cid + "/messages", json={"content": "Now compare those observations"}
@@ -510,3 +518,45 @@ def test_natural_public_analysis_respects_the_bound_work_context(data_environmen
                 assert selected.data.research.fetch_urls == ["https://data.example.com/numbers"]
             assert reference is None
         assert not sources["fetch"] and not data_environment["calls"]
+
+
+def test_captured_preview_shows_response_values_beyond_the_generic_json_cell_prefix():
+    from app.data_json_preview import inspect_json
+    from app.data_research import captured_preview
+
+    values = [
+        {
+            "url": "https://api.example.com/" + asset + "-USD/spot",
+            "text": json.dumps({"data": {"base": asset, "amount": amount}}),
+        }
+        for asset, amount in [("BTC", "80809.255"), ("ETH", "2379.325")]
+    ]
+    observations = [{"tool": "http_fetch", "result": {"urls": [p["url"] for p in values], "pages": values}}]
+    generic = inspect_json(json.dumps({"observations": observations}).encode(), lambda: None)
+    assert "80809.255" not in generic["sheets"][0]["preview"][0][1]
+    preview = captured_preview(observations)
+    pages = preview["observations"][0]["result"]["pages"]
+    assert [json.loads(p["text"])["data"]["amount"] for p in pages] == ["80809.255", "2379.325"]
+    assert preview["excerpted"] is True
+    assert preview["full_source_in_input_file"] is True
+
+
+def test_captured_preview_stays_small_for_multiple_long_unicode_sources():
+    from app.data_research import captured_preview
+
+    observations = [
+        {
+            "tool": tool,
+            "result": {
+                key: [{"url": "https://example.com/" + "ą" * 1000, field: "ź" * 1000} for _ in range(3)]
+            },
+        }
+        for tool, key, field in [
+            ("web_search", "sources", "snippet"),
+            ("search_pages", "pages", "text"),
+            ("http_fetch", "pages", "text"),
+        ]
+    ]
+    preview = captured_preview(observations)
+    assert len(json.dumps(preview, ensure_ascii=False).encode()) <= 2048
+    assert [o["tool"] for o in preview["observations"]] == ["web_search", "search_pages", "http_fetch"]

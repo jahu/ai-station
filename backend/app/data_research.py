@@ -123,11 +123,35 @@ def verify_captured_input(session, artifact):
         raise ValueError("Captured data differs from the original research receipt")
     from app.agent_schema import AgentSettings
 
-    verify_research(
+    verified = verify_research(
         session,
         workflow,
         receipt,
         AgentSettings.model_validate(workflow.parameters["definition"]),
         for_execution=False,
     )
-    return True
+    return captured_preview(verified["observations"])
+
+
+def captured_preview(observations):
+    """Show response structure, not only the URL prefix of a nested JSON cell."""
+
+    def clip(value, limit):
+        return str(value).encode("utf-8")[:limit].decode("utf-8", errors="ignore")
+
+    for limit in (512, 256, 128, 64, 32, 16):
+        result = []
+        for observation in observations:
+            source = observation["result"]
+            sample = {}
+            for key, field in (("pages", "text"), ("sources", "snippet")):
+                if key in source:
+                    sample[key] = [
+                        {"url": clip(item.get("url", ""), limit), field: clip(item.get(field, ""), limit)}
+                        for item in source[key][: (1 if limit == 16 else 3)]
+                    ]
+            result.append({"tool": observation["tool"], "result": sample})
+        preview = {"observations": result, "excerpted": True, "full_source_in_input_file": True}
+        if len(json.dumps(preview, ensure_ascii=False).encode()) <= 2048:
+            return preview
+    raise ValueError("Captured-source preview exceeds its bounded tool contract")
