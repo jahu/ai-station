@@ -17,6 +17,7 @@ import {
 import { resultEmailConsentKey, agentSettingsPayload } from "./agentSettings";
 import { AgentMarketEmailHistory } from "./AgentMarketEmail";
 import type { Run } from "../api";
+import { AssistantAgentDraft } from "./AssistantAgentDraft";
 
 const connection = {
   id: "mail",
@@ -251,4 +252,102 @@ it("shows the whole frozen email with real approval controls and a separate prep
       ),
     ).toBe(true),
   );
+});
+
+it("keeps Run now available in a compact conversation after automatic delivery was approved", async () => {
+  const agent = {
+    id: "agent-one",
+    name: "Daily report",
+    goal: "Summarize observations",
+    updated_at: "now",
+    enabled: true,
+    model: "fixture",
+    tools: ["memory_search"],
+    runs: [],
+    notification_policy: { report_email: { ...scope, mode: "automatic" } },
+    report_email_authorization: { valid: true, ready: true, mode: "automatic" },
+  };
+  const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
+    ok: true,
+    json: async () => {
+      if (options?.method === "POST") return { id: "queued" };
+      if (url.includes("/agents/agent-one")) return agent;
+      if (url.includes("/chat/provider"))
+        return { models: ["fixture"], default_model: "fixture" };
+      return [];
+    },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  mount(<AssistantAgentDraft agentId={agent.id} compact />);
+  const run = await screen.findByRole("button", {
+    name: "Run now",
+    exact: true,
+  });
+  expect((run as HTMLButtonElement).disabled).toBe(false);
+  fireEvent.click(run);
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(
+        ([url, options]) =>
+          url === "/api/agents/agent-one/run" && options?.method === "POST",
+      ),
+    ).toBe(true),
+  );
+});
+
+it("shows pending result-mail review directly in the compact conversation", async () => {
+  const agent = {
+    id: "agent-one",
+    name: "Daily report",
+    goal: "Summarize observations",
+    updated_at: "now",
+    enabled: true,
+    model: "fixture",
+    tools: ["memory_search"],
+    runs: [
+      {
+        id: "mail-run",
+        executor_type: "email_send",
+        status: "waiting_for_approval",
+      },
+    ],
+    notification_policy: { report_email: scope },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () => {
+        if (url.includes("/agents/agent-one")) return agent;
+        if (url.includes("/email/deliveries"))
+          return [
+            {
+              id: "delivery",
+              state: "prepared",
+              reason: "",
+              payload: {
+                sender: "station@example.com",
+                recipients: scope.recipients,
+                subject: "Daily report",
+                body: "Actual report to review.",
+              },
+              accepted_recipients: [],
+              refused_recipients: [],
+              run: agent.runs[0],
+            },
+          ];
+        if (url.includes("/chat/provider"))
+          return { models: ["fixture"], default_model: "fixture" };
+        return [];
+      },
+    })),
+  );
+  mount(<AssistantAgentDraft agentId={agent.id} compact />);
+  await screen.findByText("Actual report to review.");
+  expect(
+    screen.getByRole("button", { name: "Approve and send", exact: true }),
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Edit in conversation", exact: true }),
+  ).toBeTruthy();
 });

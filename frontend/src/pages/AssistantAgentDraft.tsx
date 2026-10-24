@@ -755,17 +755,17 @@ export function AssistantAgentDraft({
     saveSettings.isPending ||
     modelBusy;
   const active = history.some((run) => !TERMINAL.has(run.status));
+  const editLocked =
+    busy ||
+    active ||
+    (agent?.enabled &&
+      agent.notification_policy?.report_email?.mode === "automatic");
   const videoSetup = agent?.tools?.includes("create_media") ? (
     <>
       <AgentAvatarSetup
         value={agent.media}
         maximumRuntime={agent.maximum_runtime ?? 600}
-        disabled={
-          busy ||
-          active ||
-          (agent.enabled &&
-            agent.notification_policy?.report_email?.mode === "automatic")
-        }
+        disabled={editLocked}
         tabIndex={tabIndex}
         actionLabel="Apply and save setup"
         onApply={(patch) => saveSettings.mutate(patch)}
@@ -773,12 +773,7 @@ export function AssistantAgentDraft({
       <AgentVideoSetup
         value={agent.media}
         maximumRuntime={agent.maximum_runtime ?? 600}
-        disabled={
-          busy ||
-          active ||
-          (agent.enabled &&
-            agent.notification_policy?.report_email?.mode === "automatic")
-        }
+        disabled={editLocked}
         tabIndex={tabIndex}
         actionLabel="Apply and save setup"
         onApply={(patch) => saveSettings.mutate(patch)}
@@ -896,9 +891,9 @@ export function AssistantAgentDraft({
                   disabled={
                     busy ||
                     active ||
-                    (agent.enabled &&
-                      agent.notification_policy?.report_email?.mode ===
-                        "automatic")
+                    (agent.notification_policy?.report_email?.mode ===
+                      "automatic" &&
+                      !agent.report_email_authorization?.valid)
                   }
                   onClick={() => runNow.mutate()}
                 >
@@ -914,6 +909,18 @@ export function AssistantAgentDraft({
                 Edit in conversation
               </Button>
             </div>
+            {(agent.notification_policy?.report_email ||
+              history.some((run) => run.executor_type === "email_send")) && (
+              <AgentMarketEmailHistory
+                agentId={agent.id}
+                runs={history}
+                title={
+                  agent.notification_policy?.report_email
+                    ? "Result email"
+                    : undefined
+                }
+              />
+            )}
             {history.length ? (
               agent.tools?.includes("python_data") ? (
                 <AgentDataResult runs={history} />
@@ -972,13 +979,7 @@ export function AssistantAgentDraft({
                   maximumRuntime={agent.maximum_runtime ?? 600}
                   outputExpectation={agent.output_expectation ?? ""}
                   tabIndex={tabIndex}
-                  disabled={
-                    busy ||
-                    active ||
-                    (agent.enabled &&
-                      agent.notification_policy?.report_email?.mode ===
-                        "automatic")
-                  }
+                  disabled={editLocked}
                   pending={saveSettings.isPending}
                   onSave={(patch) => saveSettings.mutate(patch)}
                 />
@@ -992,13 +993,7 @@ export function AssistantAgentDraft({
                   agentId={agent.id}
                   description={agent.description ?? ""}
                   tabIndex={tabIndex}
-                  disabled={
-                    busy ||
-                    active ||
-                    (agent.enabled &&
-                      agent.notification_policy?.report_email?.mode ===
-                        "automatic")
-                  }
+                  disabled={editLocked}
                   pending={saveSettings.isPending}
                   onSave={(patch) => saveSettings.mutate(patch)}
                 />
@@ -1017,13 +1012,7 @@ export function AssistantAgentDraft({
                   projectId={agent.project_id ?? null}
                   projects={projects.data ?? []}
                   tabIndex={tabIndex}
-                  disabled={
-                    busy ||
-                    active ||
-                    (agent.enabled &&
-                      agent.notification_policy?.report_email?.mode ===
-                        "automatic")
-                  }
+                  disabled={editLocked}
                   onSave={(project_id) => saveSettings.mutate({ project_id })}
                 />
                 <AgentLinkedProjectLinks
@@ -1078,13 +1067,7 @@ export function AssistantAgentDraft({
                   intervalSeconds={agent.interval_seconds ?? null}
                   runAt={agent.run_at ?? null}
                   tabIndex={tabIndex}
-                  disabled={
-                    busy ||
-                    active ||
-                    (agent.enabled &&
-                      agent.notification_policy?.report_email?.mode ===
-                        "automatic")
-                  }
+                  disabled={editLocked}
                   pending={saveSettings.isPending}
                   onSave={(patch) => saveSettings.mutate(patch)}
                 />
@@ -1097,13 +1080,7 @@ export function AssistantAgentDraft({
                   names={agent.tools ?? []}
                   agentId={agent.id}
                   tabIndex={tabIndex}
-                  disabled={
-                    busy ||
-                    active ||
-                    (agent.enabled &&
-                      agent.notification_policy?.report_email?.mode ===
-                        "automatic")
-                  }
+                  disabled={editLocked}
                   pending={saveSettings.isPending}
                   onRemove={(name) =>
                     saveSettings.mutate({
@@ -1164,13 +1141,7 @@ export function AssistantAgentDraft({
                   ids={agent.skills ?? []}
                   agentId={agent.id}
                   tabIndex={tabIndex}
-                  disabled={
-                    busy ||
-                    active ||
-                    (agent.enabled &&
-                      agent.notification_policy?.report_email?.mode ===
-                        "automatic")
-                  }
+                  disabled={editLocked}
                   pending={saveSettings.isPending}
                   onRemove={(id) =>
                     saveSettings.mutate({
@@ -1197,13 +1168,7 @@ export function AssistantAgentDraft({
                       PUBLIC_RESEARCH_TOOLS.includes(name),
                     )}
                     value={agent.data}
-                    disabled={
-                      busy ||
-                      active ||
-                      (agent.enabled &&
-                        agent.notification_policy?.report_email?.mode ===
-                          "automatic")
-                    }
+                    disabled={editLocked}
                     onChange={(data) => saveSettings.mutate({ data })}
                   />
                 </dd>
@@ -1230,13 +1195,7 @@ export function AssistantAgentDraft({
                     agentId={agent.id}
                     query={agent.search_query ?? ""}
                     tabIndex={tabIndex}
-                    disabled={
-                      busy ||
-                      active ||
-                      (agent.enabled &&
-                        agent.notification_policy?.report_email?.mode ===
-                          "automatic")
-                    }
+                    disabled={editLocked}
                     pending={saveSettings.isPending}
                     onSave={(search_query) =>
                       saveSettings.mutate({ search_query })
@@ -1255,13 +1214,7 @@ export function AssistantAgentDraft({
                     agentId={agent.id}
                     urls={agent.fetch_urls ?? []}
                     tabIndex={tabIndex}
-                    disabled={
-                      busy ||
-                      active ||
-                      (agent.enabled &&
-                        agent.notification_policy?.report_email?.mode ===
-                          "automatic")
-                    }
+                    disabled={editLocked}
                     pending={saveSettings.isPending}
                     onSave={(fetch_urls) => saveSettings.mutate({ fetch_urls })}
                   />
@@ -1274,13 +1227,7 @@ export function AssistantAgentDraft({
                 <ApprovalChoiceList
                   checked={Boolean(agent.require_approval)}
                   tabIndex={tabIndex}
-                  disabled={
-                    busy ||
-                    active ||
-                    (agent.enabled &&
-                      agent.notification_policy?.report_email?.mode ===
-                        "automatic")
-                  }
+                  disabled={editLocked}
                   onChange={(require_approval) => {
                     if (require_approval === Boolean(agent.require_approval))
                       return;
@@ -1345,13 +1292,7 @@ export function AssistantAgentDraft({
                   }
                   name={`retry_policy_${shortId}`}
                   tabIndex={tabIndex}
-                  disabled={
-                    busy ||
-                    active ||
-                    (agent.enabled &&
-                      agent.notification_policy?.report_email?.mode ===
-                        "automatic")
-                  }
+                  disabled={editLocked}
                   onChange={(mode) => {
                     const current =
                       agent.retry_policy?.mode === "manual" ? "manual" : "none";
@@ -1372,13 +1313,7 @@ export function AssistantAgentDraft({
                       agent.notification_policy?.on_approval === true,
                   }}
                   tabIndex={tabIndex}
-                  disabled={
-                    busy ||
-                    active ||
-                    (agent.enabled &&
-                      agent.notification_policy?.report_email?.mode ===
-                        "automatic")
-                  }
+                  disabled={editLocked}
                   onChange={(notification_policy) => {
                     const current = {
                       on_success:
@@ -1443,13 +1378,7 @@ export function AssistantAgentDraft({
                   goal={agent.goal ?? ""}
                   systemPrompt={agent.system_prompt ?? ""}
                   tabIndex={tabIndex}
-                  disabled={
-                    busy ||
-                    active ||
-                    (agent.enabled &&
-                      agent.notification_policy?.report_email?.mode ===
-                        "automatic")
-                  }
+                  disabled={editLocked}
                   pending={saveSettings.isPending}
                   onSave={(patch) => saveSettings.mutate(patch)}
                 />
@@ -1472,12 +1401,7 @@ export function AssistantAgentDraft({
             <AgentMarketEditor
               key={agent.updated_at}
               value={agent.market}
-              disabled={
-                busy ||
-                active ||
-                (agent.enabled &&
-                  agent.notification_policy?.report_email?.mode === "automatic")
-              }
+              disabled={editLocked}
               onSave={(market) => saveSettings.mutate({ market })}
             />
           )}
@@ -1485,12 +1409,7 @@ export function AssistantAgentDraft({
             <AgentWorkspacePolicy
               value={agent.workspace_policy}
               linkedProject={agent.project_id}
-              disabled={
-                busy ||
-                active ||
-                (agent.enabled &&
-                  agent.notification_policy?.report_email?.mode === "automatic")
-              }
+              disabled={editLocked}
               onChange={(workspace_policy) =>
                 saveSettings.mutate({ workspace_policy })
               }
