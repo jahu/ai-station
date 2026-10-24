@@ -141,7 +141,20 @@ def validate_target(body, session, agent=None, *, enabling=False):
             raise HTTPException(409, str(exc)) from exc
 
 
+def _schedule_identity(agent):
+    if agent.trigger == "cron":
+        return ("cron", agent.cron_expr or "", agent.schedule_timezone or "UTC")
+    if agent.trigger == "interval":
+        return ("interval", agent.interval_seconds)
+    if agent.trigger == "datetime":
+        return ("datetime", agent.run_at)
+    return (agent.trigger,)
+
+
 def apply_settings(agent, body):
+    previous_schedule = _schedule_identity(agent)
+    previous_due = agent.next_run_at
+    was_enabled = agent.enabled
     for key, value in body.model_dump().items():
         if key == "schedule_timezone" and key not in body.model_fields_set and agent.schedule_timezone:
             continue
@@ -153,7 +166,16 @@ def apply_settings(agent, body):
     agent.retry_policy = body.retry_policy.model_dump()
     agent.notification_policy = body.notification_policy.model_dump()
     try:
-        agent.next_run_at = compute_next(agent) if agent.enabled else None
+        if (
+            was_enabled
+            and agent.enabled
+            and agent.trigger in {"cron", "interval", "datetime"}
+            and previous_due is not None
+            and previous_schedule == _schedule_identity(agent)
+        ):
+            agent.next_run_at = previous_due
+        else:
+            agent.next_run_at = compute_next(agent) if agent.enabled else None
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     agent.updated_at = utcnow()
