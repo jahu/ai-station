@@ -163,6 +163,7 @@ function ResultEmailFields({
             <label>
               Subject prefix
               <input
+                aria-label="Subject prefix"
                 maxLength={80}
                 required
                 value={value.subject_prefix}
@@ -330,7 +331,6 @@ export function ResultEmailApproval({
       ) : (
         <label className="project-checkbox">
           <input
-            aria-label="Subject prefix"
             type="checkbox"
             disabled={authorization?.ready === false}
             checked={checked}
