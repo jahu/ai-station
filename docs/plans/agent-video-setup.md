@@ -31,3 +31,20 @@ Live #397 is reviewed `992bb5c`, merged `9c0af73`, controller source
 `.tools/ui-wan-memory-profile-20261024` with fingerprint `f23dc6f7`. Central deployment
 metadata and `data/acceptance/video-memory-recommendation-20261024/post-deployment-qualified.json`
 are authoritative. Preserve the root Memory WIP and all live/proof trees.
+
+## Verification
+
+All 700 UI cases passed at the implementation head, including scope preservation,
+longer custom allowances, the existing four-hour ceiling, unavailable/active
+controls and the compact conversation's versioned disabled-definition save. A
+final shorter helper sentence receives focused coverage and compiled 1440/390
+checks. Both real API/SQLite surfaces preserved seed, scope and disabled state;
+Agents required a separate Save, conversation required an explicit saved update,
+and no Runs were created. Capability observations were declared fixtures.
+
+Backend/Runner/scripts/dependencies/deployment sources exactly match #397: reuse
+its full 3035-case gate (3026 passes/nine opt-in skips) and prior native execution
+proof rather than running unchanged Python/GPU work again. Final source/image
+and reviewed controller-only rollout records belong under
+`data/acceptance/agent-video-setup-20261024`. This does not qualify additional
+media durations or change the whole-platform completion status.

@@ -60,7 +60,7 @@ export default function AgentVideoSetup({
           : " Keep your current time limit."}
         {needsMemory &&
           " The reduced-RAM landscape profile is recommended for currently available memory."}{" "}
-        This is a time allowance, not an estimated completion time.
+        Generation finishes when the film is ready.
       </p>
       <Button
         type="button"

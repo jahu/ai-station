@@ -5,6 +5,28 @@ pause were explicitly superseded. Continue implementation; do not repeat deliver
 slices. The live release/image/backup record is
 `data/acceptance/safety-redeploy-20261012/deployment.json`; inspect it before deploying.
 
+## Current continuation — reviewed video-agent setup, 2026-10-24
+
+#397 is merged as `9c0af73` and live-qualified at reviewed `992bb5c`. Controller
+source `.tools/ui-video-memory-recommendation-20261024` uses image `c2d2fcbfe6f3`;
+supervisor 2236781. Native PID 2145033/source `.tools/ui-wan-memory-profile-20261024`
+and the existing owned model container were preserved. The live recommendation,
+password/private LAN, all 16 paused definitions, IDs, schedules and backup passed.
+Proof: `data/acceptance/video-memory-recommendation-20261024/post-deployment-qualified.json`.
+
+Current owned branch/worktree: `feat/agent-video-setup`, `.tools/agent-video-setup`,
+based on develop `9c0af73`. [The shared review helper](agent-video-setup.md) offers a
+reviewable profile/time allowance to avoid 600-second video-agent defaults expiring
+before the measured first window. Agents stages the patch until Save definition;
+compact/expanded conversation review explicitly saves the versioned patch. It
+keeps enabled state, existing larger limits, sources, scenes, seed and permissions;
+rendering never starts work or edits definitions. The API/runtime/ceiling stay
+unchanged. All 700 UI cases and real API/SQLite saves at 1440/390 passed; qualify the
+final shorter helper text and image, review the published diff and finish a
+controller-only rollout. Reuse #397 Python/native evidence by exact source match.
+Keep all live/proof trees, original root Memory WIP and pending Whisper consent.
+The broad platform goal remains open.
+
 ## Current continuation — video memory recommendation, 2026-10-24
 
 PR #396 is merged as `8fb343d` and live-qualified from reviewed `3ea8168` in
