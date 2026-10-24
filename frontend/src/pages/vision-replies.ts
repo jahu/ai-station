@@ -9,6 +9,7 @@ type Message = {
   steps?: { id: string; capability: string; status: string }[];
   metadata: {
     orchestration?: boolean;
+    agent_control?: unknown;
     partial?: boolean;
     superseded?: boolean;
     routing_only?: boolean;
@@ -100,12 +101,13 @@ export function canRegenerateResponse(messages: Message[]) {
     .slice(messages.indexOf(user) + 1)
     .filter((message) => message.role === "assistant")
     .at(-1);
-  if (!reply || reply.metadata.orchestration) return false;
+  if (!reply || reply.metadata.orchestration || reply.metadata.agent_control)
+    return false;
   // The existing API rejects replaying a tool/Work action from its original user Run.
   return !messages.some(
     (message) =>
       user.run_id &&
       message.run_id === user.run_id &&
-      message.metadata.orchestration,
+      (message.metadata.orchestration || message.metadata.agent_control),
   );
 }

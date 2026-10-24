@@ -1,6 +1,6 @@
 # Operate the conversation's agent
 
-Work accepts explicit Polish/English commands to run the last agent created in
+Work accepts explicit Polish/English commands to run the most recently referenced agent in
 this conversation, pause its future executions, or stop its current Task. Chat
 requires switching to Work. Quoted, negated or compound instructions do not
 implicitly grant control. No model selects an agent ID or modifies permissions.
@@ -55,3 +55,8 @@ Evidence: `data/acceptance/conversation-agent-control-20261024`. Earlier harness
 failures and the deliberately interrupted superseded suite are retained and are
 not passing gates. Use the post-deployment qualification and shared deployment
 record to establish the actual live image. Whole-platform completion remains open.
+
+[Conversation buttons](conversation-agent-run-button.md) additionally bind an exact
+older creation card. Later natural controls follow the latest verified operation
+or creation reference while preserving its original creation provenance. They do
+not resolve an unrelated global name or accept a model-selected UUID.

@@ -55,8 +55,53 @@ def cancel_task(session, task):
             request_cancel(session, run)
         append_event(session, run.id, "task.stop_requested", {"task_id": task.id})
         canceled.append(run.id)
+    forwarded = []
+    if task.intent == "agent.control":
+        # A Stop may arrive just after the short controller atomically published
+        # its separate background workflow. Forward only to that owned execution;
+        # an already-running/busy receipt grants no ownership of someone else's job.
+        for controller in session.scalars(
+            select(Run).where(Run.task_id == task.id, Run.executor_type == "agent_control")
+        ):
+            result = controller.metadata_json.get("agent_control_result") or {}
+            scope = controller.parameters.get("scope") or {}
+            if not isinstance(result, dict) or not isinstance(scope, dict):
+                continue
+            child_id = result.get("workflow_run_id")
+            child = session.get(Run, child_id) if isinstance(child_id, str) else None
+            if not (
+                task.conversation_id is not None
+                and controller.conversation_id == task.conversation_id
+                and controller.status == "succeeded"
+                and result.get("outcome") == "queued"
+                and result.get("operation") == scope.get("operation") == "run"
+                and child
+                and child.executor_type == "agent_workflow"
+                and child.task_id != task.id
+                and child.task.agent_id == child.agent_id
+                and child.task_id == result.get("task_id")
+                and child.agent_id == result.get("agent_id") == scope.get("agent_id")
+                and child.metadata_json.get("conversation_control_run_id") == controller.id
+                and child.task.metadata_json.get("conversation_control_run_id") == controller.id
+                and child.task.metadata_json.get("originating_conversation_id") == task.conversation_id
+                and session.scalar(
+                    select(Run.id).where(Run.task_id == child.task_id, Run.status.not_in(TERMINAL)).limit(1)
+                )
+            ):
+                continue
+            stopped = cancel_task(session, child.task)
+            forwarded.append(child.task_id)
+            canceled.extend(stopped["run_ids"])
+            retained.extend(stopped["retained_run_ids"])
+            append_event(session, controller.id, "agent.control.stop_forwarded", {"task_id": child.task_id})
     session.flush()
-    return {"task_id": task.id, "stop_requested": True, "run_ids": canceled, "retained_run_ids": retained}
+    return {
+        "task_id": task.id,
+        "stop_requested": True,
+        "run_ids": canceled,
+        "retained_run_ids": retained,
+        **({"agent_task_ids": forwarded} if forwarded else {}),
+    }
 
 
 def stopped_task(session, task):

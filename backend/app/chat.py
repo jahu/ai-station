@@ -21,6 +21,7 @@ from app.chat_attachments import TextAttachment, link_attachments, message_conte
 from app.chat_policy import POLICY_VERSION, policy_mode, validate_chat_scope
 from app.chat_providers import BUILTIN_KEY, chat_permissions, snapshot_provider
 from app.chat_reasoning import ReasoningOptions
+from app.conversation_agent_control import AgentRunRequest
 from app.conversation_summary import (
     enqueue_summary,
     latest_summary,
@@ -572,6 +573,13 @@ def enqueue(
     return run_dict(run)
 
 
+@router.post("/conversations/{conversation_id}/agents/{agent_id}/run", status_code=202)
+def run_agent_in_conversation(conversation_id: UUID, agent_id: UUID, body: AgentRunRequest, session: DB):
+    from app.conversation_agent_control import request_run
+
+    return request_run(session, conversation_id, agent_id, body)
+
+
 @router.post("/conversations/{conversation_id}/messages", status_code=202)
 def send(conversation_id: UUID, body: MessageBody, session: DB):
     return submit_message(conversation_id, body, session)
@@ -901,7 +909,7 @@ def regenerate(conversation_id: UUID, session: DB):
     if user is None:
         raise HTTPException(409, "There is no user message to regenerate")
     source_run = session.get(Run, user.run_id) if user.run_id else None
-    if source_run and source_run.executor_type == "orchestrator":
+    if source_run and source_run.executor_type in {"orchestrator", "agent_control"}:
         raise HTTPException(409, "Send a new instruction to repeat an assistant action explicitly")
     if source_run:
         from app.task_control import lock_task

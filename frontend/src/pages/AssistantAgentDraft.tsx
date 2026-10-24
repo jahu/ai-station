@@ -31,7 +31,8 @@ import {
   initialDocumentToolMode,
   type DocumentScope,
 } from "./document-context";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { chatRequestId, clearChatRequest } from "./chat-draft";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type Run } from "../api";
@@ -616,12 +617,23 @@ export function AssistantAgentDraft({
   agentId,
   tabIndex = 0,
   compact = false,
+  conversationContext,
 }: {
   agentId: string;
   tabIndex?: number;
   compact?: boolean;
+  conversationContext?: {
+    conversationId: string;
+    settingsVersion: number;
+    sourceMessageId: string;
+    busy: boolean;
+  };
 }) {
   const cache = useQueryClient();
+  const pendingControl = useRef<{ body: string; id: string } | null>(null);
+  const controlScope = conversationContext
+    ? `agent-run:${conversationContext.conversationId}:${agentId}:${conversationContext.sourceMessageId}`
+    : "";
   const [expanded, setExpanded] = useState(false);
   const [emailConsent, setEmailConsent] = useState<string | null>(null);
   const [emailReady, setEmailReady] = useState(false);
@@ -687,15 +699,43 @@ export function AssistantAgentDraft({
     },
   });
   const runNow = useMutation({
-    mutationFn: () =>
-      api<Run>(`/agents/${agentId}/run`, {
+    mutationFn: async () => {
+      if (conversationContext) {
+        if (typeof conversationContext.settingsVersion !== "number")
+          throw new Error("Reload the conversation before running this agent");
+        const values = {
+          source_message_id: conversationContext.sourceMessageId,
+          expected_updated_at: detail.data!.updated_at,
+          expected_settings_version: conversationContext.settingsVersion,
+        };
+        const body = JSON.stringify(values);
+        if (pendingControl.current?.body !== body)
+          pendingControl.current = {
+            body,
+            id: await chatRequestId(controlScope, body),
+          };
+        const receipt = await api<{ run: Run }>(
+          `/chat/conversations/${conversationContext.conversationId}/agents/${agentId}/run`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...values,
+              client_request_id: pendingControl.current.id,
+            }),
+          },
+        );
+        return receipt.run;
+      }
+      return api<Run>(`/agents/${agentId}/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          expected_updated_at: detail.data!.updated_at,
-        }),
-      }),
+        body: JSON.stringify({ expected_updated_at: detail.data!.updated_at }),
+      });
+    },
     onSuccess: () => {
+      pendingControl.current = null;
+      if (controlScope) clearChatRequest(controlScope);
       void cache.invalidateQueries({ queryKey: ["agent", agentId] });
       void cache.invalidateQueries({ queryKey: ["agents"] });
       void cache.invalidateQueries({ queryKey: ["runs"] });
@@ -761,6 +801,9 @@ export function AssistantAgentDraft({
   );
   const history = agent?.runs ?? [];
   const busy =
+    !!conversationContext?.busy ||
+    (!!conversationContext &&
+      typeof conversationContext.settingsVersion !== "number") ||
     toggle.isPending ||
     duplicate.isPending ||
     runNow.isPending ||
@@ -886,8 +929,9 @@ export function AssistantAgentDraft({
             {agent.enabled && (
               <p className="muted assistant-agent-brief-note">
                 In Work, say “Run this agent”, “Pause this agent” or “Stop this
-                agent” to control the latest agent created in this conversation.
-                Pause turns off future runs; Stop targets its current execution.
+                agent” to control the most recently referenced agent in this
+                conversation. Pause turns off future runs; Stop targets its
+                current execution.
               </p>
             )}
             {!agent.enabled && (

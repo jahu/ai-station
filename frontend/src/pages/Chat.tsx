@@ -135,6 +135,7 @@ type Message = ActionResult & {
     orchestration?: boolean;
     routing_only?: boolean;
     agent_id?: string;
+    agent_control?: { agent_name?: string };
     agent_control_result?: { agent_id: string; outcome: string };
     data_agent_source?: unknown;
     selected_data_agent?: unknown;
@@ -178,6 +179,7 @@ type WorkContext = {
   reason: string | null;
 };
 type Detail = Conversation & {
+  settings_version: number;
   work_context?: WorkContext | null;
   auto_summary: boolean;
   summary_update: { id: string; status: string; error_message: string } | null;
@@ -737,7 +739,9 @@ function Transcript({
   onAnalyzePage,
   onData,
   onRepeatAnalysis,
+  conversationContext,
 }: {
+  conversationContext?: { conversationId: string; settingsVersion: number };
   onRepeatAnalysis?: (source: AnalysisAgentSource) => void;
   messages: Message[];
   orchestrator: boolean;
@@ -881,7 +885,10 @@ function Transcript({
                         ["failed", "canceled", "interrupted"].includes(
                           message.run_status,
                         )
-                        ? "No response text was returned."
+                        ? message.metadata.agent_control &&
+                          message.run_status === "canceled"
+                          ? "Agent action canceled before dispatch."
+                          : "No response text was returned."
                         : message.metadata.page_read_request?.length &&
                             !message.metadata.page_read
                           ? "Preparing page analysis…"
@@ -889,6 +896,12 @@ function Transcript({
                       : "")}
                 </Markdown>
               </div>
+              {message.role === "user" &&
+                message.metadata.agent_control?.agent_name && (
+                  <p className="muted" style={{ overflowWrap: "anywhere" }}>
+                    Agent: {message.metadata.agent_control.agent_name}
+                  </p>
+                )}
               {message.metadata.transcript_sources?.map((source) => (
                 <p className="muted" key={source.source_message_id}>
                   {source.available
@@ -1001,6 +1014,15 @@ function Transcript({
               {message.metadata.agent_id && (
                 <AssistantAgentDraft
                   agentId={message.metadata.agent_id}
+                  conversationContext={
+                    conversationContext
+                      ? {
+                          ...conversationContext,
+                          sourceMessageId: message.id,
+                          busy,
+                        }
+                      : undefined
+                  }
                   compact
                   tabIndex={current ? 0 : -1}
                 />
@@ -1630,6 +1652,10 @@ function ConversationView({
         />
       )}
       <Transcript
+        conversationContext={{
+          conversationId: conversation.id,
+          settingsVersion: conversation.settings_version,
+        }}
         onRepeatAnalysis={
           !conversation.archived_at &&
           !context &&

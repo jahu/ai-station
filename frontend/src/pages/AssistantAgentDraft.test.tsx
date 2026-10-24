@@ -106,7 +106,13 @@ function withCatalog(
   };
 }
 
-function mount(agent = draft, compact = false) {
+function mount(
+  agent = draft,
+  compact = false,
+  conversationContext?: Parameters<
+    typeof AssistantAgentDraft
+  >[0]["conversationContext"],
+) {
   let current = { ...agent };
   const fetch = vi.fn(async (path: string, options?: RequestInit) => {
     const url = String(path);
@@ -119,6 +125,22 @@ function mount(agent = draft, compact = false) {
         updated_at: "2026-10-11T10:02:00Z",
       };
       return { ok: true, json: async () => current };
+    }
+    if (
+      url.includes("/chat/conversations/") &&
+      url.endsWith("/run") &&
+      options?.method === "POST"
+    ) {
+      return {
+        ok: true,
+        json: async () => ({
+          run: {
+            id: "queued-control",
+            capability: "agent.control",
+            status: "queued",
+          },
+        }),
+      };
     }
     return {
       ok: true,
@@ -242,7 +264,11 @@ function mount(agent = draft, compact = false) {
       }
     >
       <MemoryRouter>
-        <AssistantAgentDraft agentId={agent.id} compact={compact} />
+        <AssistantAgentDraft
+          agentId={agent.id}
+          compact={compact}
+          conversationContext={conversationContext}
+        />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -2428,4 +2454,94 @@ it("resolves an owned local model name from the read-only model catalog", async 
   );
   await screen.findByText("Local · Installed local model.gguf");
   expect(fetch).toHaveBeenCalledWith("/api/llama", undefined);
+});
+
+const conversationRun = {
+  conversationId: "conversation-one",
+  settingsVersion: 3,
+  sourceMessageId: "creation-one",
+  busy: false,
+};
+it("queues the exact conversation card without consuming its unsent draft", async () => {
+  const key = "ai-station:chat-draft:conversation-one";
+  sessionStorage.setItem(key, "My unfinished question");
+  const fetch = mount({ ...draft, enabled: true }, true, conversationRun);
+  const button = await screen.findByRole("button", {
+    name: "Run now",
+  });
+  await waitFor(() =>
+    expect((button as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.click(button);
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.filter(([, options]) => options?.method === "POST"),
+    ).toHaveLength(1),
+  );
+  const [path, options] = fetch.mock.calls.find(
+    ([, options]) => options?.method === "POST",
+  )!;
+  expect(path).toBe(
+    "/api/chat/conversations/conversation-one/agents/agent-one/run",
+  );
+  expect(JSON.parse(String(options!.body))).toMatchObject({
+    source_message_id: "creation-one",
+    expected_updated_at: draft.updated_at,
+    expected_settings_version: 3,
+  });
+  expect(sessionStorage.getItem(key)).toBe("My unfinished question");
+  expect(
+    fetch.mock.calls.some(
+      ([url, options]) =>
+        options?.method === "POST" &&
+        String(url) === "/api/agents/agent-one/run",
+    ),
+  ).toBe(false);
+  sessionStorage.removeItem(key);
+});
+it("keeps a pending button request ID for retry and generates a new ID after acceptance", async () => {
+  const fetch = mount({ ...draft, enabled: true }, true, conversationRun);
+  const original = fetch.getMockImplementation()!;
+  let attempts = 0;
+  fetch.mockImplementation(async (path, options) => {
+    if (
+      options?.method === "POST" &&
+      String(path).includes("/chat/conversations/")
+    ) {
+      attempts++;
+      if (attempts === 1) throw new Error("Connection lost before the receipt");
+    }
+    return original(path, options);
+  });
+  const button = await screen.findByRole("button", {
+    name: "Run now",
+  });
+  fireEvent.click(button);
+  await screen.findByText("Connection lost before the receipt");
+  fireEvent.click(button);
+  await waitFor(() => expect(attempts).toBe(2));
+  await waitFor(() =>
+    expect((button as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.click(button);
+  await waitFor(() => expect(attempts).toBe(3));
+  const bodies = fetch.mock.calls
+    .filter(([, options]) => options?.method === "POST")
+    .map(([, options]) => JSON.parse(String(options!.body)));
+  expect(bodies[0].client_request_id).toBe(bodies[1].client_request_id);
+  expect(bodies[2].client_request_id).not.toBe(bodies[1].client_request_id);
+});
+it("does not queue a conversation action while the composer is busy or archived", async () => {
+  const fetch = mount({ ...draft, enabled: true }, true, {
+    ...conversationRun,
+    busy: true,
+  });
+  const button = await screen.findByRole("button", {
+    name: "Run now",
+  });
+  expect((button as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(button);
+  expect(
+    fetch.mock.calls.some(([, options]) => options?.method === "POST"),
+  ).toBe(false);
 });
