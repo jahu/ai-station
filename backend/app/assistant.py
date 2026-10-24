@@ -306,6 +306,7 @@ def planner_context(session, conversation, user):
     )
     budget = max(0, 4000 - len(user.content))
     context = []
+    agent_result_seen = set()
     for message in messages:
         if (
             message.metadata_json.get("superseded")
@@ -319,6 +320,14 @@ def planner_context(session, conversation, user):
         quoted = reference(session, message, budget=min(1600, max(0, budget - len(content))))
         if quoted:
             content += quoted[0]
+        from app.agent_result_context import reference as agent_result_reference
+
+        agent_result = agent_result_reference(
+            session, message, budget=min(2000, max(0, budget - len(content)))
+        )
+        if agent_result and agent_result[1]["workflow_run_id"] not in agent_result_seen:
+            content += agent_result[0]
+            agent_result_seen.add(agent_result[1]["workflow_run_id"])
         if content:
             context.append({"role": message.role, "content": content})
             budget -= len(content)

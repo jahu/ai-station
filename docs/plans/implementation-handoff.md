@@ -1,3 +1,10 @@
+> Active candidate: [conversation agent report context](conversation-agent-results.md),
+> branch `feat/conversation-agent-results`, base qualified #417. New Chat/Work
+> replies quote only exact source-bound completed report artifacts, with bounded
+> context and visible provenance. No execution or source/tool authority is inherited.
+> Focused report/transcript regression checks pass; full candidate qualification
+> and rollout are pending. Live authority still points to qualified #417.
+
 > Current increment: [conversation agent controls](conversation-agent-control.md),
 > PR #417 / `feat/conversation-agent-control`, based on qualified #416. Explicit
 > Work run/pause/Stop uses source-bound ordinary lifecycle operations, preserves

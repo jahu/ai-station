@@ -378,6 +378,8 @@ def enqueue(
     )
     context = []
     transcript_sources = []
+    agent_result_sources = []
+    agent_result_seen = set()
     transcript_budget = 20000
     budget = 56000 - reserve_context
     for message in history:
@@ -406,6 +408,15 @@ def enqueue(
                 content += quoted[0]
                 transcript_sources.append(quoted[1])
                 transcript_budget -= len(quoted[0])
+        from app.agent_result_context import reference as agent_result_reference
+
+        agent_result = agent_result_reference(
+            session, message, budget=min(12000, max(0, budget - len(content) - 2))
+        )
+        if agent_result and agent_result[1]["workflow_run_id"] not in agent_result_seen:
+            content += agent_result[0]
+            agent_result_sources.append(agent_result[1])
+            agent_result_seen.add(agent_result[1]["workflow_run_id"])
         if len(content) + 2 > budget:
             break
         context.append({"role": message.role, "content": content, "_message_id": message.id})
@@ -418,6 +429,9 @@ def enqueue(
     retained_messages = {item.pop("_message_id") for item in context}
     transcript_sources = [
         source for source in transcript_sources if source["source_message_id"] in retained_messages
+    ]
+    agent_result_sources = [
+        source for source in agent_result_sources if source["source_message_id"] in retained_messages
     ]
     alternating = []
     for item in context:
@@ -504,6 +518,9 @@ def enqueue(
             ),
             "messages": context,
             "memory_sources": memory_sources,
+            **(
+                {"agent_result_sources": list(reversed(agent_result_sources))} if agent_result_sources else {}
+            ),
             **({"transcript_sources": list(reversed(transcript_sources))} if transcript_sources else {}),
             "summary_source": {
                 "id": summary.id,
@@ -538,6 +555,9 @@ def enqueue(
                 else {}
             ),
             **({"transcript_sources": list(reversed(transcript_sources))} if transcript_sources else {}),
+            **(
+                {"agent_result_sources": list(reversed(agent_result_sources))} if agent_result_sources else {}
+            ),
         },
     )
     session.add(response)
