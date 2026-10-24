@@ -1,6 +1,7 @@
 """Current selected inputs prepare a disabled agent through the existing factory."""
 
 import re
+from typing import Literal
 
 from fastapi import HTTPException
 from pydantic import Field
@@ -13,6 +14,10 @@ from app.permissions import require
 
 
 class SelectedProposal(RepeatProposal):
+    output_expectation: str = Field(
+        default="An inspectable result matching the reviewed task.", max_length=4000
+    )
+    family: Literal["data", "report", "code"] = "data"
     goal: str = Field(min_length=1, max_length=16000)
     system_prompt: str = Field(default="", max_length=8000)
 
@@ -155,6 +160,7 @@ def verified(session, draft):
         or parent.agent_id is not None
         or draft.agent_id is not None
         or draft.parameters.get("instruction", "").strip() != parent.parameters["content"].strip()
+        or draft.parameters.get("model") != parent.parameters.get("model")
         or parent.conversation_id != draft.conversation_id
         or parent.parameters.get("policy_mode") != "work"
         or parent.parameters.get("action") != "agent.create"
@@ -179,14 +185,47 @@ def verified(session, draft):
     return source
 
 
-def definition(source, proposal, timezone):
-    return AgentSettings.model_validate(
-        {
-            **source["definition"],
-            **proposal.model_dump(mode="json"),
-            "schedule_timezone": timezone,
-            "enabled": False,
-            "project_id": None,
-            "permission_profile": "agent_local",
-        }
+def allowed_families(source):
+    scope = DataScope.model_validate(source["scope"])
+    if scope.input_artifact_ids or scope.operation == "create":
+        return ["data"]
+    return ["data", "report", "code"] if scope.context_tools() else ["data"]
+
+
+def prepared_family(settings):
+    return (
+        "data"
+        if "python_data" in settings.tools
+        else "code"
+        if "coding_local" in settings.tools
+        else "report"
     )
+
+
+def definition(source, proposal, timezone, *, report_model=None):
+    if proposal.family not in allowed_families(source):
+        raise ValueError(
+            "Choose a family supported by the selected inputs; data files and file creation require data"
+        )
+    base = source["definition"]
+    values = {
+        **base,
+        **proposal.model_dump(mode="json", exclude={"family"}),
+        "schedule_timezone": timezone,
+        "enabled": False,
+        "project_id": None,
+        "permission_profile": "agent_local",
+    }
+    if proposal.family != "data":
+        scope = DataScope.model_validate(source["scope"])
+        values.update(data=None, tools=scope.context_tools())
+        if proposal.family == "code":
+            values.update(
+                tools=["coding_local", *scope.context_tools()],
+                workspace_policy={"auto_install_dependencies": True, "auto_validate": True},
+            )
+        else:
+            values["model"] = base["model"] if base["model"] != "auto" else report_model
+            if not values["model"] or values["model"] == "auto":
+                raise ValueError("Choose a local conversation model for the report agent")
+    return AgentSettings.model_validate(values)

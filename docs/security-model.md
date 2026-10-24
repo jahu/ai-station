@@ -806,3 +806,14 @@ Current-message/parent/source checks run before/after inference and under the Ta
 publication lock; changed source is not a formatting error. Activation remains
 explicit and computes the ordinary future workflow permissions. An empty saved
 project-context row grants no project and correctly represents General Work.
+
+Document/public-only selected drafts may propose one allowed local family. The
+controller maps data/report/code to existing operational tools; the model cannot
+supply tool names or expand selected readers, files, URLs, limits, project, mail
+or external-AI scope. Data files/creation cannot gain code/report recipes. Local
+code proposes the standard reviewed public-dependency/build policy in a new owned
+workspace; report grants only selected readers. Preparation still has only
+manage_agents and scoped filesystem_read and executes no future tools. Review and
+explicit activation determine future permissions. The child drafting model must
+match the originating conversation model; report Auto uses that frozen local
+selection. Source snapshot/default-family compatibility is preserved.

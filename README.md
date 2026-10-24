@@ -805,3 +805,12 @@ not execute the analysis or visit the public sources. The agent receives its own
 workspace when it runs. **Create files from instructions** can also prepare a
 recurring file-creation agent without uploads. Chat asks you to switch to Work.
 See [selected-input agents](docs/plans/selected-input-agent-draft.md).
+
+With **documents or reviewed public sources**, describe the actual job: for example,
+“Create an agent that summarizes this document each morning” or “Create an agent
+that builds a website from this brief.” The local factory proposes **Report**,
+**Local code**, or **Data analysis** and shows the chosen family with the draft.
+Review its task, tools, model and (for code) public package/build policy before
+activation. Reports need no Python/workspace; local code gets an owned workspace
+and a reviewable diff. Data-file and instruction-only creation selections retain
+Data analysis. See [selected-agent families](docs/plans/selected-agent-families.md).

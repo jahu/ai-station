@@ -91,3 +91,33 @@ it("identifies current selected inputs as a creation request, without claiming a
     screen.getByText(/Saved creation request and input selection/),
   ).toBeTruthy();
 });
+
+it.each([
+  ["report", "Report"],
+  ["code", "Local code"],
+  ["data", "Data analysis"],
+])(
+  "labels the reviewed %s recipe without claiming an executed workspace",
+  (family, label) => {
+    render(
+      <MemoryRouter>
+        <DataAgentDraftSource
+          value={{ ...source, kind: "selected_inputs" }}
+          family={family}
+        />
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByText(
+        `Prepared agent: ${label}. Review its task and tools below.`,
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Selected readers: Documents, Public pages"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Retained tools:/)).toBeNull();
+    expect(
+      screen.getByText(/reports read only the reviewed sources/),
+    ).toBeTruthy();
+  },
+);

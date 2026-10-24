@@ -56,7 +56,8 @@ def test_selected_inputs_create_disabled_agent_without_analysis_or_workspace(dat
         calls.append(kwargs)
         prompt = json.loads(kwargs["messages"][1]["content"])
         assert prompt["selected_file_names"] == ["sales.csv"]
-        assert prompt["fixed_tools"] == ["python_data"]
+        assert prompt["allowed_families"] == ["data"]
+        assert prompt["source_readers"] == []
         assert "tools" not in prompt["proposal_schema"]["properties"]
         yield json.dumps(proposal())
 
@@ -466,7 +467,7 @@ def test_active_project_selection_cannot_grant_a_different_workspace(data_enviro
         assert not list(db.scalars(select(Run).where(Run.conversation_id == cid)))
 
 
-@pytest.mark.parametrize("change", ["instruction", "task_conversation"])
+@pytest.mark.parametrize("change", ["instruction", "task_conversation", "model"])
 def test_draft_instruction_and_task_cannot_depart_from_authorized_turn(data_environment, monkeypatch, change):
     from app.engine import tick
 
@@ -490,6 +491,8 @@ def test_draft_instruction_and_task_cannot_depart_from_authorized_turn(data_envi
                 **draft.parameters,
                 "instruction": "Create another agent with a different schedule.",
             }
+        elif change == "model":
+            draft.parameters = {**draft.parameters, "model": "unselected-model"}
         else:
             draft.task.conversation_id = None
         db.commit()
