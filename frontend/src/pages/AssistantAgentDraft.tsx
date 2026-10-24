@@ -758,7 +758,7 @@ export function AssistantAgentDraft({
   const editLocked =
     busy ||
     active ||
-    (agent?.enabled &&
+    (agent?.enabled === true &&
       agent.notification_policy?.report_email?.mode === "automatic");
   const videoSetup = agent?.tools?.includes("create_media") ? (
     <>
