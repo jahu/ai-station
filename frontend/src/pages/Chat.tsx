@@ -1,3 +1,6 @@
+import CreationContextNotice, {
+  type CreationContext,
+} from "./CreationContextNotice";
 import { browserTimezone } from "./AgentCronFields";
 import { copyText } from "../lib/clipboard";
 import { useConversationAttachmentUpload } from "./attachment-upload";
@@ -123,6 +126,7 @@ type Message = ActionResult & {
     routing_only?: boolean;
     agent_id?: string;
     images?: { id: string; name: string }[];
+    creation_context?: CreationContext;
     conversation_reference?: {
       source_kind?: "inspected_input" | "analyzed_data";
       filenames?: string[];
@@ -891,6 +895,10 @@ function Transcript({
                   )}
                 </p>
               ))}
+              <CreationContextNotice
+                value={message.metadata.creation_context}
+                active={current}
+              />
               {message.metadata.conversation_reference && (
                 <p className="muted">
                   {message.metadata.conversation_reference.source_kind ===

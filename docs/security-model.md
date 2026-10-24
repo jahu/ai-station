@@ -39,6 +39,10 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Conversation file creation freezes bounded earlier plain text on the current
+message and Run. Source ownership/hashes gate execution; quoted text grants no
+tools, attachment reads or networking. See [creation context](plans/file-creation-conversation-context.md).
+
 Only explicit creation may omit data inputs without public research. It forbids
 input/research scope mixing and preserves legacy analysis identity. Generated
 CSV/XLSX reuse verifies the result owner, bytes and ordinary inspection; generated
