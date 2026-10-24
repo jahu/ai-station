@@ -36,7 +36,10 @@ def reference(session, message, *, budget=12000):
         "available": False,
     }
     text = ""
-    if linked["status"] != "succeeded" or root.task.metadata_json.get("stop_requested_at"):
+    stopped = root.task.metadata_json.get("stop_requested_at")
+    if stopped and linked["status"] == "succeeded":
+        value["status"] = "canceled"
+    if linked["status"] != "succeeded" or stopped:
         value["reason"] = "This execution is unfinished or did not complete; do not invent a finished report."
     else:
         reports = list(
@@ -47,7 +50,6 @@ def reference(session, message, *, budget=12000):
                     Run.agent_id == root.agent_id,
                     Run.parent_run_id == root.id,
                     Run.executor_type == "agent",
-                    Run.status == "succeeded",
                 )
                 .limit(2)
             )
@@ -56,6 +58,11 @@ def reference(session, message, *, budget=12000):
             if len(reports) != 1:
                 raise ValueError("Choose one completed ordinary report")
             source = reports[0]
+            if source.status != "succeeded":
+                value.update(run_id=source.id, status=source.status)
+                if source.error_type:
+                    value["error_type"] = source.error_type[:80]
+                raise ValueError("The report execution did not succeed")
             artifacts = list(
                 session.scalars(
                     select(Artifact)

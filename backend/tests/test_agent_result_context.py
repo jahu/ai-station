@@ -123,6 +123,8 @@ def test_invalid_report_never_becomes_invented_or_fallback_context(saved, monkey
         db.commit()
         quoted, provenance = reference(db, db.get(Message, mid))
         assert not provenance["available"]
+        if problem == "failed":
+            assert provenance["status"] == "failed" and provenance["run_id"] == rid
         assert "do not invent" in quoted or "instead of inventing" in quoted
         assert REPORT not in quoted and "Forged replacement" not in quoted
 
