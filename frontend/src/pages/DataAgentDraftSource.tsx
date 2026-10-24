@@ -24,7 +24,11 @@ export default function DataAgentDraftSource({ value }: { value: unknown }) {
       className="panel agent-document-sources"
       aria-label="Original analysis for this agent"
     >
-      <h3>Repeats this analysis</h3>
+      <h3>Drafted from this analysis</h3>
+      <p className="muted">
+        Saved source snapshot. Later edits to the agent definition do not
+        rewrite it.
+      </p>
       <p className="agent-document-preview">
         {definition.goal.slice(0, 600)}
         {definition.goal.length > 600 ? "…" : ""}
@@ -42,8 +46,8 @@ export default function DataAgentDraftSource({ value }: { value: unknown }) {
       )}
       <p className="muted">
         {source.live_public_sources === true
-          ? "The reviewed public sources will be read again on each execution."
-          : "Uses the selected saved files or captured data."}{" "}
+          ? "At creation, the draft retained live public sources for each execution."
+          : "At creation, the draft retained selected saved files or captured data."}{" "}
         A new private workspace is created for the agent. Review the schedule
         and enable it when ready.
       </p>

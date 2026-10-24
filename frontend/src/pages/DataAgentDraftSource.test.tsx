@@ -27,7 +27,7 @@ it("shows the retained task, files, tools and live-source behavior with a source
   expect(
     screen.getByText("Selected files: sales.csv, contract.pdf"),
   ).toBeTruthy();
-  expect(screen.getByText(/read again on each execution/)).toBeTruthy();
+  expect(screen.getByText(/retained live public sources/)).toBeTruthy();
   expect(
     screen
       .getByRole("link", { name: "Inspect original analysis" })
@@ -50,13 +50,13 @@ it("distinguishes immutable captures and collapses a long original instruction",
     </MemoryRouter>,
   );
   expect(
-    screen.getByText(/Uses the selected saved files or captured data/),
+    screen.getByText(/retained selected saved files or captured data/),
   ).toBeTruthy();
   expect(screen.getByText("Original analysis instruction")).toBeTruthy();
   expect(
     screen.getByText("Original analysis instruction").closest("details")?.open,
   ).toBe(false);
-  expect(screen.queryByText(/read again on each execution/)).toBeNull();
+  expect(screen.queryByText(/retained live public sources/)).toBeNull();
 });
 it("does not turn incomplete or invented metadata into a source claim", () => {
   render(
