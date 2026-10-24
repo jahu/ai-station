@@ -79,3 +79,25 @@ PID, process group and session while applying memory/swap bounds. Native group
 Stop removed it. This is a viable mechanism to retain existing ProcessManager
 ownership/restart/cancellation if a *visually qualified* profile needs kernel
 memory limits; it is not yet an exposed profile or substitute for its quality gate.
+
+## Default/steps comparison and native scope prototype
+
+The default precision at the same small geometry failed safely under 11 GiB;
+restoration completed. FP8 at 20 steps also decoded but remained visually broken.
+Default precision at 20 steps completed under a measured 12 GiB cap and restored the
+operator preset, but its middle frame was similarly distorted. All three
+successful encodes are visually rejected; none justifies an available profile.
+The earlier qualified 1280×704 forest sample is coherent, so low geometry is a
+candidate cause, not an established diagnosis. A new bounded full-resolution
+FP8/20-step/17-frame probe is testing that difference; keep its actual handle/state
+and never restart merely because observation times out.
+
+`memory_scope.py` now builds a fixed internal user-scope prefix with approved
+11/12 GiB bounds, zero swap, CPU quota and a one-hour per-invocation fuse. It checks
+the actual cgroup name and kernel limits before any model import. Public API
+fields/default launch are unchanged; the helper is not wired to an available
+profile. 25 focused pure scope/precision cases passed. A separate actual CPU scope
+using this prefix and a limited executor environment preserved PID/PGID/session,
+restored durable ownership and the original deadline, then passed targeted Stop:
+`typed-scope-restart-stop.json`. The existing ProcessManager continues to own
+absolute workflow expiry; scope RuntimeMaxSec is only an additional invocation fuse.
