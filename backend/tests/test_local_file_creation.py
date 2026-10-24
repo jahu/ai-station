@@ -379,3 +379,18 @@ def test_natural_first_send_is_durable_and_keeps_external_conversation_model_unu
             (r.executor_type, r.status, r.error_message) for r in rows
         ]
         assert len(data_environment["jobs"]) == 1
+
+
+@pytest.mark.parametrize(
+    "goal,filename",
+    [
+        ("Create a spreadsheet with ten rows", "result.xlsx"),
+        ("Utwórz nowy arkusz Excel z liczbami 1 do 10", "result.xlsx"),
+        ("Create a text file with a weekly checklist", "report.txt"),
+        ("Utwórz plik tekstowy z listą zadań", "report.txt"),
+    ],
+)
+def test_requested_creation_file_is_mandatory_even_if_model_omits_its_manifest(goal, filename):
+    from app.data_exports import required_exports
+
+    assert filename in required_exports(goal)
