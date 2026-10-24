@@ -20,8 +20,10 @@ reviewable profile/time allowance to avoid 600-second video-agent defaults expir
 before the measured first window. Agents stages the patch until Save definition;
 compact/expanded conversation review explicitly saves the versioned patch. It
 keeps enabled state, existing larger limits, sources, scenes, seed and permissions;
-rendering never starts work or edits definitions. The API/runtime/ceiling stay
-unchanged. All 700 UI cases and real API/SQLite saves at 1440/390 passed; qualify the
+rendering never starts work or edits definitions. The runtime/ceiling stay
+unchanged. Review reproduced a settings API bug that postponed interval and
+overdue cron executions; the same branch now preserves unchanged calendars and
+requires a new full Python gate. All 700 UI cases and real API/SQLite saves at 1440/390 passed; qualify the
 final shorter helper text and image, review the published diff and finish a
 controller-only rollout. Reuse #397 Python/native evidence by exact source match.
 Keep all live/proof trees, original root Memory WIP and pending Whisper consent.

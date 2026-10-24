@@ -42,9 +42,24 @@ checks. Both real API/SQLite surfaces preserved seed, scope and disabled state;
 Agents required a separate Save, conversation required an explicit saved update,
 and no Runs were created. Capability observations were declared fixtures.
 
-Backend/Runner/scripts/dependencies/deployment sources exactly match #397: reuse
-its full 3035-case gate (3026 passes/nine opt-in skips) and prior native execution
-proof rather than running unchanged Python/GPU work again. Final source/image
+Native Runner/execution remain identical to #397, so reuse its exact media
+proof without another GPU sample. Review found that ordinary settings edits
+recomputed due dates; two real API regression cases reproduced interval delay
+and overdue cron skipping to the next day. Preserve the existing due instant
+when the enabled state/calendar are unchanged; retain explicit rescheduling,
+disabling and missing-date repair. Run the full new Python/Runner gate for this
+backend correction before merge. Final source/image
 and reviewed controller-only rollout records belong under
 `data/acceptance/agent-video-setup-20261024`. This does not qualify additional
 media durations or change the whole-platform completion status.
+
+## Schedule preservation found during review
+
+`apply_settings` used to call `compute_next` for every edit, reanchoring intervals
+and skipping an already-due cron occurrence. Compare only relevant calendar
+fields (trigger plus interval, cron/timezone, or one-shot time). Preserve an
+existing due instant when that calendar and enabled state stay unchanged. An
+explicit calendar change, enable/disable transition or missing due date retains
+normal computation/repair. API regression evidence before/after is retained in
+`data/acceptance/agent-video-setup-20261024/schedule-regression-*.log`. No schema or
+native execution change is involved.

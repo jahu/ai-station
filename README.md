@@ -3,7 +3,8 @@
 Video-agent reviews offer **Use suggested setup** for a suitable time limit and
 available-memory profile. Agents keeps the change in the form until **Save
 definition**; a conversation offers **Apply and save setup**. Existing larger
-limits and selected sources remain intact. [Reviewed video setup](docs/plans/agent-video-setup.md).
+limits and selected sources remain intact. Editing unrelated settings preserves
+the next scheduled execution time. [Reviewed video setup](docs/plans/agent-video-setup.md).
 
 New text-only Video and Chat/Work requests can select the available reduced-RAM
 profile when Standard's reservation exceeds currently observed free memory.
