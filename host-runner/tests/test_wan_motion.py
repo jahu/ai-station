@@ -2,7 +2,7 @@ import json
 import struct
 
 import pytest
-from ai_station_runner.wan_motion import validate_checkpoint
+from ai_station_runner.wan_motion import profile_key, validate_checkpoint
 
 
 def checkpoint(tmp_path, **changes):
@@ -49,3 +49,18 @@ def test_motion_rejects_excessive_header_and_truncation(tmp_path):
     path.write_bytes(path.read_bytes()[:-1])
     with pytest.raises(ValueError, match="observation"):
         validate_checkpoint(path, 128, 128, "profile")
+
+
+def test_profile_precision_is_part_of_checkpoint_identity_without_changing_legacy(tmp_path):
+    import hashlib
+
+    paths = {}
+    for key in ("wan_model", "wan_text_encoder", "wan_vae"):
+        paths[key] = tmp_path / key
+        paths[key].write_bytes(b"fixed observation")
+    observed = {
+        key: {"size_bytes": path.stat().st_size, "mtime": path.stat().st_mtime} for key, path in paths.items()
+    }
+    old = hashlib.sha256(json.dumps(observed, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    assert profile_key(paths) == profile_key(paths, "default") == old
+    assert profile_key(paths, "bounded_11g") != old

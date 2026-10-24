@@ -15,6 +15,7 @@ export type MediaRequest = {
   gpu?: string;
   duration_seconds?: number;
   composition_mode?: "continuous" | "shots";
+  memory_profile?: "default" | "bounded_11g";
   scenes?: { prompt: string; duration_seconds: number }[] | null;
 };
 export type MediaJob = {

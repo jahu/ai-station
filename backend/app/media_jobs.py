@@ -22,7 +22,7 @@ from app.resources import RESOURCE_WAIT_KEY, latest_resource_wait
 from app.runs import create_run, run_dict
 from app.state import TERMINAL
 from app.task_control import cancel_task, lock_task
-from app.video import VideoRequest, capabilities, create_video_run
+from app.video import VideoRequest, capabilities, create_video_run, memory_reservation
 from app.video_schema import LongVideoSettings
 from app.video_schema import VideoScene as VideoScene
 
@@ -89,7 +89,7 @@ def publish_video(
         ):
             raise HTTPException(409, "Media plan belongs to a different reviewed publication")
         return job_view(session, task)
-    reservation = observed_profile.get("memory_estimate_mib", 16384)
+    reservation = memory_reservation(body, observed_profile)
     timing = timeline(
         frames=duration_frames(body.duration_seconds, 24),
         fps=24,
@@ -118,7 +118,9 @@ def publish_video(
                 "seed": segment.seed,
             }
         )
-        run = create_video_run(session, settings, task=task, parent_run_id=parent_run_id)
+        run = create_video_run(
+            session, settings, task=task, parent_run_id=parent_run_id, observed_profile=observed_profile
+        )
         run.requested_resources = {"ram_mib": reservation}
         run.operation_key = f"media:1:segment:{segment.index}:attempt:1"
         run.parameters = {
@@ -151,6 +153,7 @@ def publish_video(
             "height": body.height,
             "backend": "wan2.2-5b",
             "composition_mode": body.composition_mode,
+            **({"memory_profile": body.memory_profile} if body.memory_profile != "default" else {}),
             **(
                 {"prompt": body.prompt, "scenes": [scene.model_dump() for scene in body.scenes]}
                 if body.scenes
@@ -480,7 +483,10 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
         raise HTTPException(409, "Media plan changed; refresh before resuming")
     if not view["resume_allowed"] or plan["revision"] >= 20:
         raise HTTPException(409, "Inspect active/completed work before resuming")
-    observed = capabilities().get("profile_observation") if plan["kind"] == "video" else None
+    profile = capabilities() if plan["kind"] == "video" else {}
+    if plan.get("request", {}).get("memory_profile", "default") != "default":
+        memory_reservation(LongVideoRequest.model_validate(plan["request"]), profile)
+    observed = profile.get("profile_observation")
     if plan.get("profile_observation") and observed != plan["profile_observation"]:
         raise HTTPException(409, "Runtime model files changed; start a new media job")
     selected_ids = (

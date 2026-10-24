@@ -1,0 +1,162 @@
+# Qualify an optional Wan profile with lower memory use
+
+Read-only inspection of the actual configured safetensors headers and installed
+ComfyUI loader is retained in
+`data/acceptance/media-memory-investigation-20261024`. The diffusion weights are
+F16 (~10 GB); the text encoder already mixes F8/F16 (~6.7 GB). The current native
+reservation is 15811 MiB plus 1024 MiB headroom, versus observed 12978 MiB available.
+Idle owned-LLM eviction already exists. No generation, conversion, admission
+change, download or external-runtime modification was performed in this inspection.
+
+The installed UNETLoader exposes `fp8_e4m3fn`. That is an implementation candidate,
+not proof of this GPU's support, memory fit, speed or visual quality. Preserve the
+working default loader and old media receipts; do not lower their reservation.
+
+1. Inspect the installed load/cast path and kernel fallbacks before selecting a
+   supported fixed option. Reuse original read-only weights; no replacement model
+   download or converted huge copy. Add only an explicit reviewed profile choice
+   to the existing Video/agent schemas, frozen plan and typed native builder.
+2. Bind precision/profile to the model-file observation, request identity,
+   continuation checkpoint and output metadata. Legacy requests keep their exact
+   default identity. Unsupported/unqualified profiles remain unavailable.
+3. Prepare one opt-in engineering qualification using existing weights and a
+   short bounded case. Prove transient user-service/cgroup memory and swap limits
+   are available before launching it; enforce a finite runtime and owned cleanup.
+   Require measured free capacity plus headroom, no other owned GPU consumers,
+   and preserve/restore the operator's actual model preset. Never stop unrelated
+   applications, alter OS/driver settings or repeatedly submit a known rejected
+   normal media Run. A contained OOM is a failed profile, never a successful result.
+4. Record peak memory/cgroup outcomes, full output decode, timing and inspected
+   visual frames. Only a concrete passing profile can justify its own conservative
+   dimension/frame-aware reservation. Do not extrapolate a tiny case to all
+   dimensions, 81-frame chunks or a full film. Then qualify ordinary worker/agent
+   execution and existing Stop/restart/lineage paths at that exact profile.
+5. Expose the reviewed option with clear quality/resource wording and existing
+   progress/results in Video and agent editors. Keep the original full-quality
+   route. Complete normal tests, compiled desktop/phone checks, exact image/source
+   review and coordinated release through develop.
+
+The whole-platform goal remains active. This work is not authorization to bypass
+RAM admission or claim real agent GPU success. Preserve prior long-media evidence,
+root Memory WIP and pending Whisper-small download consent.
+
+## Bounded qualification preparation
+
+Installed Comfy casting code selects manual conversion when native FP8 compute
+is unsupported; the candidate uses `fp8_e4m3fn`, never the accelerated option.
+A disposable 128 MiB user service reported the actual memory/swap bounds, and a
+separate 64 MiB allocation probe was killed with kernel/unit `Result=oom-kill`.
+That proves isolation, not a usable large-model peak (systemd's post-exit peak
+property was too small to trust; record live cgroup samples instead).
+
+Candidate commit 32c6b0d accepts the fixed private engineering loader option;
+public/native Video requests and capabilities still expose only the working
+default. 27 focused cases passed, including rejection before Comfy imports. The
+opt-in `qualify-fp8.py` evidence helper prepares one 512×288/17-frame/four-step case
+under an 11 GiB memory cap, zero swap and 600-second runtime. A wrapper verifies
+kernel limits before model import. During this engineering probe only, the
+project's worker/scheduler are paused after owned-LLM stop. The exact preset
+reload is queued durably before launch; the owned unit's stop hook restarts only
+those inspected containers, including if the observer disappears. The API,
+Host Runner and unrelated services stay running. Finally also verifies restoration.
+No result or product availability may be claimed until actual execution, peak,
+full decode, inspected frames and restored operator state are recorded.
+
+## First actual probe and quality rejection
+
+A 17-frame 512×288/four-step FP8 probe completed under the kernel-enforced 11 GiB
+limit with zero swap, full decode and exact operator preset restoration. Peak
+reached the cap, so its uncapped memory use is not established. Sampled first,
+middle and final frames show severe banding/distortion and do not satisfy the
+landscape goal. This is a technical execution pass and an overall visual
+qualification failure; the product profile remains unavailable and unchanged
+admission is retained. See `fp8-probe-state.json` and `visual-review.json` in the
+investigation evidence directory. A separate same-settings/default-precision
+A/B probe is now active to distinguish sampling/geometry from FP8 effects.
+
+A real CPU-only `systemd-run --user --scope` probe preserved the exact native
+PID, process group and session while applying memory/swap bounds. Native group
+Stop removed it. This is a viable mechanism to retain existing ProcessManager
+ownership/restart/cancellation if a *visually qualified* profile needs kernel
+memory limits; it is not yet an exposed profile or substitute for its quality gate.
+
+## Default/steps comparison and native scope prototype
+
+The default precision at the same small geometry failed safely under 11 GiB;
+restoration completed. FP8 at 20 steps also decoded but remained visually broken.
+Default precision at 20 steps completed under a measured 12 GiB cap and restored the
+operator preset, but its middle frame was similarly distorted. All three
+successful encodes are visually rejected; none justifies an available profile.
+The earlier qualified 1280×704 forest sample is coherent, so low geometry is a
+candidate cause, not an established diagnosis. A new bounded full-resolution
+FP8/20-step/17-frame probe is testing that difference; keep its actual handle/state
+and never restart merely because observation times out.
+
+`memory_scope.py` now builds a fixed internal user-scope prefix with approved
+11/12 GiB bounds, zero swap, CPU quota and a one-hour per-invocation fuse. It checks
+the actual cgroup name and kernel limits before any model import. Public API
+fields/default launch are unchanged; the helper is not wired to an available
+profile. 25 focused pure scope/precision cases passed. A separate actual CPU scope
+using this prefix and a limited executor environment preserved PID/PGID/session,
+restored durable ownership and the original deadline, then passed targeted Stop:
+`typed-scope-restart-stop.json`. The existing ProcessManager continues to own
+absolute workflow expiry; scope RuntimeMaxSec is only an additional invocation fuse.
+
+## Full-resolution result and candidate integration
+
+The 1280×704/17-frame/20-step text-only FP8 case completed within 11 GiB and zero
+swap, fully decoded, and restored the exact operator preset. First/middle/last
+frames depict the requested coast without the small-geometry banding. This is
+only a short-window visual pass; an 81-frame test has its own active unit and
+evidence. The earlier 512-pixel comparisons remain rejected. `docs/video.md`
+already excludes early low-resolution exploratory outputs from quality acceptance.
+
+The candidate's optional `bounded_11g` selection is frozen in Video/agent requests,
+receipts, output metadata and a separate motion-checkpoint identity. Default fields
+are omitted during serialization to preserve existing receipts and definitions.
+The original default reservation/launch are unchanged. The native process requires
+the actual matching kernel scope before any Comfy/Torch import, uses the fixed
+plain FP8 loader, and never accepts arbitrary precision, memory limits or systemd
+properties from HTTP. Both short and segmented candidate Runs reserve 11264 MiB
+plus existing shared headroom; profile/dimension/sampling validation is identical
+on both sides. CPU composition retains the selection in final metadata.
+
+`AI_STATION_WAN_BOUNDED_PROFILE` defaults to false. Capability publication also
+requires user systemd/cgroup memory support; normal native dispatch rejects an
+unavailable option. The UI only offers it when advertised, preserves a saved
+unavailable selection and keeps a Standard recovery choice. Landscape and 20+
+steps are required. Enable the option only after matching local runtime qualification. The exact
+normal-worker result below qualifies the recorded five-second case; longer
+durations, first-frame image quality and every prompt/seed remain separate
+acceptance. Keep the Standard route and existing saved definitions unchanged.
+
+## Normal-worker qualification — PR #396
+
+At code head `d7d9ee9`, an actual persistent fixed-description agent created two
+Wan windows (81/65 frames), reused the bounded latent checkpoint and composed a
+fully decoded 1280×704, 120-frame/five-second MP4. Every stage succeeded on its
+ordinary Task/worker/typed native path; both owned GPU groups observed the 11-GiB
+kernel limit, zero swap and no OOM. The full chain took about 1189 seconds, within
+its reviewed 1800-second deadline. Native processes stopped, the disposable agent
+was paused and the exact prior operator GPU/Q8/46080 model preset was restored.
+
+First/middle/final and adjacent boundary frames retain a coherent coast and
+composition, without the rejected small-format color banding. Soft detail, haze,
+an unrequested foreground person and ghosting remain visible. This is basic
+coherent-scene/continuation qualification, not high-detail fidelity, parity with
+Standard, image-conditioned acceptance or a new 60-second visual pass. The earlier
+600-second engineering timeout remains rejected in its own evidence.
+
+All 3015 collected normal Python/Runner cases completed: 3006 passed, nine opted-out
+integrations skipped. All 686 UI cases, lint/format/types/build, normal/dev/private
+LAN Compose and exact image/backend/assets checks passed. Compiled 1440/390 Video
+selection and actual disabled-agent save/reload passed. Evidence:
+`data/acceptance/media-memory-investigation-20261024`, especially
+`native-agent-observer-state.json`, its owned `result.json`, `browser-result.json`
+and the final published-head/release qualification records.
+
+Next useful integration is a reviewed recommendation for new conversation/agent
+video requests when Standard cannot fit. Preserve existing saved scopes/receipts;
+do not silently rewrite queued Runs or select an unqualified profile. A full
+minute at 20 steps may need more than four hours on this measured configuration;
+first-window timing is an estimate, not proof of full-duration performance.

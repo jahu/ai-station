@@ -1,3 +1,5 @@
+> Optional reduced-RAM profile: [setup, exact real qualification and rollout state](plans/wan-memory-profile.md). The recorded five-second normal-worker case passed with two windows and full composition; the option is disabled by default for other installations.
+
 # Local general video
 
 The workspace now uses [durable long-media jobs](long-media.md): 1–60-second

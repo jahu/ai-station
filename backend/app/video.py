@@ -29,7 +29,32 @@ def capabilities():
         }
 
 
-def create_video_run(session, body, *, task=None, parent_run_id=None):
+def memory_reservation(body, observed_profile):
+    if body.memory_profile == "default":
+        return observed_profile.get("memory_estimate_mib", 16384)
+    selected = next(
+        (
+            item
+            for item in observed_profile.get("memory_profiles", [])
+            if item.get("id") == body.memory_profile
+        ),
+        None,
+    )
+    if (
+        not observed_profile.get("available")
+        or not selected
+        or not selected.get("available")
+        or selected.get("ram_mib") != 11264
+    ):
+        raise HTTPException(409, "The reduced-RAM video profile is unavailable; refresh Video setup")
+    return selected["ram_mib"]
+
+
+def create_video_run(session, body, *, task=None, parent_run_id=None, observed_profile=None):
+    reservation = None
+    if body.memory_profile != "default":
+        observed_profile = capabilities() if observed_profile is None else observed_profile
+        reservation = memory_reservation(body, observed_profile)
     source = None
     if body.image_artifact_id:
         source = session.get(Artifact, str(body.image_artifact_id))
@@ -49,6 +74,11 @@ def create_video_run(session, body, *, task=None, parent_run_id=None):
         "parent_artifact_ids": [source.id] if source else [],
         "backend": "wan2.2-5b",
         "fps": 24,
+        **(
+            {"profile_observation": observed_profile["profile_observation"]}
+            if reservation is not None
+            else {}
+        ),
     }
     from app.vision_inputs import pin_media_inputs
 
@@ -61,6 +91,7 @@ def create_video_run(session, body, *, task=None, parent_run_id=None):
         executor_type="wan_video",
         permissions=["filesystem_read", "workspace_write"],
         requested_gpu=body.gpu,
+        requested_resources={"ram_mib": reservation} if reservation is not None else {},
         retry_class="inspect",
         parent_run_id=parent_run_id,
         parameters=parameters,
@@ -69,9 +100,10 @@ def create_video_run(session, body, *, task=None, parent_run_id=None):
 
 @router.post("/runs", status_code=202)
 def generate(body: VideoRequest, session: DB):
-    if not capabilities()["available"]:
+    observed = capabilities()
+    if not observed["available"]:
         raise HTTPException(409, "Local video is unavailable; inspect Video setup before generating")
-    run = create_video_run(session, body)
+    run = create_video_run(session, body, observed_profile=observed)
     session.commit()
     return run_dict(run)
 
@@ -147,6 +179,11 @@ class VideoExecutor(MotionArtifacts, HostMediaExecutor):
                     else {}
                 ),
                 **{key: run.parameters[key] for key in keys},
+                **(
+                    {"memory_profile": run.parameters["memory_profile"]}
+                    if run.parameters.get("memory_profile")
+                    else {}
+                ),
                 **({"image_relative": None} if continuation else {}),
                 **(
                     {"profile_observation": run.parameters["profile_observation"]}

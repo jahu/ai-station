@@ -1,5 +1,11 @@
 # AI Station
 
+Video and video agents offer **Advanced settings → Generation profile → Reduced
+RAM** when explicitly enabled for the configured native runtime. It uses an
+11-GiB, zero-swap limit, existing weights and 1280×704 landscape output with 20+ steps. Standard
+remains available. Generation can take many minutes per short segment; choose a
+suitable agent time limit. [Setup and exact quality qualification](docs/plans/wan-memory-profile.md).
+
 Agent daily schedules use a time picker and an explicit timezone. New drafts start
 with your browser timezone; existing schedules retain UTC. Choose **Custom cron**
 for more complex calendars. Forward clock changes skip missing times; repeated

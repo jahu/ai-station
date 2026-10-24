@@ -1,3 +1,5 @@
+> Optional profile: [fixed Wan memory profiles](plans/wan-memory-profile.md) reuse the same native process manager, worker reservations and motion artifacts. The optional profile is disabled by default and requires local qualification; no new execution service is introduced.
+
 [One bounded local-agent correction](plans/agent-validation-repair.md) reuses
 the existing validation-repair engine when saved automatic project checks are
 enabled. The original deadline, commands, source scope and failed history remain.

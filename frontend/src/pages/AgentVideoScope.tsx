@@ -10,6 +10,7 @@ import { randomId } from "../lib/random-id";
 import { useHardware } from "../api";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import type { VideoMediaRequest } from "./agent-media";
+import VideoMemoryProfile from "../components/media/VideoMemoryProfile";
 
 export default function AgentVideoScope({
   value,
@@ -134,11 +135,30 @@ export default function AgentVideoScope({
           <Settings2 size={15} />
           Advanced video settings
         </summary>
+        <VideoMemoryProfile
+          value={value.memory_profile ?? "default"}
+          disabled={disabled}
+          onChange={(profile) => {
+            if (profile === "bounded_11g")
+              patch({
+                memory_profile: profile,
+                width: 1280,
+                height: 704,
+                steps: Math.max(20, value.steps ?? 20),
+              });
+            else {
+              const next = { ...value };
+              delete next.memory_profile;
+              onChange(next);
+            }
+          }}
+        />
         <div className="form-grid">
           <label>
             Resolution
             <select
               aria-label="Agent video resolution"
+              disabled={value.memory_profile === "bounded_11g"}
               value={`${value.width ?? 1280}x${value.height ?? 704}`}
               onChange={(e) => {
                 const [width, height] = e.target.value.split("x").map(Number);
@@ -169,7 +189,7 @@ export default function AgentVideoScope({
             Steps
             <input
               type="number"
-              min={4}
+              min={value.memory_profile === "bounded_11g" ? 20 : 4}
               max={40}
               aria-label="Agent video steps"
               value={value.steps ?? 20}

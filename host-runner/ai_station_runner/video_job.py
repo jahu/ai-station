@@ -14,6 +14,9 @@ def stage(message):
 def main(config_path):
     config = json.loads(Path(config_path).read_text())
     request, paths, work = config["request"], config["paths"], config["work"]
+    from ai_station_runner.wan_profiles import prepare_job
+
+    weight_dtype = prepare_job(request)
     signal.alarm(3600)
     sys.path.insert(0, paths["comfy_dir"])
     sys.argv = [
@@ -106,7 +109,12 @@ def main(config_path):
                     digest.update(chunk)
             if digest.hexdigest() != request["motion_context"]["sha256"]:
                 raise ValueError("Motion checkpoint content changed")
-            validate_checkpoint(checkpoint, request["width"], request["height"], profile_key(paths))
+            validate_checkpoint(
+                checkpoint,
+                request["width"],
+                request["height"],
+                profile_key(paths, request.get("memory_profile", "default")),
+            )
             context = load_file(str(checkpoint), device="cpu")["motion"]
             if not torch.isfinite(context).all():
                 raise ValueError("Non-finite motion checkpoint")
@@ -116,7 +124,7 @@ def main(config_path):
             mask[:, :, :5] = 0
             latent["noise_mask"] = mask
         stage("loading Wan 2.2")
-        model = nodes.UNETLoader().load_unet(aliases["wan_model"], "default")[0]
+        model = nodes.UNETLoader().load_unet(aliases["wan_model"], weight_dtype)[0]
         model = ModelSamplingSD3().patch(model, 8.0)[0]
         stage("generating frames")
         samples = nodes.KSampler().sample(
@@ -139,9 +147,14 @@ def main(config_path):
         save_file(
             {"motion": samples["samples"][:, :, -5:].detach().cpu().float().contiguous()},
             str(partial_checkpoint),
-            metadata={"station.wan_profile": profile_key(paths)},
+            metadata={"station.wan_profile": profile_key(paths, request.get("memory_profile", "default"))},
         )
-        validate_checkpoint(partial_checkpoint, request["width"], request["height"], profile_key(paths))
+        validate_checkpoint(
+            partial_checkpoint,
+            request["width"],
+            request["height"],
+            profile_key(paths, request.get("memory_profile", "default")),
+        )
         partial_checkpoint.replace(checkpoint)
         comfy.model_management.unload_all_models()
         del model
@@ -170,9 +183,20 @@ def main(config_path):
         import hashlib
 
         checkpoint_hash = hashlib.sha256(checkpoint.read_bytes()).hexdigest()
+        execution_profile = {}
+        if request.get("memory_profile", "default") != "default":
+            from ai_station_runner.memory_scope import current_group
+
+            execution_profile = {
+                "memory_profile": request["memory_profile"],
+                "maximum_ram_mib": 11264,
+                "maximum_swap_mib": 0,
+                "peak_ram_bytes": int((current_group() / "memory.peak").read_text()),
+            }
         output.with_suffix(".json").write_text(
             json.dumps(
                 {
+                    **execution_profile,
                     "motion_context": {
                         "relative_path": str(checkpoint.relative_to(Path(config["root"]))),
                         "sha256": checkpoint_hash,
