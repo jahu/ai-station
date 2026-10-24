@@ -228,6 +228,16 @@ The target is the complete AI Station vision, reconfirmed on 2026-10-13. An impl
 
 ## Current work
 
+PR #415 prepares local agents directly from current Files & data selections in
+Work, without a preliminary analysis. Selected CSV/Excel/JSON, PDF/text, reviewed
+public sources, data model and execution limits remain frozen; the model proposes
+identity/task wording/schedule. Explicit review/activation remains. It also fixes
+General Work after clearing a project and tightens source-bound child instruction/
+Task ownership. Frontend757 and compiled desktop/mobile scheduled/native-Python
+checks pass; consult [scope and final release evidence](plans/selected-input-agent-draft.md)
+before treating it as live. The full-platform goal remains open.
+
+
 PR #413 adds an explicit natural Work request to repeat the latest successful data
 analysis as a disabled persistent agent. Original files/documents, reviewed live
 public sources, goal and local data model stay fixed; the model drafts identity

@@ -130,6 +130,7 @@ type Message = ActionResult & {
     routing_only?: boolean;
     agent_id?: string;
     data_agent_source?: unknown;
+    selected_data_agent?: unknown;
     images?: { id: string; name: string }[];
     creation_context?: CreationContext;
     conversation_reference?: {
@@ -965,9 +966,15 @@ function Transcript({
                 <SearchSources result={message.metadata.web_search} />
               )}
               {message.role === "assistant" &&
-                !!message.metadata.data_agent_source && (
+                !!(
+                  message.metadata.data_agent_source ||
+                  message.metadata.selected_data_agent
+                ) && (
                   <DataAgentDraftSource
-                    value={message.metadata.data_agent_source}
+                    value={
+                      message.metadata.data_agent_source ||
+                      message.metadata.selected_data_agent
+                    }
                   />
                 )}
               {message.metadata.agent_id && (

@@ -794,3 +794,15 @@ A selected `analysis_agent_source_run_id` is accepted only with explicit Work/
 agent.create intent. Foreign, missing, stale and incomplete results cannot fall
 back to another source. The UUID grants no additional tools or file access.
 Absent selections are omitted from receipt fingerprints for historical replay.
+
+A current natural or explicitly selected agent.create Work action may prepare a
+local draft from selected data. Chat, foreign provider, active project context,
+mixed media/Git/runtime/exact-Web scope and ambiguous prior-analysis references
+fail before enqueue. Preparation grants manage_agents and filesystem_read only
+when there are selected app-owned files. It hashes only the frozen selection;
+no public fetch, Python or workspace runs during preparation. The model cannot
+alter file IDs, tools, URLs, model, runtime/repair limits, permissions or project.
+Current-message/parent/source checks run before/after inference and under the Task
+publication lock; changed source is not a formatting error. Activation remains
+explicit and computes the ordinary future workflow permissions. An empty saved
+project-context row grants no project and correctly represents General Work.

@@ -793,3 +793,15 @@ and shows whether future executions read live public sources or saved captures.
 Review/edit the definition and explicitly enable it. The agent gets a fresh private
 workspace; it does not take over the conversation's workspace or gain email access.
 See [analysis-to-agent contracts](docs/plans/conversation-data-agent-draft.md).
+
+### Create an agent with selected files, without a preliminary analysis
+
+In **Work**, choose **Files & data**, select inspected CSV/Excel/JSON files,
+PDF/text documents or reviewed public sources, and ask, for example:
+**“Create an agent that compares these inputs every weekday at 09:00.”**
+The local Agent Factory retains your selection and prepares a disabled draft.
+Review its task, sources and schedule, then explicitly enable it. Drafting does
+not execute the analysis or visit the public sources. The agent receives its own
+workspace when it runs. **Create files from instructions** can also prepare a
+recurring file-creation agent without uploads. Chat asks you to switch to Work.
+See [selected-input agents](docs/plans/selected-input-agent-draft.md).

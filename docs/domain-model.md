@@ -176,3 +176,9 @@ source definition, input snapshots, result hash and artifact manifests. It is no
 model/request field and grants no tools by itself. Identity/schedule proposals cannot
 rewrite the frozen scope. The definition Artifact retains source/result parents.
 No database migration is needed; ordinary drafts and request hashes stay unchanged.
+
+Optional selected_data_agent metadata captures the selected DataScope, definition,
+inspected input/document snapshots, ordered artifact parents and actual current
+user/orchestrator IDs. The same snapshot binds the normal agent_draft child and
+definition artifact. It is controller-owned, absent for legacy requests and does
+not alter existing receipt payloads or definition schemas.
