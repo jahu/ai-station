@@ -11,7 +11,7 @@ from PIL import Image, ImageOps
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_serializer, model_validator
 
 from ai_station_runner.config import get_settings
-from ai_station_runner.echo_profiles import BOUNDED, MEMORY_MIB, validate_profile
+from ai_station_runner.echo_profiles import BOUNDED, MEMORY_MIB, STANDARD_RAM_MIB, validate_profile
 from ai_station_runner.media_inputs import MediaInput
 from ai_station_runner.security import resolve_child
 from ai_station_runner.telemetry import collect
@@ -100,7 +100,7 @@ def capabilities():
             "fps": 25,
             "max_audio_seconds": 60,
             "offline": True,
-            "memory_estimate_mib": 16384,
+            "memory_estimate_mib": STANDARD_RAM_MIB,
             "memory_profiles": memory_profiles(),
         }
     except HTTPException as exc:

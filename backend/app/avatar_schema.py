@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_serializer, model_validator
 
+STANDARD_RAM_MIB = 24576
+
 
 class AvatarMemorySettings(BaseModel):
     memory_profile: Literal["default", "bounded_11g"] = "default"

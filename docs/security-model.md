@@ -1,7 +1,8 @@
 [Optional bounded avatar loading](plans/echo-memory-loading.md) reuses the
 existing native ProcessManager, fixed private11-GiB/zero-swap scope and ordinary
 media Task graph. Complete existing weights retain full precision; no upstream
-files or public command/memory controls are added. Default dispatch is unchanged.
+files or public command/memory controls are added. Default native arguments are unchanged; new Standard jobs reserve the observed
+loader requirement before launch.
 
 > Optional profile: the optional [Wan memory scope](plans/wan-memory-profile.md) uses fixed user-level cgroup limits and verifies actual RAM/zero-swap bounds before model import. HTTP cannot select commands, scope properties or precision. The original default launch is unchanged.
 

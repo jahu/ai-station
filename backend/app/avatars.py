@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import ConfigDict, Field
 from sqlalchemy.orm import Session
 
-from app.avatar_schema import AvatarMemorySettings
+from app.avatar_schema import STANDARD_RAM_MIB, AvatarMemorySettings
 from app.db import session_scope
 from app.host_media_executor import HostMediaExecutor
 from app.models import Artifact
@@ -44,7 +44,11 @@ def capabilities():
         ):
             try:
                 available = (runner.hardware().get("memory") or {}).get("available_mib")
-                if type(available) in (int, float) and math.isfinite(available) and 0 <= available < 17408:
+                if (
+                    type(available) in (int, float)
+                    and math.isfinite(available)
+                    and 0 <= available < STANDARD_RAM_MIB + 1024
+                ):
                     recommended = "bounded_11g"
             except (RunnerError, RunnerUnavailable):
                 pass
@@ -55,7 +59,7 @@ def capabilities():
 
 def memory_reservation(body, observed_profile=None):
     if body.memory_profile == "default":
-        return 16384
+        return STANDARD_RAM_MIB
     observed_profile = capabilities() if observed_profile is None else observed_profile
     if not observed_profile.get("available") or not any(
         row.get("id") == "bounded_11g" and row.get("available") and row.get("ram_mib") == 11264
@@ -66,7 +70,7 @@ def memory_reservation(body, observed_profile=None):
 
 
 def create_avatar_run(session, body, *, task=None, parent_run_id=None, observed_profile=None):
-    reservation = memory_reservation(body, observed_profile) if body.memory_profile != "default" else None
+    reservation = memory_reservation(body, observed_profile)
     image = session.get(Artifact, str(body.image_artifact_id))
     audio = session.get(Artifact, str(body.audio_artifact_id))
     if image is None or image.artifact_type != "image" or image.mime_type not in {"image/png", "image/jpeg"}:
@@ -98,7 +102,7 @@ def create_avatar_run(session, body, *, task=None, parent_run_id=None, observed_
         executor_type="echomimic",
         permissions=["filesystem_read", "workspace_write"],
         requested_gpu=body.gpu,
-        requested_resources={"ram_mib": reservation} if reservation is not None else {},
+        requested_resources={"ram_mib": reservation},
         retry_class="inspect",
         parent_run_id=parent_run_id,
         parameters={

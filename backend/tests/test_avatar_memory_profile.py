@@ -183,7 +183,8 @@ def test_reviewed_profile_survives_full_task_and_verified_composition(full_avata
     "available,expected",
     [
         (13000, "bounded_11g"),
-        (20000, "default"),
+        (20000, "bounded_11g"),
+        (30000, "default"),
         (None, "default"),
         (-1, "default"),
         (True, "default"),
@@ -233,3 +234,28 @@ def test_resume_preserves_profile_and_cannot_bypass_lost_readiness(full_avatar_b
             },
         )
         assert rejected.status_code == 409, rejected.text
+
+
+@pytest.mark.parametrize("full", [False, True])
+def test_standard_reserves_observed_loader_memory_and_waits_without_launch(avatar_bridge, monkeypatch, full):
+    from app.runner_client import RunnerClient
+
+    _, calls = avatar_bridge
+    monkeypatch.setattr(
+        RunnerClient, "hardware", lambda _: {"gpus": [{"index": 7}], "memory": {"available_mib": 20000}}
+    )
+    with TestClient(app) as api:
+        portrait, speech = inputs(api)
+        body = {"image_artifact_id": portrait["id"], "audio_artifact_id": speech["id"]}
+        path = "/api/media/jobs/avatar" if full else "/api/avatars/runs"
+        if full:
+            body["client_request_id"] = str(uuid4())
+        response = api.post(path, json=body)
+        assert response.status_code == 202, response.text
+        with session_factory()() as db:
+            tick(db, "standard-memory-check")
+            rows = list(db.scalars(select(Run).where(Run.executor_type == "echomimic")))
+            assert rows and all(v.requested_resources == {"ram_mib": 24576} for v in rows)
+            assert all(v.status == "queued" and v.actual_gpu is None for v in rows)
+            assert rows[0].metadata_json["resource_wait"]["required_mib"] == 24576
+        assert not calls, "Standard launched despite insufficient RAM for its measured loader"

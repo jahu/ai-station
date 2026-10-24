@@ -2,6 +2,7 @@
 
 BOUNDED = "bounded_11g"
 MEMORY_MIB = 11264
+STANDARD_RAM_MIB = 24576
 
 
 def validate_profile(name, size, steps):

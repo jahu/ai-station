@@ -78,7 +78,9 @@ entry checks its actual canonical Run scope before importing inference.
 Short/full/avatar-agent requests freeze the profile, source IDs, quality and
 original expiry. Default serialization omits the field to preserve saved receipts.
 Every bounded segment reserves11264 MiB plus existing headroom; Standard retains
-its old reservation/argv. Speech handoffs, resume, composition metadata and native
+its native argv and existing records. New Standard jobs reserve24 GiB based on
+the observed loader peak; the previous16-GiB full-job reservation and absent
+short-job reservation could start despite insufficient RAM. Speech handoffs, resume, composition metadata and native
 requests retain the selection. Unavailable profiles fail without a fallback.
 
 Fresh Avatars/Chat can recommend the available bounded profile when measured free
@@ -92,3 +94,23 @@ compiled real API/SQLite1440/390 review, actual ordinary agent→native windows�
 verified full output, visual review and controller/native backed-up rollout.
 Product evidence: `data/acceptance/echo-memory-profile-20261024`. The complete
 platform goal remains open.
+
+
+## Ordinary-agent proof and admission review
+
+At `64cfd15`, the real ordinary agent/worker/native pipeline produced two scoped
+Echo windows, preserved latent continuation and composed125 frames/five seconds
+with the actual source audio at384×384/eight steps. Full video/audio decode,
+finite non-silent audio, original source hashes, both scopes, cleanup and exact
+operator preset restoration passed. First/middle/final and join frames retain a
+coherent face. Exact word-level lip-sync and all durations/profiles remain open.
+
+Review additionally reproduced unsafe Standard admission for both short and
+whole-recording jobs:20 GiB free could start a loader historically measured near
+24 GiB RSS. The two failing-before regressions remain in
+`standard-reservation-before.log`. New Standard jobs now reserve24576 MiB plus
+existing headroom; original argv, request identities and existing Run records
+remain. Both regressions pass after correction. A new full Python gate is required
+for this material admission change. The bounded renderer/entry/weight loader and
+its11264-MiB reservation are unchanged; compare exact functions before reusing
+the recorded real bounded output without another inference run.
