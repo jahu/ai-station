@@ -14,6 +14,12 @@ def stage(message):
 def main(config_path):
     config = json.loads(Path(config_path).read_text())
     request, paths, work = config["request"], config["paths"], config["work"]
+    # The public/native request still exposes only the qualified default.
+    # An operator's bounded engineering qualification may exercise the fixed
+    # alternative loader using the same immutable original model files.
+    weight_dtype = request.get("weight_dtype", "default")
+    if not isinstance(weight_dtype, str) or weight_dtype not in {"default", "fp8_e4m3fn"}:
+        raise ValueError("Unsupported fixed Wan weight precision")
     signal.alarm(3600)
     sys.path.insert(0, paths["comfy_dir"])
     sys.argv = [
@@ -116,7 +122,7 @@ def main(config_path):
             mask[:, :, :5] = 0
             latent["noise_mask"] = mask
         stage("loading Wan 2.2")
-        model = nodes.UNETLoader().load_unet(aliases["wan_model"], "default")[0]
+        model = nodes.UNETLoader().load_unet(aliases["wan_model"], weight_dtype)[0]
         model = ModelSamplingSD3().patch(model, 8.0)[0]
         stage("generating frames")
         samples = nodes.KSampler().sample(
