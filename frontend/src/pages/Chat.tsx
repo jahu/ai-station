@@ -131,6 +131,7 @@ type Message = ActionResult & {
     orchestration?: boolean;
     routing_only?: boolean;
     agent_id?: string;
+    agent_control_result?: { agent_id: string; outcome: string };
     data_agent_source?: unknown;
     selected_data_agent?: unknown;
     selected_data_family?: unknown;
@@ -981,12 +982,14 @@ function Transcript({
                     }
                   />
                 )}
-              {message.role === "assistant" && message.agent_control_run && (
-                <AgentControlRun
-                  run={message.agent_control_run}
-                  tabIndex={current ? 0 : -1}
-                />
-              )}
+              {message.role === "assistant" &&
+                message.metadata.agent_control_result && (
+                  <AgentControlRun
+                    run={message.agent_control_run}
+                    result={message.metadata.agent_control_result}
+                    tabIndex={current ? 0 : -1}
+                  />
+                )}
               {message.metadata.agent_id && (
                 <AssistantAgentDraft
                   agentId={message.metadata.agent_id}

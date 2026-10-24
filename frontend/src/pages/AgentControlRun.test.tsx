@@ -7,7 +7,10 @@ afterEach(cleanup);
 it("links the exact execution with its current state", () => {
   const { rerender } = render(
     <MemoryRouter>
-      <AgentControlRun run={{ id: "original-run", status: "queued" }} />
+      <AgentControlRun
+        result={{ agent_id: "agent-one", outcome: "queued" }}
+        run={{ id: "original-run", status: "queued" }}
+      />
     </MemoryRouter>,
   );
   expect(screen.getByText("queued")).toBeTruthy();
@@ -19,18 +22,24 @@ it("links the exact execution with its current state", () => {
   rerender(
     <MemoryRouter>
       <AgentControlRun
+        result={{ agent_id: "agent-one", outcome: "queued" }}
         run={{ id: "original-run", status: "succeeded" }}
         tabIndex={-1}
       />
     </MemoryRouter>,
   );
   expect(screen.getByText("succeeded")).toBeTruthy();
-  expect(screen.getByRole("link").tabIndex).toBe(-1);
+  expect(
+    screen.getByRole("link", { name: "Inspect agent execution" }).tabIndex,
+  ).toBe(-1);
 });
 it("does not claim Stop has already killed a process", () => {
   render(
     <MemoryRouter>
-      <AgentControlRun run={{ id: "held", status: "cancel_requested" }} />
+      <AgentControlRun
+        result={{ agent_id: "agent-one", outcome: "queued" }}
+        run={{ id: "held", status: "cancel_requested" }}
+      />
     </MemoryRouter>,
   );
   expect(screen.getByText(/waiting for owned work/)).toBeTruthy();
@@ -39,8 +48,28 @@ it("does not claim Stop has already killed a process", () => {
 it("shows when the normal approval still needs review", () => {
   render(
     <MemoryRouter>
-      <AgentControlRun run={{ id: "review", status: "waiting_for_approval" }} />
+      <AgentControlRun
+        result={{ agent_id: "agent-one", outcome: "queued" }}
+        run={{ id: "review", status: "waiting_for_approval" }}
+      />
     </MemoryRouter>,
   );
   expect(screen.getByText(/Review the requested approval/)).toBeTruthy();
+});
+it("offers explicit review for a disabled definition without inventing an execution", () => {
+  render(
+    <MemoryRouter>
+      <AgentControlRun
+        result={{ agent_id: "disabled-agent", outcome: "needs_review" }}
+      />
+    </MemoryRouter>,
+  );
+  expect(
+    screen
+      .getByRole("link", { name: "Review & enable agent" })
+      .getAttribute("href"),
+  ).toBe("/agents/disabled-agent?view=settings");
+  expect(
+    screen.queryByRole("link", { name: "Inspect agent execution" }),
+  ).toBeNull();
 });

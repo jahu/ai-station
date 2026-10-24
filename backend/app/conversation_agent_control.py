@@ -389,7 +389,6 @@ class AgentControlExecutor:
         run.metadata_json = {**run.metadata_json, "agent_control_result": result}
         message.metadata_json = {
             **message.metadata_json,
-            "agent_id": agent.id,
             "agent_control_result": result,
         }
         message.content = text
