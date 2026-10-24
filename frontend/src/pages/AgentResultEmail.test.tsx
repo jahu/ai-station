@@ -281,7 +281,6 @@ it("keeps Run now available in a compact conversation after automatic delivery w
   mount(<AssistantAgentDraft agentId={agent.id} compact />);
   const run = await screen.findByRole("button", {
     name: "Run now",
-    exact: true,
   });
   expect((run as HTMLButtonElement).disabled).toBe(false);
   fireEvent.click(run);
@@ -344,10 +343,8 @@ it("shows pending result-mail review directly in the compact conversation", asyn
   );
   mount(<AssistantAgentDraft agentId={agent.id} compact />);
   await screen.findByText("Actual report to review.");
+  expect(screen.getByRole("button", { name: "Approve and send" })).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Approve and send", exact: true }),
-  ).toBeTruthy();
-  expect(
-    screen.getByRole("button", { name: "Edit in conversation", exact: true }),
+    screen.getByRole("button", { name: "Edit in conversation" }),
   ).toBeTruthy();
 });
