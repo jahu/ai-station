@@ -55,6 +55,12 @@ verified captured data. See [saved API sources](docs/plans/agent-http-connectors
 
 # AI Station
 
+Memory offers managed **Multilingual E5 Small** CPU embeddings: explicitly confirm
+the approximately 130-MiB download, then preparation checks the model and indexes
+memories automatically. Semantic matches appear inline with the selected scope;
+FTS continues to work during setup. No GPU/chat-model changes. Existing compatible
+embedding endpoints remain advanced configuration. [Memory guide](docs/memory.md).
+
 Images offers compatible models for each operation and **Use as default** for
 Generate, Edit and Recompose independently. Qwen and Juggernaut remain available;
 the optional Krea 2 / LUSTIFY adapter uses a separate pinned native installation.

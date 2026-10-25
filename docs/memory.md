@@ -2,7 +2,32 @@
 
 Memory is control-plane metadata under the application data root. The existing Alembic-managed `memories` and FTS5 tables store content, tags, scope, pin/enabled state, confidence, timestamps and source Run/conversation/message references. Full-text search does not need an embedding model.
 
-Optional embeddings require an explicit local OpenAI-compatible `/v1` endpoint and model name that already serve vectors. AI Station does not download embedding weights, does not start llama.cpp with extra flags, and does not store empty or all-zero vectors. Setup, health, indexing and semantic search are ordinary Task/Run operations with cancellation. Without that setup, semantic endpoints fail closed and FTS remains the search surface.
+**Semantic search** offers a managed **Multilingual E5 Small** CPU model. In Memory,
+confirm the approximately 130 MiB model/tokenizer download and choose **Set up
+semantic memory**. Preparation verifies pinned bytes, checks actual vectors and
+queues indexing automatically. Nothing downloads on startup, a status read,
+indexing or a search. The offline encoder uses two CPU threads and a 2-GiB
+address-space bound; it does not occupy GPUs or reload the chat model. FTS remains
+available throughout setup and failures.
+
+The panel shows readiness, current enabled-memory coverage, progress, errors and
+Stop. **Search by meaning** uses the current scope/target filters and displays
+matches with links to the original entries. Editing content invalidates its old
+vector; choose **Index remaining memories** to update coverage. Disabled/deleted
+memories never appear in new results. Changing scope hides old search hits until a
+matching search completes. Historical Run results retain their original provenance.
+
+**Advanced · existing local endpoint** retains explicit compatible `/v1` endpoints.
+Only a successful managed preparation can activate the CPU backend; an endpoint
+form cannot forge an installation. Model/endpoint/encoding changes invalidate the
+index. Setup, probes, indexing and searches use ordinary Tasks/Runs/events/artifacts,
+frozen settings and deadlines. Each CPU Run owns a fixed offline subprocess with
+a parent-death signal; Stop waits for its termination. Recovery marks stale work
+interrupted for inspection instead of replaying inference or downloads. Partial,
+current vectors survive Stop; final results are published only after process cleanup.
+Download progress has no memory text; weights/tokenizer stay in application-owned
+`cache/embeddings/`. Native llama.cpp and external runtimes are unchanged. See
+[model/permission/lifecycle contracts](plans/memory-embeddings-readiness.md).
 
 The Memory workspace supports search, scope/target filtering, editing, pinning, disabling, and confirmed deletion. The entry list is one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names; the pin icon stays out of the tab order. Pin and enabled flags on an entry reuse that sequence with unique Memory names; Space or Enter selects the focused row and does not invent a memory-flag Run. `GET /api/memory` supports literal-token text search, exact tag filtering, pagination and optional disabled entries. SQL filters scope and enabled state before applying the result limit. `POST /api/memory` validates scope targets and compatible provenance references. Sources are immutable after creation; edits and deletion require `expected_updated_at` and reject stale versions with 409. Source-free entries are explicitly user-entered, not attributed to an AI. Linked sources establish provenance, not truth or endorsement.
 

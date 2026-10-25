@@ -24,7 +24,7 @@ async def test_slow_private_status_releases_database_for_other_requests(monkeypa
 
     monkeypatch.setattr(RunnerClient, "request", slow_native)
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=app), base_url="http://testserver", cookies=operator.cookies
+        transport=httpx.ASGITransport(app=app), base_url="http://testserver", cookies=operator.cookies.jar
     ) as client:
         pending = asyncio.create_task(client.get("/api/private-access"))
         try:

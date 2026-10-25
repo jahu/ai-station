@@ -57,6 +57,7 @@ it("keeps embeddings off until an explicit local setup is saved", async () => {
     </QueryClientProvider>,
   );
   expect(await screen.findByText(/Embeddings are not configured/)).toBeTruthy();
+  fireEvent.click(screen.getByText("Advanced · existing local endpoint"));
   expect(
     (
       screen.getByRole("button", {

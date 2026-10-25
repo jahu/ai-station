@@ -98,6 +98,12 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Managed semantic memory uses the existing container executor, not a new service.
+A fixed ONNX CPU child owns one ordinary Run; app-owned pinned files, explicit
+preparation consent, revision/content guards and parent-death/Stop contracts keep
+inference offline and independent of native GPU models.
+[Lifecycle](plans/memory-embeddings-readiness.md).
+
 Permanent Library deletion uses an explicitly approved container-side
 `artifact_purge` Run. It removes only app-owned bytes and preserves provenance
 tombstones; native Host Runner authority is not expanded. The exact selection,
