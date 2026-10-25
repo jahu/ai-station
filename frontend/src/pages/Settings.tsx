@@ -5,7 +5,6 @@ import { api } from "../api";
 import { ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import ChatProviders from "./ChatProviders";
-import ChatModeSwitch, { type ChatMode } from "./ChatModeSwitch";
 import Connectors from "./Connectors";
 import Maintenance from "./Maintenance";
 import OperatorAccess from "./OperatorAccess";
@@ -22,7 +21,7 @@ const sections = [
 ] as const;
 type Preferences = {
   version: number;
-  mode: ChatMode;
+  mode: "assistant" | "chat" | "work";
   provider: string;
   model: string;
   send_key: "enter" | "ctrl-enter";
@@ -79,7 +78,7 @@ function GeneralSettings() {
       api<Preferences>("/chat/preferences", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify({ ...values, mode: "assistant" }),
       }),
     onSuccess: (result) => {
       cache.setQueryData(["chat-preferences"], result);
@@ -93,8 +92,8 @@ function GeneralSettings() {
         <h2>New conversations</h2>
       </div>
       <p className="muted">
-        Model and mode apply to new conversations. The send shortcut applies to
-        every chat composer.
+        The default model applies to new conversations. The send shortcut
+        applies to every chat composer.
       </p>
       <ErrorNotice error={preferences.error ?? save.error} />
       {preferences.isPending ? (
@@ -107,14 +106,6 @@ function GeneralSettings() {
               if (!busy) save.mutate();
             }}
           >
-            <div>
-              <span className="settings-label">Default mode</span>
-              <ChatModeSwitch
-                value={values.mode}
-                disabled={busy}
-                onChange={(mode) => setValues({ ...values, mode })}
-              />
-            </div>
             <div>
               <span className="settings-label">Default model</span>
               <UnifiedModelPicker

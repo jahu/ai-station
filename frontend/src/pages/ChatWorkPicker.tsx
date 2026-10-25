@@ -109,12 +109,13 @@ export default function ChatWorkPicker({
               disabled={disabled}
               onClick={() => select.mutate(null)}
             >
-              General Work
+              General conversation
             </Button>
           </div>
           <p className="muted">
             Optionally continue a project task with its files and agent. You can
-            use Work without selecting one. Selection does not start work.
+            continue the conversation without selecting one. Selection does not
+            start work.
           </p>
           <input
             aria-label="Find coding task or project"
@@ -156,7 +157,7 @@ export default function ChatWorkPicker({
           </div>
           {tasks.data?.length === 0 && (
             <p className="muted">
-              No matching project tasks. You can use Work without choosing a
+              No matching project tasks. You can continue without choosing a
               project.
             </p>
           )}

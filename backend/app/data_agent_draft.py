@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from app.agent_schema import AgentSettings
+from app.chat_policy import agent_draft_policy
 from app.conversation_data_schema import DataScope
 from app.models import Artifact, Message, Run
 
@@ -237,7 +238,7 @@ def verified(session, draft):
         or draft.agent_id is not None
         or draft.parameters.get("instruction", "").strip() != parent.parameters["content"].strip()
         or parent.conversation_id != draft.conversation_id
-        or parent.parameters.get("policy_mode") != "work"
+        or not agent_draft_policy(parent.parameters)
         or parent.parameters.get("action") != "agent.create"
         or parent.parameters.get("data_agent_source") != source
         or current is None

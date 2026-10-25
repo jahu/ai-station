@@ -1,8 +1,8 @@
 # Operator QA catalog and workbook
 
-The versioned [catalog](cases.json) contains 150 Polish operator cases across 21
+The versioned [catalog](cases.json) contains 155 Polish operator cases across 21
 areas, including all four permanent-deletion journeys and real semantic-memory
-acceptance. It is a test definition, not evidence that the product is complete.
+acceptance and the single assistant conversation. It is a test definition, not evidence that the product is complete.
 Follow the [handoff plan](../plans/operator-qa-handoff.md): the operator will test
 after implementation and internal qualification, not while features are unfinished.
 

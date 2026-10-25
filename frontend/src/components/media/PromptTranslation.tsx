@@ -175,9 +175,11 @@ export function PromptReceipt({
 export default function PromptTranslation({
   run,
   onRecover,
+  onRetried,
 }: {
   run: Run;
   onRecover?: (action: TranslationRecovery) => Promise<unknown>;
+  onRetried?: (run: Run) => void;
 }) {
   const receipt = run.metadata?.prompt_translation as
     TranslationReceipt | undefined;
@@ -230,6 +232,10 @@ export default function PromptTranslation({
       if (!next) return;
       cache.setQueryData(["run", next.id], next);
       void cache.invalidateQueries({ queryKey: ["runs"] });
+      if (onRetried) {
+        onRetried(next);
+        return;
+      }
       setSearch((current) => {
         const params = new URLSearchParams(current);
         params.set("run", next.id);
@@ -248,6 +254,7 @@ export default function PromptTranslation({
         }),
       }),
     onSuccess: () => {
+      void cache.invalidateQueries({ queryKey: ["conversation"] });
       void cache.invalidateQueries({ queryKey: ["run", run.id] });
       void cache.invalidateQueries({ queryKey: ["run", review.data!.id] });
     },

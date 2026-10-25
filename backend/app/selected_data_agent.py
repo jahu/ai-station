@@ -7,6 +7,7 @@ from fastapi import HTTPException
 from pydantic import Field
 
 from app.agent_schema import AgentSettings
+from app.chat_policy import agent_draft_policy
 from app.conversation_data_schema import DataScope
 from app.data_agent_draft import RepeatProposal
 from app.models import Artifact, ChatWorkContext, Message, Run
@@ -80,13 +81,13 @@ def prepare(session, conversation, body, mode):
     if body.data is None or not (body.action == "agent.create" or requested(body.content)):
         return body, None
     if mode not in {"work", "orchestrator"}:
-        raise HTTPException(422, "Switch to Work to create an agent with these selected inputs")
+        raise HTTPException(422, "Agent creation is not authorized for this explicit legacy request")
     from app.chat_providers import BUILTIN_KEY, get_provider
     from app.data_agent_draft import requested as repeated_analysis
 
     binding = session.get(ChatWorkContext, conversation.id)
     if binding is not None and binding.task_id:
-        raise HTTPException(422, "Choose General Work to create an agent with selected inputs")
+        raise HTTPException(422, "Leave the selected project task before creating an agent with these inputs")
     if (
         conversation.provider != BUILTIN_KEY
         or get_provider(session, conversation.provider).location != "local"
@@ -162,7 +163,7 @@ def verified(session, draft):
         or draft.parameters.get("instruction", "").strip() != parent.parameters["content"].strip()
         or draft.parameters.get("model") != parent.parameters.get("model")
         or parent.conversation_id != draft.conversation_id
-        or parent.parameters.get("policy_mode") != "work"
+        or not agent_draft_policy(parent.parameters)
         or parent.parameters.get("action") != "agent.create"
         or parent.parameters.get("selected_data_agent") != source
         or current is None

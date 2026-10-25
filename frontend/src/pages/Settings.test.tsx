@@ -102,7 +102,7 @@ it("opens dedicated General settings without launching work", async () => {
 it("saves typed defaults and send preference without submitting a Run", async () => {
   const writes = mount("/settings/general");
   await screen.findByRole("button", { name: "Save preferences" });
-  fireEvent.click(screen.getByRole("button", { name: "Work" }));
+  expect(screen.queryByRole("group", { name: "Conversation mode" })).toBeNull();
   fireEvent.change(screen.getByLabelText("Send message with"), {
     target: { value: "ctrl-enter" },
   });
@@ -113,18 +113,24 @@ it("saves typed defaults and send preference without submitting a Run", async ()
       path: "/api/chat/preferences",
       body: {
         version: 3,
-        mode: "work",
+        mode: "assistant",
         provider: provider.key,
         model: "test-model",
         send_key: "ctrl-enter",
       },
     },
   ]);
-  fireEvent.click(screen.getByRole("button", { name: "Chat" }));
+  fireEvent.change(screen.getByLabelText("Send message with"), {
+    target: { value: "enter" },
+  });
   expect(screen.queryByText("Preferences saved")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Save preferences" }));
   await vi.waitFor(() => expect(writes).toHaveLength(2));
-  expect(writes[1].body).toMatchObject({ version: 4, mode: "chat" });
+  expect(writes[1].body).toMatchObject({
+    version: 4,
+    mode: "assistant",
+    send_key: "enter",
+  });
 });
 
 it("redirects the existing System maintenance bookmark to its canonical Settings page", async () => {

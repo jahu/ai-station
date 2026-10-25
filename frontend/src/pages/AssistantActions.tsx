@@ -6,6 +6,12 @@ import AgentCodeResearch from "./AgentCodeResearch";
 import type { ConversationDataScope } from "./useDataInputs";
 import RecordingButton from "../components/media/RecordingButton";
 import MusicScope from "./MusicScope";
+import PromptTranslation from "../components/media/PromptTranslation";
+import { randomId } from "../lib/random-id";
+import {
+  PromptTranslationControl,
+  type TranslationOptions,
+} from "../components/media/PromptTranslation";
 import type { ConversationMusicOptions as MusicScopeOptions } from "./music-scope";
 import { TRANSCRIPTION_AUDIO_ACCEPT } from "../recording-formats";
 import { TranscriptResult } from "./Transcription";
@@ -81,6 +87,7 @@ export type LoadScope = {
 export type StopScope = { instance_id: string };
 export type GithubScope = { connector_id: string; expected_updated_at: string };
 export type AssistantOptions = {
+  media_translation?: TranslationOptions;
   data?: ConversationDataScope | null;
   music?: MusicScopeOptions | null;
   github?: GithubScope | null;
@@ -102,6 +109,8 @@ export type AssistantOptions = {
 };
 type Project = { id: string; name: string; updated_at: string };
 type TaskStep = {
+  superseded?: boolean;
+  media_controls?: boolean;
   id: string;
   capability: string;
   status: string;
@@ -110,6 +119,8 @@ type TaskStep = {
   location: string;
 };
 export type ActionResult = {
+  media_runs?: Run[];
+  media_retry_errors?: string[];
   data_runs?: Run[];
   data_model?: string | null;
   github_snapshots?: GithubSnapshot[];
@@ -135,6 +146,7 @@ const IMAGE_STEPS = new Set([
 const RETRYABLE = new Set(["failed", "canceled", "interrupted"]);
 
 function imageRetryable(step: TaskStep, steps: TaskStep[]) {
+  if (step.superseded || step.media_controls) return false;
   if (!IMAGE_STEPS.has(step.capability) || !RETRYABLE.has(step.status))
     return false;
   const index = steps.findIndex((row) => row.id === step.id);
@@ -151,9 +163,22 @@ function ImageStepRetry({
   onQueued?: (result: Run) => void;
 }) {
   const cache = useQueryClient();
+  const [requestId] = useState(randomId);
   const retry = useMutation({
     mutationFn: () =>
-      api<Run>(`/images/runs/${step.id}/retry`, { method: "POST" }),
+      api<Run>(
+        IMAGE_STEPS.has(step.capability)
+          ? `/images/runs/${step.id}/retry`
+          : `/generation/media/${step.id}/retry`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            translation: "reuse",
+            client_request_id: requestId,
+          }),
+        },
+      ),
     onSuccess: (next) => {
       cache.setQueryData(["run", next.id], next);
       void cache.invalidateQueries({ queryKey: ["conversation"] });
@@ -182,6 +207,53 @@ function ImageStepRetry({
   );
 }
 
+function ConversationMediaPreparation({
+  run,
+  busy,
+  onQueued,
+}: {
+  run: Run;
+  busy?: boolean;
+  onQueued?: (run: Run) => void;
+}) {
+  const cache = useQueryClient();
+  const receipt = run.metadata?.prompt_translation as
+    { status?: string } | undefined;
+  if (!receipt && !RETRYABLE.has(run.status)) return null;
+  return (
+    <div
+      className="conversation-media-preparation"
+      aria-label="Media preparation"
+    >
+      {receipt && (
+        <PromptTranslation
+          run={run}
+          onRetried={(next) => {
+            cache.setQueryData(["run", next.id], next);
+            void cache.invalidateQueries({ queryKey: ["conversation"] });
+            onQueued?.(next);
+          }}
+        />
+      )}
+      {RETRYABLE.has(run.status) &&
+        (!receipt || ["ready", "original"].includes(receipt.status ?? "")) && (
+          <ImageStepRetry
+            step={{
+              id: run.id,
+              capability: run.capability,
+              status: run.status,
+              summary: run.summary,
+              error_message: run.error_message,
+              location: "local",
+            }}
+            busy={busy}
+            onQueued={onQueued}
+          />
+        )}
+    </div>
+  );
+}
+
 function TaskSteps({
   steps,
   busy,
@@ -197,6 +269,7 @@ function TaskSteps({
         <div className="content-panel" key={step.id}>
           <Link to={`/runs/${step.id}`}>{step.capability}</Link>{" "}
           <Badge status={step.status} />{" "}
+          {step.superseded && <span className="chip">Earlier attempt</span>}
           <span className="chip">{step.location.toUpperCase()}</span>
           {step.error_message && <p className="notice">{step.error_message}</p>}
           {imageRetryable(step, steps) && (
@@ -271,6 +344,19 @@ export function AssistantResults({
         <strong>Task</strong>
         {result.task_status && <Badge status={result.task_status} />}
       </div>
+      {result.media_retry_errors?.map((error, index) => (
+        <p role="alert" className="notice" key={index}>
+          {error}
+        </p>
+      ))}
+      {result.media_runs?.map((run) => (
+        <ConversationMediaPreparation
+          key={run.id}
+          run={run}
+          busy={busy}
+          onQueued={onQueued}
+        />
+      ))}
       {result.data_runs?.length ? (
         <>
           <AgentCodeResearch
@@ -377,7 +463,9 @@ export function AssistantResults({
       ) : null}
       {result.data_runs?.length ||
       (result.steps.some((step) => step.capability === "chat.vision") &&
-        result.steps.every((step) => step.status === "succeeded")) ? (
+        result.steps.every(
+          (step) => step.superseded || step.status === "succeeded",
+        )) ? (
         <details>
           <summary>Execution details</summary>
           {executionNote && <p className="muted">{executionNote}</p>}
@@ -745,6 +833,7 @@ export default function AssistantActions({
   allowWork?: boolean;
   description?: string;
 }) {
+  const [mediaLanguageOpen, setMediaLanguageOpen] = useState(false);
   const repositories = useQuery({
     queryKey: ["connectors"],
     queryFn: () =>
@@ -1214,6 +1303,42 @@ export default function AssistantActions({
             onUploading={onUploading}
             onChange={(data) => onChange({ ...value, data })}
           />
+        )}
+        {(["auto", "video.generate", "audio.music"].includes(value.action) ||
+          value.action.startsWith("image.")) && (
+          <details
+            className="conversation-media-language"
+            onToggle={(event) => setMediaLanguageOpen(event.currentTarget.open)}
+          >
+            <summary>Media prompt language</summary>
+            <p className="muted">
+              Applies when creating images, video or music. Replies, speech and
+              lyrics keep their original language.
+            </p>
+            {mediaLanguageOpen && (
+              <PromptTranslationControl
+                value={
+                  value.media_translation ?? {
+                    mode: "inherit",
+                    review: false,
+                    protected_terms: [],
+                  }
+                }
+                disabled={busy}
+                onChange={(media_translation) =>
+                  onChange({
+                    ...value,
+                    media_translation:
+                      media_translation.mode !== "inherit" ||
+                      media_translation.review ||
+                      media_translation.protected_terms.length
+                        ? media_translation
+                        : undefined,
+                  })
+                }
+              />
+            )}
+          </details>
         )}
         {value.audio_artifact_id &&
           value.image_artifact_ids.length === 1 &&

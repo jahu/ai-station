@@ -102,12 +102,12 @@ it.each([
       body: expect.objectContaining({
         content: "Explain this clearly",
         web_search: { enabled, query: "" },
-        execution_mode: mode,
+        execution_mode: "assistant",
         client_request_id: expect.any(String),
         selection: {
           provider: builtin.key,
           model: "test-model",
-          execution_mode: mode,
+          execution_mode: "assistant",
         },
       }),
     });
@@ -235,7 +235,7 @@ it.each([undefined, 1, 2, 3, 4, 5, 6])(
       </QueryClientProvider>,
     );
     const inspect = await screen.findByRole("link", {
-      name: "Inspect run Local AI asst-two",
+      name: "Inspect run AI Station asst-two",
     });
     expect(
       screen.getByText(
@@ -270,7 +270,9 @@ it.each([undefined, 1, 2, 3, 4, 5, 6])(
     if ((inputCount ?? 0) >= 3)
       expect(screen.queryByAltText("Reference 1: landscape.png")).toBeNull();
     else expect(screen.getByAltText("Reference 1: landscape.png")).toBeTruthy();
-    const copy = screen.getByRole("button", { name: "Copy Local AI asst-two" });
+    const copy = screen.getByRole("button", {
+      name: "Copy AI Station asst-two",
+    });
     const articles = screen.getAllByRole("article");
     expect(screen.getByRole("region", { name: "Messages" })).toBeTruthy();
     expect(articles[0].tabIndex).toBe(-1);
@@ -472,7 +474,7 @@ it("moves through conversation history with arrow keys", async () => {
   expect(first.tabIndex).toBe(0);
 });
 
-it("overrides this turn without sending or rewriting conversation settings", async () => {
+it("offers applicable actions without a mode switch or rewriting conversation settings", async () => {
   const conversation = {
     id: "conv",
     title: "Planning",
@@ -538,17 +540,12 @@ it("overrides this turn without sending or rewriting conversation settings", asy
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  const work = await screen.findByRole("button", { name: "Work" });
-  const action = screen.getByRole("combobox", { name: "Action" });
-  expect(action.querySelector('option[value="coding.local"]')).toBeNull();
-  fireEvent.click(work);
-  expect(work.getAttribute("aria-pressed")).toBe("true");
-  expect(
-    screen.queryByText(/New projects include public package preparation/),
-  ).toBeNull();
+  const action = await screen.findByRole("combobox", { name: "Action" });
+  expect(screen.queryByRole("group", { name: "Conversation mode" })).toBeNull();
   expect(action.querySelector('option[value="coding.local"]')).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "Chat" }));
-  expect(action.querySelector('option[value="coding.local"]')).toBeNull();
+  fireEvent.change(action, { target: { value: "coding.local" } });
+  expect(fetch.mock.calls.every(([, options]) => !options?.method)).toBe(true);
+  expect(conversation.execution_mode).toBe("local");
 });
 
 it.each(["image.generate", "image.generate_video"])(
@@ -750,7 +747,7 @@ it("continues coding a created project with local scope without starting work on
   expect(writes[0].body).toEqual(
     expect.objectContaining({
       action: "coding.local",
-      execution_mode: "work",
+      execution_mode: "assistant",
       coding: expect.objectContaining({
         project_id: project.id,
         expected_updated_at: project.updated_at,
@@ -931,7 +928,7 @@ it.each(["wan_video", "project_setup", "orchestrator", "local_chat"])(
   },
 );
 
-it("keeps project automation out of a Chat follow-up", async () => {
+it("keeps project automation out of an ordinary assistant follow-up", async () => {
   const writes: Record<string, unknown>[] = [];
   const conversation = {
     id: "plain",
@@ -995,7 +992,7 @@ it("keeps project automation out of a Chat follow-up", async () => {
   );
   fireEvent.click(screen.getByRole("button", { name: "Send" }));
   await vi.waitFor(() => expect(writes).toHaveLength(1));
-  expect(writes[0].execution_mode).toBe("chat");
+  expect(writes[0].execution_mode).toBe("assistant");
   expect(writes[0].project_defaults).toBeUndefined();
   expect(
     screen.queryByText(/New projects include public package preparation/),

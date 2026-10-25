@@ -81,7 +81,7 @@ function mount(external = false, source = "source") {
   return { writes, accepted };
 }
 
-it("opens a scoped Work draft without mutation and first Send keeps the selected task/model", async () => {
+it("opens a scoped project draft in the unified conversation without mutation and first Send keeps the selected task/model", async () => {
   const state = mount();
   await screen.findByText("Same branch and workspace", { exact: false });
   expect(state.writes).toEqual([]);
@@ -89,7 +89,7 @@ it("opens a scoped Work draft without mutation and first Send keeps the selected
     screen.queryByText(/New projects include public package preparation/),
   ).toBeNull();
   expect(screen.queryByText("Attach files & choose tools")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Work" }));
+  expect(screen.queryByRole("group", { name: "Conversation mode" })).toBeNull();
   expect(
     screen.getByRole("region", { name: "Selected coding task" }),
   ).toBeTruthy();
@@ -101,7 +101,7 @@ it("opens a scoped Work draft without mutation and first Send keeps the selected
   expect(state.writes).toHaveLength(1);
   expect(state.writes[0]).toMatchObject({
     selection: {
-      execution_mode: "work",
+      execution_mode: "assistant",
       provider: provider.key,
       model: "Coding model",
       title: "Build a site",
@@ -137,12 +137,12 @@ it("requires new explicit sharing consent for a Cursor Work draft", async () => 
   });
 });
 
-it("General Work clears the coding scope while preserving the unsent prompt", async () => {
+it("General conversation clears the coding scope while preserving the unsent prompt", async () => {
   const state = mount();
   await screen.findByText("Same branch and workspace", { exact: false });
   const field = screen.getByRole("textbox", { name: "Message" });
   fireEvent.change(field, { target: { value: "Explain this architecture" } });
-  fireEvent.click(screen.getByRole("button", { name: "General Work" }));
+  fireEvent.click(screen.getByRole("button", { name: "General conversation" }));
   expect((field as HTMLTextAreaElement).value).toBe(
     "Explain this architecture",
   );

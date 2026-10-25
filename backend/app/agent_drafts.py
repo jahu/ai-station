@@ -19,6 +19,7 @@ from app.agent_media_schema import AgentMediaScope, fixed_media_only
 from app.agent_schema import AgentSettings
 from app.agent_tools import AGENT_TOOLS, agent_tool
 from app.artifacts import register_file
+from app.chat_policy import agent_draft_policy
 from app.chat_providers import BUILTIN_KEY, completion_stream, snapshot_provider
 from app.chat_reasoning import CompletionFinished
 from app.db import session_scope, utcnow
@@ -217,9 +218,11 @@ def enqueue_for_task(session, task, instruction, model, snapshot, *, parent=None
         if (
             parent.task_id != task.id
             or parent.executor_type != "orchestrator"
-            or parent.parameters.get("policy_mode") != "work"
+            or not agent_draft_policy(parent.parameters)
         ):
-            raise ValueError("AI-assisted agent preparation requires an originating Work request")
+            raise ValueError(
+                "AI-assisted agent preparation requires an authorized originating assistant request"
+            )
     schedule_timezone = instruction_timezone(instruction, schedule_timezone)
     lock_task(session, task)
     key = "agent-draft:" + (parent.id if parent else task.id)
@@ -391,7 +394,7 @@ class AgentDraftExecutor:
                     or parent.executor_type != "orchestrator"
                     or parent.conversation_id != run.conversation_id
                     or parent.status != "succeeded"
-                    or parent.parameters.get("policy_mode") != "work"
+                    or not agent_draft_policy(parent.parameters)
                     or parent.metadata_json.get("plan", {}).get("action") != "agent.create"
                 ):
                     raise ValueError("Agent draft has no valid originating conversation request")

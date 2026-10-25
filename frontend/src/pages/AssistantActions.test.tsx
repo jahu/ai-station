@@ -10,6 +10,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { useState } from "react";
+import type { Run } from "../api";
 import AssistantActions, {
   AssistantResults,
   type AssistantOptions,
@@ -149,6 +150,105 @@ it("retries a failed image step in the conversation without opening the inspecto
   );
   expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
   expect(screen.queryByRole("link", { name: /Images/ })).toBeNull();
+});
+
+it("retains an optional media-language override when the tool panel is reopened without creating work", async () => {
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ enabled: true }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  function Composer() {
+    const [value, setValue] = useState(emptyOptions);
+    return (
+      <>
+        <AssistantActions
+          value={value}
+          onChange={setValue}
+          busy={false}
+          onUploading={() => {}}
+        />
+        <output aria-label="Turn settings">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter>
+        <Composer />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  expect(
+    screen.queryByRole("combobox", { name: "Prompt language" }),
+  ).toBeNull();
+  const panel = screen.getByText("Media prompt language", {
+    selector: "summary",
+  }).parentElement!;
+  fireEvent.click(panel.querySelector("summary")!);
+  const select = await screen.findByRole("combobox", {
+    name: "Prompt language",
+  });
+  fireEvent.change(select, { target: { value: "off" } });
+  expect(
+    JSON.parse(screen.getByLabelText("Turn settings").textContent!)
+      .media_translation.mode,
+  ).toBe("off");
+  fireEvent.click(panel.querySelector("summary")!);
+  fireEvent.click(panel.querySelector("summary")!);
+  expect(
+    (
+      (await screen.findByRole("combobox", {
+        name: "Prompt language",
+      })) as HTMLSelectElement
+    ).value,
+  ).toBe("off");
+  expect(
+    fetch.mock.calls.every((call: unknown[]) => call.length < 2 || !call[1]),
+  ).toBe(true);
+});
+
+it("offers recovery only for the verified current media attempt and keeps failed history inspectable", async () => {
+  const queued = vi.fn();
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ id: "next", status: "queued" }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  const source = failedImageResult();
+  const current = {
+    id: "current",
+    capability: "image.recompose",
+    status: "failed",
+    summary: "",
+    error_message: "GPU busy",
+    metadata: {},
+    executor_type: "photo_pipe",
+  } as Run;
+  mountResults(
+    {
+      ...source,
+      steps: source.steps.map((step) => ({
+        ...step,
+        media_controls: true,
+        superseded: step.id === "image",
+      })),
+      media_runs: [current],
+    },
+    queued,
+  );
+  expect(screen.getByText("Earlier attempt")).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Retry as a new run image" }),
+  ).toBeNull();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Retry as a new run current" }),
+  );
+  await waitFor(() => expect(queued).toHaveBeenCalledOnce());
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/images/runs/current/retry",
+    expect.objectContaining({ method: "POST" }),
+  );
 });
 
 it("does not retry audio, avatars, or an image step that already has a later image run", () => {

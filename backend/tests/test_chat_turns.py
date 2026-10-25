@@ -100,7 +100,7 @@ def test_chat_rejects_work_actions_before_creating_domain_rows(local, action):
     with TestClient(app) as client:
         result = client.post("/api/chat/turns", json=turn(action=action))
         assert result.status_code == 422
-        assert "Switch to Work" in result.text
+        assert "does not allow" in result.text
         assert all(n == 0 for n in counts().values())
 
 
@@ -110,7 +110,7 @@ def test_chat_natural_project_instruction_cannot_publish_project(local):
         with session_factory()() as session:
             tick(session, "policy-test")
         detail = client.get(f"/api/chat/conversations/{receipt['conversation_id']}").json()
-        assert "Switch to Work" in detail["messages"][-1]["content"]
+        assert "restricted to conversation" in detail["messages"][-1]["content"]
         assert counts()["Project"] == 0
         assert counts()["Run"] == 1
         assert "manage_agents" not in receipt["run"]["effective_permissions"]

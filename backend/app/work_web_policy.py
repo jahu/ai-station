@@ -16,7 +16,7 @@ def available_for_work(params):
     mode = params.get("policy_mode")
     if mode is None:
         mode = "work" if params.get("execution_mode") in {"work", "orchestrator"} else "chat"
-    return mode == "work" and default_web(params.get("web_search") or {})
+    return mode in {"work", "assistant"} and default_web(params.get("web_search") or {})
 
 
 def prepare_turn(body, mode):

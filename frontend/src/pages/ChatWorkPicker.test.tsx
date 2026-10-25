@@ -122,7 +122,7 @@ it("preserves the picker after a stale-selection conflict without granting execu
   expect(screen.getByText("Continue an existing workspace")).toBeTruthy();
 });
 
-it("explicitly selects General Work and searches task/project names without a Run", async () => {
+it("explicitly selects General conversation and searches task/project names without a Run", async () => {
   const state = mount();
   fireEvent.click(
     screen.getByRole("button", { name: "Continue a project task" }),
@@ -135,7 +135,7 @@ it("explicitly selects General Work and searches task/project names without a Ru
   await waitFor(() =>
     expect(state.requests.some((r) => r.url.includes("q=Website"))).toBe(true),
   );
-  fireEvent.click(screen.getByRole("button", { name: "General Work" }));
+  fireEvent.click(screen.getByRole("button", { name: "General conversation" }));
   await waitFor(() => expect(state.onSelected).toHaveBeenCalledOnce());
   expect(state.requests.filter((r) => r.method)[0].body).toEqual({
     task_id: null,

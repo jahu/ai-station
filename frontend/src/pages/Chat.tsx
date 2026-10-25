@@ -36,7 +36,6 @@ import { useThinking } from "./chat-thinking";
 import NewChat from "./NewChat";
 import ConversationComposer from "./ConversationComposer";
 import { musicScopeReady } from "./music-scope";
-import ChatModeSwitch from "./ChatModeSwitch";
 import type { ChatProviderInfo } from "./ChatProviders";
 import { acceptsLocalAttachments, emptyOptions } from "./assistant-options";
 import AssistantActions, {
@@ -85,15 +84,11 @@ import { Button } from "../components/ui/button";
 import { time } from "../lib/utils";
 import { useListKeyboard } from "./useListKeyboard";
 import { visionReplies, canRegenerateResponse } from "./vision-replies";
-import {
-  ConversationModeChoiceList,
-  ConversationProviderChoiceList,
-  type SavedChatMode,
-} from "./ChatSettingsChoiceLists";
+import { ConversationProviderChoiceList } from "./ChatSettingsChoiceLists";
 
 type Conversation = {
   id: string;
-  execution_mode?: "local" | "orchestrator" | "chat" | "work";
+  execution_mode?: "local" | "orchestrator" | "chat" | "work" | "assistant";
   settings_version?: number;
   archived_at?: string | null;
   title: string;
@@ -544,12 +539,6 @@ function SettingsForm({
 }) {
   const [model, setModel] = useState(defaults.model);
   const [modelPending, setModelPending] = useState(false);
-  const [mode, setMode] = useState<SavedChatMode>(
-    defaults.execution_mode === "work" ||
-      defaults.execution_mode === "orchestrator"
-      ? "orchestrator"
-      : "local",
-  );
   const localBuiltin = provider?.builtin && provider.location === "local";
   return (
     <form
@@ -559,7 +548,7 @@ function SettingsForm({
         if (pending || modelPending || !model) return;
         const fields = new FormData(e.currentTarget);
         submit({
-          execution_mode: mode,
+          execution_mode: "assistant",
           title: fields.get("title"),
           provider: defaults.provider,
           model,
@@ -600,14 +589,6 @@ function SettingsForm({
         )}
         <details className="chat-advanced-settings">
           <summary>Advanced settings</summary>
-          <div>
-            <span>Mode</span>
-            <ConversationModeChoiceList
-              value={mode}
-              disabled={pending}
-              onChange={setMode}
-            />
-          </div>
           <label>
             Conversation title
             <input
@@ -1201,18 +1182,7 @@ function ConversationView({
   const dataReady = options.action !== "data.analyze" || dataInputs.ready;
   const [projectSelectionVersion, setProjectSelectionVersion] = useState(0);
   const [webQuery, setWebQuery] = useState("");
-  const orchestrator = ["work", "orchestrator"].includes(
-    conversation.execution_mode ?? "local",
-  );
-  const turnChoiceKey = "ai-station:turn-mode:" + conversation.id;
-  const [turnMode, setTurnMode] = useState<"chat" | "work">(() => {
-    const saved = readWorkChoice(turnChoiceKey);
-    return saved === "chat" || saved === "work"
-      ? saved
-      : orchestrator
-        ? "work"
-        : "chat";
-  });
+  const orchestrator = true;
   const assistantTurn = true;
   const pendingRequest = useRef<{ body: string; id: string } | null>(null);
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
@@ -1226,7 +1196,6 @@ function ConversationView({
   const context = conversation.work_context;
   const continuing =
     !!context &&
-    turnMode === "work" &&
     generalTask !== context.task_id &&
     options.action === "auto" &&
     !options.data;
@@ -1303,8 +1272,7 @@ function ConversationView({
               : !!draft.trim() && musicScopeReady(options, draft);
   const thinking = useThinking(
     conversation.model,
-    turnMode === "chat" &&
-      ["auto", "chat"].includes(options.action) &&
+    ["auto", "chat"].includes(options.action) &&
       !options.audio_artifact_id &&
       !options.image_artifact_ids.length &&
       !attachments.some((item) => item.kind === "image"),
@@ -1332,10 +1300,8 @@ function ConversationView({
           ? { expected_provider_version: selected.data.updated_at }
           : {}),
         attachments,
-        execution_mode: turnMode,
-        ...(turnMode === "work"
-          ? { schedule_timezone: browserTimezone() }
-          : {}),
+        execution_mode: "assistant",
+        schedule_timezone: browserTimezone(),
         ...(continuing && context
           ? {
               continuation: {
@@ -1351,7 +1317,9 @@ function ConversationView({
           ? { reasoning: { enabled: true, budget: 256 } }
           : {}),
         ...(assistantTurn ? options : {}),
-        ...(turnMode === "work" && !options.data
+        ...(["project.create", "project.create_code"].includes(
+          options.action,
+        ) && !options.data
           ? {
               project_defaults: {
                 auto_install_dependencies: true,
@@ -1516,7 +1484,7 @@ function ConversationView({
           onChange={thinking.onChange}
         />
       )}
-      {turnMode === "work" && (
+      {
         <ChatWorkPicker
           conversationId={conversation.id}
           settingsVersion={conversation.settings_version ?? 1}
@@ -1534,8 +1502,8 @@ function ConversationView({
             }));
           }}
         />
-      )}
-      {context && turnMode === "work" && (
+      }
+      {context && (
         <section className="work-context-card" aria-label="Current coding task">
           <div className="row spread">
             <div>
@@ -1543,7 +1511,7 @@ function ConversationView({
               <p className="muted">
                 {context.executor === "local" ? "Local AI" : context.executor} ·{" "}
                 {context.model_label || context.model || "Provider default"} ·{" "}
-                {continuing ? "Continuing this task" : "General Work"}
+                {continuing ? "Continuing this task" : "General conversation"}
               </p>
             </div>
             <div className="row">
@@ -1560,7 +1528,7 @@ function ConversationView({
               >
                 {generalTask === context.task_id
                   ? "Continue this task"
-                  : "Use general Work"}
+                  : "Leave this task"}
               </Button>
             </div>
           </div>
@@ -1720,7 +1688,6 @@ function ConversationView({
             ? undefined
             : (imageId, url) => {
                 pageVisionWebPreference.current ??= webEnabled;
-                setTurnMode("chat");
                 setWebEnabled(false);
                 web.setRenderPages(false);
                 setOptions({
@@ -1745,7 +1712,6 @@ function ConversationView({
           conversation.provider_location !== "external"
             ? (project) => {
                 setProjectSelectionVersion((current) => current + 1);
-                setTurnMode("work");
                 setWebEnabled(false);
                 void cache.invalidateQueries({ queryKey: ["coding-projects"] });
                 void cache.invalidateQueries({ queryKey: ["projects"] });
@@ -1793,7 +1759,7 @@ function ConversationView({
           <ConversationComposer
             toolSelectionKey={toolSelectionKey}
             permissionNote={
-              turnMode === "work" && options.action === "project.create_code"
+              options.action === "project.create_code"
                 ? "New projects include public package preparation and isolated build/test checks. Advanced project settings can override this."
                 : undefined
             }
@@ -1822,7 +1788,7 @@ function ConversationView({
                     description={draft}
                     key={projectSelectionVersion}
                     value={options}
-                    allowWork={turnMode === "work"}
+                    allowWork
                     sources={messages.flatMap(
                       (message) => message.coding_runs ?? [],
                     )}
@@ -1913,15 +1879,6 @@ function ConversationView({
             }
             controls={
               <>
-                <ChatModeSwitch
-                  value={turnMode}
-                  disabled={busy}
-                  onChange={(next) => {
-                    setTurnMode(next);
-                    saveWorkChoice(turnChoiceKey, next);
-                    setOptions(emptyOptions);
-                  }}
-                />
                 {(!assistantTurn ||
                   ([
                     "auto",

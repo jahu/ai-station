@@ -97,21 +97,19 @@ it("omits unsupported thinking controls", async () => {
   expect(screen.queryByRole("switch", { name: "Thinking" })).toBeNull();
 });
 
-it("sends verified thinking only in Chat and preserves draft on switching to Work", async () => {
+it("sends verified thinking in the unified conversation without a mode switch", async () => {
   const writes = mount(true);
   const toggle = await screen.findByRole("switch", { name: "Thinking" });
   fireEvent.click(toggle);
   expect(toggle.getAttribute("aria-checked")).toBe("true");
   const text = screen.getByRole("textbox", { name: "Message" });
   fireEvent.change(text, { target: { value: "Explain this" } });
-  fireEvent.click(screen.getByRole("button", { name: /^Work$/ }));
-  expect(screen.queryByRole("switch", { name: "Thinking" })).toBeNull();
+  expect(screen.queryByRole("group", { name: "Conversation mode" })).toBeNull();
   expect((text as HTMLTextAreaElement).value).toBe("Explain this");
-  fireEvent.click(screen.getByRole("button", { name: /^Chat$/ }));
   fireEvent.click(screen.getByRole("button", { name: "Send message" }));
   await vi.waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]).toMatchObject({
     reasoning: { enabled: true, budget: 256 },
-    execution_mode: "chat",
+    execution_mode: "assistant",
   });
 });
