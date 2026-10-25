@@ -157,10 +157,11 @@ function mount({ available = true, loseAcknowledgement = false } = {}) {
     },
   };
 }
-async function startFile() {
+async function startFile(beforeUpload?: () => void) {
   fireEvent.click(screen.getByRole("button", { name: "Dictation options" }));
   const input = screen.getByLabelText("Dictation audio file");
   await waitFor(() => expect((input as HTMLInputElement).disabled).toBe(false));
+  beforeUpload?.();
   fireEvent.change(input, {
     target: {
       files: [new File(["wav-data"], "dictation.wav", { type: "audio/wav" })],
@@ -280,8 +281,9 @@ it("explains missing local runtime without asking for a microphone or enqueuing"
 it("explains HTTPS on plain HTTP LAN while offering local file transcription", async () => {
   vi.stubGlobal("isSecureContext", false);
   const state = mount();
-  await startFile();
-  expect(screen.getByText(/On this HTTP connection/)).toBeTruthy();
+  await startFile(() =>
+    expect(screen.getByText(/On this HTTP connection/)).toBeTruthy(),
+  );
   await state.completeQueue();
   await state.complete();
   expect(state.send).not.toHaveBeenCalled();

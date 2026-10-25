@@ -5378,6 +5378,16 @@ section:has(> .memory-grid) > .dashboard-note {
   flex-wrap: wrap;
 }
 @media (max-width: 600px) {
+  .chat-main .new-chat .new-chat-footer {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+  .chat-main .new-chat .new-chat-footer > button:last-child {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .chat-main .new-chat .dictation-actions:has(.recording-state) {
+    grid-column: 1 / -1;
+  }
   .dictation-actions
     .recording-control
     > button:first-child:not(:has(.lucide-square)) {
