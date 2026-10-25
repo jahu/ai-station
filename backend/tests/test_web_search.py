@@ -376,7 +376,10 @@ def test_researched_image_does_not_publish_after_failed_or_canceled_brief(failur
             assert closed == [True]
 
 
-def test_search_does_not_silently_override_other_actions(monkeypatch):
+@pytest.mark.parametrize(
+    "scope", [{"enabled": True, "query": "exact public query"}, {"enabled": True, "render_pages": True}]
+)
+def test_search_does_not_silently_override_other_actions(monkeypatch, scope):
     async def search(query):
         raise AssertionError("An unsupported combined action must not search")
 
@@ -385,7 +388,7 @@ def test_search_does_not_silently_override_other_actions(monkeypatch):
         route = conversation(client, "orchestrator")
         client.post(
             route + "/messages",
-            json={"content": "Create an agent that generates images", "web_search": {"enabled": True}},
+            json={"content": "Create an agent that generates images", "web_search": scope},
         )
         step()
         detail = client.get(route).json()
@@ -591,7 +594,9 @@ def test_followup_resolves_subject_before_search_and_never_sends_raw_history(mod
 
     async def stream(self, **params):
         calls.append(params)
-        if params.get("json_output"):
+        if params["messages"][0]["content"].startswith("Route the user's request"):
+            yield '{"action":"chat","reason":"Research the follow-up question."}'
+        elif params.get("json_output"):
             yield '{"query":"' + resolved + '"}'
         else:
             yield "Check the actual sources; motives are not established."

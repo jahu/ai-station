@@ -615,6 +615,9 @@ def submit_message(conversation_id, body, session, *, commit=True):
 
     body, result_reference = resolve_result_reference(session, row, body, mode)
     result_reference = data_reference or result_reference
+    from app.work_web_policy import prepare_turn as prepare_work_web
+
+    body = prepare_work_web(body, mode)
     if mode == "chat":
         validate_chat_scope(body)
     from app.project_reference import resolve_project_reference

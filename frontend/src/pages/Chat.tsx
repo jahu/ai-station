@@ -1230,7 +1230,7 @@ function ConversationView({
     generalTask !== context.task_id &&
     options.action === "auto" &&
     !options.data;
-  const web = useWebSearch(turnMode === "chat" && !attachments.length);
+  const web = useWebSearch(!attachments.length);
   const webEnabled = !continuing && web.enabled;
   const setWebEnabled = web.setEnabled;
   const attachmentUpload = useConversationAttachmentUpload((selection) => {

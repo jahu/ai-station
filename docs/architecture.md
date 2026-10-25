@@ -1,3 +1,9 @@
+In Work, default Web availability no longer consumes action routing. Known
+non-research actions omit that preference before enqueue; ambiguous instructions
+use the existing selected-model planner. Explicit queries/rendering retain their
+scope checks. Planner history uses plain saved user text, excluding expanded
+attachments. [Routing contract](plans/work-default-web-routing.md).
+
 Settings → Access → **Access from anywhere** provides explicit private-access
 installation, Tailscale sign-in/HTTPS approval, an exact private address and owned
 Disable. It uses ordinary Tasks/Runs and an isolated native userspace service;

@@ -113,7 +113,7 @@ export default function NewChat({
   const dataReady = options.action !== "data.analyze" || dataInputs.ready;
   const [attachments, setAttachments] = useState<TextAttachment[]>([]);
   const [uploading, setUploading] = useState(false);
-  const web = useWebSearch(mode === "chat" && !attachments.length);
+  const web = useWebSearch(!attachments.length);
   const webEnabled = !workTaskId && web.enabled;
   const setWebEnabled = web.setEnabled;
   const [webQuery, setWebQuery] = useState("");
