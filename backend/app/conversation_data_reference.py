@@ -33,6 +33,15 @@ def requested(content):
         return False
     prefix = r"^(?:(?:a|teraz|jeszcze|następnie|nastepnie|proszę|prosze|please|now|then|also|and)\s+){0,4}"
     prefix += r"(?:(?:(?:can|could|would) you|(?:czy )?(?:możesz|mozesz))\s+)?"
+    if re.search(
+        prefix
+        + r"(?:update|edit|modify|change|zmień|zmien|edytuj|zaktualizuj)\s+"
+        + r"(?:(?:my|our|the|this|mój|moj|nasz|ten)\s+){0,2}"
+        + r"(?:project|repository|repo|codebase|application|website|projekt\w*|repozytor\w*|aplikacj\w*|stron\w*)\b",
+        text,
+        re.I,
+    ):
+        return False
     operation = r"(?:calculate|compute|sum|average|group|aggregate|analy[sz]e|compare|filter|sort|count|transform|extract|plot|chart|add|append|update|edit|merge|dodaj|uzupełnij|uzupelnij|zmień|zmien|edytuj|połącz|polacz|policz(?:y[ćc])?|oblicz(?:y[ćc])?|przelicz(?:y[ćc])?|zsumuj|por[óo]wnaj|pogrupuj|podziel|wylicz|przeanalizuj|posortuj|wyodr[ęe]bnij|narysuj)\b"
     if re.search(
         prefix
