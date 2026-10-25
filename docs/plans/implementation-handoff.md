@@ -1,3 +1,19 @@
+> PR #425 adds complete-result continuation: Use result file and explicit natural
+> result-file operations consume the preferred inspected CSV/XLSX, in a fresh Task.
+> Original-input references retain their behavior. Result reuse verifies historical
+> owner/report and current output bytes without reopening original inputs/captures.
+> Putting an original input in Trash does not remove a retained usable result.
+> Initial52 publication/creation+20 new Python checks and UI39 focused pass.
+> Full frontend784, exact image/Compose and six compiled desktop/mobile three-turn
+> flows pass on identical production source. All local gates and final release
+> status are recorded in `data/acceptance/result-file-continuations-20261025`;
+> the post-deployment receipt and shared deployment authority determine live state.
+> Native Runner/schema/config/dependencies remain unchanged. Preserve root Memory
+> WIP, operator data/auth and owned model presets. Whole-platform goal remains open.
+> Next: broader practical agent orchestration and remaining delivery, private
+> remote access and recovery acceptance. Older pending/live labels are historical.
+
+
 > PR #424: natural data-file continuations from a completed conversation agent.
 > Exact original inputs, offline captures or complete created CSV/XLSX bind a new
 > ordinary Task/workspace/budget; no agent rerun or research-tool inheritance.

@@ -414,8 +414,17 @@ def test_confirmed_python_failure_repairs_without_repeating_sources_or_capture(d
             jobs[0].parameters["inputs"] == jobs[1].parameters["inputs"]
             and jobs[0].parameters["agent_coding_deadline"] == jobs[1].parameters["agent_coding_deadline"]
         )
+        input_ids = {item["artifact_id"] for item in jobs[0].parameters["inputs"]}
+        inspections = [r for r in rows if r.executor_type == "data_inspection"]
+        source_inspections = [r for r in inspections if r.parameters["input"]["artifact_id"] in input_ids]
+        result_inspections = [r for r in inspections if r not in source_inspections]
+        assert len(source_inspections) == 1 and len(sources["fetch"]) == 1
+        assert len(result_inspections) == 1
+        result = next(r for r in rows if r.metadata_json.get("data_result"))
+        assert result_inspections[0].parent_run_id == result.id
         assert (
-            len([r for r in rows if r.executor_type == "data_inspection"]) == 1 and len(sources["fetch"]) == 1
+            result_inspections[0].parameters["input"]["artifact_id"]
+            in result.metadata_json["data_result"]["result_input_artifact_ids"]
         )
         assert (
             next(r for r in reversed(rows) if r.metadata_json.get("data_result")).metadata_json[

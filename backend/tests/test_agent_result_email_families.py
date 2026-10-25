@@ -57,6 +57,19 @@ def await_message(task_id):
             if receipt:
                 source = db.get(Run, receipt.payload["agent_result"]["source_run_id"])
                 assert source.status == "succeeded"
+                # A verified data result may still have its read-only output
+                # inspection queued. Wait for that stage before handing the
+                # receipt to tests that expect the next claim to be delivery.
+                from app.state import ACTIVE
+
+                if db.scalar(
+                    select(Run.id).where(
+                        Run.task_id == task_id,
+                        Run.executor_type == "data_inspection",
+                        Run.status.in_(ACTIVE),
+                    )
+                ):
+                    continue
                 return receipt.id, receipt.run_id, source.executor_type, receipt.payload
     with session_factory()() as db:
         raise AssertionError(

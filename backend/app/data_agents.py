@@ -130,6 +130,32 @@ def created_input_ids(session, result):
     return ids
 
 
+def result_input_ids(session, result):
+    """Select the complete published output, independently of its original inputs."""
+    from app.python_execution import MAX_INPUT
+
+    data = result.metadata_json.get("data_result") or {}
+    ids = data.get("result_input_artifact_ids")
+    if ids is None and data.get("operation") == "create":
+        return created_input_ids(session, result)
+    workbook = next((item for item in data.get("exports", []) if item.get("filename") == "result.xlsx"), None)
+    expected = workbook["artifact_id"] if workbook else data.get("download_artifact_id")
+    artifact = session.get(Artifact, expected) if expected else None
+    if (
+        result.status != "succeeded"
+        or result.executor_type != "agent_data_result"
+        or ids != [expected]
+        or artifact is None
+        or artifact.run_id != result.id
+        or artifact.trashed_at is not None
+        or not artifact.metadata_json.get("agent_data_export" if workbook else "agent_data_download")
+        or artifact.original_filename != ("result.xlsx" if workbook else "result.csv")
+    ):
+        raise ValueError("Choose an inspected complete file from this result")
+    read_owned_file(artifact.relative_path, artifact.size_bytes, artifact.sha256, limit=MAX_INPUT)
+    return ids
+
+
 def verify_inputs(session, frozen, *, allow_empty=False):
     if allow_empty and frozen == []:
         return []
@@ -856,23 +882,32 @@ class DataResultExecutor:
                 exports.append(
                     {"artifact_id": export.id, "filename": name, "label": label, "mime_type": mime}
                 )
-            created = []
-            if definition.data.operation == "create":
+            created, reusable = [], []
+            workbook = next(
+                (item["artifact_id"] for item in exports if item["filename"] == "result.xlsx"), None
+            )
+            if definition.data.operation == "create" or answer.columns or workbook:
                 from app.data_inputs import enqueue_inspection
 
-                candidates = [
-                    download.id,
-                    *[item["artifact_id"] for item in exports if item["filename"] == "result.xlsx"],
-                ]
+                # Creation keeps its existing inspections; analyses inspect only
+                # the preferred complete output rather than every export.
+                candidates = (
+                    [download.id, *([workbook] if workbook else [])]
+                    if definition.data.operation == "create"
+                    else [workbook or download.id]
+                )
                 for aid in candidates:
                     enqueue_inspection(session, aid, task=run.task, parent_run_id=run.id)
-                created = [candidates[-1]]
+                reusable = [candidates[-1]]
+                if definition.data.operation == "create":
+                    created = reusable
             run.metadata_json = {
                 **run.metadata_json,
                 "data_result": {
                     **answer.model_dump(),
                     **({"operation": "create"} if definition.data.operation == "create" else {}),
                     **({"created_input_artifact_ids": created} if created else {}),
+                    **({"result_input_artifact_ids": reusable} if reusable else {}),
                     "download_artifact_id": download.id,
                     "report_artifact_id": report_file.id,
                     "script_artifact_id": source.metadata_json["script_artifact_id"],

@@ -12,7 +12,7 @@ from app.models import Message, Run
 from app.permissions import require
 
 
-def source_reference(session, user, control):
+def source_reference(session, user, control, *, use_result_file=False):
     from app.conversation_data_reference import quoted_context
 
     if control is None or control.executor_type != "agent_control":
@@ -118,19 +118,25 @@ def source_reference(session, user, control):
     ):
         raise ValueError("The completed Python result is not confirmed")
     saved = verified_result(session, source, root, definition)
-    verify_research(session, workflow, state.get("data_research"), definition, for_execution=False)
-    original = freeze_inputs(
-        session, definition.data.model_dump(mode="json"), research=bool(state.get("data_research"))
-    )
-    if original != state.get("data_inputs"):
-        raise ValueError("The original inputs changed after execution")
+    if not use_result_file:
+        verify_research(session, workflow, state.get("data_research"), definition, for_execution=False)
+        original = freeze_inputs(
+            session, definition.data.model_dump(mode="json"), research=bool(state.get("data_research"))
+        )
+        if original != state.get("data_inputs"):
+            raise ValueError("The original inputs changed after execution")
     executed = execution_inputs(state)
     if source.metadata_json["data_result"].get("input_artifact_ids") != [
         item["artifact_id"] for item in executed
     ]:
         raise ValueError("The report belongs to different original inputs")
     created = definition.data.operation == "create"
-    ids = created_input_ids(session, source) if created else [item["artifact_id"] for item in executed]
+    if use_result_file:
+        from app.data_agents import result_input_ids
+
+        ids = result_input_ids(session, source)
+    else:
+        ids = created_input_ids(session, source) if created else [item["artifact_id"] for item in executed]
     derived = DataScope(
         input_artifact_ids=ids,
         max_repairs=definition.data.max_repairs,
@@ -143,6 +149,7 @@ def source_reference(session, user, control):
     verify_source_files(frozen)
     if (
         not created
+        and not use_result_file
         and [
             {k: v for k, v in item.items() if k not in {"preview_run_id", "preview_artifact_id"}}
             for item in frozen
@@ -161,6 +168,7 @@ def source_reference(session, user, control):
     document_count = len(definition.documents.artifact_ids) if definition.documents and not created else 0
     return {
         "source_kind": "agent_data_inputs",
+        **({"use_result_file": True, "result_run_id": source.id} if use_result_file else {}),
         "control_run_id": control.id,
         "workflow_run_id": root.id,
         "run_id": source.id,
@@ -170,7 +178,7 @@ def source_reference(session, user, control):
         "artifact_ids": ids,
         "filenames": [a.original_filename for a in artifacts],
         "source_file_count": max(len(ids), len(definition.data.input_artifact_ids) + document_count)
-        if not created
+        if not created and not use_result_file
         else len(ids),
         "data_scope": derived.model_dump(mode="json"),
         "data_inputs": frozen,

@@ -106,7 +106,7 @@ it("sends the first prompt without creating an empty conversation", async () => 
   });
 });
 
-it.each([undefined, 1, 2, 3, 4, 5])(
+it.each([undefined, 1, 2, 3, 4, 5, 6])(
   "moves through messages and identifies the resolved input source (%s)",
   async (inputCount) => {
     const conversation = {
@@ -140,6 +140,7 @@ it.each([undefined, 1, 2, 3, 4, 5])(
                 ? []
                 : [{ id: "source-image", name: "landscape.png" }],
             conversation_reference: {
+              use_result_file: inputCount === 6,
               source_kind:
                 (inputCount ?? 0) >= 4
                   ? "agent_data_inputs"
@@ -230,17 +231,19 @@ it.each([undefined, 1, 2, 3, 4, 5])(
     });
     expect(
       screen.getByText(
-        inputCount === 5
-          ? /Using the agent’s captured data/
-          : inputCount === 4
-            ? /Using the agent’s input files/
-            : inputCount === 3
-              ? /Using the analyzed input files · sales.csv/
-              : inputCount
-                ? inputCount === 2
-                  ? /Using the inspected images/
-                  : /Using the inspected image ·/
-                : /Using the previous image result/,
+        inputCount === 6
+          ? /Using the result file/
+          : inputCount === 5
+            ? /Using the agent’s captured data/
+            : inputCount === 4
+              ? /Using the agent’s input files/
+              : inputCount === 3
+                ? /Using the analyzed input files · sales.csv/
+                : inputCount
+                  ? inputCount === 2
+                    ? /Using the inspected images/
+                    : /Using the inspected image ·/
+                  : /Using the previous image result/,
       ),
     ).toBeTruthy();
     expect(screen.getByText(/Using a stored transcript/)).toBeTruthy();

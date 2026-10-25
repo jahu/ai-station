@@ -665,3 +665,74 @@ it.each(["chat", "work"])(
     expect(submitted!.action).toBe("data.analyze");
   },
 );
+
+it.each(["running", "failed", "succeeded"])(
+  "offers the result file only after its inspection completes (%s)",
+  (status) => {
+    const scope = {
+      input_artifact_ids: ["original"],
+      max_repairs: 1,
+      model: "auto",
+      maximum_runtime: 600,
+      research: {
+        search_query: "original public query",
+        fetch_urls: [],
+        read_search_pages: false,
+      },
+      documents: { artifact_ids: ["original-document"] },
+    };
+    const selected = vi.fn();
+    const runs = [
+      {
+        id: "output",
+        task_id: "task",
+        executor_type: "agent_data_result",
+        status: "succeeded",
+        metadata: {
+          data_result: {
+            answer: "Updated table",
+            columns: ["Total"],
+            rows: [["55"]],
+            download_artifact_id: "complete-result",
+            script_artifact_id: "script",
+            input_artifact_ids: ["original"],
+            result_input_artifact_ids: ["complete-result"],
+            attempt: 0,
+          },
+        },
+      },
+      {
+        id: "origin",
+        task_id: "task",
+        executor_type: "orchestrator",
+        status: "succeeded",
+        parameters: { data: scope },
+      },
+    ] as unknown as Run[];
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter>
+          <AssistantResults
+            onData={selected}
+            result={{ steps: [], data_runs: runs, task_status: status }}
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const button = screen.queryByRole("button", { name: "Use result file" });
+    if (status !== "succeeded") {
+      expect(button).toBeNull();
+      return;
+    }
+    expect(button).toBeTruthy();
+    fireEvent.click(button!);
+    expect(selected).toHaveBeenCalledExactlyOnceWith({
+      input_artifact_ids: ["complete-result"],
+      max_repairs: 1,
+      model: "auto",
+      maximum_runtime: 600,
+    });
+    expect(scope.input_artifact_ids).toEqual(["original"]);
+    expect(scope.documents.artifact_ids).toEqual(["original-document"]);
+  },
+);
