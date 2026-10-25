@@ -1,4 +1,4 @@
-"""Owned native service primitives. No operational HTTP endpoint is registered yet."""
+"""Owned userspace daemon and native-private key/process storage."""
 
 import fcntl
 import hashlib
@@ -10,12 +10,12 @@ import stat
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 
 from ai_station_runner.processes import ProcessManager, ProcessNotOwned
-from ai_station_runner.tailnet import daemon_argv, exact_serve_config, public_status
+from ai_station_runner.tailnet import daemon_argv, exact_serve_config, https_origin, public_status
 from ai_station_runner.tailnet_install import private_directory, read_private, verified_install
 
 
@@ -172,21 +172,117 @@ class TailnetManager:
                 "node_online": False,
                 "serving": False,
             }
+        config_known = True
         try:
             answer = public_status(self._read_api("/localapi/v0/status"))
             config = self._read_api("/localapi/v0/serve-config")
         except (httpx.HTTPError, ValueError, OSError):
             answer, config = {"state": "unknown", "node_online": False}, None
+            config_known = False
         serving = bool(
             answer.get("origin") and exact_serve_config(config, answer["origin"], ui_port=self.ui_port)
         )
-        return {**answer, "owned": True, "daemon_id": service["run_id"], "serving": serving}
+        configuration = (
+            "unknown"
+            if not config_known
+            else "empty"
+            if config in (None, {})
+            else "owned"
+            if serving
+            else "unexpected"
+        )
+        return {
+            **answer,
+            "owned": True,
+            "daemon_id": service["run_id"],
+            "serving": serving,
+            "configuration": configuration,
+        }
+
+    def remember_endpoint(self, node_id, origin):
+        if not isinstance(node_id, str) or not node_id or https_origin(origin[8:]) != origin:
+            raise ValueError("Private endpoint identity changed")
+        self._validate_owner()
+        with self._lock():
+            state = self.status()
+            if not state.get("serving") or (state.get("node_id"), state.get("origin")) != (node_id, origin):
+                raise ValueError("Private endpoint changed before recording its restart policy")
+            path = self.root / "desired.json"
+            if path.exists() or path.is_symlink():
+                read_private(path, limit=4096)
+            tmp = self.root / "desired.tmp"
+            fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+            with os.fdopen(fd, "w") as handle:
+                json.dump({"node_id": node_id, "origin": origin}, handle)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(tmp, path)
+
+    def forget_endpoint(self):
+        self._validate_owner()
+        with self._lock():
+            path = self.root / "desired.json"
+            if path.exists() or path.is_symlink():
+                read_private(path, limit=4096)
+                path.unlink()
+
+    def restore(self):
+        """Restart only the previously enabled daemon; never enroll or run Serve."""
+        if not self.root.exists() and not self.root.is_symlink():
+            return
+        self._validate_owner()
+        path = self.root / "desired.json"
+        if not path.exists() and not path.is_symlink():
+            return
+        desired = json.loads(read_private(path, limit=4096))
+        if (
+            set(desired) != {"node_id", "origin"}
+            or not desired["node_id"]
+            or https_origin(desired["origin"][8:]) != desired["origin"]
+        ):
+            raise ValueError("Private endpoint recovery needs inspection")
+        service = self._service()
+        if service is None:
+            raise ValueError("Private endpoint has no owned launch history")
+        if self._inspect(service)["alive"]:
+            return
+        self.stop(only_start_run_id=service["run_id"])
+        self.start(str(uuid4()))
+
+    def canceled(self, run_id, operation):
+        if str(UUID(run_id)) != run_id:
+            raise ValueError("Canonical operation UUID required")
+        path = self.root / "cancellations" / (run_id + ".json")
+        if not path.exists() and not path.is_symlink():
+            return False
+        body = json.loads(read_private(path, limit=4096))
+        if body != {"run_id": run_id, "operation": operation}:
+            raise ValueError("Private cancellation scope changed")
+        return True
+
+    def request_cancel(self, run_id, operation):
+        if str(UUID(run_id)) != run_id or operation not in {"install", "start", "login", "serve_on", "stop"}:
+            raise ValueError("Invalid private cancellation")
+        self._validate_owner(create=True)
+        with self._lock():
+            if self.canceled(run_id, operation):
+                return
+            private_directory(self.root / "cancellations")
+            fd = os.open(
+                self.root / "cancellations" / (run_id + ".json"),
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                0o600,
+            )
+            with os.fdopen(fd, "w") as handle:
+                json.dump({"run_id": run_id, "operation": operation}, handle)
 
     def start(self, run_id: str):
         if str(UUID(run_id)) != run_id:
             raise ValueError("Canonical operation UUID required")
         self._validate_owner(create=True)
         with self._lock():
+            if self.canceled(run_id, "start"):
+                return {**self.status(), "started": False, "canceled": True}
             old = self._service()
             if old is not None and self._inspect(old)["alive"]:
                 for _ in range(50):

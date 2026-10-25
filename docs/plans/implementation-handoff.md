@@ -1,3 +1,12 @@
+> Candidate update: native typed install/start/login/Serve/stop/inspect/cancel/link,
+> operator Task/Run worker, password epoch + origin revision and Settings onboarding
+> are now implemented. Focused native/API/worker tests and UI tests pass; full gates,
+> compiled browser, review and rollout remain pending. New private process/keys
+> never use the public Runner registry or Docker data mount. Stale jobs inspect
+> without replay; a canceled request cannot launch late. Native restore only starts
+> an already-approved owned daemon, never login/Serve. No real enrollment yet.
+> Live remains #425; root Memory WIP/native model/auth are untouched.
+
 > Active follow-on: `feat/private-tailnet-access` from qualified #425.
 > [Private remote access](private-tailnet-access.md) preserves password/LAN and
 > uses only an owned userspace Tailscale instance. Read-only inspection found

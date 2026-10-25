@@ -1,3 +1,9 @@
+Private remote access is being implemented in the isolated `feat/private-tailnet-access`
+branch. Operator-only setup actions use ordinary Tasks/Runs and a native-private,
+userspace Tailscale service. The onboarding UI and recovery contracts are under
+qualification; this is not yet a deployed/enrolled remote connection.
+See [setup and acceptance](plans/private-tailnet-access.md).
+
 Planned private remote access uses an owned native userspace Tailscale instance,
 with keys outside the control-plane mount and fixed loopback-only Serve targets.
 Initial native boundary helpers are not an operational adapter. See

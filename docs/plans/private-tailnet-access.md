@@ -105,3 +105,51 @@ installer cancellation/recovery through native jobs; operator API/worker permiss
 and versioned origin policy; onboarding UI; full local/release gates and real
 operator enrollment/HTTPS/phone acceptance. No endpoint or operational adapter is
 registered yet. Keep live #425 and its running native Runner/model unchanged.
+
+## Operator integration candidate — 2026-10-25
+
+The candidate now includes typed native install/start/login/Serve/stop/inspect/
+cancel/link operations and a Settings → Operator access onboarding panel.
+`POST /api/private-access` only enqueues an operator Task/Run with the exact
+`manage_private_access` grant. It is not an agent tool or a general management
+profile. The worker binds the saved password epoch, policy revision, request
+receipt and selected actual node/HTTPS origin. Changing the password invalidates
+pending operations while retaining an already approved origin for new sessions.
+Disable revokes that origin immediately; password removal stays blocked until
+owned shutdown is confirmed. Existing explicit LAN/proxy origins are preserved.
+
+Install is a separately owned, deadline-bound Python process, using the same
+pinned archive checks and cancellation callback as the explicit installer.
+Replayed receipts do not launch duplicate processes. Native cancellation persists
+an immutable tombstone before stopping an owned process, so a late request cannot
+start after Stop. Only authenticated operators may retrieve a validated interactive
+login/HTTPS-consent link, through a dedicated no-store endpoint. Links expire and
+are never copied into ordinary status, database, events or UI persistence.
+
+Stale private-access leases resume inspection of their existing operation, not
+its launch. A recovered Stop is forwarded through the private API, including
+queued resumed jobs. Uncertain outcomes require inspection and an owned Disable
+before another setup action. No completion is inferred from a lost HTTP response.
+The native service remembers only a successfully served endpoint in its private
+storage. Runner startup may restart that owned daemon using its existing state;
+it never repeats enrollment or Serve. Explicit Disable removes restart intent
+and preserves account keys for a later reviewed start. Node keys remain outside
+all configured filesystem roots and the Docker data mount.
+
+Settings exposes install/download size, start, sign-in/approval, reviewed HTTPS
+address, enable, current progress/Stop, inspection and disable. Setup does not
+replace operator authentication. The address can be opened or copied on LAN HTTP
+as well as HTTPS. Installing Tailscale and signing into the same account on the
+phone remains an actual operator step.
+
+Configuration: optional `AI_STATION_TAILNET_BINARY_DIR` and
+`AI_STATION_TAILNET_PRIVATE_DIR` override XDG defaults (documented in `.env.example`).
+The binary directory must match the pinned version/architecture installation;
+private keys must be outside application data and every allowed/model root.
+Never mount that directory into control-plane containers or include it in backups.
+
+Focused native/API/worker and UI tests have passed during implementation. Full
+local gates, compiled desktop/mobile acceptance, image/Compose, final review/PR
+and deployment are still pending. No real login, HTTPS consent, private Serve or
+phone/LTE acceptance has occurred; live #425 is unchanged. Earlier paragraphs
+record the historical native-only stage, not the current candidate surface.

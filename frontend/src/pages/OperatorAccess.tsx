@@ -4,6 +4,7 @@ import { api } from "../api";
 import { Badge, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import type { OperatorStatus } from "./OperatorLogin";
+import TailnetAccess from "./TailnetAccess";
 import { useListKeyboard } from "./useListKeyboard";
 
 type NodeRow = {
@@ -295,6 +296,7 @@ export default function OperatorAccess() {
           </form>
         </div>
       </section>
+      <TailnetAccess configured={status.data?.configured === true} />
       <section className="panel mt operator-access-panel">
         <div className="panel-heading">
           <div>

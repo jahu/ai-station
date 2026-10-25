@@ -46,6 +46,7 @@ from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktre
 from app.music import MusicExecutor
 from app.paths import safe_join, validate_relative
 from app.photo_executor import PhotoPipeExecutor
+from app.private_ui import PrivateAccessExecutor
 from app.project_checks import ProjectPlanExecutor
 from app.project_dependencies import ProjectDependenciesExecutor
 from app.project_setup import ProjectSetupExecutor
@@ -303,7 +304,9 @@ class FakeExecutor:
 
 
 # Activate adapters only after their vertical slice is verified end to end.
+
 EXECUTORS = {
+    "private_access": PrivateAccessExecutor(),
     "site_preview": PreviewExecutor(),
     "site_preview_action": PreviewActionExecutor(),
     "site_preview_close": PreviewCloseExecutor(),

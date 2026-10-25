@@ -11,11 +11,14 @@ from ai_station_runner import tailnet_service as mod
 
 FAKE = """#!/usr/bin/python3
 import sys,os,json,socketserver,http.server
+from pathlib import Path
 args=dict(x.removeprefix('--').split('=',1) for x in sys.argv[1:] if '=' in x)
 class Handler(http.server.BaseHTTPRequestHandler):
  def log_message(self,*args): pass
  def do_GET(self):
-  data={'BackendState':'NeedsLogin','AuthURL':'SECRET-LOGIN-URL','Peer':{'sensitive':'peer'}} if self.path=='/localapi/v0/status' else {}
+  root=Path(args['socket']).parent
+  file=root/('node.json' if self.path=='/localapi/v0/status' else 'config.json')
+  data=json.loads(file.read_text()) if file.exists() else {'BackendState':'NeedsLogin','AuthURL':'SECRET-LOGIN-URL','Peer':{'sensitive':'peer'}} if self.path=='/localapi/v0/status' else {}
   raw=json.dumps(data).encode();self.send_response(200);self.send_header('Content-Length',str(len(raw)));self.end_headers();self.wfile.write(raw)
 server=socketserver.UnixStreamServer(args['socket'],Handler)
 os.chmod(args['socket'],0o600)
@@ -167,3 +170,11 @@ def test_private_socket_replacement_is_not_followed(manager):
     with pytest.raises(ValueError):
         manager.stop()
     assert target.read_bytes() == b"preserve existing data"
+
+
+def test_cancel_before_service_dispatch_never_launches(manager):
+    rid = str(uuid4())
+    manager.request_cancel(rid, "start")
+    state = manager.start(rid)
+    assert state["canceled"] and not state["started"]
+    assert not (manager.root / "service.json").exists()

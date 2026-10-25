@@ -1,4 +1,4 @@
-"""Pure boundaries for an optional owned tailnet adapter; no lifecycle is exposed yet."""
+"""Fixed native command, public status and exact private HTTPS boundaries."""
 
 import re
 from pathlib import Path
@@ -31,6 +31,25 @@ def cli_argv(binary: Path, socket: Path, operation: str, *, ui_port: int = 8765)
     base = [_absolute(binary), "--socket=" + _absolute(socket)]
     if operation == "status":
         return [*base, "status", "--json"]
+    if operation == "login":
+        return [
+            *base,
+            "up",
+            "--json",
+            "--timeout=5s",
+            "--hostname=ai-station",
+            "--accept-dns=false",
+            "--accept-routes=false",
+            "--ssh=false",
+            "--advertise-routes=",
+            "--advertise-exit-node=false",
+            "--advertise-connector=false",
+            "--exit-node=",
+            "--exit-node-allow-lan-access=false",
+            "--netfilter-mode=off",
+            "--snat-subnet-routes=false",
+            "--report-posture=false",
+        ]
     if type(ui_port) is not int or not 1 <= ui_port <= 65535:
         raise ValueError("Invalid configured UI port")
     if operation == "serve_on":

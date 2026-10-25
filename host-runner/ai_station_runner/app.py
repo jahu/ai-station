@@ -67,6 +67,7 @@ from ai_station_runner.security import PathBoundaryError, ensure_within, resolve
 from ai_station_runner.site_preview_runs import PreviewAction, PreviewRequest
 from ai_station_runner.source_identity import SOURCE_FINGERPRINT
 from ai_station_runner.station_image import inspect_station_image
+from ai_station_runner.tailnet_api import router as tailnet_router
 from ai_station_runner.telemetry import collect
 from ai_station_runner.transcription import TranscriptionRequest
 from ai_station_runner.validation import ValidationRequest, start_validation, validation_report
@@ -76,6 +77,7 @@ from ai_station_runner.worktree_remove import RemoveWorktreeRequest, remove_repo
 from ai_station_runner.worktrees import inspect_worktree, reserve_and_start
 
 app = FastAPI(title="AI Station Host Runner", version=__version__)
+app.include_router(tailnet_router)
 
 
 @app.exception_handler(RequestValidationError)

@@ -187,3 +187,27 @@ def install(
             if own_client:
                 client.close()
             shutil.rmtree(stage)
+
+
+def main():
+    import argparse
+    import signal
+    from threading import Event
+
+    parser = argparse.ArgumentParser(description="Install the pinned private-access runtime")
+    parser.add_argument("--prefix", type=Path, required=True)
+    parser.add_argument("--architecture", choices=tuple(ARCHIVES), required=True)
+    args = parser.parse_args()
+    stopped = Event()
+    signal.signal(signal.SIGTERM, lambda *_: stopped.set())
+    signal.signal(signal.SIGINT, lambda *_: stopped.set())
+    try:
+        if {"x86_64": "amd64", "aarch64": "arm64"}.get(platform.machine()) != args.architecture:
+            raise ValueError("Private runtime architecture changed")
+        install(args.prefix, canceled=stopped.is_set)
+    except (ValueError, OSError, httpx.HTTPError):
+        raise SystemExit("Private runtime installation did not complete; inspect or retry") from None
+
+
+if __name__ == "__main__":
+    main()

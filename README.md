@@ -1,3 +1,9 @@
+Private remote access is being implemented in the isolated `feat/private-tailnet-access`
+branch. Operator-only setup actions use ordinary Tasks/Runs and a native-private,
+userspace Tailscale service. The onboarding UI and recovery contracts are under
+qualification; this is not yet a deployed/enrolled remote connection.
+See [setup and acceptance](docs/plans/private-tailnet-access.md).
+
 A completed analysis can expose **Use result file** and explicit follow-ups such
 as “Sort this result file”. These use the complete inspected CSV/XLSX output;
 ordinary input-file references retain their original source. See
