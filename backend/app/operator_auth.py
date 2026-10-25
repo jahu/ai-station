@@ -369,6 +369,7 @@ def remember_activity(request: Request, session: Session, token: str) -> None:
     request.state.operator_cookie_refresh = {
         "token": token,
         "max_age": cookie_max_age(payload),
+        "secure": secure_cookie(request.headers.get("host", ""), session),
     }
 
 
@@ -383,9 +384,7 @@ def refresh_operator_cookie(request: Request, response: Response) -> None:
     token = refresh.get("token")
     max_age = refresh.get("max_age")
     if isinstance(token, str) and isinstance(max_age, int) and max_age > 0:
-        attach_session_cookie(
-            response, token, max_age=max_age, secure=secure_cookie(request.headers.get("host", ""))
-        )
+        attach_session_cookie(response, token, max_age=max_age, secure=refresh.get("secure") is True)
 
 
 def require_operator_session(request: Request) -> JSONResponse | None:

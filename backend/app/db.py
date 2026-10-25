@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import fcntl
+import sqlite3
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
@@ -85,6 +86,16 @@ def _disable_legacy_transactions(connection, _record) -> None:
 
 def _begin_immediate(connection) -> None:
     connection.exec_driver_sql("BEGIN IMMEDIATE")
+
+
+def sqlite_busy(error) -> bool:
+    """Only SQLite busy/locked errors are transient; preserve other failures."""
+    from sqlalchemy.exc import OperationalError
+
+    if not isinstance(error, OperationalError) or not isinstance(error.orig, sqlite3.OperationalError):
+        return False
+    code = getattr(error.orig, "sqlite_errorcode", None)
+    return isinstance(code, int) and (code & 255) in {sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED}
 
 
 def session_factory() -> sessionmaker[Session]:

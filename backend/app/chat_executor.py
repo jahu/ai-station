@@ -147,9 +147,16 @@ class ChatExecutor:
             if not run.parameters.get("image_followup"):
                 maybe_enqueue_automatic_summary(session, conversation, run)
         finally:
-            session.commit()
-            if pending is not None:
-                pending.cancel()
-                with suppress(asyncio.CancelledError, StopAsyncIteration):
-                    await pending
-            await stream.aclose()
+            # A failed flush invalidates the transaction. Preserve the original
+            # error and always close inference, even if persistence fails.
+            try:
+                if session.is_active:
+                    session.commit()
+                else:
+                    session.rollback()
+            finally:
+                if pending is not None:
+                    pending.cancel()
+                    with suppress(asyncio.CancelledError, StopAsyncIteration):
+                        await pending
+                await stream.aclose()
