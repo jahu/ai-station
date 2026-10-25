@@ -79,7 +79,7 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
 
         cancel_expired_run(session, run.id)
         session.commit()
-        if run.executor_type in {"llama_load", "llama_stop"}:
+        if run.executor_type in {"llama_load", "llama_stop", "private_access"}:
             # The native create/start/stop journal is keyed by immutable runtime
             # identity. Resuming it cannot create another container or restart an
             # exited model. Keep all reservations until confirmed stop/readiness.
@@ -96,7 +96,7 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
                 run,
                 RunStatus.INTERRUPTED,
                 event_type="run.interrupted",
-                payload={"reason": "Resume owned llama.cpp lifecycle inspection"},
+                payload={"reason": "Resume owned lifecycle inspection"},
             )
             run.metadata_json = {**run.metadata_json, "cancel_on_resume": canceled}
             run.finished_at = None

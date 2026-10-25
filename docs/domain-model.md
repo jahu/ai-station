@@ -1,3 +1,8 @@
+Planned private remote access uses an owned native userspace Tailscale instance,
+with keys outside the control-plane mount and fixed loopback-only Serve targets.
+Initial native boundary helpers are not an operational adapter. See
+[the delivery and acceptance plan](plans/private-tailnet-access.md).
+
 # Domain model
 
 > Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Project registration, policy editing, and read-only Git status are enabled with disposable-repository integration coverage. Owned worktree preparation is enabled through the worker and a managed native process. Scoped memory with pinned Chat context and managed model-file discovery are enabled. Local agents use disabled drafts, explicit activation, persistent schedules, bounded context tools, sequential or gated workflow steps and optional bounded registry tool calling. Bounded Cursor file-edit proposals, review artifacts and separate validation Runs are operational. Other coding adapters remain inactive. See README for runnable commands and limitations.

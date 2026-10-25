@@ -1,3 +1,39 @@
+> PR #426 / private-tailnet-access: local qualification is complete (3784 Python/
+> Runner successful cases +9 opt-in skips; 175 final affected cases; UI792;
+> exact image/Compose; compiled desktop/mobile native fixture workflows; real
+> unprivileged daemon/cached-install probe). All earlier failed logs are retained
+> and resolved. Full diff review, merge and deployment receipts determine release
+> status; account enrollment/HTTPS/phone acceptance is not yet performed.
+> Restore revokes historical origin grants; trusted executables and keys are
+> outside agent roots. Preserve root Memory WIP, owned model containers and data.
+> Next: deploy the reviewed setup, have the operator enroll through Settings,
+> qualify the real private connection, and continue broader platform delivery.
+
+> Candidate update: native typed install/start/login/Serve/stop/inspect/cancel/link,
+> operator Task/Run worker, password epoch + origin revision and Settings onboarding
+> are now implemented. Focused native/API/worker tests and UI tests pass; full gates,
+> compiled browser, review and rollout remain pending. New private process/keys
+> never use the public Runner registry or Docker data mount. Stale jobs inspect
+> without replay; a canceled request cannot launch late. Native restore only starts
+> an already-approved owned daemon, never login/Serve. No real enrollment yet.
+> Live remains #425; root Memory WIP/native model/auth are untouched.
+
+> Active follow-on: `feat/private-tailnet-access` from qualified #425.
+> [Private remote access](private-tailnet-access.md) preserves password/LAN and
+> uses only an owned userspace Tailscale instance. Read-only inspection found
+> Tailscale unavailable; no system software/networking has been modified.
+> Native core now has pinned1.104.2 installation and own-service process/UDS
+> lifecycle. Focused59 CPU tests plus Ruff pass. Actual installed-version help and
+> an unprivileged temporary daemon NeedsLogin→Stop pass; host routing/DNS unchanged.
+> No login/Serve was requested. Evidence: private-tailnet-access-20261025.
+> Next: login/Serve job ownership + protected auth links, then operator API/worker
+> authorization, origin policy and onboarding UI. Full gates/release qualification
+> remain pending; no endpoint or operational capability is registered.
+> Enrollment and HTTPS consent remain actual operator actions; never fake success.
+> Live #425: result-file-continuations-20261025/post-deployment-qualified.json.
+> UI http://192.168.1.121:8765; native/model/auth/data preserved. Root Memory WIP
+> stays untouched. Full-platform objective remains open.
+
 > PR #425 adds complete-result continuation: Use result file and explicit natural
 > result-file operations consume the preferred inspected CSV/XLSX, in a fresh Task.
 > Original-input references retain their behavior. Result reuse verifies historical

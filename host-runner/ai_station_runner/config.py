@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     llm_api_key: str = ""
     web_search_url: str = ""
     cancel_grace_seconds: float = 3.0
+    tailnet_binary_dir: str = ""
+    tailnet_private_dir: str = ""
+    port: int = 8765
     runner_id: str = "local"
     node_prefix: str = ""
 

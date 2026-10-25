@@ -206,12 +206,12 @@ def current_security(path: Path) -> dict | None:
                 )
             rows = dict(
                 connection.execute(
-                    "SELECT key,value FROM settings WHERE key IN ('operator_auth','operator_login_budget')"
+                    "SELECT key,value FROM settings WHERE key IN ('operator_auth','operator_login_budget','private_ui_access')"
                 )
             )
             return {
                 key: json.loads(rows[key]) if key in rows else None
-                for key in ("operator_auth", "operator_login_budget")
+                for key in ("operator_auth", "operator_login_budget", "private_ui_access")
             }
     except RecoveryError:
         raise
@@ -307,17 +307,51 @@ def normalize_copy(path: Path, security: dict | None, backup_id: str, *, passwor
                     actions["node_tokens_revoked"] += 1
                 node.token_hash = node.token_salt = ""
                 node.status, node.revoked_at = "revoked", now
+            saved_private = session.get(Setting, "private_ui_access")
+            backup_private = (
+                dict(saved_private.value) if saved_private and isinstance(saved_private.value, dict) else {}
+            )
+            current_private = (security or {}).get("private_ui_access")
+            private_policy = current_private if isinstance(current_private, dict) else backup_private
+            private_required = (
+                private_policy.get("enabled") is True or private_policy.get("password_required") is True
+            )
+            if private_required and not (security or {}).get("operator_auth") and password is None:
+                raise RecoveryError(
+                    "Private recovery requires a fresh operator password when current credentials are missing"
+                )
             for setting in list(session.scalars(select(Setting))):
                 if setting.key == "operator_session" or setting.key.startswith("operator_session:"):
                     session.delete(setting)
                     actions["sessions_revoked"] += 1
-                elif setting.key in {"operator_auth", "operator_login_budget", "scheduler_heartbeat"}:
+                elif setting.key in {
+                    "operator_auth",
+                    "operator_login_budget",
+                    "scheduler_heartbeat",
+                    "private_ui_access",
+                }:
                     session.delete(setting)
             session.execute(delete(WorkerRow))
             session.flush()
             for key, value in (security or {}).items():
                 if key in {"operator_auth", "operator_login_budget"} and value is not None:
                     session.add(Setting(key=key, value=value))
+            if backup_private or current_private:
+                revisions = [p.get("revision", 0) for p in (backup_private, private_policy)]
+                number = max((v for v in revisions if type(v) is int and v >= 0), default=0) + 1
+                session.add(
+                    Setting(
+                        key="private_ui_access",
+                        value={
+                            "revision": number,
+                            "enabled": False,
+                            "origin": None,
+                            "node_id": None,
+                            "pending_run_id": None,
+                            "password_required": private_required,
+                        },
+                    )
+                )
             session.flush()
             if password is not None:
                 save_secret(session, password)

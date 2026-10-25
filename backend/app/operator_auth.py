@@ -124,7 +124,7 @@ def refuse_non_loopback_bind(session: Session | None = None) -> dict:
     decision = lan_bind_decision(settings.bind_host, auth_configured=auth)
     if not decision["allowed"]:
         raise RuntimeError(decision["reason"])
-    if private_access_enabled() and not auth:
+    if private_access_enabled(session) and not auth:
         raise RuntimeError(
             "Private network access requires an operator password; configure it on localhost first"
         )
@@ -302,7 +302,7 @@ def issue_session(session: Session, response: Response, request: Request) -> str
         response,
         token,
         max_age=cookie_max_age(payload, now=now),
-        secure=secure_cookie(request.headers.get("host", "")),
+        secure=secure_cookie(request.headers.get("host", ""), session),
     )
     return token
 
@@ -323,7 +323,7 @@ def public_status(session: Session, token: str | None = None, *, authority: str 
     settings = get_settings()
     auth = configured(session)
     decision = lan_bind_decision(settings.bind_host, auth_configured=auth)
-    origins = sorted(access_origins())
+    origins = sorted(access_origins(session))
     private = bool(origins)
     if private:
         decision.update(
@@ -347,7 +347,7 @@ def public_status(session: Session, token: str | None = None, *, authority: str 
         "session_scope": "private-network" if private else "loopback",
         "session_idle_seconds": SESSION_IDLE_SECONDS,
         "session_max_age_seconds": SESSION_ABSOLUTE_SECONDS,
-        "session_cookie": {**COOKIE_POLICY, "secure": secure_cookie(authority)},
+        "session_cookie": {**COOKIE_POLICY, "secure": secure_cookie(authority, session)},
         "issued_at": value.get("issued_at") if authenticated else None,
         "last_seen_at": value.get("last_seen_at") if authenticated else None,
         "expires_at": value.get("expires_at") if authenticated else None,
@@ -356,7 +356,7 @@ def public_status(session: Session, token: str | None = None, *, authority: str 
         "lan_exposure": decision["lan_exposure"],
         "lan_bind_allowed": bool(settings.lan_host and auth),
         "access_urls": origins,
-        "password_removal_allowed": not private,
+        "password_removal_allowed": not private_access_enabled(session),
         "reason": decision["reason"],
     }
 
@@ -402,7 +402,7 @@ def require_operator_session(request: Request) -> JSONResponse | None:
     db = session_factory()()
     try:
         if not configured(db):
-            if private_access_enabled():
+            if private_access_enabled(db):
                 return unauthorized()
             return None
         token = request.cookies.get(COOKIE)
@@ -423,6 +423,7 @@ def require_operator_session(request: Request) -> JSONResponse | None:
 def save_secret(session: Session, password: str) -> None:
     salt = os.urandom(16)
     payload = {
+        "authority_revision": secrets.token_hex(16),
         "algorithm": ALGORITHM,
         "iterations": ITERATIONS,
         "salt": salt.hex(),
@@ -453,6 +454,9 @@ def set_password(body: PasswordBody, request: Request, response: Response, sessi
         current = body.current_password.get_secret_value() if body.current_password else ""
         if not verify_password(session, current):
             raise HTTPException(403, "Current operator password is required")
+    from app.private_ui_state import lock
+
+    lock(session)
     save_secret(session, password)
     clear_all_sessions(session)
     token = issue_session(session, response, request)
@@ -462,7 +466,10 @@ def set_password(body: PasswordBody, request: Request, response: Response, sessi
 
 @router.post("/clear")
 def clear_password(body: ClearBody, response: Response, session: DB):
-    if private_access_enabled():
+    from app.private_ui_state import lock
+
+    lock(session)
+    if private_access_enabled(session):
         raise HTTPException(409, "Disable private network access before removing the operator password")
     if not configured(session):
         drop_session(session, response)

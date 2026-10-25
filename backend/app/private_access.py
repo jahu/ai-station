@@ -1,5 +1,6 @@
 """Explicit private UI origins; this never changes the native Runner transport."""
 
+import re
 from ipaddress import IPv4Address, ip_address, ip_network
 from urllib.parse import urlsplit
 
@@ -25,7 +26,22 @@ def private_ipv4(value: str) -> bool:
     return isinstance(address, IPv4Address) and any(address in net for net in PRIVATE_NETWORKS)
 
 
-def access_origins() -> set[str]:
+def validated_tailnet_origin(value: str) -> str:
+    if not isinstance(value, str) or not value.startswith("https://"):
+        raise ValueError("Choose an exact private HTTPS origin")
+    host = value[8:]
+    labels = host.split(".")
+    if (
+        len(host) > 253
+        or len(labels) < 4
+        or labels[-2:] != ["ts", "net"]
+        or any(not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label) for label in labels)
+    ):
+        raise ValueError("Choose an exact private HTTPS origin")
+    return value
+
+
+def access_origins(session=None) -> set[str]:
     settings = get_settings()
     origins = set()
     if settings.lan_host:
@@ -52,11 +68,19 @@ def access_origins() -> set[str]:
         ):
             raise ValueError("Access origins must be exact private IP origins or HTTPS *.ts.net origins")
         origins.add(value)
+    from app.private_ui_state import read
+
+    managed = read(session)
+    if managed.get("enabled") is True:
+        origin = managed.get("origin")
+        origins.add(validated_tailnet_origin(origin))
     return origins
 
 
-def private_access_enabled() -> bool:
-    return bool(access_origins())
+def private_access_enabled(session=None) -> bool:
+    from app.private_ui_state import read
+
+    return bool(access_origins(session)) or read(session).get("password_required") is True
 
 
 def valid_host(authority: str) -> bool:
@@ -89,7 +113,8 @@ def valid_origin(origin: str) -> bool:
         return False
 
 
-def secure_cookie(authority: str) -> bool:
+def secure_cookie(authority: str, session=None) -> bool:
     return any(
-        urlsplit(origin).netloc == authority and origin.startswith("https://") for origin in access_origins()
+        urlsplit(origin).netloc == authority and origin.startswith("https://")
+        for origin in access_origins(session)
     )

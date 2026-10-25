@@ -67,6 +67,7 @@ from ai_station_runner.security import PathBoundaryError, ensure_within, resolve
 from ai_station_runner.site_preview_runs import PreviewAction, PreviewRequest
 from ai_station_runner.source_identity import SOURCE_FINGERPRINT
 from ai_station_runner.station_image import inspect_station_image
+from ai_station_runner.tailnet_api import router as tailnet_router
 from ai_station_runner.telemetry import collect
 from ai_station_runner.transcription import TranscriptionRequest
 from ai_station_runner.validation import ValidationRequest, start_validation, validation_report
@@ -1093,3 +1094,6 @@ def site_preview_close(run_id: UUID):
         return close_preview(manager(), str(run_id))
     except (ValueError, RuntimeError, ProcessNotOwned, OSError, GitError) as exc:
         raise HTTPException(409, str(exc)) from exc
+
+
+app.include_router(tailnet_router)

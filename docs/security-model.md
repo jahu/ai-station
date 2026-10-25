@@ -1,3 +1,10 @@
+Settings → Access → **Access from anywhere** provides explicit private-access
+installation, Tailscale sign-in/HTTPS approval, an exact private address and owned
+Disable. It uses ordinary Tasks/Runs and an isolated native userspace service;
+account keys stay outside Docker and agent filesystem roots. Local qualification
+is complete; actual account enrollment and phone-outside-LAN acceptance remain
+operator steps. [Setup and evidence](plans/private-tailnet-access.md).
+
 A completed analysis can expose **Use result file** and explicit follow-ups such
 as “Sort this result file”. These use the complete inspected CSV/XLSX output;
 ordinary input-file references retain their original source. See

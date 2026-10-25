@@ -1,3 +1,8 @@
+Planned private remote access uses an owned native userspace Tailscale instance,
+with keys outside the control-plane mount and fixed loopback-only Serve targets.
+Initial native boundary helpers are not an operational adapter. See
+[the delivery and acceptance plan](plans/private-tailnet-access.md).
+
 Agent result email uses a same-Task email.send child after verified completion,
 with an operation identity derived from the root workflow. Review waits for an
 ordinary payload-bound approval; automatic delivery rechecks its frozen grant

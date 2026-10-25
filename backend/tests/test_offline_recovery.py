@@ -628,3 +628,72 @@ def test_finish_after_swap_preserves_unknown_wal_instead_of_ignoring_it(backup, 
         operation.resume_recovery(root, report["recovery_id"])
     assert wal.read_bytes() == b"unknown post-swap transaction"
     assert (root / "runtime/recovery-pending.json").exists()
+
+
+@pytest.mark.parametrize("current_enabled", [True, False])
+def test_restored_private_origin_never_revives_a_historical_grant(backup, current_enabled):
+    from app.models import Setting
+    from app.operator_auth import save_secret
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import Session
+
+    root, bid, path = backup
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "INSERT INTO settings (key,value) VALUES (?,?)",
+            (
+                "private_ui_access",
+                json.dumps(
+                    {
+                        "revision": 9,
+                        "enabled": True,
+                        "origin": "https://old.tail123.ts.net",
+                        "pending_run_id": str(uuid4()),
+                    }
+                ),
+            ),
+        )
+    with session_factory()() as session:
+        save_secret(session, "current-private-password")
+        session.add(
+            Setting(
+                key="private_ui_access",
+                value={
+                    "revision": 14,
+                    "enabled": current_enabled,
+                    "password_required": current_enabled,
+                    "origin": "https://current.tail123.ts.net" if current_enabled else None,
+                },
+            )
+        )
+        session.commit()
+    stage = root / "db/private-stage.sqlite"
+    shutil.copyfile(path, stage)
+    security = storage.current_security(root / "db/ai-station.sqlite")
+    storage.normalize_copy(stage, security, bid)
+    engine = create_engine("sqlite:///" + str(stage))
+    try:
+        with Session(engine) as session:
+            policy = session.get(Setting, "private_ui_access").value
+            assert policy == {
+                "revision": 15,
+                "enabled": False,
+                "origin": None,
+                "node_id": None,
+                "pending_run_id": None,
+                "password_required": current_enabled,
+            }
+    finally:
+        engine.dispose()
+
+
+def test_recovery_cannot_drop_password_while_a_private_service_may_exist(backup):
+    root, bid, path = backup
+    stage = root / "db/private-no-auth.sqlite"
+    shutil.copyfile(path, stage)
+    security = {"operator_auth": None, "private_ui_access": {"enabled": True, "revision": 2}}
+    with pytest.raises(RecoveryError, match="fresh operator password"):
+        storage.normalize_copy(stage, security, bid)
+    assert storage.normalize_copy(stage, security, bid, password="fresh-private-password")[
+        "operator_password_reset"
+    ]
