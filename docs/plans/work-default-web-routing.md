@@ -45,3 +45,16 @@ continuation and selected-scope overrides retain their existing Web restrictions
 No controls or layout are replaced. UI tests cover first-send Chat/Work defaults,
 Work opt-out and retained reviewed image-research queries; compiled acceptance
 must use the actual default without toggling it on to hide the regression.
+
+Qualification evidence is retained under
+`data/acceptance/work-default-web-routing-20261025`. Both actual local-model
+English/Polish requests produced a disabled snapshot-only agent without changing
+the ready runtime or its context. Four compiled UI/API/worker flows cover first
+Send and saved conversations at desktop/mobile widths, preserving default Web,
+reload and source scope; inference is injected in those browser flows. All five
+frontend gates pass (794 tests). The complete 3817-case CPU gate initially found
+two page fixtures that returned an ordinary answer to the new Work JSON planner.
+Corrected fixtures preserve their actual grounded-reply/evidence assertions;
+157 complete affected cases and 22 rendered-page importer cases pass. Original
+failed logs remain. Final coverage, reviewed-head/image and deployment receipts
+determine release status; whole-platform completion is not claimed.
