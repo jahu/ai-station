@@ -1,6 +1,6 @@
 # Wan continuation: preserve exposure and detail
 
-Candidate implemented; qualification in progress, 2026-10-25. This is a visual-quality release gate,
+Candidate implemented; qualification in progress, 2026-10-26. This is a visual-quality release gate,
 not a claim that a decodable MP4 is an acceptable long video.
 
 ## Reproduction and evidence
@@ -16,7 +16,7 @@ Retain both technical passes and the explicit visual failures.
 Receipts: `data/acceptance/long-video-standard-20261025/` and
 `data/acceptance/long-media-visual-audit-20261025/`.
 
-The current native path copies the previous denoised tensor's last five temporal
+The legacy native path copies the previous denoised tensor's last five temporal
 slices into the next window's first five slices, locking their noise mask. The
 installed Wan VAE starts encoding/decoding with a distinct one-frame boundary,
 then uses causal temporal caches. A tail from the middle of a video is therefore
@@ -71,6 +71,10 @@ hash checks, diagnostic images and `vae-image-statistics-float64.json`.
    resumes retain the original absent strategy/seventeen-frame timeline.
    Unknown strategies fail closed. Default native serialization omits the new
    field, preserving legacy dispatch identity. Historical JSON is not migrated.
+   Review also binds a present strategy into prompt-translation input identity;
+   changing it after translation must prevent dispatch. Absent fields retain
+   their exact pre-strategy receipt hashes. Two regressions reproduced the gap
+   before correction; all22 translation-module tests pass after correction.
 4. Preserve temporal continuity and record the actual conditioning overlap in
    the frozen timeline. Keep frame counts, seed, prompt, deadline,
    ownership, hash/path validation, cancellation, resources and composition.

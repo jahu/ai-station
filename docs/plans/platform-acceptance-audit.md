@@ -48,8 +48,8 @@ auth settings, E5 vectors, native/private services and owned model instances.
 Receipt paths in this table are below `data/acceptance/`. Historical receipts
 remain scoped to their original model, parameters, source and runtime. Normal
 regressions of newer source do not relabel an old integration as a fresh real
-execution. The operator case catalog is v10 with 157 stable IDs in 21 areas. All
-157 are mapped to source, current regression and concrete historical receipt
+execution. The operator case catalog is v11 with 158 stable IDs in 21 areas. All
+158 are mapped to source, current regression and concrete historical receipt
 scopes in [the internal coverage review](../qa/internal-coverage.md). That review
 retains unverified cases rather than marking them passed.
 

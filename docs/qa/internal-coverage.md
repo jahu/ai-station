@@ -1,6 +1,6 @@
 # Internal acceptance and operator test coverage
 
-Review date: 2026-10-25. This maps all 157 stable operator cases in catalog v10
+Review date: 2026-10-26. This maps all 158 stable operator cases in catalog v11
 to the current source and recorded acceptance. It does not fill operator results
 or declare platform completion. The current release and exact local qualification
 are in [the release audit](../plans/platform-acceptance-audit.md).
@@ -22,7 +22,7 @@ table alone, are the evidence. **External setup** is an open release gate.
 | WORK-001–007; UNIFIED-001–006 | `test_chat_execution_mode.py`, `test_agent_request_intent.py`, `test_conversation_data.py`, `test_conversation_agent_control.py` | `unified-assistant-chat-20261025/` and `unified-natural-agent-intent-20261025/` prove desktop/phone viewport, direct reply/media review/retry/Stop, polite disabled drafts, default Web isolation and old-history/draft preservation. Inference is injected in those compiled checks. Real executors have separate receipts below. |
 | WEB-001–007 | `test_web_search.py`, `test_chat_rendered_pages.py`, `test_work_web_routing.py` | Real search/follow-up: `chat-contextual-search-20261015/real-smoke-result.json`; real direct page reading: `chat-direct-page-reading-20261022/production-smoke-result.json`. Public-source relevance is not guaranteed for every future query. Native/private service URL rejection is regression-qualified. |
 | IMAGE-001–010 | `test_images.py`, `test_krea_images.py`; native `test_photo.py`, `test_photo_model_selection.py` | Six original real photo operations in `docs/mvp-acceptance.md`; current Krea four modes/Stop GPU-only in `krea2-lustify-20261025/milestone-complete.json`. Retain original scripts; unqualified FP8 weights are not enabled. |
-| VIDEO-001–004 | `test_video.py`, `test_video_storyboard.py`, `test_video_memory_profile.py`; native `test_wan_motion.py` | Real short standard translation video and historical 60-second segmented draft exist. Scope and quality differ: see profiles below. Do not present the 60-second four-step draft as standard-quality long-film acceptance. |
+| VIDEO-001–005 | `test_video.py`, `test_video_continuation.py`, `test_video_storyboard.py`, `test_video_memory_profile.py`; native `test_wan_motion.py`, `test_wan_continuation.py` | Real short standard translation video and historical 60-second segmented draft exist. The standard20step four-window lake explicitly failed visual quality. Actual controlled prefix/precision comparisons and the pending three-window candidate are in `wan-continuation-quality-20261025/`. VIDEO-005 requires exposure/detail/seam inspection, not merely decode/playback success. Scope and quality differ: see profiles below; do not relabel old technical receipts as visual passes. |
 | AUDIO-001–005 | `test_audio.py`, `test_music_model_setup.py`, native managed processes | Actual speech/music/transcription receipts in the product ledger; actual ten-second ACE music in `agent-media-generation-20261023/real-agent-media-result.json` and translator/music receipt. Voice-reference quality needs the appropriate supplied recording, not a synthetic tone. |
 | AVATAR-001–004 | `test_avatars.py`, `test_avatar_budgets.py`, `test_avatar_memory_profile.py`; native `test_echo_motion.py` | Actual five-second bounded-memory and historical 30-second avatar, full decode and recorded joins/playback. General word-level lip-sync and all long profiles are **not qualified**. |
 | AGENT-001–014 | `test_agent_drafts.py`, `test_agent_coding.py`, `test_agent_outcome.py`, `test_agent_media_drafts.py`, `test_agent_email_attachments.py` | Real website/data and image/music pipelines have separate receipts. `agent-video-release-20261025/` actually qualifies natural drafting, goal preparation, two GPU windows and a five-second film; PR #448 separately checks proposed and explicit runtimes with actual local inference and compiled Settings. The earlier `agent-long-media-output-20261023/production-agent-result.json` stays **false**. Longer-film quality has its own open gate. Mail attachments use actual private TLS SMTP with injected inference, not operator-inbox delivery. |
@@ -92,7 +92,7 @@ promising completion within a generic five/fifteen-minute row estimate.
    There is no email connector in the current application DB.
 5. Freeze the release after remaining fixes, generate the final Polish XLSX/CSV
    package with fixtures and exact profiles, inspect/round-trip the actual files,
-   and hand it off. All 157 operator results remain **Nie testowano**.
+   and hand it off. All 158 operator results remain **Nie testowano**.
 
 The original self-development/large IDE expansion is explicitly deferred by the
 agent-first decision; existing data and functioning code/worktree services are

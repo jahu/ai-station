@@ -1,5 +1,5 @@
 {
-  "version": 10,
+  "version": 11,
   "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
   "sources": [
     "docs/product-completion.md",
@@ -12,7 +12,8 @@
     "docs/plans/unified-assistant-chat.md",
     "docs/plans/conversation-prompt-language.md",
     "docs/plans/natural-agent-intent.md",
-    "docs/plans/agent-draft-runtime-defaults.md"
+    "docs/plans/agent-draft-runtime-defaults.md",
+    "docs/plans/wan-continuation-quality.md"
   ],
   "cases": [
     {
@@ -1126,6 +1127,35 @@
       "requirements": [
         "spec-77",
         "długie media"
+      ]
+    },
+    {
+      "id": "VIDEO-005",
+      "area": "Wideo",
+      "title": "Ciągła scena — jasność, szczegóły i łączenia",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana, wewnętrznie zakwalifikowana wersja AI Station i profil wideo; dostęp do własnej sesji operatora; jednorazowe dane QA.",
+        "Zarezerwuj czas na rzeczywistą generację GPU; tabela przekazanych profili opisuje wykonane pomiary, nie gwarantowany czas."
+      ],
+      "steps": [
+        "W Video utwórz nowe zadanie, wybierz One continuous scene oraz 10 sekund. Nie wznawiaj historycznego filmu.",
+        "Wpisz: A calm blue lake reflecting white clouds, subtle natural movement, steady camera, balanced daylight, no people or text.",
+        "Ustaw profil, rozdzielczość i liczbę kroków z przekazanej kwalifikacji; zapisz te ustawienia oraz seed w notatkach testu.",
+        "Poczekaj na cały film i montaż. Odtwórz go od początku do końca; porównaj kolor nieba, szczegóły chmur i jasność początku, środka oraz końca.",
+        "Sprawdź łączenia segmentów i długość 10 sekund. Otwórz zapisany wynik ponownie po odświeżeniu strony.",
+        "Jeśli obraz stopniowo bieleje, znika detal lub występuje wyraźny skok, zapisz błąd z Run ID, ustawieniami i czasem w filmie; dołącz zrzuty początku i końca."
+      ],
+      "expected": [
+        "Gotowy wynik ma pełne 10 sekund i zachowuje rozpoznawalne szczegóły oraz spójną jasność sceny; sam status succeeded nie wystarcza do zaliczenia jakości.",
+        "Łączenia nie pokazują białego błysku ani utraty sceny; historia, ustawienia i odtwarzalny wynik pozostają dostępne po odświeżeniu."
+      ],
+      "resources": "GPU; zakwalifikowany profil wideo; rzeczywista generacja i ocena obrazu",
+      "minutes": 45,
+      "requirements": [
+        "spec-77",
+        "długie media",
+        "WAN-CONTINUATION-QUALITY"
       ]
     },
     {

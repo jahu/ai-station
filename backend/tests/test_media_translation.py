@@ -258,6 +258,56 @@ def test_changed_receipt_cannot_dispatch_media(fake):
         assert read(client, media["id"])["status"] == "failed" and fake[1] == []
 
 
+def test_video_translation_identity_binds_new_strategy_without_changing_old_receipts():
+    from types import SimpleNamespace
+
+    from app.media_translation import source_hash
+
+    parameters = {"prompt": "A lake", "frames": 81, "width": 1280, "height": 704, "steps": 20, "seed": 43}
+    run = SimpleNamespace(executor_type="wan_video", parameters=parameters, requested_gpu="auto")
+    fields = {"prompt": "A lake"}
+    # Receipt captured from the pre-strategy implementation, not recomputed by
+    # a duplicate version of the production hashing algorithm.
+    legacy = "523e0554a0bd3243e81486276d794f2616ce626eeb03140d594d57a6dadf7417"
+    assert source_hash(run, fields) == legacy
+    run.parameters = {**parameters, "continuation_strategy": "last_frame_v1"}
+    anchored = source_hash(run, fields)
+    run.parameters = {**parameters, "continuation_strategy": "cached_latents_v1"}
+    assert source_hash(run, fields) not in {legacy, anchored}
+    assert anchored != legacy
+
+
+def test_changed_video_strategy_after_translation_cannot_dispatch_generation(fake, monkeypatch):
+    monkeypatch.setitem(EXECUTORS, "wan_video", EXECUTORS["photo_pipe"])
+    monkeypatch.setattr(
+        RunnerClient, "request", lambda *_args, **_kwargs: {"available": True, "continuation_frames": [1, 17]}
+    )
+    with TestClient(app) as client:
+        settings(client)
+        response = client.post(
+            "/api/media/jobs/video",
+            json={"client_request_id": str(uuid4()), "prompt": "czerwony rower", "duration_seconds": 10},
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            from app.models import Task
+
+            plan = session.get(Task, response.json()["task_id"]).metadata_json["media_plan"]
+            identifier = plan["segment_run_ids"][0]
+            media = session.get(Run, identifier)
+            preparation = media.metadata_json[RECEIPT]["preparation_run_id"]
+        assert work() == preparation
+        with session_factory()() as session:
+            media = session.get(Run, identifier)
+            assert media.parameters["prompt"] == "a red bicycle"
+            assert media.parameters["continuation_strategy"] == "last_frame_v1"
+            media.parameters = {**media.parameters, "continuation_strategy": "cached_latents_v1"}
+            session.commit()
+        assert work() == identifier
+        assert read(client, identifier)["status"] == "failed"
+        assert fake[1] == []
+
+
 def test_retry_reuses_effective_prompt_without_a_second_inference(fake):
     with TestClient(app) as client:
         settings(client)
