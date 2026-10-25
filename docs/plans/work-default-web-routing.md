@@ -37,3 +37,11 @@ because a newly reachable Work planner must not acquire incidental file text on
 ordinary researched follow-ups. Existing bounded verified result references stay.
 The legacy orchestrator alias is normalized to Work for passive-Web preflight,
 so ambiguous images still obtain the selected planner/provider snapshot.
+
+The compiled UI probe exposed a second restriction: both entry and saved Work
+composers forced Web off despite a saved global preference. They now share that
+preference with Chat, including an explicit saved opt-out. Upload handling,
+continuation and selected-scope overrides retain their existing Web restrictions.
+No controls or layout are replaced. UI tests cover first-send Chat/Work defaults,
+Work opt-out and retained reviewed image-research queries; compiled acceptance
+must use the actual default without toggling it on to hide the regression.

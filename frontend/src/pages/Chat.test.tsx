@@ -26,85 +26,93 @@ const builtin = {
   error: null,
 };
 
-it("sends the first prompt without creating an empty conversation", async () => {
-  const writes: { path: string; body: Record<string, unknown> }[] = [];
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (path: string, init?: RequestInit) => {
-      if (init?.method === "POST") {
-        writes.push({ path, body: JSON.parse(String(init.body)) });
-        return { ok: true, json: async () => ({ conversation_id: "new" }) };
-      }
-      return {
-        ok: true,
-        json: async () =>
-          path.endsWith("/chat/providers")
-            ? [builtin]
-            : path.includes("/chat/providers/")
-              ? builtin
-              : path.endsWith("/preferences")
-                ? {
-                    version: 0,
-                    mode: "chat",
-                    provider: builtin.key,
-                    model: "",
-                    send_key: "enter",
-                  }
-                : path.endsWith("/llama")
-                  ? { models: [], instances: [] }
-                  : path.endsWith("/hardware")
-                    ? { gpus: [] }
-                    : [],
-      };
-    }),
-  );
-  render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <MemoryRouter initialEntries={["/chat"]}>
-        <Routes>
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/chat/new" element={<h1>Created chat</h1>} />
-        </Routes>
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-  const message = await screen.findByRole("textbox", { name: "Message" });
-  expect(
-    screen.queryByRole("button", { name: "Create conversation" }),
-  ).toBeNull();
-  expect(writes).toHaveLength(0);
-  fireEvent.change(message, { target: { value: "Explain this clearly" } });
-  await vi.waitFor(() =>
+it.each([
+  { mode: "chat", enabled: true },
+  { mode: "work", enabled: true },
+  { mode: "work", enabled: false },
+] as const)(
+  "sends the first $mode prompt with the saved Web preference ($enabled)",
+  async ({ mode, enabled }) => {
+    const writes: { path: string; body: Record<string, unknown> }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (path: string, init?: RequestInit) => {
+        if (init?.method === "POST") {
+          writes.push({ path, body: JSON.parse(String(init.body)) });
+          return { ok: true, json: async () => ({ conversation_id: "new" }) };
+        }
+        return {
+          ok: true,
+          json: async () =>
+            path.endsWith("/chat/providers")
+              ? [builtin]
+              : path.includes("/chat/providers/")
+                ? builtin
+                : path.endsWith("/preferences")
+                  ? {
+                      version: 0,
+                      mode,
+                      web_search_enabled: enabled,
+                      provider: builtin.key,
+                      model: "",
+                      send_key: "enter",
+                    }
+                  : path.endsWith("/llama")
+                    ? { models: [], instances: [] }
+                    : path.endsWith("/hardware")
+                      ? { gpus: [] }
+                      : [],
+        };
+      }),
+    );
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter initialEntries={["/chat"]}>
+          <Routes>
+            <Route path="/chat" element={<Chat />} />
+            <Route path="/chat/new" element={<h1>Created chat</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const message = await screen.findByRole("textbox", { name: "Message" });
     expect(
-      (
-        screen.getByRole("button", {
-          name: "Send message",
-        }) as HTMLButtonElement
-      ).disabled,
-    ).toBe(false),
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Send message" }));
-  await screen.findByRole("heading", { name: "Created chat" });
-  expect(writes).toHaveLength(1);
-  expect(writes[0]).toEqual({
-    path: "/api/chat/turns",
-    body: expect.objectContaining({
-      content: "Explain this clearly",
-      web_search: { enabled: true, query: "" },
-      execution_mode: "chat",
-      client_request_id: expect.any(String),
-      selection: {
-        provider: builtin.key,
-        model: "test-model",
-        execution_mode: "chat",
-      },
-    }),
-  });
-});
+      screen.queryByRole("button", { name: "Create conversation" }),
+    ).toBeNull();
+    expect(writes).toHaveLength(0);
+    fireEvent.change(message, { target: { value: "Explain this clearly" } });
+    await vi.waitFor(() =>
+      expect(
+        (
+          screen.getByRole("button", {
+            name: "Send message",
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(false),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+    await screen.findByRole("heading", { name: "Created chat" });
+    expect(writes).toHaveLength(1);
+    expect(writes[0]).toEqual({
+      path: "/api/chat/turns",
+      body: expect.objectContaining({
+        content: "Explain this clearly",
+        web_search: { enabled, query: "" },
+        execution_mode: mode,
+        client_request_id: expect.any(String),
+        selection: {
+          provider: builtin.key,
+          model: "test-model",
+          execution_mode: mode,
+        },
+      }),
+    });
+  },
+);
 
 it.each([undefined, 1, 2, 3, 4, 5, 6])(
   "moves through messages and identifies the resolved input source (%s)",
@@ -606,7 +614,7 @@ it.each(["image.generate", "image.generate_video"])(
     const toggle = await screen.findByRole("switch", {
       name: "Search the web",
     });
-    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
     await vi.waitFor(() =>
       expect(
         screen

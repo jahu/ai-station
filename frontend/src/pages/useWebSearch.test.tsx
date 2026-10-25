@@ -62,7 +62,7 @@ it("starts online and remembers an explicit opt-out after a fresh conversation/c
   await vi.waitFor(() => expect(saved.web_search_enabled).toBe(true));
 });
 
-it("does not apply the Chat default to Work or coding continuation scopes", async () => {
+it("does not apply the saved Web default when scoped inputs disallow it", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => ({
