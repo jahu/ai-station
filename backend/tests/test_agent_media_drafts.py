@@ -53,6 +53,9 @@ def test_media_draft_publishes_disabled_settings_without_generation(model, imple
         assert agent["cron_expr"] == "0 8 * * *"
         prompt = json.loads(calls[0]["messages"][1]["content"])
         assert "create_media" in prompt["operational_local_tools"]
+        if kind in {"video", "avatar"}:
+            assert prompt["proposal_schema"]["properties"]["maximum_runtime"]["default"] is None
+            assert agent["maximum_runtime"] == (14400 if kind == "video" else 7200)
         if kind == "video":
             properties = prompt["proposal_schema"]["$defs"]["AgentVideoRequest"]["properties"]
             # Real local inference copied the advertised short-clip default into
@@ -121,3 +124,56 @@ def test_natural_vocal_agent_can_review_goal_lyrics_without_inventing_supplied_w
     )
     assert not result.enabled and result.model == "fake-local"
     assert result.media.lyrics_source == "goal" and result.media.request.lyrics == ""
+
+
+@pytest.mark.parametrize("duration,expected", [(5, 7200), (15, 7200), (16, 14400), (60, 14400)])
+@pytest.mark.parametrize("nullable", [False, True])
+def test_fresh_video_draft_runtime_fits_full_output_without_changing_media(
+    implemented_media, duration, expected, nullable
+):
+    media = {
+        "kind": "video",
+        "description_source": "goal",
+        "request": {"prompt": "A quiet lake", "duration_seconds": duration, "seed": 51},
+    }
+    values = {"name": "Lake film", "goal": "Generate a lake film", "tools": ["create_media"], "media": media}
+    if nullable:
+        values["maximum_runtime"] = None
+    result = definition(Proposal(**values), "Create an agent making a lake film", "fake-local")
+    assert result.maximum_runtime == expected
+    assert result.media.request.duration_seconds == duration
+    assert result.media.request.seed == 51
+    assert result.media.request.memory_profile == "default"
+    assert not result.enabled and result.tools == ["create_media"]
+
+
+@pytest.mark.parametrize("seconds", [5, 300, 600, 14400])
+@pytest.mark.parametrize("kind", ["video", "avatar"])
+def test_explicit_media_draft_runtime_is_preserved_even_when_short(implemented_media, seconds, kind):
+    proposal = Proposal(
+        name="Bounded film",
+        goal="Generate within the explicit allowance",
+        tools=["create_media"],
+        maximum_runtime=seconds,
+        media={
+            "kind": kind,
+            "request": {"prompt": "Quiet lake", "duration_seconds": 30} if kind == "video" else {},
+        },
+    )
+    result = definition(proposal, f"Create a video agent with a {seconds}-second runtime limit", "fake-local")
+    assert result.maximum_runtime == seconds
+    assert not result.enabled
+
+
+@pytest.mark.parametrize(
+    "instruction,tools,expected",
+    [
+        ("Create an agent reporting workstation telemetry", ["system_snapshot"], 600),
+        ("Create an agent that builds a new website", ["coding_local"], 1800),
+    ],
+)
+def test_unspecified_non_media_runtime_keeps_existing_factory_defaults(instruction, tools, expected):
+    proposal = Proposal(name="Useful agent", goal=instruction, tools=tools)
+    result = definition(proposal, instruction, "fake-local")
+    assert result.maximum_runtime == expected
+    assert not result.enabled and result.tools == tools

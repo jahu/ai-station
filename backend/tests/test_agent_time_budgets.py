@@ -1,7 +1,7 @@
 """A reviewed multi-hour budget does not renew at child dispatch or create work."""
 
 import pytest
-from app.agent_drafts import Proposal
+from app.agent_drafts import Proposal, definition
 from app.agent_schema import AgentSettings
 from app.api import app
 from fastapi.testclient import TestClient
@@ -43,6 +43,11 @@ def test_definitions_and_assisted_proposals_reject_unbounded_or_invalid_budgets(
 
 def test_existing_default_and_assisted_proposal_budget_do_not_increase_implicitly():
     assert AgentSettings(name="Existing", goal="Preserve").maximum_runtime == 600
-    assert Proposal(name="Draft", goal="Review").maximum_runtime == 600
+    proposal = Proposal(name="Draft", goal="Review")
+    assert proposal.maximum_runtime is None
+    # The model's optional field is not an execution allowance. The ordinary
+    # persisted definition must retain its existing ten-minute default.
+    assert definition(proposal, "Review", "fake-local").maximum_runtime == 600
     proposal = Proposal(name="Long draft", goal="Review before enabling", maximum_runtime=7200)
     assert proposal.maximum_runtime == 7200
+    assert definition(proposal, "Review before enabling", "fake-local").maximum_runtime == 7200
