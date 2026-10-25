@@ -82,7 +82,12 @@ class Proposal(BaseModel):
     cron_expr: str = Field(default="", max_length=120)
     interval_seconds: int | None = None
     run_at: datetime | None = None
-    maximum_runtime: int = Field(default=600, ge=5, le=MAX_AGENT_RUNTIME)
+    maximum_runtime: int | None = Field(
+        default=None,
+        ge=5,
+        le=MAX_AGENT_RUNTIME,
+        description="Only supply a number when the user explicitly specifies a runtime limit in seconds; otherwise leave null for the controller's suggested allowance.",
+    )
     output_expectation: str = Field(default="A concise, factual report.", max_length=4000)
     report_condition: str = Field(default="", max_length=1500)
     media: AgentMediaScope | None = None
@@ -141,6 +146,15 @@ def definition(proposal, instruction, model, schedule_timezone="UTC"):
     if create_files and proposal.tools != ["python_data"]:
         raise ValueError("Instruction-based file creation requires only the local Python data tool")
     settings = proposal.model_dump(mode="json", exclude={"report_condition"})
+    if proposal.maximum_runtime is None:
+        # These are visible proposals for a new disabled definition, never an
+        # edit of an existing or running allowance. Keep numeric requests exact.
+        settings["maximum_runtime"] = base.maximum_runtime
+        if proposal.media is not None:
+            if proposal.media.kind == "video":
+                settings["maximum_runtime"] = 7200 if proposal.media.request.duration_seconds <= 15 else 14400
+            elif proposal.media.kind == "avatar":
+                settings["maximum_runtime"] = 7200
     settings["fetch_urls"] = urls
     result = AgentSettings.model_validate(
         {
@@ -289,6 +303,7 @@ def stop(run_id: UUID, session: DB):
 
 
 INSTRUCTIONS = """Prepare a useful AI Station agent definition for user review. Output exactly one JSON object matching the proposal_schema. No Markdown or tool calls.
+maximum_runtime is an execution allowance, not the output's duration or the schedule interval. Supply a numeric maximum_runtime only when the current user explicitly requests an execution time limit, converting it to seconds; otherwise set it null. The controller suggests enough time in the disabled definition for operator review. Keep requested media duration and schedule separate and unchanged.
 Only propose tools in the operational_local_tools catalog. Tools perform no work now: the user separately reviews and enables the disabled definition. Do not claim a tool has run, an email was sent, a file was read or a website built.
 Public search is free and requires no financial-data account. A search query is a short proposal for user review, not the full private instruction. http_fetch/browser URLs must be copied from supplied current_user_urls; never invent a URL, account or credential. Use web_search for research without a supplied URL. Always supply its useful public search_query. If current_user_urls is empty, http_fetch and browser are unavailable; do not select them. A browser step reads JavaScript; http_fetch reads ordinary text.
 coding_local creates a private workspace to write/build code; it may combine with web_search, search_pages (requires web_search), http_fetch and browser. Browser reads JavaScript-rendered text only from reviewed current-user public URLs; it does not give code networking or pixel vision. Research uses the reviewed public query/URLs before code generation; generated code receives saved source context, not network access. python_data analyzes reviewed CSV/Excel files and may combine with the same public research tools. With public research, files are optional; without it, the user selects CSV/Excel files afterward. The Python container is offline and receives only frozen approved source observations. When file_creation is true, select only python_data to create requested files from instructions, without uploaded files or public research. The controller binds that explicit creation operation; do not invent a data field. http_connector reads one saved API connection selected afterward by the operator; leave its scope unset and never invent connector IDs, URLs or credentials. It may precede local code/data analysis. Local coding/data may also select memory_search or project_memory for scoped saved observations. python_data may select remember_report to retain validated final answers when the user wants outcomes remembered. Neither generated code nor the model can write memory directly. Other tools may form a report workflow. Tool descriptions define their actual behavior. Do not promise unsupported integrations, including email delivery without its separately reviewed policy.
