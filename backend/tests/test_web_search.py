@@ -52,7 +52,7 @@ def conversation(client, mode="local"):
     return "/api/chat/conversations/" + response.json()["id"]
 
 
-@pytest.mark.parametrize("mode", ["local", "orchestrator"])
+@pytest.mark.parametrize("mode", ["local", "orchestrator", "assistant"])
 def test_search_is_opt_in_audited_and_persisted(mode, monkeypatch, inference):
     queries = []
 
@@ -566,7 +566,7 @@ async def test_unrelated_results_are_rejected_for_short_queries_too(monkeypatch)
     assert result["sources"] == []
 
 
-@pytest.mark.parametrize("mode", ["local", "orchestrator"])
+@pytest.mark.parametrize("mode", ["local", "orchestrator", "assistant"])
 def test_followup_resolves_subject_before_search_and_never_sends_raw_history(mode, monkeypatch):
     from app.models import Message
 

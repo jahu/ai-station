@@ -1,13 +1,12 @@
 """Current selected inputs prepare a disabled agent through the existing factory."""
 
-import re
 from typing import Literal
 
 from fastapi import HTTPException
 from pydantic import Field
 
 from app.agent_schema import AgentSettings
-from app.chat_policy import agent_draft_policy
+from app.chat_policy import agent_draft_policy, agent_draft_requested
 from app.conversation_data_schema import DataScope
 from app.data_agent_draft import RepeatProposal
 from app.models import Artifact, ChatWorkContext, Message, Run
@@ -26,16 +25,7 @@ class SelectedProposal(RepeatProposal):
 def requested(content):
     from app.conversation_data_reference import instruction
 
-    return bool(
-        re.search(
-            r"^(?:(?:please|now|then|proszę|prosze|teraz)\s+){0,3}"
-            r"(?:create|make|save|stw[oó]rz|utw[oó]rz|zapisz)\s+"
-            r"(?:(?:a|an|the|new|persistent|recurring|daily|mi|nowego|nowy|stałego|stalego|cyklicznego|codziennego)\s+){0,3}"
-            r"(?:agent|agenta)\b",
-            instruction(content),
-            re.I,
-        )
-    )
+    return agent_draft_requested({"content": instruction(content)})
 
 
 def freeze(session, raw, instruction, *, for_execution=False):

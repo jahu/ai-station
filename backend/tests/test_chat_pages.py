@@ -79,7 +79,7 @@ def page_tools(monkeypatch):
     return seen, fetched, searched
 
 
-@pytest.mark.parametrize("mode", ["chat", "local", "work", "orchestrator"])
+@pytest.mark.parametrize("mode", ["chat", "local", "work", "orchestrator", "assistant"])
 def test_explicit_text_only_request_fetches_page_and_preserves_evidence_and_model_roles(page_tools, mode):
     seen, fetched, searched = page_tools
     with TestClient(app) as api:

@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
   "sources": [
     "docs/product-completion.md",
@@ -10,7 +10,8 @@
     "docs/plans/prompt-translation-and-dictation.md",
     "docs/plans/media-prompt-translation-implementation.md",
     "docs/plans/unified-assistant-chat.md",
-    "docs/plans/conversation-prompt-language.md"
+    "docs/plans/conversation-prompt-language.md",
+    "docs/plans/natural-agent-intent.md"
   ],
   "cases": [
     {
@@ -3444,12 +3445,13 @@
         "Przekazana wersja jednego chatu; dostęp operatora; jednorazowe neutralne dane QA; lokalne modele odpowiednie do testu."
       ],
       "steps": [
-        "W rozmowie zapytaj: Jak stworzyć agenta?",
-        "Następnie zleć: Stwórz agenta podsumowującego stan stacji co rano",
-        "Sprawdź definicję przed aktywacją"
+        "Przy włączonym domyślnym Web zapytaj w rozmowie: Jak stworzyć agenta?",
+        "Następnie zleć: Chciałbym mieć agenta podsumowującego stan stacji co rano",
+        "Powtórz w nowej rozmowie: Could you prepare an agent that summarizes workstation telemetry?",
+        "Sprawdź definicję i wykonane narzędzia przed aktywacją"
       ],
       "expected": [
-        "Pierwsze pytanie daje odpowiedź; drugie przygotowuje wyłączony szkic. Harmonogram nie uruchamia się przed jawną aktywacją."
+        "Pierwsze pytanie daje zwykłą odpowiedź. Uprzejme prośby przygotowują wyłączony szkic, bez wyszukiwania treści celu w internecie i bez wykonywania kodu. Harmonogram wymaga jawnej aktywacji."
       ],
       "resources": "Lokalny LLM; generowanie GPU tylko dla odpowiednich kroków; bez płatnych API",
       "minutes": 5,
