@@ -96,6 +96,22 @@ def test_queued_local_inference_publishes_only_disabled_definition_with_provenan
         assert step() is None
 
 
+def test_requested_report_criterion_is_visible_in_a_disabled_draft_without_email_authority(model):
+    _, responses = model
+    criterion = "Only notify about significant new releases, not repeated findings."
+    responses[0] = json.dumps({**PROPOSAL, "report_condition": criterion})
+    with TestClient(app) as api:
+        run = submit(api, instruction="Research local AI releases and only notify me about significant news.")
+        step()
+        done = state(api, run)
+        assert done["status"] == "succeeded", done["error_message"]
+        agent = api.get("/api/agents/" + done["metadata"]["agent_id"]).json()
+        assert not agent["enabled"] and agent["next_run_at"] is None
+        assert agent["notification_policy"]["on_success"] is True
+        assert agent["notification_policy"]["report_condition"] == criterion
+        assert not agent["notification_policy"].get("report_email")
+
+
 def test_replay_survives_provider_changes_but_conflicting_receipt_is_rejected(model):
     with TestClient(app) as api:
         request = body()

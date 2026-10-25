@@ -139,6 +139,21 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
     policy = notification_policy(
         (coding or media or run.parameters.get("definition") or {}).get("notification_policy")
     )
+    if status == "succeeded" and policy.report_condition and (policy.on_success or policy.report_email):
+        from app.agent_alerts import may_notify
+
+        if not may_notify(session, run, policy):
+            append_event(
+                session,
+                run.id,
+                "agent.notification.suppressed",
+                {
+                    "reason": run.metadata_json["report_alert"]["reason"],
+                    "success_notice": True,
+                    "result_email": True,
+                },
+            )
+            return None
     if status == "succeeded" and policy.report_email:
         from app.agent_report_email import publish
 

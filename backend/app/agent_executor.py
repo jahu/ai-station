@@ -420,7 +420,21 @@ class LocalAgentExecutor:
                 raise ProviderError("Provider returned unexecuted tool requests instead of a final report")
             if recorded:
                 run.metadata_json = {**run.metadata_json, "tool_calls": recorded}
-            self._artifact(session, run, text, partial=False)
+            report = self._artifact(session, run, text, partial=False)
+            policy = definition.notification_policy
+            if policy.report_condition and (policy.on_success or policy.report_email):
+                from app.agent_alerts import evaluate
+
+                session.commit()
+                decision = evaluate(session, run, definition, report, deadline, self._consume)
+                # Retain this short write transaction through final publication;
+                # a cancel committed while classification ran must win.
+                session.refresh(run)
+                if run.status in {"cancel_requested", "canceled"}:
+                    if run.status == "cancel_requested":
+                        transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
+                    return "done"
+                run.metadata_json = {**run.metadata_json, "report_alert": decision}
             remember = "remember_report" in definition.tools
             if remember:
                 append_event(session, run.id, "tool.requested", {"tool": "remember_report"})
@@ -524,16 +538,19 @@ class LocalAgentExecutor:
         session.commit()
         return run.status == "canceled"
 
-    async def _consume(self, session, run, definition, deadline, tools=None):
+    async def _consume(
+        self, session, run, definition, deadline, tools=None, *, purpose="report", messages=None
+    ):
         collected = []
         stream = LocalChatProvider().stream(
             endpoint=run.parameters["endpoint"],
-            messages=run.parameters["messages"],
+            messages=messages if messages is not None else run.parameters["messages"],
             model=definition.model,
-            temperature=0.3,
-            max_tokens=2048,
+            temperature=0.0 if purpose == "alert" else 0.3,
+            max_tokens=512 if purpose == "alert" else 2048,
             tools=tools,
             on_tool_calls=collected.extend if tools else None,
+            **({"json_output": True} if purpose == "alert" else {}),
         )
         pending = None
         text = ""
@@ -555,10 +572,11 @@ class LocalAgentExecutor:
                         return text, collected
                     finally:
                         pending = None
-                    if len(text) + len(token) > 256000:
+                    if len(text) + len(token) > (4000 if purpose == "alert" else 256000):
                         raise ProviderError("Report exceeded the output size limit")
                     text += token
-                    append_event(session, run.id, "agent.delta", {"text": token})
+                    if purpose == "report":
+                        append_event(session, run.id, "agent.delta", {"text": token})
                     session.commit()
         finally:
             session.commit()
@@ -567,7 +585,7 @@ class LocalAgentExecutor:
                 with suppress(asyncio.CancelledError, StopAsyncIteration):
                     await pending
             await stream.aclose()
-            if text and not completed:
+            if text and not completed and purpose == "report":
                 self._artifact(session, run, text, partial=True)
                 session.commit()
 
@@ -576,7 +594,7 @@ class LocalAgentExecutor:
         with tempfile.NamedTemporaryFile(mode="w+", suffix=".md") as handle:
             handle.write(text)
             handle.flush()
-            register_file(
+            return register_file(
                 session,
                 source=Path(handle.name),
                 artifact_type="markdown",

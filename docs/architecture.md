@@ -1,3 +1,9 @@
+Ordinary research reports may carry a reviewed success criterion. A tools-free,
+source-bound local check runs within the original report Run/deadline, comparing
+the previous verified report with identical settings. Suppression retains the
+report and gates both notices and separately reviewed email. Empty policy defaults
+retain existing identities. [Contract and acceptance](plans/agent-report-alerts.md).
+
 In Work, default Web availability no longer consumes action routing. Known
 non-research actions omit that preference before enqueue; ambiguous instructions
 use the existing selected-model planner. Explicit queries/rendering retain their

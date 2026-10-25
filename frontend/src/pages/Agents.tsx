@@ -5,6 +5,7 @@ import {
   type ResultEmailAuthorization,
 } from "./AgentResultEmail";
 import AgentTimeBudget from "./AgentTimeBudget";
+import { ReportAlertField, ReportAlertResult } from "./AgentReportAlerts";
 import AgentCronFields from "./AgentCronFields";
 import AgentDraftForm from "./AgentDraftForm";
 import {
@@ -150,6 +151,7 @@ interface Agent {
     on_failure: boolean;
     on_approval: boolean;
     report_email?: ResultEmailScope | null;
+    report_condition?: string;
   };
   project_id: string | null;
   enabled: boolean;
@@ -881,6 +883,7 @@ export function AgentDetail() {
               />
             )}
             {!isCoding(agent.tools) && <AgentLatestReport runs={agent.runs} />}
+            <ReportAlertResult runs={agent.runs} />
             {isCoding(agent.tools) && !agent.tools.includes("python_data") && (
               <AgentCodeWorkspace runs={agent.runs} />
             )}
@@ -1391,6 +1394,16 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
               update("notification_policy", {
                 ...values.notification_policy,
                 ...policy,
+              })
+            }
+          />
+          <ReportAlertField
+            tools={values.tools}
+            value={values.notification_policy?.report_condition}
+            onChange={(report_condition) =>
+              update("notification_policy", {
+                ...values.notification_policy,
+                report_condition,
               })
             }
           />

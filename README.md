@@ -53,6 +53,12 @@ verified captured data. See [saved API sources](docs/plans/agent-http-connectors
 
 # AI Station
 
+Research agents can use **Notifications → Only notify when** to alert on a
+reviewed finding instead of every successful report. Each report stays in history;
+the workspace shows the actual decision and compared report. The criterion gates
+success notices and configured result email; sender/recipient approval and failure
+notifications retain their own settings. [Conditional report alerts](docs/plans/agent-report-alerts.md).
+
 Ask **“Create a CSV table…”** or **“Utwórz arkusz Excel…”**, or choose
 **Files & data → Create files from instructions** in Chat/Work or an agent.
 Describe the contents; no dummy upload or repository setup is needed. Verified

@@ -1,17 +1,21 @@
-> Active: test/owned-python-runner-recovery from merged #429 (d8fac4a).
-> --failure-target runner adds actual private Native Runner SIGKILL/restart while
-> its CPU job survives. Both completion/cancel cases pass after original-worker
-> transport loss; journal adoption uses the same native job PID. The existing
-> default worker-crash mode also passes both actual cases on the final script.
-> No replay, output adoption or orphaned containers; fixture/index/script bytes
-> survive. Evidence: data/acceptance/owned-python-runner-recovery-20261025.
-> Full-source lint/format and identical-production #428 gate reuse are required;
-> final qualification/review/merge receipts determine release status. No app/native
-> deployment is needed for this opt-in command/documentation-only change.
-> Live remains qualified #428 at http://192.168.1.121:8765, preserving original
-> data/auth, native PID, model container/context and private Tailscale daemon.
-> Operator enrollment/mobile connection, sustained concurrency, broader practical
-> agent composition and whole-platform acceptance remain open. Preserve root WIP.
+> Active: feat/agent-report-alerts in .tools/agent-report-alerts, from merged
+> #430 (a3d8862). Ordinary research agents gain reviewed success criteria, a
+> source-bound tools-free local check, previous same-settings report comparison,
+> inspectable decision and notice/email suppression with reports retained.
+> Existing notification defaults preserve old identities; other output families
+> explicitly reject unsupported criteria. Factory drafts remain disabled; email
+> rechecks the criterion before transport and normal consent remains unchanged.
+> Complete Python3837 coverage passes (3828/nine opt-in skips); all five UI gates
+> pass with800 tests. Exact image/Compose and an actual-image isolated fake API/
+> worker/SQL/SSE probe pass. Four compiled desktop/mobile two-report flows pass.
+> Actual local report/check inference correctly handled no finding, new v2 and
+> repeated v2 in synthetic memory data, preserving the ready model/context.
+> PR #431 is draft pending final full review/merge and controller-only rollout.
+> Original failed fixture/effect checks are retained and resolved. Live remains qualified #428; #429/#430 real CPU worker/
+> native crash completion/cancel acceptance is merged and preserved under its
+> acceptance directories. Keep root Memory WIP, data/auth, Native PID, owned
+> model/context and private daemon. Tailscale enrollment/mobile and broader
+> general-agent/full-platform completion remain open.
 
 > #426 is merged into develop (74f409d) and deployed at
 > http://192.168.1.121:8765. Authority/evidence:

@@ -1,3 +1,9 @@
+Conditional report alerts use the same local provider/deadline without tools.
+Current/previous report bytes, ownership and frozen definitions are reverified;
+classification cannot choose recipients or authorize delivery. Invalid checks
+fail closed with the report retained. Email rechecks the decision before transport;
+policy changes invalidate existing automatic grants. [Contract](plans/agent-report-alerts.md).
+
 Default-on Web does not grant tools to a Work-created agent or replace current
 runtime/Git authority. Explicit search queries/rendered-page requests are never
 silently removed. Planner context uses plain user_text and skips legacy expanded
