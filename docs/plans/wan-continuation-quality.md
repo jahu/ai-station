@@ -1,6 +1,7 @@
 # Wan continuation: preserve exposure and detail
 
-Candidate implemented; qualification in progress, 2026-10-26. This is a visual-quality release gate,
+Candidate implemented; full-film visual gate **failed**, 2026-10-26. PR #451 stays
+draft, unmerged and undeployed. This is a visual-quality release gate,
 not a claim that a decodable MP4 is an acceptable long video.
 
 ## Reproduction and evidence
@@ -86,9 +87,44 @@ hash checks, diagnostic images and `vae-image-statistics-float64.json`.
    corrected long-video quality. Review the full diff, run required local checks,
    then PR to develop and deploy only a satisfactory reviewed release.
 
+## Full-film result and next diagnosis
+
+The candidate's real ten-second film completed all three native windows and CPU
+composition: 240 frames at 1280×704, 20 steps, approximately 34 minutes. Actual
+compiled desktop/phone playback passes. The first window is byte-identical to
+the prior baseline; the second is byte-identical to the separate single-anchor
+diagnostic. This controls the initial scene and verifies native prefix selection.
+
+Nevertheless the third window makes a pronounced exposure jump at frame 161;
+the ending is about 47% nearly white and loses detail. **The candidate fails the
+complete visual gate.** Keep `long-fixed-result.json` (technical success),
+`visual-review.json` (failure), actual images/MP4 and player receipt together.
+Neither a green normal suite nor the improved second window permits merging or
+deployment as a finished fix. Final source `596d963` passes all 4,170 normal cases
+(4,161 passes/nine opt-in skips), Ruff/format, 11 offline exporter checks, exact
+image/source/assets, three Compose variants and isolated API/worker/SQL/SSE.
+Its only later runtime delta is translation identity hashing; the hardware case
+has translation off. That scope mapping is recorded explicitly.
+
+Next test: guidance during diffusion, using the exact failed third-window input,
+seed, prompt, CFG, steps and memory profile. Two isolated fixed engineering jobs
+compare installed built-in APG (eta 0, norm threshold 5, momentum 0) and CFGNorm
+(strength 1) against the plain last-frame result. They retain normal worker,
+typed Runner, process ownership, memory scopes and cancellation, but substitute
+one explicitly recorded private job module. They are **engineering probes**,
+not a qualified product integration. Original ComfyUI source, weights and
+production services are unchanged; no arbitrary command/graph option is exposed.
+
+This hypothesis is informed by [the APG paper](https://arxiv.org/abs/2410.02416)
+and [an upstream WanGP report](https://github.com/deepbeepmeep/WanGP/issues/579)
+where the reporter found APG effective for brightness drift in Wan 2.1. That is
+not proof for this installed Wan 2.2 profile. Evaluate actual complete generated
+windows before selecting or implementing a new frozen guidance recipe. Do not
+replace the failed sample with a shorter/easier one or a colour filter.
+
 A good result for one lake/profile is not proof of arbitrary durations, scenes,
 identity fidelity or all installed models. Keep the final Polish operator QA
 package's profile descriptions aligned with the actual verified outcome.
 Single-frame anchoring also does not prove preservation of temporal velocity
-across windows. The candidate still needs a complete multi-window visual gate
-before review/merge/rollout; this document is not a deployment receipt.
+across windows. A corrected candidate must pass a new complete multi-window
+visual gate before review/merge/rollout; this document is not a deployment receipt.

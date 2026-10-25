@@ -83,7 +83,9 @@ they do not establish Auto loading. Keep these distinctions in the final report.
    or higher-quality profile. The actual four-window ten-second Wan test at
    20 steps passes decode/assembly/playback but fails visual quality with
    progressive whitening. A read-only VAE probe identifies a temporal boundary
-   mismatch in raw-tail reuse; diffusion comparison remains in progress. Follow
+   mismatch in raw-tail reuse. The last-frame candidate's complete ten-second
+   film also fails at its third window despite successful technical/player
+   checks; PR #451 is held. Controlled guidance diagnostics follow. See
    [the continuation investigation](wan-continuation-quality.md), preserving the
    failed visual receipt. Current capability checks start no inference.
 3. Keep external-account acceptance explicit. The owned Tailscale helper currently
