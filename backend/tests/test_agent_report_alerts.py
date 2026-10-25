@@ -205,7 +205,7 @@ def test_trashed_previous_report_cannot_be_silently_dropped_or_used_as_a_new_bas
         assert len(checked) == 1
 
 
-@pytest.mark.parametrize("tool", ["coding_local", "python_data", "create_media", "market_watch"])
+@pytest.mark.parametrize("tool", ["coding_local", "create_media", "market_watch"])
 def test_other_output_tools_cannot_silently_ignore_or_remove_a_saved_criterion(tool):
     from app.agent_schema import AgentSettings
 

@@ -69,6 +69,14 @@ def notice_dict(row: Notice, session: Session | None = None) -> dict:
 def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
     if run.executor_type == "email_send" and run.parameters.get("agent_result"):
         return None
+    if run.agent_id and run.executor_type in {"llama_load", "llama_stop", "llama_resume_consumer"}:
+        from app.agent_outcome import alert_check_runs
+
+        owned = list(
+            session.scalars(select(Run).where(Run.task_id == run.task_id, Run.agent_id == run.agent_id))
+        )
+        if any(item.id == run.id for item in alert_check_runs(session, owned)):
+            return None  # The dependent check reports this separately from data generation.
     task = session.get(Task, run.task_id) if run.agent_id else None
     coding = task.metadata_json.get("agent_coding_definition") if task else None
     media = None
@@ -142,6 +150,13 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
     if status == "succeeded" and policy.report_condition and (policy.on_success or policy.report_email):
         from app.agent_alerts import may_notify
 
+        if run.executor_type == "agent_data_result":
+            from app.agent_result_alert import publish as publish_check
+
+            check = publish_check(session, run)
+            if check.status != "succeeded":
+                return None
+
         if not may_notify(session, run, policy):
             append_event(
                 session,
@@ -200,6 +215,9 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
         titles["succeeded"] = "Data agent results ready"
         titles["failed"] = "Data agent workflow failed"
         titles["interrupted"] = "Data agent needs inspection"
+    if run.executor_type == "agent_result_alert":
+        titles["failed"] = "Notification check failed; data result retained"
+        titles["interrupted"] = "Notification check needs inspection; data result retained"
     if media:
         titles["succeeded"] = "Agent media ready"
     notice = Notice(

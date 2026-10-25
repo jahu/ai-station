@@ -65,7 +65,8 @@ class NotificationPolicy(BaseModel):
         if value is None or value == {}:
             return {}
         if isinstance(value, dict) and not any(
-            key in value for key in ("on_success", "on_failure", "on_approval", "report_email")
+            key in value
+            for key in ("on_success", "on_failure", "on_approval", "report_email", "report_condition")
         ):
             return {"on_success": False, "on_failure": False, "on_approval": False}
         return value
@@ -151,10 +152,13 @@ class AgentSettings(BaseModel):
     @model_validator(mode="after")
     def validate_definition(self):
         if self.notification_policy.report_condition and (
-            coding_provider(self.tools) or "create_media" in self.tools or "market_watch" in self.tools
+            coding_provider(self.tools)
+            and "python_data" not in self.tools
+            or "create_media" in self.tools
+            or "market_watch" in self.tools
         ):
             raise ValueError(
-                "Success criteria currently apply to report agents; explicitly clear them before changing output tools"
+                "Success criteria currently apply to report/data agents; explicitly clear them before changing output tools"
             )
         if self.documents is not None and "read_documents" not in self.tools:
             raise ValueError("Selected documents require the Read documents tool")

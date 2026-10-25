@@ -58,7 +58,7 @@ it("keeps an existing criterion visible when output changes instead of silently 
   const change = vi.fn();
   render(
     <ReportAlertField
-      tools={["python_data"]}
+      tools={["coding_local"]}
       value="Only new findings"
       onChange={change}
     />,
@@ -152,4 +152,58 @@ it("identifies an interrupted check rather than claiming a matching result", () 
     screen.getByRole("heading", { name: "Alert check needs attention" }),
   ).toBeTruthy();
   expect(screen.queryByText("Matching finding")).toBeNull();
+});
+
+it("offers the same reviewed criterion for data analysis", () => {
+  render(
+    <ReportAlertField
+      tools={["python_data"]}
+      value="Total exceeds 100"
+      onChange={vi.fn()}
+    />,
+  );
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect((screen.getByRole("textbox") as HTMLTextAreaElement).value).toBe(
+    "Total exceeds 100",
+  );
+});
+
+it("shows a failed data notification check independently of its successful analysis", () => {
+  render(
+    <MemoryRouter>
+      <ReportAlertResult
+        runs={[
+          run("data", "2026-10-25T10:00:00Z", {
+            executor_type: "agent_data_result",
+            status: "succeeded",
+            metadata: {
+              report_alert: {
+                state: "checking",
+                criterion: "Total exceeds 100",
+                check_run_id: "check",
+              },
+            },
+          }),
+          run("check", "2026-10-25T10:01:00Z", {
+            executor_type: "agent_result_alert",
+            status: "failed",
+            metadata: {},
+          }),
+        ]}
+      />
+    </MemoryRouter>,
+  );
+  expect(
+    screen.getByRole("heading", { name: "Alert check needs attention" }),
+  ).toBeTruthy();
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect this report & alert check" })
+      .getAttribute("href"),
+  ).toBe("/runs/check");
+  expect(
+    screen.getByText(
+      "The report remains available. No success notification has been sent.",
+    ),
+  ).toBeTruthy();
 });

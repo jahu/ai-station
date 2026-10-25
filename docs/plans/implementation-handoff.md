@@ -1,3 +1,5 @@
+> Active: `feat/data-result-alerts` in `.tools/data-result-alerts`, based on merged/deployed #431 (`bb28479`). Extend reviewed criteria to completed Python/data answers through one independent durable child; preserve data, original budget/model, private-workspace identity and SMTP consent. Focused tests cover matching/suppression, failed checks not advancing baseline, Stop, model preparation, source changes and reviewed delivery. Full gates/review/deployment remain pending. Live authority is `data/acceptance/safety-redeploy-20261012/deployment.json`; preserve root Memory WIP, native Runner, model/context, private daemon, auth and operator data. Whole-platform goal remains open.
+
 > Active: feat/agent-report-alerts in .tools/agent-report-alerts, from merged
 > #430 (a3d8862). Ordinary research agents gain reviewed success criteria, a
 > source-bound tools-free local check, previous same-settings report comparison,

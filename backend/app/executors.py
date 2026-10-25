@@ -13,6 +13,7 @@ from app.agent_drafts import AgentDraftExecutor
 from app.agent_executor import LocalAgentExecutor
 from app.agent_media import AgentMediaExecutor
 from app.agent_page_coding import AgentPageCodingExecutor
+from app.agent_result_alert import ResultAlertExecutor
 from app.agent_workflow import AgentToolExecutor, AgentWorkflowExecutor
 from app.artifacts import adopt_existing
 from app.assistant import AssistantExecutor
@@ -316,6 +317,7 @@ EXECUTORS = {
     "data_inspection": DataInspectionExecutor(),
     "agent_data_generate": DataGenerateExecutor(),
     "agent_data_result": DataResultExecutor(),
+    "agent_result_alert": ResultAlertExecutor(),
     "fake": FakeExecutor(),
     "orchestrator": AssistantExecutor(),
     "station_snapshot": StationSnapshotExecutor(),

@@ -1,3 +1,5 @@
+Conditional data-result alerts are being implemented on `feat/data-result-alerts`. Verified analysis and files remain independent of notification checking, with source-bound local checks and reviewed mail gating. Qualification and deployment are pending; this is not yet a live feature. [Contracts](plans/data-result-alerts.md).
+
 PR #425 adds explicit continuation from complete transformed CSV/XLSX outputs,
 separate from original-input follow-ups. [Contracts and release evidence](plans/data-result-file-continuations.md)
 cover fresh Task scope, source ownership and original-byte preservation. Whole-platform
