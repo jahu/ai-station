@@ -1,18 +1,17 @@
-> Active: test/owned-python-worker-recovery from qualified #428 (9d772a1).
-> The new opt-in CPU recovery probe uses an isolated native Runner/database/repo,
-> an existing trusted image and actual killed worker processes. First actual
-> completion/cancel cases passed without replay, output adoption or orphaned
-> containers, including final cleanup flags, same native PID and one script start.
-> Original repo/index/script bytes survived; leases expired naturally. Source-
-> identical #428 production gates are reused; full review/merge remain pending.
-> Live #428: data/acceptance/work-default-web-routing-20261025/post-deployment-qualified.json.
-> Work/default Web is deployed: 3817 Python cases successfully covered (nine
-> opt-in skips), 179 final affected retests, UI794, four compiled browser flows,
-> two actual local-model requests, exact image/Compose and LAN/auth preservation.
-> Native Runner/model/private Tailscale daemon remain unchanged; actual private
-> account enrollment/mobile connection remain pending operator action. Preserve
-> root Memory WIP. This closes the recorded routing/recovery slices, not the full
-> platform goal.
+> Active: test/owned-python-runner-recovery from merged #429 (d8fac4a).
+> --failure-target runner adds actual private Native Runner SIGKILL/restart while
+> its CPU job survives. Both completion/cancel cases pass after original-worker
+> transport loss; journal adoption uses the same native job PID. The existing
+> default worker-crash mode also passes both actual cases on the final script.
+> No replay, output adoption or orphaned containers; fixture/index/script bytes
+> survive. Evidence: data/acceptance/owned-python-runner-recovery-20261025.
+> Full-source lint/format and identical-production #428 gate reuse are required;
+> final qualification/review/merge receipts determine release status. No app/native
+> deployment is needed for this opt-in command/documentation-only change.
+> Live remains qualified #428 at http://192.168.1.121:8765, preserving original
+> data/auth, native PID, model container/context and private Tailscale daemon.
+> Operator enrollment/mobile connection, sustained concurrency, broader practical
+> agent composition and whole-platform acceptance remain open. Preserve root WIP.
 
 > #426 is merged into develop (74f409d) and deployed at
 > http://192.168.1.121:8765. Authority/evidence:
