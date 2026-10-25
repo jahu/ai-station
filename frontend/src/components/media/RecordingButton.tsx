@@ -22,10 +22,12 @@ export default function RecordingButton({
   disabled,
   onBusy,
   onRecorded,
+  mode = "attachment",
 }: {
   disabled: boolean;
   onBusy: (busy: boolean) => void;
   onRecorded: (file: File) => Promise<void>;
+  mode?: "attachment" | "dictation";
 }) {
   const [phase, setPhase] = useState("idle");
   const [seconds, setSeconds] = useState(0);
@@ -77,7 +79,9 @@ export default function RecordingButton({
       if (capture.active) {
         setPhase("retry");
         setError(
-          "Could not attach the recording. Retry without recording again, or cancel.",
+          mode === "dictation"
+            ? "Could not prepare dictation. Retry without recording again, or cancel."
+            : "Could not attach the recording. Retry without recording again, or cancel.",
         );
       }
     } finally {
@@ -89,6 +93,12 @@ export default function RecordingButton({
   async function start() {
     if (current.current || disabled) return;
     setError("");
+    if (window.isSecureContext === false) {
+      setError(
+        "Microphone access requires HTTPS or localhost. Transcribe an audio file instead.",
+      );
+      return;
+    }
     if (
       !navigator.mediaDevices?.getUserMedia ||
       typeof MediaRecorder === "undefined"
@@ -179,10 +189,16 @@ export default function RecordingButton({
         <Button
           type="button"
           variant="ghost"
+          aria-label={mode === "dictation" ? "Dictate" : "Record audio"}
+          title={
+            mode === "dictation"
+              ? "Dictate a draft using local transcription"
+              : "Attach a recording for analysis"
+          }
           disabled={disabled}
           onClick={start}
         >
-          <Mic size={15} /> Record audio
+          <Mic size={15} /> {mode === "dictation" ? "Dictate" : "Record audio"}
         </Button>
       ) : (
         <>
@@ -193,7 +209,9 @@ export default function RecordingButton({
                 ? "Waiting for microphone…"
                 : phase === "retry"
                   ? "Recording ready"
-                  : "Attaching recording…"}
+                  : mode === "dictation"
+                    ? "Preparing dictation…"
+                    : "Attaching recording…"}
           </span>
           {phase === "recording" && (
             <Button
@@ -203,7 +221,8 @@ export default function RecordingButton({
                 current.current?.recorder?.stop();
               }}
             >
-              <Square size={14} /> Finish recording
+              <Square size={14} />{" "}
+              {mode === "dictation" ? "Stop recording" : "Finish recording"}
             </Button>
           )}
           {phase === "retry" && (

@@ -382,6 +382,12 @@ Do not commit `.env` or secrets. The UI/API port is bound to localhost. Settings
 
 ## Local chat
 
+Use **Dictate** beside Send to prepare a locally transcribed, editable draft in
+Chat or Work. Nothing is submitted automatically. **Dictation options** contains
+Auto/Polish, the saved recording and an audio-file fallback for HTTP LAN, where
+browser microphone capture requires HTTPS. The existing **Record audio** attachment
+action remains available for recording analysis. See [recording and dictation](docs/chat-recording.md).
+
 With **Web** on, include one public URL and ask about its design, colors or a
 promotional image prompt. AI Station captures the page and inspects it with an
 installed local Vision model, which may load automatically. No advanced tool

@@ -1,6 +1,7 @@
 import { ArrowUp, Paperclip } from "lucide-react";
 import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { Button } from "../components/ui/button";
+import { useDictation } from "./useDictation";
 
 export default function ConversationComposer({
   id,
@@ -37,6 +38,7 @@ export default function ConversationComposer({
 }) {
   const textarea = useRef<HTMLTextAreaElement>(null);
   const toolPanel = useRef<HTMLDetailsElement>(null);
+  const dictation = useDictation({ value, onChange, textarea, disabled: busy });
   useLayoutEffect(() => {
     if (toolSelectionKey && toolPanel.current) {
       toolPanel.current.open = true;
@@ -51,7 +53,7 @@ export default function ConversationComposer({
     field.style.height = `${field.scrollHeight}px`;
   }, [value]);
   const submit = () => {
-    if (canSend && !busy) onSend();
+    if (canSend && !busy && !dictation.busy) onSend();
   };
   return (
     <form
@@ -93,6 +95,7 @@ export default function ConversationComposer({
           submit();
         }}
       />
+      {dictation.panel}
       {permissionNote && <p className="muted">{permissionNote}</p>}
       {tools && (
         <details ref={toolPanel} className="new-chat-tools">
@@ -100,11 +103,14 @@ export default function ConversationComposer({
             <Paperclip size={16} aria-hidden="true" />
             <span>Attach files &amp; choose tools</span>
           </summary>
-          {tools}
+          <fieldset className="composer-tools-lock" disabled={dictation.busy}>
+            {tools}
+          </fieldset>
         </details>
       )}
       <div className="new-chat-footer">
         {controls}
+        {dictation.action}
         {sendButton ?? (
           <Button
             type="submit"
@@ -114,7 +120,7 @@ export default function ConversationComposer({
                 ? "Ctrl / Cmd + Enter to send"
                 : "Enter to send · Shift + Enter for a new line"
             }
-            disabled={!canSend || busy}
+            disabled={!canSend || busy || dictation.busy}
           >
             <ArrowUp size={18} /> Send
           </Button>

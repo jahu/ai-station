@@ -8,17 +8,19 @@ import tempfile
 import wave
 from pathlib import Path
 from typing import Annotated, Literal
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.artifacts import register_file
 from app.audio import MAX_BYTES, wav_metadata
 from app.config import get_settings
 from app.db import session_scope
-from app.models import Artifact
+from app.models import Artifact, Run, Task
 from app.native_job_executor import NativeJobExecutor
 from app.paths import safe_join
 from app.recordings import FORMATS, recording_format
@@ -77,12 +79,48 @@ class TranscriptionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     audio_artifact_id: UUID
     language: Literal["auto", "pl", "en", "de", "fr", "es", "it", "pt", "uk", "ru"] = "auto"
+    client_request_id: UUID | None = None
 
 
 @router.post("/runs", status_code=202)
 def generate(body: TranscriptionRequest, session: DB):
-    run = create_transcription_run(session, body)
-    session.commit()
+    # A composer retry after a lost acknowledgement must inspect the same job.
+    # The Task PK serializes concurrent submissions; no new receipt table needed.
+    task_id = str(uuid5(NAMESPACE_URL, f"ai-station:transcription:{body.client_request_id}"))
+    digest = hashlib.sha256(body.model_dump_json(exclude={"client_request_id"}).encode()).hexdigest()
+
+    def receipt():
+        task = session.get(Task, task_id)
+        if task is None:
+            return None
+        if task.metadata_json.get("transcription_request_hash") != digest:
+            raise HTTPException(409, "This request identity already belongs to different work")
+        run = session.scalar(select(Run).where(Run.task_id == task_id, Run.operation_key == "transcribe"))
+        if run is None:
+            raise HTTPException(409, "Transcription receipt is incomplete")
+        return run
+
+    if body.client_request_id and (existing := receipt()):
+        return run_dict(existing)
+    try:
+        task = None
+        if body.client_request_id:
+            task = Task(
+                id=task_id,
+                title="Transcribe a recording",
+                prompt="Transcribe this recording locally",
+                capability="audio.transcribe",
+                metadata_json={"transcription_request_hash": digest},
+            )
+            session.add(task)
+            session.flush()
+        run = create_transcription_run(session, body, task=task)
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        if body.client_request_id and (existing := receipt()):
+            return run_dict(existing)
+        raise
     return run_dict(run)
 
 
@@ -132,6 +170,7 @@ def create_transcription_run(session, body, *, task=None, parent_run_id=None):
         requested_resources={"cpu_threads": 2},
         permissions=["filesystem_read", "workspace_write"],
         retry_class="inspect",
+        operation_key="transcribe" if body.client_request_id and parent_run_id is None else None,
         parent_run_id=parent_run_id,
         parameters={
             "source": {"relative_path": source.relative_path, "sha256": digest, "size_bytes": len(data)},

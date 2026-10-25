@@ -106,6 +106,13 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Dictation grants only the existing recording-read/transcript-write permissions.
+Audio remains in the owned local CPU process; recognized text cannot execute
+tools before an ordinary explicit Send. Draft races require a user choice;
+duplicate direct requests share a scope-bound receipt. Recording retention is
+visible and Stop/navigation follow the owned Run.
+[Dictation contract](plans/prompt-translation-and-dictation.md#dictation-implementation-contract).
+
 Managed embeddings can download only pinned public HTTPS model artifacts after
 explicit operator confirmation. DNS/redirect checks, bounded sizes/hashes and atomic
 installation constrain preparation. Inference receives only fixed input text and

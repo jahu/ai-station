@@ -1,5 +1,18 @@
 # Recording in the conversation composer
 
+**Dictate** beside Send turns speech into an editable draft in both Chat and
+Work. Stop recording starts local CPU transcription; it never Sends or starts
+the dictated task. Dictation options offers Auto/Polish and **Transcribe an audio
+file**. Existing text, cursor position and attachments are retained. If you edit
+while transcription runs, choose Insert at cursor, Replace draft or Keep my draft.
+The recording and transcript stay in Library, with source/Run links in the composer.
+Cancel or navigation stops the owned job; a late acknowledgement is also canceled.
+Retry reuses the saved recording and protects against duplicate network submissions.
+
+Microphone capture requires HTTPS or localhost. On plain HTTP LAN, use the audio
+file option; browsers cannot grant microphone access there. Review recognition
+before pressing Send. See the [dictation contract](plans/prompt-translation-and-dictation.md).
+
 Chat/Work's attachment tools include **Record audio** for Auto, Understand a
 recording and Transcribe recording. Browser microphone permission is requested
 only after that click. Finish stops the microphone and attaches a preview; it

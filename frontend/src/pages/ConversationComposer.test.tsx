@@ -1,8 +1,28 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render as renderUI,
+  screen,
+} from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MemoryRouter } from "react-router-dom";
+import type { ReactNode } from "react";
 import ConversationComposer from "./ConversationComposer";
 
 afterEach(cleanup);
+function render(ui: ReactNode) {
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>{children}</MemoryRouter>
+    </QueryClientProvider>
+  );
+  return renderUI(ui, { wrapper });
+}
 
 it.each(["enter", "ctrl-enter"] as const)(
   "honors %s, multiline and composition without submitting tool edits",
