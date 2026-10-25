@@ -61,6 +61,11 @@ def page_tools(monkeypatch):
         }
 
     async def stream(self, **params):
+        if params["messages"][0]["content"].startswith("Route the user's request"):
+            # Work now classifies intent before the separate source-grounded reply.
+            assert params["json_output"] is True
+            yield '{"action":"chat","reason":"Read the requested page text."}'
+            return
         seen.append(params)
         yield "A grounded promotional prompt based on [Akademia](https://akademia.ai)."
 
