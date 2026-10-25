@@ -26,6 +26,11 @@ platform and freeze the real release before handing it to the operator.
 - Provide the file to the operator with the exact UI address, release/commit,
   generation date and real-qualified model/media profiles. Internal test results
   do not prefill the operator's result cells as passed.
+  Supply reviewed profile paragraphs using the exporter's
+  `--qualification-notes-file`: they are embedded in Start and the readable guide,
+  with a canonical-text hash in the manifest. State exact recorded settings and
+  distinguish actual inference from fixtures/metadata. A missing description is
+  visible, and the exporter does not turn supplied claims into verified tests.
 - The returned workbook becomes input for triage, fixes and retesting. Operator QA
   is separate from automated/internal acceptance; neither substitutes for the other.
 - Whole-platform completion requires this handoff artifact. Do not mark the entire

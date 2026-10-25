@@ -156,6 +156,76 @@ class WorkbookTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 qa.load_catalog(path)
 
+    def test_qualified_profiles_are_readable_hashed_notes_not_operator_results(self):
+        with tempfile.TemporaryDirectory() as folder:
+            notes = "  LLM: Qwen 9B;\n lokalne uruchomienie.\n\nVideo: 5 sekund, 20 kroków; sprawdzony profil QA.  "
+            files = qa.export(
+                Path(folder),
+                release=self.release,
+                base_url="http://localhost:8765",
+                draft=True,
+                qualification_notes=notes,
+            )
+            book = load_workbook(files[0], keep_links=False)
+            rows = {row[0].value: row for row in book["Start"].iter_rows(min_row=2)}
+            expected = [
+                "LLM: Qwen 9B; lokalne uruchomienie.",
+                "Video: 5 sekund, 20 kroków; sprawdzony profil QA.",
+            ]
+            for index, text in enumerate(expected, 1):
+                row = rows[f"Sprawdzony profil {index}"]
+                self.assertEqual(row[1].value, text)
+                self.assertTrue(row[1].alignment.wrap_text)
+                self.assertGreaterEqual(book["Start"].row_dimensions[row[0].row].height, 32)
+            self.assertEqual({row[1] for row in list(book["Testy"].values)[1:]}, {"Nie testowano"})
+            guide = next(p for p in files if p.name.endswith("-Instrukcja.txt")).read_text()
+            self.assertTrue(all(text in guide for text in expected))
+            manifest = json.loads(files[-1].read_text())
+            self.assertEqual(manifest["qualification_paragraphs"], 2)
+            self.assertEqual(
+                manifest["qualification_notes_sha256"],
+                hashlib.sha256("\n\n".join(expected).encode()).hexdigest(),
+            )
+
+    def test_unprovided_or_formula_like_profiles_do_not_imply_verified_execution(self):
+        with tempfile.TemporaryDirectory() as folder:
+            output = Path(folder)
+            files = qa.export(
+                output / "empty", release=self.release, base_url="http://localhost:8765", draft=True
+            )
+            manifest = json.loads(files[-1].read_text())
+            self.assertIsNone(manifest["qualification_notes_sha256"])
+            self.assertEqual(manifest["qualification_paragraphs"], 0)
+            info = dict(load_workbook(files[0])["Start"].iter_rows(min_row=2, values_only=True))
+            self.assertIn("nie został dołączony", info["Zakres sprawdzonych profili"])
+            files = qa.export(
+                output / "literal",
+                release=self.release,
+                base_url="http://localhost:8765",
+                draft=True,
+                qualification_notes='=HYPERLINK("https://example.invalid","literal")',
+            )
+            cell = next(
+                row[1]
+                for row in load_workbook(files[0])["Start"].iter_rows(min_row=2)
+                if row[0].value == "Sprawdzony profil 1"
+            )
+            self.assertEqual(cell.data_type, "s")
+            self.assertTrue(cell.value.startswith("="))
+
+    def test_unreadably_large_profile_notes_are_rejected_before_export_writes(self):
+        for notes in ("x" * 32769, "x" * 1201, "\n\n".join(["profile"] * 25)):
+            with self.subTest(notes_length=len(notes)), tempfile.TemporaryDirectory() as folder:
+                output = Path(folder) / "export"
+                with self.assertRaises(ValueError):
+                    qa.export(
+                        output,
+                        release=self.release,
+                        base_url="http://localhost:8765",
+                        qualification_notes=notes,
+                    )
+                self.assertFalse(output.exists())
+
     def test_catalog_text_never_becomes_an_excel_or_csv_formula(self):
         with tempfile.TemporaryDirectory() as folder:
             catalog = qa.load_catalog()
