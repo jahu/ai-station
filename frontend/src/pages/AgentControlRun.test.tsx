@@ -114,7 +114,7 @@ it.each(["running", "failed", "interrupted", "canceled"])(
     );
     expect(screen.getByText("succeeded")).toBeTruthy();
     expect(
-      screen.getByText(`· Notification check: ${alertStatus}`),
+      screen.getByText(new RegExp(`Notification check: ${alertStatus}`)),
     ).toBeTruthy();
     const link = screen.getByRole("link", {
       name: "Inspect notification check",
