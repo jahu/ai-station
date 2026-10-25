@@ -1,7 +1,7 @@
 # Reanalyse the files used or created by a conversation agent
 
-A follow-up can quote an agent's report but cannot currently ask Python to
-reanalyse its actual files. Resolve explicit data-file operations through the
+Natural follow-ups can ask Python to reanalyse a completed data agent's actual
+files. Explicit data-file operations resolve through the
 verified conversation controller, exact final data result and original completed
 Python/input scope. Start a new ordinary conversation data Task and workspace;
 do not rerun the agent, inherit its schedule/tools or write into its workspace.
@@ -27,3 +27,16 @@ Work payloads, creation/research/document inputs, mutations at Send/dispatch,
 expiration, no agent rerun and original-byte preservation. Use normal isolated
 fake-model/transport tests and compiled desktop/mobile acceptance; qualify final
 source before reviewed merge/deployment. No schema or native API change.
+
+Qualification is recorded in `data/acceptance/agent-data-actions-20261025`.
+The complete normal baseline and final affected modules are recorded separately;
+corrected failures remain in their original logs. Frontend checks cover 780 tests.
+Compiled desktop/390px flows exercise original files, a saved public capture and a
+created file through the actual API/worker and owned Git workspaces. Model output
+and Python transport are injected; no new GPU inference or external mail delivery
+is claimed. The final post-deployment receipt determines release qualification.
+
+The existing local generation contract retains `network_read` for inference.
+Derived analysis has no fresh research/document/memory tools, and its Python child
+retains only the existing offline filesystem/workspace/Python permissions.
+Project-targeted instructions that mention a file remain project instructions.

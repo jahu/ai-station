@@ -1,14 +1,19 @@
-> Active candidate: `feat/conversation-agent-data-actions`, based on qualified
-> #423. Natural file operations reuse verified completed agent inputs, captured
-> data or inspected created CSV/XLSX through a new ordinary conversation Task.
-> Work project defaults no longer suppress natural file references. Exact source
-> and bytes are checked on Send and before dispatch; no agent rerun or new research
-> tools. Basic16 checks and frontend19 pass; expanded/full gates and compiled
-> desktop/mobile acceptance remain pending. The local inference network permission
-> is retained; generated Python remains offline. Preserve root WIP/native/model.
-> Live: #423, http://192.168.1.121:8765, evidence contextual-project-guidance-20261025.
-> Full-platform goal remains open; finish this flow then broader practical agent
-> orchestration and delivery/remote-access/reliability acceptance.
+> PR #424: natural data-file continuations from a completed conversation agent.
+> Exact original inputs, offline captures or complete created CSV/XLSX bind a new
+> ordinary Task/workspace/budget; no agent rerun or research-tool inheritance.
+> Work defaults no longer suppress file references; project-targeted wording stays
+> with projects. Sources are checked on Send and before dispatch. Local inference
+> retains its existing network permission; Python stays offline.
+> Evidence: `data/acceptance/agent-data-actions-20261025`; use its final qualification
+> and `data/acceptance/safety-redeploy-20261012/deployment.json` for actual live state.
+> Frontend780 and six compiled desktop/mobile flows passed; full baseline and final
+> affected modules are retained separately, including corrected failure logs.
+> Native/schema/deployment/config/dependencies remain unchanged. Preserve root
+> Memory WIP, operator data/auth and owned model presets. Whole-platform goal open.
+> Next: practical continuation from transformed result files, broader agent
+> orchestration and delivery/remote-access/reliability acceptance. Older entries
+> below are historical handoffs; their pending/live labels do not override evidence.
+
 
 > Active UI increment: `fix/contextual-project-guidance` on qualified #422.
 > General/media/agent Work and existing-workspace drafts should not show the
