@@ -34,3 +34,21 @@ page reads under assistant policy. Run current full backend/Runner gates,
 unchanged-frontend proof, exact image/Compose and compiled desktop/phone
 API/worker checks before review, merge and data-preserving rollout. Evidence:
 `data/acceptance/unified-natural-agent-intent-20261025/`.
+
+## Qualification
+
+PR #445's frozen source passed the complete normal suite: 4,114 Python/Runner
+tests, nine opt-in integrations skipped, and Ruff/format. The entire frontend
+tree is identical to qualified PR #444, retaining its five successful UI gates
+and 844 tests. Exact backend/compiled image assets, all three Compose variants,
+isolated image API/worker/SQL/SSE and six QA exporter checks passed. Catalog v8
+retains the same 156 case IDs and adds polite/default-Web steps to UNIFIED-002.
+
+Compiled 1440/390 checks used the actual isolated API/worker with fake local
+inference and CPU image fixtures. English/Polish polite requests with Web on
+prepared disabled agents while a forbidden-search spy recorded no query. Two
+ordinary responses and two agent drafts needed four model calls total. Existing
+translation review, inline recovery/reload, draft preservation and Stop passed.
+Source mappings, review, merge and deployment receipts in the evidence directory
+determine the live release. This does not claim a new real model/GPU smoke or
+complete the full-platform acceptance/QA handoff.
