@@ -1,6 +1,6 @@
 # Internal acceptance and operator test coverage
 
-Review date: 2026-10-25. This maps all 156 stable operator cases in catalog v9
+Review date: 2026-10-25. This maps all 157 stable operator cases in catalog v10
 to the current source and recorded acceptance. It does not fill operator results
 or declare platform completion. The current release and exact local qualification
 are in [the release audit](../plans/platform-acceptance-audit.md).
@@ -24,7 +24,7 @@ table alone, are the evidence. **External setup** is an open release gate.
 | VIDEO-001–004 | `test_video.py`, `test_video_storyboard.py`, `test_video_memory_profile.py`; native `test_wan_motion.py` | Real short standard translation video and historical 60-second segmented draft exist. Scope and quality differ: see profiles below. Do not present the 60-second four-step draft as standard-quality long-film acceptance. |
 | AUDIO-001–005 | `test_audio.py`, `test_music_model_setup.py`, native managed processes | Actual speech/music/transcription receipts in the product ledger; actual ten-second ACE music in `agent-media-generation-20261023/real-agent-media-result.json` and translator/music receipt. Voice-reference quality needs the appropriate supplied recording, not a synthetic tone. |
 | AVATAR-001–004 | `test_avatars.py`, `test_avatar_budgets.py`, `test_avatar_memory_profile.py`; native `test_echo_motion.py` | Actual five-second bounded-memory and historical 30-second avatar, full decode and recorded joins/playback. General word-level lip-sync and all long profiles are **not qualified**. |
-| AGENT-001–013 | `test_agent_drafts.py`, `test_agent_coding.py`, `test_agent_outcome.py`, `test_agent_media_drafts.py`, `test_agent_email_attachments.py` | Real website and data pipelines; real image/music agents in `agent-media-generation-20261023/real-agent-media-result.json`. Earlier `agent-long-media-output-20261023/production-agent-result.json` is **false**, not a completed goal-prepared video. Later outcome/long-budget software fixes do not by themselves prove that real chain. Review this concrete remaining integration separately. Mail attachments are actual private TLS SMTP with injected inference, not operator-inbox delivery. |
+| AGENT-001–014 | `test_agent_drafts.py`, `test_agent_coding.py`, `test_agent_outcome.py`, `test_agent_media_drafts.py`, `test_agent_email_attachments.py` | Real website and data pipelines; real image/music agents in `agent-media-generation-20261023/real-agent-media-result.json`. Earlier `agent-long-media-output-20261023/production-agent-result.json` is **false**, not a completed goal-prepared video. Later outcome/long-budget software fixes do not by themselves prove that real chain. Review this concrete remaining integration separately. Mail attachments are actual private TLS SMTP with injected inference, not operator-inbox delivery. |
 | SCHED-001–004 | `test_agents.py`, `test_schedule_timezones.py`, `test_agent_recurrence.py`, `test_agent_settings_schedule.py` | Durable atomic dispatch/timezones/restarts and deployed due-instant preservation. Do not alter existing schedules for QA; create/pause disposable definitions. |
 | DATA-001–008 | `test_python_data_agents.py`, `test_required_data_exports.py`, `test_data_result_reference.py` | Corrected real Auto chain: `data-agent-input-contract-20261022/production-smoke-result.json`, total 150, source preserved. Real context/output chain: `file-creation-conversation-context-20261024/post-deployment-qualified.json`. v9 ships input CSV, two-sheet XLSX, document and explicit invalid input. |
 | MEM-001–009 | `test_memory_api.py` and managed embeddings lifecycle | `managed-memory-release-20261025/activation-result.json`: actual E5 INT8 CPU, 384 dimensions, all three existing entries indexed. Scoped/disabled/stale-vector retrieval and cancellation/reopen are separately tested. |
@@ -47,6 +47,11 @@ table alone, are the evidence. **External setup** is an open release gate.
   17-frame carried motion context; approximately 92 minutes in the historical
   run. Source: `long-media-20261014/real-result.json`. Duration/assembly proof
   does not establish standard-profile visual quality or exact scene fidelity.
+  Review of archived frames 80/719/1439 on 2026-10-25 found progressive loss of
+  detail and severe cyan saturation/posterization. Its technical pass is retained;
+  visual standard-quality acceptance is false. Evidence:
+  `long-media-visual-audit-20261025/review.json`. A separate actual ten-second,
+  four-window/20-step bounded-profile check is in progress, not yet a pass.
 - **Avatar, bounded short:** five seconds, 384px, eight steps, two native windows,
   about four minutes; actual 11-GiB RAM/zero-swap profile, complete video/audio
   decode, basic face/join samples and compiled playback. Exact word lip-sync is
@@ -71,8 +76,11 @@ promising completion within a generic five/fifteen-minute row estimate.
    `agent-video-release-20261025/`: real 9B natural draft/goal preparation, two
    GPU windows, complete five-second/120-frame 1280×704 film, sampled joins and
    actual 1440px/390px compiled playback. The earlier false receipt is retained.
-   This used an explicitly reviewed 7200-second allowance; improve fresh-draft
-   setup because the model's default 600 seconds is below its measured runtime.
+   This used an explicitly reviewed 7200-second allowance. PR #448 qualifies
+   new disabled proposals with a controller suggestion when no runtime was
+   requested; actual 9B checks preserve an explicit five-minute limit as 300.
+   Existing definitions and running allowances are unchanged; deployment receipts
+   determine which correction is live.
 2. Decide and verify the declared quality envelope for longer Video/Avatar
    against actual output, not merely decode/readiness. Retain the user's longer
    media requirement; do not silently drop it or relabel known drift as perfect.
@@ -83,7 +91,7 @@ promising completion within a generic five/fifteen-minute row estimate.
    There is no email connector in the current application DB.
 5. Freeze the release after remaining fixes, generate the final Polish XLSX/CSV
    package with fixtures and exact profiles, inspect/round-trip the actual files,
-   and hand it off. All 156 operator results remain **Nie testowano**.
+   and hand it off. All 157 operator results remain **Nie testowano**.
 
 The original self-development/large IDE expansion is explicitly deferred by the
 agent-first decision; existing data and functioning code/worktree services are

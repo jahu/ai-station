@@ -48,8 +48,8 @@ auth settings, E5 vectors, native/private services and owned model instances.
 Receipt paths in this table are below `data/acceptance/`. Historical receipts
 remain scoped to their original model, parameters, source and runtime. Normal
 regressions of newer source do not relabel an old integration as a fresh real
-execution. The operator case catalog is v9 with 156 stable IDs in 21 areas. All
-156 are mapped to source, current regression and concrete historical receipt
+execution. The operator case catalog is v10 with 157 stable IDs in 21 areas. All
+157 are mapped to source, current regression and concrete historical receipt
 scopes in [the internal coverage review](../qa/internal-coverage.md). That review
 retains unverified cases rather than marking them passed.
 
@@ -73,9 +73,11 @@ they do not establish Auto loading. Keep these distinctions in the final report.
    `real-player-result.json`: actual natural 9B draft, goal preparation, two Wan
    windows, full five-second film and compiled playback. A real factory-schema
    defect was fixed in PR #447; the earlier false receipt remains unchanged.
-   The tested profile explicitly reviewed a 7200-second maximum. Address the
-   fresh draft's 600-second default versus the observed 1282-second render without
-   silently extending saved/running or explicitly requested budgets.
+   The tested profile explicitly reviewed a 7200-second maximum. PR #448 qualifies
+   fresh disabled-draft defaults separately: actual 9B null becomes a visible
+   controller suggestion, while an explicit five-minute limit remains 300.
+   Public settings, saved/running and explicit numeric budgets stay unchanged.
+   Its deployment receipt determines whether the correction is live.
 2. Reconcile Video/Avatar duration and quality claims with exact recorded profiles:
    earlier real 60-second Wan draft and 30-second avatar do not prove every longer
    or higher-quality profile. Current capability checks start no inference.

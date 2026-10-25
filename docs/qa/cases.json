@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
   "sources": [
     "docs/product-completion.md",
@@ -11,7 +11,8 @@
     "docs/plans/media-prompt-translation-implementation.md",
     "docs/plans/unified-assistant-chat.md",
     "docs/plans/conversation-prompt-language.md",
-    "docs/plans/natural-agent-intent.md"
+    "docs/plans/natural-agent-intent.md",
+    "docs/plans/agent-draft-runtime-defaults.md"
   ],
   "cases": [
     {
@@ -3553,6 +3554,31 @@
         "UNIFIED-ASSISTANT-CHAT",
         "chat-vision",
         "spec-47"
+      ]
+    },
+    {
+      "id": "AGENT-014",
+      "area": "Agenci",
+      "title": "Proponowany czas wykonania i jawny krótki limit",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja jednego chatu; dostępny lokalny LLM; wyłącznie jednorazowe szkice QA."
+      ],
+      "steps": [
+        "Poproś o agenta generującego na żądanie pięciosekundowy film jeziora; nie podawaj limitu wykonania.",
+        "Przejrzyj wyłączony szkic: czas filmu i limit wykonania są różnymi ustawieniami.",
+        "W nowej rozmowie poproś o taki sam film, lecz wyraźnie ogranicz czas wykonania agenta do 5 minut.",
+        "Sprawdź drugi szkic i pozostaw oba wyłączone; ten przypadek sprawdza propozycję, bez Run now."
+      ],
+      "expected": [
+        "Pierwszy szkic proponuje 2 godziny jako maksymalny limit, nie obietnicę czasu renderu; film nadal ma 5 sekund. Drugi zachowuje jawne 5 minut wykonania i 5 sekund filmu. Żaden agent nie włącza się ani nie renderuje automatycznie; istniejące definicje i uruchomienia zachowują swoje limity."
+      ],
+      "resources": "Lokalny LLM; dwa szkice bez generowania filmu",
+      "minutes": 5,
+      "requirements": [
+        "AGENT-DRAFT-RUNTIME-DEFAULTS",
+        "MVP-119",
+        "MVP-120"
       ]
     }
   ]
