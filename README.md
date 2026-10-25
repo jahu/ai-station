@@ -514,6 +514,20 @@ Interrupted Runs use that sequence. Enter inspects the Run. Mark inspected stays
 
 Run `./scripts/check-all.sh` for Python tests/lint, frontend checks/tests/build, Compose validation and a Docker image build. The script stops on the first failure and does not restart the application. GitHub Actions remains available by manual dispatch; automated hosted runs are paused because the maintainer's free credits are exhausted. Per maintainer instruction (2026-09-28), reviewed PRs may merge into `develop` using equivalent successful local checks. Failing code checks are never waived.
 
+For an explicit real worker-crash check with the **already installed** optional
+Python executor image:
+
+```bash
+AI_STATION_REAL_RECOVERY_TESTS=1 .venv/bin/python scripts/worker_recovery_smoke.py \
+  --image ai-station-python:local --output-dir /tmp/ai-station-recovery-evidence
+```
+
+Choose your installed `ai-station-python:<tag>` and a new evidence directory.
+The command uses an isolated database/repository/private Runner and real CPU
+containers; it performs no model inference, image download or live-service restart.
+It verifies actual worker death, conservative inspection without replay and owned
+cancellation/cleanup. [Recovery scope](docs/plans/owned-python-worker-recovery.md).
+
 Portrait-driven video is available in **Avatars** and **Video**, including assistant dispatch and inline playback. Configure the existing offline EchoMimic installation as described in [avatar execution](docs/avatars.md).
 
 After a Coding proposal and its configured validation pass, inspect the diff and choose **Commit reviewed changes**. Arrow keys choose the review acknowledgement; Space or Enter selects it with a unique Review name and does not queue a commit. There is no inspectable review-ack Run. This queues a local task-branch commit containing exactly the reviewed file snapshots. Changed files, staged edits and protected branches are rejected. See [reviewed commits](docs/coding-commits.md).

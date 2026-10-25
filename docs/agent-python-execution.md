@@ -68,6 +68,12 @@ No model, driver or external runtime installation is involved. The image is neve
 pulled automatically by a workload request. Availability is observed through
 `GET /v1/python/capabilities`; typed dispatch/report use `/v1/runs/python`.
 
+The explicit [worker recovery probe](plans/owned-python-worker-recovery.md) runs
+real CPU containers through a private native Runner and kills only its disposable
+worker. It checks live-process inspection, no automatic replay/output adoption,
+and cancellation with confirmed owned-container cleanup. The README documents
+the opt-in command; it is never part of normal tests.
+
 ## Verified acceptance — PR #325
 
 Local checks on runtime revision `1fa430c` passed: 1,630 Python tests, five explicit

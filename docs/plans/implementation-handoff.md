@@ -1,20 +1,18 @@
-> Active: fix/work-default-web-routing on qualified #427 (5a1bf69), in
-> `.tools/work-default-web-routing`. Default Web consumed unclassified Work
-> requests and blocked agent/system actions. Three ordinary-worker regressions
-> fail before the fix; 129 current routing/search/assistant cases pass afterward.
-> Passive preference normalization and planner fallback reuse existing actions;
-> explicit query/render scope, Chat mode, sensitive forms, Stop and receipt replay
-> stay enforced. Planner history now omits expanded user attachments.
-> Actual existing-runtime local inference passed both English/Polish draft requests.
-> Four compiled desktop/mobile first-send/saved-conversation flows and all five
-> frontend gates (794 UI tests) pass. The complete 3817-case Python gate found two
-> older page fixtures missing the newly required Work routing response; the fixed
-> complete affected modules pass 157 cases, plus 22 rendered-page importer cases.
-> Final coverage aggregation, exact image, review and rollout remain pending.
-> Live #427: private-access-status-20261025/post-deployment-qualified.json.
-> Operator Tailscale enrollment remains pending; never restart its service or
-> reload the owned model to qualify an unrelated route. Preserve root Memory WIP.
-> Full-platform goal stays open; this fixes entry routing, not arbitrary workflows.
+> Active: test/owned-python-worker-recovery from qualified #428 (9d772a1).
+> The new opt-in CPU recovery probe uses an isolated native Runner/database/repo,
+> an existing trusted image and actual killed worker processes. First actual
+> completion/cancel cases passed without replay, output adoption or orphaned
+> containers, including final cleanup flags, same native PID and one script start.
+> Original repo/index/script bytes survived; leases expired naturally. Source-
+> identical #428 production gates are reused; full review/merge remain pending.
+> Live #428: data/acceptance/work-default-web-routing-20261025/post-deployment-qualified.json.
+> Work/default Web is deployed: 3817 Python cases successfully covered (nine
+> opt-in skips), 179 final affected retests, UI794, four compiled browser flows,
+> two actual local-model requests, exact image/Compose and LAN/auth preservation.
+> Native Runner/model/private Tailscale daemon remain unchanged; actual private
+> account enrollment/mobile connection remain pending operator action. Preserve
+> root Memory WIP. This closes the recorded routing/recovery slices, not the full
+> platform goal.
 
 > #426 is merged into develop (74f409d) and deployed at
 > http://192.168.1.121:8765. Authority/evidence:
