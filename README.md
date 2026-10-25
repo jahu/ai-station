@@ -299,10 +299,15 @@ Chat and General preferences now use [one searchable model picker](docs/model-ca
 for llama.cpp, local servers and configured external providers. Endpoint discovery
 is explicit; model selection starts no workload.
 
-**Implementation roadmap:** a conversation-first
-entry with Chat/Work, simple model and verified reasoning selection, separate
-System/Settings, and longer local video/avatars. Start with the
-[implementation brief and model handoff](docs/plans/2026-10-chat-work-media.md).
+**One assistant:** the [one-assistant decision](docs/plans/unified-assistant-chat.md)
+supersedes the earlier Chat/Work split. The entry is one conversation:
+the orchestrator chooses a direct reply or applicable tools/workflows from the
+user's request. PR #444 removes the switch while preserving history and approvals.
+Model and verified reasoning selection remain simple, alongside separate
+System/Settings, and longer local video/avatars. The earlier
+[implementation brief and model handoff](docs/plans/2026-10-chat-work-media.md)
+retains implementation history; the one-assistant plan records the current contract
+and qualification. Deployment receipts determine the actual live version.
 For the current release, preserved WIP and exact remaining PR sequence, use the
 [updated GPT-6.1-Sol handoff](docs/plans/implementation-handoff.md). This distinguishes
 delivered entry/Settings/local autoload from planned reasoning and longer media.

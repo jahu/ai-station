@@ -28,6 +28,7 @@ from app.conversation_music import MusicScope
 from app.db import utcnow
 from app.events import append_event
 from app.llama import LoadModel
+from app.media_translation_text import TranslationOptions
 from app.models import Artifact, Conversation, Message, Project, Run, RuntimeInstance
 from app.project_build import ProjectBuildScope, project_build_request
 from app.project_setup import ProjectAutomation
@@ -175,6 +176,15 @@ def video_scope(params):
 
 class AssistantInputs(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    media_translation: TranslationOptions | None = None
+
+    @model_serializer(mode="wrap")
+    def legacy_identity(self, handler):
+        values = handler(self)
+        if self.media_translation is None:
+            values.pop("media_translation", None)
+        return values
+
     image_artifact_ids: list[UUID] = Field(default_factory=list, max_length=8)
     action: Literal[
         "auto",
@@ -236,7 +246,7 @@ def assistant_needs_provider(body):
         plan is not None
         and plan.action == "chat"
         or plan is None
-        and getattr(body, "execution_mode", None) == "chat"
+        and getattr(body, "execution_mode", None) in {"chat", "assistant"}
     ):
         return False  # Selected-image conversation fallback uses local Vision, not text inference.
     if plan and plan.action == "data.analyze":
@@ -345,6 +355,10 @@ def planner_context(session, conversation, user):
 
 
 def enqueue_assistant(session, conversation, user, body, *, commit=True):
+    from app.chat_policy import agent_draft_requested, policy_mode
+
+    unified = getattr(body, "execution_mode", None) == "assistant"
+    draft_authorized = agent_draft_requested(body.model_dump(mode="json", exclude={"attachments"}))
     from app.assistant_github import validate_scope
     from app.conversation_data import prepare_turn as prepare_data_turn
 
@@ -657,8 +671,13 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         retry_class="inspect",
         parameters={
             **body.model_dump(mode="json", exclude={"attachments"}),
-            "policy_mode": "chat" if getattr(body, "execution_mode", None) == "chat" else "work",
+            "policy_mode": policy_mode(getattr(body, "execution_mode", None))
+            if unified
+            else "chat"
+            if getattr(body, "execution_mode", None) == "chat"
+            else "work",
             "policy_version": 1,
+            **({"agent_draft_authorized": draft_authorized} if unified else {}),
             **(
                 {"page_design": True, "page_read": {"urls": design_pages, "renderer": "browser"}}
                 if design_pages
@@ -699,7 +718,11 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
         if body.data is not None
         else chat_permissions(
             snapshot,
-            ([] if getattr(body, "execution_mode", None) == "chat" else ["manage_agents"])
+            (
+                []
+                if getattr(body, "execution_mode", None) == "chat" or unified and not draft_authorized
+                else ["manage_agents"]
+            )
             + (
                 ["filesystem_read"]
                 if user.metadata_json.get("selected_data_agent", {}).get("artifact_ids")
@@ -749,7 +772,11 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
     user.metadata_json = {
         **user.metadata_json,
         "images": images,
-        "execution_mode": "chat" if getattr(body, "execution_mode", None) == "chat" else "orchestrator",
+        "execution_mode": "assistant"
+        if unified
+        else "chat"
+        if getattr(body, "execution_mode", None) == "chat"
+        else "orchestrator",
     }
     from app.chat_attachments import link_attachments
 
@@ -1033,7 +1060,11 @@ class AssistantExecutor:
         transition(session, run, RunStatus.RUNNING, event_type="executor.started")
         session.commit()
         plan = explicit_plan(run.parameters)
-        if plan is None and run.parameters.get("policy_mode") == "chat":
+        if plan is None and (
+            run.parameters.get("policy_mode") == "chat"
+            or run.parameters.get("policy_mode") == "assistant"
+            and run.parameters.get("image_artifact_ids")
+        ):
             plan = Plan(action="chat", reason="Answer in this conversation with the selected tools.")
         if plan is None:
             plan = asyncio.run(self.plan(session, run))
@@ -1247,6 +1278,7 @@ class AssistantExecutor:
                     settings = {"memory_profile": selected_profile} if selected_profile != "default" else {}
                     if scope:
                         request = LongVideoRequest(
+                            translation=params.get("media_translation"),
                             client_request_id=UUID(run.id),
                             prompt=params["content"][:2000],
                             image_artifact_id=images[0] if images else None,
@@ -1259,6 +1291,7 @@ class AssistantExecutor:
                         message.content = f"Generating your {scope.duration_seconds}-second video locally. Finished segments are preserved; the checked full MP4 appears here and in Library."
                     else:
                         request = VideoRequest(
+                            translation=params.get("media_translation"),
                             prompt=params["content"][:2000],
                             image_artifact_id=images[0] if images else None,
                             **settings,
@@ -1289,6 +1322,7 @@ class AssistantExecutor:
             require(run.effective_permissions, "workspace_write")
             try:
                 request = MusicRequest(
+                    translation=params.get("media_translation"),
                     client_request_id=UUID(run.id),
                     caption=prepared_song["description"] if prepared_song else music_caption(params),
                     **{
@@ -1436,6 +1470,7 @@ class AssistantExecutor:
                         "height": 704,
                     }
                 request = ImageRequest(
+                    translation=params.get("media_translation"),
                     mode=mode,
                     prompt_style="prompt"
                     if mode == "t2i"
@@ -1792,16 +1827,11 @@ def task_results(session, message, run):
     )
     by_id = {step.id: step for step in steps}
     superseded = set()
+    from app.media_retry_projection import projection as media_projection
+
+    media_runs, retired_media, media_errors = media_projection(session, steps)
+    superseded.update(retired_media)
     for step in steps:
-        retry = by_id.get(step.metadata_json.get("retry_run_id"))
-        if (
-            step.executor_type == "photo_pipe"
-            and retry
-            and retry.executor_type == "photo_pipe"
-            and retry.parent_run_id == step.id
-            and retry.task_id == step.task_id
-        ):
-            superseded.add(step.id)
         replacement = by_id.get(step.metadata_json.get("repair_run_id"))
         if (
             step.executor_type == "project_validation"
@@ -1821,6 +1851,8 @@ def task_results(session, message, run):
 
         media = job_view(session, run.task)
     return {
+        **({"media_runs": [run_dict(item) for item in media_runs]} if media_runs else {}),
+        **({"media_retry_errors": media_errors} if media_errors else {}),
         **({"media_job": media} if media else {}),
         **data,
         "steps": [
@@ -1828,6 +1860,12 @@ def task_results(session, message, run):
                 "id": step.id,
                 "capability": step.capability,
                 "status": step.status,
+                **({"superseded": True} if step.id in superseded else {}),
+                **(
+                    {"media_controls": True}
+                    if step.id in retired_media or step.id in {item.id for item in media_runs}
+                    else {}
+                ),
                 "summary": step.summary,
                 "error_message": step.error_message,
                 "location": step.metadata_json.get("execution_location", "local"),
@@ -1878,7 +1916,7 @@ def task_results(session, message, run):
                     for step in steps
                     if step.id not in superseded and step.status in {"failed", "interrupted", "canceled"}
                 ),
-                "succeeded",
+                "failed" if media_errors else "succeeded",
             ),
         ),
     }

@@ -38,8 +38,8 @@ export default function ConversationDataControls({
       aria-label="Local data analysis"
     >
       <p className="muted">
-        For a reusable agent, switch to Work and ask “Create an agent…” with
-        these inputs selected. Review its task and schedule before enabling it.
+        For a reusable agent, ask “Create an agent…” with these inputs selected.
+        Review its task and schedule before enabling it.
       </p>
       <DataOperation
         value={scope}

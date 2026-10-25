@@ -115,4 +115,10 @@ it("opens and focuses selected follow-up tools without changing or submitting th
   expect(draft.value).toBe("Keep my next question");
   expect(document.activeElement).toBe(draft);
   expect(send).not.toHaveBeenCalled();
+  fireEvent.keyDown(draft, { key: "Enter" });
+  expect(send).toHaveBeenCalledOnce();
+  expect(screen.getByText("Selected sales.csv").closest("details")?.open).toBe(
+    false,
+  );
+  expect(draft.value).toBe("Keep my next question");
 });

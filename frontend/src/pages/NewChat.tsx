@@ -18,7 +18,6 @@ import { acceptsLocalAttachments, emptyOptions } from "./assistant-options";
 import TextAttachments, { type TextAttachment } from "./TextAttachments";
 import { useWebSearch } from "./useWebSearch";
 import { WebSearchControl } from "./ChatWebSearch";
-import ChatModeSwitch, { type ChatMode } from "./ChatModeSwitch";
 import type { ChatProviderInfo } from "./ChatProviders";
 
 type WorkDraft = {
@@ -36,7 +35,7 @@ type WorkDraft = {
 
 type Preferences = {
   version: number;
-  mode: ChatMode;
+  mode: "assistant" | "chat" | "work";
   provider: string;
   model: string;
   send_key: "enter" | "ctrl-enter";
@@ -75,11 +74,11 @@ export default function NewChat({
     (item) => item.key === "local-openai-compatible",
   );
   const activeProvider = workTaskId ? localProvider : provider;
-  const clearWorkScope = (next: ChatMode) => {
+  const clearWorkScope = () => {
     const values = new URLSearchParams(params);
     values.delete("work_task");
     values.delete("work_run");
-    values.set("mode", next);
+    values.delete("mode");
     setParams(values);
   };
   const preferences = useQuery({
@@ -88,15 +87,7 @@ export default function NewChat({
   });
   const initialized = useRef(false);
   const pendingRequest = useRef<{ body: string; id: string } | null>(null);
-  const [chosenMode, setMode] = useState<ChatMode | null>(null);
-  const mode = workTaskId
-    ? "work"
-    : (chosenMode ??
-      (params.get("mode") === "work"
-        ? "work"
-        : params.get("mode") === "chat"
-          ? "chat"
-          : (preferences.data?.mode ?? "chat")));
+  const mode = "assistant" as const;
   const [selection, setSelection] = useState<{
     provider: string;
     model: string;
@@ -163,8 +154,7 @@ export default function NewChat({
     : conversationModel;
   const thinking = useThinking(
     model,
-    mode === "chat" &&
-      ["auto", "chat"].includes(options.action) &&
+    ["auto", "chat"].includes(options.action) &&
       !options.audio_artifact_id &&
       !options.image_artifact_ids.length &&
       !attachments.some((item) => item.kind === "image"),
@@ -188,14 +178,16 @@ export default function NewChat({
           ? { expected_provider_version: providerVersion }
           : {}),
         execution_mode: mode,
-        ...(mode === "work" ? { schedule_timezone: browserTimezone() } : {}),
+        schedule_timezone: browserTimezone(),
         ...(thinking.enabled
           ? { reasoning: { enabled: true, budget: 256 } }
           : {}),
         content: draft.trim(),
         attachments,
         ...options,
-        ...(mode === "work" && !options.data
+        ...(["project.create", "project.create_code"].includes(
+          options.action,
+        ) && !options.data
           ? {
               project_defaults: {
                 auto_install_dependencies: true,
@@ -269,28 +261,15 @@ export default function NewChat({
           options.new_project.external_ai)));
   return (
     <section className="new-chat" aria-label="New conversation">
-      <h1>{workTaskId ? "Continue in Work" : "What would you like to do?"}</h1>
+      <h1>
+        {workTaskId ? "Continue your project" : "What would you like to do?"}
+      </h1>
       <p className="muted">
         {workTaskId
           ? "Keep building in the same workspace."
-          : mode === "chat"
-            ? "Ask, explore or create something."
-            : "Describe your goal. Work with projects, code and agents."}
+          : "Ask a question or describe what you want to create."}
       </p>
       <div className="new-chat-controls">
-        <ChatModeSwitch
-          value={mode}
-          disabled={send.isPending}
-          onChange={(next) => {
-            if (workTaskId) {
-              if (next === "work") return;
-              clearWorkScope(next);
-              return;
-            }
-            setMode(next);
-            setOptions(emptyOptions);
-          }}
-        />
         {workTaskId ? (
           <p className="muted">
             Task model:{" "}
@@ -339,9 +318,9 @@ export default function NewChat({
               type="button"
               variant="ghost"
               disabled={busy}
-              onClick={() => clearWorkScope("work")}
+              onClick={() => clearWorkScope()}
             >
-              General Work
+              General conversation
             </Button>
           </div>
           {expectedWorkRun &&
@@ -383,7 +362,7 @@ export default function NewChat({
       )}
       <ConversationComposer
         permissionNote={
-          mode === "work" && options.action === "project.create_code"
+          options.action === "project.create_code"
             ? "New projects include public package preparation and isolated build/test checks. Advanced project settings can override this."
             : undefined
         }
@@ -399,9 +378,7 @@ export default function NewChat({
         placeholder={
           workTaskId
             ? "Describe the next change in this project…"
-            : mode === "chat"
-              ? "Ask a question or describe what to create…"
-              : "What would you like to build or change?"
+            : "Ask a question or describe what to create…"
         }
         tools={
           workTaskId ? undefined : (
@@ -423,7 +400,7 @@ export default function NewChat({
                   )
                     setWebEnabled(false);
                 }}
-                allowWork={mode === "work"}
+                allowWork
                 busy={busy || attachments.length > 0}
                 onUploading={setUploading}
               />

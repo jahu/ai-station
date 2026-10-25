@@ -52,7 +52,7 @@ DB = Annotated[Session, Depends(session_scope)]
 
 class ConversationBody(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    execution_mode: Literal["local", "orchestrator", "chat", "work"] = "local"
+    execution_mode: Literal["local", "orchestrator", "chat", "work", "assistant"] = "local"
     title: str = Field(default="New conversation", min_length=1, max_length=300)
     provider: str = Field(default=BUILTIN_KEY, min_length=1, max_length=80)
     model: str = Field(min_length=1, max_length=200)
@@ -65,7 +65,7 @@ class MessageBody(AssistantInputs):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     content: str = Field(min_length=1, max_length=32000)
     attachments: list[TextAttachment] = Field(default_factory=list, max_length=4)
-    execution_mode: Literal["auto", "local", "orchestrator", "chat", "work"] = "auto"
+    execution_mode: Literal["auto", "local", "orchestrator", "chat", "work", "assistant"] = "auto"
     reasoning: ReasoningOptions | None = None
     analysis_agent_source_run_id: UUID | None = None
 
@@ -588,7 +588,9 @@ def send(conversation_id: UUID, body: MessageBody, session: DB):
 def submit_message(conversation_id, body, session, *, commit=True):
     row = conversation(session, conversation_id)
     ensure_idle(session, row.id)
-    mode = turn_execution_mode(row, body)
+    requested_mode = turn_execution_mode(row, body)
+    unified = requested_mode == "assistant"
+    mode = "work" if unified else requested_mode
     from app.conversation_agent_control import prepare as prepare_agent_control
 
     body, agent_control = prepare_agent_control(session, row, body, mode)
@@ -633,7 +635,23 @@ def submit_message(conversation_id, body, session, *, commit=True):
             or explicit_plan(body.model_dump(mode="json", exclude={"attachments"})) is not None
         )
     )
-    if mode in {"chat", "work"}:
+    if unified:
+        from app.assistant import requested_project_name
+        from app.chat_policy import requires_orchestration
+        from app.project_setup import ProjectAutomation
+
+        body = body.model_copy(update={"execution_mode": "assistant"})
+        if body.project_defaults is None and requested_project_name(body.content, body.action) is not None:
+            body = body.model_copy(
+                update={
+                    "project_defaults": ProjectAutomation(auto_install_dependencies=True, auto_validate=True)
+                }
+            )
+        use_assistant = requires_orchestration(body)
+        if use_assistant and body.reasoning is not None:
+            # Response-model thinking does not override a tool's execution policy.
+            body = body.model_copy(update={"reasoning": None})
+    elif mode in {"chat", "work"}:
         body = body.model_copy(update={"execution_mode": mode})
     # Deterministic host inspection/runtime control does not contact an LLM.
     if (
@@ -659,9 +677,13 @@ def submit_message(conversation_id, body, session, *, commit=True):
     if body.reasoning is not None:
         from app.chat_reasoning import certificate, validated_options
 
-        if use_assistant or body.action not in {"auto", "chat"} or mode not in {"chat", "local"}:
+        if (
+            use_assistant
+            or body.action not in {"auto", "chat"}
+            or requested_mode not in {"chat", "local", "assistant"}
+        ):
             raise HTTPException(
-                422, "Thinking controls apply to Chat replies; Work uses its executor policies"
+                422, "Thinking controls apply to direct replies; tools use their own execution policies"
             )
         options = validated_options(session, row.model, body.reasoning, row.max_tokens)
         user.metadata_json = {
@@ -681,7 +703,7 @@ def submit_message(conversation_id, body, session, *, commit=True):
     session.flush()
     user.metadata_json = {
         **user.metadata_json,
-        "execution_mode": mode,
+        "execution_mode": requested_mode,
         "execution_mode_override": body.execution_mode,
     }
     if agent_control is not None:
@@ -799,10 +821,12 @@ def accept_turn(body: TurnBody, session: DB):
             if get_provider(session, selection.provider).updated_at != body.expected_provider_version:
                 raise HTTPException(409, "Provider configuration changed; choose the model again")
         if body.continuation:
-            if selection.provider != BUILTIN_KEY or selection.execution_mode not in {"work", "orchestrator"}:
-                raise HTTPException(
-                    422, "Open the selected coding task in Work using local conversation settings"
-                )
+            if selection.provider != BUILTIN_KEY or selection.execution_mode not in {
+                "work",
+                "orchestrator",
+                "assistant",
+            }:
+                raise HTTPException(422, "Continue the selected task using local conversation settings")
             from app.work_context import selected_source
 
             selected_task, _ = selected_source(
@@ -865,7 +889,7 @@ def turn_receipt(session, receipt):
 class ChatPreferences(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     version: int = Field(default=0, ge=0)
-    mode: Literal["chat", "work"] = "chat"
+    mode: Literal["assistant", "chat", "work"] = "assistant"
     provider: str = Field(default=BUILTIN_KEY, min_length=1, max_length=80)
     model: str = Field(default="", max_length=200)
     send_key: Literal["enter", "ctrl-enter"] = "enter"

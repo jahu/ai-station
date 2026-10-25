@@ -105,12 +105,13 @@ it.each([
   { mode: "chat", action: "chat", count: 2 },
   { mode: "work", action: "auto", count: 2 },
 ])(
-  "stores ordinary images in $mode/$action and sends their ordered ids instead of inline pixels",
+  "stores ordinary images with a saved $mode preference and $action and sends their ordered ids instead of inline pixels",
   async ({ mode, action, count }) => {
     const state = mount({ mode });
     const message = await screen.findByRole("textbox", { name: "Message" });
-    if (mode === "work")
-      fireEvent.click(screen.getByRole("button", { name: "Work" }));
+    expect(
+      screen.queryByRole("group", { name: "Conversation mode" }),
+    ).toBeNull();
     if (action !== "auto")
       fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
         target: { value: action },

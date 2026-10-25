@@ -68,7 +68,7 @@ def test_button_only_queues_existing_controller_and_keeps_chat_mode(saved):
     with session_factory()() as db:
         assert not list(db.scalars(select(Run).where(Run.executor_type == "agent_workflow")))
         user = db.get(Message, receipt["user_message_id"])
-        assert user.metadata_json["execution_mode"] == "work"
+        assert user.metadata_json["execution_mode"] == "assistant"
         assert user.metadata_json["agent_control_trigger"] == "button"
         assert user.metadata_json["agent_control"]["selection"] == "exact"
         assert user.metadata_json["agent_control"]["agent_name"] == db.get(Agent, saved[2]).name

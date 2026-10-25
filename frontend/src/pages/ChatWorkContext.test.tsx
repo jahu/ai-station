@@ -145,22 +145,22 @@ it("requires new external consent for the selected source and next prompt", asyn
     ).toBe(false),
   );
 });
-it("lets the user leave coding context or switch to Chat without losing the prompt", async () => {
+it("lets the user leave project context without a mode switch or losing the prompt", async () => {
   const writes = mount();
   await screen.findByRole("region", { name: "Current coding task" });
   const field = screen.getByRole("textbox", { name: "Message" });
   fireEvent.change(field, { target: { value: "Explain the architecture" } });
-  fireEvent.click(screen.getByRole("button", { name: "Use general Work" }));
+  fireEvent.click(screen.getByRole("button", { name: "Leave this task" }));
   expect((field as HTMLTextAreaElement).value).toBe("Explain the architecture");
   expect(sessionStorage.getItem("ai-station:general-work:conversation")).toBe(
     "task",
   );
-  fireEvent.click(screen.getByRole("button", { name: /^Chat$/ }));
+  expect(screen.queryByRole("group", { name: "Conversation mode" })).toBeNull();
   expect(
-    screen.queryByRole("region", { name: "Current coding task" }),
-  ).toBeNull();
+    screen.getByRole("button", { name: "Continue this task" }),
+  ).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: /^Send$/ }));
   await vi.waitFor(() => expect(writes).toHaveLength(1));
-  expect(writes[0].execution_mode).toBe("chat");
+  expect(writes[0].execution_mode).toBe("assistant");
   expect(writes[0].continuation).toBeUndefined();
 });

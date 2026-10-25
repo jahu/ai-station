@@ -98,6 +98,11 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Entry-point revision (2026-10-25): one assistant conversation replaces
+the user-facing Chat/Work switch. The orchestrator selects direct response or
+existing capabilities while scoped permissions and approvals remain explicit.
+Legacy history/API compatibility stays intact. [Plan](plans/unified-assistant-chat.md).
+
 Video/music translation reuses the image preparation/apply executors and existing
 local runtime lifecycle. Same-Task identical film prompts share preparation;
 all preparations and reviews gate all segments. Ordinary Resume retains verified

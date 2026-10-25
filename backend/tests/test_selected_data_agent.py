@@ -461,7 +461,7 @@ def test_active_project_selection_cannot_grant_a_different_workspace(data_enviro
         db.add(ChatWorkContext(conversation_id=cid, task_id=task.id))
         db.commit()
     response = send(api, cid, scope)
-    assert response.status_code == 422 and "General Work" in response.text
+    assert response.status_code == 422 and "Leave the selected project task" in response.text
     with session_factory()() as db:
         assert not list(db.scalars(select(Agent)))
         assert not list(db.scalars(select(Run).where(Run.conversation_id == cid)))

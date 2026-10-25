@@ -106,7 +106,7 @@ def enqueue_continuation(session, conversation, user, body):
     if not task or allowed != task.id:
         raise HTTPException(422, "Choose a coding task belonging to this conversation")
     if (
-        body.execution_mode not in {"work", "orchestrator"}
+        body.execution_mode not in {"work", "orchestrator", "assistant"}
         or body.action != "auto"
         or any(
             (

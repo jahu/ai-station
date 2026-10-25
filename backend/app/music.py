@@ -118,6 +118,7 @@ def create_music_run(session, body, *, task=None, parent_run_id=None, observed_p
         retry_class="inspect",
         parent_run_id=parent_run_id,
         parameters={
+            **({"translation": body.translation.model_dump()} if body.translation is not None else {}),
             "caption": body.caption,
             "lyrics": body.lyrics,
             "instrumental": body.instrumental,

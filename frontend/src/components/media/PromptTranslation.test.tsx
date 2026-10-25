@@ -8,7 +8,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import type { Run } from "../../api";
 import PromptTranslation, {
   PromptTranslationControl,
@@ -35,6 +35,7 @@ function mount({
   loseAcknowledgement = false,
   film = false,
   executor = "photo_pipe",
+  onRetried = undefined as ((run: Run) => void) | undefined,
 } = {}) {
   const writes: { path: string; body?: Record<string, unknown> }[] = [];
   let sourceStatus = review ? "queued" : "failed",
@@ -167,9 +168,18 @@ function mount({
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  function Location() {
+    const location = useLocation();
+    return (
+      <output aria-label="Current location">
+        {location.pathname + location.search}
+      </output>
+    );
+  }
   render(
     <QueryClientProvider client={cache}>
       <MemoryRouter initialEntries={["/images?run=media"]}>
+        <Location />
         {settings ? (
           <GenerationSettings />
         ) : control ? (
@@ -177,6 +187,7 @@ function mount({
         ) : (
           <PromptTranslation
             run={source()}
+            onRetried={onRetried}
             onRecover={
               film
                 ? async (action) => {
@@ -194,6 +205,23 @@ function mount({
   );
   return { writes, fetch };
 }
+
+it("recovers inside a conversation with the same receipt after a lost acknowledgement and preserves its URL", async () => {
+  const onRetried = vi.fn();
+  const state = mount({ review: false, loseAcknowledgement: true, onRetried });
+  fireEvent.click(await screen.findByRole("button", { name: "Use original" }));
+  await screen.findByText(/Lost acknowledgement/);
+  expect(onRetried).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Use original" }));
+  await waitFor(() => expect(onRetried).toHaveBeenCalledOnce());
+  expect(onRetried.mock.calls[0][0].id).toBe("retry");
+  expect(state.writes[0].body?.client_request_id).toBe(
+    state.writes[1].body?.client_request_id,
+  );
+  expect(screen.getByLabelText("Current location").textContent).toBe(
+    "/images?run=media",
+  );
+});
 
 it("delegates film recovery to the whole workflow without canceling or retrying a single segment", async () => {
   const state = mount({ film: true, executor: "wan_video" });

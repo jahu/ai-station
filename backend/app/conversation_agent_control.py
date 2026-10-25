@@ -123,7 +123,7 @@ def prepare(session, conversation, body, mode):
     if op is None:
         return body, None
     if mode not in {"work", "orchestrator"}:
-        raise HTTPException(422, "Switch to Work to control an agent")
+        raise HTTPException(422, "Agent control is not authorized for this explicit legacy request")
     binding = session.get(ChatWorkContext, conversation.id)
     mixed = any(
         getattr(body, field, None)
@@ -153,7 +153,9 @@ def prepare(session, conversation, body, mode):
         and binding.task_id
         or (body.web_search.query.strip() or body.web_search.render_pages)
     ):
-        raise HTTPException(422, "Send the agent control separately, in General Work without attachments")
+        raise HTTPException(
+            422, "Send the agent control separately, without a selected project task or attachments"
+        )
     try:
         source, origin, agent = creation_source(session, conversation.id)
     except (ValueError, PermissionDenied) as exc:
@@ -228,8 +230,8 @@ def request_run(session, conversation_id, agent_id, body):
         role="user",
         content=intent,
         metadata_json={
-            "execution_mode": "work",
-            "execution_mode_override": "work",
+            "execution_mode": "assistant",
+            "execution_mode_override": "assistant",
             "agent_control_trigger": "button",
         },
     )
@@ -307,7 +309,7 @@ def verified(session, run, *, lock=False):
         and user.content == run.parameters["content"]
         and run.task.prompt == user.content
         and user.metadata_json.get("agent_control") == scope
-        and user.metadata_json.get("execution_mode") in {"work", "orchestrator"}
+        and user.metadata_json.get("execution_mode") in {"work", "orchestrator", "assistant"}
         and operation(user.content) == scope["operation"]
     ):
         raise ValueError("The originating control request changed; send it again")

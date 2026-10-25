@@ -94,6 +94,7 @@ class PhotoPipeExecutor(HostMediaExecutor):
         child = create_video_run(
             session,
             VideoRequest(
+                translation=run.parameters.get("translation"),
                 prompt=run.parameters["video_prompt"],
                 image_artifact_id=artifact.id,
                 width=dimensions[0],

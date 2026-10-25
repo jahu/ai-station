@@ -4,7 +4,7 @@ import { api } from "../api";
 
 export type ChatPreferences = {
   version: number;
-  mode: "chat" | "work";
+  mode: "assistant" | "chat" | "work";
   provider: string;
   model: string;
   send_key: "enter" | "ctrl-enter";

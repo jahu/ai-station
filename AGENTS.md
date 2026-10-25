@@ -1,5 +1,10 @@
 # AI Station contributor guidance
 
+The 2026-10-25 product decision in `docs/plans/unified-assistant-chat.md` removes
+the user-facing Chat/Work split. Deliver one conversation; the orchestrator chooses
+direct replies versus applicable tools/workflows. Preserve scoped permissions,
+approvals, history and legacy API compatibility; do not add new mode switches.
+
 Product priorities follow `docs/plans/agent-first-product.md` (user decision, 2026-10-15): focus on useful persistent agents with local code execution; defer standalone IDE/Coding expansion and further Cursor/Codex integration work. Reuse and preserve existing coding services, projects and records.
 
 Read `docs/architecture.md`, `docs/security-model.md`, and `README.md` before changing execution boundaries.
