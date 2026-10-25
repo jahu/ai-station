@@ -14,9 +14,12 @@ from pydantic import (
     model_validator,
 )
 
+from app.media_translation_text import TranslationOptions
+
 
 class ImageRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    translation: TranslationOptions | None = None
 
     mode: Literal["t2i", "img2img", "recompose", "upscale"]
     backend: Literal["qwen", "juggernaut", "krea2"] = "qwen"
@@ -43,7 +46,7 @@ class ImageRequest(BaseModel):
     @model_serializer(mode="wrap")
     def preserve_existing_image_identity(self, handler):
         values = handler(self)
-        for key in ("model_id", "reference_strength", "reference_layout", "grounding_px"):
+        for key in ("model_id", "reference_strength", "reference_layout", "grounding_px", "translation"):
             if values.get(key) is None:
                 values.pop(key, None)
         return values

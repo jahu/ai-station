@@ -939,6 +939,7 @@ def prepare_consumer(session, run):
             )
         except HTTPException as exc:
             raise ProviderError(str(exc.detail)) from exc
+        load_run.metadata_json = {**load_run.metadata_json, "created_for_consumer": run.id}
         for old in matching:
             if old.status == "stopping":
                 operation = session.get(Run, old.metadata_json["operation_run_id"])

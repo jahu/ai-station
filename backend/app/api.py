@@ -47,6 +47,7 @@ from app.local_coding import router as local_coding_router
 from app.maintenance import router as maintenance_router
 from app.market_feeds import router as market_feed_router
 from app.media_jobs import router as media_jobs_router
+from app.media_translation import router as generation_router
 from app.memory_api import router as memory_router
 from app.model_definitions import router as model_definition_router
 from app.model_registry import router as model_router
@@ -393,6 +394,7 @@ app.include_router(coding_sessions_router)
 app.include_router(publication_router)
 app.include_router(library_router)
 app.include_router(artifact_purge_router)
+app.include_router(generation_router)
 app.include_router(project_setup_router)
 app.include_router(data_inputs_router)
 app.include_router(project_router)

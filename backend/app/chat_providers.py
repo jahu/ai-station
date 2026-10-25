@@ -254,6 +254,7 @@ def completion_stream(session, params):
         location=bound["location"],
         **({"reasoning": params["reasoning"]} if params.get("reasoning") is not None else {}),
         **({"json_output": True} if params.get("json_output") is True else {}),
+        **({"require_complete": True} if params.get("require_complete") is True else {}),
     )
 
 

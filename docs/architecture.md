@@ -98,6 +98,11 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Optional image prompt translation gates an ordinary media Run on local
+preparation and optional reviewed-apply children. Shared model startup/eviction,
+Run dependencies, approvals and verified Artifacts preserve the existing worker
+and native boundaries. [Implementation and qualification](plans/media-prompt-translation-implementation.md).
+
 Composer dictation reuses native CPU transcription and normal Library artifacts.
 Direct submissions can carry an idempotent Task receipt; recording inserts only
 editable draft text and never executes a conversation turn.

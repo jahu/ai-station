@@ -1,10 +1,16 @@
 # Optional media prompt translation and Chat/Work dictation
 
-Requested 2026-10-25. Dictation implementation is in qualification; optional media
-translation remains planned. These are additions to platform completion. The Krea
-image delivery is complete; the original planning worktree is preserved.
+Requested 2026-10-25. Dictation is delivered through PR #441 and deployed;
+optional image-prompt translation is implemented in qualification. Standalone
+Video/music translation remains subsequent work under the full plan. These are
+additions to platform completion. The Krea image delivery is complete; the original
+planning worktree is preserved.
 
 ## Optional translation for media models
+
+Current image execution/approval/retry contracts and qualification gates are in
+the [implementation record](media-prompt-translation-implementation.md). No new
+translation feature is deployed until its release gates and actual-model checks pass.
 
 Goal: let the operator write naturally in Polish while optionally translating
 model-facing instructions into the language recommended for the selected model.
@@ -116,3 +122,20 @@ Send. Dictation itself cannot grant Work tools, load a conversation model, or se
 audio to a cloud provider. After the operator edits and Sends, text uses the normal
 explicit conversation/provider rules. No physical-microphone or HTTPS deployment
 acceptance is claimed by fake-device browser tests.
+
+Qualification (2026-10-25): 4,001 normal Python cases (3,992 passed, nine explicit
+opt-in skips), all 830 frontend tests, format/lint/types/build and six QA exporter
+checks passed. Exact Docker source/assets, all Compose configurations and isolated
+API/worker/SQL/SSE smoke passed. Actual compiled 1440px Chat and 390px Work used
+approved Polish audio, Chromium MediaRecorder and native CPU Whisper; source-linked
+transcript artifacts, no automatic turn, cursor/race protection and compact mobile
+controls passed. The current tiny Whisper profile still needs operator correction
+of recognition mistakes; this is not a perfect-transcription claim. Physical
+microphone and phone HTTPS capture remain explicit operator QA cases.
+
+Reviewed head: `a77fa9e81d99d52424c003135de5120bb34f4b98`; develop squash:
+`0f218f0a3e9b7cae5ec6e1fe7ec0437087d0d9ed`. Evidence:
+`data/acceptance/chat-dictation-20261025`. Controller-only deployment preserved
+the native Runner, managed GPU models, E5 configuration/indexes, all prior data
+and LAN authentication. The final Polish QA catalog now includes 137 cases;
+the whole-platform release workbook remains a later handoff gate.

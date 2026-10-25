@@ -7,6 +7,7 @@ import {
   LoaderCircle,
   ArrowUpRight,
   Square,
+  FileText,
 } from "lucide-react";
 import { api, type Artifact, type Run } from "../../api";
 import { Badge, ErrorNotice } from "../common";
@@ -17,6 +18,7 @@ import { mediaBusy } from "./media-run";
 import { ArtifactLineage } from "../../pages/ArtifactLineage";
 import LibraryActions from "../../pages/LibraryActions";
 import { PurgeActivity } from "../../pages/LibraryPurge";
+import PromptTranslation from "./PromptTranslation";
 
 const RETRYABLE = new Set(["failed", "canceled", "interrupted"]);
 
@@ -97,7 +99,14 @@ export default function MediaResult({
     },
   });
   const canRetry =
-    allowRetry && kind === "image" && !!run && RETRYABLE.has(run.status);
+    allowRetry &&
+    kind === "image" &&
+    !!run &&
+    RETRYABLE.has(run.status) &&
+    (!run.metadata?.prompt_translation ||
+      ["ready", "original"].includes(
+        (run.metadata.prompt_translation as { status: string }).status,
+      ));
   const Icon =
     kind === "audio" ? AudioLines : kind === "video" ? Film : ImageIcon;
   const result = artifacts.data?.find((a) => a.type === kind);
@@ -122,16 +131,26 @@ export default function MediaResult({
               "Describe a style, instruments and atmosphere. Your music will appear here.",
           }
         : copy[kind];
+  const translation = run?.metadata?.prompt_translation as
+    { status: string } | undefined;
+  const waitingPromptReview =
+    translation?.status === "waiting_for_review" && run?.status === "queued";
   const statusText =
+    translation &&
+    !["ready", "original"].includes(translation.status) &&
     run?.status === "queued"
-      ? run.resource_wait
-        ? "Queued; generation has not started"
-        : kind === "audio" && audioMode === "music"
-          ? "Waiting for an available GPU and enough memory"
-          : "Waiting for an available GPU"
-      : run?.status === "cancel_requested"
-        ? "Stopping generation…"
-        : "Creating on your workstation";
+      ? translation.status === "waiting_for_review"
+        ? "Review your translated prompt"
+        : "Preparing your prompt locally"
+      : run?.status === "queued"
+        ? run.resource_wait
+          ? "Queued; generation has not started"
+          : kind === "audio" && audioMode === "music"
+            ? "Waiting for an available GPU and enough memory"
+            : "Waiting for an available GPU"
+        : run?.status === "cancel_requested"
+          ? "Stopping generation…"
+          : "Creating on your workstation";
   const file = result ? `/api/artifacts/${result.id}/file` : "";
   const spokenText =
     kind === "audio" &&
@@ -155,6 +174,9 @@ export default function MediaResult({
       />
       {run?.status === "queued" && (
         <ResourceWaitNotice wait={run.resource_wait} />
+      )}
+      {!!run?.metadata?.prompt_translation && (
+        <PromptTranslation key={run.id} run={run} />
       )}
       {steps && (
         <ol
@@ -314,7 +336,9 @@ export default function MediaResult({
           aria-live="polite"
         >
           <div className="media-empty-icon">
-            {busy ? (
+            {waitingPromptReview ? (
+              <FileText size={32} />
+            ) : busy ? (
               <LoaderCircle size={32} className="media-spinner" />
             ) : (
               <Icon size={36} />
@@ -330,12 +354,14 @@ export default function MediaResult({
                   : text.idleTitle}
           </h3>
           <p>
-            {busy
-              ? "You can stay here. Your result will appear automatically."
-              : run
-                ? run.error_message ||
-                  "Inspect the run for details, then start a new generation."
-                : text.idleBody}
+            {waitingPromptReview
+              ? "Confirm the prepared prompt above to start generation."
+              : busy
+                ? "You can stay here. Your result will appear automatically."
+                : run
+                  ? run.error_message ||
+                    "Inspect the run for details, then start a new generation."
+                  : text.idleBody}
           </p>
           {canRetry && (
             <div className="media-result-retry">

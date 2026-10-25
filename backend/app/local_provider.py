@@ -123,6 +123,7 @@ class LocalChatProvider:
         on_tool_calls=None,
         reasoning: dict | None = None,
         json_output: bool = False,
+        require_complete: bool = False,
     ):
         managed = model.startswith("llamacpp:")
         if reasoning is not None and not managed:
@@ -201,6 +202,10 @@ class LocalChatProvider:
                             if not choices:
                                 continue
                             choice = choices[0]
+                            if require_complete and choice.get("finish_reason") not in {None, "stop"}:
+                                raise ProviderError(
+                                    "The model did not complete its response; retry or use the original"
+                                )
                             done = done or choice.get("finish_reason") is not None
                             delta = choice.get("delta") or {}
                             thinking = delta.get("reasoning_content")

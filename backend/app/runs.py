@@ -207,6 +207,14 @@ def mark_failed(session: Session, run: Run, error_type: str, message: str) -> No
 
 
 def request_cancel(session: Session, run: Run) -> Run:
+    if run.executor_type == "media_translate":
+        from app.media_translation import cancel_translation_startup
+
+        cancel_translation_startup(session, run)
+    if run.metadata_json.get("prompt_translation"):
+        from app.media_translation import cancel_media_translation
+
+        cancel_media_translation(session, run)
     handoff = run.metadata_json.get("runtime_handoff")
     resume = session.get(Run, handoff.get("resume_run_id")) if isinstance(handoff, dict) else None
     if (

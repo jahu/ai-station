@@ -42,6 +42,7 @@ from app.maintenance import SqliteBackupExecutor
 from app.market_feeds import MarketFeedExecutor
 from app.market_watch import MarketExecutor
 from app.media_jobs import AvatarPlannerExecutor, CompositionExecutor
+from app.media_translation import MediaTranslationExecutor, TranslationApplyExecutor
 from app.model_definitions import ModelInstallExecutor
 from app.model_registry import ModelDiscoveryExecutor
 from app.models import Conversation, MemoryEntry, Message, Project, Run, Worktree
@@ -308,6 +309,8 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 
 EXECUTORS = {
+    "media_translate": MediaTranslationExecutor(),
+    "media_translation_apply": TranslationApplyExecutor(),
     "artifact_purge": ArtifactPurgeExecutor(),
     "private_access": PrivateAccessExecutor(),
     "site_preview": PreviewExecutor(),

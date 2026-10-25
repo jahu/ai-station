@@ -16,6 +16,11 @@ class PhotoPipeExecutor(HostMediaExecutor):
     artifact_type = "image"
     mime_type = "image/png"
 
+    def validate_inputs(self, session, run):
+        from app.media_translation import validate_media_translation
+
+        validate_media_translation(session, run)
+
     def output_metadata(self, output):
         relative = str(Path(output).with_suffix(".json"))
         root = get_settings().data_dir.resolve()
@@ -44,6 +49,14 @@ class PhotoPipeExecutor(HostMediaExecutor):
         return super().reserve_devices(session, run, indexes)
 
     def on_success(self, session, run, artifact):
+        if run.metadata_json.get("prompt_translation"):
+            artifact.metadata_json = {
+                **artifact.metadata_json,
+                "prompt_translation": run.metadata_json["prompt_translation"],
+            }
+            receipt_id = run.metadata_json["prompt_translation"].get("artifact_id")
+            if receipt_id and receipt_id not in artifact.parent_artifact_ids:
+                artifact.parent_artifact_ids = [*artifact.parent_artifact_ids, receipt_id]
         if run.parameters.get("video_prompt"):
             self.queue_video(session, run, artifact)
             return

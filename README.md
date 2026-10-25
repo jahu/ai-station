@@ -382,6 +382,15 @@ Do not commit `.env` or secrets. The UI/API port is bound to localhost. Settings
 
 ## Local chat
 
+Optional image instructions can be translated with a selected local LLM under
+**Settings → Generation → Translate media prompts** (initially off). Images has
+a per-request override and optional review/edit before generation. Original and
+effective prompts remain inspectable in the result and Library; ordinary Chat,
+speech and lyrics keep their original text. Managed llama.cpp models use the
+existing GPU handoff; externally owned local servers are never stopped.
+See [the translation contract](docs/plans/media-prompt-translation-implementation.md)
+for current qualification and scope.
+
 Use **Dictate** beside Send to prepare a locally transcribed, editable draft in
 Chat or Work. Nothing is submitted automatically. **Dictation options** contains
 Auto/Polish, the saved recording and an audio-file fallback for HTTP LAN, where
