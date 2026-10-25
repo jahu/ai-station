@@ -1,7 +1,7 @@
 # Image prompt translation implementation
 
-2026-10-25: implementation in qualification on `feat/media-prompt-translation`.
-Not merged or deployed. The parent [translation/dictation plan](prompt-translation-and-dictation.md)
+2026-10-25: image slice qualified for PR #442 on `feat/media-prompt-translation`.
+The controller rollout follows review and merge into develop. The parent [translation/dictation plan](prompt-translation-and-dictation.md)
 retains the full scope; standalone Video/music translation remains subsequent work.
 
 ## Existing execution boundaries
@@ -74,8 +74,28 @@ Stop, shared versus independent model startup, stale leases and stream closure.
 Compiled desktop/mobile API/worker flows with fake LLM and an owned CPU photo
 fixture have passed; those do not constitute real model/GPU acceptance.
 
-Before release: complete the frozen-source repository gates, inspect the full
-diff, qualify actual installed translator/image execution with identical-seed
-translation on/off comparisons, review results and then merge/deploy to develop.
-Preserve the current operator model preset and never stop external services.
-Evidence belongs in `data/acceptance/media-prompt-translation-20261025`.
+Frozen executable head `6638c27dc4ce2326a478bceea29becfd10cf4ad0` passed all
+4,038 collected normal Python cases (4,029 passed, nine explicit opt-in skips),
+Ruff check/format, 836 frontend tests, format/lint/types/build and six QA exporter
+checks. Exact Docker backend/compiled assets, normal/dev/private-LAN Compose and
+isolated non-root API/worker/SQLite/SSE/reopen checks passed. Final compiled
+1440px/390px review/edit/approve/image-output flows passed with fake LLM and an
+owned CPU photo fixture; screenshots were inspected.
+
+Actual installed Qwen3.5 9B Q6_K, managed llama.cpp on both discovered GPUs with
+8,192 context, translated a Polish scene before LUSTIFY Q4 generation. The ordinary
+Task graph loaded the translator, completed text preparation, stopped the idle
+owned LLM and generated the image with GPU-only weights. A second Run used the
+unchanged Polish prompt with identical 768×1024, eight steps, CFG 1 and seed 42.
+Both completed and retained checked images. Both visibly depict the requested
+red bicycle, blue chair and two yellow flowers without people; composition differs.
+This verifies this translation/handoff profile, not a universal quality improvement.
+The isolated test database did not change preview settings or model presets;
+owned test processes, runtimes and resource reservations were released.
+
+Evidence: `data/acceptance/media-prompt-translation-20261025`, including
+`real-model-pair-result.json`, retained on/off PNGs, compiled browser results,
+complete local gates and reviewed image identity. An initial acceptance harness
+path exceeded the private Unix socket limit and was retained as a failed attempt;
+the corrected isolated shorter data root passed without relaxing production checks.
+The final operator QA catalog includes nine translation cases (146 total).

@@ -1,7 +1,7 @@
 # Optional media prompt translation and Chat/Work dictation
 
 Requested 2026-10-25. Dictation is delivered through PR #441 and deployed;
-optional image-prompt translation is implemented in qualification. Standalone
+optional image-prompt translation is qualified for PR #442. Standalone
 Video/music translation remains subsequent work under the full plan. These are
 additions to platform completion. The Krea image delivery is complete; the original
 planning worktree is preserved.
@@ -137,5 +137,5 @@ Reviewed head: `a77fa9e81d99d52424c003135de5120bb34f4b98`; develop squash:
 `0f218f0a3e9b7cae5ec6e1fe7ec0437087d0d9ed`. Evidence:
 `data/acceptance/chat-dictation-20261025`. Controller-only deployment preserved
 the native Runner, managed GPU models, E5 configuration/indexes, all prior data
-and LAN authentication. The final Polish QA catalog now includes 137 cases;
+and LAN authentication. The dictation release brought the Polish QA catalog to 137 cases;
 the whole-platform release workbook remains a later handoff gate.
