@@ -41,6 +41,9 @@ from ai_station_runner.gitops import (
     run_project_command,
 )
 from ai_station_runner.gpu_processes import collect as collect_gpu_processes
+from ai_station_runner.krea2_native import KreaRunRequest
+from ai_station_runner.krea2_native import capabilities as krea_capabilities
+from ai_station_runner.krea2_native import start as start_krea
 from ai_station_runner.llama_runtime import router as llama_router
 from ai_station_runner.local_coding_runs import LocalCodingRequest, local_coding_report, start_local_coding
 from ai_station_runner.local_model import router as local_model_router
@@ -679,6 +682,17 @@ app.include_router(local_model_router)
 
 
 app.include_router(llama_router)
+
+
+@app.get("/v1/krea2/capabilities")
+def local_krea_capabilities():
+    return krea_capabilities()
+
+
+@app.post("/v1/runs/krea2")
+def krea_run(body: KreaRunRequest):
+    record = start_krea(manager(), body)
+    return {**record, "runner_id": get_settings().runner_id}
 
 
 @app.get("/v1/station-image")

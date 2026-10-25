@@ -55,6 +55,12 @@ verified captured data. See [saved API sources](docs/plans/agent-http-connectors
 
 # AI Station
 
+Krea 2 / LUSTIFY image integration is in development. Explicit pinned companion
+and native-runtime setup, GPU-only placement and typed owned-process dispatch are
+implemented on the feature branch; model-selection UI and real checkpoint
+qualification are pending. The adapter remains disabled by default. See the
+[setup, contracts and current evidence](docs/plans/krea2-lustify-images.md).
+
 Images and Chat/Work edits can follow the submitted instruction without implicit
 portrait/skin styling. **Use classic identity template** restores the original
 Edit/Recompose profile. Generate and the external photo pipeline remain unchanged.
