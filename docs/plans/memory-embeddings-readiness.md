@@ -73,9 +73,21 @@ content/scope/enabled state, cancellation and setup revision before publication.
 The existing FTS, provenance and inspector remain available. Show semantic results
 inline with their exact scope and entry links; endpoint fields are advanced.
 
-Implemented on the feature branch: managed CPU setup, pinned file verification,
+Implemented: managed CPU setup, pinned file verification,
 automatic indexing, scope-bound inline results, settings/content race guards and
 owned process Stop/parent-death handling. Tests include real ONNX Runtime inference
 using a tiny synthetic fixture; that is not pretrained-model quality acceptance.
-Operator consent and real pretrained-model qualification remain pending. The model
-is not presented as ready before its actual probe succeeds.
+The complete normal CPU suite covered 3,892 cases. A pre-existing concurrency test
+needed its standard CookieJar passed across the two HTTP client implementations
+introduced by the new dependencies; the corrected auth/concurrency group passed
+all 14 cases. Frontend coverage includes the complete 809-test baseline plus the
+11 affected Memory tests after spacing/filter-order refinement. Compiled desktop
+and mobile checks run the actual worker/CPU lifecycle with tiny synthetic weights.
+The production image also executed actual ONNX CPU inference without networking;
+normal/dev/private-LAN Compose and isolated API/worker/SQL/SSE checks passed.
+
+Operator consent and actual pretrained-model download/Polish semantic-quality
+qualification remain pending. These checks do not establish pretrained quality,
+and the model is not presented as ready before its actual local probe succeeds.
+No weights were downloaded and no GPU/native changes were needed for qualification.
+Evidence: `data/acceptance/managed-memory-embeddings-20261025`.
