@@ -238,6 +238,20 @@ function VideoForm({
     mediaBusy(run.data) ||
     jobBusy(job.data) ||
     (!!jobId && job.isPending);
+  const preparationStatus =
+    job.data?.prompt_preparation_status ??
+    (run.data?.status === "queued"
+      ? (
+          run.data.metadata?.prompt_translation as
+            { status?: string } | undefined
+        )?.status
+      : undefined);
+  const progressLabel =
+    preparationStatus === "review" || preparationStatus === "waiting_for_review"
+      ? "Waiting for prompt review"
+      : preparationStatus === "translating" || preparationStatus === "queued"
+        ? "Preparing prompts…"
+        : "Creating your video…";
   return (
     <>
       <PageTitle
@@ -512,7 +526,7 @@ function VideoForm({
               }
             >
               <Sparkles size={17} />
-              {busy ? "Creating your video…" : "Generate video"}
+              {busy ? progressLabel : "Generate video"}
             </Button>
             <p className="media-privacy">
               Your images and prompt stay on this workstation. Output is 24 fps,

@@ -90,6 +90,17 @@ export default function Music({ initialRun }: { initialRun?: Run }) {
     },
   });
   const busy = generate.isPending || mediaBusy(run.data);
+  const promptState = (
+    run.data?.metadata?.prompt_translation as TranslationReceipt | undefined
+  )?.status;
+  const progressLabel =
+    run.data?.status === "queued" &&
+    promptState &&
+    !["ready", "original"].includes(promptState)
+      ? promptState === "waiting_for_review"
+        ? "Waiting for prompt review"
+        : "Preparing prompt…"
+      : "Creating music…";
   const available = profile.data?.available === true;
   const maximum = Math.min(600, profile.data?.max_seconds ?? 600);
   return (
@@ -244,7 +255,7 @@ export default function Music({ initialRun }: { initialRun?: Run }) {
               }
             >
               <Sparkles size={17} />
-              {busy ? "Creating music…" : "Generate music"}
+              {busy ? progressLabel : "Generate music"}
             </Button>
             <p className="media-privacy">
               Created on your workstation. Your music and lyrics stay local.

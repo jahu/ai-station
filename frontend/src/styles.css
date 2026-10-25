@@ -7411,8 +7411,25 @@ section:has(> .memory-grid) > .dashboard-note {
   margin: 0 0 8px;
 }
 .prompt-translation-panel label {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin: 12px 0;
+}
+.prompt-translation-panel textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 100px;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg, #101214);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.6;
 }
 .prompt-translation-panel [role="alert"] {
   color: var(--danger, #f87171);
