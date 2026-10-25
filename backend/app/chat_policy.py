@@ -25,6 +25,19 @@ CHAT_ACTIONS = {
     "video.generate",
 }
 POLICY_VERSION = 1
+AGENT_REQUEST = re.compile(
+    r"^(?:(?:please|prosz[eę]|now|then|teraz)\s+){0,3}"
+    r"(?:(?:can|could|would)\s+you(?:\s+please)?\s+|"
+    r"(?:czy\s+)?(?:mo[zż]esz|m[oó]g[łl](?:by[śs]|aby[śs]))\s+)?"
+    r"(?:create|make|build|prepare|save|write|set\s+up|stw[oó]rz|utw[oó]rz|zbuduj|przygotuj|zapisz|zr[oó]b|napisz|"
+    r"stworzy[ćc]|utworzy[ćc]|przygotowa[ćc]|"
+    r"(?:(?:i\s+)?(?:want|need)|i(?:\s+would|'d)\s+like|chc[eę]|chcia[łl](?:bym|abym)|potrzebuj[eę])"
+    r"(?:\s+(?:(?:you\s+)?to\s+(?:have|create|make|prepare)|mie[ćc]|stworzy[ćc]|przygotowa[ćc]))?)\s+"
+    r"(?:(?:for\s+me|dla\s+mnie|(?!(?:about|of|for|from|with|using|on|regarding|to|how|know|learn|understand|"
+    r"jak|wiedzie[ćc]|dowiedzie[ćc]|zrozumie[ćc]|nauczy[ćc]|opis|instrukcj[ęe]|poradnik|o)\b)[\w-]+)\s+){0,8}"
+    r"agent(?:a|s|[oó]w)?\b",
+    re.I,
+)
 
 
 def policy_mode(mode):
@@ -39,18 +52,11 @@ def agent_draft_requested(params):
     mention = re.search(r"\bagent", text, re.I)
     if mention and re.search(r"\b(?:not|never|don't|nie)\b", text[: mention.start()], re.I):
         return False
-    if re.match(
-        r"^(?:i (?:want|need)|chc[eę]|potrzebuj[eę])\s+(?:to (?:know|understand|learn)|wiedzie[ćc]|dowiedzie[ćc]|zrozumie[ćc]|nauczy[ćc])\b",
-        text,
-        re.I,
-    ):
-        return False
+    match = AGENT_REQUEST.match(text)
     return bool(
-        re.search(
-            r"^(?:(?:please|prosz[eę])\s+|(?:can|could)\s+you\s+|czy\s+mo[zż]esz\s+)?"
-            r"(?:create|make|(?:i\s+)?want|(?:i\s+)?need|stw[oó]rz|utw[oó]rz|zbuduj|chc[eę]|potrzebuj[eę])\b.{0,80}\bagent",
-            text,
-            re.I,
+        match
+        and not re.match(
+            r"\s+(?:instructions?|prompts?|tutorials?|diagrams?|documentation)\b", text[match.end() :], re.I
         )
     )
 
@@ -74,7 +80,7 @@ def requires_orchestration(body):
             r"^(?:(?:please|prosz[eę])\s+|(?:can|could)\s+you\s+|czy\s+mo[zż]esz\s+)?"
             r"(?:build|create|make|write|run|execute|schedule|automate|implement|fix|"
             r"zbuduj|stw[oó]rz|utw[oó]rz|napisz|uruchom|wykonaj|zaplanuj|zautomatyzuj|napraw|dodaj)\b"
-            r".{0,180}\b(?:agent|project|projekt|script|skrypt|code|kod|workflow|process|proces|"
+            r".{0,180}\b(?:project|projekt|script|skrypt|code|kod|workflow|process|proces|"
             r"file|plik|spreadsheet|arkusz|report|raport|website|stron|aplikacj|task|zadani)",
             body.content.strip(),
             re.I | re.S,

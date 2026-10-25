@@ -1,4 +1,20 @@
-Current candidate, 2026-10-25: PR #444 implements the
+Latest candidate, 2026-10-25: [PR #445](natural-agent-intent.md) fixes polite
+agent creation routing to an ordinary Web answer. Shared current-instruction
+recognition now handles plain creation, selected inputs and completed-analysis
+references; known creation omits default Web and a separate classification call.
+Descriptions, prompts, quotes and negation do not grant creation authority.
+Disabled drafts, frozen scopes and explicit activation remain unchanged.
+Final normal suite: 4123 cases (4114 pass/nine opt-in skips), Ruff/format,
+unchanged qualified UI (844 tests), exact image/three Compose variants, isolated
+image smoke, compiled 1440/390 English/Polish default-Web checks, six QA tool
+tests. Catalog v8 retains 156 IDs. Evidence and final reviewed/tested mappings:
+`data/acceptance/unified-natural-agent-intent-20261025/`. Merge and deployment
+receipts, plus the shared deployment authority below, determine actual live state.
+Next: complete the full-platform acceptance audit and release-specific operator
+workbook. Preserve root WIP, data/auth/E5, native/private services and owned models.
+The full-platform goal remains open; no new real LLM/GPU smoke is claimed here.
+
+Delivered foundation: PR #444 implements the
 [single assistant](unified-assistant-chat.md), replacing visible Chat/Work modes.
 Direct questions retain the inexpensive reply path; media, data, local code and
 agent requests use existing scoped execution. Per-turn media language and inline

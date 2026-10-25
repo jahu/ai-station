@@ -52,23 +52,27 @@ def work():
         "Chciałbym mieć agenta, który opisuje aktualne użycie GPU i RAM mojej stacji.",
     ],
 )
-def test_default_web_does_not_block_a_reviewable_agent_draft(model, content):
+@pytest.mark.parametrize("mode", ["work", "assistant"])
+def test_default_web_does_not_block_a_reviewable_agent_draft(model, content, mode):
     with TestClient(app) as client:
         conversation = client.post(
-            "/api/chat/conversations", json={"model": "fake-local", "execution_mode": "work"}
+            "/api/chat/conversations", json={"model": "fake-local", "execution_mode": mode}
         ).json()
         route = f"/api/chat/conversations/{conversation['id']}"
         sent = client.post(
             route + "/messages",
             json={
                 "content": content,
-                "execution_mode": "work",
+                "execution_mode": mode,
                 "project_defaults": {"auto_install_dependencies": True, "auto_validate": True},
                 "web_search": {"enabled": True},
             },
         )
         assert sent.status_code == 202, sent.text
         root = sent.json()
+        if mode == "assistant":
+            assert root["parameters"]["web_search"]["enabled"] is False
+            assert "network_read" not in root["effective_permissions"]
         assert work() == root["id"]
         with session_factory()() as session:
             planner = session.get(Run, root["id"])
@@ -81,6 +85,8 @@ def test_default_web_does_not_block_a_reviewable_agent_draft(model, content):
             assert len(agents) == 1 and not agents[0].enabled and agents[0].next_run_at is None
             assert agents[0].tools == ["system_snapshot"]
         assert client.get("/api/chat/preferences").json()["web_search_enabled"] is True
+        if mode == "assistant":
+            assert len(model) == 1, "Recognized creation needs the draft model, not another planner"
 
 
 @pytest.mark.parametrize("mode", ["chat", "work", "orchestrator"])

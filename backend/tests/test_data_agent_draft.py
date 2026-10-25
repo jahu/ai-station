@@ -15,11 +15,19 @@ from test_projects import repository as repository
 from test_python_data_agents import data_environment as data_environment
 
 
+@pytest.mark.parametrize(
+    "mode,text",
+    [
+        ("work", "Create an agent that repeats this analysis every five minutes."),
+        ("assistant", "Could you prepare an agent that repeats this analysis every five minutes?"),
+        ("assistant", "Chciałbym mieć agenta, który co pięć minut powtarza tę analizę."),
+    ],
+)
 def test_completed_analysis_can_become_a_disabled_repeat_agent_with_its_original_inputs(
-    data_environment, monkeypatch
+    data_environment, monkeypatch, mode, text
 ):
     api = TestClient(app)
-    cid, original = start(api, data_environment, mode="work")
+    cid, original = start(api, data_environment, mode=mode)
     drain()
     calls = []
 
@@ -31,8 +39,8 @@ def test_completed_analysis_can_become_a_disabled_repeat_agent_with_its_original
     response = api.post(
         f"/api/chat/conversations/{cid}/messages",
         json={
-            "content": "Create an agent that repeats this analysis every five minutes.",
-            "execution_mode": "work",
+            "content": text,
+            "execution_mode": mode,
         },
     )
     assert response.status_code == 202, response.text

@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from app.agent_schema import AgentSettings
-from app.chat_policy import agent_draft_policy
+from app.chat_policy import agent_draft_policy, agent_draft_requested
 from app.conversation_data_schema import DataScope
 from app.models import Artifact, Message, Run
 
@@ -36,11 +36,7 @@ def requested(content):
     prefix = r"^(?:(?:please|now|then|proszę|prosze|teraz)\s+){0,3}"
     article = r"(?:(?:a|an|the|new|persistent|recurring|daily|mi|nowego|nowy|stałego|stalego|cyklicznego|codziennego)\s+){0,3}"
     reference = r"(?:\b(?:this|that|the previous|the last)\s+analysis\b|\b(?:t[ęeą]|tej|t[ąa]|poprzedni[ąa]|ostatni[ąa])\s+analiz\w*\b)"
-    agent = re.search(
-        prefix + r"(?:create|make|save|stw[oó]rz|utw[oó]rz|zapisz)\s+" + article + r"(?:agent|agenta)\b",
-        text,
-        re.I,
-    )
+    agent = agent_draft_requested({"content": text})
     saved = re.search(
         prefix
         + r"(?:save|zapisz|zamie[ńn]|przekszta[łl][ćc])\s+"

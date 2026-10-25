@@ -47,9 +47,19 @@ def send(api, cid, scope, **extra):
     )
 
 
-def test_selected_inputs_create_disabled_agent_without_analysis_or_workspace(data_environment, monkeypatch):
+@pytest.mark.parametrize(
+    "mode,text",
+    [
+        ("work", "Create an agent that computes the total every five minutes."),
+        ("assistant", "Could you prepare an agent to compute these totals every five minutes?"),
+        ("assistant", "Chciałbym mieć agenta, który co pięć minut liczy sumę w wybranych plikach."),
+    ],
+)
+def test_selected_inputs_create_disabled_agent_without_analysis_or_workspace(
+    data_environment, monkeypatch, mode, text
+):
     api = TestClient(app)
-    cid, scope = setup(api, data_environment)
+    cid, scope = setup(api, data_environment, mode=mode)
     calls = []
 
     async def stream(self, **kwargs):
@@ -62,7 +72,7 @@ def test_selected_inputs_create_disabled_agent_without_analysis_or_workspace(dat
         yield json.dumps(proposal())
 
     monkeypatch.setattr(LocalChatProvider, "stream", stream)
-    result = send(api, cid, scope)
+    result = send(api, cid, scope, content=text)
     assert result.status_code == 202, result.text
     drain()
     with session_factory()() as db:

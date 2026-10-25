@@ -27,8 +27,9 @@ def prepare_turn(body, mode):
 
     # The saved legacy orchestrator mode has the same server-owned Work policy.
     # Provider preflight must see that policy for ambiguous image requests too.
-    body = body.model_copy(update={"execution_mode": "work"})
-    plan = explicit_plan({**body.model_dump(mode="json", exclude={"attachments"}), "policy_mode": "work"})
+    policy = "assistant" if body.execution_mode == "assistant" else "work"
+    body = body.model_copy(update={"execution_mode": policy})
+    plan = explicit_plan({**body.model_dump(mode="json", exclude={"attachments"}), "policy_mode": policy})
     if plan is not None and plan.action not in WEB_ACTIONS:
         return body.model_copy(update={"web_search": SearchOptions(enabled=False)})
     return body

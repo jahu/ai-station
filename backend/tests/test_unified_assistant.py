@@ -59,6 +59,13 @@ def work():
         "I want to know how to create an agent",
         "Chcę wiedzieć jak stworzyć agenta",
         "I want you not to create an agent",
+        "Chciałbym wiedzieć jak stworzyć agenta",
+        "I would like to know how to create an agent",
+        "Create a description of an agent",
+        "Write a prompt for an agent",
+        "Create a list of agents",
+        "Prepare a tutorial about agents",
+        "Create agent instructions",
     ],
 )
 def test_ordinary_question_is_one_direct_completion_without_planner_or_authority(fake, text):
