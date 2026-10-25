@@ -14,8 +14,28 @@ with Pydantic `SkipJsonSchema`, retaining its existing snapshot exclusion and
 explicit-input rejection. This does not accept/drop untrusted model fields or
 weaken duration/resource validation. The actual factory prompt regression fails
 before the change; image/music/avatar proposals retain their existing schemas.
-Real requalification and final local/image gates are still required. Evidence:
-`data/acceptance/agent-video-release-20261025/`. Earlier receipts remain unchanged.
+The corrected source passed all 4123 normal Python/Runner cases: 4114 passes and
+nine opt-in skips, plus Ruff. Its frontend/native/deployment trees are unchanged;
+the exact image/compiled assets, three Compose variants and isolated image
+API/worker/SQL/SSE/reopen checks pass. The factory/media/video focused suite has
+72 passes, including continued rejection of explicit short-clip frames.
+
+Actual requalification used Qwen3.5 9B at 8192 context in an isolated database,
+normal worker and private native Runner: natural draft, disabled-definition
+review, goal preparation, automatic owned model unloading, two real Wan windows
+and final composition all passed. The film is five seconds/120 frames at
+1280×704, 20 steps, under the existing 11-GiB/zero-swap profile. It took about
+21 minutes. Complete decode, sampled scene/join checks and actual compiled
+1440px/390px playback pass. Mild detail/lighting drift is recorded; this is not
+all-duration visual or physical-phone qualification. Original failed receipts
+are retained. Evidence: `data/acceptance/agent-video-release-20261025/`.
+
+The accepted profile explicitly reviewed a 7200-second maximum before enabling.
+The model's disabled proposal still defaulted to 600 seconds, shorter than the
+actual render. Improve this fresh-draft happy path separately, preserving
+explicit operator budgets and never extending a running/saved allowance silently.
+The existing reviewed setup suggestion remains available. Whole-platform and
+final operator workbook handoff remain open; deployment receipts determine live state.
 
 Status: scene-video agents are implemented through the existing long-media
 controller. The optional native deadline prerequisite (#366) is deployed.

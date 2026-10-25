@@ -67,9 +67,12 @@ promising completion within a generic five/fifteen-minute row estimate.
 
 ## Finite next release gates
 
-1. Resolve the actual goal-prepared video-agent chain, keeping the earlier false
-   receipt and distinguishing software correction from a real completed film.
-   Do not rerun the unrelated 60-second benchmark just to count another test.
+1. The goal-prepared video chain is now actually qualified in
+   `agent-video-release-20261025/`: real 9B natural draft/goal preparation, two
+   GPU windows, complete five-second/120-frame 1280×704 film, sampled joins and
+   actual 1440px/390px compiled playback. The earlier false receipt is retained.
+   This used an explicitly reviewed 7200-second allowance; improve fresh-draft
+   setup because the model's default 600 seconds is below its measured runtime.
 2. Decide and verify the declared quality envelope for longer Video/Avatar
    against actual output, not merely decode/readiness. Retain the user's longer
    media requirement; do not silently drop it or relabel known drift as perfect.

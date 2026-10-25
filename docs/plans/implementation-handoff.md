@@ -1,3 +1,7 @@
+Latest acceptance, 2026-10-25: PR #447 fixes a real Qwen3.5 9B natural video-agent draft failure caused by the advertised inherited frames default. Backend/Runner full qualification: 4123 cases (4114 pass/nine opt-in skips); all72 focused factory/media/video cases pass. Exact image/assets, three Compose variants and isolated API/worker/SQL/SSE pass; frontend/native trees match their qualified baseline. Actual isolated normal-worker natural draft/goal preparation/owned model unloading/two-window Wan/composed five-second film and 1440/390 playback pass. Source/evidence: `data/acceptance/agent-video-release-20261025/`. Review/merge/rollout receipts and shared deployment metadata determine live state.
+
+Next: improve fresh video-agent draft setup (the model proposed600seconds; the measured film took1282seconds and explicitly reviewed7200), preserve all explicit/saved/running allowances; reconcile existing long-media visual evidence; finish owner-controlled private access/mail setup and final release-specific Polish QA package. PR #446 already provides all156case mappings and hashed synthetic test inputs. Never overwrite root Memory WIP, operator data/auth/E5/native/private services. Whole-platform goal remains active. Earlier entries below are history.
+
 Latest candidate, 2026-10-25: [PR #445](natural-agent-intent.md) fixes polite
 agent creation routing to an ordinary Web answer. Shared current-instruction
 recognition now handles plain creation, selected inputs and completed-analysis
