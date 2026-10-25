@@ -5,6 +5,11 @@ import {
   type ResultEmailAuthorization,
 } from "./AgentResultEmail";
 import AgentTimeBudget, { MAX_AGENT_RUNTIME } from "./AgentTimeBudget";
+import {
+  ReportAlertEditor,
+  ReportAlertResult,
+  reportAlertsSupported,
+} from "./AgentReportAlerts";
 import AgentVideoSetup from "./AgentVideoSetup";
 import AgentAvatarSetup from "./AgentAvatarSetup";
 import type { AgentMediaScope } from "./agent-media";
@@ -99,6 +104,7 @@ type AgentDraft = {
     on_failure?: boolean;
     on_approval?: boolean;
     report_email?: ResultEmailScope | null;
+    report_condition?: string;
   };
   github?: { connector_id: string; repository: string } | null;
   http?: { connector_id: string; connector_revision: string } | null;
@@ -995,6 +1001,7 @@ export function AssistantAgentDraft({
                 <AgentLatestReport runs={history} />
               )
             ) : null}
+            <ReportAlertResult runs={history} />
           </>
         ) : !detail.error ? (
           <p className="muted" role="status">
@@ -1446,6 +1453,28 @@ export function AssistantAgentDraft({
                 />
               </dd>
             </div>
+            {(reportAlertsSupported(agent.tools ?? []) ||
+              agent.notification_policy?.report_condition) && (
+              <div>
+                <dt>Success criterion</dt>
+                <dd>
+                  <ReportAlertEditor
+                    value={agent.notification_policy?.report_condition}
+                    tools={agent.tools ?? []}
+                    disabled={editLocked}
+                    tabIndex={tabIndex}
+                    onSave={(report_condition) =>
+                      saveSettings.mutate({
+                        notification_policy: {
+                          ...agent.notification_policy,
+                          report_condition,
+                        },
+                      })
+                    }
+                  />
+                </dd>
+              </div>
+            )}
             {!agent.market?.email && (
               <div>
                 <dt>Email delivery</dt>
@@ -1736,6 +1765,7 @@ export function AssistantAgentDraft({
                   <AgentLatestReport runs={history} />
                 </>
               )}
+              <ReportAlertResult runs={history} />
               <AgentLastWorkflowSteps runs={history} tabIndex={tabIndex} />
               <AgentExecutionHistory
                 runs={history}

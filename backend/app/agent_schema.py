@@ -43,17 +43,20 @@ class RetryPolicy(BaseModel):
 
 
 class NotificationPolicy(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     on_success: StrictBool = False
     on_failure: StrictBool = False
     on_approval: StrictBool = False
     report_email: AgentReportEmailScope | None = None
+    report_condition: str = Field(default="", max_length=1500)
 
     @model_serializer(mode="wrap")
     def legacy_identity(self, handler):
         values = handler(self)
         if self.report_email is None:
             values.pop("report_email", None)
+        if not self.report_condition:
+            values.pop("report_condition", None)
         return values
 
     @model_validator(mode="before")
@@ -147,6 +150,12 @@ class AgentSettings(BaseModel):
 
     @model_validator(mode="after")
     def validate_definition(self):
+        if self.notification_policy.report_condition and (
+            coding_provider(self.tools) or "create_media" in self.tools or "market_watch" in self.tools
+        ):
+            raise ValueError(
+                "Success criteria currently apply to report agents; explicitly clear them before changing output tools"
+            )
         if self.documents is not None and "read_documents" not in self.tools:
             raise ValueError("Selected documents require the Read documents tool")
         if self.enabled and "read_documents" in self.tools and self.documents is None:

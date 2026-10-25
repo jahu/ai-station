@@ -190,6 +190,11 @@ def delivery_context(session, source):
     ):
         raise ReportEmailPolicyError("The completed result is not an active agent workflow outcome")
     definition = AgentSettings.model_validate(root.parameters["definition"])
+    if definition.notification_policy.report_condition:
+        from app.agent_alerts import may_notify
+
+        if not may_notify(session, source, definition.notification_policy):
+            raise ReportEmailPolicyError("The reviewed success notification criterion was not met")
     agent = session.get(Agent, source.agent_id)
     grant = authorization(
         session, agent, definition, expected_id=root.parameters.get("report_email_approval_id")
