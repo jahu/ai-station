@@ -1,12 +1,13 @@
 {
-  "version": 2,
+  "version": 3,
   "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
   "sources": [
     "docs/product-completion.md",
     "docs/plans/operator-qa-handoff.md",
     "docs/plans/agent-first-product.md",
     "docs/plans/library-permanent-deletion.md",
-    "docs/plans/memory-embeddings-readiness.md"
+    "docs/plans/memory-embeddings-readiness.md",
+    "docs/plans/prompt-translation-and-dictation.md"
   ],
   "cases": [
     {
@@ -2967,6 +2968,160 @@
       "minutes": 10,
       "requirements": [
         "wyniki agenta; email"
+      ]
+    },
+    {
+      "id": "DICT-001",
+      "area": "Chat i Work",
+      "title": "Dyktowanie po polsku do szkicu",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany lokalny Whisper; jednorazowe neutralne nagranie QA; dostęp operatora."
+      ],
+      "steps": [
+        "Na localhost lub HTTPS otwórz Chat, a potem Work",
+        "W Dictation options wybierz Polish; wpisz fragment tekstu i ustaw kursor",
+        "Kliknij Dictate; wypowiedz neutralne zdanie po polsku; kliknij Stop recording"
+      ],
+      "expected": [
+        "Transkrypcja odbywa się lokalnie; tekst trafia w miejsce kursora; nic nie jest wysłane automatycznie; zachowane załączniki."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 3,
+      "requirements": [
+        "CHAT-DICTATION"
+      ]
+    },
+    {
+      "id": "DICT-002",
+      "area": "Chat i Work",
+      "title": "Edycja podczas transkrypcji",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany lokalny Whisper; jednorazowe neutralne nagranie QA; dostęp operatora."
+      ],
+      "steps": [
+        "Rozpocznij dyktowanie lub transkrypcję pliku",
+        "Zmień szkic podczas transkrypcji",
+        "Po zakończeniu sprawdź Insert at cursor, Replace draft i Keep my draft na oddzielnych próbach"
+      ],
+      "expected": [
+        "Własne poprawki nie są nadpisywane; każda operacja odpowiada wybranemu działaniu; brak automatycznego Send."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 3,
+      "requirements": [
+        "CHAT-DICTATION"
+      ]
+    },
+    {
+      "id": "DICT-003",
+      "area": "Chat i Work",
+      "title": "Stop i opuszczenie rozmowy",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany lokalny Whisper; jednorazowe neutralne nagranie QA; dostęp operatora."
+      ],
+      "steps": [
+        "Rozpocznij transkrypcję jednorazowego pliku QA",
+        "Kliknij Cancel dictation i obejrzyj Run",
+        "Powtórz próbę, opuszczając rozmowę podczas pracy"
+      ],
+      "expected": [
+        "Szkic pozostaje bez zmian; zatrzymany jest tylko własny Run; spóźniony wynik nie trafia do nowej rozmowy."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 3,
+      "requirements": [
+        "CHAT-DICTATION"
+      ]
+    },
+    {
+      "id": "DICT-004",
+      "area": "Chat i Work",
+      "title": "HTTP LAN i plik zamiast mikrofonu",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany lokalny Whisper; jednorazowe neutralne nagranie QA; dostęp operatora."
+      ],
+      "steps": [
+        "Otwórz AI Station przez HTTP z innego urządzenia LAN",
+        "Sprawdź Dictate i Dictation options",
+        "Wybierz Transcribe an audio file i podaj krótkie polskie nagranie QA"
+      ],
+      "expected": [
+        "Jest wyjaśnienie wymogu HTTPS/localhost; transkrypcja pliku działa lokalnie bez obchodzenia zabezpieczeń przeglądarki."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 3,
+      "requirements": [
+        "CHAT-DICTATION"
+      ]
+    },
+    {
+      "id": "DICT-005",
+      "area": "Chat i Work",
+      "title": "Odmowa dostępu do mikrofonu",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany lokalny Whisper; jednorazowe neutralne nagranie QA; dostęp operatora."
+      ],
+      "steps": [
+        "Na localhost lub HTTPS kliknij Dictate",
+        "Odmów uprawnienia mikrofonu",
+        "Sprawdź czytelny komunikat i możliwość przesłania pliku"
+      ],
+      "expected": [
+        "Brak zawieszonego nagrywania; szkic jest zachowany; żaden turn ani Work nie uruchamia się."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 3,
+      "requirements": [
+        "CHAT-DICTATION"
+      ]
+    },
+    {
+      "id": "DICT-006",
+      "area": "Chat i Work",
+      "title": "Wznowienie i zachowane nagranie",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany lokalny Whisper; jednorazowe neutralne nagranie QA; dostęp operatora."
+      ],
+      "steps": [
+        "Wywołaj błąd transkrypcji na jednorazowym pliku QA lub przerwij łączność podczas kolejki",
+        "Przywróć połączenie i użyj Retry dictation",
+        "Otwórz Saved recording & transcript oraz Inspect dictation Run"
+      ],
+      "expected": [
+        "Nagrania nie trzeba powtarzać; niepotwierdzone żądanie nie dubluje tego samego Run; źródło i transkrypcja są dostępne do inspekcji."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 3,
+      "requirements": [
+        "CHAT-DICTATION"
+      ]
+    },
+    {
+      "id": "DICT-007",
+      "area": "Chat i Work",
+      "title": "Mikrofon telefonu przez HTTPS",
+      "priority": "P1",
+      "prerequisites": [
+        "Skonfigurowany lokalny Whisper; jednorazowe neutralne nagranie QA; dostęp operatora."
+      ],
+      "steps": [
+        "Na telefonie otwórz skonfigurowany prywatny adres HTTPS",
+        "Dyktuj krótkie polskie zdanie; zatrzymaj; popraw tekst",
+        "Sprawdź nagranie i dopiero wtedy kliknij Send"
+      ],
+      "expected": [
+        "Przyciski mieszczą się w ekranie; mikrofon jest zwalniany po Stop/Cancel/nawigacji; dopiero Send uruchamia właściwą prośbę."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 3,
+      "requirements": [
+        "CHAT-DICTATION"
       ]
     }
   ]

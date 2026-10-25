@@ -98,6 +98,11 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Composer dictation reuses native CPU transcription and normal Library artifacts.
+Direct submissions can carry an idempotent Task receipt; recording inserts only
+editable draft text and never executes a conversation turn.
+[Contracts](plans/prompt-translation-and-dictation.md#dictation-implementation-contract).
+
 Managed semantic memory uses the existing container executor, not a new service.
 A fixed ONNX CPU child owns one ordinary Run; app-owned pinned files, explicit
 preparation consent, revision/content guards and parent-death/Stop contracts keep

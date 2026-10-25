@@ -1,5 +1,7 @@
 import io
 import wave
+from concurrent.futures import ThreadPoolExecutor
+from uuid import uuid4
 
 import pytest
 from app.api import app
@@ -82,6 +84,59 @@ def enqueue(client):
     result = client.post("/api/audio/transcription/runs", json={"audio_artifact_id": upload.json()["id"]})
     assert result.status_code == 202, result.text
     return result.json(), upload.json()
+
+
+def test_request_receipt_reuses_run_and_rejects_changed_scope(monkeypatch):
+    fake(monkeypatch)
+    with TestClient(app) as client:
+        source = client.post(
+            "/api/audio/transcription/uploads", files={"file": ("speech.wav", wav(), "audio/wav")}
+        ).json()
+        body = {"audio_artifact_id": source["id"], "language": "pl", "client_request_id": str(uuid4())}
+        first = client.post("/api/audio/transcription/runs", json=body)
+        assert first.status_code == 202, first.text
+        work()
+        second = client.post("/api/audio/transcription/runs", json=body)
+        assert second.status_code == 202
+        assert second.json()["id"] == first.json()["id"]
+        assert second.json()["status"] == "succeeded"
+        changed = client.post("/api/audio/transcription/runs", json={**body, "language": "en"})
+        assert changed.status_code == 409
+        with session_factory()() as session:
+            assert session.get(Run, first.json()["id"]).conversation_id is None
+
+
+def test_concurrent_request_receipts_enqueue_one_run(monkeypatch):
+    from app.models import Task
+    from sqlalchemy import func, select
+
+    fake(monkeypatch)
+    with TestClient(app) as client:
+        source = client.post(
+            "/api/audio/transcription/uploads", files={"file": ("speech.wav", wav(), "audio/wav")}
+        ).json()
+        body = {"audio_artifact_id": source["id"], "client_request_id": str(uuid4())}
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(
+                pool.map(lambda _: client.post("/api/audio/transcription/runs", json=body), range(2))
+            )
+        assert all(result.status_code == 202 for result in results)
+        assert results[0].json()["id"] == results[1].json()["id"]
+    with session_factory()() as session:
+        assert session.scalar(select(func.count()).select_from(Run)) == 1
+        assert session.scalar(select(func.count()).select_from(Task)) == 1
+
+
+def test_receipt_retry_survives_runtime_unavailability(monkeypatch):
+    fake(monkeypatch)
+    with TestClient(app) as client:
+        source = client.post(
+            "/api/audio/transcription/uploads", files={"file": ("speech.wav", wav(), "audio/wav")}
+        ).json()
+        body = {"audio_artifact_id": source["id"], "client_request_id": str(uuid4())}
+        first = client.post("/api/audio/transcription/runs", json=body)
+        monkeypatch.setattr("app.transcription.capabilities", lambda: {"available": False})
+        assert client.post("/api/audio/transcription/runs", json=body).json()["id"] == first.json()["id"]
 
 
 def work():
