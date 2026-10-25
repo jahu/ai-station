@@ -90,9 +90,7 @@ it("updates deleted artifact history after worker completion without refreshing 
     await screen.findByRole("button", { name: "Delete permanently portrait" }),
   );
   await screen.findByText("1 artifact");
-  fireEvent.click(
-    screen.getByRole("button", { name: "Delete permanently" }),
-  );
+  fireEvent.click(screen.getByRole("button", { name: "Delete permanently" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   await waitFor(() =>
     expect(
