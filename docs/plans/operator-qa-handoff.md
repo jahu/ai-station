@@ -5,6 +5,12 @@ before testing. Deliver a complete Polish QA workbook at the release handoff,
 then use the returned results as structured bug/improvement input. This is a
 required product deliverable, not a request for operator testing now.
 
+The initial [versioned catalog and offline exporter](../qa/README.md) now cover
+130 Polish cases in 20 areas and produce a six-sheet XLSX, three CSV templates,
+a readable guide and a release/catalog manifest. Drafts have no prefilled passes.
+The final package remains a release gate: recheck coverage against the completed
+platform and freeze the real release before handing it to the operator.
+
 ## Delivery and timing
 
 - Keep a version-controlled test-case catalog with stable case IDs and trace each

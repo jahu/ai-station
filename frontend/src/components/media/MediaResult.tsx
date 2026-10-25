@@ -16,6 +16,7 @@ import { Button } from "../ui/button";
 import { mediaBusy } from "./media-run";
 import { ArtifactLineage } from "../../pages/ArtifactLineage";
 import LibraryActions from "../../pages/LibraryActions";
+import { PurgeActivity } from "../../pages/LibraryPurge";
 
 const RETRYABLE = new Set(["failed", "canceled", "interrupted"]);
 
@@ -187,6 +188,7 @@ export default function MediaResult({
           ))}
         </ol>
       )}
+      {result && <PurgeActivity artifactId={result.id} />}
       {result?.purged_at || result?.purge_run_id ? (
         <div className="media-finished library-deleted-placeholder">
           <Icon size={40} />

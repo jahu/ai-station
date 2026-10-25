@@ -3,8 +3,10 @@
 Operator request, 2026-10-25: support permanent deletion directly from Library,
 without moving to Trash first; in Trash allow individual deletion, deleting the
 selected items and emptying all Trash. Keep reversible Trash/restore available.
-Implementation is in progress on `feat/library-permanent-deletion`; it is not
-deployed. This document does not authorize purging operator data.
+Implemented, locally qualified and deployed in PR #438. This document does not
+authorize purging operator data. The follow-up UI fix keeps artifact inspectors
+and inline media results subscribed to their own deletion progress; item outcomes
+refresh them without navigation, including during a larger batch still running.
 
 ## Implementation contract
 
