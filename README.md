@@ -528,6 +528,12 @@ containers; it performs no model inference, image download or live-service resta
 It verifies actual worker death, conservative inspection without replay and owned
 cancellation/cleanup. [Recovery scope](docs/plans/owned-python-worker-recovery.md).
 
+Add `--failure-target runner` to kill/restart only that probe's private Host
+Runner while the CPU job continues. The original worker must record transport
+loss; the restarted Runner must inspect/cancel the same owned job without replay.
+Use a different new evidence directory for each invocation.
+[Native restart contract](docs/plans/owned-python-runner-recovery.md).
+
 Portrait-driven video is available in **Avatars** and **Video**, including assistant dispatch and inline playback. Configure the existing offline EchoMimic installation as described in [avatar execution](docs/avatars.md).
 
 After a Coding proposal and its configured validation pass, inspect the diff and choose **Commit reviewed changes**. Arrow keys choose the review acknowledgement; Space or Enter selects it with a unique Review name and does not queue a commit. There is no inspectable review-ack Run. This queues a local task-branch commit containing exactly the reviewed file snapshots. Changed files, staged edits and protected branches are rejected. See [reviewed commits](docs/coding-commits.md).

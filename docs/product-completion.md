@@ -102,6 +102,15 @@ unchanged. See [Node project dependencies](node-project-dependencies.md).
 
 # Full-product acceptance ledger
 
+Actual isolated CPU recovery now covers worker death and native Runner death/
+restart during active Python jobs, each with completion and cancellation. The
+new Runner retains the same owned process; recovery never replays or adopts
+uncertain output. Exact cleanup and original source bytes are checked. See
+[worker recovery](plans/owned-python-worker-recovery.md) and
+[native recovery](plans/owned-python-runner-recovery.md), with reviewed-head
+qualification under their acceptance directories. Sustained concurrency, other
+adapters, machine reboot and whole-platform completion remain separate.
+
 [Local music](plans/local-music-generation.md), including direct Chat/Work
 dispatch, now has actual queued 10-second instrumental and 30-second
 supplied-lyrics GPU/Library acceptance and owned native Stop evidence. The

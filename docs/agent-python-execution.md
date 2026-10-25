@@ -73,6 +73,9 @@ real CPU containers through a private native Runner and kills only its disposabl
 worker. It checks live-process inspection, no automatic replay/output adoption,
 and cancellation with confirmed owned-container cleanup. The README documents
 the opt-in command; it is never part of normal tests.
+Its optional `--failure-target runner` mode instead kills/restarts that private
+native service and verifies journal adoption after actual worker transport loss.
+See [native restart acceptance](plans/owned-python-runner-recovery.md).
 
 ## Verified acceptance — PR #325
 

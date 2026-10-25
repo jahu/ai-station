@@ -1,4 +1,4 @@
-"""Opt-in actual CPU-container/worker-crash recovery; no inference or live data."""
+"""Opt-in actual CPU-container worker/Runner crash recovery; no inference or live data."""
 
 import argparse
 import hashlib
@@ -29,6 +29,12 @@ def wait_for(probe, *, seconds=40):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", required=True, help="Already installed trusted Python executor image")
+    parser.add_argument(
+        "--failure-target",
+        choices=["worker", "runner"],
+        default="worker",
+        help="Kill the disposable worker (default) or its isolated native Runner",
+    )
     parser.add_argument("--output-dir", type=Path, required=True, help="New private evidence directory")
     args = parser.parse_args()
     if os.environ.get("AI_STATION_REAL_RECOVERY_TESTS") != "1":
@@ -128,7 +134,7 @@ def main():
         subprocess.run(["git", "-C", str(repo), "add", "README.md"], check=True)
         subprocess.run(["git", "-C", str(repo), "commit", "-m", "Fixture"], check=True, stdout=log)
         index = (repo / ".git/index").read_bytes()
-        launch("ai_station_runner.main")
+        native_process = launch("ai_station_runner.main")
         wait_for(native_ready)
         caps = runner.request("GET", "/v1/python/capabilities")
         assert caps["available"], "The installed image does not meet the trusted executor protocol"
@@ -193,9 +199,28 @@ def main():
                 launched = wait_for(running)
                 started.append(rid)
                 assert worker.poll() is None
-                worker.send_signal(signal.SIGKILL)
-                worker.wait(timeout=10)
-                assert worker.returncode == -signal.SIGKILL
+                if args.failure_target == "worker":
+                    worker.send_signal(signal.SIGKILL)
+                    worker.wait(timeout=10)
+                    assert worker.returncode == -signal.SIGKILL
+                else:
+                    assert native_process.poll() is None
+                    native_process.send_signal(signal.SIGKILL)
+                    native_process.wait(timeout=10)
+                    assert native_process.returncode == -signal.SIGKILL
+                    # Wait for actual transport loss to finish the original tick;
+                    # reconnecting too early would conceal the uncertain dispatch.
+                    worker.wait(timeout=15)
+                    assert worker.returncode == 0
+                    with session_factory()() as session:
+                        row = session.get(Run, rid)
+                        assert row.status == "running" and row.metadata_json["dispatch_attempted"]
+                        events = list(session.scalars(select(RunEvent).where(RunEvent.run_id == rid)))
+                        assert any(event.event_type == "recovery.inspection_required" for event in events)
+                    native_process = launch("ai_station_runner.main")
+                    wait_for(native_ready)
+                    adopted = inspect_job(rid)
+                    assert adopted["alive"] and adopted["pid"] == launched["pid"]
                 # No fake clock or rewritten lease: wait for the actual heartbeat
                 # lease to expire, then run the ordinary recovery service.
                 time.sleep(2.5)
@@ -227,7 +252,9 @@ def main():
                             "mode": mode,
                             "run_id": rid,
                             "status": row.status,
-                            "actual_worker_sigkill": True,
+                            "actual_worker_sigkill": args.failure_target == "worker",
+                            "actual_native_runner_sigkill": args.failure_target == "runner",
+                            "original_worker_observed_transport_loss": args.failure_target == "runner",
                             "live_owned_process_inspected": True,
                             "owned_container_removed": True,
                             "no_replay_or_output_adoption": True,
@@ -276,6 +303,7 @@ def main():
             "passed": completed and cleanup_confirmed,
             "actual_cpu_container": bool(started),
             "image_id": image_id,
+            "failure_target": args.failure_target,
             "inference_or_gpu_work": False,
             "production_data_or_services_modified": False,
             "cases": results,
@@ -290,7 +318,7 @@ def main():
             shutil.rmtree(root)
     assert completed and cleanup_confirmed, "Recovery or exact owned cleanup was not confirmed"
     print(
-        "PASS actual CPU worker crash: live inspection, no replay/adoption, completion interruption and owned cancellation"
+        f"PASS actual CPU {args.failure_target} crash: live inspection, no replay/adoption, completion interruption and owned cancellation"
     )
 
 
