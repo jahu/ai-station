@@ -14,7 +14,10 @@ adding an account/provider for each example.
 
 ## Product contract
 
-Chat remains the entry point, with Chat/Work modes and model selection. Agents
+Chat remains the entry point, with model selection. The 2026-10-25
+[one-assistant decision](unified-assistant-chat.md) removes the user-facing
+Chat/Work split: the orchestrator chooses direct response versus applicable tools
+and workflows from the current instruction. Agents
 are durable definitions that can research, create files, write and execute local
 code, remember observations, run on schedules and deliver results. Users describe
 a result and inspect progress, outputs and history without configuring a software

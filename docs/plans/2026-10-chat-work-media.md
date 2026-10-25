@@ -1,3 +1,5 @@
+Priority update, 2026-10-25: the [single-assistant plan](unified-assistant-chat.md) supersedes user-facing Chat/Work modes and their visible default preference. Preserve historical execution/API records, permissions and approvals. New work removes the switch and mode-only refusals; this document retains earlier implementation history and other applicable contracts.
+
 # Conversation-first AI Station: implementation brief for GPT-6.1-Sol
 
 Status: **in progress**. Decision date: 2026-10-14.
