@@ -6,7 +6,7 @@ then use the returned results as structured bug/improvement input. This is a
 required product deliverable, not a request for operator testing now.
 
 The initial [versioned catalog and offline exporter](../qa/README.md) now cover
-130 Polish cases in 20 areas and produce a six-sheet XLSX, three CSV templates,
+156 Polish cases in 21 areas and produce a six-sheet XLSX, three CSV templates,
 a readable guide and a release/catalog manifest. Drafts have no prefilled passes.
 The final package remains a release gate: recheck coverage against the completed
 platform and freeze the real release before handing it to the operator.
@@ -59,7 +59,7 @@ Cover all accepted product requirements and operational enabled capabilities:
 
 - installation/startup/update/restart; data retention, backup/restore and diagnostics;
 - local/LAN/private remote login, independent device sessions and access controls;
-- first and ongoing Chat/Work conversations, models, context, stop/regenerate,
+- first and ongoing single-assistant conversations, including legacy history, models, context, stop/regenerate,
   attachments, search/page reading, citations and natural multi-step instructions;
 - image generation/edit/recompose/upscale, inputs and source/result continuation;
 - video, speech/music/transcription and avatars at declared profiles, progress,

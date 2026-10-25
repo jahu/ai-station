@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
   "sources": [
     "docs/product-completion.md",
@@ -3524,6 +3524,30 @@
       "minutes": 5,
       "requirements": [
         "UNIFIED-ASSISTANT-CHAT",
+        "spec-47"
+      ]
+    },
+    {
+      "id": "UNIFIED-006",
+      "area": "Orkiestracja",
+      "title": "Pytanie o załączony obraz bez zmiany trybu",
+      "priority": "P0",
+      "prerequisites": [
+        "Lokalny model Vision dostępny w Models; neutralny obraz QA z łatwo rozpoznawalnym kolorem lub kształtem."
+      ],
+      "steps": [
+        "Załącz obraz w zwykłej rozmowie i zapytaj o widoczny kolor lub kształt",
+        "Powtórz z opcjonalnym narzędziem Conversation, bez wyboru innego modelu tekstowego",
+        "Sprawdź wynik i użyty model w szczegółach wykonania"
+      ],
+      "expected": [
+        "Odpowiedź uwzględnia rzeczywiste piksele przez lokalny Vision. Brak prośby o przełączenie Chat / Work, zbędnego uruchomienia modelu tekstowego i niejawnego wysłania obrazu do chmury."
+      ],
+      "resources": "Lokalny model Vision; GPU; bez płatnych API",
+      "minutes": 4,
+      "requirements": [
+        "UNIFIED-ASSISTANT-CHAT",
+        "chat-vision",
         "spec-47"
       ]
     }
