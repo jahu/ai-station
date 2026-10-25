@@ -1,5 +1,22 @@
 # Video and avatar output from persistent agents
 
+## Natural video draft correction — 2026-10-25
+
+The release audit's actual Qwen3.5 9B run reproduced failed natural video drafting:
+the proposal JSON schema advertised the inherited short-clip `frames=49` even
+though duration-based agent requests reject that field. The first real response
+included both timing controls; its bounded correction removed duration while
+retaining frames, so both responses were invalid. No media was generated and
+the isolated owned runtime was stopped; production records were untouched.
+
+Hide only this non-proposal field from `AgentVideoRequest`'s generated JSON schema
+with Pydantic `SkipJsonSchema`, retaining its existing snapshot exclusion and
+explicit-input rejection. This does not accept/drop untrusted model fields or
+weaken duration/resource validation. The actual factory prompt regression fails
+before the change; image/music/avatar proposals retain their existing schemas.
+Real requalification and final local/image gates are still required. Evidence:
+`data/acceptance/agent-video-release-20261025/`. Earlier receipts remain unchanged.
+
 Status: scene-video agents are implemented through the existing long-media
 controller. The optional native deadline prerequisite (#366) is deployed.
 Whole-speech avatar agent scopes are implemented and deployed in #368; new real

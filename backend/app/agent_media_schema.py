@@ -4,6 +4,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 from app.audio_schema import SpeechRequest
 from app.avatar_schema import FullAvatarSettings
@@ -66,7 +67,10 @@ class AgentSpeechScope(BaseModel):
 class AgentVideoRequest(LongVideoSettings):
     # Long settings reject explicitly supplied frames; omit the inherited default
     # from frozen snapshots so its round-trip preserves that public contract.
-    frames: int = Field(default=49, exclude=True)
+    # It is not a proposal input: advertising it makes models copy an invalid
+    # short-clip default into a duration-based film, even during correction.
+    # Keep the inherited explicit-input rejection and snapshot compatibility.
+    frames: SkipJsonSchema[int] = Field(default=49, exclude=True)
 
 
 class AgentVideoScope(BaseModel):

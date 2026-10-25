@@ -53,6 +53,13 @@ def test_media_draft_publishes_disabled_settings_without_generation(model, imple
         assert agent["cron_expr"] == "0 8 * * *"
         prompt = json.loads(calls[0]["messages"][1]["content"])
         assert "create_media" in prompt["operational_local_tools"]
+        if kind == "video":
+            properties = prompt["proposal_schema"]["$defs"]["AgentVideoRequest"]["properties"]
+            # Real local inference copied the advertised short-clip default into
+            # a duration-based film, then failed both bounded correction attempts.
+            assert "duration_seconds" in properties
+            assert "frames" not in properties
+            assert "client_request_id" not in properties
         with session_factory()() as session:
             assert [r.executor_type for r in session.scalars(select(Run))] == ["agent_draft"]
 
