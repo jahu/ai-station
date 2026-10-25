@@ -5,11 +5,13 @@
 > Existing notification defaults preserve old identities; other output families
 > explicitly reject unsupported criteria. Factory drafts remain disabled; email
 > rechecks the criterion before transport and normal consent remains unchanged.
-> Initial broad backend151 and final alert19 cases pass; focused UI20, lint and
-> TypeScript pass after correcting test-fixture fields and an editor effect.
-> Full final Python/Runner/frontend gates, actual local inference, compiled
-> desktop/mobile acceptance, full review, PR and rollout remain required.
-> No PR/deployment yet. Live remains qualified #428; #429/#430 real CPU worker/
+> Complete Python3837 coverage passes (3828/nine opt-in skips); all five UI gates
+> pass with800 tests. Exact image/Compose and an actual-image isolated fake API/
+> worker/SQL/SSE probe pass. Four compiled desktop/mobile two-report flows pass.
+> Actual local report/check inference correctly handled no finding, new v2 and
+> repeated v2 in synthetic memory data, preserving the ready model/context.
+> PR #431 is draft pending final full review/merge and controller-only rollout.
+> Original failed fixture/effect checks are retained and resolved. Live remains qualified #428; #429/#430 real CPU worker/
 > native crash completion/cancel acceptance is merged and preserved under its
 > acceptance directories. Keep root Memory WIP, data/auth, Native PID, owned
 > model/context and private daemon. Tailscale enrollment/mobile and broader
