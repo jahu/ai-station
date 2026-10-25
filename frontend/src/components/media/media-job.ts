@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, type ResourceWait } from "../../api";
+import type { TranslationOptions } from "./PromptTranslation";
 
 export type MediaRequest = {
+  translation?: TranslationOptions;
   image_artifact_id?: string | null;
   audio_artifact_id?: string;
   speech_text?: string | null;
@@ -19,6 +21,8 @@ export type MediaRequest = {
   scenes?: { prompt: string; duration_seconds: number }[] | null;
 };
 export type MediaJob = {
+  translation_consumer_run_ids?: string[];
+  prompt_preparation_status?: "translating" | "review";
   resource_wait?: ResourceWait | null;
   request?: MediaRequest;
   preview_artifact_id?: string | null;

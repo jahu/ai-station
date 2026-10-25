@@ -15,6 +15,11 @@ import { PageTitle, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import MediaInput from "../components/media/MediaInput";
 import MediaResult from "../components/media/MediaResult";
+import {
+  PromptTranslationControl,
+  translationRequest,
+  type TranslationOptions,
+} from "../components/media/PromptTranslation";
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import Avatars from "./Avatars";
@@ -91,6 +96,13 @@ function VideoForm({
   const [mode, setMode] = useState(initialImage ? "animate" : "generate");
   const [image, setImage] = useState(initialImage);
   const [prompt, setPrompt] = useState(initialRequest?.prompt ?? "");
+  const [translation, setTranslation] = useState<TranslationOptions>(
+    initialRequest?.translation ?? {
+      mode: "inherit",
+      review: false,
+      protected_terms: [],
+    },
+  );
   const [negative, setNegative] = useState(
     initialRequest?.negative_prompt ?? "",
   );
@@ -166,6 +178,7 @@ function VideoForm({
         seed,
         gpu,
         image_artifact_id: mode === "animate" ? image : null,
+        ...translationRequest(translation),
       };
       if (duration.endsWith("s")) {
         const body = {
@@ -194,18 +207,8 @@ function VideoForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...(memoryProfile !== "default"
-            ? { memory_profile: memoryProfile }
-            : {}),
-          prompt,
-          negative_prompt: negative,
-          width,
-          height,
+          ...values,
           frames: Number(duration),
-          steps,
-          seed,
-          gpu,
-          image_artifact_id: mode === "animate" ? image : null,
         }),
       });
     },
@@ -235,6 +238,20 @@ function VideoForm({
     mediaBusy(run.data) ||
     jobBusy(job.data) ||
     (!!jobId && job.isPending);
+  const preparationStatus =
+    job.data?.prompt_preparation_status ??
+    (run.data?.status === "queued"
+      ? (
+          run.data.metadata?.prompt_translation as
+            { status?: string } | undefined
+        )?.status
+      : undefined);
+  const progressLabel =
+    preparationStatus === "review" || preparationStatus === "waiting_for_review"
+      ? "Waiting for prompt review"
+      : preparationStatus === "translating" || preparationStatus === "queued"
+        ? "Preparing prompts…"
+        : "Creating your video…";
   return (
     <>
       <PageTitle
@@ -484,6 +501,11 @@ function VideoForm({
                 onChange={setGpu}
               />
             </details>
+            <PromptTranslationControl
+              value={translation}
+              onChange={setTranslation}
+              disabled={busy || uploading}
+            />
             <ErrorNotice error={generate.error ?? capability.error} />
             {capability.data && !capability.data.available && (
               <p className="notice">
@@ -504,7 +526,7 @@ function VideoForm({
               }
             >
               <Sparkles size={17} />
-              {busy ? "Creating your video…" : "Generate video"}
+              {busy ? progressLabel : "Generate video"}
             </Button>
             <p className="media-privacy">
               Your images and prompt stay on this workstation. Output is 24 fps,

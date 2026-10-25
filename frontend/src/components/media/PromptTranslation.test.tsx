@@ -33,6 +33,8 @@ function mount({
   settings = false,
   control = false,
   loseAcknowledgement = false,
+  film = false,
+  executor = "photo_pipe",
 } = {}) {
   const writes: { path: string; body?: Record<string, unknown> }[] = [];
   let sourceStatus = review ? "queued" : "failed",
@@ -53,7 +55,7 @@ function mount({
       task_id: "task",
       parent_run_id: null,
       capability: "image.generate",
-      executor_type: "photo_pipe",
+      executor_type: executor,
       execution_target: "host",
       created_at: "2026-10-25T12:00:00Z",
       started_at: null,
@@ -173,13 +175,43 @@ function mount({
         ) : control ? (
           <Controls />
         ) : (
-          <PromptTranslation run={source()} />
+          <PromptTranslation
+            run={source()}
+            onRecover={
+              film
+                ? async (action) => {
+                    writes.push({
+                      path: "whole-film-recovery",
+                      body: { translation: action },
+                    });
+                  }
+                : undefined
+            }
+          />
         )}
       </MemoryRouter>
     </QueryClientProvider>,
   );
   return { writes, fetch };
 }
+
+it("delegates film recovery to the whole workflow without canceling or retrying a single segment", async () => {
+  const state = mount({ film: true, executor: "wan_video" });
+  fireEvent.click(await screen.findByRole("button", { name: "Use original" }));
+  await waitFor(() =>
+    expect(state.writes).toEqual([
+      { path: "whole-film-recovery", body: { translation: "original" } },
+    ]),
+  );
+});
+
+it("uses the typed media retry endpoint for standalone failed music translation", async () => {
+  const state = mount({ review: false, executor: "ace_step_music" });
+  fireEvent.click(await screen.findByRole("button", { name: "Use original" }));
+  await waitFor(() => expect(state.writes).toHaveLength(1));
+  expect(state.writes[0].path).toBe("/api/generation/media/media/retry");
+  expect(state.writes[0].body?.translation).toBe("original");
+});
 
 it("keeps inherited translation off, supports explicit overrides and retains multiline names", async () => {
   const state = mount({ control: true });

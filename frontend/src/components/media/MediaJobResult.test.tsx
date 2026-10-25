@@ -70,6 +70,22 @@ it("reports actual segment progress and stops the entire job", async () => {
     expect(writes[0].url).toBe("/api/media/jobs/task/cancel"),
   );
 });
+
+it("distinguishes prompt review from speech preparation or GPU generation", () => {
+  const writes = mount("preparing", undefined, {
+    kind: "video",
+    prompt_preparation_status: "review",
+  });
+  expect(
+    screen.getByText(
+      "Review the translated prompts below before film generation.",
+    ),
+  ).toBeTruthy();
+  expect(
+    screen.queryByText("Generating speech and preparing its full timeline…"),
+  ).toBeNull();
+  expect(writes).toHaveLength(0);
+});
 it("resumes unfinished work using the displayed revision and a UUID receipt", async () => {
   const writes = mount("failed");
   fireEvent.click(

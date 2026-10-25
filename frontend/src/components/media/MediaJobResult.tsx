@@ -7,6 +7,25 @@ import { Badge, ErrorNotice } from "../common";
 import ResourceWaitNotice from "../ResourceWaitNotice";
 import { Button } from "../ui/button";
 import { chatRequestId, clearChatRequest } from "../../pages/chat-draft";
+import PromptTranslation, {
+  type TranslationRecovery,
+} from "./PromptTranslation";
+import { useMediaRun } from "./media-run";
+
+function FilmPrompt({
+  id,
+  onRecover,
+}: {
+  id: string;
+  onRecover: (action: TranslationRecovery) => Promise<unknown>;
+}) {
+  const run = useMediaRun(id);
+  return run.data ? (
+    <PromptTranslation run={run.data} onRecover={onRecover} />
+  ) : (
+    <ErrorNotice error={run.error} />
+  );
+}
 
 export default function MediaJobResult({
   id,
@@ -36,8 +55,33 @@ export default function MediaJobResult({
     onSuccess: refresh,
   });
   const resume = useMutation({
-    mutationFn: async () => {
-      const body = { expected_revision: job!.revision };
+    mutationFn: async (translation: TranslationRecovery = "reuse") => {
+      if (translation !== "reuse" && jobBusy(job)) {
+        try {
+          await api(`/media/jobs/${id}/cancel`, { method: "POST" });
+        } catch (error) {
+          const actual = await api<MediaJob>(`/media/jobs/${id}`);
+          if (
+            actual.status !== "canceled" &&
+            actual.status !== "cancel_requested"
+          )
+            throw error;
+        }
+        const deadline = Date.now() + 30000;
+        while (true) {
+          const actual = await api<MediaJob>(`/media/jobs/${id}`);
+          if (!jobBusy(actual)) break;
+          if (Date.now() >= deadline)
+            throw new Error(
+              "The film is still stopping. Inspect its Runs, then retry.",
+            );
+          await new Promise((resolve) => setTimeout(resolve, 500));
+        }
+      }
+      const body = {
+        expected_revision: job!.revision,
+        ...(translation === "reuse" ? {} : { translation }),
+      };
       const key = await chatRequestId(
         "media-resume:" + id,
         JSON.stringify(body),
@@ -99,16 +143,20 @@ export default function MediaJobResult({
               aria-label="Completed video stages"
             />
             <p>
-              {job.status === "composing"
-                ? "Assembling and checking the full video…"
-                : job.resource_wait &&
-                    (job.status === "queued" || job.status === "preparing")
-                  ? "Queued; generation will start when resources are available."
-                  : job.status === "preparing"
-                    ? "Generating speech and preparing its full timeline…"
-                    : job.status === "succeeded"
-                      ? "Your full video is ready."
-                      : `${job.completed_segments} of ${job.total_segments} ${job.mode === "shots" ? "shots" : "segments"} complete`}
+              {job.prompt_preparation_status === "review"
+                ? "Review the translated prompts below before film generation."
+                : job.prompt_preparation_status === "translating"
+                  ? "Preparing your film prompts locally…"
+                  : job.status === "composing"
+                    ? "Assembling and checking the full video…"
+                    : job.resource_wait &&
+                        (job.status === "queued" || job.status === "preparing")
+                      ? "Queued; generation will start when resources are available."
+                      : job.status === "preparing"
+                        ? "Generating speech and preparing its full timeline…"
+                        : job.status === "succeeded"
+                          ? "Your full video is ready."
+                          : `${job.completed_segments} of ${job.total_segments} ${job.mode === "shots" ? "shots" : "segments"} complete`}
             </p>
           </div>
           {job.kind === "video" &&
@@ -185,7 +233,7 @@ export default function MediaJobResult({
                 type="button"
                 variant="secondary"
                 disabled={resume.isPending}
-                onClick={() => resume.mutate()}
+                onClick={() => resume.mutate("reuse")}
               >
                 <RotateCcw size={15} />
                 Resume unfinished work
@@ -194,6 +242,13 @@ export default function MediaJobResult({
             <Link to="/runs">Inspect Runs</Link>
           </div>
           {job.error_message && <p className="notice">{job.error_message}</p>}
+          {job.translation_consumer_run_ids?.map((identifier) => (
+            <FilmPrompt
+              key={identifier}
+              id={identifier}
+              onRecover={(choice) => resume.mutateAsync(choice)}
+            />
+          ))}
         </>
       )}
       <ErrorNotice

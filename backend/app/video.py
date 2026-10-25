@@ -81,7 +81,9 @@ def memory_reservation(body, observed_profile):
     return selected["ram_mib"]
 
 
-def create_video_run(session, body, *, task=None, parent_run_id=None, observed_profile=None):
+def create_video_run(
+    session, body, *, task=None, parent_run_id=None, observed_profile=None, _prepare_translation=True
+):
     reservation = None
     if body.memory_profile != "default":
         observed_profile = capabilities() if observed_profile is None else observed_profile
@@ -114,7 +116,7 @@ def create_video_run(session, body, *, task=None, parent_run_id=None, observed_p
     from app.vision_inputs import pin_media_inputs
 
     pin_media_inputs(session, parent_run_id, parameters)
-    return create_run(
+    run = create_run(
         session,
         task,
         run_type="video",
@@ -127,6 +129,11 @@ def create_video_run(session, body, *, task=None, parent_run_id=None, observed_p
         parent_run_id=parent_run_id,
         parameters=parameters,
     )
+    if _prepare_translation:
+        from app.media_translation import enqueue_translation
+
+        enqueue_translation(session, run, body.translation)
+    return run
 
 
 @router.post("/runs", status_code=202)
@@ -146,6 +153,9 @@ class VideoExecutor(MotionArtifacts, HostMediaExecutor):
     mime_type = "video/mp4"
 
     def validate_inputs(self, session, run):
+        from app.media_translation import validate_media_translation
+
+        validate_media_translation(session, run)
         if run.parameters.get("media_inputs"):
             from app.agent_media import verify_published_inputs
 

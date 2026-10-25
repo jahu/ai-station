@@ -106,6 +106,13 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Grouped film translation binds every consumer's source/configuration and applies
+only allowlisted descriptive fields. Lyrics and speech are excluded. Agent film
+translation is frozen after publication of its reviewed input provenance. Retry
+and Resume reuse verified proof or require an explicit audited replacement;
+translation grants no native/API/filesystem or external-provider authority.
+[Contracts](plans/media-language-workflows.md).
+
 Optional image translation has no tools or external-AI permission. Source-bound
 text placeholders and a checked field allowlist prevent model output from changing
 references or execution settings. Media waits for preparation/review; Stop and

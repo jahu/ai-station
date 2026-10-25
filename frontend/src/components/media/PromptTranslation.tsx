@@ -13,6 +13,15 @@ export type TranslationOptions = {
   review: boolean;
   protected_terms: string[];
 };
+export type TranslationRecovery = "reuse" | "retry" | "original";
+
+export function translationRequest(value: TranslationOptions) {
+  return value.mode !== "inherit" ||
+    value.review ||
+    value.protected_terms.length
+    ? { translation: value }
+    : {};
+}
 export type TranslationReceipt = {
   status: string;
   preparation_run_id?: string;
@@ -71,7 +80,8 @@ export function PromptTranslationControl({
         <summary>Translation options</summary>
         <p className="muted">
           Only descriptive instructions are translated. The original is
-          retained; quoted image text, numbers and model tokens stay unchanged.{" "}
+          retained; quoted text, lyrics, numbers and model tokens stay
+          unchanged.{" "}
           <Link to="/settings/generation">Choose local translator</Link>
         </p>
         <label className="image-workflow-option">
@@ -137,11 +147,13 @@ export function PromptReceipt({
           <h4>
             {key === "edit_prompt"
               ? "Edit instruction"
-              : key === "negative"
+              : key === "negative" || key === "negative_prompt"
                 ? "Negative prompt"
-                : key === "video_prompt"
-                  ? "Motion prompt"
-                  : "Prompt"}
+                : key === "caption"
+                  ? "Music description"
+                  : key === "video_prompt"
+                    ? "Motion prompt"
+                    : "Prompt"}
           </h4>
           <span className="eyebrow">YOUR ORIGINAL</span>
           <p>{original}</p>
@@ -160,7 +172,13 @@ export function PromptReceipt({
   );
 }
 
-export default function PromptTranslation({ run }: { run: Run }) {
+export default function PromptTranslation({
+  run,
+  onRecover,
+}: {
+  run: Run;
+  onRecover?: (action: TranslationRecovery) => Promise<unknown>;
+}) {
   const receipt = run.metadata?.prompt_translation as
     TranslationReceipt | undefined;
   const prep = useMediaRun(receipt?.preparation_run_id ?? "");
@@ -177,7 +195,11 @@ export default function PromptTranslation({ run }: { run: Run }) {
       panel.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
   }, [needsReview]);
   const resolve = useMutation({
-    mutationFn: async (action: "retry" | "original") => {
+    mutationFn: async (action: TranslationRecovery) => {
+      if (onRecover) {
+        await onRecover(action);
+        return null;
+      }
       if (identity.current?.action !== action)
         identity.current = { action, id: randomId() };
       const current = await api<Run>(`/runs/${run.id}`);
@@ -190,7 +212,11 @@ export default function PromptTranslation({ run }: { run: Run }) {
             throw cause;
         }
       }
-      return api<Run>(`/images/runs/${run.id}/retry`, {
+      const path =
+        run.executor_type === "photo_pipe"
+          ? `/images/runs/${run.id}/retry`
+          : `/generation/media/${run.id}/retry`;
+      return api<Run>(path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -201,6 +227,7 @@ export default function PromptTranslation({ run }: { run: Run }) {
     },
     onSuccess: (next) => {
       identity.current = null;
+      if (!next) return;
       cache.setQueryData(["run", next.id], next);
       void cache.invalidateQueries({ queryKey: ["runs"] });
       setSearch((current) => {
@@ -244,8 +271,8 @@ export default function PromptTranslation({ run }: { run: Run }) {
       {!ready && !failed && !waiting && (
         <p role="status">
           {receipt.status === "waiting_for_review"
-            ? "Applying your reviewed prompt before image generation…"
-            : "Translating your prompt locally before image generation…"}
+            ? "Applying your reviewed prompt before generation…"
+            : "Translating your prompt locally before generation…"}
         </p>
       )}
       <ErrorNotice
@@ -290,6 +317,16 @@ export default function PromptTranslation({ run }: { run: Run }) {
             explicitly to translate again or use your original wording.
           </p>
           <div className="row">
+            {run.executor_type !== "photo_pipe" && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={resolve.isPending}
+                onClick={() => resolve.mutate("reuse")}
+              >
+                Retry generation
+              </Button>
+            )}
             <Button
               type="button"
               variant="secondary"
@@ -313,7 +350,7 @@ export default function PromptTranslation({ run }: { run: Run }) {
         <div className="translation-review">
           <h3>Review before generation</h3>
           <p>
-            Your images and generation settings are unchanged. Check the
+            Your source files and generation settings are unchanged. Check the
             translated instructions, then continue.
           </p>
           {Object.entries(
@@ -321,14 +358,21 @@ export default function PromptTranslation({ run }: { run: Run }) {
               (review.data!.parameters.effective as Record<string, string>),
           ).map(([key, text]) => (
             <label key={key}>
-              {key === "negative"
+              {key === "negative" || key === "negative_prompt"
                 ? "Translated negative prompt"
-                : key === "edit_prompt"
-                  ? "Translated edit instruction"
-                  : "Translated prompt"}
+                : key === "caption"
+                  ? "Translated music description"
+                  : key === "edit_prompt"
+                    ? "Translated edit instruction"
+                    : "Translated prompt"}
               <textarea
                 rows={3}
-                maxLength={10000}
+                maxLength={Number(
+                  (
+                    review.data?.parameters.field_limits as
+                      Record<string, number> | undefined
+                  )?.[key] ?? 10000,
+                )}
                 value={text}
                 disabled={approve.isPending || resolve.isPending}
                 onChange={(event) =>

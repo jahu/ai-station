@@ -8,7 +8,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import Field
+from pydantic import Field, model_serializer
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db import session_scope
 from app.host_media_executor import HostMediaExecutor
+from app.media_translation_text import TranslationOptions
 from app.models import Run, Task
 from app.music_schema import MusicSettings
 from app.paths import safe_join
@@ -32,6 +33,14 @@ PROFILE_SHA256 = "912b4a5cd50f729d8874dcbd44776d87643f04d199b748ba3706b7181a69c6
 class MusicRequest(MusicSettings):
     client_request_id: UUID
     caption: str = Field(min_length=1, max_length=512)
+    translation: TranslationOptions | None = None
+
+    @model_serializer(mode="wrap")
+    def legacy_identity(self, handler):
+        values = handler(self)
+        if self.translation is None:
+            values.pop("translation", None)
+        return values
 
 
 @router.get("/capabilities")
@@ -94,7 +103,7 @@ def create_music_run(session, body, *, task=None, parent_run_id=None, observed_p
         )
         session.add(task)
         session.flush()
-    return create_run(
+    run = create_run(
         session,
         task,
         run_type="audio",
@@ -121,6 +130,10 @@ def create_music_run(session, body, *, task=None, parent_run_id=None, observed_p
         },
         metadata={"music_request_sha256": fingerprint(body)},
     )
+    from app.media_translation import enqueue_translation
+
+    enqueue_translation(session, run, body.translation)
+    return run
 
 
 def wav_metadata(path):
@@ -152,6 +165,11 @@ class MusicExecutor(HostMediaExecutor):
     suffix = ".wav"
     artifact_type = "audio"
     mime_type = "audio/wav"
+
+    def validate_inputs(self, session, run):
+        from app.media_translation import validate_media_translation
+
+        validate_media_translation(session, run)
 
     def _start(self, runner, run, allocated, output):
         return runner.request(

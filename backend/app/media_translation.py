@@ -114,6 +114,10 @@ def save_preferences(body: PreferencesWrite, session: DB):
 
 def image_fields(run):
     params = run.parameters
+    if run.executor_type == "wan_video":
+        return {key: params[key] for key in ["prompt", "negative_prompt"] if params.get(key)}
+    if run.executor_type == "ace_step_music":
+        return {"caption": params["caption"]}
     if params.get("mode") == "upscale":
         return {}
     keys = ["edit_prompt" if params.get("mode") == "img2img" else "prompt", "negative", "video_prompt"]
@@ -121,6 +125,43 @@ def image_fields(run):
 
 
 def source_hash(run, fields):
+    keys = {
+        "wan_video": [
+            "image_relative",
+            "parent_artifact_ids",
+            "media_inputs",
+            "backend",
+            "profile_observation",
+            "frames",
+            "width",
+            "height",
+            "steps",
+            "cfg",
+            "seed",
+            "memory_profile",
+            "media_segment",
+            "scene_index",
+        ],
+        "ace_step_music": [
+            "lyrics",
+            "instrumental",
+            "duration_seconds",
+            "seed",
+            "backend",
+            "model_revision",
+            "code_revision",
+            "profile_sha256",
+        ],
+    }.get(run.executor_type)
+    if keys is not None:
+        return digest(
+            {
+                "executor": run.executor_type,
+                "fields": fields,
+                "gpu": run.requested_gpu,
+                "inputs": {key: run.parameters.get(key) for key in keys},
+            }
+        )
     return digest(
         {
             "fields": fields,
@@ -133,13 +174,36 @@ def source_hash(run, fields):
     )
 
 
-def enqueue_translation(session, media, options=None, *, policy=None):
+def enqueue_translation(session, media, options=None, *, policy=None, additional_consumers=()):
     options = TranslationOptions.model_validate(options or {})
     policy = dict(policy or preferences(session))
     enabled = policy["enabled"] if options.mode == "inherit" else options.mode == "on"
     fields = image_fields(media)
     if not enabled or not fields:
         return None
+    if media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music"}:
+        raise ValueError("Unsupported media translation consumer")
+    limits = {
+        key: 512
+        if key == "caption"
+        else 2000
+        if media.executor_type == "wan_video"
+        else FIELD_LIMITS.get(key, 10000)
+        for key in fields
+    }
+    targets = []
+    for item in additional_consumers:
+        if (
+            item.id == media.id
+            or item.task_id != media.task_id
+            or item.executor_type != media.executor_type
+            or item.status != "queued"
+            or image_fields(item) != fields
+        ):
+            raise ValueError("Translation group has mismatched media consumers")
+        targets.append({"run_id": item.id, "source_hash": source_hash(item, fields)})
+    if len(targets) > 100 or len({item["run_id"] for item in targets}) != len(targets):
+        raise ValueError("Translation group exceeds its unique consumer bound")
     validate_model(session, policy["model"])
     policy.setdefault("model_label", translator_label(session, policy["model"]))
     encoded, tokens = encode_fields(fields, options.protected_terms)
@@ -168,6 +232,8 @@ def enqueue_translation(session, media, options=None, *, policy=None):
             "encoded": encoded,
             "tokens": tokens,
             "source_hash": source_hash(media, fields),
+            "additional_consumers": targets,
+            "field_limits": limits,
             "options": options.model_dump(),
             "temperature": 0.0,
             "system_prompt": SYSTEM,
@@ -179,19 +245,20 @@ def enqueue_translation(session, media, options=None, *, policy=None):
     from app.llama import prepare_consumer
 
     prepare_consumer(session, child)
-    depend_on(session, media, child)
-    media.metadata_json = {
-        **media.metadata_json,
-        RECEIPT: {
-            "preparation_run_id": child.id,
-            "origin_run_id": media.id,
-            "original": fields,
-            "policy": policy,
-            "options": options.model_dump(),
-            "status": "queued",
-        },
-    }
-    append_event(session, media.id, "media.translation.queued", {"preparation_run_id": child.id})
+    for item in [media, *additional_consumers]:
+        depend_on(session, item, child)
+        item.metadata_json = {
+            **item.metadata_json,
+            RECEIPT: {
+                "preparation_run_id": child.id,
+                "origin_run_id": item.id,
+                "original": fields,
+                "policy": policy,
+                "options": options.model_dump(),
+                "status": "queued",
+            },
+        }
+        append_event(session, item.id, "media.translation.queued", {"preparation_run_id": child.id})
     return child
 
 
@@ -201,7 +268,7 @@ def consumer(session, run):
         not media
         or media.status != "queued"
         or media.task_id != run.task_id
-        or media.executor_type != "photo_pipe"
+        or media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music"}
     ):
         raise ValueError("Translation has no matching media request")
     receipt = media.metadata_json.get(RECEIPT, {})
@@ -213,6 +280,25 @@ def consumer(session, run):
     if image_fields(media) != run.parameters["original"]:
         raise ValueError("Media instructions changed before translation could be applied")
     return media
+
+
+def grouped_consumers(session, run, media):
+    result = [media]
+    for target in run.parameters.get("additional_consumers", []):
+        item = session.get(Run, target["run_id"], populate_existing=True)
+        prep_id = run.id if run.executor_type == "media_translate" else run.parent_run_id
+        if (
+            not item
+            or item.task_id != media.task_id
+            or item.executor_type != media.executor_type
+            or item.status != "queued"
+            or image_fields(item) != run.parameters["original"]
+            or source_hash(item, run.parameters["original"]) != target["source_hash"]
+            or item.metadata_json.get(RECEIPT, {}).get("preparation_run_id") != prep_id
+        ):
+            raise ValueError("A grouped media request changed during translation")
+        result.append(item)
+    return result
 
 
 def stopped(session, run, *, finalize=True):
@@ -245,7 +331,7 @@ def save_receipt(session, run, media, effective, *, reviewed=False):
         "origin_run_id": media.id,
         "task_id": media.task_id,
         "preparation_run_id": media.metadata_json[RECEIPT]["preparation_run_id"],
-        "source_hash": run.parameters["source_hash"],
+        "source_hash": source_hash(media, run.parameters["original"]),
         "policy": run.parameters["policy"],
         "translator": prep.metadata_json.get("translator"),
         "original": run.parameters["original"],
@@ -268,11 +354,11 @@ def save_receipt(session, run, media, effective, *, reviewed=False):
     return artifact
 
 
-def checked_effective(original, effective):
+def checked_effective(original, effective, limits=None):
     if set(effective) != set(original) or any(
         not isinstance(text, str)
         or not text.strip()
-        or len(text) > FIELD_LIMITS.get(key, 10000)
+        or len(text) > (limits or FIELD_LIMITS).get(key, 10000)
         or "\0" in text
         for key, text in effective.items()
     ):
@@ -280,7 +366,13 @@ def checked_effective(original, effective):
 
 
 def apply_effective(session, run, media, effective, *, reviewed=False):
-    checked_effective(run.parameters["original"], effective)
+    checked_effective(run.parameters["original"], effective, run.parameters.get("field_limits"))
+    targets = grouped_consumers(session, run, media)
+    for item in targets:
+        apply_one(session, run, item, effective, reviewed=reviewed)
+
+
+def apply_one(session, run, media, effective, *, reviewed=False):
     artifact = save_receipt(session, run, media, effective, reviewed=reviewed)
     media.parameters = {**media.parameters, **effective}
     media.metadata_json = {
@@ -323,6 +415,8 @@ class MediaTranslationExecutor:
                 return "done"
             effective = decode_fields(result, run.parameters["original"], run.parameters["tokens"])
             media = consumer(session, run)
+            targets = grouped_consumers(session, run, media)
+            checked_effective(run.parameters["original"], effective, run.parameters.get("field_limits"))
             if run.parameters["options"]["review"]:
                 from app.approvals import request_run_approval
 
@@ -343,6 +437,8 @@ class MediaTranslationExecutor:
                         for key in ["consumer_run_id", "original", "source_hash", "policy"]
                     }
                     | {
+                        "additional_consumers": run.parameters.get("additional_consumers", []),
+                        "field_limits": run.parameters.get("field_limits", FIELD_LIMITS),
                         "effective": effective,
                         "candidate_artifact_id": artifact.id,
                         "candidate_sha256": artifact.sha256,
@@ -355,16 +451,28 @@ class MediaTranslationExecutor:
                     reason="Review the translated prompt before media generation",
                     payload={"consumer_run_id": media.id, "effective_hash": digest(effective)},
                 )
-                depend_on(session, media, review)
-                media.metadata_json = {
-                    **media.metadata_json,
-                    RECEIPT: {
-                        **media.metadata_json[RECEIPT],
-                        "status": "waiting_for_review",
-                        "effective": effective,
-                        "review_run_id": review.id,
-                    },
-                }
+                for identifier in run.parameters.get("barrier_consumer_ids", []):
+                    item = session.get(Run, identifier)
+                    if (
+                        not item
+                        or item.task_id != media.task_id
+                        or item.executor_type != "wan_video"
+                        or not item.parameters.get("internal_media")
+                        or item.status != "queued"
+                    ):
+                        raise ValueError("Film review barrier has a changed consumer")
+                    depend_on(session, item, review)
+                for item in targets:
+                    depend_on(session, item, review)
+                    item.metadata_json = {
+                        **item.metadata_json,
+                        RECEIPT: {
+                            **item.metadata_json[RECEIPT],
+                            "status": "waiting_for_review",
+                            "effective": effective,
+                            "review_run_id": review.id,
+                        },
+                    }
             else:
                 apply_effective(session, run, media, effective)
             transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed")
@@ -569,6 +677,147 @@ def cancel_media_translation(session, media):
         request_cancel(session, prep)
 
 
+def decorate_output(run, artifact):
+    receipt = run.metadata_json.get(RECEIPT)
+    if not receipt:
+        return
+    artifact.metadata_json = {**artifact.metadata_json, RECEIPT: receipt}
+    identifier = receipt.get("artifact_id")
+    if identifier and identifier not in artifact.parent_artifact_ids:
+        artifact.parent_artifact_ids = [*artifact.parent_artifact_ids, identifier]
+
+
+def enqueue_groups(session, entries):
+    """One inference per identical same-Task instruction group; all groups gate the film."""
+    groups = {}
+    for media, options, policy in entries:
+        policy = dict(policy or preferences(session))
+        key = digest([image_fields(media), options, policy])
+        groups.setdefault(key, []).append((media, options, policy))
+    preparations, primary_ids = [], []
+    for items in groups.values():
+        primary, options, policy = items[0]
+        prep = enqueue_translation(
+            session, primary, options, policy=policy, additional_consumers=[item[0] for item in items[1:]]
+        )
+        if prep:
+            preparations.append(prep)
+            primary_ids.append(primary.id)
+    for media, _, _ in entries:
+        for prep in preparations:
+            depend_on(session, media, prep)
+    if len(entries) > 1:
+        for prep in preparations:
+            prep.parameters = {**prep.parameters, "barrier_consumer_ids": [entry[0].id for entry in entries]}
+    return primary_ids
+
+
+def prepare_retry(session, source, retry, choice):
+    receipt = source.metadata_json.get(RECEIPT)
+    if not receipt:
+        return None
+    if choice == "reuse":
+        try:
+            validate_media_translation(session, source)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(
+                409, "Saved translation is unavailable. Choose Retry translation or Use original"
+            ) from exc
+        retry.metadata_json = {**retry.metadata_json, RECEIPT: receipt}
+        return None
+    retry.parameters = {**retry.parameters, **receipt["original"]}
+    options = {**receipt.get("options", {}), "mode": "on" if choice == "retry" else "off"}
+    if choice == "retry":
+        return retry, options, receipt["policy"]
+    retry.parameters = {**retry.parameters, "translation": {**options, "review": False}}
+    retry.metadata_json = {
+        **retry.metadata_json,
+        RECEIPT: {
+            key: value
+            for key, value in receipt.items()
+            if key not in {"artifact_id", "artifact_sha256", "review_run_id"}
+        }
+        | {"status": "original", "effective": receipt["original"], "bypass_of": source.id},
+    }
+    append_event(
+        session, retry.id, "media.translation.bypassed", {"original_run_id": source.id, "by": "user"}
+    )
+    return None
+
+
+class TranslationRetry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    translation: Literal["reuse", "retry", "original"] = "reuse"
+    client_request_id: UUID | None = None
+
+
+@router.post("/media/{run_id}/retry", status_code=202)
+def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
+    from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
+
+    source = session.get(Run, str(run_id))
+    if source and source.executor_type == "photo_pipe":
+        from app.images import ImageRetry, retry_image
+
+        return retry_image(run_id, session, ImageRetry.model_validate(body.model_dump()))
+    if not source or source.executor_type not in {"wan_video", "ace_step_music"}:
+        raise HTTPException(404, "Media Run not found")
+    if source.parameters.get("internal_media"):
+        raise HTTPException(409, "Resume the whole film instead of an individual segment")
+    if source.status not in {"failed", "canceled", "interrupted"}:
+        raise HTTPException(409, "Inspect active or completed media before retrying")
+    if body.translation != "reuse" and not source.metadata_json.get(RECEIPT):
+        raise HTTPException(409, "This Run has no translation to resolve")
+    identity = {"id": str(body.client_request_id), "translation": body.translation}
+
+    def previous():
+        item = session.scalar(
+            select(Run).where(Run.parent_run_id == source.id, Run.executor_type == source.executor_type)
+        )
+        if item and body.client_request_id and item.metadata_json.get("media_retry_request") == identity:
+            return item
+        if item:
+            raise HTTPException(409, "A retry already exists; inspect that Run")
+        return None
+
+    if item := previous():
+        return run_dict(item)
+    session.commit()
+    try:
+        info = RunnerClient().inspect_process(source.id)
+        if info.get("alive") or info.get("completion_pending"):
+            raise HTTPException(409, "The original process still requires inspection")
+    except RunnerUnavailable as exc:
+        raise HTTPException(409, "Runner must be reachable before retrying") from exc
+    except RunnerError as exc:
+        if exc.status_code != 404:
+            raise HTTPException(409, "Cannot confirm that the original process stopped") from exc
+    session.refresh(source)
+    if item := previous():
+        return run_dict(item)
+    retry = create_run(
+        session,
+        source.task,
+        run_type=source.run_type,
+        capability=source.capability,
+        executor_type=source.executor_type,
+        execution_target=source.execution_target,
+        parameters=dict(source.parameters),
+        requested_gpu=source.requested_gpu,
+        requested_resources=dict(source.requested_resources),
+        permissions=list(source.effective_permissions),
+        retry_class="inspect",
+        parent_run_id=source.id,
+        metadata={"media_retry_request": identity},
+    )
+    entry = prepare_retry(session, source, retry, body.translation)
+    if entry:
+        enqueue_groups(session, [entry])
+    source.metadata_json = {**source.metadata_json, "retry_run_id": retry.id}
+    session.commit()
+    return run_dict(retry)
+
+
 def cancel_translation_startup(session, consumer):
     """Cancel only a translation-created startup after its last consumer stops."""
     loads = session.scalars(
@@ -611,7 +860,8 @@ def review_translation(run_id: UUID, body: ReviewWrite, session: DB):
         raise HTTPException(409, "This translated prompt changed or was already reviewed")
     try:
         consumer(session, run)
-        checked_effective(run.parameters["original"], body.effective)
+        grouped_consumers(session, run, consumer(session, run))
+        checked_effective(run.parameters["original"], body.effective, run.parameters.get("field_limits"))
     except ValueError as exc:
         raise HTTPException(409, str(exc)) from exc
     run.parameters = {**run.parameters, "effective": body.effective}

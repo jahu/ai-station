@@ -9,6 +9,12 @@ import MediaResult from "../components/media/MediaResult";
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { chatRequestId, clearChatRequest } from "./chat-draft";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
+import {
+  PromptTranslationControl,
+  translationRequest,
+  type TranslationOptions,
+  type TranslationReceipt,
+} from "../components/media/PromptTranslation";
 
 type MusicCapabilities = {
   available: boolean;
@@ -20,7 +26,16 @@ export default function Music({ initialRun }: { initialRun?: Run }) {
   const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
   const parameters = initialRun?.parameters ?? {};
-  const [caption, setCaption] = useState(String(parameters.caption ?? ""));
+  const savedTranslation = initialRun?.metadata?.prompt_translation as
+    TranslationReceipt | undefined;
+  const [caption, setCaption] = useState(
+    String(savedTranslation?.original.caption ?? parameters.caption ?? ""),
+  );
+  const [translation, setTranslation] = useState<TranslationOptions>({
+    mode: "inherit",
+    review: false,
+    protected_terms: [],
+  });
   const [lyrics, setLyrics] = useState(String(parameters.lyrics ?? ""));
   const [instrumental, setInstrumental] = useState(
     parameters.instrumental !== false,
@@ -50,6 +65,7 @@ export default function Music({ initialRun }: { initialRun?: Run }) {
         duration_seconds: duration,
         gpu,
         seed: seed.trim() ? Number(seed) : null,
+        ...translationRequest(translation),
       });
       if (receipt.current?.payload !== payload) {
         receipt.current = {
@@ -74,6 +90,17 @@ export default function Music({ initialRun }: { initialRun?: Run }) {
     },
   });
   const busy = generate.isPending || mediaBusy(run.data);
+  const promptState = (
+    run.data?.metadata?.prompt_translation as TranslationReceipt | undefined
+  )?.status;
+  const progressLabel =
+    run.data?.status === "queued" &&
+    promptState &&
+    !["ready", "original"].includes(promptState)
+      ? promptState === "waiting_for_review"
+        ? "Waiting for prompt review"
+        : "Preparing prompt…"
+      : "Creating music…";
   const available = profile.data?.available === true;
   const maximum = Math.min(600, profile.data?.max_seconds ?? 600);
   return (
@@ -211,6 +238,11 @@ export default function Music({ initialRun }: { initialRun?: Run }) {
               <ErrorNotice error={hardware.error} />
             </details>
             <ErrorNotice error={generate.error} />
+            <PromptTranslationControl
+              value={translation}
+              onChange={setTranslation}
+              disabled={busy}
+            />
             <Button
               type="submit"
               className="media-generate"
@@ -223,7 +255,7 @@ export default function Music({ initialRun }: { initialRun?: Run }) {
               }
             >
               <Sparkles size={17} />
-              {busy ? "Creating music…" : "Generate music"}
+              {busy ? progressLabel : "Generate music"}
             </Button>
             <p className="media-privacy">
               Created on your workstation. Your music and lyrics stay local.

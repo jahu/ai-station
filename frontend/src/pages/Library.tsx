@@ -458,9 +458,12 @@ export function ArtifactDetail() {
   const a = query.data;
   const translation = a?.metadata.prompt_translation as
     TranslationReceipt | undefined;
+  const translations = (a?.metadata.prompt_translations ??
+    []) as TranslationReceipt[];
   const prompt =
     translation?.original.edit_prompt ||
     translation?.original.prompt ||
+    translation?.original.caption ||
     a?.metadata.edit_prompt ||
     a?.metadata.prompt ||
     a?.metadata.text ||
@@ -633,6 +636,9 @@ export function ArtifactDetail() {
                 </>
               )}
               {translation && <PromptReceipt receipt={translation} />}
+              {translations.map((item, index) => (
+                <PromptReceipt key={index} receipt={item} />
+              ))}
               {a.run_id && (
                 <p>
                   <Link to={`/runs/${a.run_id}`}>Inspect source run →</Link>

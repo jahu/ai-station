@@ -5,9 +5,12 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_serializer, model_validator
 
+from app.media_translation_text import TranslationOptions
+
 
 class VideoRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    translation: TranslationOptions | None = None
     prompt: str = Field(min_length=1, max_length=2000)
     negative_prompt: str = Field(default="", max_length=2000)
     image_artifact_id: UUID | None = None
@@ -25,6 +28,8 @@ class VideoRequest(BaseModel):
         values = handler(self)
         if self.memory_profile == "default":
             values.pop("memory_profile", None)
+        if self.translation is None:
+            values.pop("translation", None)
         return values
 
     @model_validator(mode="after")

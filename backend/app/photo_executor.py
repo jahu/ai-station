@@ -49,14 +49,6 @@ class PhotoPipeExecutor(HostMediaExecutor):
         return super().reserve_devices(session, run, indexes)
 
     def on_success(self, session, run, artifact):
-        if run.metadata_json.get("prompt_translation"):
-            artifact.metadata_json = {
-                **artifact.metadata_json,
-                "prompt_translation": run.metadata_json["prompt_translation"],
-            }
-            receipt_id = run.metadata_json["prompt_translation"].get("artifact_id")
-            if receipt_id and receipt_id not in artifact.parent_artifact_ids:
-                artifact.parent_artifact_ids = [*artifact.parent_artifact_ids, receipt_id]
         if run.parameters.get("video_prompt"):
             self.queue_video(session, run, artifact)
             return

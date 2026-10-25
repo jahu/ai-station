@@ -52,6 +52,51 @@ function responses(available = true) {
   }));
 }
 
+it("sends explicit prompt translation without translating supplied lyrics in the browser", async () => {
+  const fetch = responses();
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  fireEvent.change(screen.getByLabelText("Describe your music"), {
+    target: { value: "Spokojna muzyka" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "With lyrics" }));
+  fireEvent.change(screen.getByLabelText("Your lyrics"), {
+    target: { value: "[Verse]\nPolskie słowa" },
+  });
+  fireEvent.change(screen.getByLabelText("Prompt language"), {
+    target: { value: "on" },
+  });
+  fireEvent.click(
+    screen.getByText("Translation options", { selector: "summary" }),
+  );
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: /Review before generation/ }),
+  );
+  const submit = screen.getByRole("button", { name: "Generate music" });
+  await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+  fireEvent.click(submit);
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(
+        ([path, options]) =>
+          path === "/api/audio/music/runs" && options?.method === "POST",
+      ),
+    ).toBe(true),
+  );
+  const call = fetch.mock.calls.find(
+    ([path, options]) =>
+      path === "/api/audio/music/runs" && options?.method === "POST",
+  )!;
+  const body = JSON.parse(String(call[1]!.body));
+  expect(body.caption).toBe("Spokojna muzyka");
+  expect(body.lyrics).toBe("[Verse]\nPolskie słowa");
+  expect(body.translation).toEqual({
+    mode: "on",
+    review: true,
+    protected_terms: [],
+  });
+});
+
 it("shows music readiness without pretending an unavailable engine can generate", async () => {
   const fetch = responses(false);
   vi.stubGlobal("fetch", fetch);

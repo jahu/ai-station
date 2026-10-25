@@ -50,9 +50,9 @@ export default function GenerationSettings() {
         <h2>Write naturally. Keep control.</h2>
       </div>
       <p className="muted">
-        Optionally translate image instructions to English with a local LLM
-        before generation. Your original wording stays available. Quoted text
-        and model tokens are preserved.
+        Optionally translate image, video and music descriptions to English with
+        a local LLM before generation. Your original wording stays available.
+        Quoted text and model tokens are preserved.
       </p>
       <form
         onSubmit={(event) => {
@@ -74,7 +74,7 @@ export default function GenerationSettings() {
           <span>
             <strong>Translate media prompts</strong>
             <small>
-              Generate, Edit and Recompose, including image actions in
+              Images, Video and music descriptions, including media actions in
               Chat/Work. Speech, lyrics and ordinary conversations stay in their
               original language.
             </small>
