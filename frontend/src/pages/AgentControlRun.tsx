@@ -10,6 +10,8 @@ export default function AgentControlRun({
     id: string;
     status: string;
     delivery_status?: string;
+    alert_status?: string;
+    alert_run_id?: string;
     delivery_run_id?: string;
   };
   result: { agent_id: string; outcome: string };
@@ -35,6 +37,20 @@ export default function AgentControlRun({
             Inspect agent execution
           </Link>
         </>
+      )}
+      {run?.alert_status && (
+        <span>
+          {" · Notification check: "}
+          {run.alert_status.replaceAll("_", " ")}
+          {run.alert_run_id && (
+            <>
+              {" · "}
+              <Link to={`/runs/${run.alert_run_id}`} tabIndex={tabIndex}>
+                Inspect notification check
+              </Link>
+            </>
+          )}
+        </span>
       )}
       {run?.delivery_status && (
         <span>

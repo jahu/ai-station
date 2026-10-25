@@ -539,13 +539,13 @@ class LocalAgentExecutor:
         return run.status == "canceled"
 
     async def _consume(
-        self, session, run, definition, deadline, tools=None, *, purpose="report", messages=None
+        self, session, run, definition, deadline, tools=None, *, purpose="report", messages=None, model=None
     ):
         collected = []
         stream = LocalChatProvider().stream(
             endpoint=run.parameters["endpoint"],
             messages=messages if messages is not None else run.parameters["messages"],
-            model=definition.model,
+            model=model if model is not None else definition.model,
             temperature=0.0 if purpose == "alert" else 0.3,
             max_tokens=512 if purpose == "alert" else 2048,
             tools=tools,

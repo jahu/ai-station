@@ -3,10 +3,44 @@
 from sqlalchemy import select
 
 from app.agent_coding_policy import coding_provider
-from app.models import Run
+from app.models import Run, RunDependency
 
 ACTIVE_ORDER = ("cancel_requested", "running", "preparing", "claimed", "waiting_for_approval", "queued")
 BAD_ORDER = ("failed", "interrupted", "canceled")
+
+
+def alert_check_runs(session, runs):
+    """Classify checks and their model-only prerequisites, never data/code work."""
+    by_id = {run.id: run for run in runs}
+    checks = [
+        run
+        for run in runs
+        if run.executor_type == "agent_result_alert"
+        and (source := by_id.get(run.parameters.get("source_run_id"))) is not None
+        and source.executor_type == "agent_data_result"
+        and source.status == "succeeded"
+        and run.parent_run_id == source.id
+        and run.agent_id == source.agent_id
+        and run.task_id == source.task_id
+    ]
+    selected = {run.id for run in checks}
+    pending = list(selected)
+    while pending:
+        prerequisites = session.scalars(
+            select(RunDependency.prerequisite_id).where(RunDependency.run_id.in_(pending))
+        )
+        following = []
+        for key in prerequisites:
+            source = by_id.get(key)
+            if (
+                source is not None
+                and key not in selected
+                and source.executor_type in {"llama_load", "llama_stop", "llama_resume_consumer"}
+            ):
+                selected.add(key)
+                following.append(key)
+        pending = following
+    return [run for run in runs if run.id in selected]
 
 
 def ranked_status(runs):
@@ -120,16 +154,26 @@ def workflow_outcome(session, root):
     # Email is a separate typed workload. Its approval/transport cannot turn a
     # completed report into an unfinished generation or erase its saved result.
     delivery = [run for run in owned if run.executor_type == "email_send"]
-    generation = [run for run in owned if run.executor_type != "email_send"]
+    checks = alert_check_runs(session, owned)
+    check_ids = {run.id for run in checks}
+    generation = [run for run in owned if run.executor_type != "email_send" and run.id not in check_ids]
     ignored = superseded_failures(generation)
     relevant = [run for run in generation if run.id not in ignored]
     status = ranked_status(relevant)
     final = final_runs(root, generation)
     if status == "succeeded" and (not final or any(run.status != "succeeded" for run in final)):
         status = "interrupted"
-    if root.task.metadata_json.get("stop_requested_at") and status == "succeeded" and not delivery:
+    if (
+        root.task.metadata_json.get("stop_requested_at")
+        and status == "succeeded"
+        and not delivery
+        and not checks
+    ):
         status = "canceled"
     value = {"status": status}
+    if checks:
+        actual_check = next(run for run in reversed(checks) if run.executor_type == "agent_result_alert")
+        value.update(alert_status=ranked_status(checks), alert_run_id=actual_check.id)
     if len(final) == 1:
         value["result_run_id"] = final[0].id
     if delivery:

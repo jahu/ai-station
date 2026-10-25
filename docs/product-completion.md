@@ -1,3 +1,5 @@
+Conditional data-result alerts in PR #432 retain completed analysis while a separate local check gates notices and reviewed mail. Generation/check/delivery outcomes stay distinct, failed checks do not advance the next baseline, and conversation receipts expose the actual check. [Contracts and qualification](plans/data-result-alerts.md) record all gates; deployment receipts determine live status. Whole-platform completion remains open.
+
 PR #425 adds explicit continuation from complete transformed CSV/XLSX outputs,
 separate from original-input follow-ups. [Contracts and release evidence](plans/data-result-file-continuations.md)
 cover fresh Task scope, source ownership and original-byte preservation. Whole-platform

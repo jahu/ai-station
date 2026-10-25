@@ -7,7 +7,6 @@ const OTHER_OUTPUTS = new Set([
   "coding_local",
   "coding_cursor",
   "coding_codex",
-  "python_data",
   "create_media",
   "market_watch",
 ]);
@@ -43,20 +42,25 @@ export function ReportAlertField({
           rows={3}
           disabled={disabled}
           tabIndex={tabIndex}
-          placeholder="A significant new local model release fits this workstation. Skip repeated findings."
+          placeholder={
+            tools.includes("python_data")
+              ? "The computed total exceeds 100 and has changed since the previous analysis."
+              : "A significant new local model release fits this workstation. Skip repeated findings."
+          }
           onChange={(event) => onChange(event.target.value)}
         />
       </label>
       <p className="muted">
         Every report stays in history. This criterion gates success notices and
-        result email, using the previous successful report with the same
-        settings. Failure and approval notices keep their own settings. Leave
-        blank to notify about every successful result in your selected channels.
+        result email, using the previous successfully checked result with the
+        same settings. Failure and approval notices keep their own settings.
+        Leave blank to notify about every successful result in your selected
+        channels.
       </p>
       {!supported && (
         <p className="notice" role="alert">
-          Criteria apply to report agents. Explicitly clear this field before
-          changing to code, data, media or price-watch output.
+          Criteria apply to report and data agents. Explicitly clear this field
+          before changing to code, media or price-watch output.
         </p>
       )}
     </div>
@@ -92,26 +96,40 @@ function ReportAlertEditorForm({ value, onSave, ...props }: EditorProps) {
 
 export function ReportAlertResult({ runs }: { runs: Run[] }) {
   const latest = runs
-    .filter((run) => run.executor_type === "agent")
-    .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+    .filter((run) => ["agent", "agent_data_result"].includes(run.executor_type))
+    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""))[0];
   const value = latest?.metadata?.report_alert as
     | {
         state?: string;
         criterion?: string;
         notify?: boolean;
         reason?: string;
+        check_run_id?: string;
         previous_report?: { run_id: string } | null;
       }
     | undefined;
   if (!latest || !value) return null;
-  const completed = latest.status === "succeeded" && value.state === "checked";
+  const check = value.check_run_id
+    ? runs.find((run) => run.id === value.check_run_id)
+    : undefined;
+  const status =
+    check?.status ??
+    (value.state === "failed"
+      ? "failed"
+      : value.state === "canceled"
+        ? "canceled"
+        : latest.status);
+  const completed =
+    latest.status === "succeeded" &&
+    value.state === "checked" &&
+    (!check || status === "succeeded");
   const label = completed
     ? value.notify
       ? "Matching finding"
       : "No alert needed"
-    : latest.status === "failed" || latest.status === "interrupted"
+    : status === "failed" || status === "interrupted"
       ? "Alert check needs attention"
-      : latest.status === "canceled"
+      : status === "canceled"
         ? "Alert check canceled"
         : "Checking notification criterion…";
   return (
@@ -141,7 +159,7 @@ export function ReportAlertResult({ runs }: { runs: Run[] }) {
           <p className="muted">No previous compatible report was available.</p>
         )}
       </details>
-      <Link className="text-link" to={`/runs/${latest.id}`}>
+      <Link className="text-link" to={`/runs/${check?.id ?? latest.id}`}>
         Inspect this report &amp; alert check
       </Link>
     </section>

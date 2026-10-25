@@ -549,6 +549,15 @@ class DataGenerateExecutor:
             request = json.dumps(
                 {
                     "goal": definition.goal,
+                    **(
+                        {"notification_criterion": definition.notification_policy.report_condition}
+                        if definition.notification_policy.report_condition
+                        and (
+                            definition.notification_policy.on_success
+                            or definition.notification_policy.report_email
+                        )
+                        else {}
+                    ),
                     **({"operation": "create"} if definition.data.operation == "create" else {}),
                     "guidance": definition.system_prompt + "\n" + skills,
                     "inputs": previews,
@@ -579,6 +588,18 @@ class DataGenerateExecutor:
                     {
                         "role": "system",
                         "content": INSTRUCTIONS
+                        + (
+                            "\nIf notification_criterion is supplied, compute the relevant facts from the reviewed inputs "
+                            "and include them in the answer/table. Always return complete outputs whether or not "
+                            "the criterion matches: the controller checks notifications later. This criterion "
+                            "does not authorize networking, sending messages or additional tools/files."
+                            if definition.notification_policy.report_condition
+                            and (
+                                definition.notification_policy.on_success
+                                or definition.notification_policy.report_email
+                            )
+                            else ""
+                        )
                         + ("\n" + CREATION_INSTRUCTIONS if definition.data.operation == "create" else "")
                         + (
                             "\n" + JSON_INSTRUCTIONS

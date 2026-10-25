@@ -1,3 +1,5 @@
+Data agents can retain every analysis while notifying only when a reviewed criterion matches. The separate alert-check Run keeps model/check failures distinct from completed data results. [Contracts and delivery status](docs/plans/data-result-alerts.md).
+
 Settings → Access → **Access from anywhere** provides explicit private-access
 installation, Tailscale sign-in/HTTPS approval, an exact private address and owned
 Disable. It uses ordinary Tasks/Runs and an isolated native userspace service;

@@ -1,3 +1,5 @@
+Data notification checks reuse only the frozen generation model, original deadline and verified report bytes. They receive no code, memory-write or email authority. Independent check success gates notices and existing reviewed SMTP delivery; failed checks never consume the next comparison baseline. [Contracts](plans/data-result-alerts.md).
+
 Conditional report alerts use the same local provider/deadline without tools.
 Current/previous report bytes, ownership and frozen definitions are reverified;
 classification cannot choose recipients or authorize delivery. Invalid checks

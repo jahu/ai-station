@@ -1,3 +1,5 @@
+Data-agent notification criteria run as a separate durable, source-bound child after the verified Python result. Model/check failures leave analysis successful and never replay Python. Existing ordinary report checks retain their inline lifecycle. [Contracts](plans/data-result-alerts.md).
+
 Ordinary research reports may carry a reviewed success criterion. A tools-free,
 source-bound local check runs within the original report Run/deadline, comparing
 the previous verified report with identical settings. Suppression retains the

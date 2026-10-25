@@ -260,3 +260,19 @@ def test_normal_worker_data_repair_has_a_successful_projected_final_result(data_
                 db.get(Run, value["result_run_id"]).metadata_json["data_result"]["answer"]
                 == "The total is 27."
             )
+
+
+@pytest.mark.parametrize("executor", ["llama_load", "llama_stop", "llama_resume_consumer"])
+def test_notification_inspection_targets_its_check_not_a_later_model_prerequisite(session, executor):
+    from app.dependencies import depend_on
+
+    root = graph(session, tools=["python_data"])
+    result = child(session, root, executor="agent_data_result")
+    check = child(session, root, executor="agent_result_alert", status="queued", source_run_id=result.id)
+    check.parent_run_id = result.id
+    support = child(session, root, executor=executor, status="failed")
+    depend_on(session, check, support)
+    check.status = "failed"
+    value = workflow_outcome(session, root)
+    assert value["status"] == "succeeded" and value["alert_status"] == "failed"
+    assert value["alert_run_id"] == check.id
