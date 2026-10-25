@@ -98,6 +98,12 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Managed semantic memory uses the existing container executor, not a new service.
+A fixed ONNX CPU child owns one ordinary Run; app-owned pinned files, explicit
+preparation consent, revision/content guards and parent-death/Stop contracts keep
+inference offline and independent of native GPU models.
+[Lifecycle](plans/memory-embeddings-readiness.md).
+
 Generated data email attachments reuse the existing final-result/email Run graph,
 approval hash and conservative SMTP journal. Frozen selected formats require actual
 verified exports; original uploads and scripts are excluded. Empty selections

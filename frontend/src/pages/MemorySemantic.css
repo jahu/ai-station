@@ -1,0 +1,156 @@
+.memory-semantic {
+  display: grid;
+  gap: 1rem;
+}
+.memory-semantic h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: 1.05rem;
+}
+.memory-semantic-heading,
+.memory-semantic-state {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.memory-semantic-heading p {
+  margin: 0.4rem 0 0;
+}
+.memory-semantic-device {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--muted);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.memory-semantic-setup {
+  display: grid;
+  gap: 0.7rem;
+  background: #101113;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+}
+.memory-semantic-setup p {
+  margin: 0;
+}
+.memory-semantic-setup > button {
+  justify-self: start;
+}
+.memory-semantic-consent {
+  display: flex;
+  align-items: start;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.memory-semantic-consent input {
+  width: auto;
+  margin-top: 0.3rem;
+  flex: 0 0 auto;
+}
+.memory-semantic-state > div {
+  display: grid;
+  gap: 0.3rem;
+}
+.memory-semantic-state .muted,
+.memory-semantic-scope {
+  font-size: 0.78rem;
+}
+.memory-semantic progress {
+  width: 100%;
+  height: 5px;
+  accent-color: var(--accent);
+}
+.memory-semantic-query {
+  display: flex;
+  align-items: end;
+  gap: 0.65rem;
+}
+.memory-semantic-query label {
+  flex: 1;
+  min-width: 0;
+}
+.memory-semantic-query input {
+  width: 100%;
+}
+.memory-semantic-scope {
+  margin: -0.4rem 0 0;
+}
+.memory-semantic-progress {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  font-size: 0.82rem;
+}
+.memory-semantic-progress span {
+  flex: 1;
+}
+.memory-semantic-results ul {
+  display: grid;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 0.5rem;
+}
+.memory-semantic-results a {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.memory-semantic-results a:hover {
+  border-color: var(--accent);
+}
+.memory-semantic-results span {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 7rem;
+  overflow: auto;
+}
+.memory-semantic-results small {
+  color: var(--muted);
+}
+.memory-semantic-operation {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 0.8rem;
+  margin: 0;
+}
+.memory-semantic-advanced {
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+  font-size: 0.82rem;
+}
+.memory-semantic-advanced summary {
+  color: var(--muted);
+  cursor: pointer;
+}
+.memory-semantic-endpoint {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+@media (max-width: 640px) {
+  .memory-semantic-heading,
+  .memory-semantic-state {
+    align-items: start;
+    flex-direction: column;
+  }
+  .memory-semantic-query {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .memory-semantic-endpoint {
+    grid-template-columns: 1fr;
+  }
+}

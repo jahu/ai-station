@@ -41,3 +41,41 @@ and prove that the existing chat container/context/GPU allocation were preserved
 Then qualify the Docker/native deployment and include these journeys in the
 [operator QA workbook](operator-qa-handoff.md). Implementation is pending; ordinary
 FTS remains available during setup/failure.
+
+
+## Implementation decision (2026-10-25)
+
+Use a container CPU executor backed by ONNX Runtime and the pinned quantized
+multilingual-e5-small export, rather than extend native chat-runtime ownership
+for this small encoder. This remains the existing Docker/native architecture:
+CPU inference uses only app-owned model files inside the worker; no host access,
+GPU, extra HTTP server or chat-model lifecycle changes are needed. The native
+llama.cpp path remains available for generative models; manual compatible
+embedding endpoints remain an advanced option.
+
+The researched GGUF candidate explicitly mentions a custom inference fork; its
+stock llama.cpp compatibility is unproven. The selected ONNX export is directly
+supported by the CPU runtime and has about 136 MB of weights/tokenizer files.
+Reference: [model export](https://huggingface.co/Xenova/multilingual-e5-small),
+[original model](https://huggingface.co/intfloat/multilingual-e5-small),
+[CPU thread controls](https://onnxruntime.ai/docs/performance/tune-performance/threading.html).
+Pin commit, byte counts and SHA256 for every file. Downloads require an explicit
+operator action and confirmation, use bounded public HTTPS with pinned DNS and
+atomic verified installation; startup/index/search never download weights.
+
+Each inference Run owns a bounded CPU subprocess, fixed two-thread profile and
+parent-death signal. Stop terminates only that child; worker death cannot leave
+an orphan model process or silently replay an interrupted Run. Load once per Run,
+stream bounded JSON requests/results, chunk full memory text at actual tokenizer
+boundaries, apply query/passage prefixes and mean pooling/L2 normalization.
+Changed model/endpoint/encoding identities invalidate vectors. Recheck memory
+content/scope/enabled state, cancellation and setup revision before publication.
+The existing FTS, provenance and inspector remain available. Show semantic results
+inline with their exact scope and entry links; endpoint fields are advanced.
+
+Implemented on the feature branch: managed CPU setup, pinned file verification,
+automatic indexing, scope-bound inline results, settings/content race guards and
+owned process Stop/parent-death handling. Tests include real ONNX Runtime inference
+using a tiny synthetic fixture; that is not pretrained-model quality acceptance.
+Operator consent and real pretrained-model qualification remain pending. The model
+is not presented as ready before its actual probe succeeds.

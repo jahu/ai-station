@@ -55,6 +55,12 @@ verified captured data. See [saved API sources](docs/plans/agent-http-connectors
 
 # AI Station
 
+Memory offers managed **Multilingual E5 Small** CPU embeddings: explicitly confirm
+the approximately 130-MiB download, then preparation checks the model and indexes
+memories automatically. Semantic matches appear inline with the selected scope;
+FTS continues to work during setup. No GPU/chat-model changes. Existing compatible
+embedding endpoints remain advanced configuration. [Memory guide](docs/memory.md).
+
 Research agents can use **Notifications → Only notify when** to alert on a
 reviewed finding instead of every successful report. Each report stays in history;
 the workspace shows the actual decision and compared report. The criterion gates

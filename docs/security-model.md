@@ -106,6 +106,13 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Managed embeddings can download only pinned public HTTPS model artifacts after
+explicit operator confirmation. DNS/redirect checks, bounded sizes/hashes and atomic
+installation constrain preparation. Inference receives only fixed input text and
+app-owned weights in an owned CPU subprocess, without networking or tool authority;
+normal Stop and parent-death cleanup apply. No native/runtime/GPU grants are added.
+[Contracts](plans/memory-embeddings-readiness.md).
+
 Generated data email attachments reuse the existing final-result/email Run graph,
 approval hash and conservative SMTP journal. Frozen selected formats require actual
 verified exports; original uploads and scripts are excluded. Empty selections

@@ -11,6 +11,7 @@ import { api } from "../api";
 import { Empty, ErrorNotice, Loading, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import { useListKeyboard } from "./useListKeyboard";
+import MemorySemantic from "./MemorySemantic";
 
 type Scope = "global" | "project" | "conversation" | "agent";
 interface Entry {
@@ -43,152 +44,6 @@ const json = (method: string, body: unknown) => ({
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
 });
-
-interface EmbeddingSetup {
-  configured: boolean;
-  endpoint: string;
-  model: string;
-  dimension: number | null;
-  indexed_count: number;
-  memory_count: number;
-  last_health_run_id: string | null;
-  last_index_run_id: string | null;
-}
-
-function EmbeddingsPanel() {
-  const cache = useQueryClient();
-  const [endpoint, setEndpoint] = useState("");
-  const [model, setModel] = useState("");
-  const [semantic, setSemantic] = useState("");
-  const setup = useQuery({
-    queryKey: ["memory-embeddings"],
-    queryFn: () => api<EmbeddingSetup>("/memory/embeddings/setup"),
-  });
-  const save = useMutation({
-    mutationFn: (body: Record<string, unknown>) =>
-      api<EmbeddingSetup>("/memory/embeddings/setup", json("PUT", body)),
-    onSuccess: () => {
-      void cache.invalidateQueries({ queryKey: ["memory-embeddings"] });
-    },
-  });
-  const start = useMutation({
-    mutationFn: (path: string) =>
-      api<{ id: string }>(path, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: path.endsWith("/search")
-          ? JSON.stringify({ query: semantic })
-          : "{}",
-      }),
-  });
-  const current = setup.data;
-  return (
-    <section className="panel">
-      <h2>Optional embeddings</h2>
-      <p className="muted">
-        Semantic search stays off until you point AI Station at a local
-        OpenAI-compatible embeddings endpoint that already has its model
-        installed. Weights are never downloaded. Empty or all-zero vectors are
-        rejected. Full-text search above does not need this.
-      </p>
-      {current?.configured ? (
-        <p className="muted">
-          Using {current.model} at {current.endpoint}
-          {current.dimension ? ` · ${current.dimension}-dimension probe` : ""}
-          {` · ${current.indexed_count} indexed / ${current.memory_count} memories`}
-        </p>
-      ) : (
-        <p className="notice">Embeddings are not configured.</p>
-      )}
-      <label>
-        Local embeddings base URL
-        <input
-          value={endpoint}
-          onChange={(event) => setEndpoint(event.target.value)}
-          placeholder="http://127.0.0.1:11434/v1"
-        />
-      </label>
-      <label>
-        Model name already served by that endpoint
-        <input
-          value={model}
-          onChange={(event) => setModel(event.target.value)}
-          placeholder="nomic-embed-text"
-        />
-      </label>
-      <div className="row">
-        <Button
-          disabled={save.isPending || !endpoint || !model}
-          onClick={() => save.mutate({ endpoint, model })}
-        >
-          Save local setup
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={!current?.configured || start.isPending}
-          onClick={() => start.mutate("/memory/embeddings/health")}
-        >
-          Check endpoint
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={!current?.configured || start.isPending}
-          onClick={() => start.mutate("/memory/embeddings/index")}
-        >
-          Index memories
-        </Button>
-        {current?.configured && (
-          <Button
-            variant="secondary"
-            disabled={save.isPending}
-            onClick={() =>
-              save.mutate({ clear: true, endpoint: "", model: "" })
-            }
-          >
-            Clear setup
-          </Button>
-        )}
-      </div>
-      <label>
-        Semantic query
-        <input
-          value={semantic}
-          onChange={(event) => setSemantic(event.target.value)}
-          placeholder="Requires a configured endpoint"
-          disabled={!current?.configured}
-        />
-      </label>
-      <Button
-        variant="secondary"
-        disabled={!current?.configured || !semantic || start.isPending}
-        onClick={() => start.mutate("/memory/embeddings/search")}
-      >
-        Semantic search
-      </Button>
-      <ErrorNotice error={setup.error ?? save.error ?? start.error} />
-      {start.data?.id && (
-        <p>
-          <Link to={`/runs/${start.data.id}`}>Inspect embeddings Run →</Link>
-        </p>
-      )}
-      {current?.last_health_run_id && (
-        <p className="muted">
-          <Link to={`/runs/${current.last_health_run_id}`}>
-            Last health Run
-          </Link>
-          {current.last_index_run_id && (
-            <>
-              {" · "}
-              <Link to={`/runs/${current.last_index_run_id}`}>
-                Last index Run
-              </Link>
-            </>
-          )}
-        </p>
-      )}
-    </section>
-  );
-}
 
 function MemoryCards({ entries }: { entries: Entry[] }) {
   const headingId = useId();
@@ -283,7 +138,7 @@ export function Memory() {
         Inspect what AI Station remembers, where it came from, and where it
         applies.
       </PageTitle>
-      <EmbeddingsPanel />
+      <MemorySemantic scope={scope} target={target} />
       <section className="panel memory-filters">
         <label>
           <Search size={15} /> Search memory
