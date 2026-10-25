@@ -73,21 +73,26 @@ content/scope/enabled state, cancellation and setup revision before publication.
 The existing FTS, provenance and inspector remain available. Show semantic results
 inline with their exact scope and entry links; endpoint fields are advanced.
 
-Implemented: managed CPU setup, pinned file verification,
-automatic indexing, scope-bound inline results, settings/content race guards and
-owned process Stop/parent-death handling. Tests include real ONNX Runtime inference
-using a tiny synthetic fixture; that is not pretrained-model quality acceptance.
-The complete normal CPU suite covered 3,892 cases. A pre-existing concurrency test
-needed its standard CookieJar passed across the two HTTP client implementations
-introduced by the new dependencies; the corrected auth/concurrency group passed
-all 14 cases. Frontend coverage includes the complete 809-test baseline plus the
-11 affected Memory tests after spacing/filter-order refinement. Compiled desktop
-and mobile checks run the actual worker/CPU lifecycle with tiny synthetic weights.
-The production image also executed actual ONNX CPU inference without networking;
-normal/dev/private-LAN Compose and isolated API/worker/SQL/SSE checks passed.
+Implemented: managed CPU setup, pinned file verification, automatic indexing,
+scope-bound inline results, settings/content race guards and owned process
+Stop/parent-death handling. Normal qualification covers the complete CPU suite,
+frontend gates, exact container source/assets and isolated API/worker/SSE checks.
+Compiled desktop/mobile acceptance exercises actual ONNX inference in a bounded
+CPU child; synthetic fixtures remain clearly distinguished from pretrained tests.
 
-Operator consent and actual pretrained-model download/Polish semantic-quality
-qualification remain pending. These checks do not establish pretrained quality,
-and the model is not presented as ready before its actual local probe succeeds.
-No weights were downloaded and no GPU/native changes were needed for qualification.
-Evidence: `data/acceptance/managed-memory-embeddings-20261025`.
+The operator explicitly authorized required downloads on 2026-10-25. The pinned
+Multilingual E5 Small INT8 weights/tokenizer were downloaded through an ordinary
+preparation Run and verified against the recorded file sizes and SHA-256 values.
+Actual pretrained inference produced normalized nonzero 384-dimensional vectors,
+ranked the intended facts first for three Polish synonym queries, respected a
+separate project scope and excluded a disabled memory. Setup/vectors survived an
+engine reopen. Every owned CPU child was confirmed gone after its Run; the native
+Runner and live control-plane container identities remained unchanged. No GPU
+model or chat configuration was modified. These are concrete functional checks,
+not an exhaustive retrieval-quality or active-chat performance benchmark.
+
+Final integration incorporates the latest Library state-refresh fix and operator
+QA catalog. Review/deployment must use the exact qualified head and retain the
+existing settings if the operator changes them before activation. The installed
+model remains outside the application image in owned cache storage. Evidence:
+`data/acceptance/managed-memory-final-20261025`, especially `real-model-result.json`.
