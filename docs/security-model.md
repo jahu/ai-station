@@ -106,6 +106,13 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Library permanent deletion is a user-confirmed `artifact_delete` operation,
+restricted to a frozen set of app-owned artifact/thumbnail paths. Directory
+descriptors and `O_NOFOLLOW` reject symlink escapes; content checks reject changed
+primary files. Shared paths are retained. No new agent tool, command, host root or
+native API authority is introduced. See the
+[deletion contract](plans/library-permanent-deletion.md).
+
 Krea image jobs import only configured pinned native code, with immutable job
 configuration and model aliases under a private native runtime directory outside
 container-writable storage. Typed inputs bind model hashes, a runtime/companion

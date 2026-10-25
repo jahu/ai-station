@@ -46,6 +46,12 @@ A typed output of a run: `image`, `video`, `audio`, `text`, `markdown`, `json`, 
 
 AI Station-owned bytes live under the data root with a UUID filename. `original_filename` is metadata. `parent_artifact_ids` links edits, speech, avatars and upscales to their sources. Library lineage resolves those parents and the reverse derived set without creating a Run. External model files are never copied in as artifacts.
 
+Permanent deletion records `purge_run_id` before filesystem changes and
+`purged_at` after completion. Artifact records remain as provenance tombstones;
+their originating Runs, events and parent links are retained. The approved purge
+Run owns a frozen selection and durable per-item outcomes. See the
+[Library deletion contract](plans/library-permanent-deletion.md).
+
 ## Project
 
 A registered Git repository: path, default branch, integration branch, protected branches, preferred executor, argv test/lint/build commands, agent rules, and PR policy.

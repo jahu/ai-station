@@ -40,6 +40,8 @@ def task_dict(task: Task) -> dict:
 
 def artifact_dict(artifact: Artifact) -> dict:
     return {
+        **({"purged_at": iso(artifact.purged_at)} if artifact.purged_at else {}),
+        **({"purge_run_id": artifact.purge_run_id} if artifact.purge_run_id else {}),
         "id": artifact.id,
         "type": artifact.artifact_type,
         "mime_type": artifact.mime_type,

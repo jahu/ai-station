@@ -7178,3 +7178,107 @@ section:has(> .memory-grid) > .dashboard-note {
   margin-top: 8px;
   font-size: 11px;
 }
+
+/* Permanent deletion remains a distinct, explicitly confirmed Library action. */
+.library-selection-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.library-selection-toolbar label,
+.library-select-artifact {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.library-select-artifact {
+  padding: 0.7rem 0.9rem 0;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.library-purge-trigger {
+  color: #f0a4ab;
+}
+.library-purge-dialog {
+  max-height: 88dvh;
+  overflow-y: auto;
+}
+.library-purge-dialog .dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+.library-purge-items {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  max-height: 28dvh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+}
+.library-purge-items li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  overflow-wrap: anywhere;
+  padding: 0.65rem 0.85rem;
+}
+.library-purge-items small {
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.library-purge-progress {
+  padding: 1rem 1.2rem;
+  margin-bottom: 0.85rem;
+}
+.library-purge-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+.library-purge-progress progress {
+  width: 100%;
+  height: 0.45rem;
+  margin-top: 0.85rem;
+  accent-color: #a78bfa;
+}
+.library-purge-progress p {
+  margin: 0.6rem 0;
+}
+.library-purge-progress details {
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.library-purge-retry {
+  margin-top: 0.7rem;
+}
+.library-deleted-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.8rem;
+  padding: 2.5rem 1.25rem;
+  min-height: 14rem;
+}
+.library-deleted-placeholder p {
+  max-width: 36rem;
+  color: var(--muted);
+}
+@media (max-width: 640px) {
+  .library-selection-toolbar {
+    gap: 0.6rem;
+  }
+  .library-purge-dialog .dialog-actions > button {
+    flex: 1 1 auto;
+  }
+}

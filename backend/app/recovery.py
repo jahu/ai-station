@@ -79,7 +79,9 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
 
         cancel_expired_run(session, run.id)
         session.commit()
-        if run.executor_type in {"llama_load", "llama_stop", "private_access"}:
+        if run.executor_type in {"llama_load", "llama_stop", "private_access", "artifact_purge"}:
+            # Purges resume only their approved artifact snapshot and committed
+            # per-item intent. Unlinked bytes and tombstones are idempotent.
             # The native create/start/stop journal is keyed by immutable runtime
             # identity. Resuming it cannot create another container or restart an
             # exited model. Keep all reservations until confirmed stop/readiness.

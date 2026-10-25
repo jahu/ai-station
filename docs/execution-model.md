@@ -27,6 +27,12 @@ workspace. One reviewed definition and deadline bind every child.
 
 # Execution model
 
+Permanent Library deletion parks an immutable selection in an existing Approval
+before a worker removes any bytes. Per-item committed intent makes recovery
+idempotent; Stop preserves completed work and leaves later items untouched.
+Partial retries require a new review of the remaining IDs, never a fresh
+selection of all Trash. See [Library deletion](plans/library-permanent-deletion.md).
+
 Instruction-based creation follows the existing workspace → generation → Python
 → verified result graph. Ordinary read-only inspection prepares the created
 workbook/CSV for a new analysis, without extending the original budget.

@@ -107,6 +107,8 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
     body, model_snapshot = resolve_request(session, body)
     parents = [get_artifact(session, item) for item in body.input_artifact_ids]
     for parent in parents:
+        if parent.purged_at or parent.purge_run_id:
+            raise HTTPException(409, "A source image was deleted or is being permanently deleted")
         if parent.artifact_type != "image":
             raise HTTPException(422, "Source artifacts must be images")
         try:
@@ -233,6 +235,10 @@ def artifact_detail(artifact_id: UUID, session: DB):
 
 
 def artifact_response(artifact: Artifact, *, thumbnail=False):
+    if artifact.purged_at:
+        raise HTTPException(410, "This artifact was permanently deleted; its history is preserved")
+    if artifact.purge_run_id:
+        raise HTTPException(409, "Permanent deletion of this artifact is in progress")
     if artifact.metadata_json.get("internal_data_output"):
         raise HTTPException(409, "This raw Python output is internal; use the verified analysis export")
     relative = artifact.thumbnail_relative_path if thumbnail else artifact.relative_path

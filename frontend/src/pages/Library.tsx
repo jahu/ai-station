@@ -25,13 +25,18 @@ import { time } from "../lib/utils";
 import { useListKeyboard } from "./useListKeyboard";
 import { ArtifactLineage } from "./ArtifactLineage";
 import { artifactName } from "./artifactName";
+import { PurgeActivity, PurgeButton } from "./LibraryPurge";
 
 export function ArtifactCards({
   artifacts,
   heading = "Artifacts",
+  selected,
+  onSelect,
 }: {
   artifacts: Artifact[];
   heading?: string;
+  selected?: Record<string, Artifact>;
+  onSelect?: (artifact: Artifact, selected: boolean) => void;
 }) {
   const headingId = useId();
   const labelId = useId();
@@ -76,13 +81,30 @@ export function ArtifactCards({
               key={a.id}
               {...itemProps(i, a.id)}
             >
+              {onSelect && (
+                <label className="library-select-artifact">
+                  <input
+                    type="checkbox"
+                    checked={!!selected?.[a.id]}
+                    disabled={!!a.purge_run_id || !!a.purged_at}
+                    onChange={(event) => onSelect(a, event.target.checked)}
+                    aria-label={`Select ${name} ${shortId}`}
+                  />
+                  Select
+                </label>
+              )}
               <Link
                 className="artifact-card-inspect"
                 to={`/library/${a.id}`}
                 tabIndex={current ? 0 : -1}
                 aria-label={`Inspect ${name} ${shortId}`}
               >
-                {a.type === "image" ? (
+                {a.purged_at || a.purge_run_id ? (
+                  <div className="artifact-placeholder">
+                    <FileText size={30} />
+                    <span>{a.purged_at ? "Deleted" : "Deleting"}</span>
+                  </div>
+                ) : a.type === "image" ? (
                   <img
                     loading="lazy"
                     src={`/api/artifacts/${a.id}/thumbnail`}
@@ -143,9 +165,15 @@ export function Library() {
   const [search, setSearch] = useState("");
   const [term, setTerm] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [selected, setSelected] = useState<Record<string, Artifact>>({});
   const input = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const cache = useQueryClient();
+  const trashCount = useQuery({
+    queryKey: ["library-trash-count"],
+    queryFn: () => api<{ count: number }>("/library/trash-count"),
+    enabled: view === "trash",
+  });
   useEffect(() => {
     const timer = setTimeout(() => setTerm(search.trim()), 250);
     return () => clearTimeout(timer);
@@ -225,9 +253,10 @@ export function Library() {
       >
         {" "}
         {view === "trash"
-          ? "Restore artifacts whenever you need them. Files and execution history are preserved."
+          ? "Restore files you still need, or permanently delete them to free storage. History stays available."
           : "Images, voices, videos and working files — with their source and history intact."}
       </PageTitle>
+      <PurgeActivity />
       <div className="library-toolbar">
         <div
           className="library-type-tabs"
@@ -260,7 +289,58 @@ export function Library() {
           <Trash2 size={15} />
           {view === "trash" ? "Back to Library" : "Trash"}
         </button>
+        {view === "trash" && (
+          <PurgeButton
+            emptyTrash
+            count={trashCount.data?.count}
+            onConfirmed={() => setSelected({})}
+          />
+        )}
       </div>
+      {(artifacts.length > 0 || Object.keys(selected).length > 0) && (
+        <div className="library-selection-toolbar">
+          <label>
+            <input
+              type="checkbox"
+              aria-label="Select all loaded artifacts"
+              checked={
+                artifacts.filter((a) => !a.purge_run_id).length > 0 &&
+                artifacts
+                  .filter((a) => !a.purge_run_id)
+                  .every((a) => !!selected[a.id])
+              }
+              onChange={(event) => {
+                const checked = event.target.checked;
+                setSelected((old) => {
+                  const next = { ...old };
+                  artifacts
+                    .filter((a) => !a.purge_run_id)
+                    .forEach((a) => {
+                      if (checked) next[a.id] = a;
+                      else delete next[a.id];
+                    });
+                  return next;
+                });
+              }}
+            />
+            Select loaded
+          </label>
+          {Object.keys(selected).length > 0 && (
+            <>
+              <span>
+                {Object.keys(selected).length} selected across filters
+              </span>
+              <Button variant="ghost" onClick={() => setSelected({})}>
+                Clear selection
+              </Button>
+              <PurgeButton
+                artifacts={Object.values(selected)}
+                onConfirmed={() => setSelected({})}
+              />
+            </>
+          )}
+        </div>
+      )}
       <div className="library-search-row">
         <label>
           <Search size={16} />
@@ -306,7 +386,19 @@ export function Library() {
         {query.isPending ? (
           <Loading />
         ) : artifacts.length ? (
-          <ArtifactCards artifacts={artifacts} heading="Library" />
+          <ArtifactCards
+            artifacts={artifacts}
+            heading="Library"
+            selected={selected}
+            onSelect={(artifact, checked) =>
+              setSelected((old) => {
+                const next = { ...old };
+                if (checked) next[artifact.id] = artifact;
+                else delete next[artifact.id];
+                return next;
+              })
+            }
+          />
         ) : (
           <section className="panel library-empty">
             <ImageIcon size={36} />
@@ -375,7 +467,7 @@ export function ArtifactDetail() {
         Sources, derived artifacts, parameters, and execution history.
       </PageTitle>
       <ErrorNotice error={query.error ?? copyError} />
-      {a?.trashed_at && (
+      {a?.trashed_at && !a.purge_run_id && !a.purged_at && (
         <div className="notice">
           <Trash2 size={16} />
           This artifact is in Trash. Restore it above to return it to Library.
@@ -387,37 +479,59 @@ export function ArtifactDetail() {
         a && (
           <div className="image-workspace">
             <section className="panel artifact-preview">
-              {a.metadata.data_input === true && <DataPreview artifact={a} />}
-              {a.type === "image" && (
-                <img
-                  src={`/api/artifacts/${a.id}/file`}
-                  alt={prompt || a.original_filename}
-                />
+              {a.purged_at || a.purge_run_id ? (
+                <div className="library-deleted-placeholder">
+                  <Trash2 size={38} />
+                  <h2>
+                    {a.purged_at
+                      ? "Artifact permanently deleted"
+                      : "Permanent deletion started"}
+                  </h2>
+                  <p>
+                    File playback, download and reuse are unavailable. Its
+                    sources, parameters and execution history remain below.
+                  </p>
+                  {a.purge_run_id && (
+                    <Link to={`/runs/${a.purge_run_id}`}>Inspect deletion</Link>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {a.metadata.data_input === true && (
+                    <DataPreview artifact={a} />
+                  )}
+                  {a.type === "image" && (
+                    <img
+                      src={`/api/artifacts/${a.id}/file`}
+                      alt={prompt || a.original_filename}
+                    />
+                  )}
+                  {a.type === "video" && (
+                    <video
+                      controls
+                      preload="metadata"
+                      src={`/api/artifacts/${a.id}/file`}
+                      aria-label="Generated video"
+                      style={{ maxWidth: "100%" }}
+                    />
+                  )}
+                  {a.type === "audio" && (
+                    <audio
+                      controls
+                      preload="metadata"
+                      src={`/api/artifacts/${a.id}/file`}
+                      aria-label="Generated audio"
+                    />
+                  )}
+                  <a
+                    href={`/api/artifacts/${a.id}/file`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open full artifact ↗
+                  </a>
+                </>
               )}
-              {a.type === "video" && (
-                <video
-                  controls
-                  preload="metadata"
-                  src={`/api/artifacts/${a.id}/file`}
-                  aria-label="Generated video"
-                  style={{ maxWidth: "100%" }}
-                />
-              )}
-              {a.type === "audio" && (
-                <audio
-                  controls
-                  preload="metadata"
-                  src={`/api/artifacts/${a.id}/file`}
-                  aria-label="Generated audio"
-                />
-              )}
-              <a
-                href={`/api/artifacts/${a.id}/file`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open full artifact ↗
-              </a>
             </section>
             <aside className="panel content-panel">
               <h2>Artifact details</h2>
@@ -434,7 +548,7 @@ export function ArtifactDetail() {
                 {(a.size_bytes / 1024).toFixed(0)} KiB
               </p>
               <p className="muted">{time(a.created_at)}</p>
-              {a.type === "image" && (
+              {!a.purged_at && !a.purge_run_id && a.type === "image" && (
                 <div className="artifact-actions">
                   {[
                     ["img2img", "Edit"],
@@ -460,7 +574,7 @@ export function ArtifactDetail() {
                   </Button>
                 </div>
               )}
-              {a.type === "audio" && (
+              {!a.purged_at && !a.purge_run_id && a.type === "audio" && (
                 <div className="artifact-actions">
                   <Button asChild variant="secondary">
                     <Link to={`/audio?input=${a.id}`}>

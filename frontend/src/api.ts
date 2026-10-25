@@ -186,6 +186,8 @@ export interface Artifact {
   notes?: string;
   library_updated_at?: string | null;
   trashed_at?: string | null;
+  purged_at?: string | null;
+  purge_run_id?: string | null;
   size_bytes: number;
   created_at: string;
   run_id: string | null;
