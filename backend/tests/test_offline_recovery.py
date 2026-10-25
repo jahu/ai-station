@@ -640,7 +640,7 @@ def test_restored_private_origin_never_revives_a_historical_grant(backup, curren
     root, bid, path = backup
     with sqlite3.connect(path) as connection:
         connection.execute(
-            "INSERT INTO settings (key,value,updated_at) VALUES (?,?,?)",
+            "INSERT INTO settings (key,value) VALUES (?,?)",
             (
                 "private_ui_access",
                 json.dumps(
@@ -651,7 +651,6 @@ def test_restored_private_origin_never_revives_a_historical_grant(backup, curren
                         "pending_run_id": str(uuid4()),
                     }
                 ),
-                "2026-10-25 00:00:00",
             ),
         )
     with session_factory()() as session:
@@ -686,3 +685,15 @@ def test_restored_private_origin_never_revives_a_historical_grant(backup, curren
             }
     finally:
         engine.dispose()
+
+
+def test_recovery_cannot_drop_password_while_a_private_service_may_exist(backup):
+    root, bid, path = backup
+    stage = root / "db/private-no-auth.sqlite"
+    shutil.copyfile(path, stage)
+    security = {"operator_auth": None, "private_ui_access": {"enabled": True, "revision": 2}}
+    with pytest.raises(RecoveryError, match="fresh operator password"):
+        storage.normalize_copy(stage, security, bid)
+    assert storage.normalize_copy(stage, security, bid, password="fresh-private-password")[
+        "operator_password_reset"
+    ]

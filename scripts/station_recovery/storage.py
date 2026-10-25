@@ -313,6 +313,13 @@ def normalize_copy(path: Path, security: dict | None, backup_id: str, *, passwor
             )
             current_private = (security or {}).get("private_ui_access")
             private_policy = current_private if isinstance(current_private, dict) else backup_private
+            private_required = (
+                private_policy.get("enabled") is True or private_policy.get("password_required") is True
+            )
+            if private_required and not (security or {}).get("operator_auth") and password is None:
+                raise RecoveryError(
+                    "Private recovery requires a fresh operator password when current credentials are missing"
+                )
             for setting in list(session.scalars(select(Setting))):
                 if setting.key == "operator_session" or setting.key.startswith("operator_session:"):
                     session.delete(setting)
@@ -341,8 +348,7 @@ def normalize_copy(path: Path, security: dict | None, backup_id: str, *, passwor
                             "origin": None,
                             "node_id": None,
                             "pending_run_id": None,
-                            "password_required": private_policy.get("enabled") is True
-                            or private_policy.get("password_required") is True,
+                            "password_required": private_required,
                         },
                     )
                 )
