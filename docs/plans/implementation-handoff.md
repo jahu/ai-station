@@ -2,9 +2,13 @@
 > [Private remote access](private-tailnet-access.md) preserves password/LAN and
 > uses only an owned userspace Tailscale instance. Read-only inspection found
 > Tailscale unavailable; no system software/networking has been modified.
-> Initial native builders/status/config checks pass34 focused CPU tests plus Ruff.
-> They expose no endpoint or operational capability and are
-> not operational until private ownership, permissions, Stop and recovery pass.
+> Native core now has pinned1.104.2 installation and own-service process/UDS
+> lifecycle. Focused59 CPU tests plus Ruff pass. Actual installed-version help and
+> an unprivileged temporary daemon NeedsLogin→Stop pass; host routing/DNS unchanged.
+> No login/Serve was requested. Evidence: private-tailnet-access-20261025.
+> Next: login/Serve job ownership + protected auth links, then operator API/worker
+> authorization, origin policy and onboarding UI. Full gates/release qualification
+> remain pending; no endpoint or operational capability is registered.
 > Enrollment and HTTPS consent remain actual operator actions; never fake success.
 > Live #425: result-file-continuations-20261025/post-deployment-qualified.json.
 > UI http://192.168.1.121:8765; native/model/auth/data preserved. Root Memory WIP

@@ -14,6 +14,11 @@ def test_fixed_userspace_daemon_never_selects_a_system_socket_or_proxy():
     assert args == [
         "/owned/bin/tailscaled",
         "--tun=userspace-networking",
+        "--no-logs-no-support",
+        "--encrypt-state=false",
+        "--hardware-attestation=false",
+        "--syspolicy-file=",
+        "--statedir=/private/ai-station",
         "--state=/private/ai-station/tailscaled.state",
         "--socket=/private/ai-station/daemon.sock",
         "--port=0",

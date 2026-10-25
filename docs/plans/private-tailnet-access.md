@@ -74,3 +74,34 @@ readiness. Next implement native ownership/private storage, actual installed-ver
 CLI probing, typed lifecycle and redaction/cancellation/recovery before API/UI wiring.
 The current module is never registered as available. Preserve live #425 and the
 unchanged running Runner/model while developing in this isolated branch.
+
+## Native core progress — 2026-10-25
+
+Pinned official Tailscale 1.104.2 x64/ARM64 archives now have an explicit installer,
+with SHA-256 checks, bounded selective extraction, private ownership, cancellation,
+atomic publication and refusal to overwrite changed installations. The x64 archive
+was actually installed under the project's ignored tools directory. Version and
+daemon/login/up/set/serve help were executed and retained; no system package or
+system Tailscale service was modified.
+
+The service core reuses ProcessManager in a **native-private** directory outside
+control-plane data. It binds its owner marker to the data root, journals a canonical
+operation UUID, checks boot/PID start identity and preserves node state on stop.
+Status discards login URLs, keys and peer/user lists; node-online is not application
+readiness. Stale/missing ownership requires inspection. Only the owned process
+group can be canceled; replaced socket/journal paths do not authorize cleanup.
+Daemon arguments disable uploads, host syspolicy and TPM use, and select a private
+state directory and userspace transport. The installed CLI accepted these flags.
+
+59 focused CPU tests pass for builders, installation and actual offline fixture
+process/UDS lifecycle, recovery, cancellation, PID reuse and path/ownership attacks.
+A real unprivileged 1.104.2 daemon reached NeedsLogin and stopped cleanly in a
+private temporary directory; socket0600, unchanged host routes/DNS and zero
+login/Serve requests were checked. Evidence:
+`data/acceptance/private-tailnet-access-20261025`.
+
+Still pending: typed login/Serve operation ownership and secret-link handling;
+installer cancellation/recovery through native jobs; operator API/worker permissions
+and versioned origin policy; onboarding UI; full local/release gates and real
+operator enrollment/HTTPS/phone acceptance. No endpoint or operational adapter is
+registered yet. Keep live #425 and its running native Runner/model unchanged.

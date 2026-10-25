@@ -15,6 +15,11 @@ def daemon_argv(binary: Path, state_dir: Path, socket: Path) -> list[str]:
     return [
         _absolute(binary),
         "--tun=userspace-networking",
+        "--no-logs-no-support",
+        "--encrypt-state=false",
+        "--hardware-attestation=false",
+        "--syspolicy-file=",
+        "--statedir=" + _absolute(state_dir),
         "--state=" + _absolute(state_dir / "tailscaled.state"),
         "--socket=" + _absolute(socket),
         "--port=0",
