@@ -4,7 +4,6 @@ from uuid import uuid4
 
 import pytest
 from ai_station_runner import tailnet_api as api
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from test_tailnet_actions import finished, online
 from test_tailnet_actions import runtime as runtime
@@ -13,8 +12,8 @@ from test_tailnet_service import manager as manager
 
 @pytest.fixture
 def client(runtime, monkeypatch):
-    app = FastAPI()
-    app.include_router(api.router)
+    from ai_station_runner.app import app
+
     monkeypatch.setattr(api, "manager", lambda: runtime)
     monkeypatch.setattr(api, "paths", lambda: (runtime.root, runtime.binary_dir, "amd64"))
     monkeypatch.setattr(api, "verified_install", lambda *a: {})

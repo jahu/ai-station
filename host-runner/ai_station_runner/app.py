@@ -77,7 +77,6 @@ from ai_station_runner.worktree_remove import RemoveWorktreeRequest, remove_repo
 from ai_station_runner.worktrees import inspect_worktree, reserve_and_start
 
 app = FastAPI(title="AI Station Host Runner", version=__version__)
-app.include_router(tailnet_router)
 
 
 @app.exception_handler(RequestValidationError)
@@ -1095,3 +1094,6 @@ def site_preview_close(run_id: UUID):
         return close_preview(manager(), str(run_id))
     except (ValueError, RuntimeError, ProcessNotOwned, OSError, GitError) as exc:
         raise HTTPException(409, str(exc)) from exc
+
+
+app.include_router(tailnet_router)
