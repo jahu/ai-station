@@ -123,7 +123,7 @@ it("shows the Vision answer as one assistant reply with inspectable execution, c
   const articles = screen.getAllByRole("article");
   expect(articles).toHaveLength(2);
   const inspect = screen.getByRole("link", {
-    name: "Inspect run Local AI vision-r",
+    name: "Inspect run AI Station vision-r",
   });
   expect(inspect.getAttribute("href")).toBe("/runs/vision-run");
   expect(
