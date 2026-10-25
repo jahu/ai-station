@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
   "sources": [
     "docs/product-completion.md",
@@ -3316,6 +3316,94 @@
       ],
       "resources": "Lokalny LLM i GPU; bez płatnych API",
       "minutes": 5,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
+      ]
+    },
+    {
+      "id": "TRANS-010",
+      "area": "Audio",
+      "title": "Opis muzyki tłumaczony, słowa pozostają po polsku",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana ukończona wersja; skonfigurowany lokalny LLM oraz właściwy silnik mediów; neutralne dane QA."
+      ],
+      "steps": [
+        "W Audio → Music wybierz opis po polsku i własne polskie słowa",
+        "Włącz tłumaczenie opisu z podglądem; sprawdź i zatwierdź",
+        "Otwórz wynik w Library"
+      ],
+      "expected": [
+        "Tłumacz otrzymuje tylko opis muzyki. Tekst piosenki jest niezmieniony. Wynik zachowuje oryginalny opis, efektywny opis oraz źródło tłumaczenia."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 8,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
+      ]
+    },
+    {
+      "id": "TRANS-011",
+      "area": "Wideo",
+      "title": "Wspólne tłumaczenie i akceptacja segmentów filmu",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana ukończona wersja; skonfigurowany lokalny LLM oraz właściwy silnik mediów; neutralne dane QA."
+      ],
+      "steps": [
+        "Utwórz film z powtarzającym się polskim opisem i włącz podgląd tłumaczenia",
+        "Sprawdź Runs i panel filmu",
+        "Edytuj tekst, zatwierdź i poczekaj na wynik"
+      ],
+      "expected": [
+        "Identyczne opisy w obrębie filmu mają jedno tłumaczenie. Żaden segment nie startuje przed przygotowaniem i zatwierdzeniem wszystkich opisów. Edycja dotyczy właściwej grupy. Wynik zachowuje źródła."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 8,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
+      ]
+    },
+    {
+      "id": "TRANS-012",
+      "area": "Wideo",
+      "title": "Resume zachowuje tekst i zamrożony wybór tłumacza",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana ukończona wersja; skonfigurowany lokalny LLM oraz właściwy silnik mediów; neutralne dane QA."
+      ],
+      "steps": [
+        "Po przygotowaniu tłumaczenia zatrzymaj film",
+        "Zmień domyślnego tłumacza w Settings",
+        "Wznów zwyczajnie, a potem sprawdź jawne Translate again"
+      ],
+      "expected": [
+        "Zwykłe Resume korzysta z zapisanej wersji bez ponownego tłumaczenia. Jawne ponowne tłumaczenie używa wcześniejszej polityki. Zakończone segmenty pozostają; stare próby i decyzje są dostępne."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 8,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
+      ]
+    },
+    {
+      "id": "TRANS-013",
+      "area": "Wideo",
+      "title": "Błąd tłumaczenia i wybór oryginału filmu",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana ukończona wersja; skonfigurowany lokalny LLM oraz właściwy silnik mediów; neutralne dane QA."
+      ],
+      "steps": [
+        "Doprowadź w jednorazowym zadaniu do niedostępności wybranego lokalnego tłumacza",
+        "Sprawdź błąd i wybierz Use original",
+        "Odśwież widok i sprawdź historię"
+      ],
+      "expected": [
+        "Błąd nie uruchamia generatora z przypadkowym tekstem. Use original jawnie tworzy dalszą próbę z oryginalnym tekstem. Nie powstają duplikaty po odświeżeniu; niepowiązane procesy pozostają bez zmian."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 8,
       "requirements": [
         "MEDIA-PROMPT-TRANSLATION"
       ]

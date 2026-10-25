@@ -15,6 +15,11 @@ import { PageTitle, ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
 import MediaInput from "../components/media/MediaInput";
 import MediaResult from "../components/media/MediaResult";
+import {
+  PromptTranslationControl,
+  translationRequest,
+  type TranslationOptions,
+} from "../components/media/PromptTranslation";
 import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import Avatars from "./Avatars";
@@ -91,6 +96,13 @@ function VideoForm({
   const [mode, setMode] = useState(initialImage ? "animate" : "generate");
   const [image, setImage] = useState(initialImage);
   const [prompt, setPrompt] = useState(initialRequest?.prompt ?? "");
+  const [translation, setTranslation] = useState<TranslationOptions>(
+    initialRequest?.translation ?? {
+      mode: "inherit",
+      review: false,
+      protected_terms: [],
+    },
+  );
   const [negative, setNegative] = useState(
     initialRequest?.negative_prompt ?? "",
   );
@@ -166,6 +178,7 @@ function VideoForm({
         seed,
         gpu,
         image_artifact_id: mode === "animate" ? image : null,
+        ...translationRequest(translation),
       };
       if (duration.endsWith("s")) {
         const body = {
@@ -194,18 +207,8 @@ function VideoForm({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...(memoryProfile !== "default"
-            ? { memory_profile: memoryProfile }
-            : {}),
-          prompt,
-          negative_prompt: negative,
-          width,
-          height,
+          ...values,
           frames: Number(duration),
-          steps,
-          seed,
-          gpu,
-          image_artifact_id: mode === "animate" ? image : null,
         }),
       });
     },
@@ -484,6 +487,11 @@ function VideoForm({
                 onChange={setGpu}
               />
             </details>
+            <PromptTranslationControl
+              value={translation}
+              onChange={setTranslation}
+              disabled={busy || uploading}
+            />
             <ErrorNotice error={generate.error ?? capability.error} />
             {capability.data && !capability.data.available && (
               <p className="notice">

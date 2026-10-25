@@ -98,6 +98,12 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Video/music translation reuses the image preparation/apply executors and existing
+local runtime lifecycle. Same-Task identical film prompts share preparation;
+all preparations and reviews gate all segments. Ordinary Resume retains verified
+effective text; explicit retranslation uses the frozen earlier policy.
+[Contracts and qualification](plans/media-language-workflows.md).
+
 Optional image prompt translation gates an ordinary media Run on local
 preparation and optional reviewed-apply children. Shared model startup/eviction,
 Run dependencies, approvals and verified Artifacts preserve the existing worker

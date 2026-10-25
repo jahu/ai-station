@@ -15,7 +15,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 function mount(entry = "/video", available = true) {
-  const fetch = vi.fn(async (path: string) => ({
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
     ok: true,
     json: async () =>
       path.endsWith("/capabilities")
@@ -30,7 +30,13 @@ function mount(entry = "/video", available = true) {
                 original_filename: "scene.png",
               }
             : path.includes("/runs")
-              ? { id: "video-run", status: "queued", parameters: {} }
+              ? {
+                  id: "video-run",
+                  status: "queued",
+                  parameters: options?.body
+                    ? JSON.parse(String(options.body))
+                    : {},
+                }
               : [],
   }));
   vi.stubGlobal("fetch", fetch);
@@ -72,6 +78,38 @@ it("queues text video with visible progress and Stop in place", async () => {
   expect(
     screen.queryByText("A portrait. A voice. A living moment."),
   ).toBeNull();
+});
+
+it("sends an explicit video translation override with the original scene unchanged", async () => {
+  const fetch = mount();
+  fireEvent.change(screen.getByLabelText("Scene and motion"), {
+    target: { value: "Czerwony rower nad jeziorem" },
+  });
+  fireEvent.change(screen.getByLabelText("Prompt language"), {
+    target: { value: "on" },
+  });
+  const submit = screen.getByRole("button", { name: "Generate video" });
+  await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+  fireEvent.click(submit);
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.some(
+        ([path, options]) =>
+          path === "/api/video/runs" && options?.method === "POST",
+      ),
+    ).toBe(true),
+  );
+  const call = fetch.mock.calls.find(
+    ([path, options]) =>
+      path === "/api/video/runs" && options?.method === "POST",
+  )!;
+  const body = JSON.parse(String(call[1]!.body));
+  expect(body.prompt).toBe("Czerwony rower nad jeziorem");
+  expect(body.translation).toEqual({
+    mode: "on",
+    review: false,
+    protected_terms: [],
+  });
 });
 it("stages Library first frame without starting work", async () => {
   const fetch = mount("/video?input=source");

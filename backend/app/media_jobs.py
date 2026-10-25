@@ -1,7 +1,7 @@
 """Durable segmented video jobs built from existing Runs, dependencies and artifacts."""
 
 import json
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -58,7 +58,14 @@ def execution_budget(execution_deadline_at):
 
 
 def publish_video(
-    session, body, *, task=None, parent_run_id=None, observed_profile=None, execution_deadline_at=None
+    session,
+    body,
+    *,
+    task=None,
+    parent_run_id=None,
+    observed_profile=None,
+    execution_deadline_at=None,
+    _prepare_translation=True,
 ):
     budget = execution_budget(execution_deadline_at)
     prior = session.get(Task, str(body.client_request_id)) if task is None else None
@@ -119,7 +126,12 @@ def publish_video(
             }
         )
         run = create_video_run(
-            session, settings, task=task, parent_run_id=parent_run_id, observed_profile=observed_profile
+            session,
+            settings,
+            task=task,
+            parent_run_id=parent_run_id,
+            observed_profile=observed_profile,
+            _prepare_translation=False,
         )
         run.requested_resources = {"ram_mib": reservation}
         run.operation_key = f"media:1:segment:{segment.index}:attempt:1"
@@ -137,6 +149,16 @@ def publish_video(
             depend_on(session, run, previous)
         runs.append(run)
         previous = run
+    from app.media_translation import enqueue_groups
+
+    translation_ids = (
+        enqueue_groups(
+            session,
+            [(run, body.translation.model_dump() if body.translation else None, None) for run in runs],
+        )
+        if _prepare_translation
+        else []
+    )
     compose = create_run(
         session,
         task,
@@ -178,6 +200,7 @@ def publish_video(
             "mode": body.composition_mode,
             "timing": timing.model_dump(mode="json"),
             "segment_run_ids": [r.id for r in runs],
+            **({"translation_consumer_run_ids": translation_ids} if translation_ids else {}),
             "compose_run_id": compose.id,
             "request": video_request(body),
             "final_artifact_id": None,
@@ -241,6 +264,13 @@ def job_view(session, task):
     stages = {r.id: r for r in session.scalars(select(Run).where(Run.id.in_(ids)))}
     compose = stages[plan["compose_run_id"]]
     active = [r for r in stages.values() if r.status not in TERMINAL]
+    prompt_states = [
+        r.metadata_json["prompt_translation"]["status"]
+        for r in stages.values()
+        if r.status == "queued"
+        and r.metadata_json.get("prompt_translation")
+        and r.metadata_json["prompt_translation"]["status"] not in {"ready", "original"}
+    ]
     stopping = bool(task.metadata_json.get("stop_requested_at"))
     if compose.status == "succeeded" and plan.get("final_artifact_id"):
         status = "succeeded"
@@ -252,6 +282,8 @@ def job_view(session, task):
         status = "composing"
     elif any(r.status == "running" for r in stages.values()):
         status = "generating"
+    elif prompt_states:
+        status = "preparing"
     else:
         status = "queued"
     return {
@@ -261,8 +293,22 @@ def job_view(session, task):
         "revision": plan["revision"],
         "kind": plan["kind"],
         "mode": plan["mode"],
+        **(
+            {"translation_consumer_run_ids": plan["translation_consumer_run_ids"]}
+            if plan.get("translation_consumer_run_ids")
+            else {}
+        ),
         "scenes": scene_progress(plan, stages),
         "status": status,
+        **(
+            {
+                "prompt_preparation_status": "review"
+                if "waiting_for_review" in prompt_states
+                else "translating"
+            }
+            if prompt_states
+            else {}
+        ),
         "duration_seconds": plan["timing"]["target_frames"] / plan["timing"]["fps"],
         "completed_segments": sum(stages[rid].status == "succeeded" for rid in plan["segment_run_ids"]),
         "total_segments": len(plan["segment_run_ids"]),
@@ -452,6 +498,23 @@ class CompositionExecutor(HostMediaExecutor):
             "composition_mode": plan["mode"],
             "backend": run.parameters["backend"],
         }
+        receipts = {}
+        for rid in run.parameters["stage_run_ids"]:
+            source = session.get(Run, rid)
+            receipt = source.metadata_json.get("prompt_translation")
+            if receipt:
+                from app.media_translation import validate_media_translation
+
+                validate_media_translation(session, source)
+                receipts.setdefault(receipt["preparation_run_id"], receipt)
+                identifier = receipt.get("artifact_id")
+                if identifier and identifier not in artifact.parent_artifact_ids:
+                    artifact.parent_artifact_ids = [*artifact.parent_artifact_ids, identifier]
+        if receipts:
+            artifact.metadata_json = {
+                **artifact.metadata_json,
+                "prompt_translations": list(receipts.values()),
+            }
         task.metadata_json = {**task.metadata_json, "media_plan": {**plan, "final_artifact_id": artifact.id}}
         task.updated_at = utcnow()
 
@@ -460,6 +523,7 @@ class ResumeRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     client_request_id: UUID
     expected_revision: StrictInt = Field(ge=1, le=20)
+    translation: Literal["reuse", "retry", "original"] = "reuse"
 
 
 @router.post("/{task_id}/resume", status_code=202)
@@ -472,7 +536,10 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
     key = str(body.client_request_id)
     if key in receipts:
         saved = receipts[key]
-        if saved["expected_revision"] != body.expected_revision:
+        if (
+            saved["expected_revision"] != body.expected_revision
+            or saved.get("translation", "reuse") != body.translation
+        ):
             raise HTTPException(409, "Resume ID belongs to another request")
         return saved["response"]
     plan = task.metadata_json["media_plan"]
@@ -558,6 +625,7 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
         }
         return save_resume(session, task, plan, updated, receipts, key, body)
     new_ids = []
+    translation_entries = []
     previous = None
     reusable_prefix = True
     for index, rid in enumerate(plan["segment_run_ids"]):
@@ -590,11 +658,36 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
                 parent_run_id=source.id,
                 retry_class="inspect",
             )
+            from app.media_translation import prepare_retry
+
+            entry = prepare_retry(session, source, run, body.translation)
+            if entry:
+                translation_entries.append(entry)
             if previous and plan["mode"] == "continuous":
                 run.parameters = {**run.parameters, "previous_video_run_id": previous.id}
                 depend_on(session, run, previous)
         new_ids.append(run.id)
         previous = run
+    from app.media_translation import enqueue_groups
+
+    translation_ids = enqueue_groups(session, translation_entries)
+    # All newly allocated stages wait for every preparation, including any stage
+    # that can reuse its earlier effective text in this revision.
+    preparations = [
+        session.get(Run, rid).metadata_json["prompt_translation"]["preparation_run_id"]
+        for rid in translation_ids
+    ]
+    for identifier in preparations:
+        prep = session.get(Run, identifier)
+        prep.parameters = {
+            **prep.parameters,
+            "barrier_consumer_ids": [rid for rid in new_ids if session.get(Run, rid).status == "queued"],
+        }
+    for rid in new_ids:
+        item = session.get(Run, rid)
+        if item.status == "queued":
+            for prep in preparations:
+                depend_on(session, item, session.get(Run, prep))
     old_compose = session.get(Run, plan["compose_run_id"])
     compose = create_run(
         session,
@@ -616,6 +709,17 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
         "revision": next_revision,
         "segment_run_ids": new_ids,
         "compose_run_id": compose.id,
+        "translation_consumer_run_ids": list(
+            dict.fromkeys(
+                translation_ids
+                + [
+                    rid
+                    for rid in new_ids
+                    if session.get(Run, rid).metadata_json.get("prompt_translation")
+                    and rid not in [item[0].id for item in translation_entries]
+                ]
+            )
+        ),
         "final_artifact_id": None,
     }
     return save_resume(session, task, plan, updated, receipts, key, body)
@@ -633,7 +737,11 @@ def save_resume(session, task, plan, updated, receipts, key, body):
         **task.metadata_json,
         "media_receipts": {
             **receipts,
-            key: {"expected_revision": body.expected_revision, "response": result},
+            key: {
+                "expected_revision": body.expected_revision,
+                "translation": body.translation,
+                "response": result,
+            },
         },
     }
     task.updated_at = utcnow()

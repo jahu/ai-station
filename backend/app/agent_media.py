@@ -382,6 +382,7 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
             parent_run_id=run.id,
             observed_profile=profile,
             execution_deadline_at=run.parameters["execution_deadline_at"],
+            _prepare_translation=False,
         )
         child = session.get(Run, run.task.metadata_json["media_plan"]["compose_run_id"])
         child.operation_key = key
@@ -446,6 +447,21 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
         "agent_media_preparation_sha256": preparation_sha,
     }
     child.triggered_by = run.triggered_by
+    if prepared_scope.kind == "video":
+        from app.media_translation import enqueue_groups
+
+        plan = run.task.metadata_json["media_plan"]
+        options = (
+            prepared_scope.request.translation.model_dump() if prepared_scope.request.translation else None
+        )
+        identifiers = enqueue_groups(
+            session, [(session.get(Run, rid), options, None) for rid in plan["segment_run_ids"]]
+        )
+        if identifiers:
+            run.task.metadata_json = {
+                **run.task.metadata_json,
+                "media_plan": {**plan, "translation_consumer_run_ids": identifiers},
+            }
     append_event(session, run.id, "agent.media.queued", {"run_id": child.id, "capability": child.capability})
     return child
 

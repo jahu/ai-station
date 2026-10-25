@@ -237,4 +237,8 @@ class HostMediaExecutor:
                 parent_artifact_ids=run.parameters.get("parent_artifact_ids", []),
             )
             self.on_success(session, run, artifact)
+            if run.metadata_json.get("prompt_translation"):
+                from app.media_translation import decorate_output
+
+                decorate_output(run, artifact)
             transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})
