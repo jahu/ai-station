@@ -79,7 +79,17 @@ def quoted_context(question, answer):
         values[key] = values[key][: -max(1, len(text) - 6000)]
 
 
-def source_reference(session, user, root):
+def requested_result_file(content):
+    text = instruction(content)
+    pattern = (
+        r"\b(?:(?:this|that) (?:result|output) (?:file|spreadsheet|workbook)"
+        r"|(?:ten|tego|tym) (?:plik|pliku|arkusz|arkusza|arkuszu) wynikow\w*)\b"
+    )
+    replaced, count = re.subn(pattern, "this file", text, flags=re.I)
+    return bool(count and requested(replaced))
+
+
+def source_reference(session, user, root, *, use_result_file=False):
     from app.assistant import task_results
     from app.conversation_data import root_binding, validate_workflow
     from app.data_agents import DataAnswer, freeze_inputs
@@ -138,13 +148,14 @@ def source_reference(session, user, root):
         from app.data_research import verify_research
 
         receipt = state.get("data_research")
-        verify_research(
-            session,
-            workflow,
-            receipt,
-            AgentSettings.model_validate(workflow.parameters["definition"]),
-            for_execution=False,
-        )
+        if not use_result_file:
+            verify_research(
+                session,
+                workflow,
+                receipt,
+                AgentSettings.model_validate(workflow.parameters["definition"]),
+                for_execution=False,
+            )
         handoff = session.get(Run, receipt["context_run_id"])
         if handoff.metadata_json.get("child_run_id") != state.get("worktree_run_id"):
             raise ValueError("Source capture belongs to a different analysis workspace")
@@ -169,14 +180,24 @@ def source_reference(session, user, root):
         or not python.metadata_json.get("process_confirmed_gone")
     ):
         raise ValueError("The completed result does not belong to its original inputs")
-    original = (
-        freeze_inputs(session, scope.files(), research=True)
-        if scope.context_tools()
-        else freeze_inputs(session, scope.files())
-    )
-    if original != root.parameters.get("data_inputs"):
-        raise ValueError("The original data input or inspection changed")
-    if scope.operation == "create":
+    if not use_result_file:
+        original = (
+            freeze_inputs(session, scope.files(), research=True)
+            if scope.context_tools()
+            else freeze_inputs(session, scope.files())
+        )
+        if original != root.parameters.get("data_inputs"):
+            raise ValueError("The original data input or inspection changed")
+    if use_result_file:
+        from app.agent_email_results import verified_result
+        from app.agent_schema import AgentSettings
+        from app.data_agents import result_input_ids
+
+        verified_result(
+            session, result, workflow, AgentSettings.model_validate(workflow.parameters["definition"])
+        )
+        ids = result_input_ids(session, result)
+    elif scope.operation == "create":
         from app.data_agents import created_input_ids
 
         ids = created_input_ids(session, result)
@@ -197,6 +218,7 @@ def source_reference(session, user, root):
     )
     return {
         "source_kind": "analyzed_data",
+        **({"use_result_file": True, "result_run_id": result.id} if use_result_file else {}),
         **({"created_from_instructions": True} if scope.operation == "create" else {}),
         "artifact_id": ids[0],
         "artifact_ids": ids,
@@ -247,7 +269,8 @@ def resolve(session, conversation, body, mode):
         and (body.web_search.query.strip() or body.web_search.render_pages)
     ):
         return body, None
-    if not requested(body.content):
+    use_result_file = requested_result_file(body.content)
+    if not use_result_file and not requested(body.content):
         return body, None
     from app.chat_pages import requested_pages
 
@@ -282,11 +305,11 @@ def resolve(session, conversation, body, mode):
                 if is_agent:
                     from app.agent_data_reference import source_reference as agent_reference
 
-                    reference = agent_reference(session, user, root)
+                    reference = agent_reference(session, user, root, use_result_file=use_result_file)
                     if reference is None:
                         continue
                 else:
-                    reference = source_reference(session, user, root)
+                    reference = source_reference(session, user, root, use_result_file=use_result_file)
             except (ValueError, KeyError, TypeError, AttributeError, PermissionDenied) as exc:
                 raise HTTPException(422, ERROR) from exc
             if reference.get("source_file_count", len(reference["artifact_ids"])) > 1 and not re.search(
@@ -337,7 +360,7 @@ def verify_reference(session, run):
     else:
         build = source_reference
     if (
-        build(session, prior, source) != reference
+        build(session, prior, source, use_result_file=reference.get("use_result_file") is True) != reference
         or run.parameters.get("data_inputs") != reference["data_inputs"]
         or run.parameters.get("data") != reference["data_scope"]
     ):

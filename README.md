@@ -1,3 +1,8 @@
+A completed analysis can expose **Use result file** and explicit follow-ups such
+as “Sort this result file”. These use the complete inspected CSV/XLSX output;
+ordinary input-file references retain their original source. See
+[result continuation contracts](docs/plans/data-result-file-continuations.md).
+
 Natural data-file follow-ups can reuse the exact inspected files or offline
 captures of a completed conversation-linked data agent. The new task has its own
 workspace and budget; the agent is not rerun. See

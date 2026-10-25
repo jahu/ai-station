@@ -256,7 +256,11 @@ export function AssistantResults({
   const completedData = result.data_runs?.find(
     (run) => run.status === "succeeded" && run.metadata?.data_result,
   )?.metadata?.data_result as
-    | { input_artifact_ids?: string[]; created_input_artifact_ids?: string[] }
+    | {
+        input_artifact_ids?: string[];
+        created_input_artifact_ids?: string[];
+        result_input_artifact_ids?: string[];
+      }
     | undefined;
   const hasDataResult = result.data_runs?.some(
     (run) => run.status === "succeeded" && run.metadata?.data_result,
@@ -326,6 +330,28 @@ export function AssistantResults({
                   : "Ask another question about these files"}
             </Button>
           ) : null}
+          {onData &&
+            result.task_status === "succeeded" &&
+            dataScope?.operation !== "create" &&
+            !!completedData?.result_input_artifact_ids?.length && (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() =>
+                  onData({
+                    input_artifact_ids: [
+                      ...completedData.result_input_artifact_ids!,
+                    ],
+                    max_repairs: dataScope?.max_repairs ?? 1,
+                    model: dataScope?.model ?? "auto",
+                    maximum_runtime: dataScope?.maximum_runtime ?? 600,
+                  })
+                }
+              >
+                Use result file
+              </Button>
+            )}
           {onData && hasDataResult && dataScope?.research && (
             <Button
               type="button"

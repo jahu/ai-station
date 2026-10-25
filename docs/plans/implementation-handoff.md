@@ -1,3 +1,15 @@
+> Active follow-on: `feat/data-result-file-continuations`, from qualified #424.
+> Add distinct complete-output reuse while preserving original-input references;
+> [contracts](data-result-file-continuations.md) cover the planned API/worker/UI
+> behavior. Publication now queues ordinary output inspection; natural result references and
+> the separate Use result file action bind the complete preferred CSV/XLSX.
+> Original-file semantics stay intact. Initial52 existing+20 new Python cases,
+> UI39 focused and TypeScript pass. Full gates/browser/review/rollout remain pending.
+> Implementation is not deployed.
+> Live #424 qualification: `data/acceptance/agent-data-actions-20261025`.
+> Root WIP, native Runner, operator data/auth and model presets stay untouched.
+> Whole-platform objective remains open.
+
 > PR #424: natural data-file continuations from a completed conversation agent.
 > Exact original inputs, offline captures or complete created CSV/XLSX bind a new
 > ordinary Task/workspace/budget; no agent rerun or research-tool inheritance.
