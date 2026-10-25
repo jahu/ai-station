@@ -2,7 +2,7 @@
 
 Requested 2026-10-25. Dictation is delivered through PR #441 and deployed;
 optional image-prompt translation is qualified for PR #442. Standalone
-Video/music translation is in qualification under the [shared workflow contract](media-language-workflows.md). These are
+Video/music translation is qualified for PR #443 under the [shared workflow contract](media-language-workflows.md). These are
 additions to platform completion. The Krea image delivery is complete; the original
 planning worktree is preserved.
 
