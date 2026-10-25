@@ -1,0 +1,2971 @@
+{
+  "version": 1,
+  "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
+  "sources": [
+    "docs/product-completion.md",
+    "docs/plans/operator-qa-handoff.md",
+    "docs/plans/agent-first-product.md",
+    "docs/plans/library-permanent-deletion.md",
+    "docs/plans/memory-embeddings-readiness.md"
+  ],
+  "cases": [
+    {
+      "id": "START-001",
+      "area": "Uruchomienie",
+      "title": "Start jedną komendą",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Uruchom ./scripts/start.sh zgodnie z README",
+        "Otwórz wskazany adres UI"
+      ],
+      "expected": [
+        "UI odpowiada; API, worker, scheduler i Host Runner mają rzeczywiste statusy gotowości."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MVP-111"
+      ]
+    },
+    {
+      "id": "START-002",
+      "area": "Uruchomienie",
+      "title": "Ponowne uruchomienie",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Zapisz rozmowę i utwórz plik QA",
+        "Uruchom ponownie AI Station dozwolonym skryptem",
+        "Otwórz te same rekordy"
+      ],
+      "expected": [
+        "Rozmowa, plik i historia wykonań pozostają dostępne bez duplikacji."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MVP-111"
+      ]
+    },
+    {
+      "id": "START-003",
+      "area": "Uruchomienie",
+      "title": "Odświeżenie przeglądarki",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Otwórz rozmowę z zapisanym wynikiem",
+        "Odśwież stronę i ponownie wybierz rozmowę"
+      ],
+      "expected": [
+        "Treść i wynik pozostają; nie rozpoczyna się ponownie zakończona praca."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MVP-111"
+      ]
+    },
+    {
+      "id": "START-004",
+      "area": "Uruchomienie",
+      "title": "Zatrzymanie stacji",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Poczekaj na zakończenie zadań QA",
+        "Zatrzymaj AI Station zgodnie z README",
+        "Sprawdź, że wcześniejsze niezależne narzędzia nadal działają"
+      ],
+      "expected": [
+        "Zatrzymują się tylko usługi należące do AI Station; pliki i baza pozostają."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MVP-111"
+      ]
+    },
+    {
+      "id": "START-005",
+      "area": "Uruchomienie",
+      "title": "Kopia zapasowa",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W ustawieniach konserwacji utwórz kopię bazy",
+        "Poczekaj na zakończenie Run",
+        "Sprawdź wynik kontroli kopii"
+      ],
+      "expected": [
+        "Kopia ma własną historię, datę i rzeczywisty wynik weryfikacji; niedostępna operacja przywracania nie udaje gotowej."
+      ],
+      "resources": "CPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MVP-111"
+      ]
+    },
+    {
+      "id": "ACCESS-001",
+      "area": "Dostęp i logowanie",
+      "title": "Logowanie lokalne",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Przypadki wymagające własnego konta wykonuj dopiero po jego świadomej konfiguracji; brak warunku zapisz jako Zablokowany."
+      ],
+      "steps": [
+        "Wyloguj się na localhost",
+        "Zaloguj własnym ustawionym hasłem"
+      ],
+      "expected": [
+        "Poprawne hasło otwiera aplikację; hasło nie pojawia się w historii zadań."
+      ],
+      "resources": "Przeglądarka; część testów wymaga własnego konta Tailscale",
+      "minutes": 5,
+      "requirements": [
+        "spec-95",
+        "dostęp LAN/Tailscale"
+      ]
+    },
+    {
+      "id": "ACCESS-002",
+      "area": "Dostęp i logowanie",
+      "title": "Niepoprawne hasło",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Przypadki wymagające własnego konta wykonuj dopiero po jego świadomej konfiguracji; brak warunku zapisz jako Zablokowany."
+      ],
+      "steps": [
+        "W prywatnym oknie wpisz raz niepoprawne hasło",
+        "Następnie wpisz poprawne hasło"
+      ],
+      "expected": [
+        "Błąd jest czytelny; nie ma dostępu do danych przed poprawnym logowaniem."
+      ],
+      "resources": "Przeglądarka; część testów wymaga własnego konta Tailscale",
+      "minutes": 5,
+      "requirements": [
+        "spec-95",
+        "dostęp LAN/Tailscale"
+      ]
+    },
+    {
+      "id": "ACCESS-003",
+      "area": "Dostęp i logowanie",
+      "title": "Drugi host w LAN",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Przypadki wymagające własnego konta wykonuj dopiero po jego świadomej konfiguracji; brak warunku zapisz jako Zablokowany."
+      ],
+      "steps": [
+        "Otwórz adres LAN na drugim urządzeniu",
+        "Zaloguj się",
+        "Wyślij wiadomość przyciskiem Send"
+      ],
+      "expected": [
+        "UI i wysyłanie działają także przez HTTP w LAN; nie ma błędu crypto.randomUUID."
+      ],
+      "resources": "Przeglądarka; część testów wymaga własnego konta Tailscale",
+      "minutes": 5,
+      "requirements": [
+        "spec-95",
+        "dostęp LAN/Tailscale"
+      ]
+    },
+    {
+      "id": "ACCESS-004",
+      "area": "Dostęp i logowanie",
+      "title": "Wylogowanie",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Przypadki wymagające własnego konta wykonuj dopiero po jego świadomej konfiguracji; brak warunku zapisz jako Zablokowany."
+      ],
+      "steps": [
+        "Zaloguj się i otwórz rozmowę",
+        "Wyloguj się",
+        "Spróbuj ponownie otworzyć jej stronę"
+      ],
+      "expected": [
+        "Dane są chronione i wymagają ponownego logowania."
+      ],
+      "resources": "Przeglądarka; część testów wymaga własnego konta Tailscale",
+      "minutes": 5,
+      "requirements": [
+        "spec-95",
+        "dostęp LAN/Tailscale"
+      ]
+    },
+    {
+      "id": "ACCESS-005",
+      "area": "Dostęp i logowanie",
+      "title": "Niezależne sesje urządzeń",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Przypadki wymagające własnego konta wykonuj dopiero po jego świadomej konfiguracji; brak warunku zapisz jako Zablokowany."
+      ],
+      "steps": [
+        "Zaloguj komputer i telefon",
+        "Wyloguj telefon",
+        "Sprawdź obie sesje"
+      ],
+      "expected": [
+        "Telefon nie ma dostępu po wylogowaniu; zachowanie pozostałej sesji jest spójne z komunikatem aplikacji."
+      ],
+      "resources": "Przeglądarka; część testów wymaga własnego konta Tailscale",
+      "minutes": 5,
+      "requirements": [
+        "spec-95",
+        "dostęp LAN/Tailscale"
+      ]
+    },
+    {
+      "id": "ACCESS-006",
+      "area": "Dostęp i logowanie",
+      "title": "Prywatny dostęp zdalny",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Przypadki wymagające własnego konta wykonuj dopiero po jego świadomej konfiguracji; brak warunku zapisz jako Zablokowany."
+      ],
+      "steps": [
+        "W Settings przejdź świadomie proces Access from anywhere na własnym koncie",
+        "Otwórz podany prywatny adres z telefonu poza domowym Wi-Fi",
+        "Zaloguj się i wyślij wiadomość"
+      ],
+      "expected": [
+        "Prywatny dostęp i hasło działają; publiczne wystawienie nie jest uruchamiane ukrycie."
+      ],
+      "resources": "Przeglądarka; część testów wymaga własnego konta Tailscale",
+      "minutes": 5,
+      "requirements": [
+        "spec-95",
+        "dostęp LAN/Tailscale"
+      ]
+    },
+    {
+      "id": "ACCESS-007",
+      "area": "Dostęp i logowanie",
+      "title": "Wyłączenie dostępu zdalnego",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Przypadki wymagające własnego konta wykonuj dopiero po jego świadomej konfiguracji; brak warunku zapisz jako Zablokowany."
+      ],
+      "steps": [
+        "Przy działającym prywatnym dostępie użyj Disable",
+        "Sprawdź adres zdalny i dotychczasowy adres LAN"
+      ],
+      "expected": [
+        "Zdalna usługa AI Station zostaje wyłączona; dostęp lokalny i dane pozostają."
+      ],
+      "resources": "Przeglądarka; część testów wymaga własnego konta Tailscale",
+      "minutes": 5,
+      "requirements": [
+        "spec-95",
+        "dostęp LAN/Tailscale"
+      ]
+    },
+    {
+      "id": "CHAT-001",
+      "area": "Chat",
+      "title": "Pierwsza wiadomość",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Otwórz stronę startową",
+        "Wybierz Chat i dostępny lokalny model",
+        "Wyślij: Wyjaśnij w trzech punktach czym jest fotosynteza"
+      ],
+      "expected": [
+        "Powstaje rozmowa, odpowiedź strumieniuje w głównej przestrzeni i pozostaje w historii."
+      ],
+      "resources": "Lokalny LLM; opcjonalny GPU",
+      "minutes": 5,
+      "requirements": [
+        "MVP-113",
+        "rozmowy jako punkt wejścia"
+      ]
+    },
+    {
+      "id": "CHAT-002",
+      "area": "Chat",
+      "title": "Kontynuacja kontekstu",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Napisz: Zapamiętaj na tę rozmowę nazwę projektu Testowy Sad",
+        "W kolejnym pytaniu poproś o podsumowanie projektu bez powtarzania nazwy"
+      ],
+      "expected": [
+        "Odpowiedź korzysta z tej samej rozmowy i nie tworzy przypadkowego nowego zadania."
+      ],
+      "resources": "Lokalny LLM; opcjonalny GPU",
+      "minutes": 5,
+      "requirements": [
+        "MVP-113",
+        "rozmowy jako punkt wejścia"
+      ]
+    },
+    {
+      "id": "CHAT-003",
+      "area": "Chat",
+      "title": "Wybór innego modelu",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Otwórz listę Local AI",
+        "Wybierz drugi dostępny model z dysku",
+        "Wyślij krótkie pytanie"
+      ],
+      "expected": [
+        "Wybór odpowiada faktycznemu modelowi wykonania; lista nie ogranicza się sztucznie do jednego Qwena."
+      ],
+      "resources": "Lokalny LLM; opcjonalny GPU",
+      "minutes": 5,
+      "requirements": [
+        "MVP-113",
+        "rozmowy jako punkt wejścia"
+      ]
+    },
+    {
+      "id": "CHAT-004",
+      "area": "Chat",
+      "title": "llama.cpp",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wybierz przygotowany model obsługiwany przez llama.cpp",
+        "Wyślij pytanie",
+        "Sprawdź wskazany runtime i model w historii"
+      ],
+      "expected": [
+        "Chat używa rzeczywistego llama.cpp; stan ładowania i ewentualny błąd są widoczne."
+      ],
+      "resources": "Lokalny LLM; opcjonalny GPU",
+      "minutes": 5,
+      "requirements": [
+        "MVP-113",
+        "rozmowy jako punkt wejścia"
+      ]
+    },
+    {
+      "id": "CHAT-005",
+      "area": "Chat",
+      "title": "Stop w trakcie odpowiedzi",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wyślij prośbę o długą odpowiedź",
+        "Podczas strumieniowania naciśnij Stop",
+        "Wyślij nowe krótkie pytanie"
+      ],
+      "expected": [
+        "Generowanie zostaje przerwane, częściowa treść pozostaje czytelna, a kolejna wiadomość działa."
+      ],
+      "resources": "Lokalny LLM; opcjonalny GPU",
+      "minutes": 5,
+      "requirements": [
+        "MVP-113",
+        "rozmowy jako punkt wejścia"
+      ]
+    },
+    {
+      "id": "CHAT-006",
+      "area": "Chat",
+      "title": "Regeneracja",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Zakończ krótką odpowiedź",
+        "Użyj dostępnej akcji ponowienia odpowiedzi",
+        "Sprawdź historię"
+      ],
+      "expected": [
+        "Powstaje właściwe ponowienie; poprzednia treść i powiązanie z pytaniem pozostają zrozumiałe."
+      ],
+      "resources": "Lokalny LLM; opcjonalny GPU",
+      "minutes": 5,
+      "requirements": [
+        "MVP-113",
+        "rozmowy jako punkt wejścia"
+      ]
+    },
+    {
+      "id": "CHAT-007",
+      "area": "Chat",
+      "title": "Markdown i kod",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Poproś o listę, tabelę i krótki przykład Pythona",
+        "Skopiuj fragment kodu",
+        "Wklej go do zwykłego edytora tekstowego"
+      ],
+      "expected": [
+        "Format jest czytelny; kopiowany kod nie zawiera elementów UI."
+      ],
+      "resources": "Lokalny LLM; opcjonalny GPU",
+      "minutes": 5,
+      "requirements": [
+        "MVP-113",
+        "rozmowy jako punkt wejścia"
+      ]
+    },
+    {
+      "id": "CHAT-008",
+      "area": "Chat",
+      "title": "Załącznik obrazu",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dołącz własny neutralny obraz QA",
+        "Wybierz dostępny model obsługujący obraz i poproś o opis",
+        "Sprawdź źródło w rozmowie"
+      ],
+      "expected": [
+        "Obraz jest użyty albo aplikacja jawnie wskazuje brak obsługi; nie twierdzi, że go obejrzała bez wykonania."
+      ],
+      "resources": "Lokalny LLM; opcjonalny GPU",
+      "minutes": 5,
+      "requirements": [
+        "MVP-113",
+        "rozmowy jako punkt wejścia"
+      ]
+    },
+    {
+      "id": "CHAT-009",
+      "area": "Chat",
+      "title": "Obsługa braku modelu",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wybierz model, którego runtime jest zatrzymany",
+        "Wyślij krótkie pytanie",
+        "Obserwuj ładowanie albo komunikat"
+      ],
+      "expected": [
+        "Stan oczekiwania i błędu jest czytelny; aplikacja nie przełącza się ukrycie na płatne API."
+      ],
+      "resources": "Lokalny LLM; opcjonalny GPU",
+      "minutes": 5,
+      "requirements": [
+        "MVP-113",
+        "rozmowy jako punkt wejścia"
+      ]
+    },
+    {
+      "id": "CHAT-010",
+      "area": "Chat",
+      "title": "Stabilność strumienia",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W tej samej rozmowie wyślij trzy kolejne pytania",
+        "Podczas jednej odpowiedzi odśwież stronę",
+        "Wróć do wykonania"
+      ],
+      "expected": [
+        "Nie występuje utrata historii ani przypadkowy błąd blokady bazy; stan odpowiada faktycznemu wykonaniu."
+      ],
+      "resources": "Lokalny LLM; opcjonalny GPU",
+      "minutes": 5,
+      "requirements": [
+        "MVP-113",
+        "rozmowy jako punkt wejścia"
+      ]
+    },
+    {
+      "id": "WORK-001",
+      "area": "Work",
+      "title": "Chat kontra Work",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W Chat poproś o opis planu strony bez wykonania",
+        "Przełącz na Work i jawnie zleć stworzenie pliku lub projektu QA"
+      ],
+      "expected": [
+        "Sama rozmowa nie wykonuje ukrytych działań; Work pokazuje rzeczywiste zadania i wyniki."
+      ],
+      "resources": "Lokalny LLM; osobny projekt QA",
+      "minutes": 5,
+      "requirements": [
+        "spec-47",
+        "agent-first"
+      ]
+    },
+    {
+      "id": "WORK-002",
+      "area": "Work",
+      "title": "Plik z polecenia",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W Work poproś: Utwórz CSV z kolumnami produkt i cena oraz trzema przykładowymi wierszami",
+        "Pobierz wynik"
+      ],
+      "expected": [
+        "Plik powstaje bez sztucznego załącznika wejściowego i ma żądaną strukturę."
+      ],
+      "resources": "Lokalny LLM; osobny projekt QA",
+      "minutes": 5,
+      "requirements": [
+        "spec-47",
+        "agent-first"
+      ]
+    },
+    {
+      "id": "WORK-003",
+      "area": "Work",
+      "title": "Obraz z konwersacji",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W Work poproś o neutralną grafikę z czerwonym rowerem",
+        "Poczekaj na zakończenie",
+        "Otwórz wynik i jego Run"
+      ],
+      "expected": [
+        "Powstaje obraz, dostępny w rozmowie i Library, z rzeczywistymi parametrami."
+      ],
+      "resources": "Lokalny LLM; osobny projekt QA",
+      "minutes": 5,
+      "requirements": [
+        "spec-47",
+        "agent-first"
+      ]
+    },
+    {
+      "id": "WORK-004",
+      "area": "Work",
+      "title": "Edycja przez follow-up",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Po gotowym obrazie napisz: Zmień kolor roweru na niebieski",
+        "Sprawdź wybrane źródło i wynik"
+      ],
+      "expected": [
+        "Nowe wykonanie korzysta z właściwego poprzedniego obrazu; oryginał i pochodzenie pozostają."
+      ],
+      "resources": "Lokalny LLM; osobny projekt QA",
+      "minutes": 5,
+      "requirements": [
+        "spec-47",
+        "agent-first"
+      ]
+    },
+    {
+      "id": "WORK-005",
+      "area": "Work",
+      "title": "Wiele referencji",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dołącz neutralny obraz sceny i obraz dorosłej ubranej osoby",
+        "Poproś o umieszczenie tej osoby w scenie",
+        "Sprawdź źródła i efekt"
+      ],
+      "expected": [
+        "Oba wskazane obrazy trafiają do właściwego wykonania; kolejność i powiązania są widoczne."
+      ],
+      "resources": "Lokalny LLM; osobny projekt QA",
+      "minutes": 5,
+      "requirements": [
+        "spec-47",
+        "agent-first"
+      ]
+    },
+    {
+      "id": "WORK-006",
+      "area": "Work",
+      "title": "Utworzenie agenta",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Napisz: Utwórz agenta który codziennie przygotuje krótki raport z podanych publicznych stron",
+        "Przejrzyj wygenerowany szkic"
+      ],
+      "expected": [
+        "Szkic jest dostępny w Agents, ma czytelne narzędzia i harmonogram, pozostaje wyłączony do zatwierdzenia."
+      ],
+      "resources": "Lokalny LLM; osobny projekt QA",
+      "minutes": 5,
+      "requirements": [
+        "spec-47",
+        "agent-first"
+      ]
+    },
+    {
+      "id": "WORK-007",
+      "area": "Work",
+      "title": "Sterowanie agentem z rozmowy",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W rozmowie z utworzonym agentem użyj Run now",
+        "Po zakończeniu poproś o jego wynik",
+        "Następnie wstrzymaj przyszłe uruchomienia"
+      ],
+      "expected": [
+        "Praca ma historię w tej rozmowie; odczyt wyniku nie uruchamia ponownie agenta, a Pause dotyczy harmonogramu."
+      ],
+      "resources": "Lokalny LLM; osobny projekt QA",
+      "minutes": 5,
+      "requirements": [
+        "spec-47",
+        "agent-first"
+      ]
+    },
+    {
+      "id": "WEB-001",
+      "area": "Internet",
+      "title": "Domyślny Web",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Otwórz nową rozmowę",
+        "Sprawdź domyślne udostępnienie wyszukiwania",
+        "Zapytaj o aktualną publiczną wiadomość"
+      ],
+      "expected": [
+        "Web jest domyślnie dostępny; źródła i faktyczne użycie są widoczne."
+      ],
+      "resources": "Publiczny internet; bez kluczy API",
+      "minutes": 5,
+      "requirements": [
+        "spec-87",
+        "wyszukiwanie i odczyt stron"
+      ]
+    },
+    {
+      "id": "WEB-002",
+      "area": "Internet",
+      "title": "Trafność wyszukiwania",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Zapytaj o konkretną osobę, zdarzenie i datę",
+        "Otwórz dwa cytowane źródła"
+      ],
+      "expected": [
+        "Źródła odnoszą się do pytania, a nie przypadkowych definicji pojedynczych słów."
+      ],
+      "resources": "Publiczny internet; bez kluczy API",
+      "minutes": 5,
+      "requirements": [
+        "spec-87",
+        "wyszukiwanie i odczyt stron"
+      ]
+    },
+    {
+      "id": "WEB-003",
+      "area": "Internet",
+      "title": "Wyszukiwanie follow-up",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Po odpowiedzi ze źródłami zadaj: A kiedy dokładnie to się wydarzyło i dlaczego?",
+        "Sprawdź nową kwerendę oraz cytowane strony"
+      ],
+      "expected": [
+        "Wyszukiwanie zachowuje temat; nie pojawiają się przypadkowe serwisy typu Downdetector bez związku z pytaniem."
+      ],
+      "resources": "Publiczny internet; bez kluczy API",
+      "minutes": 5,
+      "requirements": [
+        "spec-87",
+        "wyszukiwanie i odczyt stron"
+      ]
+    },
+    {
+      "id": "WEB-004",
+      "area": "Internet",
+      "title": "Treść konkretnej strony",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Poproś: Przeanalizuj stronę akademia.ai i przygotuj prompt grafiki promującej jej ofertę",
+        "Otwórz wskazane źródła"
+      ],
+      "expected": [
+        "Model korzysta z pobranej treści tej witryny albo jawnie zgłasza błąd odczytu; nie zastępuje jej ogólnymi wynikami o promptach."
+      ],
+      "resources": "Publiczny internet; bez kluczy API",
+      "minutes": 5,
+      "requirements": [
+        "spec-87",
+        "wyszukiwanie i odczyt stron"
+      ]
+    },
+    {
+      "id": "WEB-005",
+      "area": "Internet",
+      "title": "Strona z JavaScript",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wybierz publiczną stronę wymagającą renderowania",
+        "Jawnie włącz odczyt z JavaScript",
+        "Sprawdź zapis przechwycenia i odpowiedź"
+      ],
+      "expected": [
+        "Użycie przeglądarki jest widoczne; wynik ma pochodzenie i nie wymaga przekazania prywatnych danych."
+      ],
+      "resources": "Publiczny internet; bez kluczy API",
+      "minutes": 5,
+      "requirements": [
+        "spec-87",
+        "wyszukiwanie i odczyt stron"
+      ]
+    },
+    {
+      "id": "WEB-006",
+      "area": "Internet",
+      "title": "Web wyłączony i niedostępne źródło",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wyłącz Web i zadaj zwykłe pytanie",
+        "Następnie jawnie poproś o odczyt nieistniejącej strony QA"
+      ],
+      "expected": [
+        "Zwykła odpowiedź nie udaje pobrania internetu; nieudany odczyt ma czytelny błąd, bez zmyślonych cytatów."
+      ],
+      "resources": "Publiczny internet; bez kluczy API",
+      "minutes": 5,
+      "requirements": [
+        "spec-87",
+        "wyszukiwanie i odczyt stron"
+      ]
+    },
+    {
+      "id": "IMAGE-001",
+      "area": "Obrazy",
+      "title": "Generate Qwen",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W Images wybierz Generate, dostępny Qwen i neutralny prompt",
+        "Uruchom i otwórz wynik w Library"
+      ],
+      "expected": [
+        "Obraz powstaje, a prompt, model, rozmiar i wykonanie są zapisane."
+      ],
+      "resources": "GPU; jednorazowe obrazy QA; Krea wymaga przygotowanego profilu",
+      "minutes": 15,
+      "requirements": [
+        "MVP-114",
+        "Krea/LUSTIFY"
+      ]
+    },
+    {
+      "id": "IMAGE-002",
+      "area": "Obrazy",
+      "title": "Generate Juggernaut",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W Generate wybierz Juggernaut i neutralną scenę",
+        "Uruchom i obejrzyj wynik"
+      ],
+      "expected": [
+        "Wykorzystano wybrany backend, a zapisane parametry odpowiadają formularzowi."
+      ],
+      "resources": "GPU; jednorazowe obrazy QA; Krea wymaga przygotowanego profilu",
+      "minutes": 15,
+      "requirements": [
+        "MVP-114",
+        "Krea/LUSTIFY"
+      ]
+    },
+    {
+      "id": "IMAGE-003",
+      "area": "Obrazy",
+      "title": "Wybór i domyślny model",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wybierz przygotowany model dla Generate i ustaw jako domyślny",
+        "Odśwież stronę",
+        "Przejdź do Edit i sprawdź jego ustawienie"
+      ],
+      "expected": [
+        "Wybór jest prosty i trwały; domyślny model Generate nie nadpisuje bez pytania ustawień innych trybów."
+      ],
+      "resources": "GPU; jednorazowe obrazy QA; Krea wymaga przygotowanego profilu",
+      "minutes": 15,
+      "requirements": [
+        "MVP-114",
+        "Krea/LUSTIFY"
+      ]
+    },
+    {
+      "id": "IMAGE-004",
+      "area": "Obrazy",
+      "title": "Krea LUSTIFY GPU-only",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wybierz przygotowany LUSTIFY Q4 i jego sprawdzony preset",
+        "Uruchom neutralną scenę",
+        "Sprawdź przydzielone GPU i metadane wykonania"
+      ],
+      "expected": [
+        "Profil mieści się w przydzielonych GPU; brak zasobów jest jawny, bez ukrytego offloadu modelu na CPU."
+      ],
+      "resources": "GPU; jednorazowe obrazy QA; Krea wymaga przygotowanego profilu",
+      "minutes": 15,
+      "requirements": [
+        "MVP-114",
+        "Krea/LUSTIFY"
+      ]
+    },
+    {
+      "id": "IMAGE-005",
+      "area": "Obrazy",
+      "title": "Edit zmiana lokalna",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Załącz jednorazowe zdjęcie dorosłej ubranej osoby",
+        "Poproś wyłącznie o zmianę koloru kurtki na czerwony",
+        "Porównaj źródło z wynikiem"
+      ],
+      "expected": [
+        "Instrukcja jest wykonana, osoba i scena pozostają rozpoznawalne; brak niezamówionego stylizowania skóry lub twarzy."
+      ],
+      "resources": "GPU; jednorazowe obrazy QA; Krea wymaga przygotowanego profilu",
+      "minutes": 15,
+      "requirements": [
+        "MVP-114",
+        "Krea/LUSTIFY"
+      ]
+    },
+    {
+      "id": "IMAGE-006",
+      "area": "Obrazy",
+      "title": "Recompose jedna referencja",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W Recompose dodaj obraz ubranej osoby",
+        "Poproś o przeniesienie do biblioteki",
+        "Porównaj tożsamość, tło i jakość"
+      ],
+      "expected": [
+        "Wynik realizuje zmianę sceny przy zachowaniu rozpoznawalnej osoby; widoczną utratę jakości zgłoś."
+      ],
+      "resources": "GPU; jednorazowe obrazy QA; Krea wymaga przygotowanego profilu",
+      "minutes": 15,
+      "requirements": [
+        "MVP-114",
+        "Krea/LUSTIFY"
+      ]
+    },
+    {
+      "id": "IMAGE-007",
+      "area": "Obrazy",
+      "title": "Recompose dwie referencje",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dodaj scenę i osobę w kolejności opisanej w UI",
+        "Sprawdź podgląd i zamianę referencji",
+        "Uruchom kompozycję"
+      ],
+      "expected": [
+        "Oba źródła są użyte; podgląd, kolejność i wynik są spójne, bez przypadkowego obrazu z innej rozmowy."
+      ],
+      "resources": "GPU; jednorazowe obrazy QA; Krea wymaga przygotowanego profilu",
+      "minutes": 15,
+      "requirements": [
+        "MVP-114",
+        "Krea/LUSTIFY"
+      ]
+    },
+    {
+      "id": "IMAGE-008",
+      "area": "Obrazy",
+      "title": "Upscale",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wybierz jednorazowy mały obraz",
+        "Sprawdź zapowiedziany rozmiar",
+        "Uruchom Upscale i pobierz wynik"
+      ],
+      "expected": [
+        "Rozmiar i proporcje odpowiadają deklaracji; źródło pozostaje niezmienione."
+      ],
+      "resources": "GPU; jednorazowe obrazy QA; Krea wymaga przygotowanego profilu",
+      "minutes": 15,
+      "requirements": [
+        "MVP-114",
+        "Krea/LUSTIFY"
+      ]
+    },
+    {
+      "id": "IMAGE-009",
+      "area": "Obrazy",
+      "title": "Parametry zaawansowane",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dla jednego modelu ustaw seed i liczbę kroków",
+        "Przełącz model i wróć",
+        "Uruchom i sprawdź parametry Run"
+      ],
+      "expected": [
+        "Ustawienia nie mieszają się między niekompatybilnymi modelami; wykonanie ma rzeczywiste wybrane wartości."
+      ],
+      "resources": "GPU; jednorazowe obrazy QA; Krea wymaga przygotowanego profilu",
+      "minutes": 15,
+      "requirements": [
+        "MVP-114",
+        "Krea/LUSTIFY"
+      ]
+    },
+    {
+      "id": "IMAGE-010",
+      "area": "Obrazy",
+      "title": "Stop i brak źródła",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Uruchom obraz QA i użyj Stop w trakcie",
+        "Następnie spróbuj ponownie użyć trwale usuniętego źródła QA"
+      ],
+      "expected": [
+        "Własny proces zostaje zatrzymany; usunięte źródło nie jest użyte ani zastąpione innym bez wiedzy użytkownika."
+      ],
+      "resources": "GPU; jednorazowe obrazy QA; Krea wymaga przygotowanego profilu",
+      "minutes": 15,
+      "requirements": [
+        "MVP-114",
+        "Krea/LUSTIFY"
+      ]
+    },
+    {
+      "id": "VIDEO-001",
+      "area": "Wideo",
+      "title": "Krótka scena",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W Video opisz neutralną scenę i wybierz dostępny profil",
+        "Uruchom i odtwórz wynik"
+      ],
+      "expected": [
+        "Powstaje działający film z właściwą długością i historią; brak modelu jest opisany uczciwie."
+      ],
+      "resources": "GPU; przygotowany model wideo; dłuższe wykonanie",
+      "minutes": 15,
+      "requirements": [
+        "spec-77",
+        "długie media"
+      ]
+    },
+    {
+      "id": "VIDEO-002",
+      "area": "Wideo",
+      "title": "Film ze zdjęcia",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dodaj własny neutralny obraz QA",
+        "Uruchom animację z krótkim promptem",
+        "Sprawdź proporcje i pochodzenie"
+      ],
+      "expected": [
+        "Pierwsza klatka korzysta z wybranego źródła, a gotowy film jest odtwarzalny."
+      ],
+      "resources": "GPU; przygotowany model wideo; dłuższe wykonanie",
+      "minutes": 15,
+      "requirements": [
+        "spec-77",
+        "długie media"
+      ]
+    },
+    {
+      "id": "VIDEO-003",
+      "area": "Wideo",
+      "title": "Dłuższy film",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wybierz dłuższy film ze scen lub segmentów",
+        "Opisz kilka neutralnych ujęć",
+        "Poczekaj na końcowy montaż"
+      ],
+      "expected": [
+        "Postęp obejmuje generowanie i składanie; gotowy wynik ma żądaną całościową długość, a nie tylko pierwszy krótki klip."
+      ],
+      "resources": "GPU; przygotowany model wideo; dłuższe wykonanie",
+      "minutes": 15,
+      "requirements": [
+        "spec-77",
+        "długie media"
+      ]
+    },
+    {
+      "id": "VIDEO-004",
+      "area": "Wideo",
+      "title": "Stop i Resume",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Zatrzymaj dłuższe wykonanie QA po utworzeniu części segmentów",
+        "Użyj dostępnego wznowienia",
+        "Sprawdź historię segmentów i wynik"
+      ],
+      "expected": [
+        "Wznowienie wykorzystuje zweryfikowaną dotychczasową pracę; nie udaje ukończenia filmu przed montażem."
+      ],
+      "resources": "GPU; przygotowany model wideo; dłuższe wykonanie",
+      "minutes": 15,
+      "requirements": [
+        "spec-77",
+        "długie media"
+      ]
+    },
+    {
+      "id": "AUDIO-001",
+      "area": "Audio",
+      "title": "Mowa z tekstu",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W Audio wpisz krótki neutralny tekst po polsku",
+        "Wybierz przygotowany model i uruchom",
+        "Odtwórz i pobierz WAV"
+      ],
+      "expected": [
+        "Słychać żądany tekst; plik i parametry są w historii oraz Library."
+      ],
+      "resources": "GPU/CPU; przygotowany model audio",
+      "minutes": 5,
+      "requirements": [
+        "spec-91",
+        "działające media"
+      ]
+    },
+    {
+      "id": "AUDIO-002",
+      "area": "Audio",
+      "title": "Referencja głosu",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dodaj własne nagranie QA, do którego masz prawo",
+        "Zleć krótki tekst",
+        "Sprawdź źródła i dźwięk"
+      ],
+      "expected": [
+        "Wykorzystano wybrane nagranie; nie ma pomieszania ze źródłami innej rozmowy."
+      ],
+      "resources": "GPU/CPU; przygotowany model audio",
+      "minutes": 5,
+      "requirements": [
+        "spec-91",
+        "działające media"
+      ]
+    },
+    {
+      "id": "AUDIO-003",
+      "area": "Audio",
+      "title": "Muzyka",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wybierz przygotowany model muzyki i opisz krótki instrumentalny fragment",
+        "Uruchom, odtwórz i pobierz wynik"
+      ],
+      "expected": [
+        "Powstaje rzeczywisty plik audio; czas, postęp i błędy są czytelne."
+      ],
+      "resources": "GPU/CPU; przygotowany model audio",
+      "minutes": 5,
+      "requirements": [
+        "spec-91",
+        "działające media"
+      ]
+    },
+    {
+      "id": "AUDIO-004",
+      "area": "Audio",
+      "title": "Transkrypcja",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dodaj własny krótki WAV z dwoma znanymi zdaniami",
+        "Uruchom transkrypcję",
+        "Porównaj tekst i plik źródłowy"
+      ],
+      "expected": [
+        "Tekst odpowiada nagraniu, a pochodzenie jest widoczne; nie jest wymyśloną treścią."
+      ],
+      "resources": "GPU/CPU; przygotowany model audio",
+      "minutes": 5,
+      "requirements": [
+        "spec-91",
+        "działające media"
+      ]
+    },
+    {
+      "id": "AUDIO-005",
+      "area": "Audio",
+      "title": "Stop audio",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Uruchom dłuższe zadanie audio QA",
+        "W trakcie użyj Stop",
+        "Spróbuj nowego krótkiego wykonania"
+      ],
+      "expected": [
+        "Zatrzymuje się tylko własne zadanie; kolejne może korzystać z uwolnionych zasobów."
+      ],
+      "resources": "GPU/CPU; przygotowany model audio",
+      "minutes": 5,
+      "requirements": [
+        "spec-91",
+        "działające media"
+      ]
+    },
+    {
+      "id": "AVATAR-001",
+      "area": "Awatary",
+      "title": "Portret i WAV",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W Avatars dodaj własny portret dorosłej ubranej osoby i własny WAV QA",
+        "Uruchom przygotowany krótki profil",
+        "Odtwórz film"
+      ],
+      "expected": [
+        "Wynik zawiera właściwą osobę i audio, poprawne proporcje oraz widoczne źródła."
+      ],
+      "resources": "GPU; przygotowany model; własny portret i krótki WAV QA",
+      "minutes": 15,
+      "requirements": [
+        "spec-91",
+        "działające media"
+      ]
+    },
+    {
+      "id": "AVATAR-002",
+      "area": "Awatary",
+      "title": "Dłuższa wypowiedź",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wybierz obsługiwany profil dłuższego awatara",
+        "Dodaj dłuższy WAV QA",
+        "Poczekaj na złożony wynik"
+      ],
+      "expected": [
+        "Film obejmuje całą zadeklarowaną wypowiedź; podział na segmenty i montaż nie gubią końca audio."
+      ],
+      "resources": "GPU; przygotowany model; własny portret i krótki WAV QA",
+      "minutes": 15,
+      "requirements": [
+        "spec-91",
+        "działające media"
+      ]
+    },
+    {
+      "id": "AVATAR-003",
+      "area": "Awatary",
+      "title": "Generowana mowa",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Podaj portret i neutralny tekst zamiast gotowego WAV",
+        "Uruchom wspierany workflow",
+        "Sprawdź etap mowy i końcowy film"
+      ],
+      "expected": [
+        "Końcowy awatar wykorzystuje rzeczywiście wygenerowany, powiązany WAV; statusy etapów są rozdzielone."
+      ],
+      "resources": "GPU; przygotowany model; własny portret i krótki WAV QA",
+      "minutes": 15,
+      "requirements": [
+        "spec-91",
+        "działające media"
+      ]
+    },
+    {
+      "id": "AVATAR-004",
+      "area": "Awatary",
+      "title": "Niedostępność i Stop",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Przy nieprzygotowanym modelu sprawdź komunikat bez instalowania go",
+        "Przy przygotowanym profilu zatrzymaj zadanie QA"
+      ],
+      "expected": [
+        "UI nie udaje dostępności; Stop obejmuje własne segmenty i końcowe składanie."
+      ],
+      "resources": "GPU; przygotowany model; własny portret i krótki WAV QA",
+      "minutes": 15,
+      "requirements": [
+        "spec-91",
+        "działające media"
+      ]
+    },
+    {
+      "id": "AGENT-001",
+      "area": "Agenci",
+      "title": "Szkic z języka naturalnego",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Poproś o codziennego agenta raportującego publiczne wiadomości z podanych stron",
+        "Otwórz definicję"
+      ],
+      "expected": [
+        "Cel, model, narzędzia, uprawnienia i harmonogram są zrozumiałe; agent nie jest automatycznie aktywowany."
+      ],
+      "resources": "Lokalny LLM; wyłącznie własne dane QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-119",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-002",
+      "area": "Agenci",
+      "title": "Edycja i aktywacja",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W szkicu zmień nazwę i cel",
+        "Przejrzyj narzędzia i uprawnienia",
+        "Jawnie aktywuj"
+      ],
+      "expected": [
+        "Zapisywane są wybrane wartości; samo zapisanie szkicu nie uruchamia zadań bez zgody."
+      ],
+      "resources": "Lokalny LLM; wyłącznie własne dane QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-119",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-003",
+      "area": "Agenci",
+      "title": "Run now i historia",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Uruchom prostego agenta ręcznie dwa razy",
+        "Otwórz oba wykonania i wyniki"
+      ],
+      "expected": [
+        "Każde wykonanie ma oddzielną historię; definicja i dane nie mieszają się."
+      ],
+      "resources": "Lokalny LLM; wyłącznie własne dane QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-119",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-004",
+      "area": "Agenci",
+      "title": "Lokalny kod",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Utwórz agenta analizującego dane QA przy pomocy Pythona",
+        "Przejrzyj narzędzia i uruchom",
+        "Sprawdź kod, walidację i wynik"
+      ],
+      "expected": [
+        "Kod uruchamia się w prywatnym workspace; wyniki i błędy są inspectowalne, bez zmian aktywnego repozytorium użytkownika."
+      ],
+      "resources": "Lokalny LLM; wyłącznie własne dane QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-119",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-005",
+      "area": "Agenci",
+      "title": "Nowa wersja strony",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Podaj publiczny URL i poproś agenta o własny nowy projekt strony QA",
+        "Uruchom po przeglądzie",
+        "Otwórz wynik i podgląd"
+      ],
+      "expected": [
+        "Powstaje prywatny projekt z działającym podglądem; oryginalna strona i inne repozytoria pozostają niezmienione."
+      ],
+      "resources": "Lokalny LLM; wyłącznie własne dane QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-119",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-006",
+      "area": "Agenci",
+      "title": "Kontynuacja projektu agenta",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wskaż gotowy projekt QA i poproś o zmianę nagłówka",
+        "Uruchom kontynuację",
+        "Porównaj wersje i walidację"
+      ],
+      "expected": [
+        "Praca jest kontynuowana we właściwym projekcie, a poprzednie wyniki i diff pozostają dostępne."
+      ],
+      "resources": "Lokalny LLM; wyłącznie własne dane QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-119",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-007",
+      "area": "Agenci",
+      "title": "Powiadomienie warunkowe",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dodaj do agenta raportowego warunek powiadomienia zależny od treści",
+        "Uruchom dwa razy przy niezmienionym źródle",
+        "Sprawdź raport i decyzję"
+      ],
+      "expected": [
+        "Raporty pozostają; decyzja o powiadomieniu jest osobno widoczna, a powtórzony brak zmiany nie udaje nowego alertu."
+      ],
+      "resources": "Lokalny LLM; wyłącznie własne dane QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-119",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-008",
+      "area": "Agenci",
+      "title": "Błąd sprawdzania warunku",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W testowym agencie doprowadź do czytelnego błędu źródła lub oceny warunku",
+        "Sprawdź raport, stan oceny i powiadomienie"
+      ],
+      "expected": [
+        "Niepewna lub błędna ocena nie wysyła nieuprawnionego maila i nie zamienia ukończonej analizy w pozorny sukces całego workflow."
+      ],
+      "resources": "Lokalny LLM; wyłącznie własne dane QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-119",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-009",
+      "area": "Agenci",
+      "title": "Jawne uprawnienia",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Utwórz agenta bez email_send i dostępu do innych projektów",
+        "Poproś go o wysłanie maila lub odczyt drugiego projektu QA"
+      ],
+      "expected": [
+        "Brakujące uprawnienia są respektowane; model nie nadaje ich sam sobie."
+      ],
+      "resources": "Lokalny LLM; wyłącznie własne dane QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-119",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-010",
+      "area": "Agenci",
+      "title": "Pause kontra Stop",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Uruchom dłuższe zadanie QA i użyj Pause agenta",
+        "Sprawdź harmonogram",
+        "Użyj Stop bieżącego wykonania"
+      ],
+      "expected": [
+        "Pause wstrzymuje przyszłe uruchomienia, Stop dotyczy aktualnej pracy; UI wyjaśnia różnicę."
+      ],
+      "resources": "Lokalny LLM; wyłącznie własne dane QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-119",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "SCHED-001",
+      "area": "Harmonogramy",
+      "title": "Interwał",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Ustaw prostemu agentowi krótki interwał QA",
+        "Obserwuj next run i dwa wykonania",
+        "Wstrzymaj harmonogram"
+      ],
+      "expected": [
+        "Powstają zwykłe wykonania z właściwymi czasami; po wstrzymaniu kolejne nie startuje."
+      ],
+      "resources": "CPU/LLM; krótkie zadanie QA",
+      "minutes": 5,
+      "requirements": [
+        "spec-62",
+        "spec-63"
+      ]
+    },
+    {
+      "id": "SCHED-002",
+      "area": "Harmonogramy",
+      "title": "Cron i strefa czasowa",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wybierz strefę Europe/Warsaw i najbliższy termin QA",
+        "Sprawdź next run oraz zapis definicji"
+      ],
+      "expected": [
+        "Czas jest jednoznaczny i zgodny z wybraną strefą; nie jest przypadkowo traktowany jako UTC."
+      ],
+      "resources": "CPU/LLM; krótkie zadanie QA",
+      "minutes": 5,
+      "requirements": [
+        "spec-62",
+        "spec-63"
+      ]
+    },
+    {
+      "id": "SCHED-003",
+      "area": "Harmonogramy",
+      "title": "Jednorazowy termin",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Zaplanuj pojedyncze proste wykonanie QA",
+        "Poczekaj na termin",
+        "Sprawdź dalszy harmonogram"
+      ],
+      "expected": [
+        "Zadanie uruchamia się raz i nie tworzy nieskończonych powtórek."
+      ],
+      "resources": "CPU/LLM; krótkie zadanie QA",
+      "minutes": 5,
+      "requirements": [
+        "spec-62",
+        "spec-63"
+      ]
+    },
+    {
+      "id": "SCHED-004",
+      "area": "Harmonogramy",
+      "title": "Restart harmonogramu",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Zapisz przyszły termin QA",
+        "Uruchom ponownie AI Station",
+        "Sprawdź next run i historię"
+      ],
+      "expected": [
+        "Harmonogram przetrwał restart bez duplikacji nieukończonych wykonań."
+      ],
+      "resources": "CPU/LLM; krótkie zadanie QA",
+      "minutes": 5,
+      "requirements": [
+        "spec-62",
+        "spec-63"
+      ]
+    },
+    {
+      "id": "DATA-001",
+      "area": "Pliki i analiza",
+      "title": "Analiza CSV",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dołącz QA CSV: produkt,cena oraz A,10 i B,20",
+        "Poproś o sumę cen i liczbę wierszy",
+        "Sprawdź kod i wynik"
+      ],
+      "expected": [
+        "Suma wynosi 30, wierszy danych jest 2; wynik ma właściwe źródło."
+      ],
+      "resources": "CPU; jednorazowe CSV/XLSX/PDF QA",
+      "minutes": 5,
+      "requirements": [
+        "agent-first",
+        "pliki wynikowe"
+      ]
+    },
+    {
+      "id": "DATA-002",
+      "area": "Pliki i analiza",
+      "title": "Analiza XLSX",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dołącz własny mały arkusz QA z dwiema zakładkami i znanymi wartościami",
+        "Poproś o podsumowanie obu arkuszy"
+      ],
+      "expected": [
+        "Wartości i nazwy odpowiadają całemu plikowi, nie tylko pierwszemu podglądowi."
+      ],
+      "resources": "CPU; jednorazowe CSV/XLSX/PDF QA",
+      "minutes": 5,
+      "requirements": [
+        "agent-first",
+        "pliki wynikowe"
+      ]
+    },
+    {
+      "id": "DATA-003",
+      "area": "Pliki i analiza",
+      "title": "Utworzenie Excela",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Poproś o XLSX z trzema produktami, cenami i sumą",
+        "Pobierz plik i otwórz go"
+      ],
+      "expected": [
+        "Plik jest poprawny i zawiera rzeczywiste dane; link nie prowadzi do nieistniejącego artefaktu."
+      ],
+      "resources": "CPU; jednorazowe CSV/XLSX/PDF QA",
+      "minutes": 5,
+      "requirements": [
+        "agent-first",
+        "pliki wynikowe"
+      ]
+    },
+    {
+      "id": "DATA-004",
+      "area": "Pliki i analiza",
+      "title": "Wykres i eksport",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Przeanalizuj małe dane QA",
+        "Poproś o wykres i CSV z podsumowaniem",
+        "Pobierz oba wyniki"
+      ],
+      "expected": [
+        "Oba pliki odpowiadają obliczeniom i mają zapisane źródła."
+      ],
+      "resources": "CPU; jednorazowe CSV/XLSX/PDF QA",
+      "minutes": 5,
+      "requirements": [
+        "agent-first",
+        "pliki wynikowe"
+      ]
+    },
+    {
+      "id": "DATA-005",
+      "area": "Pliki i analiza",
+      "title": "Kontynuacja na wyniku",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Po utworzeniu pełnego CSV użyj Use result file lub poproś o sortowanie tego wyniku",
+        "Pobierz nową wersję"
+      ],
+      "expected": [
+        "Przetwarzany jest kompletny właściwy wynik, a nie tylko kilka wierszy podglądu czy pierwotny załącznik."
+      ],
+      "resources": "CPU; jednorazowe CSV/XLSX/PDF QA",
+      "minutes": 5,
+      "requirements": [
+        "agent-first",
+        "pliki wynikowe"
+      ]
+    },
+    {
+      "id": "DATA-006",
+      "area": "Pliki i analiza",
+      "title": "Publiczne dane bez klucza",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Poproś agenta o odczyt publicznej ceny BTC wraz z datą i źródłem",
+        "Sprawdź źródło i wykonanie"
+      ],
+      "expected": [
+        "Raport korzysta z rzeczywistego darmowego źródła; brak klucza płatnego serwisu nie blokuje wszystkich publicznych danych."
+      ],
+      "resources": "CPU; jednorazowe CSV/XLSX/PDF QA",
+      "minutes": 5,
+      "requirements": [
+        "agent-first",
+        "pliki wynikowe"
+      ]
+    },
+    {
+      "id": "DATA-007",
+      "area": "Pliki i analiza",
+      "title": "Uszkodzony plik",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dołącz jednorazowy niepoprawny CSV/XLSX QA",
+        "Poproś o analizę",
+        "Sprawdź komunikat i możliwość użycia poprawnego pliku"
+      ],
+      "expected": [
+        "Błąd jest jawny, bez wymyślenia obliczeń i bez uszkodzenia innych plików."
+      ],
+      "resources": "CPU; jednorazowe CSV/XLSX/PDF QA",
+      "minutes": 5,
+      "requirements": [
+        "agent-first",
+        "pliki wynikowe"
+      ]
+    },
+    {
+      "id": "MEM-001",
+      "area": "Memory",
+      "title": "Dodanie i odczyt",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dodaj globalną pamięć QA z własnym prostym faktem",
+        "Wyszukaj ją i otwórz szczegóły"
+      ],
+      "expected": [
+        "Treść, zakres i pochodzenie są widoczne po odświeżeniu."
+      ],
+      "resources": "CPU; model embeddingów tylko po świadomej konfiguracji",
+      "minutes": 5,
+      "requirements": [
+        "MVP-121",
+        "embeddingi"
+      ]
+    },
+    {
+      "id": "MEM-002",
+      "area": "Memory",
+      "title": "Zakres projektu i agenta",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dodaj różne fakty QA do dwóch projektów i agenta",
+        "Zmień filtry zakresu",
+        "Wykonaj wyszukiwanie"
+      ],
+      "expected": [
+        "Wyniki respektują wybrany zakres, bez przecieku treści między projektami."
+      ],
+      "resources": "CPU; model embeddingów tylko po świadomej konfiguracji",
+      "minutes": 5,
+      "requirements": [
+        "MVP-121",
+        "embeddingi"
+      ]
+    },
+    {
+      "id": "MEM-003",
+      "area": "Memory",
+      "title": "Edycja, pin i wyłączenie",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Zmień fakt QA, przypnij go, następnie wyłącz",
+        "Sprawdź widok i odczyt w nowej właściwej rozmowie"
+      ],
+      "expected": [
+        "Zmiany są trwałe; wyłączona treść nie wraca jako aktywna pamięć."
+      ],
+      "resources": "CPU; model embeddingów tylko po świadomej konfiguracji",
+      "minutes": 5,
+      "requirements": [
+        "MVP-121",
+        "embeddingi"
+      ]
+    },
+    {
+      "id": "MEM-004",
+      "area": "Memory",
+      "title": "Usunięcie pamięci",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Usuń jednorazowy fakt QA",
+        "Wyszukaj go tekstowo i semantycznie"
+      ],
+      "expected": [
+        "Usunięty wpis nie jest zwracany jako aktywny wynik ani ze starego indeksu."
+      ],
+      "resources": "CPU; model embeddingów tylko po świadomej konfiguracji",
+      "minutes": 5,
+      "requirements": [
+        "MVP-121",
+        "embeddingi"
+      ]
+    },
+    {
+      "id": "MEM-005",
+      "area": "Memory",
+      "title": "FTS bez embeddingów",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Przy nieskonfigurowanych embeddingach wyszukaj dokładne słowo z faktu QA",
+        "Sprawdź opis mechanizmu"
+      ],
+      "expected": [
+        "FTS działa i nie jest prezentowane jako gotowe wyszukiwanie semantyczne."
+      ],
+      "resources": "CPU; model embeddingów tylko po świadomej konfiguracji",
+      "minutes": 5,
+      "requirements": [
+        "MVP-121",
+        "embeddingi"
+      ]
+    },
+    {
+      "id": "MEM-006",
+      "area": "Memory",
+      "title": "Jawna konfiguracja embeddingów",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Otwórz przygotowanie lokalnego modelu Memory",
+        "Sprawdź model, rozmiar, urządzenie i zgodę na pobranie",
+        "Uruchom tylko po świadomym potwierdzeniu"
+      ],
+      "expected": [
+        "Nie ma ukrytego pobrania ani przejęcia GPU; postęp, błąd i gotowość są rzeczywiste."
+      ],
+      "resources": "CPU; model embeddingów tylko po świadomej konfiguracji",
+      "minutes": 5,
+      "requirements": [
+        "MVP-121",
+        "embeddingi"
+      ]
+    },
+    {
+      "id": "MEM-007",
+      "area": "Memory",
+      "title": "Polska semantyka",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Przy rzeczywistym skonfigurowanym modelu dodaj fakt QA o rowerowej wycieczce",
+        "Wyszukaj znaczeniowo: podróż na dwóch kółkach"
+      ],
+      "expected": [
+        "Pojawia się właściwy znaczeniowo fakt z pochodzeniem; to wynik prawdziwego modelu, nie samego FTS."
+      ],
+      "resources": "CPU; model embeddingów tylko po świadomej konfiguracji",
+      "minutes": 5,
+      "requirements": [
+        "MVP-121",
+        "embeddingi"
+      ]
+    },
+    {
+      "id": "MEM-008",
+      "area": "Memory",
+      "title": "Aktualność indeksu i restart",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Po zaindeksowaniu zmień treść pamięci QA",
+        "Sprawdź ponowne indeksowanie",
+        "Uruchom ponownie stację i powtórz zapytanie"
+      ],
+      "expected": [
+        "Nie wracają stare wektory ani treści; konfiguracja i gotowy indeks przetrwały restart."
+      ],
+      "resources": "CPU; model embeddingów tylko po świadomej konfiguracji",
+      "minutes": 5,
+      "requirements": [
+        "MVP-121",
+        "embeddingi"
+      ]
+    },
+    {
+      "id": "MEM-009",
+      "area": "Memory",
+      "title": "Stop indeksowania",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Uruchom indeksowanie jednorazowych wpisów QA",
+        "Użyj Stop",
+        "Sprawdź stan i późniejsze wznowienie"
+      ],
+      "expected": [
+        "Nie pozostaje osierocony proces CPU, a częściowe indeksowanie nie udaje pełnego pokrycia."
+      ],
+      "resources": "CPU; model embeddingów tylko po świadomej konfiguracji",
+      "minutes": 5,
+      "requirements": [
+        "MVP-121",
+        "embeddingi"
+      ]
+    },
+    {
+      "id": "MODEL-001",
+      "area": "Modele i runtime",
+      "title": "Odkrywanie plików",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Otwórz Models i uruchom dozwolone odkrywanie istniejących katalogów",
+        "Porównaj listę z własnymi znanymi modelami"
+      ],
+      "expected": [
+        "Pliki nie są przenoszone, zmieniane ani pobierane automatycznie."
+      ],
+      "resources": "GPU/CPU; istniejące modele; bez automatycznych dużych pobrań",
+      "minutes": 5,
+      "requirements": [
+        "MVP-122",
+        "llama.cpp"
+      ]
+    },
+    {
+      "id": "MODEL-002",
+      "area": "Modele i runtime",
+      "title": "Wybór z rejestru",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wybierz przygotowany lokalny model z listy",
+        "Sprawdź format, rozmiar i kompatybilny runtime"
+      ],
+      "expected": [
+        "Model plikowy, definicja i runtime nie są mylone; niezgodność ma czytelny opis."
+      ],
+      "resources": "GPU/CPU; istniejące modele; bez automatycznych dużych pobrań",
+      "minutes": 5,
+      "requirements": [
+        "MVP-122",
+        "llama.cpp"
+      ]
+    },
+    {
+      "id": "MODEL-003",
+      "area": "Modele i runtime",
+      "title": "Ładowanie na wiele GPU",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Dla obsługiwanego llama.cpp wybierz dostępny profil wielokartowy",
+        "Uruchom małe pytanie",
+        "Sprawdź alokację i kontekst"
+      ],
+      "expected": [
+        "Przydział odpowiada wykrytym GPU i rzeczywistemu kontekstowi; brak pamięci nie jest ukrywany."
+      ],
+      "resources": "GPU/CPU; istniejące modele; bez automatycznych dużych pobrań",
+      "minutes": 5,
+      "requirements": [
+        "MVP-122",
+        "llama.cpp"
+      ]
+    },
+    {
+      "id": "MODEL-004",
+      "area": "Modele i runtime",
+      "title": "Duży kontekst",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wybierz największy dostępny profil mieszczący model i kontekst w GPU",
+        "Sprawdź rzeczywisty limit",
+        "Użyj materiału QA w tym limicie"
+      ],
+      "expected": [
+        "UI nie obiecuje arbitralnych 100k tokenów bez zasobów; brak przyjęcia ma wyjaśnienie, a przyjęty profil działa."
+      ],
+      "resources": "GPU/CPU; istniejące modele; bez automatycznych dużych pobrań",
+      "minutes": 5,
+      "requirements": [
+        "MVP-122",
+        "llama.cpp"
+      ]
+    },
+    {
+      "id": "MODEL-005",
+      "area": "Modele i runtime",
+      "title": "Zwolnienie GPU",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Po zakończeniu testu zatrzymaj własny zarządzany model",
+        "Sprawdź System i spróbuj nowego zadania GPU QA"
+      ],
+      "expected": [
+        "Pamięć własnego runtime zostaje zwolniona; niezależny zewnętrzny runtime nie jest zatrzymany bez uprawnienia."
+      ],
+      "resources": "GPU/CPU; istniejące modele; bez automatycznych dużych pobrań",
+      "minutes": 5,
+      "requirements": [
+        "MVP-122",
+        "llama.cpp"
+      ]
+    },
+    {
+      "id": "LIB-001",
+      "area": "Library i Trash",
+      "title": "Import i szczegóły",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Nie usuwaj istniejących danych. Empty Trash wolno potwierdzić tylko przy koszu zawierającym wyłącznie przeznaczone do usunięcia pliki QA."
+      ],
+      "steps": [
+        "Dodaj neutralny obraz oraz mały plik danych QA do Library",
+        "Otwórz każdy szczegół",
+        "Sprawdź nazwę, typ i pochodzenie"
+      ],
+      "expected": [
+        "Podglądy i metadane odpowiadają właściwym plikom; oryginalne nazwy pozostają inspectowalne."
+      ],
+      "resources": "Wyłącznie jednorazowe pliki QA; usuwanie nieodwracalne",
+      "minutes": 5,
+      "requirements": [
+        "spec-42",
+        "trwałe usuwanie"
+      ]
+    },
+    {
+      "id": "LIB-002",
+      "area": "Library i Trash",
+      "title": "Nazwy i notatki",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Nie usuwaj istniejących danych. Empty Trash wolno potwierdzić tylko przy koszu zawierającym wyłącznie przeznaczone do usunięcia pliki QA."
+      ],
+      "steps": [
+        "Zmień tytuł i notatkę jednorazowego artefaktu",
+        "Odśwież stronę",
+        "Wyszukaj nowy tytuł"
+      ],
+      "expected": [
+        "Adnotacje są trwałe i nie nadpisują promptu ani historii generowania."
+      ],
+      "resources": "Wyłącznie jednorazowe pliki QA; usuwanie nieodwracalne",
+      "minutes": 5,
+      "requirements": [
+        "spec-42",
+        "trwałe usuwanie"
+      ]
+    },
+    {
+      "id": "LIB-003",
+      "area": "Library i Trash",
+      "title": "Filtry i kolejne strony",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Nie usuwaj istniejących danych. Empty Trash wolno potwierdzić tylko przy koszu zawierającym wyłącznie przeznaczone do usunięcia pliki QA."
+      ],
+      "steps": [
+        "Przefiltruj Library po typie i fragmencie nazwy",
+        "Załaduj kolejną stronę jeśli jest dostępna",
+        "Otwórz wynik"
+      ],
+      "expected": [
+        "Nie ma duplikatów; filtry i wynik wskazują te same artefakty."
+      ],
+      "resources": "Wyłącznie jednorazowe pliki QA; usuwanie nieodwracalne",
+      "minutes": 5,
+      "requirements": [
+        "spec-42",
+        "trwałe usuwanie"
+      ]
+    },
+    {
+      "id": "LIB-004",
+      "area": "Library i Trash",
+      "title": "Move to Trash i Restore",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Nie usuwaj istniejących danych. Empty Trash wolno potwierdzić tylko przy koszu zawierającym wyłącznie przeznaczone do usunięcia pliki QA."
+      ],
+      "steps": [
+        "Przenieś jednorazowy plik QA do Trash",
+        "Przywróć go",
+        "Otwórz plik i jego historię"
+      ],
+      "expected": [
+        "Operacja jest odwracalna, plik i historia pozostają nienaruszone."
+      ],
+      "resources": "Wyłącznie jednorazowe pliki QA; usuwanie nieodwracalne",
+      "minutes": 5,
+      "requirements": [
+        "spec-42",
+        "trwałe usuwanie"
+      ]
+    },
+    {
+      "id": "LIB-005",
+      "area": "Library i Trash",
+      "title": "Usunięcie bez kosza",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Nie usuwaj istniejących danych. Empty Trash wolno potwierdzić tylko przy koszu zawierającym wyłącznie przeznaczone do usunięcia pliki QA."
+      ],
+      "steps": [
+        "Na jednorazowym aktywnym pliku QA wybierz Delete permanently",
+        "Sprawdź nazwę i najpierw anuluj",
+        "Powtórz i potwierdź"
+      ],
+      "expected": [
+        "Anulowanie zachowuje plik, potwierdzenie usuwa go trwale; historia pokazuje jawny stan usunięcia."
+      ],
+      "resources": "Wyłącznie jednorazowe pliki QA; usuwanie nieodwracalne",
+      "minutes": 5,
+      "requirements": [
+        "spec-42",
+        "trwałe usuwanie"
+      ]
+    },
+    {
+      "id": "LIB-006",
+      "area": "Library i Trash",
+      "title": "Usunięcie jednego z Trash",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Nie usuwaj istniejących danych. Empty Trash wolno potwierdzić tylko przy koszu zawierającym wyłącznie przeznaczone do usunięcia pliki QA."
+      ],
+      "steps": [
+        "Utwórz dwa jednorazowe pliki QA i przenieś do Trash",
+        "Usuń trwale tylko jeden",
+        "Otwórz drugi"
+      ],
+      "expected": [
+        "Usunięty jest wyłącznie wskazany plik; drugi nadal można przywrócić."
+      ],
+      "resources": "Wyłącznie jednorazowe pliki QA; usuwanie nieodwracalne",
+      "minutes": 5,
+      "requirements": [
+        "spec-42",
+        "trwałe usuwanie"
+      ]
+    },
+    {
+      "id": "LIB-007",
+      "area": "Library i Trash",
+      "title": "Usunięcie zaznaczonych",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Nie usuwaj istniejących danych. Empty Trash wolno potwierdzić tylko przy koszu zawierającym wyłącznie przeznaczone do usunięcia pliki QA."
+      ],
+      "steps": [
+        "Zaznacz dwa spośród trzech plików QA w Trash",
+        "Sprawdź listę w potwierdzeniu",
+        "Potwierdź i sprawdź trzeci"
+      ],
+      "expected": [
+        "Operacja dotyczy dokładnie zaznaczonego zestawu; trzeci plik pozostaje."
+      ],
+      "resources": "Wyłącznie jednorazowe pliki QA; usuwanie nieodwracalne",
+      "minutes": 5,
+      "requirements": [
+        "spec-42",
+        "trwałe usuwanie"
+      ]
+    },
+    {
+      "id": "LIB-008",
+      "area": "Library i Trash",
+      "title": "Empty Trash całego kosza",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Nie usuwaj istniejących danych. Empty Trash wolno potwierdzić tylko przy koszu zawierającym wyłącznie przeznaczone do usunięcia pliki QA."
+      ],
+      "steps": [
+        "Upewnij się, że cały kosz zawiera wyłącznie jednorazowe pliki QA",
+        "Zastosuj filtr pokazujący tylko część",
+        "Wybierz Empty Trash i sprawdź pełną listę przed potwierdzeniem"
+      ],
+      "expected": [
+        "Liczba obejmuje cały kosz, a nie tylko stronę lub filtr; zakończenie ma rzeczywisty postęp i wynik."
+      ],
+      "resources": "Wyłącznie jednorazowe pliki QA; usuwanie nieodwracalne",
+      "minutes": 5,
+      "requirements": [
+        "spec-42",
+        "trwałe usuwanie"
+      ]
+    },
+    {
+      "id": "LIB-009",
+      "area": "Library i Trash",
+      "title": "Stare potwierdzenie",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Nie usuwaj istniejących danych. Empty Trash wolno potwierdzić tylko przy koszu zawierającym wyłącznie przeznaczone do usunięcia pliki QA."
+      ],
+      "steps": [
+        "Otwórz potwierdzenie usunięcia pliku QA",
+        "W drugiej karcie zmień jego tytuł",
+        "W pierwszej potwierdź starą operację"
+      ],
+      "expected": [
+        "Zmodyfikowany plik nie jest usunięty pod starym potwierdzeniem; błąd i możliwość ponownej oceny są czytelne."
+      ],
+      "resources": "Wyłącznie jednorazowe pliki QA; usuwanie nieodwracalne",
+      "minutes": 5,
+      "requirements": [
+        "spec-42",
+        "trwałe usuwanie"
+      ]
+    },
+    {
+      "id": "LIB-010",
+      "area": "Library i Trash",
+      "title": "Pochodzenie po usunięciu źródła",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Nie usuwaj istniejących danych. Empty Trash wolno potwierdzić tylko przy koszu zawierającym wyłącznie przeznaczone do usunięcia pliki QA."
+      ],
+      "steps": [
+        "Utwórz pochodny obraz z pliku QA",
+        "Usuń trwale wyłącznie źródło QA",
+        "Otwórz wynik i jego lineage"
+      ],
+      "expected": [
+        "Wynik pozostaje dostępny, a usunięte źródło ma jawny stan zamiast nieprawdziwego podglądu."
+      ],
+      "resources": "Wyłącznie jednorazowe pliki QA; usuwanie nieodwracalne",
+      "minutes": 5,
+      "requirements": [
+        "spec-42",
+        "trwałe usuwanie"
+      ]
+    },
+    {
+      "id": "LIB-011",
+      "area": "Library i Trash",
+      "title": "Stop usuwania",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Nie usuwaj istniejących danych. Empty Trash wolno potwierdzić tylko przy koszu zawierającym wyłącznie przeznaczone do usunięcia pliki QA."
+      ],
+      "steps": [
+        "Dla większego zestawu wyłącznie jednorazowych plików QA potwierdź usuwanie",
+        "Użyj Stop podczas postępu",
+        "Sprawdź usunięte i pozostałe elementy"
+      ],
+      "expected": [
+        "Zakończone usunięcia pozostają zakończone; późniejsze pliki nie znikają, a powtórka ma nowy przegląd zakresu."
+      ],
+      "resources": "Wyłącznie jednorazowe pliki QA; usuwanie nieodwracalne",
+      "minutes": 5,
+      "requirements": [
+        "spec-42",
+        "trwałe usuwanie"
+      ]
+    },
+    {
+      "id": "RUN-001",
+      "area": "Wykonania",
+      "title": "Historia każdego wykonania",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Uruchom zadanie QA w Chat i w Images",
+        "Otwórz odpowiadające im Runs",
+        "Sprawdź model, parametry, zdarzenia i artefakty"
+      ],
+      "expected": [
+        "Wykonania są trwałe i powiązane z właściwymi zadaniami oraz wynikami."
+      ],
+      "resources": "CPU/GPU zależnie od wybranego zadania QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-115",
+        "trwałe Run/Events/Artifacts"
+      ]
+    },
+    {
+      "id": "RUN-002",
+      "area": "Wykonania",
+      "title": "Kolejka i postęp",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Uruchom dwa zadania QA wymagające tego samego zajętego zasobu",
+        "Obserwuj statusy i powód oczekiwania"
+      ],
+      "expected": [
+        "Nie ma podwójnego ciężkiego przydziału do tego samego GPU; oczekiwanie ma rzeczywisty opis."
+      ],
+      "resources": "CPU/GPU zależnie od wybranego zadania QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-115",
+        "trwałe Run/Events/Artifacts"
+      ]
+    },
+    {
+      "id": "RUN-003",
+      "area": "Wykonania",
+      "title": "Anulowanie w kolejce",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Wstrzymaj oczekujące zadanie QA przed startem",
+        "Sprawdź historię i późniejszą kolejkę"
+      ],
+      "expected": [
+        "Anulowane zadanie nie startuje później samoczynnie i nie tworzy pozornego wyniku."
+      ],
+      "resources": "CPU/GPU zależnie od wybranego zadania QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-115",
+        "trwałe Run/Events/Artifacts"
+      ]
+    },
+    {
+      "id": "RUN-004",
+      "area": "Wykonania",
+      "title": "Błąd i świadome ponowienie",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Otwórz nieudane jednorazowe wykonanie QA",
+        "Sprawdź błąd",
+        "Użyj dostępnego bezpiecznego retry i porównaj historię"
+      ],
+      "expected": [
+        "Retry jest osobnym inspectowalnym wykonaniem albo wymaga przeglądu; stary błąd nie jest ukrywany."
+      ],
+      "resources": "CPU/GPU zależnie od wybranego zadania QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-115",
+        "trwałe Run/Events/Artifacts"
+      ]
+    },
+    {
+      "id": "RUN-005",
+      "area": "Wykonania",
+      "title": "Restart podczas pracy",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "W odizolowanej instancji QA uruchom dłuższe zadanie",
+        "Przerwij i przywróć kontroler zgodnie z instrukcją",
+        "Sprawdź odzyskiwanie"
+      ],
+      "expected": [
+        "Nie ma ślepego powtórzenia zewnętrznych skutków; stan procesu i potrzeba inspekcji są jawne."
+      ],
+      "resources": "CPU/GPU zależnie od wybranego zadania QA",
+      "minutes": 5,
+      "requirements": [
+        "MVP-115",
+        "trwałe Run/Events/Artifacts"
+      ]
+    },
+    {
+      "id": "CONNECT-001",
+      "area": "Połączenia",
+      "title": "Stan bez konfiguracji",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Przypadki wymagające własnego konta wykonuj dopiero po jego świadomej konfiguracji; brak warunku zapisz jako Zablokowany."
+      ],
+      "steps": [
+        "Otwórz integracje bez wprowadzania kluczy",
+        "Sprawdź dostępne i nieskonfigurowane połączenia"
+      ],
+      "expected": [
+        "Niedostępne usługi nie mają fikcyjnego zielonego statusu i nie ujawniają sekretów."
+      ],
+      "resources": "Własne konto testowe; niektóre przypadki wymagają SMTP/GitHub",
+      "minutes": 5,
+      "requirements": [
+        "spec-85",
+        "jawne uprawnienia"
+      ]
+    },
+    {
+      "id": "CONNECT-002",
+      "area": "Połączenia",
+      "title": "Publiczne API GET",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Przypadki wymagające własnego konta wykonuj dopiero po jego świadomej konfiguracji; brak warunku zapisz jako Zablokowany."
+      ],
+      "steps": [
+        "Skonfiguruj dozwolone publiczne testowe API tylko do odczytu",
+        "Podłącz je jawnie do agenta QA",
+        "Otwórz wynik i pochodzenie"
+      ],
+      "expected": [
+        "Agent otrzymuje zweryfikowane dane tego połączenia, a nie ukryte uprawnienie do dowolnej sieci."
+      ],
+      "resources": "Własne konto testowe; niektóre przypadki wymagają SMTP/GitHub",
+      "minutes": 5,
+      "requirements": [
+        "spec-85",
+        "jawne uprawnienia"
+      ]
+    },
+    {
+      "id": "CONNECT-003",
+      "area": "Połączenia",
+      "title": "Mail z przeglądem",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Przypadki wymagające własnego konta wykonuj dopiero po jego świadomej konfiguracji; brak warunku zapisz jako Zablokowany."
+      ],
+      "steps": [
+        "Na własnym testowym koncie SMTP i własnym odbiorcy przygotuj raport QA",
+        "Przejrzyj nadawcę, odbiorcę i załączniki",
+        "Jawnie zatwierdź dostarczenie"
+      ],
+      "expected": [
+        "Raport i wysyłka mają oddzielne stany; dociera właściwa treść, bez sekretów w logach."
+      ],
+      "resources": "Własne konto testowe; niektóre przypadki wymagają SMTP/GitHub",
+      "minutes": 5,
+      "requirements": [
+        "spec-85",
+        "jawne uprawnienia"
+      ]
+    },
+    {
+      "id": "CONNECT-004",
+      "area": "Połączenia",
+      "title": "GitHub tylko do odczytu",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
+        "Przypadki wymagające własnego konta wykonuj dopiero po jego świadomej konfiguracji; brak warunku zapisz jako Zablokowany."
+      ],
+      "steps": [
+        "Przy własnym skonfigurowanym połączeniu wybierz testowe repozytorium i dozwolony raport",
+        "Uruchom agenta QA"
+      ],
+      "expected": [
+        "Raport ma rzeczywiste źródło; sam odczyt nie daje praw do push, merge ani innych repozytoriów."
+      ],
+      "resources": "Własne konto testowe; niektóre przypadki wymagają SMTP/GitHub",
+      "minutes": 5,
+      "requirements": [
+        "spec-85",
+        "jawne uprawnienia"
+      ]
+    },
+    {
+      "id": "SYSTEM-001",
+      "area": "System i ustawienia",
+      "title": "GPU, CPU i RAM",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Otwórz System",
+        "Sprawdź rzeczywiście wykryte urządzenia i metryki",
+        "Odśwież podczas zadania QA"
+      ],
+      "expected": [
+        "Wartości się aktualizują; nieobsługiwane czujniki nie pokazują wymyślonych danych."
+      ],
+      "resources": "Odczyt rzeczywistego stanu; bez zmian sterowników",
+      "minutes": 5,
+      "requirements": [
+        "MVP-112",
+        "MVP-123"
+      ]
+    },
+    {
+      "id": "SYSTEM-002",
+      "area": "System i ustawienia",
+      "title": "Diagnostyka",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Otwórz Diagnostics",
+        "Sprawdź Host Runner, Docker, modele i integracje",
+        "Otwórz opis niedostępnego elementu"
+      ],
+      "expected": [
+        "Status odzwierciedla dostępność; diagnostyka niczego samoczynnie nie instaluje ani nie zmienia sterowników."
+      ],
+      "resources": "Odczyt rzeczywistego stanu; bez zmian sterowników",
+      "minutes": 5,
+      "requirements": [
+        "MVP-112",
+        "MVP-123"
+      ]
+    },
+    {
+      "id": "SYSTEM-003",
+      "area": "System i ustawienia",
+      "title": "System kontra Settings",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Przełącz System i Settings",
+        "Znajdź telemetrykę oraz ustawienia dostępu i integracji"
+      ],
+      "expected": [
+        "Strony mają różne zadania i nie są duplikatem tej samej zawartości."
+      ],
+      "resources": "Odczyt rzeczywistego stanu; bez zmian sterowników",
+      "minutes": 5,
+      "requirements": [
+        "MVP-112",
+        "MVP-123"
+      ]
+    },
+    {
+      "id": "UX-001",
+      "area": "UX i urządzenia",
+      "title": "Telefon",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Na telefonie otwórz Chat, Agents, Library i dialog potwierdzenia",
+        "Wyślij wiadomość i zamknij dialog bez akcji"
+      ],
+      "expected": [
+        "Główne przyciski i tekst są dostępne bez poziomego przewijania; klawiatura nie zasłania trwale wysyłania."
+      ],
+      "resources": "Desktop oraz telefon w tej samej sieci",
+      "minutes": 5,
+      "requirements": [
+        "spec-21",
+        "spec-91"
+      ]
+    },
+    {
+      "id": "UX-002",
+      "area": "UX i urządzenia",
+      "title": "Klawiatura i fokus",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Przejdź Tabem po głównym widoku",
+        "Otwórz i zamknij dialog Escape",
+        "Sprawdź command palette"
+      ],
+      "expected": [
+        "Fokus jest widoczny, dialog go zachowuje i oddaje; podstawowe działania działają bez myszy."
+      ],
+      "resources": "Desktop oraz telefon w tej samej sieci",
+      "minutes": 5,
+      "requirements": [
+        "spec-21",
+        "spec-91"
+      ]
+    },
+    {
+      "id": "UX-003",
+      "area": "UX i urządzenia",
+      "title": "Ładowanie i puste stany",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Otwórz pusty nowy obszar QA i rozpocznij zadanie",
+        "Obserwuj oczekiwanie, wykonanie i zakończenie"
+      ],
+      "expected": [
+        "Stany są czytelne, a brak wyniku nie jest prezentowany jako sukces."
+      ],
+      "resources": "Desktop oraz telefon w tej samej sieci",
+      "minutes": 5,
+      "requirements": [
+        "spec-21",
+        "spec-91"
+      ]
+    },
+    {
+      "id": "UX-004",
+      "area": "UX i urządzenia",
+      "title": "Czytelność rozmowy",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
+      ],
+      "steps": [
+        "Prowadź dłuższą rozmowę z kodem, źródłami i artefaktem",
+        "Wróć do starszego pytania i ponownie do końca"
+      ],
+      "expected": [
+        "Historia jest główną przestrzenią, treści są czytelne i nie giną pod panelami technicznymi."
+      ],
+      "resources": "Desktop oraz telefon w tej samej sieci",
+      "minutes": 5,
+      "requirements": [
+        "spec-21",
+        "spec-91"
+      ]
+    },
+    {
+      "id": "CHAT-011",
+      "area": "Chat",
+      "title": "Obsługiwane ustawienia generowania",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; własna sesja operatora i wyłącznie jednorazowe dane QA.",
+        "Wymagane konto lub model muszą być świadomie przygotowane; w przeciwnym razie zapisz Zablokowany i powód."
+      ],
+      "steps": [
+        "Wybierz model i otwórz ustawienia odpowiedzi.",
+        "Zmień dostępną temperaturę lub limit odpowiedzi; reasoning tylko jeśli dany model rzeczywiście go obsługuje.",
+        "Wyślij krótkie pytanie i sprawdź zapisane parametry."
+      ],
+      "expected": [
+        "UI udostępnia tylko rzeczywiście wspierane opcje, a wykonanie ma wybrane wartości."
+      ],
+      "resources": "Lokalny LLM",
+      "minutes": 10,
+      "requirements": [
+        "MVP-113"
+      ]
+    },
+    {
+      "id": "WEB-007",
+      "area": "Internet",
+      "title": "Ochrona usług lokalnych",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; własna sesja operatora i wyłącznie jednorazowe dane QA.",
+        "Wymagane konto lub model muszą być świadomie przygotowane; w przeciwnym razie zapisz Zablokowany i powód."
+      ],
+      "steps": [
+        "W publicznym odczycie WWW podaj http://127.0.0.1:8765/api/health.",
+        "Sprawdź komunikat i historię próby."
+      ],
+      "expected": [
+        "Publiczny tool WWW odmawia sięgnięcia do chronionego lokalnego celu; nie przekazuje modelowi danych usługi."
+      ],
+      "resources": "CPU; próba odczytu tylko własnej AI Station",
+      "minutes": 10,
+      "requirements": [
+        "spec-87"
+      ]
+    },
+    {
+      "id": "DATA-008",
+      "area": "Pliki i analiza",
+      "title": "Dokument tekstowy lub PDF",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; własna sesja operatora i wyłącznie jednorazowe dane QA.",
+        "Wymagane konto lub model muszą być świadomie przygotowane; w przeciwnym razie zapisz Zablokowany i powód."
+      ],
+      "steps": [
+        "Dołącz własny mały dokument QA z dwoma znanymi faktami.",
+        "Poproś o podsumowanie obu faktów i wskazanie źródła."
+      ],
+      "expected": [
+        "Treść pochodzi z właściwego dokumentu; brak obsługi lub uszkodzony plik ma jawny komunikat."
+      ],
+      "resources": "CPU; neutralny plik QA",
+      "minutes": 10,
+      "requirements": [
+        "agent-first; załączniki"
+      ]
+    },
+    {
+      "id": "PROJECT-001",
+      "area": "Projekty",
+      "title": "Nowy projekt tylko z nazwy",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; własna sesja operatora i wyłącznie jednorazowe dane QA.",
+        "Wymagane konto lub model muszą być świadomie przygotowane; w przeciwnym razie zapisz Zablokowany i powód."
+      ],
+      "steps": [
+        "W Projects wybierz utworzenie nowego projektu QA.",
+        "Podaj nazwę QA-projekt i wybierz odpowiedni dostępny profil.",
+        "Otwórz utworzony projekt i szczegóły przygotowania."
+      ],
+      "expected": [
+        "Standardowa ścieżka nie wymaga ręcznego podawania ścieżki repozytorium; powstaje własny folder i repo, a środowisko odpowiada profilowi."
+      ],
+      "resources": "CPU; nowy prywatny projekt QA",
+      "minutes": 10,
+      "requirements": [
+        "MVP-116; agent-first"
+      ]
+    },
+    {
+      "id": "PROJECT-002",
+      "area": "Projekty",
+      "title": "Istniejące repo jako ustawienie zaawansowane",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; własna sesja operatora i wyłącznie jednorazowe dane QA.",
+        "Wymagane konto lub model muszą być świadomie przygotowane; w przeciwnym razie zapisz Zablokowany i powód."
+      ],
+      "steps": [
+        "W zaawansowanym dodawaniu wskaż wyłącznie własne testowe repo QA w dozwolonym katalogu.",
+        "Sprawdź branch i status po rejestracji."
+      ],
+      "expected": [
+        "Repozytorium jest zweryfikowane bez modyfikowania jego roboczych plików; niedozwolona ścieżka ma jawny błąd."
+      ],
+      "resources": "CPU; testowe repo QA",
+      "minutes": 10,
+      "requirements": [
+        "MVP-116"
+      ]
+    },
+    {
+      "id": "PROJECT-003",
+      "area": "Projekty",
+      "title": "Prywatna praca i walidacja",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; własna sesja operatora i wyłącznie jednorazowe dane QA.",
+        "Wymagane konto lub model muszą być świadomie przygotowane; w przeciwnym razie zapisz Zablokowany i powód."
+      ],
+      "steps": [
+        "Dla projektu QA zleć lokalnemu agentowi prostą zmianę pliku.",
+        "Otwórz diff i wyniki skonfigurowanej walidacji.",
+        "Porównaj z oryginalnym checkoutem."
+      ],
+      "expected": [
+        "Praca i wyniki walidacji są zachowane w prywatnym workspace; aktywny checkout nie zmienia się bez świadomego zastosowania."
+      ],
+      "resources": "CPU/LLM; własny projekt QA",
+      "minutes": 10,
+      "requirements": [
+        "spec-55; agent-first"
+      ]
+    },
+    {
+      "id": "PROJECT-004",
+      "area": "Projekty",
+      "title": "Ochrona gałęzi i zachowanie wcześniejszych prac",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; własna sesja operatora i wyłącznie jednorazowe dane QA.",
+        "Wymagane konto lub model muszą być świadomie przygotowane; w przeciwnym razie zapisz Zablokowany i powód."
+      ],
+      "steps": [
+        "W testowym projekcie QA przejrzyj zaawansowane zasady gałęzi.",
+        "Otwórz istniejącą historię zadania kodującego i jego przegląd."
+      ],
+      "expected": [
+        "Zasady i historyczne wyniki są zachowane; agent nie otrzymuje ukrytego prawa do push lub merge na chronioną gałąź."
+      ],
+      "resources": "Odczyt istniejących danych QA; bez zewnętrznej sesji kodującej",
+      "minutes": 10,
+      "requirements": [
+        "spec-57; agent-first"
+      ]
+    },
+    {
+      "id": "AGENT-011",
+      "area": "Agenci",
+      "title": "Skill a uprawnienia",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; własna sesja operatora i wyłącznie jednorazowe dane QA.",
+        "Wymagane konto lub model muszą być świadomie przygotowane; w przeciwnym razie zapisz Zablokowany i powód."
+      ],
+      "steps": [
+        "Wybierz istniejący dostępny Skill w szkicu agenta QA.",
+        "Sprawdź osobno jego narzędzia i uprawnienia.",
+        "Uruchom proste zadanie po świadomym przeglądzie."
+      ],
+      "expected": [
+        "Skill ma widoczne pochodzenie i nie daje automatycznie dodatkowej władzy nad plikami, siecią lub mailem."
+      ],
+      "resources": "Lokalny LLM; Skill przygotowany w repo",
+      "minutes": 10,
+      "requirements": [
+        "spec-88; spec-65"
+      ]
+    },
+    {
+      "id": "AGENT-012",
+      "area": "Agenci",
+      "title": "Media jako wynik trwałego agenta",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; własna sesja operatora i wyłącznie jednorazowe dane QA.",
+        "Wymagane konto lub model muszą być świadomie przygotowane; w przeciwnym razie zapisz Zablokowany i powód."
+      ],
+      "steps": [
+        "Przygotuj agenta tworzącego neutralny obraz QA z gotowego lokalnego modelu.",
+        "Przejrzyj model, źródła, budżet i narzędzia.",
+        "Uruchom i otwórz jego końcowy artefakt w rozmowie oraz Library."
+      ],
+      "expected": [
+        "Agent rzeczywiście uruchamia media; sama publikacja planu nie jest przedstawiona jako gotowy obraz."
+      ],
+      "resources": "GPU; przygotowany model obrazu",
+      "minutes": 10,
+      "requirements": [
+        "MVP-120; wspólne media"
+      ]
+    },
+    {
+      "id": "AGENT-013",
+      "area": "Agenci",
+      "title": "Wynik agenta z załącznikiem maila",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja AI Station; własna sesja operatora i wyłącznie jednorazowe dane QA.",
+        "Wymagane konto lub model muszą być świadomie przygotowane; w przeciwnym razie zapisz Zablokowany i powód."
+      ],
+      "steps": [
+        "Na własnym skonfigurowanym koncie testowym przygotuj agenta tworzącego mały CSV QA.",
+        "W przeglądzie dostarczenia sprawdź właściwy wynikowy plik i odbiorcę.",
+        "Jawnie zatwierdź wysyłkę i sprawdź odebrany załącznik."
+      ],
+      "expected": [
+        "Dociera zweryfikowany wynik, nie źródłowy prywatny plik ani kod; generowanie i mail mają oddzielne stany."
+      ],
+      "resources": "CPU; własny SMTP i odbiorca; świadoma zgoda na wysyłkę",
+      "minutes": 10,
+      "requirements": [
+        "wyniki agenta; email"
+      ]
+    }
+  ]
+}
