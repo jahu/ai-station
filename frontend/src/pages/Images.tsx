@@ -13,6 +13,10 @@ import { Button } from "../components/ui/button";
 import LibraryPicker from "../components/media/LibraryPicker";
 import MediaResult from "../components/media/MediaResult";
 import {
+  PromptTranslationControl,
+  type TranslationOptions,
+} from "../components/media/PromptTranslation";
+import {
   mediaBusy,
   useMediaRun,
   useImageWorkflow,
@@ -136,6 +140,11 @@ function ImageForm({
     queryKey: ["image-models"],
     queryFn: () => api<ImageModelCatalog>("/images/models"),
   });
+  const [translation, setTranslation] = useState<TranslationOptions>({
+    mode: "inherit",
+    review: false,
+    protected_terms: [],
+  });
   const choiceId =
     choices[mode] ??
     catalog.data?.defaults.choices[mode] ??
@@ -255,6 +264,13 @@ function ImageForm({
         input_artifact_ids: mode === "t2i" ? [] : ids,
         upscale_result: mode !== "upscale" && upscaleResult,
       };
+      if (
+        mode !== "upscale" &&
+        (translation.mode !== "inherit" ||
+          translation.review ||
+          translation.protected_terms.length)
+      )
+        parameters.translation = translation;
       if (selectedModel.definition_id)
         parameters.model_id = selectedModel.definition_id;
       if (mode === "t2i" || mode === "recompose")
@@ -302,6 +318,15 @@ function ImageForm({
       run.data?.parameters?.upscale_result || run.data?.parameters?.video_prompt
     ) &&
       workflow.isPending);
+  const promptStatus = (
+    run.data?.metadata?.prompt_translation as { status: string } | undefined
+  )?.status;
+  const generationProgress =
+    promptStatus === "waiting_for_review"
+      ? "Waiting for prompt review"
+      : promptStatus === "queued"
+        ? "Preparing prompt…"
+        : "Generating…";
   const oversized =
     mode === "upscale" && source?.metadata.width && source.metadata.height
       ? source.metadata.width * source.metadata.height * 16 > 64 * 1024 * 1024
@@ -570,6 +595,13 @@ function ImageForm({
                 </label>
               )}
               {mode !== "upscale" && (
+                <PromptTranslationControl
+                  value={translation}
+                  onChange={setTranslation}
+                  disabled={busy}
+                />
+              )}
+              {mode !== "upscale" && (
                 <label className="image-workflow-option">
                   <input
                     type="checkbox"
@@ -616,7 +648,9 @@ function ImageForm({
                 }
               >
                 <Sparkles size={16} />
-                {busy ? "Generating…" : `Queue ${modes[mode].toLowerCase()}`}
+                {busy
+                  ? generationProgress
+                  : `Queue ${modes[mode].toLowerCase()}`}
               </Button>
             </section>
             <aside className="panel content-panel image-form">

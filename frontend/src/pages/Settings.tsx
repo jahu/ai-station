@@ -9,10 +9,12 @@ import ChatModeSwitch, { type ChatMode } from "./ChatModeSwitch";
 import Connectors from "./Connectors";
 import Maintenance from "./Maintenance";
 import OperatorAccess from "./OperatorAccess";
+import GenerationSettings from "./GenerationSettings";
 import UnifiedModelPicker, { type Catalog } from "./UnifiedModelPicker";
 
 const sections = [
   ["general", "General"],
+  ["generation", "Generation"],
   ["providers", "Providers"],
   ["integrations", "Integrations"],
   ["access", "Access"],
@@ -46,6 +48,7 @@ export default function Settings() {
       </nav>
       <div className="settings-content">
         {section === "general" && <GeneralSettings />}
+        {section === "generation" && <GenerationSettings />}
         {section === "providers" && <ChatProviders />}
         {section === "integrations" && <Connectors />}
         {section === "access" && <OperatorAccess />}

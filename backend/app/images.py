@@ -4,12 +4,13 @@ import io
 import tempfile
 import warnings
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from PIL import Image, UnidentifiedImageError
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -40,13 +41,48 @@ def image_workflow(run_id: UUID, session: DB):
     return workflow_steps(session, run_id, {"photo_pipe", "wan_video"})
 
 
+class ImageRetry(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    translation: Literal["reuse", "retry", "original"] = "reuse"
+    client_request_id: UUID | None = None
+
+
 @router.post("/images/runs/{run_id}/retry", status_code=202)
-def retry_image(run_id: UUID, session: DB):
+def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
+    body = body or ImageRetry()
     original = session.get(Run, str(run_id))
     if original is None:
         raise HTTPException(404, "Run not found")
     if original.executor_type != "photo_pipe" or original.status not in {"failed", "canceled", "interrupted"}:
         raise HTTPException(409, "Only finished unsuccessful image runs can be retried")
+    identity = {"id": str(body.client_request_id), "translation": body.translation}
+
+    def existing_retry():
+        child = session.scalar(
+            select(Run).where(Run.parent_run_id == original.id, Run.executor_type == "photo_pipe")
+        )
+        if child is not None:
+            if body.client_request_id and child.metadata_json.get("image_retry_request") == identity:
+                return child
+            raise HTTPException(409, "This run already has a retry; inspect that run instead")
+        return None
+
+    if existing := existing_retry():
+        return run_dict(existing)
+    receipt = original.metadata_json.get("prompt_translation")
+    if body.translation != "reuse" and not receipt:
+        raise HTTPException(409, "This image has no translation to resolve")
+    if receipt and body.translation == "reuse" and receipt.get("status") not in {"ready", "original"}:
+        raise HTTPException(409, "Translation did not complete. Choose Retry translation or Use original")
+    if receipt and body.translation == "reuse":
+        from app.media_translation import validate_media_translation
+
+        try:
+            validate_media_translation(session, original)
+        except (ValueError, OSError) as exc:
+            raise HTTPException(
+                409, "The saved translation receipt is unavailable. Choose Retry translation or Use original"
+            ) from exc
     session.commit()
     try:
         info = RunnerClient().inspect_process(original.id)
@@ -58,9 +94,8 @@ def retry_image(run_id: UUID, session: DB):
         if exc.status_code != 404:
             raise HTTPException(409, "Cannot confirm original process has stopped") from exc
     session.refresh(original)
-    child = session.scalar(select(Run).where(Run.parent_run_id == original.id))
-    if child is not None:
-        raise HTTPException(409, "This run already has a retry; inspect that run instead")
+    if existing := existing_retry():
+        return run_dict(existing)
     for relative in original.parameters.get("inputs", []):
         if not safe_join(get_settings().data_dir, relative).is_file():
             raise HTTPException(422, "A source image is missing")
@@ -72,13 +107,48 @@ def retry_image(run_id: UUID, session: DB):
         capability=original.capability,
         executor_type="photo_pipe",
         execution_target="host",
-        parameters=original.parameters,
+        parameters={
+            **original.parameters,
+            **(receipt["original"] if receipt and body.translation != "reuse" else {}),
+        },
         requested_gpu=original.requested_gpu,
         requested_resources=original.requested_resources,
         permissions=original.effective_permissions,
         retry_class="safe",
         parent_run_id=original.id,
+        metadata={
+            "image_retry_request": identity,
+            **({"prompt_translation": receipt} if receipt and body.translation == "reuse" else {}),
+        },
     )
+    if receipt and body.translation == "retry":
+        from app.media_translation import enqueue_translation
+
+        enqueue_translation(
+            session, retry, {**receipt.get("options", {}), "mode": "on"}, policy=receipt["policy"]
+        )
+    elif receipt and body.translation == "original":
+        original_receipt = {
+            key: value for key, value in receipt.items() if key not in {"artifact_id", "artifact_sha256"}
+        }
+        retry.parameters = {
+            **retry.parameters,
+            "translation": {**receipt.get("options", {}), "mode": "off", "review": False},
+        }
+        retry.metadata_json = {
+            **retry.metadata_json,
+            "prompt_translation": {
+                **original_receipt,
+                "status": "original",
+                "effective": receipt["original"],
+                "bypass_of": original.id,
+            },
+        }
+        from app.events import append_event
+
+        append_event(
+            session, retry.id, "media.translation.bypassed", {"original_run_id": original.id, "by": "user"}
+        )
     original.metadata_json = {**original.metadata_json, "retry_run_id": retry.id}
     session.commit()
     return run_dict(retry)
@@ -179,6 +249,9 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
         retry_class="safe",
         parent_run_id=parent_run_id,
     )
+    from app.media_translation import enqueue_translation
+
+    enqueue_translation(session, run, body.translation)
     return run
 
 

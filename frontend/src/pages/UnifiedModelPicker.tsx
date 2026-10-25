@@ -60,6 +60,7 @@ export default function UnifiedModelPicker({
   location,
   busy,
   onSelect,
+  allowedProvider,
 }: {
   providerKey: string;
   modelKey: string;
@@ -67,6 +68,7 @@ export default function UnifiedModelPicker({
   busy?: boolean;
   onSelect: (choice: CatalogModel) => void;
   location?: "local" | "external";
+  allowedProvider?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -87,7 +89,9 @@ export default function UnifiedModelPicker({
     staleTime: 30000,
   });
   const data = discovered.data ?? catalog.data;
-  const models = data?.models ?? [];
+  const models = (data?.models ?? []).filter(
+    (item) => !allowedProvider || item.provider_key === allowedProvider,
+  );
   const selected = models.find(
     (item) => item.provider_key === providerKey && item.model_key === modelKey,
   );
@@ -190,12 +194,17 @@ export default function UnifiedModelPicker({
                     (item) => item.runtime_kind === kind,
                   );
                   const providers =
-                    data?.providers?.filter((provider) =>
-                      kind === "external"
-                        ? provider.location === "external"
-                        : kind === "local-server" &&
-                          provider.location === "local",
-                    ) ?? [];
+                    data?.providers
+                      ?.filter(
+                        (provider) =>
+                          !allowedProvider || provider.key === allowedProvider,
+                      )
+                      .filter((provider) =>
+                        kind === "external"
+                          ? provider.location === "external"
+                          : kind === "local-server" &&
+                            provider.location === "local",
+                      ) ?? [];
                   if (!entries.length && !providers.length) return null;
                   return (
                     <section

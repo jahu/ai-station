@@ -106,6 +106,12 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Optional image translation has no tools or external-AI permission. Source-bound
+text placeholders and a checked field allowlist prevent model output from changing
+references or execution settings. Media waits for preparation/review; Stop and
+model-startup cancellation preserve unrelated/shared work. No new native authority.
+[Contracts](plans/media-prompt-translation-implementation.md).
+
 Dictation grants only the existing recording-read/transcript-write permissions.
 Audio remains in the owned local CPU process; recognized text cannot execute
 tools before an ordinary explicit Send. Draft races require a user choice;

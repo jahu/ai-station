@@ -26,6 +26,10 @@ import { useListKeyboard } from "./useListKeyboard";
 import { ArtifactLineage } from "./ArtifactLineage";
 import { artifactName } from "./artifactName";
 import { PurgeActivity, PurgeButton } from "./LibraryPurge";
+import {
+  PromptReceipt,
+  type TranslationReceipt,
+} from "../components/media/PromptTranslation";
 
 export function ArtifactCards({
   artifacts,
@@ -452,8 +456,15 @@ export function ArtifactDetail() {
     queryFn: () => api<Artifact>(`/artifacts/${id}`),
   });
   const a = query.data;
+  const translation = a?.metadata.prompt_translation as
+    TranslationReceipt | undefined;
   const prompt =
-    a?.metadata.edit_prompt || a?.metadata.prompt || a?.metadata.text || "";
+    translation?.original.edit_prompt ||
+    translation?.original.prompt ||
+    a?.metadata.edit_prompt ||
+    a?.metadata.prompt ||
+    a?.metadata.text ||
+    "";
   return (
     <>
       <Link className="back-link" to="/library">
@@ -621,6 +632,7 @@ export function ArtifactDetail() {
                   </Button>
                 </>
               )}
+              {translation && <PromptReceipt receipt={translation} />}
               {a.run_id && (
                 <p>
                   <Link to={`/runs/${a.run_id}`}>Inspect source run →</Link>

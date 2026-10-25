@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
   "sources": [
     "docs/product-completion.md",
@@ -7,7 +7,8 @@
     "docs/plans/agent-first-product.md",
     "docs/plans/library-permanent-deletion.md",
     "docs/plans/memory-embeddings-readiness.md",
-    "docs/plans/prompt-translation-and-dictation.md"
+    "docs/plans/prompt-translation-and-dictation.md",
+    "docs/plans/media-prompt-translation-implementation.md"
   ],
   "cases": [
     {
@@ -3122,6 +3123,201 @@
       "minutes": 3,
       "requirements": [
         "CHAT-DICTATION"
+      ]
+    },
+    {
+      "id": "TRANS-001",
+      "area": "Obrazy",
+      "title": "Domyślnie bez tłumaczenia",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja z ukończoną translacją; lokalny LLM i silnik obrazów; jednorazowe neutralne dane QA."
+      ],
+      "steps": [
+        "W Settings → Generation sprawdź Translate media prompts",
+        "Przy wyłączonym ustawieniu utwórz neutralny obraz QA"
+      ],
+      "expected": [
+        "Ustawienie domyślnie jest wyłączone; nie powstaje Run tłumacza; oryginalny prompt zostaje zachowany."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
+      ]
+    },
+    {
+      "id": "TRANS-002",
+      "area": "Obrazy",
+      "title": "Lokalny model i pojedyncze nadpisanie",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja z ukończoną translacją; lokalny LLM i silnik obrazów; jednorazowe neutralne dane QA."
+      ],
+      "steps": [
+        "Wybierz lokalny translator z listy i zapisz ustawienie",
+        "W Images wybierz Keep original dla jednego zadania",
+        "Następnie wybierz Translate to English dla nowego zadania"
+      ],
+      "expected": [
+        "Tylko wskazane zadanie jest tłumaczone; brak ukrytego pobierania lub wywołań zewnętrznego AI; zwykły Chat działa bez globalnego tłumaczenia."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
+      ]
+    },
+    {
+      "id": "TRANS-003",
+      "area": "Obrazy",
+      "title": "Polski prompt i tekst na obrazie",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja z ukończoną translacją; lokalny LLM i silnik obrazów; jednorazowe neutralne dane QA."
+      ],
+      "steps": [
+        "Włącz tłumaczenie",
+        "Podaj polski opis i cytowany napis „Dzień dobry”, nazwę własną, liczby oraz znany trigger modelu",
+        "Sprawdź Prompt sent to model i oryginał w Library"
+      ],
+      "expected": [
+        "Instrukcja jest tłumaczona wiernie; cytat, wskazana chroniona nazwa, liczby i tokeny nie zmieniają się; oryginał i tekst efektywny są widoczne."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
+      ]
+    },
+    {
+      "id": "TRANS-004",
+      "area": "Obrazy",
+      "title": "Podgląd i edycja przed generowaniem",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja z ukończoną translacją; lokalny LLM i silnik obrazów; jednorazowe neutralne dane QA."
+      ],
+      "steps": [
+        "Włącz Review before generation i wyślij prompt",
+        "Sprawdź, że obraz jeszcze nie jest generowany",
+        "Zmień przygotowany tekst i kliknij Use translated prompt"
+      ],
+      "expected": [
+        "Generowanie czeka na świadomą akceptację; dokładnie zaakceptowany tekst jest zapisany w Run i Artifact; model tłumacza nie uruchamia się ponownie."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
+      ]
+    },
+    {
+      "id": "TRANS-005",
+      "area": "Obrazy",
+      "title": "Błąd i jawny oryginał",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja z ukończoną translacją; lokalny LLM i silnik obrazów; jednorazowe neutralne dane QA."
+      ],
+      "steps": [
+        "Na jednorazowym zadaniu QA wywołaj błąd tłumaczenia lub zatrzymaj je",
+        "Wybierz Retry translation, a w oddzielnej próbie Use original"
+      ],
+      "expected": [
+        "Błąd nie uruchamia obrazu z przypadkowym tekstem; ponowienie korzysta z zapisanej konfiguracji; użycie oryginału ma jawny ślad bez mylącego dowodu poprzedniego tłumaczenia."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
+      ]
+    },
+    {
+      "id": "TRANS-006",
+      "area": "Obrazy",
+      "title": "Stop i wspólny model",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja z ukończoną translacją; lokalny LLM i silnik obrazów; jednorazowe neutralne dane QA."
+      ],
+      "steps": [
+        "Zatrzymaj obraz podczas tłumaczenia lub przed akceptacją",
+        "Sprawdź Runy przygotowania, akceptacji i modelu",
+        "Nie zatrzymuj niezależnej pracy innej rozmowy"
+      ],
+      "expected": [
+        "Kończy się tylko własne przygotowanie; nieużywany rozruch tłumacza jest anulowany; współdzielony lub niezależnie uruchomiony model pozostaje chroniony."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
+      ]
+    },
+    {
+      "id": "TRANS-007",
+      "area": "Obrazy",
+      "title": "Edit i kolejność referencji",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja z ukończoną translacją; lokalny LLM i silnik obrazów; jednorazowe neutralne dane QA."
+      ],
+      "steps": [
+        "Użyj Edit, a następnie Recompose z dwiema neutralnymi referencjami QA",
+        "Porównaj original/effective prompt oraz kolejność wejść"
+      ],
+      "expected": [
+        "Tłumacz zmienia wyłącznie opis; referencje, role, model, wymiary, CFG, seed i GPU pozostają zgodne z wysłanym zadaniem."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
+      ]
+    },
+    {
+      "id": "TRANS-008",
+      "area": "Obrazy",
+      "title": "Ponowienie ze stałym promptem",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja z ukończoną translacją; lokalny LLM i silnik obrazów; jednorazowe neutralne dane QA."
+      ],
+      "steps": [
+        "Po przygotowaniu tłumaczenia zatrzymaj obraz",
+        "Zmień domyślnego tłumacza w Settings",
+        "Użyj zwykłego Retry as a new run, potem osobno Translate again"
+      ],
+      "expected": [
+        "Zwykłe ponowienie zachowuje zapisany prompt bez dodatkowego tłumaczenia; jawna ponowna translacja ma osobny Run i zamrożoną konfigurację."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
+      ]
+    },
+    {
+      "id": "TRANS-009",
+      "area": "Obrazy",
+      "title": "Oryginał i tłumaczenie na małym ekranie",
+      "priority": "P1",
+      "prerequisites": [
+        "Przekazana wersja z ukończoną translacją; lokalny LLM i silnik obrazów; jednorazowe neutralne dane QA."
+      ],
+      "steps": [
+        "Na telefonie otwórz Images i włącz podgląd tłumaczenia",
+        "Zatwierdź lub wybierz oryginał",
+        "Otwórz gotowy obraz w Library i skopiuj prompt"
+      ],
+      "expected": [
+        "Panel akceptacji jest łatwo dostępny bez przewijania na ślepo; przyciski nie wychodzą poza ekran; Library pokazuje oryginał i efektywny tekst, a Copy prompt kopiuje oryginał."
+      ],
+      "resources": "Lokalny LLM i GPU; bez płatnych API",
+      "minutes": 5,
+      "requirements": [
+        "MEDIA-PROMPT-TRANSLATION"
       ]
     }
   ]
