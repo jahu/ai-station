@@ -208,9 +208,10 @@ def test_attachment_authority_is_rechecked_after_smtp_connection(prepared, smtp,
 
 def test_stop_during_last_result_check_prevents_data_submission(prepared, smtp, monkeypatch):
     from app import agent_email_results
+    from app.db import session_factory
+    from app.engine import tick
     from app.models import Run
     from app.runs import request_cancel
-    from test_reviewed_email import step
 
     api, agent, did, rid, payload = prepared
     assert api.post(f"/api/runs/{rid}/approval", json={"resolution": "granted"}).status_code == 200
@@ -225,7 +226,9 @@ def test_stop_during_last_result_check_prevents_data_submission(prepared, smtp, 
         return value
 
     monkeypatch.setattr(agent_email_results, "result_snapshot", check)
-    step()
+    with session_factory()() as worker:
+        actual = tick(worker, "stop-during-final-email-check")
+        assert actual == rid, (actual, rid)
     assert not smtp[0].messages
     receipt = api.get("/api/email/deliveries").json()[0]
     assert receipt["state"] == "canceled", receipt
