@@ -1,3 +1,14 @@
+> #422 review follow-up: the compiled native CPU photo flow found generated
+> image paths use the owning Run UUID, while Vision verification required the
+> Artifact UUID used for uploads. The final reader permits only the exact successful
+> photo owner/capability plus confirmed dispatch/reaping and canonical Run filename;
+> all existing byte/hash/path checks remain. No file migration or native change.
+> Complete baseline3624 passes+nine opt-in skips and UI778 passed. Final eight
+> affected modules (including nine new native photo path tests), rebuilt image and
+> compiled16 Chat/Work desktop/mobile actions are being checked before merge.
+> Describe/Animate browser scope is typed selection/cancellation, not real inference;
+> Edit/Upscale use the native CPU test photo script, never GPU/cloud work.
+
 > Active candidate: [agent image actions](conversation-agent-image-actions.md),
 > `feat/conversation-agent-image-actions`, based on merged/qualified #421. Explicit
 > Edit/Upscale/Describe/Animate resolves an exact completed agent photo output;

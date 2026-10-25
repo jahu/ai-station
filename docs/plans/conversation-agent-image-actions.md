@@ -20,3 +20,11 @@ Trash, cross-conversation/forged links, byte changes at Send/dispatch, generic t
 follow-ups and explicit input precedence. Use normal fake executors and real PNG
 fixtures. Qualify compiled desktop/mobile interactions and review full gates
 before merge/rollout. Preserve native Runner, current models and all existing data.
+
+
+Generated photo files have a Run-owned UUID path, distinct from upload Artifact
+UUID paths. Accept that existing path only for the exact successful photo owner,
+confirmed dispatch/cleanup, matching image capability and canonical Run filename.
+The original byte/hash/symlink/size checks still apply. Do not rename, copy or
+migrate existing images. A compiled native CPU fixture exposed the original
+upload-only assumption; nine direct native photo path/ownership tests cover it.
