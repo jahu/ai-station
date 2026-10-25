@@ -54,8 +54,8 @@ inspection link, including when model preparation was required.
 Local qualification: all 3855 baseline CPU cases (3846 pass, nine expensive opt-in
 skips), final 54 outcome/data cases including three added inspection-link
 regressions, Ruff/format, and the full 806-test UI suite with format/lint/types/build.
-The final normal collection has 3858 cases: baseline nodes are preserved, only
-three cases were added, and the sole production delta after the full CPU baseline
+The final normal collection has 3858 cases: baseline test-function case counts are preserved, only
+three cases were added, and the sole Python production delta after the full CPU baseline
 is the verified outcome-link correction. No failing check is waived.
 
 The exact Docker image, normal/dev/private-LAN Compose and isolated-image fake
