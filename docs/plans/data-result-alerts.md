@@ -42,3 +42,35 @@ Run complete local gates, compiled desktop/mobile flows and bounded actual CPU/
 local-model acceptance with explicit provenance for any injected code generation.
 Review and squash a PR to develop, then qualify a data/auth/native/model/private-
 service-preserving controller rollout. Full-platform completion remains open.
+
+
+## Implementation and verification
+
+PR #432 implements the shared reviewed field, durable check, source/model/budget
+binding, comparison baseline and independent result/notification outcomes.
+Conversation execution receipts also expose the actual alert-check state and
+inspection link, including when model preparation was required.
+
+Local qualification: all 3855 baseline CPU cases (3846 pass, nine expensive opt-in
+skips), final 54 outcome/data cases including three added inspection-link
+regressions, Ruff/format, and the full 806-test UI suite with format/lint/types/build.
+The final normal collection has 3858 cases: baseline nodes are preserved, only
+three cases were added, and the sole production delta after the full CPU baseline
+is the verified outcome-link correction. No failing check is waived.
+
+The exact Docker image, normal/dev/private-LAN Compose and isolated-image fake
+API/worker/SQL/SSE/reopen pass. Compiled desktop/mobile settings save/reload/enable
+and four actual worker workflows retain analysis and match/suppress notifications;
+code generation and Python responses in those flows are injected. Two actual
+local-model classifier cases correctly match a first total27 and suppress the
+same total next time, preserving the ready container and 46080-token preset.
+Their upstream generation/Python graph and selected-model binding are explicit
+fixtures; this does not claim new real long-context code generation or GPU Python.
+Earlier real native Python and long-context qualifications remain separate.
+
+Evidence: `data/acceptance/data-result-alerts-20261025`. Initial harness failures,
+corrected UI text assertions and the actual red/green outcome-link regression are
+retained. `post-deployment-qualified.json` and the shared deployment authority
+prove merge/rollout status; local qualification alone is not a deployment claim.
+Native Runner, schema, dependencies and external runtimes are unchanged.
+Whole-platform completion remains open.
