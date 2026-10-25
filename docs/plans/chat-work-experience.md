@@ -1,4 +1,11 @@
-# Chat and Work: UX, policy and implementation contracts
+> Superseded product decision, reaffirmed 2026-10-25: use the
+> [single assistant conversation](unified-assistant-chat.md). The Chat/Work
+> selector, visible mode defaults and mode-specific action restrictions below
+> are historical requirements, not implementation tasks. The orchestrator routes
+> each prompt automatically. Retain applicable conversation UX, permission,
+> approval and compatibility contracts; do not restore a user-facing mode switch.
+
+# Chat and Work: historical UX, policy and implementation contracts
 
 Status: partially delivered, 2026-10-14. Part of the [delivery brief](2026-10-chat-work-media.md).
 The findings below describe the original **806b604** baseline. Immediate first Send,
