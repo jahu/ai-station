@@ -85,6 +85,9 @@ it("opens a scoped Work draft without mutation and first Send keeps the selected
   const state = mount();
   await screen.findByText("Same branch and workspace", { exact: false });
   expect(state.writes).toEqual([]);
+  expect(
+    screen.queryByText(/New projects include public package preparation/),
+  ).toBeNull();
   expect(screen.queryByText("Attach files & choose tools")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Work" }));
   expect(

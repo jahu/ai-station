@@ -383,7 +383,7 @@ export default function NewChat({
       )}
       <ConversationComposer
         permissionNote={
-          mode === "work" && !options.data
+          mode === "work" && options.action === "project.create_code"
             ? "New projects include public package preparation and isolated build/test checks. Advanced project settings can override this."
             : undefined
         }

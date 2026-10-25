@@ -1780,7 +1780,7 @@ function ConversationView({
           <ConversationComposer
             toolSelectionKey={toolSelectionKey}
             permissionNote={
-              turnMode === "work"
+              turnMode === "work" && options.action === "project.create_code"
                 ? "New projects include public package preparation and isolated build/test checks. Advanced project settings can override this."
                 : undefined
             }
