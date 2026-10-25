@@ -1,8 +1,9 @@
-Private remote access is being implemented in the isolated `feat/private-tailnet-access`
-branch. Operator-only setup actions use ordinary Tasks/Runs and a native-private,
-userspace Tailscale service. The onboarding UI and recovery contracts are under
-qualification; this is not yet a deployed/enrolled remote connection.
-See [setup and acceptance](docs/plans/private-tailnet-access.md).
+Settings → Access → **Access from anywhere** provides explicit private-access
+installation, Tailscale sign-in/HTTPS approval, an exact private address and owned
+Disable. It uses ordinary Tasks/Runs and an isolated native userspace service;
+account keys stay outside Docker and agent filesystem roots. Local qualification
+is complete; actual account enrollment and phone-outside-LAN acceptance remain
+operator steps. [Setup and evidence](docs/plans/private-tailnet-access.md).
 
 A completed analysis can expose **Use result file** and explicit follow-ups such
 as “Sort this result file”. These use the complete inspected CSV/XLSX output;

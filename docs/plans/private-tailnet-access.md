@@ -153,3 +153,35 @@ local gates, compiled desktop/mobile acceptance, image/Compose, final review/PR
 and deployment are still pending. No real login, HTTPS consent, private Serve or
 phone/LTE acceptance has occurred; live #425 is unchanged. Earlier paragraphs
 record the historical native-only stage, not the current candidate surface.
+
+## Local release qualification
+
+Candidate PR #426 has completed full local qualification: normal-suite successful
+coverage is **3784 passes and nine explicitly opt-in skips**, with 175 complete
+final affected-module cases resolving every retained baseline failure. Three
+source-identity checks initially observed files being edited during the first
+baseline; frozen-source reruns pass. The focused transport subprocess also passed
+with explicit worktree PYTHONPATH, avoiding the older shared editable checkout.
+Those original logs remain in the evidence directory; no failure is waived.
+
+All frontend gates pass (792 tests), and the exact image/backend/assets plus normal,
+development and private-LAN Compose configurations are checked. Compiled 1440px/
+390px browser flows exercise ordinary API/worker/native operations and actual owned
+CPU fixture processes through start/login/enable/reload/disable, without overflow
+or JavaScript errors. A real installed 1.104.2 cached-install job and unprivileged
+userspace daemon NeedsLogin→Stop pass, with unchanged host routes/DNS. The fixture
+flows do not establish an actual enrolled account, private HTTPS or phone/LTE link.
+
+Offline database recovery now revokes historical managed-origin grants and pending
+setup authority, retaining the current password requirement while an owned private
+service may exist. Missing current credentials in that state require a fresh
+recovery password. Node keys and trusted executables must both stay outside every
+configured agent/model filesystem root. Nested private process/log/cancellation
+folders reject symlink escapes.
+
+Evidence and final reviewed-head mapping:
+`data/acceptance/private-tailnet-access-20261025/workspace-full-check-result.json`,
+`review.json`, `image-source-and-assets.json`, `browser-result.json`, and
+`native-userspace-candidate-smoke.json`. Deployment status is recorded separately;
+account enrollment/HTTPS consent and a real phone test remain open. The full AI
+Station objective is not complete.

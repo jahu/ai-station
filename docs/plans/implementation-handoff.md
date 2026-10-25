@@ -1,3 +1,14 @@
+> PR #426 / private-tailnet-access: local qualification is complete (3784 Python/
+> Runner successful cases +9 opt-in skips; 175 final affected cases; UI792;
+> exact image/Compose; compiled desktop/mobile native fixture workflows; real
+> unprivileged daemon/cached-install probe). All earlier failed logs are retained
+> and resolved. Full diff review, merge and deployment receipts determine release
+> status; account enrollment/HTTPS/phone acceptance is not yet performed.
+> Restore revokes historical origin grants; trusted executables and keys are
+> outside agent roots. Preserve root Memory WIP, owned model containers and data.
+> Next: deploy the reviewed setup, have the operator enroll through Settings,
+> qualify the real private connection, and continue broader platform delivery.
+
 > Candidate update: native typed install/start/login/Serve/stop/inspect/cancel/link,
 > operator Task/Run worker, password epoch + origin revision and Settings onboarding
 > are now implemented. Focused native/API/worker tests and UI tests pass; full gates,
