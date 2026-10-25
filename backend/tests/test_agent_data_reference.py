@@ -311,8 +311,13 @@ def test_agent_captured_sources_are_reused_offline_without_refetching(saved, dat
 
     extra = {"tools": ["python_data", "http_fetch"], "fetch_urls": ["https://data.example.com/numbers"]}
     if kind == "document":
+        from app.agent_documents import reviewed_scope
+        from app.document_schema import AgentDocumentScope
+
         upload = upload_document(saved[0], b"Observed values: 12 and 15.")
-        extra = {"tools": ["python_data", "read_documents"], "documents": {"artifact_ids": [upload["id"]]}}
+        with session_factory()() as db:
+            reviewed = reviewed_scope(db, AgentDocumentScope(artifact_ids=[upload["id"]]), freeze=True)
+        extra = {"tools": ["python_data", "read_documents"], "documents": reviewed.model_dump(mode="json")}
     source = completed(saved, data_environment, input_count=0, **extra)
     with session_factory()() as db:
         result_run = db.get(Run, source["agent_control_run"]["result_run_id"])
