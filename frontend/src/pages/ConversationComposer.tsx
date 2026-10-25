@@ -53,7 +53,10 @@ export default function ConversationComposer({
     field.style.height = `${field.scrollHeight}px`;
   }, [value]);
   const submit = () => {
-    if (canSend && !busy && !dictation.busy) onSend();
+    if (canSend && !busy && !dictation.busy) {
+      if (toolPanel.current) toolPanel.current.open = false;
+      onSend();
+    }
   };
   return (
     <form
