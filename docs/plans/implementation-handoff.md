@@ -1,3 +1,15 @@
+> Active candidate: `feat/conversation-agent-data-actions`, based on qualified
+> #423. Natural file operations reuse verified completed agent inputs, captured
+> data or inspected created CSV/XLSX through a new ordinary conversation Task.
+> Work project defaults no longer suppress natural file references. Exact source
+> and bytes are checked on Send and before dispatch; no agent rerun or new research
+> tools. Basic16 checks and frontend19 pass; expanded/full gates and compiled
+> desktop/mobile acceptance remain pending. The local inference network permission
+> is retained; generated Python remains offline. Preserve root WIP/native/model.
+> Live: #423, http://192.168.1.121:8765, evidence contextual-project-guidance-20261025.
+> Full-platform goal remains open; finish this flow then broader practical agent
+> orchestration and delivery/remote-access/reliability acceptance.
+
 > Active UI increment: `fix/contextual-project-guidance` on qualified #422.
 > General/media/agent Work and existing-workspace drafts should not show the
 > new-project package/build policy hint. The hint remains visible when explicitly

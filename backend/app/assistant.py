@@ -615,7 +615,7 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
                 else freeze_inputs(session, body.data.files())
             )
             reference = user.metadata_json.get("conversation_reference") or {}
-            if reference.get("source_kind") == "analyzed_data" and (
+            if reference.get("source_kind") in {"analyzed_data", "agent_data_inputs"} and (
                 reference.get("data_inputs") != data_inputs
                 or reference.get("data_scope") != body.data.model_dump(mode="json")
             ):
@@ -679,7 +679,8 @@ def enqueue_assistant(session, conversation, user, body, *, commit=True):
             **(
                 {"data_reference": user.metadata_json["conversation_reference"]}
                 if body.data is not None
-                and user.metadata_json.get("conversation_reference", {}).get("source_kind") == "analyzed_data"
+                and user.metadata_json.get("conversation_reference", {}).get("source_kind")
+                in {"analyzed_data", "agent_data_inputs"}
                 else {}
             ),
             **({"image_inputs": image_inputs} if image_inputs is not None else {}),

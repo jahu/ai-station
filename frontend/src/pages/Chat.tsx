@@ -148,7 +148,11 @@ type Message = ActionResult & {
     images?: { id: string; name: string }[];
     creation_context?: CreationContext;
     conversation_reference?: {
-      source_kind?: "inspected_input" | "analyzed_data" | "agent_image_result";
+      source_kind?:
+        | "inspected_input"
+        | "analyzed_data"
+        | "agent_image_result"
+        | "agent_data_inputs";
       filenames?: string[];
       captured_sources?: { artifact_id: string; captured_at: string }[];
       artifact_ids?: string[];
@@ -940,26 +944,32 @@ function Transcript({
               {message.metadata.conversation_reference && (
                 <p className="muted">
                   {message.metadata.conversation_reference.source_kind ===
-                  "analyzed_data"
+                  "agent_data_inputs"
                     ? message.metadata.conversation_reference.captured_sources
                         ?.length
-                      ? `Using captured source data · ${new Date(message.metadata.conversation_reference.captured_sources[0].captured_at).toLocaleString()}`
-                      : `Using the analyzed input files · ${message.metadata.conversation_reference.filenames?.join(", ") || "Data files"}`
+                      ? "Using the agent’s captured data"
+                      : "Using the agent’s input files"
                     : message.metadata.conversation_reference.source_kind ===
-                        "inspected_input"
-                      ? (message.metadata.conversation_reference.artifact_ids
-                          ?.length ?? 1) > 1
-                        ? "Using the inspected images"
-                        : "Using the inspected image"
+                        "analyzed_data"
+                      ? message.metadata.conversation_reference.captured_sources
+                          ?.length
+                        ? `Using captured source data · ${new Date(message.metadata.conversation_reference.captured_sources[0].captured_at).toLocaleString()}`
+                        : `Using the analyzed input files · ${message.metadata.conversation_reference.filenames?.join(", ") || "Data files"}`
                       : message.metadata.conversation_reference.source_kind ===
-                          "agent_image_result"
-                        ? "Using the agent’s image result"
-                        : "Using the previous image result"}{" "}
+                          "inspected_input"
+                        ? (message.metadata.conversation_reference.artifact_ids
+                            ?.length ?? 1) > 1
+                          ? "Using the inspected images"
+                          : "Using the inspected image"
+                        : message.metadata.conversation_reference
+                              .source_kind === "agent_image_result"
+                          ? "Using the agent’s image result"
+                          : "Using the previous image result"}{" "}
                   ·{" "}
                   <Link
                     to={`/runs/${message.metadata.conversation_reference.run_id}`}
                     tabIndex={current ? 0 : -1}
-                    aria-label={`Inspect referenced ${message.metadata.conversation_reference.source_kind === "analyzed_data" ? "data" : "image"} ${shortId}`}
+                    aria-label={`Inspect referenced ${["analyzed_data", "agent_data_inputs"].includes(message.metadata.conversation_reference.source_kind ?? "") ? "data" : "image"} ${shortId}`}
                   >
                     Inspect source
                   </Link>

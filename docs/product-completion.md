@@ -1,3 +1,7 @@
+Natural data continuation from a completed conversation agent is in development;
+see [source and execution contracts](plans/conversation-agent-data-actions.md).
+The qualified live release is #423; the whole-platform objective remains open.
+
 > [Agent report follow-up context](plans/conversation-agent-results.md), PR #418,
 > lets Chat/Work use actual verified completed reports with visible provenance and
 > no repeated execution. Newer unfinished work does not inherit an older report.

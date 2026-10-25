@@ -186,7 +186,7 @@ def root_binding(session, root, *, for_execution=True):
         raise ValueError("Data analysis is not bound to its conversation message")
     reference = root.parameters.get("data_reference")
     recorded = user.metadata_json.get("conversation_reference") or {}
-    if reference or recorded.get("source_kind") == "analyzed_data":
+    if reference or recorded.get("source_kind") in {"analyzed_data", "agent_data_inputs"}:
         if (
             reference != recorded
             or reference.get("data_inputs") != root.parameters.get("data_inputs")
