@@ -84,7 +84,15 @@ def rows(catalog):
         ]
 
 
-def export(output: Path, *, release: str, base_url: str, draft=False, catalog_path=CATALOG):
+def export(
+    output: Path,
+    *,
+    release: str,
+    base_url: str,
+    draft=False,
+    catalog_path=CATALOG,
+    qualification_notes: str = "",
+):
     """Only explicit immutable release identities can label a handoff workbook."""
     from openpyxl import Workbook
     from openpyxl.formatting.rule import CellIsRule
@@ -106,6 +114,15 @@ def export(output: Path, *, release: str, base_url: str, draft=False, catalog_pa
         or target.fragment
     ):
         raise ValueError("Use an HTTP(S) UI address without credentials")
+    if not isinstance(qualification_notes, str) or len(qualification_notes.encode("utf-8")) > 32768:
+        raise ValueError("Qualification notes must be at most 32 KiB of plain UTF-8 text")
+    profiles = [
+        " ".join(paragraph.split())
+        for paragraph in re.split(r"\n\s*\n", qualification_notes)
+        if paragraph.strip()
+    ]
+    if len(profiles) > 24 or any(len(paragraph) > 1200 for paragraph in profiles):
+        raise ValueError("Use at most 24 qualification paragraphs, each at most 1200 characters")
     catalog = load_catalog(catalog_path)
     output.mkdir(parents=True, exist_ok=True)
     prefix = f"AI-Station-QA-{'DRAFT-' if draft else ''}{release[:12]}"
@@ -168,6 +185,13 @@ def export(output: Path, *, release: str, base_url: str, draft=False, catalog_pa
             ],
             ["Gotowe dane i oczekiwane wartości", FIXTURE_INSTRUCTIONS],
             [
+                "Zakres sprawdzonych profili",
+                "Poniższe notatki opisują weryfikację wewnętrzną i jej zakres; nie są wynikami operatora. W testach zapisz rzeczywiście wybrany model i parametry."
+                if profiles
+                else "Opis sprawdzonych profili nie został dołączony. Uzupełnij go przed finalnym przekazaniem pakietu; nie zakładaj, że wszystkie modele i ustawienia zostały sprawdzone.",
+            ],
+            *[[f"Sprawdzony profil {index}", value] for index, value in enumerate(profiles, 1)],
+            [
                 "Co uzupełnić",
                 "W Testy wypełniaj niebieskie pola. Wynik jest w kolumnie B i pozostaje widoczny podczas przewijania. Zapisz rzeczywisty rezultat, dowód oraz ID wykonania. Nie zmieniaj ID przypadków. Testy nie zostały za Ciebie oznaczone jako zaliczone.",
             ],
@@ -205,7 +229,8 @@ def export(output: Path, *, release: str, base_url: str, draft=False, catalog_pa
     start.auto_filter.ref = None
     for row in start.iter_rows(min_row=2):
         # Explicit height keeps wrapped instructions visible in spreadsheet viewers.
-        start.row_dimensions[row[0].row].height = max(32, 16 * (len(wrap_text(str(row[1].value), 100)) + 1))
+        width = 60 if str(row[0].value).startswith("Sprawdzony profil ") else 100
+        start.row_dimensions[row[0].row].height = max(32, 16 * (len(wrap_text(str(row[1].value), width)) + 1))
     tests = sheet(
         "Testy",
         HEADERS,
@@ -363,6 +388,10 @@ def export(output: Path, *, release: str, base_url: str, draft=False, catalog_pa
                 "draft": draft,
                 "base_url": base_url,
                 "case_ids": [case["id"] for case in catalog["cases"]],
+                "qualification_notes_sha256": hashlib.sha256("\n\n".join(profiles).encode()).hexdigest()
+                if profiles
+                else None,
+                "qualification_paragraphs": len(profiles),
                 "fixtures": [
                     {
                         "path": path.relative_to(output).as_posix(),
@@ -386,9 +415,19 @@ def main():
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--catalog", type=Path, default=CATALOG)
     parser.add_argument("--draft", action="store_true")
+    parser.add_argument("--qualification-notes-file", type=Path)
     args = parser.parse_args()
+    notes = ""
+    if args.qualification_notes_file:
+        with args.qualification_notes_file.open(encoding="utf-8") as source:
+            notes = source.read(32769)
     for path in export(
-        args.output, release=args.release, base_url=args.base_url, draft=args.draft, catalog_path=args.catalog
+        args.output,
+        release=args.release,
+        base_url=args.base_url,
+        draft=args.draft,
+        catalog_path=args.catalog,
+        qualification_notes=notes,
     ):
         print(path)
 

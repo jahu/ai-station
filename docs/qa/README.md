@@ -41,6 +41,16 @@ The `Dane-QA` folder contains a six-row CSV, a matching two-sheet XLSX, a Polish
 text document, a deliberately invalid XLSX and a neutral PNG with coloured shapes.
 The Start sheet and plain-text guide explain the expected values and appropriate
 uses; the manifest records every input's SHA-256. None is a real-inference result.
+Add reviewed, release-specific qualification notes with
+`--qualification-notes-file /path/to/profiles.txt`. Use blank lines between
+profiles and name their actual model, parameters, evidence and qualified scope.
+The notes appear directly on Start and in the plain-text guide; the manifest
+hashes their exported text. Single line breaks/extra whitespace are normalized.
+Keep the file within 32 KiB, at most 24 paragraphs of at most 1200 characters.
+Without notes, Start explicitly says that the profile description is missing.
+The exporter does not verify those claims or run inference; final handoff still
+requires the contributor to inspect the actual receipts and include accurate
+profiles. Notes never prefill operator results. Keep credentials out of them.
 The result column stays visible while scrolling; editable fields are blue.
 All test results start as **Nie testowano**. Expected behavior is never converted
 into an operator pass. Summary formulas count operator answers and recalculate
