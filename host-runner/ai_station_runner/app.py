@@ -134,7 +134,7 @@ class PhotoBody(RequestBody):
     mode: Literal["t2i", "img2img", "recompose", "upscale"]
     backend: Literal["qwen", "juggernaut"] = "qwen"
     prompt: str = Field(default="", max_length=10000)
-    prompt_style: Literal["pipeline", "prompt"] = "pipeline"
+    prompt_style: Literal["pipeline", "prompt", "instruction"] = "pipeline"
     negative: str | None = Field(default=None, max_length=10000)
     edit_prompt: str = Field(default="", max_length=10000)
     width: int | None = Field(default=None, ge=256, le=2048, multiple_of=32)
@@ -406,6 +406,12 @@ def photo_capabilities():
         "backend": "photo_pipe",
         "modes": ["t2i", "img2img", "recompose", "upscale"],
         "backends": ["qwen", "juggernaut"],
+        "prompt_profiles": {
+            "t2i": ["pipeline", "prompt"],
+            "img2img": ["pipeline", "instruction"],
+            "recompose": ["pipeline", "instruction"],
+            "upscale": ["pipeline"],
+        },
         "requires_gpu": True,
     }
 

@@ -106,6 +106,12 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Photo instruction profiles are fixed native modes without caller-selected Python,
+scripts or model paths. Edit/Recompose can omit implicit portrait constants in
+an owned import of the configured trusted pipeline; its file remains unchanged.
+Existing path checks, permissions, process groups, cancellation and recovery apply.
+[Contracts](image-workflows.md#instruction-only-editing).
+
 Generated data email attachments reuse the existing final-result/email Run graph,
 approval hash and conservative SMTP journal. Frozen selected formats require actual
 verified exports; original uploads and scripts are excluded. Empty selections

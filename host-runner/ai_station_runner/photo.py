@@ -39,8 +39,12 @@ def build_photo_argv(
     inputs: list[str],
     prompt_style: str = "pipeline",
 ) -> list[str]:
-    if prompt_style not in {"pipeline", "prompt"} or prompt_style == "prompt" and mode != "t2i":
+    if prompt_style not in {"pipeline", "prompt", "instruction"}:
+        raise PhotoCommandError("Unknown photo prompt profile")
+    if prompt_style == "prompt" and mode != "t2i":
         raise PhotoCommandError("Prompt-only styling supports text-to-image only")
+    if prompt_style == "instruction" and mode not in {"img2img", "recompose"}:
+        raise PhotoCommandError("Instruction-only styling supports Edit and Recompose only")
     if not _DEVICE.match(device):
         raise PhotoCommandError("Device must look like cuda:<index>")
     for value in (python, script, output, *inputs):
@@ -83,7 +87,7 @@ def build_photo_argv(
             raise PhotoCommandError("Edit requires exactly one input image")
         if not edit_prompt.strip():
             raise PhotoCommandError("Edit instruction is required")
-        return argv + [
+        edit = argv + [
             "img2img",
             "--input",
             inputs[0],
@@ -98,6 +102,7 @@ def build_photo_argv(
             "--out",
             output,
         ]
+        return _profile(edit) if prompt_style == "instruction" else edit
     if mode == "recompose":
         if not inputs:
             raise PhotoCommandError("Recompose requires at least one reference")
@@ -122,7 +127,7 @@ def build_photo_argv(
         ]
         for ref in inputs:
             argv += ["--reference", ref]
-        return argv
+        return _profile(argv) if prompt_style == "instruction" else argv
     if mode == "upscale":
         if len(inputs) != 1:
             raise PhotoCommandError("Upscale requires exactly one input image")
@@ -138,6 +143,10 @@ def build_photo_argv(
             output,
         ]
     raise PhotoCommandError(f"Unknown photo mode: {mode}")
+
+
+def _profile(argv):
+    return [argv[0], str(Path(__file__).with_name("photo_job.py")), *argv[1:]]
 
 
 def expected_upscale_size(width: int, height: int, repeats: int = 1) -> tuple[int, int]:

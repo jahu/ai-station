@@ -55,6 +55,11 @@ verified captured data. See [saved API sources](docs/plans/agent-http-connectors
 
 # AI Station
 
+Images and Chat/Work edits can follow the submitted instruction without implicit
+portrait/skin styling. **Use classic identity template** restores the original
+Edit/Recompose profile. Generate and the external photo pipeline remain unchanged.
+[Image profile contracts](docs/image-workflows.md#instruction-only-editing).
+
 Research agents can use **Notifications → Only notify when** to alert on a
 reviewed finding instead of every successful report. Each report stays in history;
 the workspace shows the actual decision and compared report. The criterion gates

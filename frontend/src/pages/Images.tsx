@@ -128,6 +128,7 @@ function ImageForm({
   const [gpu, setGpu] = useState("auto");
   const [upscaleResult, setUpscaleResult] = useState(false);
   const [portraitStyling, setPortraitStyling] = useState(false);
+  const [classicEdit, setClassicEdit] = useState(false);
   const [ids, setIds] = useState<string[]>(initialInput ? [initialInput] : []);
   const [localError, setLocalError] = useState<Error | null>(null);
   const hardware = useHardware();
@@ -195,6 +196,8 @@ function ImageForm({
         Object.assign(parameters, { prompt, width, height, steps, cfg });
       if (mode === "t2i")
         parameters.prompt_style = portraitStyling ? "pipeline" : "prompt";
+      if (mode === "img2img" || mode === "recompose")
+        parameters.prompt_style = classicEdit ? "pipeline" : "instruction";
       if (mode === "img2img")
         Object.assign(parameters, {
           edit_prompt: prompt,
@@ -451,6 +454,24 @@ function ImageForm({
                     <small>
                       Adds skin, hair and eye detail. Leave off for scenes,
                       products and illustrations.
+                    </small>
+                  </span>
+                </label>
+              )}
+              {(mode === "img2img" || mode === "recompose") && (
+                <label className="image-workflow-option">
+                  <input
+                    type="checkbox"
+                    aria-label="Use classic identity template"
+                    checked={classicEdit}
+                    disabled={busy}
+                    onChange={(event) => setClassicEdit(event.target.checked)}
+                  />
+                  <span>
+                    Use classic identity template
+                    <small>
+                      Off follows your edit directly. On adds the original
+                      identity and photo-detail instructions.
                     </small>
                   </span>
                 </label>

@@ -32,6 +32,9 @@ assert os.environ['TRANSFORMERS_OFFLINE'] == '1'
 args = sys.argv
 PHOTO_SUFFIX = 'portrait details'
 T2I_NEGATIVE = 'illustration'
+IDENTITY_PREFIX = 'preserve every facial detail'
+RECOMPOSE_PREFIX_SINGLE = 'redesign a portrait'
+RECOMPOSE_PREFIX_MULTI = 'all references show one person'
 def main():
     if '--prompt' in args and args[args.index('--prompt')+1] == 'fail':
         print('expected failure', file=sys.stderr)
@@ -804,3 +807,43 @@ def test_explicit_researched_image_does_not_add_unselected_video(video_bridge, m
         result = api.get(route).json()["messages"][1]
         assert result["task_status"] == "succeeded"
         assert not any(s["capability"] == "video.generate" for s in result["steps"])
+
+
+@pytest.mark.parametrize("mode", ["img2img", "recompose"])
+def test_instruction_only_profile_crosses_api_worker_runner_and_retains_lineage(bridge, mode):
+    with TestClient(app) as client:
+        source = upload(client)
+        response = client.post(
+            "/api/images/runs",
+            json={
+                "mode": mode,
+                "prompt_style": "instruction",
+                "prompt": "Change the blue wall to red",
+                "edit_prompt": "Change the blue wall to red",
+                "input_artifact_ids": [source["id"]],
+            },
+        )
+        assert response.status_code == 202, response.text
+        with session_factory()() as session:
+            tick(session, "instruction-profile-test")
+            assert active_locks(session) == set()
+        run = client.get("/api/runs/" + response.json()["id"]).json()
+        assert run["status"] == "succeeded", run
+        assert run["parameters"]["prompt_style"] == "instruction"
+        artifacts = client.get("/api/artifacts?run_id=" + run["id"]).json()
+        assert artifacts[0]["metadata"]["prompt_style"] == "instruction"
+        assert artifacts[0]["parent_artifact_ids"] == [source["id"]]
+        events = client.get("/api/runs/" + run["id"] + "/events").json()
+        assert any("photo.profile: instruction-only" in e["payload"].get("text", "") for e in events)
+
+
+@pytest.mark.parametrize("mode", ["t2i", "upscale"])
+def test_instruction_profile_cannot_change_other_image_modes(mode):
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/api/images/runs",
+                json={"mode": mode, "prompt_style": "instruction", "prompt": "A landscape"},
+            ).status_code
+            == 422
+        )
