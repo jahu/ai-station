@@ -304,7 +304,9 @@ def planner_context(session, conversation, user):
         .order_by(Message.created_at.desc(), Message.id.desc())
         .limit(16)
     )
-    budget = max(0, 4000 - len(user.content))
+    from app.creation_context import plain
+
+    budget = max(0, 4000 - len(plain(user)))
     context = []
     agent_result_seen = set()
     for message in messages:
@@ -314,7 +316,13 @@ def planner_context(session, conversation, user):
             or message.metadata_json.get("routing_only")
         ):
             continue
-        content = message.content[: min(1000, budget)]
+        if (
+            message.role == "user"
+            and message.metadata_json.get("attachments")
+            and "user_text" not in message.metadata_json
+        ):
+            continue  # Older expanded attachments cannot become ordinary planner history.
+        content = plain(message)[: min(1000, budget)]
         from app.transcript_context import reference
 
         quoted = reference(session, message, budget=min(1600, max(0, budget - len(content))))
@@ -915,7 +923,10 @@ def explicit_plan(params):
             return Plan(
                 action="page.describe", reason="Read the selected page and inspect its visual design locally."
             )
-        return Plan(action="chat", reason="Answer using your requested web search and local model.")
+        from app.work_web_policy import available_for_work
+
+        if not available_for_work(params):
+            return Plan(action="chat", reason="Answer using your requested web search and local model.")
     return None
 
 
@@ -974,7 +985,7 @@ def avatar_speech_text(content):
 
 PLANNER_SYSTEM = """Route the user's request within AI Station. Return ONLY a JSON object with keys
 "action" and "reason" (short explanation in the user's language). Allowed actions:
-chat: questions, explanations and discussion (no tools executed);
+chat: questions, explanations and discussion, using separately selected conversation web tools when enabled; this does not authorize workstation mutations;
 system.inspect: read actual current workstation GPU/CPU/RAM/disk telemetry, active Runs and observed runtimes;
 this read-only action does not control processes or identify arbitrary GPU processes;
 image.describe: describe, inspect or compare attached images using a local vision model;
@@ -1055,16 +1066,24 @@ class AssistantExecutor:
                     action="clarify",
                     reason="Local video needs setup. Open Video to inspect the configured Wan runtime before generating.",
                 )
-        if (
-            run.parameters.get("web_search", {}).get("enabled")
-            and plan
-            and plan.action
-            not in {"chat", "page.describe", "image.generate", "image.generate_video", "clarify"}
-        ):
-            plan = Plan(
-                action="clarify",
-                reason="Web search can inform a conversation answer or a new image. Turn it off for this action, or ask a separate research question first.",
-            )
+        from app.work_web_policy import WEB_ACTIONS, available_for_work
+
+        if run.parameters.get("web_search", {}).get("enabled") and plan and plan.action not in WEB_ACTIONS:
+            if available_for_work(run.parameters):
+                append_event(
+                    session,
+                    run.id,
+                    "web_search.not_used",
+                    {
+                        "action": plan.action,
+                        "reason": "Default Web availability does not require research for this action",
+                    },
+                )
+            else:
+                plan = Plan(
+                    action="clarify",
+                    reason="Web search can inform a conversation answer or a new image. Turn it off for this action, or ask a separate research question first.",
+                )
         if plan and plan.action == "data.analyze":
             if not run.parameters.get("data") or run.parameters.get("action") not in {"auto", "data.analyze"}:
                 plan = Plan(
@@ -1673,6 +1692,7 @@ class AssistantExecutor:
                                 "instruction": params["content"],
                                 "recent_context": params.get("planner_context", []),
                                 "reference_image_count": len(params["image_artifact_ids"]),
+                                "web_search_available": bool(params.get("web_search", {}).get("enabled")),
                                 "voice_reference_attached": bool(params.get("audio_artifact_id")),
                                 "coding_scope_selected": bool(params.get("coding")),
                                 "reviewed_commit_selected": bool(params.get("commit")),

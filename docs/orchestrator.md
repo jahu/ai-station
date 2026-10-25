@@ -1,11 +1,14 @@
 # Platform assistant
 
-**Next UX/policy design:** [Chat and Work](plans/chat-work-experience.md), with
-an immediate first-message composer, shared tools/artifacts and scoped Work
-continuation. Its [delivery brief](plans/2026-10-chat-work-media.md) explicitly
-supersedes the create-conversation-first UX and plans bounded media actions in
-Chat. The rest of this document describes the existing implementation until those
-increments land; neither the mode rename nor its expanded Chat tools is deployed.
+[Chat and Work](plans/chat-work-experience.md) now provide immediate first Send,
+shared tools/artifacts and scoped Work continuation. The
+[delivery brief](plans/2026-10-chat-work-media.md) and implementation handoff record
+qualification of those delivered increments. Historical descriptions below retain
+earlier terminology; current source and deployment receipts determine live state.
+
+[Default Web routing](plans/work-default-web-routing.md) lets Work plan natural
+requests even with Web enabled. It does not inherit search tools into an agent,
+ignore explicit research scope or weaken Chat/Git/runtime permissions.
 
 The default AI Station screen is a conversation that operates the workstation. The existing workspaces remain direct entry points and detailed inspectors. Ordinary questions, image references, coding requests, agent definitions and media results belong in the same persistent conversation.
 

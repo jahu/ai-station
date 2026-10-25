@@ -1,3 +1,16 @@
+> Active: fix/work-default-web-routing on qualified #427 (5a1bf69), in
+> `.tools/work-default-web-routing`. Default Web consumed unclassified Work
+> requests and blocked agent/system actions. Three ordinary-worker regressions
+> fail before the fix; 129 current routing/search/assistant cases pass afterward.
+> Passive preference normalization and planner fallback reuse existing actions;
+> explicit query/render scope, Chat mode, sensitive forms, Stop and receipt replay
+> stay enforced. Planner history now omits expanded user attachments.
+> Browser/real-local acceptance, final full gates, review and rollout are pending.
+> Live #427: private-access-status-20261025/post-deployment-qualified.json.
+> Operator Tailscale enrollment remains pending; never restart its service or
+> reload the owned model to qualify an unrelated route. Preserve root Memory WIP.
+> Full-platform goal stays open; this fixes entry routing, not arbitrary workflows.
+
 > #426 is merged into develop (74f409d) and deployed at
 > http://192.168.1.121:8765. Authority/evidence:
 > `data/acceptance/private-tailnet-access-20261025/post-deployment-qualified.json`.

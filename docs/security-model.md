@@ -1,3 +1,9 @@
+Default-on Web does not grant tools to a Work-created agent or replace current
+runtime/Git authority. Explicit search queries/rendered-page requests are never
+silently removed. Planner context uses plain user_text and skips legacy expanded
+attachments without it; prior artifact bodies do not become incidental planning
+input. [Contracts and acceptance](plans/work-default-web-routing.md).
+
 Settings → Access → **Access from anywhere** provides explicit private-access
 installation, Tailscale sign-in/HTTPS approval, an exact private address and owned
 Disable. It uses ordinary Tasks/Runs and an isolated native userspace service;

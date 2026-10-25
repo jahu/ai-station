@@ -1016,7 +1016,10 @@ def test_project_followup_is_not_silently_treated_as_a_name(monkeypatch, instruc
     [
         {"new_project": {"name": "Weather", "executor": "cursor", "external_ai": False}},
         {"new_project": {"name": "Weather", "executor": "local", "external_ai": True}},
-        {"new_project": {"name": "Weather"}, "web_search": {"enabled": True}},
+        {
+            "new_project": {"name": "Weather"},
+            "web_search": {"enabled": True, "query": "explicit public research"},
+        },
         {"new_project": {"name": "Weather"}, "speech_text": "extra"},
         {"new_project": {"name": "Weather"}, "action": "chat"},
         {"content": "Create project Weather and build a website with Cursor"},
