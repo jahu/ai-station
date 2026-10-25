@@ -138,7 +138,6 @@ export function Memory() {
         Inspect what AI Station remembers, where it came from, and where it
         applies.
       </PageTitle>
-      <MemorySemantic scope={scope} target={target} />
       <section className="panel memory-filters">
         <label>
           <Search size={15} /> Search memory
@@ -193,6 +192,7 @@ export function Memory() {
           Include disabled
         </label>
       </section>
+      <MemorySemantic scope={scope} target={target} />
       <ErrorNotice error={entries.error} />
       {entries.isPending ? (
         <Loading />
