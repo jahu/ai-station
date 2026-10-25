@@ -47,7 +47,14 @@ bounded existing-local-model streaming/polling acceptance before review/deployme
 Do not claim user Runs recovered: keep failed history and require a new explicit
 message/regeneration to repeat inference. Preserve data, auth and ready model.
 
-Evidence: `data/acceptance/chat-cookie-db-lock-20261025`. Full qualification,
-review and deployment remain pending. This work takes priority over the planned
+Evidence: `data/acceptance/chat-cookie-db-lock-20261025`. Local qualification passes all3867 CPU cases (3858 pass/nine opt-in skips),
+Ruff/format, exact image/three Compose and isolated-image fake API/worker/SQL/SSE.
+Frontend806/native qualification is reused only after exact source identity. Two
+actual local responses completed with435/632 saved deltas and197/293 forced
+activity-cookie refreshes during streaming; max history latency139ms/43ms.
+Ready container/context and production data stayed unchanged. Original failed
+Runs/messages are recorded by hash for post-deployment preservation checks.
+Full review and deployment require their receipts; local qualification alone
+is not a deployment claim. This work takes priority over the planned
 managed Memory embeddings and permanent Library deletion. The final Polish QA
 workbook must cover concurrent streaming and login-session activity refresh.
