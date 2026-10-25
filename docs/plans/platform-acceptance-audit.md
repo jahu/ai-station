@@ -80,7 +80,12 @@ they do not establish Auto loading. Keep these distinctions in the final report.
    Its deployment receipt determines whether the correction is live.
 2. Reconcile Video/Avatar duration and quality claims with exact recorded profiles:
    earlier real 60-second Wan draft and 30-second avatar do not prove every longer
-   or higher-quality profile. Current capability checks start no inference.
+   or higher-quality profile. The actual four-window ten-second Wan test at
+   20 steps passes decode/assembly/playback but fails visual quality with
+   progressive whitening. A read-only VAE probe identifies a temporal boundary
+   mismatch in raw-tail reuse; diffusion comparison remains in progress. Follow
+   [the continuation investigation](wan-continuation-quality.md), preserving the
+   failed visual receipt. Current capability checks start no inference.
 3. Keep external-account acceptance explicit. The owned Tailscale helper currently
    reports `NeedsLogin`, not serving: worldwide mobile acceptance is unperformed.
    SMTP private-sink qualification is not real operator-inbox delivery. These

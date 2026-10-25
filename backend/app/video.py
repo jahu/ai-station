@@ -162,6 +162,9 @@ class VideoExecutor(MotionArtifacts, HostMediaExecutor):
             verify_published_inputs(session, run)
 
     def _start(self, runner, run, allocated, output):
+        strategy = run.parameters.get("continuation_strategy", "cached_latents_v1")
+        if strategy not in ("cached_latents_v1", "last_frame_v1"):
+            raise ValueError("Unknown frozen video continuation strategy")
         continuation = None
         motion = None
         if run.parameters.get("previous_video_run_id"):
@@ -183,7 +186,9 @@ class VideoExecutor(MotionArtifacts, HostMediaExecutor):
                 )
                 if not artifact or artifact.trashed_at is not None:
                     raise ValueError("Successful prior motion context is unavailable")
-                motion = artifact.metadata_json.get("motion_context")
+                motion = (
+                    artifact.metadata_json.get("motion_context") if strategy == "cached_latents_v1" else None
+                )
                 if motion:
                     context = session.get(Artifact, artifact.metadata_json.get("motion_context_artifact_id"))
                     if not context or context.trashed_at is not None or context.run_id != previous.id:
@@ -214,6 +219,7 @@ class VideoExecutor(MotionArtifacts, HostMediaExecutor):
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
                 **({"continuation": continuation} if continuation else {}),
+                **({"continuation_frames": 1} if continuation and strategy == "last_frame_v1" else {}),
                 **(
                     {"motion_context": {k: motion[k] for k in ("relative_path", "sha256", "size_bytes")}}
                     if motion

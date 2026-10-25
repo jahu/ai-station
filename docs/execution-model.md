@@ -402,3 +402,13 @@ activation, reports use the ordinary source/report graph without Python/project
 setup, while code uses selected source context, owned project/worktree, proposal,
 validation and review through existing executors. Output family metadata is only
 an inspectable preparation snapshot, not a new execution architecture.
+
+## Wan continuation policy
+
+New capable-Runner video plans freeze `last_frame_v1` and one overlap frame in
+their segment timeline. The native worker verifies the owned prior clip, then
+conditions on its last decoded RGB frame; a caller cannot choose arbitrary
+prefix sizes or supply both a one-frame prefix and a raw checkpoint. Old plans
+and their retries/resumes keep cached-latent/seventeen-frame behavior. The plan,
+Run parameters and native report expose the actual choice. Unknown internal
+strategies fail before native dispatch. See [qualification and scope](plans/wan-continuation-quality.md).

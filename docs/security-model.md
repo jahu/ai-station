@@ -1,3 +1,10 @@
+The [Wan continuation candidate](plans/wan-continuation-quality.md) adds only a
+typed choice of one or seventeen preceding frames inside the existing owned-video
+operation. One-frame requests cannot carry raw latent checkpoints. Hash, path,
+dimension and 81-frame decoding bounds remain enforced; there is no caller-chosen
+command, model path, graph, memory limit or extra permission. Legacy dispatch
+serialization and persisted plan/resume semantics remain unchanged.
+
 Data notification checks reuse only the frozen generation model, original deadline and verified report bytes. They receive no code, memory-write or email authority. Independent check success gates notices and existing reviewed SMTP delivery; failed checks never consume the next comparison baseline. [Contracts](plans/data-result-alerts.md).
 
 Conditional report alerts use the same local provider/deadline without tools.

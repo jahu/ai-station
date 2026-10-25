@@ -124,7 +124,18 @@ def test_segmented_job_is_durable_and_finishes_only_after_real_cpu_composition(b
             assert not active_locks(session)
 
 
-def test_job_stop_and_resume_reuses_completed_clip_and_receipt(bridge):
+@pytest.mark.parametrize("legacy", [False, True])
+def test_job_stop_and_resume_reuses_completed_clip_and_receipt(bridge, monkeypatch, legacy):
+    if legacy:
+        original = RunnerClient.request
+
+        def old_runner(self, method, path, json=None):
+            result = original(self, method, path, json=json)
+            if path == "/v1/video/capabilities":
+                result.pop("continuation_frames", None)
+            return result
+
+        monkeypatch.setattr(RunnerClient, "request", old_runner)
     with TestClient(app) as client:
         response = client.post(
             "/api/media/jobs/video",
@@ -140,6 +151,19 @@ def test_job_stop_and_resume_reuses_completed_clip_and_receipt(bridge):
         assert response.status_code == 202, response.text
         tid = response.json()["task_id"]
         with session_factory()() as session:
+            task = session.get(Task, tid)
+            plan = task.metadata_json["media_plan"]
+            assert plan["continuation_strategy"] == ("cached_latents_v1" if legacy else "last_frame_v1")
+            if legacy:
+                # Simulate persisted pre-strategy records, including their old
+                # seventeen-frame timeline. Resuming must not upgrade them.
+                for identifier in plan["segment_run_ids"]:
+                    run = session.get(Run, identifier)
+                    run.parameters = {k: v for k, v in run.parameters.items() if k != "continuation_strategy"}
+                plan = {k: v for k, v in plan.items() if k != "continuation_strategy"}
+                task.metadata_json = {**task.metadata_json, "media_plan": plan}
+                session.commit()
+        with session_factory()() as session:
             tick(session, "partial")
         stopped = client.post("/api/media/jobs/" + tid + "/cancel").json()
         assert stopped["status"] == "canceled" and stopped["completed_segments"] == 1
@@ -147,6 +171,12 @@ def test_job_stop_and_resume_reuses_completed_clip_and_receipt(bridge):
         resumed = client.post("/api/media/jobs/" + tid + "/resume", json=values)
         assert resumed.status_code == 202, resumed.text
         assert resumed.json()["revision"] == 2
+        with session_factory()() as session:
+            plan = session.get(Task, tid).metadata_json["media_plan"]
+            assert plan.get("continuation_strategy") == (None if legacy else "last_frame_v1")
+            for identifier in plan["segment_run_ids"]:
+                run = session.get(Run, identifier)
+                assert run.parameters.get("continuation_strategy") == (None if legacy else "last_frame_v1")
         assert client.post("/api/media/jobs/" + tid + "/resume", json=values).json() == resumed.json()
         assert (
             client.post(

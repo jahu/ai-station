@@ -65,30 +65,17 @@ def main(config_path):
         vae = nodes.VAELoader().load_vae(aliases["wan_vae"])[0]
         image = None
         if config.get("previous_video") and not config.get("motion_context"):
-            import hashlib
+            from ai_station_runner.wan_motion import continuation_pixels
 
-            source = Path(config["previous_video"])
-            digest = hashlib.sha256()
-            with source.open("rb") as handle:
-                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                    digest.update(chunk)
-            if digest.hexdigest() != request["continuation"]["sha256"]:
-                raise ValueError("Continuation segment content changed")
-            from collections import deque
-
-            prior = deque(maxlen=17)
-            count = 0
-            with av.open(str(source)) as container:
-                for frame in container.decode(video=0):
-                    if frame.width != request["width"] or frame.height != request["height"]:
-                        raise ValueError("Continuation segment dimensions changed")
-                    prior.append(frame.to_ndarray(format="rgb24"))
-                    count += 1
-                    if count > 81:
-                        raise ValueError("Continuation input exceeds native segment size")
-            if len(prior) < 17:
-                raise ValueError("Continuation needs seventeen preceding motion frames")
-            image = torch.from_numpy(np.stack(list(prior)).astype(np.float32) / 255)
+            image = torch.from_numpy(
+                continuation_pixels(
+                    Path(config["previous_video"]),
+                    request["continuation"]["sha256"],
+                    request["width"],
+                    request["height"],
+                    request.get("continuation_frames", 17),
+                )
+            )
         elif config["image"]:
             with Image.open(config["image"]) as source:
                 image = torch.from_numpy(np.array(source.convert("RGB"), dtype=np.float32) / 255).unsqueeze(0)
@@ -197,6 +184,7 @@ def main(config_path):
             json.dumps(
                 {
                     **execution_profile,
+                    **({"continuation_frames": 1} if request.get("continuation_frames") == 1 else {}),
                     "motion_context": {
                         "relative_path": str(checkpoint.relative_to(Path(config["root"]))),
                         "sha256": checkpoint_hash,

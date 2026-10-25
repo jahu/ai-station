@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from PIL import Image
-from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_serializer, model_validator
 
 from ai_station_runner.avatars import owned
 from ai_station_runner.config import get_settings
@@ -34,6 +34,7 @@ class VideoRequest(BaseModel):
     negative_prompt: str = Field(default="", max_length=2000)
     continuation: MediaInput | None = None
     motion_context: MediaInput | None = None
+    continuation_frames: StrictInt = Field(default=17, ge=1, le=17)
     image_relative: str | None = Field(default=None, max_length=500)
     width: int = Field(default=1280, ge=128, le=1280, multiple_of=32)
     height: int = Field(default=704, ge=128, le=1280, multiple_of=32)
@@ -50,6 +51,8 @@ class VideoRequest(BaseModel):
         values = handler(self)
         if self.memory_profile == "default":
             values.pop("memory_profile", None)
+        if self.continuation_frames == 17:
+            values.pop("continuation_frames", None)
         return values
 
     @model_validator(mode="after")
@@ -66,6 +69,10 @@ class VideoRequest(BaseModel):
             raise ValueError("Choose an initial image or preceding motion, not both")
         if self.motion_context and (not self.continuation or self.motion_context.size_bytes > 4 * 1024**2):
             raise ValueError("Motion checkpoints require a bounded preceding video")
+        if self.continuation_frames not in (1, 17):
+            raise ValueError("Choose a supported bounded continuation prefix")
+        if self.continuation_frames == 1 and (not self.continuation or self.motion_context):
+            raise ValueError("Single-frame continuation requires a preceding video without a raw checkpoint")
         if self.width * self.height > 1280 * 704:
             raise ValueError("Video dimensions exceed the profile limit")
         return self
@@ -113,6 +120,7 @@ def capabilities():
         return {
             "available": True,
             "backend": "wan2.2-5b",
+            "continuation_frames": [1, 17],
             "modes": ["generate", "animate"],
             "fps": 24,
             "memory_estimate_mib": memory_mib,
