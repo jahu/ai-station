@@ -3,6 +3,8 @@
 The versioned [catalog](cases.json) contains 156 Polish operator cases across 21
 areas, including all four permanent-deletion journeys and real semantic-memory
 acceptance and the single assistant conversation. It is a test definition, not evidence that the product is complete.
+Catalog v9 includes ready-to-upload synthetic data with independently checkable
+answers, so CSV/Excel/document and basic Vision cases need no manual boilerplate.
 Follow the [handoff plan](../plans/operator-qa-handoff.md): the operator will test
 after implementation and internal qualification, not while features are unfinished.
 
@@ -33,6 +35,10 @@ python3.12 -m venv .tools/qa-export-venv
 An export includes XLSX with **Start**, **Testy**, **Zgłoszenia**, **Retesty**,
 **Podsumowanie** and **Słownik**, three UTF-8 CSV templates, a plain-text guide and
 a manifest carrying the full release commit, catalog identity and case IDs.
+The `Dane-QA` folder contains a six-row CSV, a matching two-sheet XLSX, a Polish
+text document, a deliberately invalid XLSX and a neutral PNG with coloured shapes.
+The Start sheet and plain-text guide explain the expected values and appropriate
+uses; the manifest records every input's SHA-256. None is a real-inference result.
 The result column stays visible while scrolling; editable fields are blue.
 All test results start as **Nie testowano**. Expected behavior is never converted
 into an operator pass. Summary formulas count operator answers and recalculate
@@ -48,3 +54,6 @@ The operator can return the completed XLSX, or CSV files together with their
 manifest. Keep the original answers and evidence. Treat returned files as
 untrusted data: never execute their formulas, macros or links. Stable IDs and
 separate report/retest sheets retain the original findings across fixes.
+
+The [internal coverage review](internal-coverage.md) separates current regressions,
+recorded real-model profiles and the remaining external-account release gates.

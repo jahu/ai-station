@@ -1,12 +1,14 @@
 # Platform assistant
 
-[Chat and Work](plans/chat-work-experience.md) now provide immediate first Send,
-shared tools/artifacts and scoped Work continuation. The
-[delivery brief](plans/2026-10-chat-work-media.md) and implementation handoff record
-qualification of those delivered increments. Historical descriptions below retain
+[One assistant conversation](plans/unified-assistant-chat.md) is the current product
+contract: there is no Chat/Work mode selection. Each current request routes to a
+direct response or the applicable scoped tools/workflow. Dedicated workspaces stay.
+The earlier [Chat and Work](plans/chat-work-experience.md) history,
+[delivery brief](plans/2026-10-chat-work-media.md) and implementation handoff are
+retained as qualification history. Historical descriptions below retain
 earlier terminology; current source and deployment receipts determine live state.
 
-[Default Web routing](plans/work-default-web-routing.md) lets Work plan natural
+[Default Web routing](plans/work-default-web-routing.md) lets the assistant plan natural
 requests even with Web enabled. It does not inherit search tools into an agent,
 ignore explicit research scope or weaken Chat/Git/runtime permissions.
 
@@ -14,7 +16,14 @@ The default AI Station screen is a conversation that operates the workstation. T
 
 ## Execution contract
 
-A submitted turn creates a Task and an orchestration Run. The worker selects a typed action from the operational capability registry. Explicit intent takes a deterministic route; ambiguous requests can use a local model to produce a strictly validated plan. A model proposes actions, never grants permissions, selects arbitrary host paths or supplies shell commands. The user can override routing, including a per-turn execution-mode override that does not rewrite the saved conversation mode.
+A submitted turn creates a Task and the applicable ordinary Run. Simple questions
+use the direct response path without a separate planner. For tasks, the worker
+selects a typed action from the operational capability registry. Explicit intent
+takes a deterministic route; ambiguous requests can use a local model to produce
+a strictly validated plan. A model proposes actions, never grants permissions,
+selects arbitrary host paths or supplies shell commands. Optional tool/action
+controls can scope the request; they are not an execution-mode selector. Existing
+legacy API restrictions remain compatible without recreating the split in the UI.
 
 An action uses the same domain service as its dedicated workspace. Child Runs inherit Task/conversation provenance and reference their orchestration parent. Image generation, worktree preparation, coding, validation and model loading remain separate inspectable Runs. A planning Run completes when it atomically publishes its child Run; it does not wait while occupying the sole worker. The conversation projects the complete Task tree, errors, validation and artifacts, rather than equating successful planning with successful execution.
 

@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
   "sources": [
     "docs/product-completion.md",
@@ -1658,12 +1658,12 @@
         "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
       ],
       "steps": [
-        "Dołącz QA CSV: produkt,cena oraz A,10 i B,20",
-        "Poproś o sumę cen i liczbę wierszy",
-        "Sprawdź kod i wynik"
+        "Dołącz Dane-QA/qa-sprzedaz.csv z pakietu QA",
+        "Poproś o sumę kwota_pln, liczbę wierszy danych i sumy kategorii A oraz B",
+        "Sprawdź kod, wynik i źródło"
       ],
       "expected": [
-        "Suma wynosi 30, wierszy danych jest 2; wynik ma właściwe źródło."
+        "Suma wynosi 150, wierszy danych jest 6, kategoria A = 65 i B = 85; obliczenia pochodzą z całego właściwego pliku."
       ],
       "resources": "CPU; jednorazowe CSV/XLSX/PDF QA",
       "minutes": 5,
@@ -1681,11 +1681,12 @@
         "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
       ],
       "steps": [
-        "Dołącz własny mały arkusz QA z dwiema zakładkami i znanymi wartościami",
-        "Poproś o podsumowanie obu arkuszy"
+        "Dołącz Dane-QA/qa-sprzedaz.xlsx z pakietu QA",
+        "Poproś o podsumowanie obu arkuszy: Sprzedaż QA i Kontrola QA",
+        "Sprawdź obliczenia dla transakcji oraz ich zgodność z arkuszem kontrolnym"
       ],
       "expected": [
-        "Wartości i nazwy odpowiadają całemu plikowi, nie tylko pierwszemu podglądowi."
+        "Oba arkusze są rozpoznane; Sprzedaż QA ma 6 transakcji o sumie 150, A = 65 i B = 85. Kontrola QA opisuje te same wartości, nie dodatkowe transakcje."
       ],
       "resources": "CPU; jednorazowe CSV/XLSX/PDF QA",
       "minutes": 5,
@@ -1725,12 +1726,12 @@
         "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
       ],
       "steps": [
-        "Przeanalizuj małe dane QA",
-        "Poproś o wykres i CSV z podsumowaniem",
+        "Dołącz Dane-QA/qa-sprzedaz.csv",
+        "Poproś o wykres sum kwota_pln według kategorii i CSV z tym podsumowaniem",
         "Pobierz oba wyniki"
       ],
       "expected": [
-        "Oba pliki odpowiadają obliczeniom i mają zapisane źródła."
+        "Wykres i pełny CSV mają kategorię A = 65 oraz B = 85; oba wyniki wskazują właściwe źródło."
       ],
       "resources": "CPU; jednorazowe CSV/XLSX/PDF QA",
       "minutes": 5,
@@ -1792,7 +1793,7 @@
         "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA."
       ],
       "steps": [
-        "Dołącz jednorazowy niepoprawny CSV/XLSX QA",
+        "Dołącz Dane-QA/qa-uszkodzony.xlsx: celowo błędny plik z pakietu QA",
         "Poproś o analizę",
         "Sprawdź komunikat i możliwość użycia poprawnego pliku"
       ],
@@ -2130,7 +2131,7 @@
         "Nie usuwaj istniejących danych. Empty Trash wolno potwierdzić tylko przy koszu zawierającym wyłącznie przeznaczone do usunięcia pliki QA."
       ],
       "steps": [
-        "Dodaj neutralny obraz oraz mały plik danych QA do Library",
+        "Dodaj Dane-QA/qa-ksztalty.png i Dane-QA/qa-sprzedaz.csv do Library",
         "Otwórz każdy szczegół",
         "Sprawdź nazwę, typ i pochodzenie"
       ],
@@ -2805,11 +2806,11 @@
         "Wymagane konto lub model muszą być świadomie przygotowane; w przeciwnym razie zapisz Zablokowany i powód."
       ],
       "steps": [
-        "Dołącz własny mały dokument QA z dwoma znanymi faktami.",
+        "Dołącz Dane-QA/qa-notatka.txt z pakietu QA.",
         "Poproś o podsumowanie obu faktów i wskazanie źródła."
       ],
       "expected": [
-        "Treść pochodzi z właściwego dokumentu; brak obsługi lub uszkodzony plik ma jawny komunikat."
+        "Podsumowanie zawiera oba fakty fikcyjnego projektu Latarnia: 18 listopada 2026 i 42 uczestników, z odwołaniem do właściwego dokumentu."
       ],
       "resources": "CPU; neutralny plik QA",
       "minutes": 10,
@@ -3538,12 +3539,13 @@
         "Lokalny model Vision dostępny w Models; neutralny obraz QA z łatwo rozpoznawalnym kolorem lub kształtem."
       ],
       "steps": [
-        "Załącz obraz w zwykłej rozmowie i zapytaj o widoczny kolor lub kształt",
+        "Załącz Dane-QA/qa-ksztalty.png w zwykłej rozmowie; zapytaj o kolory, kształty i ich położenie",
         "Powtórz z opcjonalnym narzędziem Conversation, bez wyboru innego modelu tekstowego",
         "Sprawdź wynik i użyty model w szczegółach wykonania"
       ],
       "expected": [
-        "Odpowiedź uwzględnia rzeczywiste piksele przez lokalny Vision. Brak prośby o przełączenie Chat / Work, zbędnego uruchomienia modelu tekstowego i niejawnego wysłania obrazu do chmury."
+        "Odpowiedź uwzględnia rzeczywiste piksele przez lokalny Vision. Brak prośby o przełączenie Chat / Work, zbędnego uruchomienia modelu tekstowego i niejawnego wysłania obrazu do chmury.",
+        "Obraz przedstawia czerwony kwadrat po lewej i niebieskie koło po prawej na białym tle."
       ],
       "resources": "Lokalny model Vision; GPU; bez płatnych API",
       "minutes": 4,
