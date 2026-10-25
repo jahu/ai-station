@@ -61,6 +61,18 @@ memories automatically. Semantic matches appear inline with the selected scope;
 FTS continues to work during setup. No GPU/chat-model changes. Existing compatible
 embedding endpoints remain advanced configuration. [Memory guide](docs/memory.md).
 
+Images offers compatible models for each operation and **Use as default** for
+Generate, Edit and Recompose independently. Qwen and Juggernaut remain available;
+the optional Krea 2 / LUSTIFY adapter uses a separate pinned native installation.
+Its GPU-only profile never falls back to CPU model offload. Setup remains explicit
+and the adapter is disabled until configured. See the
+[setup, model selection and qualification](docs/plans/krea2-lustify-images.md).
+
+Images and Chat/Work edits can follow the submitted instruction without implicit
+portrait/skin styling. **Use classic identity template** restores the original
+Edit/Recompose profile. Generate and the external photo pipeline remain unchanged.
+[Image profile contracts](docs/image-workflows.md#instruction-only-editing).
+
 Research agents can use **Notifications → Only notify when** to alert on a
 reviewed finding instead of every successful report. Each report stays in history;
 the workspace shows the actual decision and compared report. The criterion gates

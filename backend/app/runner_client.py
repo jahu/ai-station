@@ -83,6 +83,9 @@ class RunnerClient:
     def start_photo(self, payload: dict) -> dict:
         return self.request("POST", "/v1/runs/photo", payload)
 
+    def start_krea_image(self, payload: dict) -> dict:
+        return self.request("POST", "/v1/runs/krea2", payload)
+
     def start_coding(self, payload: dict) -> dict:
         return self.request("POST", "/v1/runs/coding", payload)
 

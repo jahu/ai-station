@@ -8,6 +8,13 @@ import { useListKeyboard } from "./useListKeyboard";
 import { artifactName } from "./artifactName";
 
 function LineagePreview({ artifact }: { artifact: Artifact }) {
+  if (artifact.purged_at || artifact.purge_run_id)
+    return (
+      <div className="artifact-placeholder">
+        <FileText size={24} />
+        <span>{artifact.purged_at ? "Deleted" : "Deleting"}</span>
+      </div>
+    );
   if (artifact.type === "image") {
     return (
       <img
@@ -81,7 +88,13 @@ export function LineageStrip({
               <strong>{name}</strong>
               <small>
                 {related.type.replaceAll("_", " ")}
-                {related.trashed_at ? " · Trash" : ""}
+                {related.purged_at
+                  ? " · Deleted"
+                  : related.purge_run_id
+                    ? " · Deleting"
+                    : related.trashed_at
+                      ? " · Trash"
+                      : ""}
               </small>
             </Link>
           );

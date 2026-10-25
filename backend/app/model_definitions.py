@@ -156,7 +156,18 @@ def preset_of(row: ModelDefinition) -> dict:
 
 def definition_dict(row: ModelDefinition, file: ModelFile | None = None) -> dict:
     spec = compatibility_for(file.format, file.category, file.filename) if file else None
+    image = (row.metadata_json or {}).get("image")
+    image_backend = image.get("backend") if isinstance(image, dict) and row.category == "image" else None
+    if spec and image_backend in {"qwen", "krea2"}:
+        spec = {
+            **spec,
+            "runtime": "ComfyUI · Krea 2" if image_backend == "krea2" else "photo_pipe",
+            "adapter": "host-media",
+            "operational": row.status == "registered",
+            "summary": "Select this installed image checkpoint and operation settings in Images. Models load only when its Run executes.",
+        }
     return {
+        **({"image_backend": image_backend} if image_backend in {"qwen", "krea2"} else {}),
         "id": row.id,
         "name": row.name,
         "family": row.family,

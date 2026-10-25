@@ -104,6 +104,25 @@ preparation consent, revision/content guards and parent-death/Stop contracts kee
 inference offline and independent of native GPU models.
 [Lifecycle](plans/memory-embeddings-readiness.md).
 
+Permanent Library deletion uses an explicitly approved container-side
+`artifact_purge` Run. It removes only app-owned bytes and preserves provenance
+tombstones; native Host Runner authority is not expanded. The exact selection,
+progress and recovery policy are documented in the
+[Library deletion contract](plans/library-permanent-deletion.md).
+
+The [Krea 2 image backend plan](plans/krea2-lustify-images.md) extends existing
+host-media execution and the model registry. Pinned native runtime code stays
+outside control-plane data mounts; fixed per-Run graphs preserve typed access,
+resource ownership and artifact lineage. Per-operation model defaults and frozen
+checkpoint snapshots reuse ModelDefinition/Settings and the existing photo/media
+executor. Real GPU qualification is recorded in the plan; release gates and preview
+deployment are tracked separately.
+
+Instruction-only Edit/Recompose reuses the fixed native photo wrapper and the
+existing Task/Run lifecycle. Profile names are typed; only constants in the owned
+pipeline import change. No external script/model modifications or new execution
+boundary. [Contracts](image-workflows.md#instruction-only-editing).
+
 Generated data email attachments reuse the existing final-result/email Run graph,
 approval hash and conservative SMTP journal. Frozen selected formats require actual
 verified exports; original uploads and scripts are excluded. Empty selections

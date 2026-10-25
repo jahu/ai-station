@@ -1,7 +1,12 @@
 """Adapter around the existing photo pipeline's typed Runner operation."""
 
+import json
+from pathlib import Path
+
+from app.config import get_settings
 from app.events import append_event
 from app.host_media_executor import HostMediaExecutor
+from app.paths import safe_join
 from app.permissions import require
 
 
@@ -10,6 +15,33 @@ class PhotoPipeExecutor(HostMediaExecutor):
     suffix = ".png"
     artifact_type = "image"
     mime_type = "image/png"
+
+    def output_metadata(self, output):
+        relative = str(Path(output).with_suffix(".json"))
+        root = get_settings().data_dir.resolve()
+        sidecar = safe_join(root, relative)
+        if sidecar != root / relative:
+            raise ValueError("Image execution receipt must not contain symlinks")
+        if not sidecar.exists():
+            return {}
+        if sidecar.stat().st_size > 16 * 1024:
+            raise ValueError("Image execution receipt exceeds its limit")
+        report = json.loads(sidecar.read_text())
+        if "fully_resident_cuda_weights_checked" not in report:
+            return {}
+        if (
+            report.get("fully_resident_cuda_weights_checked") is not True
+            or report.get("cpu_offload") is not False
+        ):
+            raise ValueError("Krea did not verify GPU-only inference")
+        return {"execution": report}
+
+    def reserve_devices(self, session, run, indexes):
+        if run.parameters.get("backend") == "krea2":
+            from app.resources import reserve_gpu_bundle
+
+            return reserve_gpu_bundle(session, run, indexes, run.requested_resources["gpu_count"])
+        return super().reserve_devices(session, run, indexes)
 
     def on_success(self, session, run, artifact):
         if run.parameters.get("video_prompt"):
@@ -73,6 +105,36 @@ class PhotoPipeExecutor(HostMediaExecutor):
         )
 
     def _start(self, runner, run, allocated, output):
+        if run.parameters.get("backend") == "krea2":
+            model = run.parameters["image_model"]
+            keys = (
+                "mode",
+                "width",
+                "height",
+                "steps",
+                "cfg",
+                "seed",
+                "reference_strength",
+                "reference_layout",
+                "grounding_px",
+                "negative",
+            )
+            options = {key: run.parameters[key] for key in keys if run.parameters.get(key) is not None}
+            options["prompt"] = (
+                run.parameters["edit_prompt"] if options["mode"] == "img2img" else run.parameters["prompt"]
+            )
+            return runner.start_krea_image(
+                {
+                    "run_id": run.id,
+                    "options": options,
+                    "model_file": model["model_file"],
+                    "profile_sha256": model["profile_sha256"],
+                    "gpus": [int(gpu) for gpu in run.allocated_resources["gpus"]],
+                    "inputs": run.parameters.get("krea_inputs", []),
+                    "permissions": ["filesystem_read", "workspace_write"],
+                    **self.native_budget(run),
+                }
+            )
         payload = {
             key: run.parameters.get(key)
             for key in (
@@ -92,6 +154,8 @@ class PhotoPipeExecutor(HostMediaExecutor):
             )
         }
         payload["prompt_style"] = run.parameters.get("prompt_style", "pipeline")
+        if run.parameters.get("image_model"):
+            payload["model_file"] = run.parameters["image_model"]["model_file"]
         payload.update(run_id=run.id, gpu=allocated, output_relative=output)
         payload.update(self.native_budget(run))
         return runner.start_photo(payload)

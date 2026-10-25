@@ -41,6 +41,10 @@ from ai_station_runner.gitops import (
     run_project_command,
 )
 from ai_station_runner.gpu_processes import collect as collect_gpu_processes
+from ai_station_runner.krea2 import KreaFile
+from ai_station_runner.krea2_native import KreaRunRequest
+from ai_station_runner.krea2_native import capabilities as krea_capabilities
+from ai_station_runner.krea2_native import start as start_krea
 from ai_station_runner.llama_runtime import router as llama_router
 from ai_station_runner.local_coding_runs import LocalCodingRequest, local_coding_report, start_local_coding
 from ai_station_runner.local_model import router as local_model_router
@@ -134,7 +138,7 @@ class PhotoBody(RequestBody):
     mode: Literal["t2i", "img2img", "recompose", "upscale"]
     backend: Literal["qwen", "juggernaut"] = "qwen"
     prompt: str = Field(default="", max_length=10000)
-    prompt_style: Literal["pipeline", "prompt"] = "pipeline"
+    prompt_style: Literal["pipeline", "prompt", "instruction"] = "pipeline"
     negative: str | None = Field(default=None, max_length=10000)
     edit_prompt: str = Field(default="", max_length=10000)
     width: int | None = Field(default=None, ge=256, le=2048, multiple_of=32)
@@ -147,6 +151,7 @@ class PhotoBody(RequestBody):
     gpu: str = Field(pattern=r"^[0-9]{1,12}$")
     output_relative: str
     inputs: list[str] = Field(default_factory=list, max_length=8)
+    model_file: KreaFile | None = None
 
 
 class CodingBody(RequestBody):
@@ -406,6 +411,12 @@ def photo_capabilities():
         "backend": "photo_pipe",
         "modes": ["t2i", "img2img", "recompose", "upscale"],
         "backends": ["qwen", "juggernaut"],
+        "prompt_profiles": {
+            "t2i": ["pipeline", "prompt"],
+            "img2img": ["pipeline", "instruction"],
+            "recompose": ["pipeline", "instruction"],
+            "upscale": ["pipeline"],
+        },
         "requires_gpu": True,
     }
 
@@ -415,6 +426,22 @@ def start_photo(body: PhotoBody):
     settings = get_settings()
     if not settings.photo_python or not settings.photo_script:
         raise HTTPException(status_code=409, detail="photo_pipe is not configured")
+    if body.model_file:
+        from ai_station_runner.config import _split
+
+        if body.backend != "qwen" or body.mode == "upscale":
+            raise HTTPException(422, "This operation does not support a Qwen checkpoint override")
+        try:
+            model_path = ensure_within(Path(body.model_file.path), _split(settings.model_roots))
+        except PathBoundaryError as exc:
+            raise HTTPException(403, "Selected checkpoint is outside model roots") from exc
+        if (
+            str(model_path) != body.model_file.path
+            or model_path.suffix != ".gguf"
+            or not model_path.is_file()
+            or model_path.stat().st_size != body.model_file.size
+        ):
+            raise HTTPException(422, "Selected checkpoint must match an existing canonical GGUF")
     expected = f"artifacts/{body.run_id[:2]}/{body.run_id[2:4]}/{body.run_id}.png"
     if body.output_relative != expected:
         raise HTTPException(422, "Output must be the run-owned artifact path")
@@ -464,6 +491,7 @@ def start_photo(body: PhotoBody):
             output=str(output),
             inputs=inputs,
             prompt_style=body.prompt_style,
+            model_snapshot=body.model_file.model_dump() if body.model_file else None,
         )
     except PhotoCommandError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -673,6 +701,17 @@ app.include_router(local_model_router)
 
 
 app.include_router(llama_router)
+
+
+@app.get("/v1/krea2/capabilities")
+def local_krea_capabilities():
+    return krea_capabilities()
+
+
+@app.post("/v1/runs/krea2")
+def krea_run(body: KreaRunRequest):
+    record = start_krea(manager(), body)
+    return {**record, "runner_id": get_settings().runner_id}
 
 
 @app.get("/v1/station-image")

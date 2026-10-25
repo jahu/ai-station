@@ -305,3 +305,6 @@ websockets==17.1
     #   -c requirements-dev.lock
     #   -c requirements.lock
     #   uvicorn
+
+tzdata==2026.5
+    # via ai-station (backend/pyproject.toml)

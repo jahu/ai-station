@@ -113,6 +113,28 @@ app-owned weights in an owned CPU subprocess, without networking or tool authori
 normal Stop and parent-death cleanup apply. No native/runtime/GPU grants are added.
 [Contracts](plans/memory-embeddings-readiness.md).
 
+Library permanent deletion is a user-confirmed `artifact_delete` operation,
+restricted to a frozen set of app-owned artifact/thumbnail paths. Directory
+descriptors and `O_NOFOLLOW` reject symlink escapes; content checks reject changed
+primary files. Shared paths are retained. No new agent tool, command, host root or
+native API authority is introduced. See the
+[deletion contract](plans/library-permanent-deletion.md).
+
+Krea image jobs import only configured pinned native code, with immutable job
+configuration and model aliases under a private native runtime directory outside
+container-writable storage. Typed inputs bind model hashes, a runtime/companion
+profile, app-owned references and reserved GPU UUIDs. Full CUDA weight residency
+is checked before inference; no implicit CPU fallback. Selected Qwen checkpoints
+use a validated, checksum-bound snapshot in fixed argv and an owned pipeline
+import; the external script stays unchanged. See the
+[image model contracts](plans/krea2-lustify-images.md).
+
+Photo instruction profiles are fixed native modes without caller-selected Python,
+scripts or model paths. Edit/Recompose can omit implicit portrait constants in
+an owned import of the configured trusted pipeline; its file remains unchanged.
+Existing path checks, permissions, process groups, cancellation and recovery apply.
+[Contracts](image-workflows.md#instruction-only-editing).
+
 Generated data email attachments reuse the existing final-result/email Run graph,
 approval hash and conservative SMTP journal. Frozen selected formats require actual
 verified exports; original uploads and scripts are excluded. Empty selections

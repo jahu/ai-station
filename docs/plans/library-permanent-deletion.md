@@ -3,7 +3,41 @@
 Operator request, 2026-10-25: support permanent deletion directly from Library,
 without moving to Trash first; in Trash allow individual deletion, deleting the
 selected items and emptying all Trash. Keep reversible Trash/restore available.
-Implementation is pending; this document does not authorize purging operator data.
+Implementation is in progress on `feat/library-permanent-deletion`; it is not
+deployed. This document does not authorize purging operator data.
+
+## Implementation contract
+
+`POST /api/library/purges` accepts a UUID receipt and either versioned artifact
+IDs or the complete server-selected Trash. A normal Task/Run is parked in
+`waiting_for_approval`; its high-risk Approval carries the exact count, names and
+snapshot digest. The existing Run approval endpoint grants or denies this scope.
+Repeating the same receipt returns the original operation; a changed payload is
+rejected. New Trash arrivals cannot enter an already prepared operation.
+
+The container-side `artifact_purge` executor requires `artifact_delete`, checks
+the granted snapshot digest and commits each artifact's deletion intent before
+unlinking. Migration 0036 adds `purge_run_id` and `purged_at`. Annotations/restore
+are blocked after intent. Metadata and lineage remain inspectable; file and
+thumbnail endpoints return 410 after deletion and 409 while deletion is pending.
+Library/Trash omit tombstones, while Run-specific artifact history retains them.
+
+Every storage component is opened with `O_NOFOLLOW` using directory descriptors.
+Only recorded files beneath `artifacts/` and the artifact's own known thumbnail
+are eligible; main content size/hash and inode identity are checked. Shared
+artifact/log paths are retained and reported. No recursive deletion, host path,
+original model, runtime file or command can be requested.
+
+Per-item outcomes are durable Run metadata/events. Partial failure keeps completed
+deletions and records the remaining files. A reviewed retry obtains current
+versions only for those exact remaining IDs. Stop finishes the current item and
+leaves subsequent items alone. Stale-worker recovery resumes the same approved
+Run and committed intent; missing bytes after intent are idempotent. Recovery
+preserves cancellation and does not select Trash again.
+
+The UI provides selection, per-item permanent deletion, complete Empty Trash,
+confirmation names/count, persistent progress, Stop and review of failed items.
+Deleted results and lineage render preserved-history placeholders.
 
 ## User journeys
 

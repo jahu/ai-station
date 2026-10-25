@@ -9,12 +9,88 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import Images from "./Images";
+import type { ImageModelCatalog } from "./image-models";
+
+const imageCatalog: ImageModelCatalog = {
+  items: [
+    {
+      id: "qwen",
+      definition_id: null,
+      name: "Qwen Image",
+      backend: "qwen",
+      available: true,
+      modes: ["t2i", "img2img", "recompose"],
+      maximum_references: 8,
+    },
+    {
+      id: "juggernaut",
+      definition_id: null,
+      name: "Juggernaut XL",
+      backend: "juggernaut",
+      available: true,
+      modes: ["t2i"],
+      maximum_references: 0,
+    },
+    {
+      id: "realesrgan",
+      definition_id: null,
+      name: "RealESRGAN",
+      backend: "qwen",
+      available: true,
+      modes: ["upscale"],
+      maximum_references: 1,
+    },
+  ],
+  defaults: {
+    revision: 0,
+    choices: {
+      t2i: "qwen",
+      img2img: "qwen",
+      recompose: "qwen",
+      upscale: "realesrgan",
+    },
+  },
+};
+
+const lustifyId = "22222222-2222-4222-8222-222222222222";
+function withLustify(defaultChoice = "qwen"): ImageModelCatalog {
+  return {
+    items: [
+      ...imageCatalog.items,
+      {
+        id: lustifyId,
+        definition_id: lustifyId,
+        name: "LUSTIFY Turbo Q4",
+        backend: "krea2",
+        available: true,
+        modes: ["t2i", "img2img", "recompose"],
+        maximum_references: 2,
+        gpu_count: 2,
+      },
+    ],
+    defaults: {
+      revision: 4,
+      choices: { ...imageCatalog.defaults.choices, t2i: defaultChoice },
+    },
+  };
+}
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-function mount(entry = "/images") {
+async function mount(entry = "/images", catalog = imageCatalog) {
+  const originalFetch = globalThis.fetch;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) =>
+      String(input) === "/api/images/models"
+        ? Promise.resolve(
+            new Response(JSON.stringify(catalog), { status: 200 }),
+          )
+        : originalFetch(input, init),
+    ),
+  );
   const cache = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -28,6 +104,11 @@ function mount(entry = "/images") {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  await waitFor(() =>
+    expect(
+      screen.getByRole("combobox", { name: "Model" }).textContent,
+    ).not.toContain("Loading models…"),
+  );
 }
 it("queues Juggernaut parameters and keeps generation in the workspace", async () => {
   const fetch = vi.fn(async (path: string) => ({
@@ -38,12 +119,10 @@ it("queues Juggernaut parameters and keeps generation in the workspace", async (
         : { id: "run-id", status: "queued" },
   }));
   vi.stubGlobal("fetch", fetch);
-  mount();
-  const backendList = screen
-    .getByLabelText("Backend qwen")
-    .closest(".image-backend-choice-list") as HTMLElement;
-  fireEvent.keyDown(backendList, { key: "End" });
-  fireEvent.keyDown(backendList, { key: "Enter" });
+  await mount();
+  fireEvent.change(screen.getByRole("combobox", { name: "Model" }), {
+    target: { value: "juggernaut" },
+  });
   fireEvent.change(screen.getByLabelText("Prompt"), {
     target: { value: "A forest" },
   });
@@ -78,57 +157,76 @@ it("queues Juggernaut parameters and keeps generation in the workspace", async (
     expect.objectContaining({ body: expect.stringContaining('"gpu":"7"') }),
   );
 });
-it("attaches a Library image for Edit without another upload", async () => {
-  const artifact = {
-    id: "lib-one",
-    original_filename: "room.png",
-    type: "image",
-    mime_type: "image/png",
-    metadata: { width: 200, height: 100 },
-  };
-  const fetch = vi.fn(async (path: string) => ({
-    ok: true,
-    json: async () => {
-      const url = String(path);
-      if (url.includes("/hardware")) return { gpus: [] };
-      if (url.includes("/artifacts?")) return [artifact];
-      if (url.includes("/artifacts/")) return artifact;
-      return { id: "run-edit", status: "queued" };
-    },
-  }));
-  vi.stubGlobal("fetch", fetch);
-  mount();
-  fireEvent.click(screen.getByLabelText("Operation img2img"));
-  fireEvent.click(screen.getByRole("button", { name: "Images from Library" }));
-  fireEvent.click(
-    await screen.findByRole("button", { name: "Choose room.png lib-one" }),
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Attach file" }));
-  fireEvent.change(screen.getByLabelText("Edit instruction"), {
-    target: { value: "Make it dusk" },
-  });
-  await waitFor(() =>
+it.each([false, true])(
+  "attaches a Library image for Edit with classic template=%s",
+  async (classic) => {
+    const artifact = {
+      id: "lib-one",
+      original_filename: "room.png",
+      type: "image",
+      mime_type: "image/png",
+      metadata: { width: 200, height: 100 },
+    };
+    const fetch = vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () => {
+        const url = String(path);
+        if (url.includes("/hardware")) return { gpus: [] };
+        if (url.includes("/artifacts?")) return [artifact];
+        if (url.includes("/artifacts/")) return artifact;
+        return { id: "run-edit", status: "queued" };
+      },
+    }));
+    vi.stubGlobal("fetch", fetch);
+    await mount();
+    fireEvent.click(screen.getByLabelText("Operation img2img"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Images from Library" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Choose room.png lib-one" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Attach file" }));
+    fireEvent.change(screen.getByLabelText("Edit instruction"), {
+      target: { value: "Make it dusk" },
+    });
+    const template = screen.getByRole("checkbox", {
+      name: "Use classic identity template",
+    }) as HTMLInputElement;
+    expect(template.checked).toBe(false);
+    if (classic) fireEvent.click(template);
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Queue edit" })
+          .hasAttribute("disabled"),
+      ).toBe(false),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Queue edit" }));
+    await screen.findByText("Waiting for an available GPU");
+    expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/images/runs",
+      expect.objectContaining({
+        body: expect.stringContaining(
+          `"prompt_style":"${classic ? "pipeline" : "instruction"}"`,
+        ),
+      }),
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/images/runs",
+      expect.objectContaining({
+        body: expect.stringContaining('"input_artifact_ids":["lib-one"]'),
+      }),
+    );
     expect(
-      screen
-        .getByRole("button", { name: "Queue edit" })
-        .hasAttribute("disabled"),
-    ).toBe(false),
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Queue edit" }));
-  await screen.findByText("Waiting for an available GPU");
-  expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
-  expect(fetch).toHaveBeenCalledWith(
-    "/api/images/runs",
-    expect.objectContaining({
-      body: expect.stringContaining('"input_artifact_ids":["lib-one"]'),
-    }),
-  );
-  expect(
-    fetch.mock.calls.some((call) =>
-      String(call[0]).includes("/images/uploads"),
-    ),
-  ).toBe(false);
-});
+      fetch.mock.calls.some((call) =>
+        String(call[0]).includes("/images/uploads"),
+      ),
+    ).toBe(false);
+  },
+);
 
 it("moves through Images sources with arrow keys without queueing a Run", async () => {
   const artifacts = [
@@ -159,7 +257,7 @@ it("moves through Images sources with arrow keys without queueing a Run", async 
     },
   }));
   vi.stubGlobal("fetch", fetch);
-  mount();
+  await mount();
   fireEvent.click(screen.getByLabelText("Operation recompose"));
   fireEvent.click(screen.getByRole("button", { name: "Images from Library" }));
   fireEvent.click(
@@ -173,7 +271,7 @@ it("moves through Images sources with arrow keys without queueing a Run", async 
   const second = screen.getByLabelText("Source 2 lib-two");
   expect(first.tabIndex).toBe(0);
   expect(second.tabIndex).toBe(-1);
-  expect(screen.getByText(/There is no inspectable source Run/)).toBeTruthy();
+  expect(screen.getByText(/Selected references/)).toBeTruthy();
   fireEvent.keyDown(first.closest(".source-strip") as HTMLElement, {
     key: "ArrowRight",
   });
@@ -203,7 +301,7 @@ it("reuses a Library source, shows upscale dimensions, and submits its identity"
           : { id: "next", status: "queued" },
   }));
   vi.stubGlobal("fetch", fetch);
-  mount("/images?mode=upscale&input=source");
+  await mount("/images?mode=upscale&input=source");
   await screen.findByText(/Expected output: 800 × 400/);
   await waitFor(() =>
     expect(
@@ -251,7 +349,7 @@ it("restores a completed image from the workspace URL", async () => {
                 : { gpus: [] },
     })),
   );
-  mount("/images?run=done");
+  await mount("/images?run=done");
   const image = await screen.findByAltText("Generated image");
   expect(image.getAttribute("src")).toBe("/api/artifacts/photo/file");
   expect(
@@ -288,7 +386,7 @@ it("retries a failed image run in the workspace without opening the inspector", 
     };
   });
   vi.stubGlobal("fetch", fetch);
-  mount("/images?run=failed");
+  await mount("/images?run=failed");
   expect(await screen.findByText("Generation did not complete")).toBeTruthy();
   expect(screen.getByText("GPU lost")).toBeTruthy();
   fireEvent.click(
@@ -321,7 +419,7 @@ it("reuses the finished image as an Edit source without queueing a Run", async (
               : { gpus: [] },
   }));
   vi.stubGlobal("fetch", fetch);
-  mount("/images?run=done");
+  await mount("/images?run=done");
   fireEvent.click(await screen.findByRole("link", { name: "Edit photo" }));
   await screen.findByRole("heading", { name: "Edit" });
   await screen.findByLabelText("Source 1 photo");
@@ -338,7 +436,7 @@ it("queues the optional upscale without replacing the selected image operation",
         : { id: "queued", status: "queued" },
   }));
   vi.stubGlobal("fetch", fetch);
-  mount();
+  await mount();
   fireEvent.change(screen.getByLabelText("Prompt"), {
     target: { value: "A forest" },
   });
@@ -381,7 +479,7 @@ it("restores the two-step workflow and stops the active upscale instead of the c
     },
   }));
   vi.stubGlobal("fetch", fetch);
-  mount("/images?run=base");
+  await mount("/images?run=base");
   await screen.findByRole("list", { name: "Image workflow" });
   expect(
     screen.getByRole("link", { name: "1. Generate" }).getAttribute("href"),
@@ -436,7 +534,7 @@ it("shows the final upscaled artifact after reopening the original workflow URL"
       },
     })),
   );
-  mount("/images?run=base");
+  await mount("/images?run=base");
   await waitFor(() =>
     expect(screen.getByAltText("Generated image").getAttribute("src")).toBe(
       "/api/artifacts/final/file",
@@ -472,7 +570,7 @@ it("follows image-to-video after refresh and stops the active video stage", asyn
             : [],
   }));
   vi.stubGlobal("fetch", fetch);
-  mount("/images?run=source-run");
+  await mount("/images?run=source-run");
   await screen.findByRole("heading", { name: "Your scene in motion" });
   expect(screen.getByRole("link", { name: /Animate scene/ })).toBeTruthy();
   fireEvent.click(
@@ -497,7 +595,7 @@ it("uses the prompt alone by default and offers explicit portrait styling", asyn
         : { id: "run-id", status: "queued" },
   }));
   vi.stubGlobal("fetch", fetch);
-  mount();
+  await mount();
   const style = screen.getByRole("checkbox", {
     name: "Add portrait styling",
   }) as HTMLInputElement;
@@ -517,4 +615,111 @@ it("uses the prompt alone by default and offers explicit portrait styling", asyn
       body: expect.stringContaining('"prompt_style":"pipeline"'),
     }),
   );
+});
+
+it("selects LUSTIFY with its own preset and freezes its model in the request", async () => {
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path.endsWith("/hardware")
+        ? { gpus: [] }
+        : { id: "krea-run", status: "queued" },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  await mount("/images", withLustify());
+  fireEvent.change(screen.getByLabelText("Width"), {
+    target: { value: "640" },
+  });
+  fireEvent.change(screen.getByRole("combobox", { name: "Model" }), {
+    target: { value: lustifyId },
+  });
+  expect((screen.getByLabelText("Steps") as HTMLInputElement).value).toBe("8");
+  expect((screen.getByLabelText("CFG") as HTMLInputElement).value).toBe("1");
+  expect((screen.getByLabelText("Width") as HTMLInputElement).value).toBe(
+    "768",
+  );
+  expect(screen.queryByLabelText("Add portrait styling")).toBeNull();
+  fireEvent.change(screen.getByLabelText("Prompt"), {
+    target: { value: "A red bicycle" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Queue generate" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/images/runs",
+      expect.objectContaining({ body: expect.stringContaining(lustifyId) }),
+    ),
+  );
+  const call = fetch.mock.calls.find(([url]) => url === "/api/images/runs");
+  expect(
+    JSON.parse((call as unknown as [string, RequestInit])[1].body as string),
+  ).toMatchObject({
+    backend: "krea2",
+    model_id: lustifyId,
+    steps: 8,
+    cfg: 1,
+    width: 768,
+    seed: 42,
+  });
+});
+
+it("restores the saved model and updates only the chosen operation default", async () => {
+  const catalog = withLustify(lustifyId);
+  const fetch = vi.fn(async (path: string) => ({
+    ok: true,
+    json: async () =>
+      path.endsWith("/hardware")
+        ? { gpus: [] }
+        : {
+            revision: 5,
+            choices: { ...catalog.defaults.choices, t2i: "qwen" },
+          },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  await mount("/images", catalog);
+  expect(
+    (screen.getByRole("combobox", { name: "Model" }) as HTMLSelectElement)
+      .value,
+  ).toBe(lustifyId);
+  expect((screen.getByLabelText("Steps") as HTMLInputElement).value).toBe("8");
+  fireEvent.change(screen.getByRole("combobox", { name: "Model" }), {
+    target: { value: "qwen" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Use as default" }));
+  await waitFor(() =>
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/images/defaults",
+      expect.objectContaining({
+        method: "PUT",
+        body: JSON.stringify({ mode: "t2i", choice: "qwen", revision: 4 }),
+      }),
+    ),
+  );
+  expect(fetch.mock.calls.some(([path]) => path === "/api/images/runs")).toBe(
+    false,
+  );
+});
+
+it("keeps an unavailable saved model visible without silently selecting Qwen", async () => {
+  const catalog = withLustify(lustifyId);
+  catalog.items[catalog.items.length - 1].available = false;
+  const fetch = vi.fn(async () => ({
+    ok: true,
+    json: async () => ({ gpus: [] }),
+  }));
+  vi.stubGlobal("fetch", fetch);
+  await mount("/images", catalog);
+  expect(
+    (screen.getByRole("combobox", { name: "Model" }) as HTMLSelectElement)
+      .value,
+  ).toBe(lustifyId);
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "Queue generate",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  expect(
+    screen.getByRole("option", { name: "LUSTIFY Turbo Q4 · unavailable" }),
+  ).toBeTruthy();
 });

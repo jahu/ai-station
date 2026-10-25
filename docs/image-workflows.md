@@ -85,3 +85,32 @@ an animation; the selected action remains authoritative. Normal composed
 verification uses fake providers/native jobs. The separately executed real
 search→image and image→Wan acceptances do not claim a real combined four-stage
 execution.
+
+
+## Instruction-only editing
+
+New Chat/Work edits and the Images workspace select `prompt_style: "instruction"`
+for Edit and Recompose. The model receives the submitted edit without the legacy
+identity/portrait paragraphs. The Images **Use classic identity template** checkbox
+restores the original behavior; raw image API callers and previously queued Runs
+retain their existing `pipeline` default. Generate and Upscale are unchanged.
+
+The fixed native wrapper clears only the relevant constants in its own imported
+pipeline module: `IDENTITY_PREFIX` for Edit, and `RECOMPOSE_PREFIX_SINGLE`,
+`RECOMPOSE_PREFIX_MULTI`, `PHOTO_SUFFIX` for Recompose. This prevents an implicit
+photo/skin-style request and avoids treating every reference as the same person.
+There is no caller-selected Python code, module path, model path or shell. The
+external script on disk, sampler, CFG, dimensions, model weights and source pixels
+are unchanged. Unsupported pipeline/profile combinations fail explicitly. Profile
+choice is frozen in Run and Artifact parameters; process ownership, Stop, recovery,
+resource reservations and source lineage reuse the existing PhotoPipe executor.
+
+Investigation on 2026-10-25 confirmed that both reported Recompose outputs used
+Qwen Image 2.1 Q4_K_M with its matching VAE/Qwen3-VL vision projector, 30 steps,
+Euler and CFG 6. The source artifact was the original Generate output in both
+cases; no chained recompression or Upscale was involved. CFG 6 matches the
+[upstream editing example](https://github.com/leejet/stable-diffusion.cpp/blob/master/docs/qwen_image_2.1.md).
+The observed artifacts and ignored changes are not a proven CFG or GPU hardware
+fault. Long implicit prompt templates are one tested adapter concern; actual
+visual improvement must be checked with neutral edits before claiming success.
+No explicit sexual prompt is replayed for qualification.

@@ -28,6 +28,7 @@ interface Preset {
   cache_type: "f16" | "q8_0";
 }
 interface Definition {
+  image_backend?: "qwen" | "krea2";
   id: string;
   name: string;
   family: string;
@@ -187,9 +188,11 @@ function DefinitionCards({ definitions }: { definitions: Definition[] }) {
               {item.file?.filename ?? "Linked file missing"}
             </p>
             <small className="muted">
-              {item.compatibility?.operational
-                ? "Managed llama.cpp after a successful install"
-                : "Catalogued only · no managed adapter"}
+              {item.image_backend
+                ? "Image model · configure in Images"
+                : item.compatibility?.operational
+                  ? "Managed llama.cpp after a successful install"
+                  : "Catalogued only · no managed adapter"}
             </small>
           </Link>
         ))}
@@ -434,9 +437,13 @@ export function ModelDetail() {
             `/models/definitions/${definition.id}`,
             json("PATCH", {
               name: selectedName,
-              gpus: selectedGpus,
-              context_size: selectedContext,
-              cache_type: selectedCache,
+              ...(!definition.image_backend
+                ? {
+                    gpus: selectedGpus,
+                    context_size: selectedContext,
+                    cache_type: selectedCache,
+                  }
+                : {}),
             }),
           )
         : api<Definition>(
@@ -547,7 +554,11 @@ export function ModelDetail() {
         )}
       </section>
       <section className="panel model-card">
-        <h2>Model definition and load preset</h2>
+        <h2>
+          {definition?.image_backend
+            ? "Image model"
+            : "Model definition and load preset"}
+        </h2>
         {definition ? (
           <p>
             Status: <Badge status={definition.status} />
@@ -569,9 +580,11 @@ export function ModelDetail() {
         )}
         {definition?.compatibility && (
           <p>
-            {definition.compatibility.operational
-              ? "Declared adapter: managed llama.cpp. Registration is not a successful load."
-              : definition.compatibility.summary}
+            {definition.image_backend
+              ? definition.compatibility.summary
+              : definition.compatibility.operational
+                ? "Declared adapter: managed llama.cpp. Registration is not a successful load."
+                : definition.compatibility.summary}
           </p>
         )}
         <form
@@ -590,47 +603,60 @@ export function ModelDetail() {
               required
             />
           </label>
-          <label>
-            Context size
-            <input
-              type="number"
-              min={512}
-              max={262144}
-              step={256}
-              value={selectedContext}
-              onChange={(event) => setContext(Number(event.target.value))}
-            />
-          </label>
-          <label>
-            KV cache
-            <select
-              value={selectedCache}
-              onChange={(event) =>
-                setCacheType(event.target.value as "f16" | "q8_0")
-              }
-            >
-              <option value="f16">f16</option>
-              <option value="q8_0">q8_0</option>
-            </select>
-          </label>
-          <fieldset>
-            <legend>Saved GPU preset</legend>
-            {(hardware.data?.gpus ?? []).length ? (
-              <GpuChoiceList
-                gpus={hardware.data?.gpus ?? []}
-                selected={selectedGpus}
-                onChange={setGpus}
-              />
-            ) : (
-              <p className="muted">
-                No GPUs reported. An empty preset loads on CPU after
-                installation.
-              </p>
-            )}
-          </fieldset>
+          {!definition?.image_backend && (
+            <>
+              <label>
+                Context size
+                <input
+                  type="number"
+                  min={512}
+                  max={262144}
+                  step={256}
+                  value={selectedContext}
+                  onChange={(event) => setContext(Number(event.target.value))}
+                />
+              </label>
+              <label>
+                KV cache
+                <select
+                  value={selectedCache}
+                  onChange={(event) =>
+                    setCacheType(event.target.value as "f16" | "q8_0")
+                  }
+                >
+                  <option value="f16">f16</option>
+                  <option value="q8_0">q8_0</option>
+                </select>
+              </label>
+              <fieldset>
+                <legend>Saved GPU preset</legend>
+                {(hardware.data?.gpus ?? []).length ? (
+                  <GpuChoiceList
+                    gpus={hardware.data?.gpus ?? []}
+                    selected={selectedGpus}
+                    onChange={setGpus}
+                  />
+                ) : (
+                  <p className="muted">
+                    No GPUs reported. An empty preset loads on CPU after
+                    installation.
+                  </p>
+                )}
+              </fieldset>
+            </>
+          )}
+          {definition?.image_backend && (
+            <Link to={`/images?model=${definition.id}`}>
+              Choose this model in Images
+            </Link>
+          )}
           <div className="row">
             <Button type="submit" disabled={save.isPending}>
-              {definition ? "Save preset" : "Save definition"}
+              {definition?.image_backend
+                ? "Save name"
+                : definition
+                  ? "Save preset"
+                  : "Save definition"}
             </Button>
             {definition && (
               <Button
@@ -645,6 +671,7 @@ export function ModelDetail() {
               </Button>
             )}
             {definition?.status === "registered" &&
+              !definition.image_backend &&
               definition.compatibility?.operational && (
                 <Button
                   type="button"

@@ -72,6 +72,7 @@ def artifacts(
         statement = statement.where(
             Artifact.trashed_at.is_not(None) if view == "trash" else Artifact.trashed_at.is_(None)
         )
+        statement = statement.where(Artifact.purged_at.is_(None))
     if not run_id and not include_internal:
         statement = statement.where(Artifact.metadata_json["internal_media"].as_boolean().is_not(True))
         statement = statement.where(Artifact.metadata_json["internal_data_output"].as_boolean().is_not(True))
@@ -119,9 +120,16 @@ def mutate(session, artifact_id, expected, values, event):
     row = session.get(Artifact, str(artifact_id))
     if row is None:
         raise HTTPException(404, "Artifact not found")
+    if row.purged_at or row.purge_run_id:
+        raise HTTPException(409, "This artifact is permanently deleted or deletion has already started")
     changed = session.execute(
         update(Artifact)
-        .where(Artifact.id == row.id, Artifact.library_updated_at == expected)
+        .where(
+            Artifact.id == row.id,
+            Artifact.library_updated_at == expected,
+            Artifact.purged_at.is_(None),
+            Artifact.purge_run_id.is_(None),
+        )
         .values(**values, library_updated_at=utcnow())
         .execution_options(synchronize_session=False)
     )

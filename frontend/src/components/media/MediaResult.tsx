@@ -187,7 +187,22 @@ export default function MediaResult({
           ))}
         </ol>
       )}
-      {result ? (
+      {result?.purged_at || result?.purge_run_id ? (
+        <div className="media-finished library-deleted-placeholder">
+          <Icon size={40} />
+          <h3>
+            {result.purged_at
+              ? "Result permanently deleted"
+              : "Permanent deletion started"}
+          </h3>
+          <p>
+            Generation history is preserved. This file can no longer be
+            downloaded or reused.
+          </p>
+          <Link to={`/library/${result.id}`}>Inspect preserved history</Link>
+          <ArtifactLineage artifactId={result.id} />
+        </div>
+      ) : result ? (
         <div className="media-finished">
           {kind === "video" ? (
             <video
