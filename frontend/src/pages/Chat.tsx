@@ -148,7 +148,7 @@ type Message = ActionResult & {
     images?: { id: string; name: string }[];
     creation_context?: CreationContext;
     conversation_reference?: {
-      source_kind?: "inspected_input" | "analyzed_data";
+      source_kind?: "inspected_input" | "analyzed_data" | "agent_image_result";
       filenames?: string[];
       captured_sources?: { artifact_id: string; captured_at: string }[];
       artifact_ids?: string[];
@@ -951,7 +951,10 @@ function Transcript({
                           ?.length ?? 1) > 1
                         ? "Using the inspected images"
                         : "Using the inspected image"
-                      : "Using the previous image result"}{" "}
+                      : message.metadata.conversation_reference.source_kind ===
+                          "agent_image_result"
+                        ? "Using the agent’s image result"
+                        : "Using the previous image result"}{" "}
                   ·{" "}
                   <Link
                     to={`/runs/${message.metadata.conversation_reference.run_id}`}

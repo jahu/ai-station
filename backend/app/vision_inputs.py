@@ -62,10 +62,10 @@ def inspected_selection(session, parent, *, read_bytes=True):
     if parent is None:
         return None
     user = session.get(Message, parent.parameters.get("user_message_id", ""))
-    if (
-        user is None
-        or user.metadata_json.get("conversation_reference", {}).get("source_kind") != "inspected_input"
-    ):
+    if user is None or user.metadata_json.get("conversation_reference", {}).get("source_kind") not in {
+        "inspected_input",
+        "agent_image_result",
+    }:
         return None
     inputs = parent.parameters.get("image_inputs")
     verify(session, inputs, read_bytes=read_bytes)

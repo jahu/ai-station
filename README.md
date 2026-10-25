@@ -1,3 +1,8 @@
+Explicit image follow-ups can select a completed linked agent image. The source
+is checked on Send and through the existing frozen-input dispatch guard; unfinished
+or ambiguous results do not fall back to an older image.
+[Agent image actions](docs/plans/conversation-agent-image-actions.md).
+
 Conversation follow-ups reuse saved data answers and coding reviews with verified
 source bytes. Media references describe published metadata and explicitly do not
 claim content inspection. No new execution or tools are granted.
