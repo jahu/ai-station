@@ -21,8 +21,10 @@ may install pinned project components; normal startup/inference never downloads.
 The operator subsequently required GPU-only execution (no weight/compute offload
 to system RAM). The initial candidate is therefore LUSTIFY v10 Turbo Q4_0,
 matching Qwen3-VL 4B FP8 encoder and Krea VAE, with Identity Edit V2 or General Edit
-V2 r64 weights. The operator is downloading the LUSTIFY checkpoint separately and
-will report completion; do not start a duplicate checkpoint download. Choose one LoRA
+V2 r64 weights. The operator supplied both Turbo Q4_0 and FP8; both were verified
+against the creator's exact SHA-256 and moved from Downloads into the configured
+image diffusion-model directory. No duplicate checkpoint download was started.
+Choose one LoRA
 per operation. The primary Civitai metadata binds exact file IDs and hashes; a
 public HF copy is usable only if its SHA256 matches the creator's file. Download
 verification is atomic and resumable, with no overwritten unknown files. Qwen's
@@ -58,7 +60,11 @@ loopback server with the existing simpler execution pattern.
 Its children share the owned process group; cleanup confirms they are gone before
 releasing resources. Existing external ComfyUI/services are never controlled.
 Inputs/outputs are validated canonical app-owned paths; only verified final PNG
-bytes become Artifacts. No container privileges, Docker socket or host mounts.
+bytes become Artifacts. Job configuration, model aliases and runtime caches live
+under the private native runtime's owned `jobs/<run-id>` directory, outside the
+container-writable application-data mount. This prevents replacement of import
+paths/configuration through shared storage. No container privileges, Docker socket
+or unrestricted host mounts.
 
 Use GPU-only execution on discovered GPUs. Place the diffusion model and auxiliary
 encoder/VAE on separately reserved devices when required; never silently use CPU
@@ -112,9 +118,13 @@ queried load/offload device policies stay CUDA on each card. This is an import /
 placement-policy check, not an inference success. The native typed adapter remains
 disabled by default. Synthetic tests cover bounded options, hashes, paths, exact
 LoRA choice, GPU bundles, owned process cancellation and restart inspection.
-Checkpoint-specific GGUF compatibility, actual peak VRAM, all four real image
-cases, registry/default resolution, user-facing model selection and deployment
-qualification remain pending. In particular, the pinned GGUF plugin's architecture
-allowlist does not name Krea 2; inspect the operator's actual GGUF header and verify
-the tensor mapping before enabling it. An import success does not establish that
-checkpoint compatibility.
+The actual Q4 file declares `general.architecture=qwen_image`, which the pinned
+GGUF loader accepts; shape-only inspection of all 430 tensors detects Comfy's
+`Krea2` class with 28 layers, without allocating model weights or doing inference.
+Actual quantized weight loading, peak VRAM and all four real image cases remain
+pending. Registry choices, versioned per-operation defaults and immutable Run model
+snapshots now have backend implementations and targeted tests. Krea routes through
+the existing photo/media lifecycle and reserves its primary/auxiliary GPUs together.
+User-facing model selection, selected-Qwen checkpoint dispatch and complete
+review/checks/deployment qualification remain pending. No inference success is
+inferred from metadata or import checks.

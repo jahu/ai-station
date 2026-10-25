@@ -108,7 +108,8 @@ def test_native_dispatch_binds_devices_files_and_owned_output(installed):
     assert set(config["files"]) == {"model", "encoder", "vae"}
     assert config["gpu_count"] == 2
     assert Path(config["output"]).name == f"{body.run_id}.png"
-    assert Path(config["work"]).is_relative_to(settings.host_data_dir() / "runs")
+    assert Path(config["work"]).is_relative_to(Path(settings.krea_runtime_dir) / "jobs")
+    assert not Path(call["argv"][-1]).is_relative_to(settings.host_data_dir())
     with pytest.raises(HTTPException) as error:
         native.start(manager, body)
     assert error.value.status_code == 409

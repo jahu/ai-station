@@ -170,13 +170,17 @@ def start(manager, body):
     selected = {name: file.model_dump() for name, file in files.items() if name in {"encoder", "vae", role}}
     selected["model"] = body.model_file.model_dump()
     run_id = str(body.run_id)
-    work = root / "runs" / run_id / "krea2"
+    # Runtime paths, aliases and the config it imports must not be replaceable by
+    # the control-plane container through its writable application-data mount.
+    # Only final artifacts and ordinary process journals belong in shared storage.
+    work = runtime / "jobs" / run_id
     if work.resolve() != work:
         raise HTTPException(403, "Krea work directory must not contain symlinks")
     output = owned(root, f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.png")
     if work.exists() or output.exists():
         raise HTTPException(409, "Inspect existing Krea work before retrying")
-    work.mkdir(parents=True, mode=0o700)
+    work.parent.mkdir(exist_ok=True, mode=0o700)
+    work.mkdir(mode=0o700)
     output.parent.mkdir(parents=True, exist_ok=True)
     config = work / "request.json"
     with config.open("x") as handle:

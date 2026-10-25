@@ -16,6 +16,8 @@ from sqlalchemy.orm import Session
 from app.artifacts import register_file
 from app.config import get_settings
 from app.db import session_scope
+from app.image_models import resolve_request
+from app.image_models import router as image_model_router
 from app.image_schema import ImageRequest
 from app.models import Artifact, Run, Task
 from app.paths import PathBoundaryError, safe_join
@@ -102,6 +104,7 @@ def enqueue_image(body: ImageRequest, session: DB):
 
 
 def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=None):
+    body, model_snapshot = resolve_request(session, body)
     parents = [get_artifact(session, item) for item in body.input_artifact_ids]
     for parent in parents:
         if parent.artifact_type != "image":
@@ -133,6 +136,24 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
         parent_artifact_ids=[parent.id for parent in parents],
         repeats=1,
     )
+    resources = {"gpu": body.gpu}
+    if model_snapshot:
+        parameters["image_model"] = model_snapshot
+    if body.backend == "krea2":
+        parameters["krea_inputs"] = [
+            {"relative_path": parent.relative_path, "size_bytes": parent.size_bytes, "sha256": parent.sha256}
+            for parent in parents
+        ]
+        if body.mode == "img2img":
+            width, height = parents[0].metadata_json.get("width"), parents[0].metadata_json.get("height")
+            if not width or not height:
+                raise HTTPException(422, "Krea Edit requires verified source dimensions")
+            scale = min(body.max_side or 1024, 2048) / max(width, height)
+            parameters["width"] = body.width or max(256, round(width * scale / 32) * 32)
+            parameters["height"] = body.height or max(256, round(height * scale / 32) * 32)
+        if parameters["width"] * parameters["height"] > 2_097_152:
+            raise HTTPException(422, "Krea output must be at most two megapixels")
+        resources.update(gpu_count=model_snapshot["gpu_count"], ram_mib=6144)
     from app.vision_inputs import pin_media_inputs
 
     pin_media_inputs(session, parent_run_id, parameters)
@@ -145,12 +166,16 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
         execution_target="host",
         parameters=parameters,
         requested_gpu=body.gpu,
-        requested_resources={"gpu": body.gpu},
+        requested_resources=resources,
         permissions=permissions_for("image_generation"),
         retry_class="safe",
         parent_run_id=parent_run_id,
     )
     return run
+
+
+# Uses the same registry/Settings rows as Models; selection creates no workload.
+router.include_router(image_model_router)
 
 
 @router.post("/images/uploads", status_code=201)

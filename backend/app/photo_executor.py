@@ -11,6 +11,13 @@ class PhotoPipeExecutor(HostMediaExecutor):
     artifact_type = "image"
     mime_type = "image/png"
 
+    def reserve_devices(self, session, run, indexes):
+        if run.parameters.get("backend") == "krea2":
+            from app.resources import reserve_gpu_bundle
+
+            return reserve_gpu_bundle(session, run, indexes, run.requested_resources["gpu_count"])
+        return super().reserve_devices(session, run, indexes)
+
     def on_success(self, session, run, artifact):
         if run.parameters.get("video_prompt"):
             self.queue_video(session, run, artifact)
@@ -73,6 +80,38 @@ class PhotoPipeExecutor(HostMediaExecutor):
         )
 
     def _start(self, runner, run, allocated, output):
+        if run.parameters.get("backend") == "krea2":
+            model = run.parameters["image_model"]
+            keys = (
+                "mode",
+                "width",
+                "height",
+                "steps",
+                "cfg",
+                "seed",
+                "reference_strength",
+                "reference_layout",
+                "grounding_px",
+                "negative",
+            )
+            options = {key: run.parameters[key] for key in keys if run.parameters.get(key) is not None}
+            options["prompt"] = (
+                run.parameters["edit_prompt"] if options["mode"] == "img2img" else run.parameters["prompt"]
+            )
+            return runner.start_krea_image(
+                {
+                    "run_id": run.id,
+                    "options": options,
+                    "model_file": model["model_file"],
+                    "profile_sha256": model["profile_sha256"],
+                    "gpus": [int(gpu) for gpu in run.allocated_resources["gpus"]],
+                    "inputs": run.parameters.get("krea_inputs", []),
+                    "permissions": ["filesystem_read", "workspace_write"],
+                    **self.native_budget(run),
+                }
+            )
+        if run.parameters.get("image_model"):
+            raise ValueError("This selected checkpoint needs a qualified native model-selection adapter")
         payload = {
             key: run.parameters.get(key)
             for key in (
