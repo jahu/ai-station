@@ -44,7 +44,7 @@ export default function AnalysisAgentDialog({
         content:
           "Create an agent that repeats this analysis. " + schedule.trim(),
         action: "agent.create",
-        execution_mode: "work",
+        execution_mode: "assistant",
         analysis_agent_source_run_id: source.id,
         schedule_timezone: timezone,
         web_search: { enabled: false, query: "" },

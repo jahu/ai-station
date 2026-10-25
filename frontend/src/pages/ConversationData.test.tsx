@@ -39,7 +39,7 @@ it.each([
   { mode: "chat", entry: "json" },
   { mode: "work", entry: "json" },
 ])(
-  "waits for $entry inspection before first Send in $mode and submits only a local data scope",
+  "waits for $entry inspection before first Send with a saved $mode preference and submits only a local data scope",
   async ({ mode, entry }) => {
     let inspected = false;
     const writes: Record<string, unknown>[] = [];
@@ -100,8 +100,9 @@ it.each([
       </QueryClientProvider>,
     );
     await screen.findByRole("textbox", { name: "Message" });
-    if (mode === "work")
-      fireEvent.click(screen.getByRole("button", { name: "Work" }));
+    expect(
+      screen.queryByRole("group", { name: "Conversation mode" }),
+    ).toBeNull();
     if (entry === "csv" && mode === "work") {
       // Deliberately switching out of project creation must clear that scope.
       fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
@@ -568,7 +569,7 @@ it("offers offline captured-data continuation separately from an explicit public
 });
 
 it.each(["chat", "work"])(
-  "submits selected documents from the first %s composer and waits for upload",
+  "submits selected documents from the unified composer with a saved %s preference and waits for upload",
   async (mode) => {
     let release: (() => void) | undefined;
     const pending = new Promise<void>((resolve) => {
@@ -620,8 +621,9 @@ it.each(["chat", "work"])(
       </QueryClientProvider>,
     );
     await screen.findByRole("textbox", { name: "Message" });
-    if (mode === "work")
-      fireEvent.click(screen.getByRole("button", { name: "Work" }));
+    expect(
+      screen.queryByRole("group", { name: "Conversation mode" }),
+    ).toBeNull();
     fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
       target: { value: "data.analyze" },
     });

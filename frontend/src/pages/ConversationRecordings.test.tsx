@@ -95,12 +95,13 @@ function recording(name = "meeting.mp3") {
 }
 
 it.each(["chat", "work"])(
-  "attaches a stored recording in %s without losing the prompt",
+  "attaches a stored recording with a saved %s preference without losing the prompt",
   async (mode) => {
     const state = mount({ mode });
     const message = await screen.findByRole("textbox", { name: "Message" });
-    if (mode === "work")
-      fireEvent.click(screen.getByRole("button", { name: "Work" }));
+    expect(
+      screen.queryByRole("group", { name: "Conversation mode" }),
+    ).toBeNull();
     fireEvent.change(message, { target: { value: "Podsumuj to nagranie" } });
     fireEvent.change(screen.getByLabelText("Attach files"), {
       target: { files: [recording()] },

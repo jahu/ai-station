@@ -462,7 +462,8 @@ export function AssistantResults({
         </>
       ) : null}
       {result.data_runs?.length ||
-      (result.steps.some((step) => step.capability === "chat.vision") &&
+      ((!!result.media_runs?.length ||
+        result.steps.some((step) => step.capability === "chat.vision")) &&
         result.steps.every(
           (step) => step.superseded || step.status === "succeeded",
         )) ? (

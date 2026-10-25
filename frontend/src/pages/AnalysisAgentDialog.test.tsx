@@ -64,7 +64,7 @@ it("previews the selected source and creates only a disabled Work draft after ex
       conversation_id: "conversation",
       expected_settings_version: 4,
       expected_provider_version: "version",
-      execution_mode: "work",
+      execution_mode: "assistant",
       action: "agent.create",
       web_search: { enabled: false, query: "" },
       content:
