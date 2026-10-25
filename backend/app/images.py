@@ -153,7 +153,13 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
             parameters["height"] = body.height or max(256, round(height * scale / 32) * 32)
         if parameters["width"] * parameters["height"] > 2_097_152:
             raise HTTPException(422, "Krea output must be at most two megapixels")
-        resources.update(gpu_count=model_snapshot["gpu_count"], ram_mib=6144)
+        # Host loading/mmap bookkeeping still needs RAM even with all inference
+        # weights on CUDA. Admission covers the measured loader RSS plus headroom;
+        # it never authorizes model offload or CPU execution.
+        resources.update(
+            gpu_count=model_snapshot["gpu_count"],
+            ram_mib=max(12288, model_snapshot["model_file"]["size"] // (1024 * 1024) + 4096),
+        )
     from app.vision_inputs import pin_media_inputs
 
     pin_media_inputs(session, parent_run_id, parameters)

@@ -2,7 +2,13 @@ import hashlib
 from types import SimpleNamespace
 
 import pytest
-from ai_station_runner.krea2 import KreaFile, KreaOptions, gpu_only_args, require_gpu_placement
+from ai_station_runner.krea2 import (
+    KreaFile,
+    KreaOptions,
+    gpu_only_args,
+    require_gpu_placement,
+    require_loaded_gpu_weights,
+)
 from pydantic import ValidationError
 
 
@@ -54,6 +60,18 @@ def test_unexpected_runtime_cpu_offload_is_rejected():
     for load, offload in [("cuda:1", "cpu"), ("cpu", "cuda:1"), ("cuda:0", "cuda:0")]:
         with pytest.raises(ValueError, match="GPU-only placement"):
             require_gpu_placement(SimpleNamespace(load_device=load, offload_device=offload), 1)
+
+
+def test_cpu_streamed_weights_are_rejected_even_if_patcher_claims_cuda():
+    patcher = SimpleNamespace(
+        load_device="cuda:1",
+        offload_device="cuda:1",
+        model=SimpleNamespace(named_parameters=lambda: [("layer", SimpleNamespace(device="cpu"))]),
+    )
+    with pytest.raises(ValueError, match="fully resident"):
+        require_loaded_gpu_weights(patcher, 1)
+    patcher.model = SimpleNamespace(named_parameters=lambda: [("layer", SimpleNamespace(device="cuda:1"))])
+    require_loaded_gpu_weights(patcher, 1)
 
 
 def test_selected_weight_hash_is_required_and_mutations_are_rejected(tmp_path):

@@ -61,7 +61,18 @@ def choice(session, identifier):
     expected = {"t2i", "img2img", "recompose"}
     if not isinstance(modes, list) or not modes or not set(modes) <= expected:
         raise HTTPException(422, "Image model capabilities are invalid")
-    available = bool(row.status == "registered" and file and file.availability == "present")
+    valid_snapshot = bool(re.fullmatch(r"[a-f0-9]{64}", metadata.get("sha256", "")))
+    if backend == "krea2":
+        count = metadata.get("gpu_count", 2)
+        valid_snapshot = (
+            valid_snapshot
+            and bool(re.fullmatch(r"[a-f0-9]{64}", metadata.get("profile_sha256", "")))
+            and type(count) is int
+            and count in {1, 2}
+        )
+    available = bool(
+        row.status == "registered" and file and file.availability == "present" and valid_snapshot
+    )
     return {
         "id": row.id,
         "definition_id": row.id,
@@ -70,6 +81,7 @@ def choice(session, identifier):
         "modes": modes,
         "available": available,
         "maximum_references": 2 if backend == "krea2" else 8,
+        "gpu_count": metadata.get("gpu_count", 2) if backend == "krea2" else 1,
         "presets": metadata.get("presets", {}),
         "license_url": metadata.get("license_url"),
         "file": {"filename": file.filename, "format": file.format, "size_bytes": file.size_bytes}

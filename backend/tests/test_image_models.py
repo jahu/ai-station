@@ -114,7 +114,7 @@ def test_krea_uses_normal_image_run_and_typed_native_payload(session):
         session, ImageRequest(mode="t2i", backend="krea2", model_id=model.id, prompt="A red bicycle")
     )
     assert run.executor_type == "photo_pipe"
-    assert run.requested_resources == {"gpu": "auto", "gpu_count": 2, "ram_mib": 6144}
+    assert run.requested_resources == {"gpu": "auto", "gpu_count": 2, "ram_mib": 12288}
     assert run.parameters["steps"] == 8
     executor = PhotoPipeExecutor()
     assert executor.reserve_devices(session, run, [3, 7]) == "3"
@@ -143,3 +143,13 @@ def test_image_catalog_is_read_only_and_defaults_change_no_existing_run(session)
     assert "image_model" not in first.parameters
     assert second.parameters["backend"] == "krea2"
     assert second.parameters["image_model"]["definition_id"] == model.id
+
+
+def test_models_registry_identifies_image_adapter_without_llama_controls(session):
+    from app.model_definitions import definition_dict
+
+    model, file = registered(session)
+    record = definition_dict(model, file)
+    assert record["image_backend"] == "krea2"
+    assert record["compatibility"]["runtime"] == "ComfyUI · Krea 2"
+    assert record["compatibility"]["adapter"] == "host-media"

@@ -41,6 +41,7 @@ from ai_station_runner.gitops import (
     run_project_command,
 )
 from ai_station_runner.gpu_processes import collect as collect_gpu_processes
+from ai_station_runner.krea2 import KreaFile
 from ai_station_runner.krea2_native import KreaRunRequest
 from ai_station_runner.krea2_native import capabilities as krea_capabilities
 from ai_station_runner.krea2_native import start as start_krea
@@ -150,6 +151,7 @@ class PhotoBody(RequestBody):
     gpu: str = Field(pattern=r"^[0-9]{1,12}$")
     output_relative: str
     inputs: list[str] = Field(default_factory=list, max_length=8)
+    model_file: KreaFile | None = None
 
 
 class CodingBody(RequestBody):
@@ -424,6 +426,22 @@ def start_photo(body: PhotoBody):
     settings = get_settings()
     if not settings.photo_python or not settings.photo_script:
         raise HTTPException(status_code=409, detail="photo_pipe is not configured")
+    if body.model_file:
+        from ai_station_runner.config import _split
+
+        if body.backend != "qwen" or body.mode == "upscale":
+            raise HTTPException(422, "This operation does not support a Qwen checkpoint override")
+        try:
+            model_path = ensure_within(Path(body.model_file.path), _split(settings.model_roots))
+        except PathBoundaryError as exc:
+            raise HTTPException(403, "Selected checkpoint is outside model roots") from exc
+        if (
+            str(model_path) != body.model_file.path
+            or model_path.suffix != ".gguf"
+            or not model_path.is_file()
+            or model_path.stat().st_size != body.model_file.size
+        ):
+            raise HTTPException(422, "Selected checkpoint must match an existing canonical GGUF")
     expected = f"artifacts/{body.run_id[:2]}/{body.run_id[2:4]}/{body.run_id}.png"
     if body.output_relative != expected:
         raise HTTPException(422, "Output must be the run-owned artifact path")
@@ -473,6 +491,7 @@ def start_photo(body: PhotoBody):
             output=str(output),
             inputs=inputs,
             prompt_style=body.prompt_style,
+            model_snapshot=body.model_file.model_dump() if body.model_file else None,
         )
     except PhotoCommandError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

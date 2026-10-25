@@ -49,7 +49,7 @@ operator-controlled and versioned. An explicit unavailable model fails clearly;
 no silent fallback. Legacy explicit backend callers and saved Runs retain their
 existing behavior. Model/preset changes affect future Runs.
 
-Krea execution subclasses the existing host-media executor, reusing Task → Run →
+Krea execution extends the existing photo executor's host-media lifecycle, reusing Task → Run →
 Events → Artifacts, resource reservations, managed process groups, Stop, leases,
 recovery, source lineage, Upscale/video follow-ups and conversation results.
 The native API accepts validated settings and model references, never arbitrary
@@ -121,10 +121,36 @@ LoRA choice, GPU bundles, owned process cancellation and restart inspection.
 The actual Q4 file declares `general.architecture=qwen_image`, which the pinned
 GGUF loader accepts; shape-only inspection of all 430 tensors detects Comfy's
 `Krea2` class with 28 layers, without allocating model weights or doing inference.
-Actual quantized weight loading, peak VRAM and all four real image cases remain
-pending. Registry choices, versioned per-operation defaults and immutable Run model
-snapshots now have backend implementations and targeted tests. Krea routes through
-the existing photo/media lifecycle and reserves its primary/auxiliary GPUs together.
-User-facing model selection, selected-Qwen checkpoint dispatch and complete
-review/checks/deployment qualification remain pending. No inference success is
-inferred from metadata or import checks.
+Actual Q4 loading and all four required image cases now succeeded through ordinary
+durable preview Tasks/Runs: Generate, General Edit V2, single-reference Identity
+Edit V2 and two-reference Identity Edit V2. The inspected cases recolor a jacket,
+restage a recognizable generated adult in a library, and combine a separately
+generated cafe scene with that subject. Source IDs/hashes and final PNGs remain
+in Library. Generic generative editing does not establish perfect pixel/identity
+preservation or arbitrary object-removal accuracy; no explicit sexual prompts
+were replayed. A real Stop requested during sampling canceled its owned process,
+produced no artifact and released both GPU/RAM reservations.
+
+For the measured 768×1024 two-reference case, peak PyTorch allocations were about
+9.36 / 6.29 GiB; allocator reservations about 10.72 / 7.10 GiB, within the two
+12-GiB-class devices. Full weight residency is checked on CUDA before text,
+diffusion and VAE execution. Loader process RSS peaked around 9.92 GiB; normal
+host file loading still uses RAM, so conservative admission now reserves at least
+12 GiB host RAM plus the scheduler's existing headroom. This is not CPU inference
+or weight streaming. Higher resolutions are editable within validated limits but
+are not implied to fit by this measured profile.
+
+Registry choices, versioned per-operation defaults, immutable Run model snapshots,
+selected-Qwen checkpoint dispatch and the Images model/preset UI are implemented.
+Model selection is at the top of the form; switching models preserves sources and
+uses that model's settings. Oversized reference selections remain visible and must
+be corrected before Send. Models links prepared image definitions to Images and
+does not present llama.cpp context/cache controls for them. Library/Chat/Work
+retain the existing `photo_pipe` execution family, avoiding a parallel engine.
+
+The compiled desktop/mobile UI passed six actual API/worker/native synthetic-image
+flows, including saved defaults and two references. Evidence is retained under
+`data/acceptance/krea2-lustify-20261025`; real receipts are `scene-01.json`,
+`edit-01.json`, `recompose-01.json`, `recompose-two-01.json` and `stop-01.json`.
+Full local checks, PR review and preview deployment remain release gates. The
+current live preview has not yet been upgraded to this feature branch.

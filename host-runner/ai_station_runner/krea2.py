@@ -85,3 +85,16 @@ def require_gpu_placement(patcher, expected):
         actual = getattr(patcher, attribute, None)
         if actual is None or str(actual) != f"cuda:{expected}":
             raise ValueError(f"Krea GPU-only placement rejected {attribute}={actual}")
+
+
+def require_loaded_gpu_weights(patcher, expected):
+    require_gpu_placement(patcher, expected)
+    wrong = [
+        name
+        for name, parameter in patcher.model.named_parameters()
+        if str(parameter.device) != f"cuda:{expected}"
+    ]
+    if wrong:
+        raise ValueError(
+            "Krea GPU-only weights are not fully resident on the reserved GPU: " + ", ".join(wrong[:3])
+        )

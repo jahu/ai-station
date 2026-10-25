@@ -1,7 +1,12 @@
 """Adapter around the existing photo pipeline's typed Runner operation."""
 
+import json
+from pathlib import Path
+
+from app.config import get_settings
 from app.events import append_event
 from app.host_media_executor import HostMediaExecutor
+from app.paths import safe_join
 from app.permissions import require
 
 
@@ -10,6 +15,26 @@ class PhotoPipeExecutor(HostMediaExecutor):
     suffix = ".png"
     artifact_type = "image"
     mime_type = "image/png"
+
+    def output_metadata(self, output):
+        relative = str(Path(output).with_suffix(".json"))
+        root = get_settings().data_dir.resolve()
+        sidecar = safe_join(root, relative)
+        if sidecar != root / relative:
+            raise ValueError("Image execution receipt must not contain symlinks")
+        if not sidecar.exists():
+            return {}
+        if sidecar.stat().st_size > 16 * 1024:
+            raise ValueError("Image execution receipt exceeds its limit")
+        report = json.loads(sidecar.read_text())
+        if "fully_resident_cuda_weights_checked" not in report:
+            return {}
+        if (
+            report.get("fully_resident_cuda_weights_checked") is not True
+            or report.get("cpu_offload") is not False
+        ):
+            raise ValueError("Krea did not verify GPU-only inference")
+        return {"execution": report}
 
     def reserve_devices(self, session, run, indexes):
         if run.parameters.get("backend") == "krea2":
@@ -110,8 +135,6 @@ class PhotoPipeExecutor(HostMediaExecutor):
                     **self.native_budget(run),
                 }
             )
-        if run.parameters.get("image_model"):
-            raise ValueError("This selected checkpoint needs a qualified native model-selection adapter")
         payload = {
             key: run.parameters.get(key)
             for key in (
@@ -131,6 +154,8 @@ class PhotoPipeExecutor(HostMediaExecutor):
             )
         }
         payload["prompt_style"] = run.parameters.get("prompt_style", "pipeline")
+        if run.parameters.get("image_model"):
+            payload["model_file"] = run.parameters["image_model"]["model_file"]
         payload.update(run_id=run.id, gpu=allocated, output_relative=output)
         payload.update(self.native_budget(run))
         return runner.start_photo(payload)

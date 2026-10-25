@@ -106,6 +106,15 @@ creates a new workflow. No new host endpoint, shell or filesystem grant.
 
 # Security model
 
+Krea image jobs import only configured pinned native code, with immutable job
+configuration and model aliases under a private native runtime directory outside
+container-writable storage. Typed inputs bind model hashes, a runtime/companion
+profile, app-owned references and reserved GPU UUIDs. Full CUDA weight residency
+is checked before inference; no implicit CPU fallback. Selected Qwen checkpoints
+use a validated, checksum-bound snapshot in fixed argv and an owned pipeline
+import; the external script stays unchanged. See the
+[image model contracts](plans/krea2-lustify-images.md).
+
 Photo instruction profiles are fixed native modes without caller-selected Python,
 scripts or model paths. Edit/Recompose can omit implicit portrait constants in
 an owned import of the configured trusted pipeline; its file remains unchanged.
