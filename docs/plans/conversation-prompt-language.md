@@ -1,8 +1,9 @@
 # Conversation media language and inline recovery
 
-Next increment after shared media translation PR #443. Implementation and
-qualification are pending; global translation policy already applies to media
-created in Chat/Work through the shared creation services.
+Implemented and locally qualified within unified assistant PR #444, following
+shared media translation PR #443. Per-turn policy and inline review/recovery use
+the same media creation services. See the qualification and deployment authority
+in the [single-assistant plan](unified-assistant-chat.md).
 
 Priority update, 2026-10-25: implement this inside the
 [single assistant conversation](unified-assistant-chat.md). “Chat/Work” below

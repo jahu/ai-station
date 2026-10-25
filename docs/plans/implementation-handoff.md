@@ -1,4 +1,24 @@
-Priority update, 2026-10-25: the [single-assistant plan](unified-assistant-chat.md) supersedes user-facing Chat/Work modes and their visible default preference. Preserve historical execution/API records, permissions and approvals. New work removes the switch and mode-only refusals; this document retains earlier implementation history and other applicable contracts.
+Current candidate, 2026-10-25: PR #444 implements the
+[single assistant](unified-assistant-chat.md), replacing visible Chat/Work modes.
+Direct questions retain the inexpensive reply path; media, data, local code and
+agent requests use existing scoped execution. Per-turn media language and inline
+review/retry preserve the conversation, draft and verified result after refresh.
+Saved settings retain their historical mode; current UI turns use assistant policy.
+Selected-image questions use local Vision without starting the text provider.
+
+Qualification: final normal suite 4085 cases (4076 pass/nine opt-in skips),
+Ruff/format, five UI gates with 844 tests, exact image/Compose/isolated API smoke,
+compiled 1440/390 actual API/worker acceptance with fake LLM/CPU image fixtures,
+and six QA exporter checks. Catalog v7 has 156 cases in 21 areas. No new real
+LLM/GPU smoke is claimed; native/schema/dependencies remain unchanged.
+`data/acceptance/unified-assistant-chat-20261025/local-validation.json` binds the
+reviewed and tested heads; its merge/deployment receipts and the shared
+`data/acceptance/safety-redeploy-20261012/deployment.json` determine actual live
+state. Next: finish rollout verification, then full-platform acceptance audit and
+the release-specific Polish operator workbook. Preserve root Memory WIP,
+operator data/auth, E5 vectors, native Runner, private daemon and owned models.
+The full-platform goal remains open. Earlier entries below are historical;
+their old pending labels do not override the current ledger and receipts.
 
 > PR #434 fixes authenticated streaming contention: secure-cookie policy is frozen inside the existing auth session; response cookie attachment performs no database I/O. Failed flushes preserve their original error and always close inference; only typed SQLite busy/locked errors keep worker slots alive through normal inspection, without executor replay. All3867 CPU cases qualify (3858 pass/nine opt-in skips), Ruff/format, exact image/Compose/fake API and two actual local streams with490 cookie refreshes pass. Frontend806/native source is identical and its prior qualification is reused. [Contracts and scope](chat-cookie-db-lock.md); `data/acceptance/chat-cookie-db-lock-20261025` and shared deployment authority prove actual merge/live status. Original two failed user Runs are hashed for preservation; no automatic replay. Next: managed Memory embeddings, permanent Library deletion and the final Polish QA workbook. Preserve root Memory WIP, data/auth/native/model/private daemon; full-platform goal open.
 

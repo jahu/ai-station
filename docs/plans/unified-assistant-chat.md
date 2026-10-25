@@ -2,9 +2,9 @@
 
 Product decision, 2026-10-25: remove the user-facing Chat/Work distinction. This
 supersedes the two-mode entry in the original brief, `2026-10-chat-work-media.md`
-and earlier agent-first acceptance text. Implementation is in progress on
-`feat/unified-assistant-chat`; qualification and deployment are pending. The
-deployed UI still has the switch.
+and earlier agent-first acceptance text. Implementation and local qualification
+are complete in PR #444. The deployment receipt, rather than a feature-branch
+status, determines which version is live.
 
 ## Product contract
 
@@ -92,3 +92,27 @@ old drafts/history, reload, lost acknowledgements and no execution on inspection
 Compiled desktop/phone checks must show no switch or requirement to switch to Work.
 The final operator QA workbook must describe this one-chat workflow; handoff waits
 for its implementation and qualification.
+
+## Qualification
+
+The final production source passed all 4,085 normal Python/Runner cases: 4,076
+passed and nine explicitly opted-in integrations skipped. Ruff/format, all five
+frontend gates with 844 tests, production image, exact backend/compiled assets,
+normal/dev/private-LAN Compose and isolated image API/worker/SQL/SSE smoke passed.
+The six QA exporter checks passed; catalog version 7 has 156 Polish cases in 21
+areas, including this workflow.
+
+Compiled desktop (1440) and phone (390) acceptance used the actual isolated
+API/worker, fake LLM and owned CPU image fixtures. Ordinary responses, per-turn
+review/edit, visible results, failed translation → original recovery, refresh,
+draft/URL preservation, disabled agent creation and Stop passed without mode
+switches, overflow or JavaScript errors. Twelve local Vision question variants
+cover Auto/Conversation and legacy/unified policy without preparing the text
+provider. This is not a new real LLM/GPU smoke claim; earlier qualified executors
+and their recorded hardware profiles remain unchanged.
+
+Exact reviewed/tested-head mappings, full review and deployment verification:
+`data/acceptance/unified-assistant-chat-20261025/`. The shared live authority is
+`data/acceptance/safety-redeploy-20261012/deployment.json`. No native API,
+database schema, driver, original photo script or external runtime was changed.
+The full-platform goal and final operator workbook handoff remain open.
