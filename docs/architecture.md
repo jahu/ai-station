@@ -98,6 +98,11 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Instruction-only Edit/Recompose reuses the fixed native photo wrapper and the
+existing Task/Run lifecycle. Profile names are typed; only constants in the owned
+pipeline import change. No external script/model modifications or new execution
+boundary. [Contracts](image-workflows.md#instruction-only-editing).
+
 Generated data email attachments reuse the existing final-result/email Run graph,
 approval hash and conservative SMTP journal. Frozen selected formats require actual
 verified exports; original uploads and scripts are excluded. Empty selections

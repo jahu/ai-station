@@ -78,57 +78,76 @@ it("queues Juggernaut parameters and keeps generation in the workspace", async (
     expect.objectContaining({ body: expect.stringContaining('"gpu":"7"') }),
   );
 });
-it("attaches a Library image for Edit without another upload", async () => {
-  const artifact = {
-    id: "lib-one",
-    original_filename: "room.png",
-    type: "image",
-    mime_type: "image/png",
-    metadata: { width: 200, height: 100 },
-  };
-  const fetch = vi.fn(async (path: string) => ({
-    ok: true,
-    json: async () => {
-      const url = String(path);
-      if (url.includes("/hardware")) return { gpus: [] };
-      if (url.includes("/artifacts?")) return [artifact];
-      if (url.includes("/artifacts/")) return artifact;
-      return { id: "run-edit", status: "queued" };
-    },
-  }));
-  vi.stubGlobal("fetch", fetch);
-  mount();
-  fireEvent.click(screen.getByLabelText("Operation img2img"));
-  fireEvent.click(screen.getByRole("button", { name: "Images from Library" }));
-  fireEvent.click(
-    await screen.findByRole("button", { name: "Choose room.png lib-one" }),
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Attach file" }));
-  fireEvent.change(screen.getByLabelText("Edit instruction"), {
-    target: { value: "Make it dusk" },
-  });
-  await waitFor(() =>
+it.each([false, true])(
+  "attaches a Library image for Edit with classic template=%s",
+  async (classic) => {
+    const artifact = {
+      id: "lib-one",
+      original_filename: "room.png",
+      type: "image",
+      mime_type: "image/png",
+      metadata: { width: 200, height: 100 },
+    };
+    const fetch = vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () => {
+        const url = String(path);
+        if (url.includes("/hardware")) return { gpus: [] };
+        if (url.includes("/artifacts?")) return [artifact];
+        if (url.includes("/artifacts/")) return artifact;
+        return { id: "run-edit", status: "queued" };
+      },
+    }));
+    vi.stubGlobal("fetch", fetch);
+    mount();
+    fireEvent.click(screen.getByLabelText("Operation img2img"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Images from Library" }),
+    );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Choose room.png lib-one" }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Attach file" }));
+    fireEvent.change(screen.getByLabelText("Edit instruction"), {
+      target: { value: "Make it dusk" },
+    });
+    const template = screen.getByRole("checkbox", {
+      name: "Use classic identity template",
+    }) as HTMLInputElement;
+    expect(template.checked).toBe(false);
+    if (classic) fireEvent.click(template);
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Queue edit" })
+          .hasAttribute("disabled"),
+      ).toBe(false),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Queue edit" }));
+    await screen.findByText("Waiting for an available GPU");
+    expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/images/runs",
+      expect.objectContaining({
+        body: expect.stringContaining(
+          `"prompt_style":"${classic ? "pipeline" : "instruction"}"`,
+        ),
+      }),
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/images/runs",
+      expect.objectContaining({
+        body: expect.stringContaining('"input_artifact_ids":["lib-one"]'),
+      }),
+    );
     expect(
-      screen
-        .getByRole("button", { name: "Queue edit" })
-        .hasAttribute("disabled"),
-    ).toBe(false),
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Queue edit" }));
-  await screen.findByText("Waiting for an available GPU");
-  expect(screen.queryByRole("heading", { name: "Run inspector" })).toBeNull();
-  expect(fetch).toHaveBeenCalledWith(
-    "/api/images/runs",
-    expect.objectContaining({
-      body: expect.stringContaining('"input_artifact_ids":["lib-one"]'),
-    }),
-  );
-  expect(
-    fetch.mock.calls.some((call) =>
-      String(call[0]).includes("/images/uploads"),
-    ),
-  ).toBe(false);
-});
+      fetch.mock.calls.some((call) =>
+        String(call[0]).includes("/images/uploads"),
+      ),
+    ).toBe(false);
+  },
+);
 
 it("moves through Images sources with arrow keys without queueing a Run", async () => {
   const artifacts = [

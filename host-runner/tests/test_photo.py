@@ -153,7 +153,8 @@ def test_runner_rejects_prompt_only_profile_for_identity_and_upscale_modes(tmp_p
     clear_settings_cache()
 
 
-def test_prompt_wrapper_recovery_and_cancellation_own_only_its_process_group(tmp_path):
+@pytest.mark.parametrize("mode", ["t2i", "img2img", "recompose"])
+def test_prompt_wrapper_recovery_and_cancellation_own_only_its_process_group(tmp_path, mode):
     import subprocess
     import sys
     import time
@@ -164,6 +165,9 @@ def test_prompt_wrapper_recovery_and_cancellation_own_only_its_process_group(tmp
     source = """import subprocess,sys,time
 PHOTO_SUFFIX='portrait'
 T2I_NEGATIVE='painting'
+IDENTITY_PREFIX='preserve facial details'
+RECOMPOSE_PREFIX_SINGLE='redesign portrait'
+RECOMPOSE_PREFIX_MULTI='same person'
 def main():
     subprocess.Popen([sys.executable,'-c','import time;time.sleep(30)'])
     print('ready',flush=True)
@@ -174,11 +178,11 @@ if __name__=='__main__':main()
     argv = build_photo_argv(
         sys.executable,
         str(script),
-        mode="t2i",
+        mode=mode,
         backend="qwen",
         prompt="forest",
         negative=None,
-        edit_prompt="",
+        edit_prompt="Change the wall to red",
         width=1280,
         height=704,
         steps=35,
@@ -188,8 +192,8 @@ if __name__=='__main__':main()
         repeats=None,
         device="cuda:7",
         output=str(tmp_path / "out.png"),
-        inputs=[],
-        prompt_style="prompt",
+        inputs=[] if mode == "t2i" else [str(tmp_path / "source.png")],
+        prompt_style="prompt" if mode == "t2i" else "instruction",
     )
     manager = ProcessManager(tmp_path, grace_seconds=0.05)
     unrelated = subprocess.Popen([sys.executable, "-c", "import time;time.sleep(30)"])
@@ -210,3 +214,59 @@ if __name__=='__main__':main()
         manager.shutdown()
         unrelated.terminate()
         unrelated.wait()
+
+
+@pytest.mark.parametrize("mode", ["img2img", "recompose"])
+@pytest.mark.parametrize("profile", ["pipeline", "instruction"])
+def test_instruction_profile_retains_exact_user_instruction_without_portrait_injection(
+    tmp_path, mode, profile
+):
+    import json
+    import subprocess
+    import sys
+
+    script = tmp_path / "trusted_pipeline.py"
+    source = """import json,sys
+PHOTO_SUFFIX='pores, fine skin, DSLR'
+IDENTITY_PREFIX='preserve every facial detail'
+RECOMPOSE_PREFIX_SINGLE='free pose, scene, clothing, main person'
+RECOMPOSE_PREFIX_MULTI='all references show the same person'
+def main():
+ print(json.dumps({'argv':sys.argv[1:],'suffix':PHOTO_SUFFIX,'identity':IDENTITY_PREFIX,'single':RECOMPOSE_PREFIX_SINGLE,'multi':RECOMPOSE_PREFIX_MULTI}))
+if __name__=='__main__':main()
+"""
+    script.write_text(source)
+    instruction = "Change the blue wall to solid red; keep the chair unchanged."
+    argv = build_photo_argv(
+        sys.executable,
+        str(script),
+        mode=mode,
+        backend="qwen",
+        prompt=instruction,
+        negative=None,
+        edit_prompt=instruction,
+        width=832,
+        height=1216,
+        steps=30,
+        cfg=6,
+        seed=None,
+        max_side=1216,
+        repeats=None,
+        device="cuda:7",
+        output=str(tmp_path / "out.png"),
+        inputs=[str(tmp_path / "source.png")],
+        prompt_style=profile,
+    )
+    result = subprocess.run(argv, check=True, capture_output=True, text=True)
+    data = json.loads(result.stdout.splitlines()[-1])
+    flag = "--edit-prompt" if mode == "img2img" else "--prompt"
+    assert data["argv"][data["argv"].index(flag) + 1] == instruction
+    assert script.read_text() == source
+    if profile == "instruction":
+        assert (
+            (data["identity"] == "")
+            if mode == "img2img"
+            else (data["suffix"] == data["single"] == data["multi"] == "")
+        )
+    else:
+        assert all(data[key] for key in ["identity", "suffix", "single", "multi"])

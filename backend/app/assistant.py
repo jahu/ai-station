@@ -1437,7 +1437,11 @@ class AssistantExecutor:
                     }
                 request = ImageRequest(
                     mode=mode,
-                    prompt_style="prompt" if mode == "t2i" else "pipeline",
+                    prompt_style="prompt"
+                    if mode == "t2i"
+                    else "instruction"
+                    if mode in {"img2img", "recompose"}
+                    else "pipeline",
                     **animation,
                     input_artifact_ids=images,
                     upscale_result=mode != "upscale" and (params.get("upscale_result", False) or followup),
