@@ -2971,7 +2971,7 @@
       ]
     },
     {
-      "id": "CHAT-DICT-001",
+      "id": "DICT-001",
       "area": "Chat i Work",
       "title": "Dyktowanie po polsku do szkicu",
       "priority": "P1",
@@ -2993,7 +2993,7 @@
       ]
     },
     {
-      "id": "CHAT-DICT-002",
+      "id": "DICT-002",
       "area": "Chat i Work",
       "title": "Edycja podczas transkrypcji",
       "priority": "P1",
@@ -3015,7 +3015,7 @@
       ]
     },
     {
-      "id": "CHAT-DICT-003",
+      "id": "DICT-003",
       "area": "Chat i Work",
       "title": "Stop i opuszczenie rozmowy",
       "priority": "P1",
@@ -3037,7 +3037,7 @@
       ]
     },
     {
-      "id": "CHAT-DICT-004",
+      "id": "DICT-004",
       "area": "Chat i Work",
       "title": "HTTP LAN i plik zamiast mikrofonu",
       "priority": "P1",
@@ -3059,7 +3059,7 @@
       ]
     },
     {
-      "id": "CHAT-DICT-005",
+      "id": "DICT-005",
       "area": "Chat i Work",
       "title": "Odmowa dostępu do mikrofonu",
       "priority": "P1",
@@ -3081,7 +3081,7 @@
       ]
     },
     {
-      "id": "CHAT-DICT-006",
+      "id": "DICT-006",
       "area": "Chat i Work",
       "title": "Wznowienie i zachowane nagranie",
       "priority": "P1",
@@ -3103,7 +3103,7 @@
       ]
     },
     {
-      "id": "CHAT-DICT-007",
+      "id": "DICT-007",
       "area": "Chat i Work",
       "title": "Mikrofon telefonu przez HTTPS",
       "priority": "P1",

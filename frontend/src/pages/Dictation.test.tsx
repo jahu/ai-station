@@ -184,6 +184,9 @@ it("inserts local speech at the saved caret, preserves attachments and never sen
   );
   expect(screen.getByText("Keep attachment")).toBeTruthy();
   expect(
+    screen.queryByRole("combobox", { name: "Dictation language" }),
+  ).toBeNull();
+  expect(
     screen.getByLabelText("Dictation recording").getAttribute("src"),
   ).toContain("recording");
   expect(state.writes.map((item) => item.path)).toEqual([

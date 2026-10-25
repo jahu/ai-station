@@ -105,6 +105,7 @@ export function useDictation({
 
   async function prepare(current: Job) {
     setPhase("working");
+    setOptions(false);
     setError("");
     setTranscript(null);
     try {
@@ -195,6 +196,7 @@ export function useDictation({
     }
     draft.current.onChange(next);
     setPhase("done");
+    setOptions(false);
     setError("");
     requestAnimationFrame(() => {
       if (!mounted.current) return;
