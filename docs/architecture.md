@@ -1,3 +1,10 @@
+Current conversation contract: one assistant interface, with no Chat/Work
+selector or replacement execution-mode choice. The orchestrator routes each
+prompt to a direct response, permitted tools or an applicable workflow. Routing
+never grants permissions; sensitive actions retain their existing approvals.
+Specialist workspaces remain available. This decision overrides older two-mode
+descriptions below. See the [single-assistant plan](plans/unified-assistant-chat.md).
+
 Data-agent notification criteria run as a separate durable, source-bound child after the verified Python result. Model/check failures leave analysis successful and never replay Python. Existing ordinary report checks retain their inline lifecycle. [Contracts](plans/data-result-alerts.md).
 
 Ordinary research reports may carry a reviewed success criterion. A tools-free,

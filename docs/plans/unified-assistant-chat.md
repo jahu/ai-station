@@ -6,6 +6,12 @@ and earlier agent-first acceptance text. Implementation and local qualification
 are complete in PR #444. The deployment receipt, rather than a feature-branch
 status, determines which version is live.
 
+Owner reaffirmation, 2026-10-25: this is the default product experience for every
+user, not an optional simplified view. Choosing between a question and a task is
+the orchestrator's responsibility. Do not ask users to learn the Chat/Work
+distinction, including when continuing an older conversation. The historical
+[two-mode UX plan](chat-work-experience.md) is explicitly superseded on this point.
+
 ## Product contract
 
 AI Station opens one composer with model selection and supported reasoning
