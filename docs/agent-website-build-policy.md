@@ -67,5 +67,15 @@ rebuilt and its backend files plus compiled frontend assets matched the reviewed
 source. Actual desktop/mobile definition review/save/reload passed on the final
 factory code without worker/model execution. The source-bound regression results,
 image proof and browser record are under the acceptance directory above. These
-checks qualify policy propagation; the separate real-model website scenario is
-still pending. Native source matches deployed PR #337 and needs no Runner restart.
+checks qualified policy propagation at that release. Native source matched
+deployed PR #337 and needed no Runner restart.
+
+## Subsequent real-model acceptance
+
+The separate scenario completed on 2026-10-22:
+`data/acceptance/agent-website-real-20261022/result.json` has `passed: true`.
+It used the actual 27B local model at 131072 context through normal deployed
+workers and the native Runner, with unmocked automatic loading. Two real builds,
+the rendered Example Studio preview and a same-workspace follow-up passed.
+This supersedes the earlier pending label; it proves that concrete public
+example.com scenario, not arbitrary-site fidelity or every framework/dependency.

@@ -12,6 +12,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from operator_qa_fixtures import FIXTURE_INSTRUCTIONS, fixture_bytes
+
 ROOT = Path(__file__).resolve().parent.parent
 CATALOG = ROOT / "docs/qa/cases.json"
 STATUSES = ("Nie testowano", "OK", "Błąd", "Zablokowany", "Nie dotyczy")
@@ -110,7 +112,8 @@ def export(output: Path, *, release: str, base_url: str, draft=False, catalog_pa
     csv_paths = {name: output / f"{prefix}-{name}.csv" for name in ("Testy", "Zgloszenia", "Retesty")}
     guide = output / f"{prefix}-Instrukcja.txt"
     manifest = output / f"{prefix}-manifest.json"
-    paths = [destination, *csv_paths.values(), guide, manifest]
+    fixtures = {output / path: data for path, data in fixture_bytes().items()}
+    paths = [destination, *csv_paths.values(), guide, *fixtures, manifest]
     if any(path.exists() for path in paths):
         raise FileExistsError("Keep previous answers: choose a new output directory")
     catalog_hash = hashlib.sha256(
@@ -160,8 +163,9 @@ def export(output: Path, *, release: str, base_url: str, draft=False, catalog_pa
             ["Identyfikator katalogu", catalog_hash],
             [
                 "Kolejność",
-                "Zacznij od uruchomienia i logowania, następnie Chat/Work, pliki i media, agenci, Memory oraz pozostałe obszary. P0 oznacza główną ścieżkę.",
+                "Zacznij od uruchomienia i logowania, następnie jedna rozmowa, pliki i media, agenci, Memory oraz pozostałe obszary. Nie wybierasz trybu Chat / Work: orkiestrator dobiera wykonanie. P0 oznacza główną ścieżkę.",
             ],
+            ["Gotowe dane i oczekiwane wartości", FIXTURE_INSTRUCTIONS],
             [
                 "Co uzupełnić",
                 "W Testy wypełniaj niebieskie pola. Wynik jest w kolumnie B i pozostaje widoczny podczas przewijania. Zapisz rzeczywisty rezultat, dowód oraz ID wykonania. Nie zmieniaj ID przypadków. Testy nie zostały za Ciebie oznaczone jako zaliczone.",
@@ -341,6 +345,10 @@ def export(output: Path, *, release: str, base_url: str, draft=False, catalog_pa
         handle.write("AI STATION — QA OPERATORA\n\n")
         for key, value in start.iter_rows(min_row=2, values_only=True):
             handle.write(f"{key}\n{value}\n\n")
+    for path, data in fixtures.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("xb") as handle:
+            handle.write(data)
     with manifest.open("x", encoding="utf-8") as handle:
         json.dump(
             {
@@ -351,6 +359,14 @@ def export(output: Path, *, release: str, base_url: str, draft=False, catalog_pa
                 "draft": draft,
                 "base_url": base_url,
                 "case_ids": [case["id"] for case in catalog["cases"]],
+                "fixtures": [
+                    {
+                        "path": path.relative_to(output).as_posix(),
+                        "size_bytes": len(data),
+                        "sha256": hashlib.sha256(data).hexdigest(),
+                    }
+                    for path, data in fixtures.items()
+                ],
             },
             handle,
             ensure_ascii=False,

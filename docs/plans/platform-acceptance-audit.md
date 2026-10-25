@@ -45,7 +45,10 @@ auth settings, E5 vectors, native/private services and owned model instances.
 Receipt paths in this table are below `data/acceptance/`. Historical receipts
 remain scoped to their original model, parameters, source and runtime. Normal
 regressions of newer source do not relabel an old integration as a fresh real
-execution. The current operator case catalog is v8 with 156 stable IDs in 21 areas.
+execution. The operator case catalog is v9 with 156 stable IDs in 21 areas. All
+156 are mapped to source, current regression and concrete historical receipt
+scopes in [the internal coverage review](../qa/internal-coverage.md). That review
+retains unverified cases rather than marking them passed.
 
 ## Corrections to stale evidence interpretation
 
@@ -62,9 +65,11 @@ they do not establish Auto loading. Keep these distinctions in the final report.
 
 ## Remaining release work
 
-1. Complete requirement-by-requirement reconciliation of the current plans,
-   normal tests, actual receipts, enabled adapters and all 156 operator cases.
-   Replace vague “broader acceptance” entries with concrete scenarios and verdicts.
+1. Complete the concrete integration gap identified by the 156-case/source/receipt
+   review: a goal-prepared persistent video agent must finish its real film.
+   The earlier `agent-long-media-output-20261023/production-agent-result.json`
+   is false; later software/outcome fixes and separate Video generation cannot
+   relabel that receipt as successful.
 2. Reconcile Video/Avatar duration and quality claims with exact recorded profiles:
    earlier real 60-second Wan draft and 30-second avatar do not prove every longer
    or higher-quality profile. Current capability checks start no inference.
@@ -77,6 +82,9 @@ they do not establish Auto loading. Keep these distinctions in the final report.
    six-sheet XLSX, CSV feedback/retest templates, instructions, manifest and
    accurate qualified profiles/test prerequisites. All operator results start
    **Nie testowano**. A catalog or a draft export is not this final handoff.
+   The offline exporter now includes synthetic CSV/two-sheet XLSX/document/PNG
+   inputs, an intentionally invalid input and checked values/hashes. Its eight
+   offline checks pass; neither those inputs nor a draft export prove inference.
 5. Keep the full-platform goal open until the applicable requirements and required
    handoff artifacts are proved; do not count deferred/future or unverified work
    as completed. Preserve unrelated root Memory WIP and existing operator data.
