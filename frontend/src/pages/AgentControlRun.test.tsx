@@ -94,3 +94,33 @@ it("separates a ready result from pending email review", () => {
     screen.getByRole("link", { name: "Inspect delivery" }).getAttribute("href"),
   ).toBe("/runs/email-one");
 });
+
+it.each(["running", "failed", "interrupted", "canceled"])(
+  "keeps a completed analysis separate from a %s notification check",
+  (alertStatus) => {
+    render(
+      <MemoryRouter>
+        <AgentControlRun
+          result={{ agent_id: "agent-one", outcome: "queued" }}
+          run={{
+            id: "workflow",
+            status: "succeeded",
+            alert_status: alertStatus,
+            alert_run_id: "criterion-check",
+          }}
+          tabIndex={-1}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText("succeeded")).toBeTruthy();
+    expect(
+      screen.getByText(`· Notification check: ${alertStatus}`),
+    ).toBeTruthy();
+    const link = screen.getByRole("link", {
+      name: "Inspect notification check",
+    });
+    expect(link.getAttribute("href")).toBe("/runs/criterion-check");
+    expect(link.tabIndex).toBe(-1);
+    expect(screen.queryByText(/Email delivery:/)).toBeNull();
+  },
+);
