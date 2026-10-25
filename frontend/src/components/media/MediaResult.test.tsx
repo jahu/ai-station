@@ -47,6 +47,79 @@ const video: Artifact = {
   metadata: { capability: "avatar.animate" },
 };
 
+it("refreshes a deleted media result while the remaining bulk operation is still running", async () => {
+  let deleted = false;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () => {
+        if (path === "/api/library/purges")
+          return [
+            {
+              id: "purge-inline",
+              status: "running",
+              parameters: {
+                items: [
+                  { id: portrait.id, name: "Portrait", version: null },
+                  {
+                    id: "another-artifact",
+                    name: "Another file",
+                    version: null,
+                  },
+                ],
+                scope: "selected",
+              },
+              metadata: {
+                purge_outcomes: deleted
+                  ? { [portrait.id]: { state: "deleted" } }
+                  : {},
+              },
+            },
+          ];
+        if (path.endsWith("/lineage"))
+          return { id: portrait.id, sources: [], derived: [] };
+        return [
+          {
+            ...portrait,
+            ...(deleted
+              ? {
+                  purged_at: "2026-10-25T12:00:00Z",
+                  purge_run_id: "purge-inline",
+                }
+              : {}),
+          },
+        ];
+      },
+    })),
+  );
+  render(
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <MemoryRouter>
+        <MediaResult
+          kind="image"
+          runId="image-run"
+          run={{ id: "image-run", status: "succeeded" } as Run}
+          error={null}
+        />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  await screen.findByRole("img", { name: "Generated image" });
+  deleted = true;
+  await screen.findByRole(
+    "heading",
+    { name: "Result permanently deleted" },
+    { timeout: 4000 },
+  );
+  expect(screen.queryByRole("img", { name: "Generated image" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "Download image" })).toBeNull();
+});
+
 function mount(run: Run, lineage: ArtifactLineage, artifact: Artifact) {
   vi.stubGlobal(
     "fetch",

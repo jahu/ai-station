@@ -46,6 +46,75 @@ function mount(path = "/library/portrait") {
     </QueryClientProvider>,
   );
 }
+
+it("updates deleted artifact history after worker completion without refreshing the page", async () => {
+  let phase = "";
+  let deleted = false;
+  const operation = () => ({
+    id: "purge-detail",
+    status: phase,
+    parameters: {
+      items: [
+        { id: original.id, name: original.original_filename, version: null },
+      ],
+      scope: "selected",
+    },
+    metadata: {
+      purge_outcomes: deleted ? { portrait: { state: "deleted" } } : {},
+    },
+  });
+  const fetch = vi.fn(async (path: string, init?: RequestInit) => {
+    let value: unknown;
+    if (path === "/api/library/purges" && init?.method === "POST") {
+      phase = "waiting_for_approval";
+      value = operation();
+    } else if (path.endsWith("/approval")) {
+      phase = "queued";
+      value = operation();
+    } else if (path === "/api/library/purges")
+      value = phase ? [operation()] : [];
+    else if (path.endsWith("/lineage"))
+      value = { id: original.id, sources: [], derived: [] };
+    else
+      value = {
+        ...original,
+        ...(deleted
+          ? { purged_at: "2026-10-25T12:00:00Z", purge_run_id: "purge-detail" }
+          : {}),
+      };
+    return { ok: true, json: async () => value };
+  });
+  vi.stubGlobal("fetch", fetch);
+  mount();
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Delete permanently portrait" }),
+  );
+  await screen.findByText("1 artifact");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Delete permanently", exact: true }),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() =>
+    expect(
+      fetch.mock.calls.filter(([path]) => path === "/api/artifacts/portrait")
+        .length,
+    ).toBeGreaterThan(1),
+  );
+  deleted = true;
+  phase = "succeeded";
+  await screen.findByRole(
+    "heading",
+    { name: "Artifact permanently deleted" },
+    { timeout: 4000 },
+  );
+  expect(screen.queryByRole("img")).toBeNull();
+  expect(
+    screen.queryByRole("link", { name: "Open full artifact ↗" }),
+  ).toBeNull();
+  expect(
+    screen.getByRole("link", { name: "Inspect deletion" }).getAttribute("href"),
+  ).toBe("/runs/purge-detail");
+});
 it("edits annotations, confirms Trash, and restores using each returned version", async () => {
   let row = { ...original };
   const fetch = vi.fn(async (_path: string, init?: RequestInit) => {

@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
   "sources": [
     "docs/product-completion.md",
@@ -2221,10 +2221,12 @@
       "steps": [
         "Na jednorazowym aktywnym pliku QA wybierz Delete permanently",
         "Sprawdź nazwę i najpierw anuluj",
-        "Powtórz i potwierdź"
+        "Powtórz i potwierdź",
+        "Pozostań w tym samym widoku bez odświeżania strony; obserwuj postęp i końcowy stan pliku."
       ],
       "expected": [
-        "Anulowanie zachowuje plik, potwierdzenie usuwa go trwale; historia pokazuje jawny stan usunięcia."
+        "Anulowanie zachowuje plik, potwierdzenie usuwa go trwale; historia pokazuje jawny stan usunięcia.",
+        "Podgląd oraz akcje pobierania i ponownego użycia znikają automatycznie po zakończeniu usuwania; nie trzeba przeładować strony."
       ],
       "resources": "Wyłącznie jednorazowe pliki QA; usuwanie nieodwracalne",
       "minutes": 5,

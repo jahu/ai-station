@@ -221,30 +221,43 @@ export function PurgeButton({
   );
 }
 
-export function PurgeActivity() {
+export function PurgeActivity({ artifactId }: { artifactId?: string } = {}) {
   const cache = useQueryClient();
   const previous = useRef<Record<string, string>>({});
   const [dismissed, setDismissed] = useState<string[]>([]);
   const query = useQuery({
     queryKey: ["library-purges"],
     queryFn: () => api<PurgeRun[]>("/library/purges"),
-    refetchInterval: 2000,
+    refetchInterval: (state) =>
+      Array.isArray(state.state.data) &&
+      state.state.data.some((run) => !terminal.has(run.status))
+        ? 1000
+        : 10000,
   });
   const rows = useMemo(
     () =>
       Array.isArray(query.data)
-        ? query.data.filter((run) => Array.isArray(run.parameters?.items))
+        ? query.data.filter(
+            (run) =>
+              Array.isArray(run.parameters?.items) &&
+              (!artifactId ||
+                run.parameters.items.some((item) => item.id === artifactId)),
+          )
         : [],
-    [query.data],
+    [query.data, artifactId],
   );
   useEffect(() => {
+    let changed = false;
     for (const run of rows) {
-      if (previous.current[run.id] && previous.current[run.id] !== run.status)
-        keys
-          .filter((key) => key !== "library-purges")
-          .forEach((key) => void cache.invalidateQueries({ queryKey: [key] }));
-      previous.current[run.id] = run.status;
+      const outcomes = Object.values(run.metadata?.purge_outcomes ?? {});
+      const version = `${run.status}:${outcomes.length}:${outcomes.filter((item) => item.state === "failed").length}`;
+      if (previous.current[run.id] !== version) changed = true;
+      previous.current[run.id] = version;
     }
+    if (changed)
+      keys
+        .filter((key) => key !== "library-purges")
+        .forEach((key) => void cache.invalidateQueries({ queryKey: [key] }));
   }, [rows, cache]);
   const cancel = useMutation({
     mutationFn: (id: string) => api(`/runs/${id}/cancel`, { method: "POST" }),

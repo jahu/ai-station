@@ -57,6 +57,29 @@ function mount(element: React.ReactNode) {
 }
 const response = (value: unknown) => ({ ok: true, json: async () => value });
 
+it("limits contextual progress to the inspected artifact", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      response([
+        {
+          ...run,
+          id: "unrelated",
+          status: "queued",
+          parameters: { items: [{ id: "b", name: "other" }] },
+        },
+        { ...run, status: "queued" },
+      ]),
+    ),
+  );
+  mount(<PurgeActivity artifactId="a" />);
+  const links = await screen.findAllByRole("link", {
+    name: "Inspect execution history",
+  });
+  expect(links).toHaveLength(1);
+  expect(links[0].getAttribute("href")).toBe("/runs/delete-run");
+});
+
 it("an unconfirmed deletion can be reviewed after a page reload", async () => {
   const fetch = vi.fn(async (path: string) =>
     response(path === "/api/library/purges" ? [run] : run),
