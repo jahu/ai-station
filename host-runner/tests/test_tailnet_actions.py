@@ -20,6 +20,8 @@ if 'up' in sys.argv:
  if (root/'hold').exists():time.sleep(60)
  sys.exit(1)
 if 'serve' in sys.argv:
+ if (root/'consent').exists():
+  print('https://login.tailscale.com/f/serve?node=node123',flush=True);time.sleep(60)
  if 'off' in sys.argv:config={}
  else:config={'TCP':{'443':{'HTTPS':True}},'Web':{'ai-station.tail123.ts.net:443':{'Handlers':{'/':{'Proxy':sys.argv[-1]}}}}}
  (root/'config.json').write_text(json.dumps(config))
@@ -178,3 +180,22 @@ def test_enabled_endpoint_restarts_owned_daemon_without_login_or_serve(runtime):
     runtime.stop()
     runtime.restore()
     assert runtime.status()["state"] == "stopped"
+
+
+def test_https_consent_link_survives_owned_observation_deadline(runtime):
+    online(runtime)
+    (runtime.root / "consent").write_text("required")
+    rid = str(uuid4())
+    actions.begin(runtime, rid, "serve_on", node_id="node123", origin="https://ai-station.tail123.ts.net")
+    for _ in range(50):
+        process = runtime._processes().inspect(rid)
+        if "https://login.tailscale.com/f/serve" in process.get("stdout", ""):
+            break
+        time.sleep(0.02)
+    assert "https://login.tailscale.com/f/serve" in process["stdout"]
+    runtime._processes()._expire(rid, process["deadline_at"])
+    result = finished(runtime, rid)
+    assert result["phase"] == "https_consent_required" and result["process_confirmed_gone"]
+    assert actions.action_link(runtime, rid) == "https://login.tailscale.com/f/serve?node=node123"
+    actions.cancel(runtime, rid)
+    assert actions.action_link(runtime, rid) is None

@@ -136,11 +136,9 @@ def _process(manager, body):
 def _action_url(manager, body, process):
     if manager.canceled(body["run_id"], body["operation"]):
         return None
-    if time.time() - body["created_at"] > 300 or process["status"] in {
-        "canceled",
-        "cancel_requested",
-        "interrupted",
-    }:
+    if time.time() - body["created_at"] > 300 or process["status"] in {"cancel_requested", "interrupted"}:
+        return None
+    if process["status"] == "canceled" and not process.get("deadline_exceeded_at"):
         return None
     # Only the latest action of this kind may disclose its interactive link.
     folder = manager.root / "operations"
@@ -174,7 +172,9 @@ def _inspect(manager, run_id):
         raise ValueError("Private operation belongs to another daemon start")
     phase = "running"
     if not process["alive"] and not process.get("completion_pending"):
-        if manager.canceled(run_id, body["operation"]) or process["status"] == "canceled":
+        if manager.canceled(run_id, body["operation"]) or (
+            process["status"] == "canceled" and not process.get("deadline_exceeded_at")
+        ):
             phase = "canceled"
         elif process["exit_code"] is None:
             phase = "interrupted"
