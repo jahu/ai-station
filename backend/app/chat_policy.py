@@ -60,10 +60,12 @@ def requires_orchestration(body):
 
     params = {**body.model_dump(mode="json", exclude={"attachments"}), "policy_mode": "assistant"}
     plan = explicit_plan(params)
-    if plan is not None:
-        return plan.action != "chat"
+    # Selected media still needs the existing Vision/transcription dispatch even
+    # when the optional action is Conversation; direct text replies cannot read it.
     if body.image_artifact_ids or body.audio_artifact_id:
         return True
+    if plan is not None:
+        return plan.action != "chat"
     # Ordinary questions use the existing direct reply executor. Unknown requests
     # to perform concrete work retain bounded model-assisted routing.
     return bool(

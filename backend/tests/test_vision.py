@@ -277,12 +277,13 @@ def test_oversized_source_is_rejected_without_loading_a_model(vision_runtime):
 
 
 @pytest.mark.parametrize("action", ["auto", "chat"])
+@pytest.mark.parametrize("mode", ["chat", "assistant"])
 @pytest.mark.parametrize(
     "prompt",
     ["Jaki kolor ma ten prostokąt?", "Czy widzisz czerwony kształt?", "How many shapes are visible?"],
 )
 def test_chat_image_questions_use_only_vision_without_a_text_provider_or_prerequisite(
-    vision_runtime, monkeypatch, action, prompt
+    vision_runtime, monkeypatch, action, prompt, mode
 ):
     from app import assistant, chat, llama
 
@@ -308,7 +309,7 @@ def test_chat_image_questions_use_only_vision_without_a_text_provider_or_prerequ
             json={
                 "content": prompt,
                 "image_artifact_ids": [image],
-                "execution_mode": "chat",
+                "execution_mode": mode,
                 "action": action,
             },
         )
