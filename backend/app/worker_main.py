@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import multiprocessing
 import os
 import signal
@@ -10,7 +11,7 @@ import time
 import uuid
 
 from app.config import get_settings
-from app.db import migrate, session_factory
+from app.db import migrate, session_factory, sqlite_busy
 from app.engine import tick
 
 
@@ -26,6 +27,13 @@ def worker_loop(identity: str) -> None:
         session = factory()
         try:
             tick(session, identity)
+        except Exception as exc:
+            session.rollback()
+            if not sqlite_busy(exc):
+                raise
+            # A claimed Run retains its lease/inspection policy. Never replay an
+            # executor or restart unrelated slots because a database was busy.
+            logging.warning("SQLite busy; worker slot will inspect durable state on its next tick")
         finally:
             session.close()
         time.sleep(settings.heartbeat_seconds)
