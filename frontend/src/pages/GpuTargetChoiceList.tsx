@@ -7,11 +7,13 @@ export function GpuTargetChoiceList({
   value,
   onChange,
   disabled,
+  hint,
 }: {
   gpus: GpuChoice[];
   value: string;
   onChange: (gpu: string) => void;
   disabled?: boolean;
+  hint?: string;
 }) {
   const labelId = useId();
   const items = [
@@ -42,9 +44,8 @@ export function GpuTargetChoiceList({
   return (
     <>
       <p id={labelId} className="dashboard-note">
-        Arrow keys choose a GPU target while the list is focused. Space or Enter
-        selects it. Enter does not queue a Run. There is no inspectable
-        GPU-target Run.
+        {hint ??
+          "Arrow keys choose a GPU target while the list is focused. Space or Enter selects it. Enter does not queue a Run. There is no inspectable GPU-target Run."}
       </p>
       <div
         ref={listRef}

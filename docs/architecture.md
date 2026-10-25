@@ -98,6 +98,14 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+The [Krea 2 image backend plan](plans/krea2-lustify-images.md) extends existing
+host-media execution and the model registry. Pinned native runtime code stays
+outside control-plane data mounts; fixed per-Run graphs preserve typed access,
+resource ownership and artifact lineage. Per-operation model defaults and frozen
+checkpoint snapshots reuse ModelDefinition/Settings and the existing photo/media
+executor. Real GPU qualification is recorded in the plan; release gates and preview
+deployment are tracked separately.
+
 Instruction-only Edit/Recompose reuses the fixed native photo wrapper and the
 existing Task/Run lifecycle. Profile names are typed; only constants in the owned
 pipeline import change. No external script/model modifications or new execution

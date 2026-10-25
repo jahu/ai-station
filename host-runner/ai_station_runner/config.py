@@ -23,6 +23,9 @@ class Settings(BaseSettings):
     runner_socket: str = ""
     photo_python: str = ""
     photo_script: str = ""
+    krea_runtime_dir: str = ""
+    krea_companions_dir: str = ""
+    krea_enabled: bool = False
     sd_cli: str = ""
     transcription_python: str = ""
     transcription_model_dir: str = ""

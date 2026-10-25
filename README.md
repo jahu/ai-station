@@ -55,6 +55,13 @@ verified captured data. See [saved API sources](docs/plans/agent-http-connectors
 
 # AI Station
 
+Images offers compatible models for each operation and **Use as default** for
+Generate, Edit and Recompose independently. Qwen and Juggernaut remain available;
+the optional Krea 2 / LUSTIFY adapter uses a separate pinned native installation.
+Its GPU-only profile never falls back to CPU model offload. Setup remains explicit
+and the adapter is disabled until configured. See the
+[setup, model selection and qualification](docs/plans/krea2-lustify-images.md).
+
 Images and Chat/Work edits can follow the submitted instruction without implicit
 portrait/skin styling. **Use classic identity template** restores the original
 Edit/Recompose profile. Generate and the external photo pipeline remain unchanged.

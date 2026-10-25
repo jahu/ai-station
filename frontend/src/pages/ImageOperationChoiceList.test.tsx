@@ -32,7 +32,7 @@ it("moves through image operations without queueing a Run", () => {
   const generate = screen.getByLabelText("Operation t2i");
   expect(generate.tabIndex).toBe(0);
   expect(
-    screen.getByText(/There is no inspectable operation Run/),
+    screen.getByText(/Choose Generate, Edit, Recompose or Upscale/),
   ).toBeTruthy();
   expect(generate.getAttribute("aria-pressed")).toBe("true");
   const list = generate.closest(".image-operation-choice-list") as HTMLElement;

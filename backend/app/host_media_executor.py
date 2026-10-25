@@ -60,7 +60,9 @@ class HostMediaExecutor:
             (hardware.get("memory") or {}).get("available_mib"),
             run.requested_resources.get("ram_mib", 0),
         )
-        allocated = reserve_gpu(session, run, indexes) if self.requires_gpu and memory_ready else None
+        allocated = (
+            self.reserve_devices(session, run, indexes) if self.requires_gpu and memory_ready else None
+        )
         if not memory_ready or self.requires_gpu and allocated is None:
             release_run_locks(session, run.id)
             from app.media_admission import defer_media_task
@@ -157,6 +159,9 @@ class HostMediaExecutor:
 
     def validate_inputs(self, session, run):
         """Optional bounded source check before recording a native dispatch."""
+
+    def reserve_devices(self, session, run, indexes):
+        return reserve_gpu(session, run, indexes)
 
     def _start(self, runner, run, allocated, output):
         raise NotImplementedError

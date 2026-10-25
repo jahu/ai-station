@@ -80,6 +80,37 @@ def _grant(session: Session, run: Run, key: str, gpu: str) -> None:
     session.flush()
 
 
+def reserve_gpu_bundle(session: Session, run: Run, available: list[int], count: int) -> str | None:
+    """Reserve a primary and optional auxiliary GPU together, or reserve neither.
+
+    Native dispatch must occur only after the containing transaction commits.
+    Existing unique live resource keys arbitrate competing worker transactions.
+    """
+    if type(count) is not int or count not in {1, 2}:
+        raise ResourceUnknown("Image execution supports one or two reserved GPUs")
+    if len(set(available)) < count:
+        raise ResourceUnknown(f"This image preset requires {count} discovered GPUs")
+    requested = run.requested_gpu or "auto"
+    if requested != "auto" and (not requested.isdigit() or int(requested) not in available):
+        raise ResourceUnknown("Requested primary image GPU was not discovered")
+    busy = active_locks(session)
+    free = [str(index) for index in dict.fromkeys(available) if f"gpu:{index}" not in busy]
+    if requested != "auto":
+        requested = str(int(requested))
+        if requested not in free:
+            return None
+        free = [requested, *(gpu for gpu in free if gpu != requested)]
+    if len(free) < count:
+        return None
+    selected = free[:count]
+    for gpu in selected:
+        session.add(ResourceLock(resource_key=f"gpu:{gpu}", run_id=run.id))
+    run.actual_gpu = selected[0]
+    run.allocated_resources = {**run.allocated_resources, "gpu": selected[0], "gpus": selected}
+    session.flush()
+    return selected[0]
+
+
 def release_run_locks(session: Session, run_id: str) -> None:
     rows = session.scalars(
         select(ResourceLock).where(ResourceLock.run_id == run_id, ResourceLock.released_at.is_(None))

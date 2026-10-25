@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -38,7 +39,10 @@ def build_photo_argv(
     output: str,
     inputs: list[str],
     prompt_style: str = "pipeline",
+    model_snapshot: dict | None = None,
 ) -> list[str]:
+    if model_snapshot is not None and (backend != "qwen" or mode == "upscale"):
+        raise PhotoCommandError("Selected checkpoints require a compatible Qwen image operation")
     if prompt_style not in {"pipeline", "prompt", "instruction"}:
         raise PhotoCommandError("Unknown photo prompt profile")
     if prompt_style == "prompt" and mode != "t2i":
@@ -79,9 +83,7 @@ def build_photo_argv(
         ]
         if negative:
             argv += ["--negative", negative]
-        if prompt_style == "prompt":
-            argv = [python, str(Path(__file__).with_name("photo_job.py")), script, *argv[2:]]
-        return argv
+        return _wrap(argv, prompt_style, model_snapshot)
     if mode == "img2img":
         if len(inputs) != 1:
             raise PhotoCommandError("Edit requires exactly one input image")
@@ -102,7 +104,7 @@ def build_photo_argv(
             "--out",
             output,
         ]
-        return _profile(edit) if prompt_style == "instruction" else edit
+        return _wrap(edit, prompt_style, model_snapshot)
     if mode == "recompose":
         if not inputs:
             raise PhotoCommandError("Recompose requires at least one reference")
@@ -127,7 +129,7 @@ def build_photo_argv(
         ]
         for ref in inputs:
             argv += ["--reference", ref]
-        return _profile(argv) if prompt_style == "instruction" else argv
+        return _wrap(argv, prompt_style, model_snapshot)
     if mode == "upscale":
         if len(inputs) != 1:
             raise PhotoCommandError("Upscale requires exactly one input image")
@@ -147,6 +149,20 @@ def build_photo_argv(
 
 def _profile(argv):
     return [argv[0], str(Path(__file__).with_name("photo_job.py")), *argv[1:]]
+
+
+def _wrap(argv, style, model):
+    if model is None:
+        return _profile(argv) if style != "pipeline" else argv
+    return [
+        argv[0],
+        str(Path(__file__).with_name("photo_job.py")),
+        "--station-model-json",
+        json.dumps(model, separators=(",", ":")),
+        "--station-profile",
+        style,
+        *argv[1:],
+    ]
 
 
 def expected_upscale_size(width: int, height: int, repeats: int = 1) -> tuple[int, int]:

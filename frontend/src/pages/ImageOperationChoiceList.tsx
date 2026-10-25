@@ -41,9 +41,8 @@ export function ImageOperationChoiceList({
   return (
     <>
       <p id={labelId} className="dashboard-note">
-        Arrow keys choose an image operation while the list is focused. Space or
-        Enter selects it. Enter does not queue a Run. Edit, Recompose and
-        Upscale still use Qwen. There is no inspectable operation Run.
+        Choose Generate, Edit, Recompose or Upscale. Arrow keys move between
+        operations.
       </p>
       <div
         ref={listRef}
