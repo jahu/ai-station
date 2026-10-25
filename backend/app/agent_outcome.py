@@ -172,7 +172,8 @@ def workflow_outcome(session, root):
         status = "canceled"
     value = {"status": status}
     if checks:
-        value.update(alert_status=ranked_status(checks), alert_run_id=checks[-1].id)
+        actual_check = next(run for run in reversed(checks) if run.executor_type == "agent_result_alert")
+        value.update(alert_status=ranked_status(checks), alert_run_id=actual_check.id)
     if len(final) == 1:
         value["result_run_id"] = final[0].id
     if delivery:
