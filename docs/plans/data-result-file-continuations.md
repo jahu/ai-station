@@ -38,5 +38,6 @@ Ordinary input-file reuse still requires the actual original source.
 
 Initial focused qualification: 52 existing publication/creation tests, 20 new
 result-reference cases, 39 focused UI cases and TypeScript pass. Tests use injected
-model/Python transport with actual private Git workspaces. Full release gates,
-compiled acceptance, review and deployment remain pending. Live remains #424.
+model/Python transport with actual private Git workspaces. Release gates, compiled acceptance, review and deployment evidence live under
+`data/acceptance/result-file-continuations-20261025`. Use the final post-deployment
+receipt and shared deployment authority for actual release status.

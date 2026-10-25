@@ -1,14 +1,18 @@
-> Active follow-on: `feat/data-result-file-continuations`, from qualified #424.
-> Add distinct complete-output reuse while preserving original-input references;
-> [contracts](data-result-file-continuations.md) cover the planned API/worker/UI
-> behavior. Publication now queues ordinary output inspection; natural result references and
-> the separate Use result file action bind the complete preferred CSV/XLSX.
-> Original-file semantics stay intact. Initial52 existing+20 new Python cases,
-> UI39 focused and TypeScript pass. Full gates/browser/review/rollout remain pending.
-> Implementation is not deployed.
-> Live #424 qualification: `data/acceptance/agent-data-actions-20261025`.
-> Root WIP, native Runner, operator data/auth and model presets stay untouched.
-> Whole-platform objective remains open.
+> PR #425 adds complete-result continuation: Use result file and explicit natural
+> result-file operations consume the preferred inspected CSV/XLSX, in a fresh Task.
+> Original-input references retain their behavior. Result reuse verifies historical
+> owner/report and current output bytes without reopening original inputs/captures.
+> Putting an original input in Trash does not remove a retained usable result.
+> Initial52 publication/creation+20 new Python checks and UI39 focused pass.
+> Full frontend784, exact image/Compose and six compiled desktop/mobile three-turn
+> flows pass on identical production source. All local gates and final release
+> status are recorded in `data/acceptance/result-file-continuations-20261025`;
+> the post-deployment receipt and shared deployment authority determine live state.
+> Native Runner/schema/config/dependencies remain unchanged. Preserve root Memory
+> WIP, operator data/auth and owned model presets. Whole-platform goal remains open.
+> Next: broader practical agent orchestration and remaining delivery, private
+> remote access and recovery acceptance. Older pending/live labels are historical.
+
 
 > PR #424: natural data-file continuations from a completed conversation agent.
 > Exact original inputs, offline captures or complete created CSV/XLSX bind a new

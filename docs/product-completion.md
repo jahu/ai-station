@@ -1,3 +1,8 @@
+PR #425 adds explicit continuation from complete transformed CSV/XLSX outputs,
+separate from original-input follow-ups. [Contracts and release evidence](plans/data-result-file-continuations.md)
+cover fresh Task scope, source ownership and original-byte preservation. Whole-platform
+completion is still open.
+
 Natural data continuation from a completed conversation agent is implemented in
 PR #424. It reuses exact inspected inputs, captured data or complete created files
 through a new Task without rerunning the agent. [Contracts and qualification](plans/conversation-agent-data-actions.md)
