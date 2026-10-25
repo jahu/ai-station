@@ -467,6 +467,7 @@ export function ArtifactDetail() {
         Sources, derived artifacts, parameters, and execution history.
       </PageTitle>
       <ErrorNotice error={query.error ?? copyError} />
+      {id && <PurgeActivity artifactId={id} />}
       {a?.trashed_at && !a.purge_run_id && !a.purged_at && (
         <div className="notice">
           <Trash2 size={16} />
