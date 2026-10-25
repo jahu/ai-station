@@ -72,6 +72,7 @@ class TailnetManager:
             yield
 
     def _processes(self):
+        private_directory(self.root / "runtime")
         registry = self.root / "runtime/processes.json"
         if registry.exists() or registry.is_symlink():
             read_private(registry, limit=1024 * 1024)
@@ -252,7 +253,10 @@ class TailnetManager:
     def canceled(self, run_id, operation):
         if str(UUID(run_id)) != run_id:
             raise ValueError("Canonical operation UUID required")
-        path = self.root / "cancellations" / (run_id + ".json")
+        folder = self.root / "cancellations"
+        if folder.exists() or folder.is_symlink():
+            private_directory(folder, create=False)
+        path = folder / (run_id + ".json")
         if not path.exists() and not path.is_symlink():
             return False
         body = json.loads(read_private(path, limit=4096))
@@ -298,8 +302,8 @@ class TailnetManager:
             verified_install(self.binary_dir, architecture)
             journal = {"run_id": run_id, "phase": "preparing"}
             self._write(journal)
-            log_dir = self.root / "runs" / run_id
-            log_dir.mkdir(parents=True, mode=0o700, exist_ok=True)
+            private_directory(self.root / "runs")
+            log_dir = private_directory(self.root / "runs" / run_id)
             for name in ("stdout.log", "stderr.log"):
                 fd = os.open(log_dir / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
                 os.close(fd)

@@ -99,8 +99,8 @@ def _begin(manager, run_id, operation, *, node_id=None, origin=None):
         fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         with os.fdopen(fd, "w") as handle:
             json.dump(body, handle)
-        log_dir = manager.root / "runs" / run_id
-        log_dir.mkdir(parents=True, mode=0o700, exist_ok=True)
+        private_directory(manager.root / "runs")
+        log_dir = private_directory(manager.root / "runs" / run_id)
         for name in ("stdout.log", "stderr.log"):
             fd = os.open(log_dir / name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
             os.close(fd)

@@ -178,3 +178,18 @@ def test_cancel_before_service_dispatch_never_launches(manager):
     state = manager.start(rid)
     assert state["canceled"] and not state["started"]
     assert not (manager.root / "service.json").exists()
+
+
+@pytest.mark.parametrize("folder", ["runtime", "runs", "cancellations"])
+def test_private_subdirectory_symlinks_cannot_escape_service_storage(manager, folder):
+    manager._validate_owner(create=True)
+    outside = manager.root.parent / "outside"
+    outside.mkdir(mode=0o700)
+    (manager.root / folder).symlink_to(outside, target_is_directory=True)
+    rid = str(uuid4())
+    with pytest.raises(ValueError):
+        if folder == "cancellations":
+            manager.request_cancel(rid, "start")
+        else:
+            manager.start(rid)
+    assert list(outside.iterdir()) == []
