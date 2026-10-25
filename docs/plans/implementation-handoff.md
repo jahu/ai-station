@@ -1,3 +1,15 @@
+> Active follow-on: `feat/private-tailnet-access` from qualified #425.
+> [Private remote access](private-tailnet-access.md) preserves password/LAN and
+> uses only an owned userspace Tailscale instance. Read-only inspection found
+> Tailscale unavailable; no system software/networking has been modified.
+> Initial native builders/status/config checks pass34 focused CPU tests plus Ruff.
+> They expose no endpoint or operational capability and are
+> not operational until private ownership, permissions, Stop and recovery pass.
+> Enrollment and HTTPS consent remain actual operator actions; never fake success.
+> Live #425: result-file-continuations-20261025/post-deployment-qualified.json.
+> UI http://192.168.1.121:8765; native/model/auth/data preserved. Root Memory WIP
+> stays untouched. Full-platform objective remains open.
+
 > PR #425 adds complete-result continuation: Use result file and explicit natural
 > result-file operations consume the preferred inspected CSV/XLSX, in a fresh Task.
 > Original-input references retain their behavior. Result reuse verifies historical

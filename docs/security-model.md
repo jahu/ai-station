@@ -1,3 +1,8 @@
+Planned private remote access uses an owned native userspace Tailscale instance,
+with keys outside the control-plane mount and fixed loopback-only Serve targets.
+Initial native boundary helpers are not an operational adapter. See
+[the delivery and acceptance plan](plans/private-tailnet-access.md).
+
 A completed analysis can expose **Use result file** and explicit follow-ups such
 as “Sort this result file”. These use the complete inspected CSV/XLSX output;
 ordinary input-file references retain their original source. See
