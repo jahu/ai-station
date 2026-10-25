@@ -15,6 +15,7 @@ from app.agent_media import AgentMediaExecutor
 from app.agent_page_coding import AgentPageCodingExecutor
 from app.agent_result_alert import ResultAlertExecutor
 from app.agent_workflow import AgentToolExecutor, AgentWorkflowExecutor
+from app.artifact_purge import ArtifactPurgeExecutor
 from app.artifacts import adopt_existing
 from app.assistant import AssistantExecutor
 from app.audio import AudioExecutor
@@ -307,6 +308,7 @@ class FakeExecutor:
 # Activate adapters only after their vertical slice is verified end to end.
 
 EXECUTORS = {
+    "artifact_purge": ArtifactPurgeExecutor(),
     "private_access": PrivateAccessExecutor(),
     "site_preview": PreviewExecutor(),
     "site_preview_action": PreviewActionExecutor(),

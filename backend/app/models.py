@@ -133,6 +133,8 @@ class Artifact(Base):
     notes: Mapped[str] = mapped_column(Text, default="", server_default="")
     library_updated_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
     trashed_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True, index=True)
+    purged_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+    purge_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
 
 class Conversation(Base):

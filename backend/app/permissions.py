@@ -50,6 +50,7 @@ ALL_PERMISSIONS = sorted(
         "manage_models",
         "manage_station",
         "manage_private_access",
+        "artifact_delete",
         "memory_write",
         "project_memory_read",
     }

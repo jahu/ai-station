@@ -5,6 +5,7 @@ import { Pencil, Trash2, RotateCcw, X } from "lucide-react";
 import { api, type Artifact } from "../api";
 import { ErrorNotice } from "../components/common";
 import { Button } from "../components/ui/button";
+import { PurgeButton } from "./LibraryPurge";
 
 export default function LibraryActions({
   artifact,
@@ -64,6 +65,14 @@ export default function LibraryActions({
     setAction(next);
   }
   const shortId = artifact.id.slice(0, 8);
+  if (artifact.purged_at || artifact.purge_run_id)
+    return (
+      <span className="muted">
+        {artifact.purged_at
+          ? "Permanently deleted"
+          : "Permanent deletion started"}
+      </span>
+    );
   return (
     <>
       <div className="library-detail-actions">
@@ -102,6 +111,7 @@ export default function LibraryActions({
             <Trash2 size={17} />
           </Button>
         )}
+        <PurgeButton artifacts={[artifact]} compact tabIndex={tabIndex} />
       </div>
       {!action && <ErrorNotice error={mutation.error} />}
       <Dialog.Root

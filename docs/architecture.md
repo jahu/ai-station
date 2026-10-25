@@ -98,6 +98,12 @@ additional agent execution engine or model download is introduced.
 
 # Architecture
 
+Permanent Library deletion uses an explicitly approved container-side
+`artifact_purge` Run. It removes only app-owned bytes and preserves provenance
+tombstones; native Host Runner authority is not expanded. The exact selection,
+progress and recovery policy are documented in the
+[Library deletion contract](plans/library-permanent-deletion.md).
+
 The [Krea 2 image backend plan](plans/krea2-lustify-images.md) extends existing
 host-media execution and the model registry. Pinned native runtime code stays
 outside control-plane data mounts; fixed per-Run graphs preserve typed access,

@@ -21,6 +21,7 @@ from app.agent_documents import router as document_router
 from app.agent_drafts import router as agent_draft_router
 from app.agents_api import router as agent_router
 from app.approvals import resolve_run_approval, run_public
+from app.artifact_purge import router as artifact_purge_router
 from app.audio import router as audio_router
 from app.avatars import router as avatar_router
 from app.browser import router as browser_router
@@ -391,6 +392,7 @@ app.include_router(codex_router)
 app.include_router(coding_sessions_router)
 app.include_router(publication_router)
 app.include_router(library_router)
+app.include_router(artifact_purge_router)
 app.include_router(project_setup_router)
 app.include_router(data_inputs_router)
 app.include_router(project_router)

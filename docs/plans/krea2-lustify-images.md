@@ -152,5 +152,14 @@ The compiled desktop/mobile UI passed six actual API/worker/native synthetic-ima
 flows, including saved defaults and two references. Evidence is retained under
 `data/acceptance/krea2-lustify-20261025`; real receipts are `scene-01.json`,
 `edit-01.json`, `recompose-01.json`, `recompose-two-01.json` and `stop-01.json`.
-Full local checks, PR review and preview deployment remain release gates. The
-current live preview has not yet been upgraded to this feature branch.
+Release qualification completed in [PR #437](https://github.com/jahu/ai-station/pull/437),
+squash merged to `develop` as `9c93a76443786f85a06b3e116e49030b7f38b7a7`.
+The reviewed head passed 3,951 Python tests (nine opt-in cases skipped), 810 UI
+tests, all configured lint/format/type/build checks, exact Docker source/assets,
+Compose validation and the isolated image API/worker/SSE smoke. The six compiled
+desktop/mobile cases were repeated against the final source. The preview now runs
+the reviewed tree with Krea enabled, unchanged authentication and preserved IDs,
+schema 0035, three worker slots and scheduler. A fresh SQLite backup precedes rollout.
+`deployed-verification.json` and `milestone-complete.json` retain the authoritative
+local receipts. Completing this image milestone does not complete the wider
+platform/Memory/Library/operator-QA delivery plan.
