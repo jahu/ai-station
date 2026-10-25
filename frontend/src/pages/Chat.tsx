@@ -548,7 +548,7 @@ function SettingsForm({
         if (pending || modelPending || !model) return;
         const fields = new FormData(e.currentTarget);
         submit({
-          execution_mode: "assistant",
+          execution_mode: defaults.execution_mode ?? "local",
           title: fields.get("title"),
           provider: defaults.provider,
           model,

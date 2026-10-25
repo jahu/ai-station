@@ -475,6 +475,7 @@ it("moves through conversation history with arrow keys", async () => {
 });
 
 it("offers applicable actions without a mode switch or rewriting conversation settings", async () => {
+  const updates: Record<string, unknown>[] = [];
   const conversation = {
     id: "conv",
     title: "Planning",
@@ -505,6 +506,11 @@ it("offers applicable actions without a mode switch or rewriting conversation se
     ],
   };
   const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    if (options?.method === "PATCH") {
+      const body = JSON.parse(String(options.body));
+      updates.push(body);
+      return { ok: true, json: async () => ({ ...conversation, ...body }) };
+    }
     if (options?.method === "POST" || options?.method === "PATCH") {
       throw new Error(`unexpected ${options.method} ${path}`);
     }
@@ -546,6 +552,13 @@ it("offers applicable actions without a mode switch or rewriting conversation se
   fireEvent.change(action, { target: { value: "coding.local" } });
   expect(fetch.mock.calls.every(([, options]) => !options?.method)).toBe(true);
   expect(conversation.execution_mode).toBe("local");
+  fireEvent.click(screen.getByRole("button", { name: "Conversation options" }));
+  fireEvent.click(
+    screen.getByText("Conversation settings", { selector: "summary" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save settings" }));
+  await vi.waitFor(() => expect(updates).toHaveLength(1));
+  expect(updates[0].execution_mode).toBe("local");
 });
 
 it.each(["image.generate", "image.generate_video"])(
