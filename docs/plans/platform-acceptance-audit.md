@@ -5,7 +5,10 @@ claim of 100% completion. Preserve the original specification together with the
 explicit agent-first and single-conversation decisions. Do not substitute one
 feature PR, an available runtime badge or fixture output for full acceptance.
 
-## Current release identity
+## Audited baseline identity (PR #445)
+
+The shared deployment receipt below determines the current release after later
+fixes. These exact identities describe the baseline audited here.
 
 - Develop: `c5d48d94ae206d7722299baf8a538cddb706dec4`, squash merge of PR #445.
 - Deployed reviewed source: `fefdf3c9e2cd4760f6689b497a0a872aacc68563`.
@@ -65,11 +68,14 @@ they do not establish Auto loading. Keep these distinctions in the final report.
 
 ## Remaining release work
 
-1. Complete the concrete integration gap identified by the 156-case/source/receipt
-   review: a goal-prepared persistent video agent must finish its real film.
-   The earlier `agent-long-media-output-20261023/production-agent-result.json`
-   is false; later software/outcome fixes and separate Video generation cannot
-   relabel that receipt as successful.
+1. The actual goal-prepared video-agent gap is now qualified in
+   `agent-video-release-20261025/result.json`, `visual-review.json` and
+   `real-player-result.json`: actual natural 9B draft, goal preparation, two Wan
+   windows, full five-second film and compiled playback. A real factory-schema
+   defect was fixed in PR #447; the earlier false receipt remains unchanged.
+   The tested profile explicitly reviewed a 7200-second maximum. Address the
+   fresh draft's 600-second default versus the observed 1282-second render without
+   silently extending saved/running or explicitly requested budgets.
 2. Reconcile Video/Avatar duration and quality claims with exact recorded profiles:
    earlier real 60-second Wan draft and 30-second avatar do not prove every longer
    or higher-quality profile. Current capability checks start no inference.

@@ -1,5 +1,42 @@
 # Video and avatar output from persistent agents
 
+## Natural video draft correction — 2026-10-25
+
+The release audit's actual Qwen3.5 9B run reproduced failed natural video drafting:
+the proposal JSON schema advertised the inherited short-clip `frames=49` even
+though duration-based agent requests reject that field. The first real response
+included both timing controls; its bounded correction removed duration while
+retaining frames, so both responses were invalid. No media was generated and
+the isolated owned runtime was stopped; production records were untouched.
+
+Hide only this non-proposal field from `AgentVideoRequest`'s generated JSON schema
+with Pydantic `SkipJsonSchema`, retaining its existing snapshot exclusion and
+explicit-input rejection. This does not accept/drop untrusted model fields or
+weaken duration/resource validation. The actual factory prompt regression fails
+before the change; image/music/avatar proposals retain their existing schemas.
+The corrected source passed all 4123 normal Python/Runner cases: 4114 passes and
+nine opt-in skips, plus Ruff. Its frontend/native/deployment trees are unchanged;
+the exact image/compiled assets, three Compose variants and isolated image
+API/worker/SQL/SSE/reopen checks pass. The factory/media/video focused suite has
+72 passes, including continued rejection of explicit short-clip frames.
+
+Actual requalification used Qwen3.5 9B at 8192 context in an isolated database,
+normal worker and private native Runner: natural draft, disabled-definition
+review, goal preparation, automatic owned model unloading, two real Wan windows
+and final composition all passed. The film is five seconds/120 frames at
+1280×704, 20 steps, under the existing 11-GiB/zero-swap profile. It took about
+21 minutes. Complete decode, sampled scene/join checks and actual compiled
+1440px/390px playback pass. Mild detail/lighting drift is recorded; this is not
+all-duration visual or physical-phone qualification. Original failed receipts
+are retained. Evidence: `data/acceptance/agent-video-release-20261025/`.
+
+The accepted profile explicitly reviewed a 7200-second maximum before enabling.
+The model's disabled proposal still defaulted to 600 seconds, shorter than the
+actual render. Improve this fresh-draft happy path separately, preserving
+explicit operator budgets and never extending a running/saved allowance silently.
+The existing reviewed setup suggestion remains available. Whole-platform and
+final operator workbook handoff remain open; deployment receipts determine live state.
+
 Status: scene-video agents are implemented through the existing long-media
 controller. The optional native deadline prerequisite (#366) is deployed.
 Whole-speech avatar agent scopes are implemented and deployed in #368; new real
