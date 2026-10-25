@@ -517,6 +517,9 @@ it("overrides this turn without sending or rewriting conversation settings", asy
   expect(action.querySelector('option[value="coding.local"]')).toBeNull();
   fireEvent.click(work);
   expect(work.getAttribute("aria-pressed")).toBe("true");
+  expect(
+    screen.queryByText(/New projects include public package preparation/),
+  ).toBeNull();
   expect(action.querySelector('option[value="coding.local"]')).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Chat" }));
   expect(action.querySelector('option[value="coding.local"]')).toBeNull();

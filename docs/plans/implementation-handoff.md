@@ -1,3 +1,18 @@
+> Active UI increment: `fix/contextual-project-guidance` on qualified #422.
+> General/media/agent Work and existing-workspace drafts should not show the
+> new-project package/build policy hint. The hint remains visible when explicitly
+> selecting Create project; request defaults, permissions and backend stay intact.
+> Existing flow tests assert both visibility states and preserve send behavior.
+> Frontend checks/build/compiled acceptance/review/rollout are pending. Reuse the
+> qualified backend only after proving all backend/native/config source identical.
+> #422 merged/deployed: full baseline3624+9 opt-in skips, final197 affected tests,
+> UI778, exact image/Compose and16 compiled actions. Eight Edit/Upscale results used
+> the native CPU photo fixture; Describe/Animate qualified typed queue/cancel only.
+> Five existing images passed read-only verification. Native/model/auth/data intact.
+> Authority: agent-image-actions-20261025/post-deployment-qualified.json. Root WIP
+> stays untouched; full-platform goal remains open. Next broaden practical natural
+> result/agent workflows and outstanding platform acceptance, not standalone IDE work.
+
 > #422 review follow-up: the compiled native CPU photo flow found generated
 > image paths use the owning Run UUID, while Vision verification required the
 > Artifact UUID used for uploads. The final reader permits only the exact successful

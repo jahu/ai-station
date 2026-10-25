@@ -107,9 +107,15 @@ it.each([
       fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
         target: { value: "project.create_code" },
       });
+      expect(
+        screen.getByText(/New projects include public package preparation/),
+      ).toBeTruthy();
       fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
         target: { value: "auto" },
       });
+      expect(
+        screen.queryByText(/New projects include public package preparation/),
+      ).toBeNull();
     }
     if (entry === "tool")
       fireEvent.change(screen.getByRole("combobox", { name: "Action" }), {
