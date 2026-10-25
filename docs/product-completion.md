@@ -1,3 +1,9 @@
+Natural data continuation from a completed conversation agent is implemented in
+PR #424. It reuses exact inspected inputs, captured data or complete created files
+through a new Task without rerunning the agent. [Contracts and qualification](plans/conversation-agent-data-actions.md)
+retain baseline/final checks and actual deployment evidence. The whole-platform
+objective remains open.
+
 > [Agent report follow-up context](plans/conversation-agent-results.md), PR #418,
 > lets Chat/Work use actual verified completed reports with visible provenance and
 > no repeated execution. Newer unfinished work does not inherit an older report.

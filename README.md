@@ -1,3 +1,8 @@
+Natural data-file follow-ups can reuse the exact inspected files or offline
+captures of a completed conversation-linked data agent. The new task has its own
+workspace and budget; the agent is not rerun. See
+[agent data continuations](docs/plans/conversation-agent-data-actions.md).
+
 Explicit image follow-ups can select a completed linked agent image. The source
 is checked on Send and through the existing frozen-input dispatch guard; unfinished
 or ambiguous results do not fall back to an older image.

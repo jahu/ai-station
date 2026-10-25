@@ -106,7 +106,7 @@ it("sends the first prompt without creating an empty conversation", async () => 
   });
 });
 
-it.each([undefined, 1, 2, 3])(
+it.each([undefined, 1, 2, 3, 4, 5])(
   "moves through messages and identifies the resolved input source (%s)",
   async (inputCount) => {
     const conversation = {
@@ -136,17 +136,28 @@ it.each([undefined, 1, 2, 3])(
           error_message: "",
           metadata: {
             images:
-              inputCount === 3
+              (inputCount ?? 0) >= 3
                 ? []
                 : [{ id: "source-image", name: "landscape.png" }],
             conversation_reference: {
               source_kind:
-                inputCount === 3
-                  ? "analyzed_data"
-                  : inputCount
-                    ? "inspected_input"
-                    : undefined,
-              filenames: inputCount === 3 ? ["sales.csv"] : undefined,
+                (inputCount ?? 0) >= 4
+                  ? "agent_data_inputs"
+                  : inputCount === 3
+                    ? "analyzed_data"
+                    : inputCount
+                      ? "inspected_input"
+                      : undefined,
+              filenames: (inputCount ?? 0) >= 3 ? ["sales.csv"] : undefined,
+              captured_sources:
+                inputCount === 5
+                  ? [
+                      {
+                        artifact_id: "source-data",
+                        captured_at: "2026-10-09T12:00:00Z",
+                      },
+                    ]
+                  : undefined,
               artifact_ids:
                 inputCount === 2
                   ? ["source-image", "second-image"]
@@ -219,13 +230,17 @@ it.each([undefined, 1, 2, 3])(
     });
     expect(
       screen.getByText(
-        inputCount === 3
-          ? /Using the analyzed input files · sales.csv/
-          : inputCount
-            ? inputCount === 2
-              ? /Using the inspected images/
-              : /Using the inspected image ·/
-            : /Using the previous image result/,
+        inputCount === 5
+          ? /Using the agent’s captured data/
+          : inputCount === 4
+            ? /Using the agent’s input files/
+            : inputCount === 3
+              ? /Using the analyzed input files · sales.csv/
+              : inputCount
+                ? inputCount === 2
+                  ? /Using the inspected images/
+                  : /Using the inspected image ·/
+                : /Using the previous image result/,
       ),
     ).toBeTruthy();
     expect(screen.getByText(/Using a stored transcript/)).toBeTruthy();
@@ -237,11 +252,11 @@ it.each([undefined, 1, 2, 3])(
     expect(
       screen
         .getByRole("link", {
-          name: `Inspect referenced ${inputCount === 3 ? "data" : "image"} user-one`,
+          name: `Inspect referenced ${(inputCount ?? 0) >= 3 ? "data" : "image"} user-one`,
         })
         .getAttribute("href"),
     ).toBe("/runs/source-run");
-    if (inputCount === 3)
+    if ((inputCount ?? 0) >= 3)
       expect(screen.queryByAltText("Reference 1: landscape.png")).toBeNull();
     else expect(screen.getByAltText("Reference 1: landscape.png")).toBeTruthy();
     const copy = screen.getByRole("button", { name: "Copy Local AI asst-two" });

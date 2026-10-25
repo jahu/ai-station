@@ -1,3 +1,20 @@
+> PR #424: natural data-file continuations from a completed conversation agent.
+> Exact original inputs, offline captures or complete created CSV/XLSX bind a new
+> ordinary Task/workspace/budget; no agent rerun or research-tool inheritance.
+> Work defaults no longer suppress file references; project-targeted wording stays
+> with projects. Sources are checked on Send and before dispatch. Local inference
+> retains its existing network permission; Python stays offline.
+> Evidence: `data/acceptance/agent-data-actions-20261025`; use its final qualification
+> and `data/acceptance/safety-redeploy-20261012/deployment.json` for actual live state.
+> Frontend780 and six compiled desktop/mobile flows passed; full baseline and final
+> affected modules are retained separately, including corrected failure logs.
+> Native/schema/deployment/config/dependencies remain unchanged. Preserve root
+> Memory WIP, operator data/auth and owned model presets. Whole-platform goal open.
+> Next: practical continuation from transformed result files, broader agent
+> orchestration and delivery/remote-access/reliability acceptance. Older entries
+> below are historical handoffs; their pending/live labels do not override evidence.
+
+
 > Active UI increment: `fix/contextual-project-guidance` on qualified #422.
 > General/media/agent Work and existing-workspace drafts should not show the
 > new-project package/build policy hint. The hint remains visible when explicitly

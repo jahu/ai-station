@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from app.conversation_data_schema import DataScope
 from app.models import Artifact, ChatWorkContext, Message, Run
+from app.permissions import PermissionDenied
 
 GROUP = r"(?:(?:these|those) (?:input |csv |excel |xlsx |json )?(?:files|spreadsheets|data)|this (?:data|dataset)|these observations|those observations|these sources|those sources|te źródła|tych źródeł|tych zrodel|tych obserwacji|te dane|tych danych|te pliki|tych plik[óo]w|tych plikach|te arkusze|tych arkusz[ay]ch|tych arkuszy)"
 SINGLE = r"(?:this (?:input )?(?:file|spreadsheet)|that (?:file|spreadsheet)|ten plik|tego pliku|tym pliku|ten arkusz|tego arkusza|tym arkuszu)"
@@ -32,7 +33,16 @@ def requested(content):
         return False
     prefix = r"^(?:(?:a|teraz|jeszcze|następnie|nastepnie|proszę|prosze|please|now|then|also|and)\s+){0,4}"
     prefix += r"(?:(?:(?:can|could|would) you|(?:czy )?(?:możesz|mozesz))\s+)?"
-    operation = r"(?:calculate|compute|sum|average|group|aggregate|analy[sz]e|compare|filter|sort|count|transform|extract|plot|chart|policz(?:y[ćc])?|oblicz(?:y[ćc])?|przelicz(?:y[ćc])?|zsumuj|por[óo]wnaj|pogrupuj|podziel|wylicz|przeanalizuj|posortuj|wyodr[ęe]bnij|narysuj)\b"
+    if re.search(
+        prefix
+        + r"(?:update|edit|modify|change|zmień|zmien|edytuj|zaktualizuj)\s+"
+        + r"(?:(?:my|our|the|this|mój|moj|nasz|ten)\s+){0,2}"
+        + r"(?:project|repository|repo|codebase|application|website|projekt\w*|repozytor\w*|aplikacj\w*|stron\w*)\b",
+        text,
+        re.I,
+    ):
+        return False
+    operation = r"(?:calculate|compute|sum|average|group|aggregate|analy[sz]e|compare|filter|sort|count|transform|extract|plot|chart|add|append|update|edit|merge|dodaj|uzupełnij|uzupelnij|zmień|zmien|edytuj|połącz|polacz|policz(?:y[ćc])?|oblicz(?:y[ćc])?|przelicz(?:y[ćc])?|zsumuj|por[óo]wnaj|pogrupuj|podziel|wylicz|przeanalizuj|posortuj|wyodr[ęe]bnij|narysuj)\b"
     if re.search(
         prefix
         + r"(?:create|draw|make|stw[oó]rz|utw[oó]rz|zr[oó]b)\b.{0,50}\b(?:chart|plot|workbook|spreadsheet|csv|xlsx|arkusz\w*|wykres\w*|raport\w*|excel)\b",
@@ -225,7 +235,6 @@ def resolve(session, conversation, body, mode):
                 "github",
                 "coding",
                 "new_project",
-                "project_defaults",
                 "continuation",
                 "commit",
                 "publish",
@@ -259,19 +268,40 @@ def resolve(session, conversation, body, mode):
     )
     for user, root in previous:
         params = root.parameters if root is not None else {}
-        if user.metadata_json.get("data_scope") or params.get("data"):
+        is_agent = (
+            root is not None
+            and root.executor_type == "agent_control"
+            and (
+                (user.metadata_json.get("agent_control") or {}).get("operation") == "run"
+                or isinstance(params.get("scope"), dict)
+                and params["scope"].get("operation") == "run"
+            )
+        )
+        if is_agent or user.metadata_json.get("data_scope") or params.get("data"):
             try:
-                reference = source_reference(session, user, root)
-            except (ValueError, KeyError, TypeError, AttributeError) as exc:
+                if is_agent:
+                    from app.agent_data_reference import source_reference as agent_reference
+
+                    reference = agent_reference(session, user, root)
+                    if reference is None:
+                        continue
+                else:
+                    reference = source_reference(session, user, root)
+            except (ValueError, KeyError, TypeError, AttributeError, PermissionDenied) as exc:
                 raise HTTPException(422, ERROR) from exc
-            if len(reference["artifact_ids"]) > 1 and not re.search(GROUP, instruction(body.content), re.I):
+            if reference.get("source_file_count", len(reference["artifact_ids"])) > 1 and not re.search(
+                GROUP, instruction(body.content), re.I
+            ):
                 raise HTTPException(
                     422, "Several analysed files match. Refer to the group or select one file."
                 )
-            from app.conversation_data import prepare_turn
-
             return prepare_turn(
-                body.model_copy(update={"data": DataScope.model_validate(reference["data_scope"])})
+                body.model_copy(
+                    update={
+                        "data": DataScope.model_validate(reference["data_scope"]),
+                        "project_defaults": None,
+                    }
+                )
             ), reference
         if (
             user.metadata_json.get("attachments")
@@ -287,11 +317,13 @@ def verify_reference(session, run):
     reference = run.parameters.get("data_reference")
     user = session.get(Message, run.parameters.get("user_message_id", ""))
     recorded = user.metadata_json.get("conversation_reference") if user else None
-    if not reference and not (recorded and recorded.get("source_kind") == "analyzed_data"):
+    kinds = {"analyzed_data", "agent_data_inputs"}
+    if not reference and not (recorded and recorded.get("source_kind") in kinds):
         return
-    if not reference or reference != recorded or reference.get("source_kind") != "analyzed_data":
+    if not reference or reference != recorded or reference.get("source_kind") not in kinds:
         raise ValueError("The data continuation differs from its submitted source")
-    source = session.get(Run, reference["run_id"])
+    agent_source = reference["source_kind"] == "agent_data_inputs"
+    source = session.get(Run, reference["control_run_id"] if agent_source else reference["run_id"])
     prior = session.get(Message, reference["user_message_id"])
     if (
         source is None
@@ -300,8 +332,12 @@ def verify_reference(session, run):
         or prior.conversation_id != run.conversation_id
     ):
         raise ValueError("The data continuation source belongs to another conversation")
+    if agent_source:
+        from app.agent_data_reference import source_reference as build
+    else:
+        build = source_reference
     if (
-        source_reference(session, prior, source) != reference
+        build(session, prior, source) != reference
         or run.parameters.get("data_inputs") != reference["data_inputs"]
         or run.parameters.get("data") != reference["data_scope"]
     ):
