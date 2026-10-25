@@ -1,3 +1,5 @@
+Operator readiness additions (2026-10-25): [managed memory embeddings](plans/memory-embeddings-readiness.md), [permanent Library deletion](plans/library-permanent-deletion.md), and a complete [Polish QA workbook with returnable results](plans/operator-qa-handoff.md) are required remaining delivery. The operator will start testing after the platform is ready; do not request early operator QA or treat these plans as shipped features.
+
 Conditional data-result alerts in PR #432 retain completed analysis while a separate local check gates notices and reviewed mail. Generation/check/delivery outcomes stay distinct, failed checks do not advance the next baseline, and conversation receipts expose the actual check. [Contracts and qualification](plans/data-result-alerts.md) record all gates; deployment receipts determine live status. Whole-platform completion remains open.
 
 PR #425 adds explicit continuation from complete transformed CSV/XLSX outputs,
