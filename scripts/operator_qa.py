@@ -10,6 +10,7 @@ import re
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
+from textwrap import wrap as wrap_text
 from urllib.parse import urlsplit
 
 from operator_qa_fixtures import FIXTURE_INSTRUCTIONS, fixture_bytes
@@ -202,6 +203,9 @@ def export(output: Path, *, release: str, base_url: str, draft=False, catalog_pa
         [24, 112],
     )
     start.auto_filter.ref = None
+    for row in start.iter_rows(min_row=2):
+        # Explicit height keeps wrapped instructions visible in spreadsheet viewers.
+        start.row_dimensions[row[0].row].height = max(32, 16 * (len(wrap_text(str(row[1].value), 100)) + 1))
     tests = sheet(
         "Testy",
         HEADERS,
