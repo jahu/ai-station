@@ -92,3 +92,18 @@ def test_enable_and_disable_drain_owned_service_preserve_keys(client):
     assert service.status()["state"] == "stopped"
     assert not (service.root / "desired.json").exists()
     assert (service.root / "tailscaled.state").read_text() == "SECRET-NODE-KEY"
+
+
+@pytest.mark.parametrize("unsafe", ["keys", "binaries"])
+def test_native_secrets_and_executables_cannot_enter_agent_roots(tmp_path, monkeypatch, unsafe):
+    from types import SimpleNamespace
+
+    allowed = tmp_path / "workspace"
+    private = allowed / "keys" if unsafe == "keys" else tmp_path / "keys"
+    binary = allowed / "runtime" if unsafe == "binaries" else tmp_path / "runtime"
+    settings = SimpleNamespace(roots=lambda: [allowed], host_data_dir=lambda: tmp_path / "data", port=8765)
+    monkeypatch.setattr(api, "get_settings", lambda: settings)
+    monkeypatch.setattr(api, "paths", lambda: (private, binary, "amd64"))
+    with pytest.raises(ValueError, match="outside every allowed"):
+        api.manager()
+    assert not private.exists() and not binary.exists()

@@ -49,10 +49,11 @@ def manager():
     settings = get_settings()
     canonical = private.expanduser().absolute()
     if any(
-        canonical.is_relative_to(root.resolve()) or root.resolve().is_relative_to(canonical)
+        location.is_relative_to(root.resolve()) or root.resolve().is_relative_to(location)
         for root in settings.roots()
+        for location in (canonical, binaries.expanduser().absolute())
     ):
-        raise ValueError("Private node keys must be outside every allowed filesystem root")
+        raise ValueError("Private keys and executables must be outside every allowed filesystem root")
     key = (str(private), str(binaries), str(settings.host_data_dir().resolve()), settings.port)
     with _lock:
         if _instance is None or _instance[0] != key:
