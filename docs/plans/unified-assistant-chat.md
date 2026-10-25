@@ -2,7 +2,9 @@
 
 Product decision, 2026-10-25: remove the user-facing Chat/Work distinction. This
 supersedes the two-mode entry in the original brief, `2026-10-chat-work-media.md`
-and earlier agent-first acceptance text. Planned; the deployed UI still has the switch.
+and earlier agent-first acceptance text. Implementation is in progress on
+`feat/unified-assistant-chat`; qualification and deployment are pending. The
+deployed UI still has the switch.
 
 ## Product contract
 
@@ -19,6 +21,27 @@ inputs, approvals and Inspect Run. Do not replace the switch with another
 technical mode or obligatory tool choice. Advanced controls remain optional.
 Ambiguous consequential requests need focused clarification or concrete action
 review; never a “switch to Work” instruction.
+
+## Everyday user experience
+
+The same conversation must support these transitions without changing modes:
+
+- “Explain this” produces a normal answer, with sources when appropriate.
+- An uploaded image plus “Change the background” creates the appropriate media
+  Task and returns the resulting image inline.
+- “Create an agent that checks prices every morning” prepares an inspectable
+  definition; activation remains an explicit action in that conversation.
+- “Analyse this spreadsheet” uses the attached file and returns an answer and
+  any generated files, retaining the same conversation for follow-up questions.
+- A question after a completed task returns to an ordinary answer automatically.
+
+The user never has to understand or select “Chat”, “Work”, “orchestration” or a
+replacement execution mode. There is no hidden persistent Work toggle deciding
+whether the next message may become a task. Each turn is routed from its intent,
+verified conversation context and available capabilities. Show what the system
+is actually doing in plain language; ask only for missing information or a
+required sensitive-action approval. Model selection remains optional, and
+specialist tabs remain shortcuts to their existing workspaces.
 
 ## Boundaries and compatibility
 
