@@ -4,9 +4,9 @@ import re
 from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
-from app.models import Artifact, ChatWorkContext, Message, Run
+from app.models import Agent, Artifact, ChatWorkContext, Message, Run
 
 _PLURAL_REFERENCE = r"(?:these images|these pictures|both images|the reference images|te obrazy|te zdjęcia|te zdjecia|oba obrazy|obie fotografie|te fotografie)"
 _REFERENCE = r"(?:it|this(?: image| picture)?|the (?:last |previous )?(?:image|picture|graphic|result)|this graphic|tę grafikę|te grafike|tą grafikę|ta grafike|to|ten obraz|ten wynik|ostatni obraz|poprzedni obraz|to zdjęcie|to zdjecie|tę fotografię)"
@@ -148,7 +148,10 @@ def resolve_result_reference(session, conversation, body, mode):
             Message.conversation_id == conversation.id,
             Run.conversation_id == conversation.id,
             Message.role == "assistant",
-            Message.metadata_json["orchestration"].as_boolean().is_(True),
+            or_(
+                Message.metadata_json["orchestration"].as_boolean().is_(True),
+                Message.metadata_json["agent_control"]["operation"].as_string() == "run",
+            ),
         )
         .order_by(Message.created_at.desc(), Message.id.desc())
         .limit(32)
@@ -159,11 +162,34 @@ def resolve_result_reference(session, conversation, body, mode):
         if generic_description and source.task_id != description_task:
             continue
         if message.metadata_json.get("partial"):
+            if source.executor_type == "agent_control":
+                raise HTTPException(
+                    422, "The latest agent image reference is incomplete. Select its image explicitly."
+                )
             if source.parameters.get("image_artifact_ids"):
                 raise HTTPException(
                     422, "The latest image input has no completed inspection. Select it explicitly."
                 )
             continue
+        if source.executor_type == "agent_control":
+            selected = agent_image_result(session, message, source)
+            if selected is None:
+                continue
+            artifact, producer, workflow = selected
+            return body.model_copy(
+                update={
+                    "action": action,
+                    "image_artifact_ids": [UUID(artifact.id)],
+                    "web_search": body.web_search.model_copy(update={"enabled": False}),
+                }
+            ), {
+                "artifact_id": artifact.id,
+                "message_id": message.id,
+                "run_id": producer.id,
+                "workflow_run_id": workflow.id,
+                "control_run_id": source.id,
+                "source_kind": "agent_image_result",
+            }
         images = list(
             session.execute(
                 select(Artifact, Run)
@@ -232,3 +258,63 @@ def resolve_result_reference(session, conversation, body, mode):
     if generic_description:
         return body, None
     raise HTTPException(422, "There is no recent image result in this conversation. Attach an image first.")
+
+
+def agent_image_result(session, message, control):
+    from app.conversation_agent_control import definition_hash, linked_run
+
+    error = "The latest agent image is unfinished, unavailable or ambiguous. Inspect its execution or select a completed image explicitly."
+    linked = linked_run(session, message, control)
+    if linked is None:
+        scope = control.parameters.get("scope") or {}
+        agent = session.get(Agent, scope.get("agent_id", ""))
+        if agent is None or definition_hash(agent) != scope.get("definition_hash"):
+            raise HTTPException(422, error)
+        if (agent.media or {}).get("kind") != "image":
+            return None
+        raise HTTPException(422, error)
+    root = session.get(Run, linked["id"])
+    if (root.parameters.get("definition", {}).get("media") or {}).get("kind") != "image":
+        return None
+    if linked["status"] != "succeeded":
+        raise HTTPException(422, error)
+    producer = session.get(Run, linked.get("result_run_id", ""))
+    result = control.metadata_json["agent_control_result"]
+    if (
+        producer is None
+        or producer.status != "succeeded"
+        or producer.executor_type != "photo_pipe"
+        or producer.agent_id != root.agent_id
+        or producer.task_id != root.task_id
+        or root.task.agent_id != root.agent_id
+        or result.get("outcome") == "queued"
+        and (
+            root.task.metadata_json.get("conversation_control_run_id") != control.id
+            or root.task.metadata_json.get("originating_conversation_id") != message.conversation_id
+        )
+    ):
+        raise HTTPException(422, error)
+    images = list(
+        session.scalars(
+            select(Artifact)
+            .where(
+                Artifact.run_id == producer.id,
+                Artifact.artifact_type == "image",
+            )
+            .limit(3)
+        )
+    )
+    if (
+        len(images) != 1
+        or images[0].trashed_at
+        or images[0].metadata_json.get("internal_media")
+        or images[0].metadata_json.get("partial")
+    ):
+        raise HTTPException(422, error)
+    from app.vision_inputs import freeze, verify
+
+    try:
+        verify(session, freeze(session, [UUID(images[0].id)]), read_bytes=True)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(422, error) from exc
+    return images[0], producer, root

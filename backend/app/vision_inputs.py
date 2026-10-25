@@ -2,7 +2,7 @@
 
 from pathlib import PurePosixPath
 
-from app.models import Artifact
+from app.models import Artifact, Run
 from app.paths import artifact_relative
 from app.python_execution import read_owned_file
 
@@ -46,9 +46,7 @@ def verify(session, inputs, *, read_bytes=False):
             raise ValueError("An inspected image is unavailable or changed")
         if read_bytes:
             suffix = PurePosixPath(row.relative_path).suffix.lower()
-            if suffix not in {".png", ".jpg", ".jpeg", ".webp"} or row.relative_path != artifact_relative(
-                row.id, suffix
-            ):
+            if suffix not in {".png", ".jpg", ".jpeg", ".webp"} or not owned_image_path(session, row, suffix):
                 raise ValueError("An inspected image has an unexpected storage path")
             if not row.sha256:
                 raise ValueError("Reattach this image to establish its source hash")
@@ -62,10 +60,10 @@ def inspected_selection(session, parent, *, read_bytes=True):
     if parent is None:
         return None
     user = session.get(Message, parent.parameters.get("user_message_id", ""))
-    if (
-        user is None
-        or user.metadata_json.get("conversation_reference", {}).get("source_kind") != "inspected_input"
-    ):
+    if user is None or user.metadata_json.get("conversation_reference", {}).get("source_kind") not in {
+        "inspected_input",
+        "agent_image_result",
+    }:
         return None
     inputs = parent.parameters.get("image_inputs")
     verify(session, inputs, read_bytes=read_bytes)
@@ -95,3 +93,20 @@ def verify_media_inputs(session, run):
     verify(session, inputs, read_bytes=True)
     if [item["artifact_id"] for item in inputs] != run.parameters.get("parent_artifact_ids"):
         raise ValueError("Media sources differ from the inspected input selection")
+
+
+def owned_image_path(session, artifact, suffix):
+    if artifact.relative_path == artifact_relative(artifact.id, suffix):
+        return True
+    source = session.get(Run, artifact.run_id) if artifact.run_id else None
+    return bool(
+        suffix == ".png"
+        and source
+        and source.executor_type == "photo_pipe"
+        and source.status == "succeeded"
+        and source.capability in {"image.generate", "image.edit", "image.recompose", "image.upscale"}
+        and source.metadata_json.get("dispatch_attempted") is True
+        and source.metadata_json.get("process_confirmed_gone") is True
+        and artifact.metadata_json.get("capability") == source.capability
+        and artifact.relative_path == artifact_relative(source.id, suffix)
+    )

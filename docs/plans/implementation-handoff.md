@@ -1,3 +1,34 @@
+> #422 review follow-up: the compiled native CPU photo flow found generated
+> image paths use the owning Run UUID, while Vision verification required the
+> Artifact UUID used for uploads. The final reader permits only the exact successful
+> photo owner/capability plus confirmed dispatch/reaping and canonical Run filename;
+> all existing byte/hash/path checks remain. No file migration or native change.
+> Complete baseline3624 passes+nine opt-in skips and UI778 passed. Final eight
+> affected modules (including nine new native photo path tests), rebuilt image and
+> compiled16 Chat/Work desktop/mobile actions are being checked before merge.
+> Describe/Animate browser scope is typed selection/cancellation, not real inference;
+> Edit/Upscale use the native CPU test photo script, never GPU/cloud work.
+
+> Active candidate: [agent image actions](conversation-agent-image-actions.md),
+> `feat/conversation-agent-image-actions`, based on merged/qualified #421. Explicit
+> Edit/Upscale/Describe/Animate resolves an exact completed agent photo output;
+> source links, single visible result, current-only generic description and
+> explicit selections are preserved. Input bytes are checked on Send; the existing
+> Vision/Photo/Video pinning now recognizes agent_image_result and rejects later
+> changes before dispatch. No new executor, permission, schema or Runner boundary.
+> Focused65 legacy/new cases pass after correcting a test action-key/import and
+> fixing the genuine missing frozen-input propagation. Final module26 cases, including partial-artifact/message guards, pass. Full final
+> gates/browser/review/rollout remain pending.
+> TypeScript passed. Live remains qualified #421 at http://192.168.1.121:8765.
+> #421 qualified:3598 Python/Runner passes+nine opt-in skips, UI778, exact image/
+> Compose and12 compiled1440/390 Chat+Work replies. Inference/Python transport were
+> injected; coding/media publications synthetic. Native/model/auth/data preserved.
+> Use data/acceptance/agent-result-families-20261025/post-deployment-qualified.json
+> and shared deployment authority. Preserve root Memory WIP and full-platform goal.
+> Next: finish natural source-bound result actions, then broader agent orchestration
+> and remaining delivery/remote-access/product acceptance. Do not repeat qualified
+> GPU profiles or claim this increment closes the platform.
+
 > Active candidate: [result families](conversation-agent-result-families.md),
 > `feat/conversation-agent-result-families`, base merged/qualified #420. Shared
 > verified-result reader preserves strict SMTP byte validation and legacy rendering.
