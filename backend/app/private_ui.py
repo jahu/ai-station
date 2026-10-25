@@ -104,6 +104,9 @@ def status(session: DB):
     }
     if not configured(session):
         return {**result, "available": False, "state": "password_required", "serving": False}
+    # SQLite reads use BEGIN IMMEDIATE. Release that transaction before native
+    # I/O so an unavailable service cannot stall unrelated API/worker requests.
+    session.commit()
     try:
         return {**RunnerClient(timeout=5).request("GET", "/v1/private-access"), **result}
     except (RunnerError, RunnerUnavailable):

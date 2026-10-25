@@ -1,3 +1,15 @@
+> #426 is merged into develop (74f409d) and deployed at
+> http://192.168.1.121:8765. Authority/evidence:
+> `data/acceptance/private-tailnet-access-20261025/post-deployment-qualified.json`.
+> Native Runner was updated; existing model container/context, original data and
+> password were preserved. Actual ordinary install/start/login Runs succeeded;
+> Tailscale 1.104.2 is ready for operator sign-in, with keys outside app data.
+> The operator has a pending Settings → Access enrollment/HTTPS/phone instruction.
+> No real account/remote HTTPS/phone success is claimed. Full-platform goal open.
+> Follow-on fix/private-access-status-db-wait releases SQLite before a slow native
+> status read; a real concurrent ASGI regression fails before the change. Validate
+> the frozen candidate, review and deploy it while enrollment remains pending.
+
 > PR #426 / private-tailnet-access: local qualification is complete (3784 Python/
 > Runner successful cases +9 opt-in skips; 175 final affected cases; UI792;
 > exact image/Compose; compiled desktop/mobile native fixture workflows; real

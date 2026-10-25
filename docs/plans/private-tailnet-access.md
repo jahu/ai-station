@@ -185,3 +185,19 @@ Evidence and final reviewed-head mapping:
 `native-userspace-candidate-smoke.json`. Deployment status is recorded separately;
 account enrollment/HTTPS consent and a real phone test remain open. The full AI
 Station objective is not complete.
+
+## Deployment and status concurrency follow-up
+
+PR #426 is merged and deployed. The actual deployed worker completed native
+install/start/login preparation Runs; the service reports NeedsLogin with a
+protected link, and no account enrollment or Serve is implied. The updated native
+Runner retained the existing llama.cpp container/context and original data/auth.
+`post-deployment-qualified.json` records release acceptance. The operator completes
+account login and HTTPS/phone acceptance through Settings → Access.
+
+The follow-on status-read fix commits the captured policy snapshot before the
+read-only native HTTP request. SQLite's BEGIN IMMEDIATE must not remain held
+while a private service is slow. A concurrent authenticated ASGI test holds that
+native response and proves an unrelated health/database request can still finish;
+it times out on the uncorrected version. Snapshot revision guards still validate
+later actions, so releasing this read transaction grants no new authority.
