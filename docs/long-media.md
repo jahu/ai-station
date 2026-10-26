@@ -14,7 +14,10 @@ expected revision and another UUID, preserves completed prefix segments and seed
 and inspects uncertain owned processes before creating replacement attempts.
 A completed speech WAV is reused when resuming the avatar planner.
 
-Wan continuation conditions the next native window on seventeen preceding frames.
+New Wan plans freeze the capability-selected continuation and guidance recipe.
+The qualified `last_frame_v1` with `apg_v1` uses one preceding frame; saved legacy
+plans retain their seventeen-frame cached-latent conditioning. Recipe/source
+observations are rechecked before native dispatch, never silently changed on Resume.
 The overlapped frames are removed from the final timeline; each remaining frame is
 newly generated. Shot mode intentionally starts fresh windows. Continuous windows
 are sequential. Independent shot windows have no inter-shot dependency and can

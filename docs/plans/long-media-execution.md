@@ -3,9 +3,9 @@
 Original design, 2026-10-14. Segmented execution, durable Stop/resume and verified
 composition are implemented. The baseline facts below describe the pre-delivery
 system. Actual current qualification covers a sixty-second Wan film and a
-36.52-second portrait-anchored avatar, with recorded visual limitations. A full
-sixty-second uploaded-recording avatar is the next distinct acceptance profile;
-its outcome must be recorded before extending the qualified range. Broader
+sixty-second uploaded-recording avatar, with recorded visual limitations. The
+complete-speech-to-avatar chain has separate 36.52-second qualification. These
+are concrete profiles, not guarantees for every source or combination. Broader
 durations, quality settings and concurrent two-GPU shots are separate gates.
 See [current release acceptance](platform-acceptance-audit.md) and the implemented
 [execution contract](../long-media.md).

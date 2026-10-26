@@ -3,9 +3,20 @@
 The current workspace defaults to **Full recording (up to 60 seconds)** through
 [durable long-media jobs](long-media.md). Generated speech uses the same complete
 recording plan; bounded motion windows share one canonical audio timeline. The
-[real 30-second qualification](long-avatar-qualification.md#executed-2026-10-15)
-passed full decoding/timing and desktop/mobile playback. Broader portrait and
-lip-sync quality remain distinct from that concrete acceptance.
+[latest full-minute qualification](plans/platform-acceptance-audit.md) uses
+1500 frames at 25 fps, 384-square/eight steps and `portrait_anchor_v1`: 24 native
+windows plus composition, all 23 joins sampled and full desktop playback/mobile
+ending checked. The complete input recording is retained with zero observed
+audio lag and 0.9991 correlation. Contrast/color and facial-detail drift remain
+visible; this is not perfect-identity or exact lip-sync qualification.
+
+The minute fixture is an explicit 60-second recording excerpt of fresh
+62.44-second local narration, with no loops, stretching or silent padding.
+It does not claim the uncut TTS text's ending inside that excerpt. A separate
+36.52-second workflow verifies the complete shorter speech-to-avatar chain.
+Evidence: `data/acceptance/avatar-full-minute-20261026/qualification-complete.json`.
+The [earlier 30-second timing/playback record](long-avatar-qualification.md#executed-2026-10-15)
+remains historical; it is not the current whole-narration quality proof.
 
 The direct short-Run adapter and earlier verification below remain compatible;
 their per-window frame limits are not the current workspace's duration limit.

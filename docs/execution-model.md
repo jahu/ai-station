@@ -85,7 +85,8 @@ dependencies for bounded segments and CPU composition, with idempotent stage
 publication and task-wide Stop/resume, and distinguishes plan-prepared from final
 artifact success. RAM-aware admission and exclusive GPU ownership are enforced.
 Actual recorded profiles qualify a complete sixty-second Wan film and a
-36.52-second portrait-anchored avatar. Two-GPU concurrent-shot fit and broader
+sixty-second uploaded-recording avatar. The separate complete-speech-to-avatar
+profile covers 36.52 seconds. Two-GPU concurrent-shot fit and broader
 quality/duration combinations need their own evidence; two detected devices do
 not prove simultaneous execution. See [current acceptance](plans/platform-acceptance-audit.md).
 

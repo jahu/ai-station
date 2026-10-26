@@ -151,6 +151,11 @@ importer preserves returned answers and produces a triage list without executing
 spreadsheet formulas or changing the app. Final operator handoff is separate from
 internal qualification; unperformed operator tests remain **Nie testowano**.
 
+Ordinary generated results appear in Library and their Runs. Isolated acceptance
+probes have separate databases/data roots and record file locations in their
+receipts. Developer exports such as `data/test-previews` are independent local
+copies; they do not automatically create entries in the running Library.
+
 Contributions use feature/fix branches, full diff review and successful checks,
 then squash PRs into `develop`. Hosted Actions are currently manual; equivalent
 local verification is authorized by the maintainer. Actual failing checks are
