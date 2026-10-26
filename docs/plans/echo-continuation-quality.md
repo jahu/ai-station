@@ -67,7 +67,7 @@ original-portrait windows retain appearance better across five windows, but rese
 eye, mouth and head state at joins; all four exact composition joins have larger
 face-crop RGB discontinuities than baseline. These controlled ablations implicate
 recursive temporal conditioning in the visible drift, without proving a single
-upstream defect. No candidate passes both appearance and continuity requirements.
+upstream defect. Those three candidates do not pass both appearance and continuity requirements.
 
 Keep all negative evidence. The five-window diagnostics intentionally cancel the
 remaining job after collecting comparable output; they are not full-duration
@@ -102,3 +102,34 @@ recipe fails with an actionable error rather than silently mixing conditions.
 No user-supplied CLI arguments, Python hooks, arbitrary graphs or new Chat/Work
 mode may be introduced. Qualify a complete same-input narration/avatar before
 promoting the recommendation; shorter diagnostic output cannot satisfy that gate.
+
+## Viable diagnostic and product implementation under qualification
+
+The original-end-image plus cached-motion diagnostic completed all 14 native
+windows, 36.52 seconds and 913 frames. Ordinary same-Task resume reused the first
+five completed clips/checkpoints without changing their bytes or execution times.
+The first resume was refused while an owned cancellation lease was still active;
+its failed receipt is retained. Ordinary expired-lease recovery inspected the gone
+process before the accepted resume. No GPU work was blindly repeated.
+
+All 13 sampled joins and periodic frames retain motion while substantially reducing
+the baseline's progressive red/magenta appearance. Residual contrast/facial detail
+changes remain. Complete final audio has correlation 0.999038 with canonical speech,
+zero lag and full overlap. Actual compiled 1440/390 playback passes. This is one
+controlled portrait/voice, not exact identity or phoneme synchronization. The
+private engineering wrapper is not the public product recipe qualification.
+Evidence: `end-anchor-prefix/full-result.json`, `full-visual-review.json`,
+`full-decode-and-audio.json` and `release-player-result.json` in the investigation
+folder. The full narration was reused from its already-qualified WAV; Chatterbox
+was not rerun for these controlled comparisons.
+
+The product candidate freezes `portrait_anchor_v1` and its opaque source/model
+observation in new full-avatar plans, child Runs and artifact provenance. New
+agent workflows freeze the recipe at enqueue; old queued snapshots without it
+remain legacy. Workflow retry preserves that snapshot. Legacy public request
+serialization and checkpoint identities remain unchanged. Existing jobs do not
+follow a new recommendation on Resume. A changed recipe is rejected before
+native dispatch or model import, and incompatible preceding motion is refused.
+The implementation adds fixed typed metadata/arguments, not a shell/graph API.
+Full local qualification and an actual complete public-product-source workflow
+remain required before merge/promotion/deployment.

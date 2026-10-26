@@ -24,6 +24,8 @@ def main():
     parser.add_argument("--motion-output")
     parser.add_argument("--motion-profile")
     parser.add_argument("--motion-relative")
+    parser.add_argument("--appearance-profile", choices=["portrait_anchor_v1"])
+    parser.add_argument("--appearance-observation")
     profile = parser.add_mutually_exclusive_group()
     profile.add_argument("--station-mapped-run-id")
     profile.add_argument("--station-bounded-run-id")
@@ -37,16 +39,27 @@ def main():
 
         require_scope(options.station_bounded_run_id, 11264)
     sys.path.insert(0, options.runtime_dir)
-    inference = importlib.import_module("infer_flash")
-    base = inference.WanFunInpaintAudioPipeline
     motion = None
     size = int(arguments[arguments.index("--sample_size") + 1])
-    from ai_station_runner.echo_motion import flow_sigma, profile_key, validate_checkpoint
+    from ai_station_runner.echo_appearance import anchored_conditioning, checked_recipe, motion_profile
+    from ai_station_runner.echo_motion import flow_sigma, validate_checkpoint
 
     base_model = Path(arguments[arguments.index("--model_name") + 1])
     model_root = base_model.parent
-    if options.motion_output and profile_key(options.runtime_dir, model_root) != options.motion_profile:
+    appearance_recipe = checked_recipe(
+        {"id": options.appearance_profile, "observation": options.appearance_observation}
+        if options.appearance_profile is not None or options.appearance_observation is not None
+        else None
+    )
+    if appearance_recipe and options.motion_output is None:
+        raise ValueError("Portrait anchoring requires a full-job motion checkpoint")
+    if (
+        options.motion_output
+        and motion_profile(options.runtime_dir, model_root, appearance_recipe) != options.motion_profile
+    ):
         raise ValueError("Avatar model/config observation changed before inference")
+    inference = importlib.import_module("infer_flash")
+    base = inference.WanFunInpaintAudioPipeline
 
     if options.motion_context:
         import hashlib
@@ -145,7 +158,10 @@ def main():
                 partial = path.with_suffix(".partial.safetensors")
                 if path.exists() or partial.exists():
                     raise FileExistsError(path)
-                if profile_key(options.runtime_dir, model_root) != options.motion_profile:
+                if (
+                    motion_profile(options.runtime_dir, model_root, appearance_recipe)
+                    != options.motion_profile
+                ):
                     raise ValueError("Avatar model/config observation changed during inference")
                 context = combined[:, :, -21:].detach().cpu().float().contiguous()
                 if not torch.isfinite(context).all():
@@ -179,7 +195,11 @@ def main():
             import numpy as np
             import torch
 
-            video, mask, identity = original(*args, **kwargs)
+            video, mask, identity = (
+                anchored_conditioning(original, *args, **kwargs)
+                if appearance_recipe
+                else original(*args, **kwargs)
+            )
             if motion is not None:
                 video[:, :, :17] = 0
                 mask[:, :, :17] = 0
@@ -234,6 +254,7 @@ def main():
         output.with_suffix(".json").write_text(
             json.dumps(
                 {
+                    **({"appearance_recipe": appearance_recipe} if appearance_recipe else {}),
                     "motion_context": {
                         "relative_path": options.motion_relative,
                         "sha256": hashlib.sha256(checkpoint.read_bytes()).hexdigest(),

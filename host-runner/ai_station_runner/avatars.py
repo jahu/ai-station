@@ -11,6 +11,7 @@ from PIL import Image, ImageOps
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_serializer, model_validator
 
 from ai_station_runner.config import get_settings
+from ai_station_runner.echo_appearance import checked_recipe, current_recipe, motion_profile
 from ai_station_runner.echo_profiles import BOUNDED, MEMORY_MIB, STANDARD_RAM_MIB, validate_profile
 from ai_station_runner.media_inputs import MediaInput
 from ai_station_runner.security import resolve_child
@@ -29,6 +30,7 @@ class AvatarRequest(BaseModel):
     audio_window: AudioWindow | None = None
     previous_video: MediaInput | None = None
     motion_context: MediaInput | None = None
+    appearance_recipe: dict[str, str] | None = None
     image_relative: str = Field(max_length=500)
     audio_relative: str = Field(max_length=500)
     prompt: str = Field(min_length=1, max_length=2000)
@@ -45,11 +47,16 @@ class AvatarRequest(BaseModel):
         values = handler(self)
         if self.memory_profile == "default":
             values.pop("memory_profile", None)
+        if self.appearance_recipe is None:
+            values.pop("appearance_recipe", None)
         return values
 
     @model_validator(mode="after")
     def motion_scope(self):
         validate_profile(self.memory_profile, self.size, self.steps)
+        checked_recipe(self.appearance_recipe)
+        if self.appearance_recipe and (self.audio_window is None or self.size != 384 or self.steps < 8):
+            raise ValueError("Portrait anchoring requires a full-job audio window at 384x384 and 8+ steps")
         if self.motion_context and (self.previous_video is None or self.audio_window is None):
             raise ValueError("Avatar motion checkpoint needs a preceding full-job video window")
         return self
@@ -92,8 +99,17 @@ def installation():
 
 def capabilities():
     try:
-        settings, python, *_ = installation()
+        settings, python, runtime, models, *_ = installation()
         ready = os.access(python, os.X_OK) and bool(collect(settings.host_data_dir()).get("gpus"))
+        appearance = {}
+        try:
+            recipe = current_recipe(runtime, models)
+            appearance = {
+                "appearance_profiles": [{**recipe, "available": ready}],
+                **({"recommended_appearance_profile": recipe["id"]} if ready else {}),
+            }
+        except OSError:
+            pass  # Legacy inference remains distinguishable from recipe readiness.
         return {
             "available": ready,
             "backend": "echomimic-v3",
@@ -102,6 +118,7 @@ def capabilities():
             "offline": True,
             "memory_estimate_mib": STANDARD_RAM_MIB,
             "memory_profiles": memory_profiles(),
+            **appearance,
         }
     except HTTPException as exc:
         return {"available": False, "backend": "echomimic-v3", "reason": exc.detail}
@@ -131,6 +148,12 @@ def start_avatar(manager, body):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise HTTPException(403, "Avatar read/write permissions are required")
     settings, python, runtime, models, base, checkpoint = installation()
+    try:
+        profile = (
+            motion_profile(runtime, models, body.appearance_recipe) if body.audio_window is not None else None
+        )
+    except (ValueError, OSError) as exc:
+        raise HTTPException(409, "Avatar appearance or model observation changed; start a new job") from exc
     prefix = []
     if body.memory_profile == BOUNDED:
         from ai_station_runner.memory_scope import scope_prefix
@@ -202,9 +225,8 @@ def start_avatar(manager, body):
     ):
         raise HTTPException(422, "Choose a bounded owned preceding video segment")
     motion = owned(root, body.motion_context.relative_path) if body.motion_context else None
-    from ai_station_runner.echo_motion import profile_key, validate_checkpoint
+    from ai_station_runner.echo_motion import validate_checkpoint
 
-    profile = profile_key(runtime, models) if body.audio_window is not None else None
     if motion:
         try:
             if (
@@ -272,6 +294,15 @@ def start_avatar(manager, body):
         )
     if motion:
         argv.extend(["--motion-context", str(motion), "--motion-hash", body.motion_context.sha256])
+    if body.appearance_recipe:
+        argv.extend(
+            [
+                "--appearance-profile",
+                body.appearance_recipe["id"],
+                "--appearance-observation",
+                body.appearance_recipe["observation"],
+            ]
+        )
     if body.memory_profile == BOUNDED:
         argv.extend(["--station-bounded-run-id", run_id])
     environment = {

@@ -1,3 +1,10 @@
+The [Echo appearance candidate](plans/echo-continuation-quality.md) snapshots
+its fixed recipe in new full-avatar Tasks and agent workflows. Speech planning,
+segments, composition and retries preserve that snapshot. Resume refuses changed
+observations and reuses only compatible completed clips/checkpoints; old plans
+without a recipe retain their original native arguments and tensor identity.
+No new execution state or separate queue is introduced.
+
 Planned private remote access uses an owned native userspace Tailscale instance,
 with keys outside the control-plane mount and fixed loopback-only Serve targets.
 Initial native boundary helpers are not an operational adapter. See

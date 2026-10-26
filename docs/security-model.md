@@ -1,3 +1,9 @@
+The [Echo appearance candidate](plans/echo-continuation-quality.md) accepts only
+one built-in recipe and its exact source/model observation. It preserves owned
+portrait/audio/motion boundaries, process groups, memory scopes and permissions.
+A model cannot supply conditioning code, commands or paths through this metadata.
+Old queued agent snapshots and legacy plans retain their existing behavior.
+
 [Long speech](plans/complete-long-speech.md) uses fixed internal text bounds and
 the configured offline CLI, with no caller-selected commands or chunk paths.
 Every child inherits the owned process group and deadline. Intermediate PCM stays

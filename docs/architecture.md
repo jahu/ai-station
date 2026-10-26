@@ -1,3 +1,10 @@
+The [Echo portrait continuation candidate](plans/echo-continuation-quality.md)
+freezes an appearance recipe and source/model observation in new full-avatar
+plans and agent workflow snapshots. Old plans retain legacy behavior; a resumed
+job never follows a new recommendation. The private typed Runner verifies the
+observation before dispatch and model import. Qualification and rollout remain
+separate gates.
+
 [Complete long speech](plans/complete-long-speech.md) keeps bounded text chunks
 inside one owned Chatterbox Run. A fixed native wrapper calls the configured
 offline CLI sequentially and publishes only the complete PCM output; the original

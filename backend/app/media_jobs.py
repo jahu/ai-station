@@ -581,6 +581,11 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
         raise HTTPException(409, "Media plan changed; refresh before resuming")
     if not view["resume_allowed"] or plan["revision"] >= 20:
         raise HTTPException(409, "Inspect active/completed work before resuming")
+    if plan["kind"] == "avatar" and plan.get("appearance_recipe") is not None:
+        from app.avatar_appearance import frozen_recipe, verify_recipe
+        from app.avatars import capabilities as avatar_capabilities
+
+        verify_recipe(avatar_capabilities(), frozen_recipe(plan))
     profile = capabilities() if plan["kind"] == "video" else {}
     if plan.get("request", {}).get("memory_profile", "default") != "default":
         if plan["kind"] == "avatar":
@@ -784,7 +789,16 @@ class FullAvatarRequest(FullAvatarSettings):
     client_request_id: UUID
 
 
-def publish_avatar(session, body, *, task=None, parent_run_id=None, execution_deadline_at=None):
+def publish_avatar(
+    session,
+    body,
+    *,
+    task=None,
+    parent_run_id=None,
+    execution_deadline_at=None,
+    observed_profile=None,
+    appearance_snapshot=None,
+):
     import wave
 
     from app.avatars import AvatarRequest, create_avatar_run
@@ -840,7 +854,19 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None, execution_de
             or canonical.trashed_at is not None
         ):
             raise HTTPException(409, "Avatar speech handoff is not bound to its owned planner")
-    avatar_profile = avatar_capabilities() if body.memory_profile != "default" else None
+    from app.avatar_appearance import frozen_recipe, select_recipe, verify_recipe
+
+    needs_profile = not prior_plan or body.memory_profile != "default" or prior_plan.get("appearance_recipe")
+    avatar_profile = (
+        observed_profile if observed_profile is not None else avatar_capabilities() if needs_profile else {}
+    )
+    appearance = (
+        frozen_recipe(prior_plan or appearance_snapshot)
+        if prior_plan or appearance_snapshot is not None
+        else select_recipe(avatar_profile, body)
+    )
+    verify_recipe(avatar_profile, appearance)
+    appearance_fields = {"appearance_recipe": appearance} if appearance is not None else {}
     reservation = avatar_memory(body, avatar_profile)
     image = session.get(Artifact, str(body.image_artifact_id))
     if not image or image.trashed_at is not None or image.mime_type not in {"image/png", "image/jpeg"}:
@@ -885,6 +911,7 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None, execution_de
             **task.metadata_json,
             "media_plan": {
                 **budget,
+                **appearance_fields,
                 **({"agent_media_parent_run_id": root_parent} if budget else {}),
                 "version": 1,
                 "revision": 1,
@@ -959,6 +986,7 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None, execution_de
         run.parameters = {
             **run.parameters,
             **budget,
+            **appearance_fields,
             "internal_media": True,
             "media_segment": segment.model_dump(),
             "audio_window": {"start_frame": segment.start_frame - segment.first_frame},
@@ -978,6 +1006,7 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None, execution_de
         operation_key=f"media:{revision}:compose:attempt:1",
         parameters={
             **budget,
+            **appearance_fields,
             "stage_run_ids": [r.id for r in runs],
             "timeline": timing.model_dump(mode="json"),
             "width": body.size,
@@ -999,6 +1028,7 @@ def publish_avatar(session, body, *, task=None, parent_run_id=None, execution_de
         **task.metadata_json,
         "media_plan": {
             **budget,
+            **appearance_fields,
             **({"agent_media_parent_run_id": root_parent} if budget else {}),
             "version": 1,
             "revision": revision,
