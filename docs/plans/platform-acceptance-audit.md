@@ -7,7 +7,8 @@ feature PR, an available runtime badge or fixture output for full acceptance.
 
 ## Current audit, 2026-10-26
 
-The PR #445 identities below are historical. The current deployed release is
+The PR #445 identities below are historical. The audited deployment before the
+market-draft correction is
 `73f425fe7d14ad87792c9495a0a06f3357f756c6` (PR #456), with preserved data,
 schema0036 and the same LAN address. Its complete normal qualification contains
 4,224 cases (4,215 passed, nine opt-in skips). Frontend qualification includes
