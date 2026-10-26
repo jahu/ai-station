@@ -71,6 +71,29 @@ class WorkbookTests(unittest.TestCase):
             self.assertTrue(all(row[1] == "Nie testowano" for row in rows[1:]))
             self.assertEqual(json.loads(files[-1].read_text())["release"], self.release)
 
+    def test_long_multiline_instructions_remain_visible_without_manual_row_resize(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            catalog = qa.load_catalog()
+            case = catalog["cases"][0]
+            case["steps"] = [f"Sprawdź punkt {index}." for index in range(1, 13)]
+            source = root / "catalog.json"
+            source.write_text(json.dumps(catalog, ensure_ascii=False))
+            paths = qa.export(
+                root / "export",
+                release=self.release,
+                base_url="http://localhost:8765",
+                catalog_path=source,
+                draft=True,
+            )
+            book = load_workbook(paths[0], keep_links=False)
+            page = book["Testy"]
+            self.assertGreaterEqual(page.row_dimensions[2].height, 12 * 16)
+            self.assertTrue(page["E2"].alignment.wrap_text)
+            self.assertIn("12. Sprawdź punkt 12.", page["E2"].value)
+            self.assertEqual(page["B2"].value, "Nie testowano")
+            self.assertLessEqual(max(row.height for row in page.row_dimensions.values()), 409)
+
     def test_synthetic_inputs_have_known_values_and_manifest_checksums(self):
         with tempfile.TemporaryDirectory() as folder:
             output = Path(folder)

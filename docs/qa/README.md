@@ -54,6 +54,8 @@ The exporter does not verify those claims or run inference; final handoff still
 requires the contributor to inspect the actual receipts and include accurate
 profiles. Notes never prefill operator results. Keep credentials out of them.
 The result column stays visible while scrolling; editable fields are blue.
+Test row heights grow with wrapped instructions, including explicit line breaks,
+so longer cases can be read without manually expanding their rows.
 All test results start as **Nie testowano**. Expected behavior is never converted
 into an operator pass. Summary formulas count operator answers and recalculate
 in Excel/LibreOffice; they do not express a product-completion percentage.
