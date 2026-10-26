@@ -1,5 +1,9 @@
 # Setup, configuration and development
 
+AI Station is source-available under [PolyForm Noncommercial 1.0.0](../LICENSE).
+Permitted noncommercial use is free; other commercial use requires a separate
+written license. See [licensing](../COMMERCIAL.md) and [contributing](../CONTRIBUTING.md).
+
 Run the commands below from the repository root. For the product overview, see
 [AI Station](../README.md).
 

@@ -1,0 +1,3 @@
+# Ownership declarations require an enforced branch rule to gate merges.
+# Require code-owner review on master when the GitHub plan supports it.
+* @jahu

@@ -10,7 +10,7 @@ Your models, images, videos, voices, music and agents — together, on your mach
 
 [Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
-`v0.0.1` · `Linux first` · `Local inference` · `Cloud optional`
+`v0.0.1` · `Linux first` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
 ![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
 
@@ -222,7 +222,7 @@ nine opt-in skips and 847 frontend tests; newer offline QA tools have their own
 26 tests and 21 subtests. Those numbers do not automatically qualify every model,
 media profile or machine. [Verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
-Read [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)
+Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)
 also explains how to add executors, capabilities, providers, tools and connectors.
 
 </details>
@@ -236,5 +236,16 @@ also explains how to add executors, capabilities, providers, tools and connector
 | Operate your station | [Library](docs/library.md) · [Private access](docs/private-network-access.md) · [Backups](docs/operations.md) |
 
 ---
+
+## 📜 License
+
+**Free for noncommercial use. Commercial use requires a separate written license.**
+AI Station is source-available under [PolyForm Noncommercial 1.0.0](LICENSE),
+including its expressly permitted organizational uses. You can inspect, modify
+and share it for permitted purposes. [Commercial licensing and details →](COMMERCIAL.md)
+
+Contributions are welcome; contributors retain their copyright and provide the
+separate permission needed for commercial licensing. Models and dependencies
+keep their own licenses. [Contribution guide](CONTRIBUTING.md) · [Required notice](NOTICE)
 
 **Build an AI workstation you want to come back to.** ✳

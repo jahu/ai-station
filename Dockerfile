@@ -14,6 +14,8 @@ FROM python:3.12-slim AS runtime
 ENV PATH="/opt/venv/bin:$PATH" PYTHONPATH=/app/backend PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     AI_STATION_DATA_DIR=/data AI_STATION_FRONTEND_DIST=/app/frontend
 WORKDIR /app
+LABEL org.opencontainers.image.licenses="PolyForm-Noncommercial-1.0.0"
+COPY LICENSE NOTICE COMMERCIAL.md /app/legal/
 COPY --from=dependencies /opt/venv /opt/venv
 COPY backend/ /app/backend/
 COPY --from=frontend /build/dist /app/frontend/
