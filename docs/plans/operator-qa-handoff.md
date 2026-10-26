@@ -107,6 +107,16 @@ case IDs carried into fix/retest notes. Ask for clarification only for genuinely
 unreproducible or ambiguous observations; do not require the user to rewrite clear
 workbook rows as chat messages.
 
+The offline feedback importer accepts the returned XLSX or the three CSV files
+with the original manifest and reviewed catalog. Bind stable IDs, headers and
+release/catalog identity; retain original input bytes and their hashes in a fresh
+output directory. Ignore spreadsheet summary formulas and reject formulas in
+imported answer sheets, macros, external workbooks and oversized archives. Emit
+JSON plus a readable Polish triage list, separating bugs, blockers and ideas.
+Group only exact equivalent reports; retain every source row, evidence and retest.
+A successful retest never silently overwrites the original failed result. No
+network, app database, model, issue publication or repair execution belongs here.
+
 ## Acceptance
 
 The final workbook opens in LibreOffice/Excel, has usable Polish instructions,

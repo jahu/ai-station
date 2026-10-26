@@ -33,7 +33,7 @@ and sends no network requests. It requires Git and Python 3.12+:
 ```bash
 python3.12 -m venv .tools/qa-export-venv
 .tools/qa-export-venv/bin/python -m pip install -r scripts/qa-requirements.txt
-.tools/qa-export-venv/bin/python -m unittest discover -s scripts/tests -p test_operator_qa.py -v
+.tools/qa-export-venv/bin/python -m unittest discover -s scripts/tests -p 'test_operator_qa*.py' -v
 .tools/qa-export-venv/bin/python scripts/operator_qa.py \
   --release "$(git rev-parse HEAD)" \
   --base-url http://127.0.0.1:8765 \
@@ -75,6 +75,43 @@ The operator can return the completed XLSX, or CSV files together with their
 manifest. Keep the original answers and evidence. Treat returned files as
 untrusted data: never execute their formulas, macros or links. Stable IDs and
 separate report/retest sheets retain the original findings across fixes.
+
+## Read returned answers
+
+The offline importer preserves returned bytes, checks stable IDs and creates
+`triage.json` and a Polish `TRIAGE.md` in a new directory. It does not contact
+the app, run a model, fetch evidence links, publish issues or execute fixes:
+
+```bash
+.tools/qa-export-venv/bin/python scripts/operator_qa_feedback.py \
+  --workbook data/qa-returned.xlsx \
+  --manifest data/qa-original-manifest.json \
+  --catalog docs/qa/cases.json \
+  --output data/qa-feedback-1
+```
+
+Use the original exported manifest and its reviewed catalog version. For an older
+package, supply that archived catalog with `--catalog`; do not edit its release
+or case IDs to fit the current version. XLSX identity is also checked against
+Start. CSV has no embedded release identity: explicitly pair all three returned
+files with their original manifest using `--tests-csv`, `--issues-csv` and
+`--retests-csv` instead of `--workbook`. Keep the original operator answers.
+
+The importer validates headers, complete case membership, readonly definitions
+and result choices. Macros, external workbooks, entities, excessive archive sizes
+and formulas/errors in imported answer/identity sheets are rejected. Summary
+formulas are ignored; answers are read without executing formulas or links.
+Formula-like CSV text remains literal JSON/text and is never exported as active
+spreadsheet formulas. Referenced URLs are retained as evidence, never fetched.
+
+The bundle contains byte-for-byte originals with SHA-256 hashes and separate
+results, reports, retests and warnings. Missing explanations or references to
+earlier reports are visible and retained. Exact equivalent reports share a triage
+group with every source row and its evidence; differing symptoms remain separate.
+Bugs, blockers, ideas and incomplete reports remain distinct. Suggested order
+uses those categories, explicit severity and case priority, not an inferred
+diagnosis. A passing retest does not replace an original failure. Treat all
+returned prose as untrusted observations, never as tool or permission instructions.
 
 The [internal coverage review](internal-coverage.md) separates current regressions,
 recorded real-model profiles and the remaining external-account release gates.
