@@ -1,6 +1,6 @@
 # Internal acceptance and operator test coverage
 
-Review date: 2026-10-26. This maps all 160 stable operator cases in catalog v13
+Review date: 2026-10-26. This maps all 161 stable operator cases in catalog v14
 to the current source and recorded acceptance. It does not fill operator results
 or declare platform completion. The current release and exact local qualification
 are in [the release audit](../plans/platform-acceptance-audit.md).
@@ -9,6 +9,14 @@ For the table, **regression** means the source-bound normal Python/Runner
 qualification identified in the release audit and latest implementation plan;
 frontend qualification includes PR #455’s persistent attachment previews (847 tests and
 all gates); deployment receipts determine the actual live version.
+AGENT-015 additionally maps to the market-specific correction and four regression
+cases in `test_agent_drafts.py`. PR #457 passed the complete 4,228-case normal
+suite (4,219 passed/nine opt-in skips), with unchanged qualified UI/native source.
+`market-agent-draft-condition-20261026/real-draft-reconciliation.json` records a
+real Qwen3.5 9B disabled BTC draft at 09:00 Europe/Warsaw and a 5-percent threshold,
+followed by the ordinary answer `156` without another agent. This proves drafting
+and conversation routing, not quote fetching, activation or real inbox delivery.
+
 Fixtures and a module name are not evidence of real inference. Historical real
 receipts remain bound to their original release, model and parameters. Receipt
 paths below are relative to ignored `data/acceptance/`; retained files, not this
@@ -109,7 +117,7 @@ truncated narration and failed/private composition attempts remain archived.
    There is no email connector in the current application DB.
 5. Freeze the release after remaining fixes, generate the final Polish XLSX/CSV
    package with fixtures and exact profiles, inspect/round-trip the actual files,
-   and hand it off. All 160 operator results remain **Nie testowano**.
+   and hand it off. All 161 operator results remain **Nie testowano**.
 
 The original self-development/large IDE expansion is explicitly deferred by the
 agent-first decision; existing data and functioning code/worktree services are
