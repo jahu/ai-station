@@ -1,9 +1,9 @@
 # Operator QA catalog and workbook
 
-The versioned [catalog](cases.json) contains 158 Polish operator cases across 21
+The versioned [catalog](cases.json) contains 159 Polish operator cases across 21
 areas, including all four permanent-deletion journeys and real semantic-memory
 acceptance and the single assistant conversation. It is a test definition, not evidence that the product is complete.
-Catalog v11 includes ready-to-upload synthetic data with independently checkable
+Catalog v12 includes ready-to-upload synthetic data with independently checkable
 answers, so CSV/Excel/document and basic Vision cases need no manual boilerplate.
 AGENT-014 checks sensible new media-agent allowances and preservation of an
 explicit short runtime without rendering another film.
