@@ -31,9 +31,8 @@ function WorkerCards({ workers }: { workers: Worker[] }) {
       <h3 id={headingId} className="sr-only">
         Worker heartbeats
       </h3>
-      <p id={labelId} className="dashboard-note">
-        Arrow keys choose a worker while the list is focused. There is no
-        inspectable heartbeat Run. Held leases stay a separate list.
+      <p id={labelId} className="sr-only">
+        Worker list. Use arrow keys to move between workers.
       </p>
       <div
         ref={listRef}
@@ -71,9 +70,9 @@ function CheckCards({ checks }: { checks: Diagnostic[] }) {
       <h3 id={headingId} className="sr-only">
         Integration checks
       </h3>
-      <p id={labelId} className="dashboard-note">
-        Arrow keys choose a check while the list is focused. There is no
-        inspectable diagnostic Run. Refresh stays outside this list.
+      <p id={labelId} className="sr-only">
+        Integration checks. Use arrow keys to move between checks. Refresh
+        updates the checks.
       </p>
       <div
         ref={listRef}

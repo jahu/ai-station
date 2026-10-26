@@ -207,9 +207,7 @@ it("moves through integration checks with arrow keys", async () => {
   expect(
     screen.getByRole("region", { name: "Integration checks" }),
   ).toBeTruthy();
-  expect(
-    screen.getByText(/There is no inspectable diagnostic Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Integration checks. Use arrow keys/)).toBeTruthy();
   fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
     key: "ArrowDown",
   });
@@ -244,9 +242,7 @@ it("moves through worker heartbeats with arrow keys", async () => {
   expect(
     screen.getByRole("region", { name: "Worker heartbeats" }),
   ).toBeTruthy();
-  expect(
-    screen.getByText(/There is no inspectable heartbeat Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Worker list. Use arrow keys/)).toBeTruthy();
   fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
     key: "ArrowDown",
   });

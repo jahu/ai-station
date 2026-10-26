@@ -649,9 +649,7 @@ it("stages local coding scope without granting Cursor consent", async () => {
     await screen.findByLabelText("Project project-1")
   ).closest(".project-choice-list") as HTMLElement;
   fireEvent.keyDown(projectList, { key: "Enter" });
-  expect(
-    screen.getByText(/There is no inspectable project-selection Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Project choices. Use arrow keys/)).toBeTruthy();
   expect(JSON.parse(screen.getByTestId("scope").textContent!)).toMatchObject({
     files: [],
     explore: true,
@@ -799,9 +797,7 @@ it("selects a native Cursor model without sending", async () => {
   expect(
     JSON.parse(screen.getByTestId("scope").textContent!).model,
   ).toBeUndefined();
-  expect(
-    screen.getByText(/There is no inspectable model-selection Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Model choices. Use arrow keys/)).toBeTruthy();
 });
 
 it("enables Cursor automatic file discovery without sending", async () => {
@@ -1091,9 +1087,7 @@ it("requires an explicit GGUF before a load action is ready", async () => {
     ".gguf-choice-list",
   ) as HTMLElement;
   fireEvent.keyDown(ggufList, { key: "Enter" });
-  expect(
-    screen.getByText(/There is no inspectable GGUF-selection Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Local model choices. Use arrow keys/)).toBeTruthy();
   expect(JSON.parse(screen.getByTestId("load").textContent!)).toMatchObject({
     model_file_id: "gguf-1",
     context_size: 4096,
@@ -1157,7 +1151,7 @@ it("selects an owned runtime without listing external servers", async () => {
   expect(screen.queryByLabelText("Runtime dead")).toBeNull();
   fireEvent.keyDown(runtimeList, { key: "Enter" });
   expect(
-    screen.getByText(/There is no inspectable runtime-selection Run/),
+    screen.getByText(/AI Station runtime choices. Use arrow keys/),
   ).toBeTruthy();
   expect(JSON.parse(screen.getByTestId("stop").textContent!)).toEqual({
     instance_id: "owned",
@@ -1198,9 +1192,7 @@ it("moves through image references with arrow keys without inventing a Run", asy
   const second = screen.getByLabelText("Image reference 2 image-2");
   expect(first.tabIndex).toBe(0);
   expect(second.tabIndex).toBe(-1);
-  expect(
-    screen.getByText(/There is no inspectable reference Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Image references. Use arrow keys/)).toBeTruthy();
   fireEvent.keyDown(
     first.closest(".assistant-reference-strip") as HTMLElement,
     { key: "ArrowRight" },

@@ -40,10 +40,12 @@ export function RuntimeChoiceList({
   if (!items.length) return null;
   return (
     <>
-      <p id={labelId} className="dashboard-note">
-        Arrow keys choose an owned llama.cpp instance while the list is focused.
-        Space or Enter selects it. Enter does not send. External servers are not
-        listed. There is no inspectable runtime-selection Run.
+      <p className="dashboard-note">
+        Only AI Station–managed llama.cpp instances are listed.
+      </p>
+      <p id={labelId} className="sr-only">
+        AI Station runtime choices. Use arrow keys to move, then Space or Enter
+        to select.
       </p>
       <div
         ref={listRef}

@@ -380,9 +380,7 @@ it("moves through saved transcript attachments without inspecting a Run", async 
   expect(first.tabIndex).toBe(0);
   expect(second.tabIndex).toBe(-1);
   expect(first.getAttribute("href")).toBe("/api/artifacts/att-notes-aaaa/file");
-  expect(
-    screen.getByText(/There is no inspectable attachment Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Saved attachments. Use arrow keys/)).toBeTruthy();
   fireEvent.keyDown(
     first.closest(".chat-saved-attachment-list") as HTMLElement,
     { key: "ArrowDown" },

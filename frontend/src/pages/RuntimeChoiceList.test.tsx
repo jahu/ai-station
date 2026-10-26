@@ -35,9 +35,11 @@ it("moves through owned runtimes without sending", () => {
   const first = screen.getByLabelText("Runtime run-a");
   expect(first.tabIndex).toBe(0);
   expect(
-    screen.getByText(/There is no inspectable runtime-selection Run/),
+    screen.getByText(/AI Station runtime choices. Use arrow keys/),
   ).toBeTruthy();
-  expect(screen.getByText(/External servers are not listed/)).toBeTruthy();
+  expect(
+    screen.getByText(/Only AI Station–managed llama.cpp instances are listed/),
+  ).toBeTruthy();
   const list = first.closest(".runtime-choice-list") as HTMLElement;
   fireEvent.keyDown(list, { key: "End" });
   fireEvent.keyDown(list, { key: "Enter" });

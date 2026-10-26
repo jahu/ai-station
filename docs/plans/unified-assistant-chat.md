@@ -49,6 +49,17 @@ is actually doing in plain language; ask only for missing information or a
 required sensitive-action approval. Model selection remains optional, and
 specialist tabs remain shortcuts to their existing workspaces.
 
+## Control descriptions and keyboard help
+
+Keep the conversation and its results visually primary. Keyboard navigation hints
+for attachment lists, project/model choices and reference ordering stay available
+to assistive technology, without repeating technical execution explanations below
+every control. Selection does not submit; existing event handlers, permissions and
+accessible control names remain unchanged. Visible help should explain a useful
+choice or consequential action, such as a provider default or which model servers
+AI Station owns. Never describe internal non-existent selection Runs as product
+instructions. Apply the same distinction to System lists and provider settings.
+
 ## Boundaries and compatibility
 
 - Reuse the current router, assistant, providers and Task → Run → Events →

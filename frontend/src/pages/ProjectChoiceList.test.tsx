@@ -37,9 +37,7 @@ it("moves through coding projects without starting a Run", () => {
   render(<Host />);
   const first = screen.getByLabelText("Project alpha");
   expect(first.tabIndex).toBe(0);
-  expect(
-    screen.getByText(/There is no inspectable project-selection Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Project choices. Use arrow keys/)).toBeTruthy();
   expect(screen.getByText("Preferred executor: Cursor")).toBeTruthy();
   expect(
     (screen.getByRole("radio", { name: /^Alpha/ }) as HTMLInputElement).checked,

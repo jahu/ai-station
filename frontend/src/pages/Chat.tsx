@@ -666,9 +666,9 @@ function SavedAttachments({
   };
   return (
     <>
-      <p id={labelId} className="dashboard-note">
-        Arrow keys choose a saved attachment while the list is focused. Enter
-        opens the selected file. There is no inspectable attachment Run.
+      <p id={labelId} className="sr-only">
+        Saved attachments. Use arrow keys to move, then Enter to open the
+        selected file.
       </p>
       <div
         ref={listRef}

@@ -36,10 +36,9 @@ export function GgufChoiceList({
   if (!items.length) return null;
   return (
     <>
-      <p id={labelId} className="dashboard-note">
-        Arrow keys choose a discovered GGUF while the list is focused. Space or
-        Enter selects it. Enter does not send. External runtimes are not listed.
-        There is no inspectable GGUF-selection Run.
+      <p id={labelId} className="sr-only">
+        Local model choices. Use arrow keys to move, then Space or Enter to
+        select.
       </p>
       <div
         ref={listRef}
