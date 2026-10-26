@@ -1,3 +1,8 @@
+[Long speech](plans/complete-long-speech.md) uses fixed internal text bounds and
+the configured offline CLI, with no caller-selected commands or chunk paths.
+Every child inherits the owned process group and deadline. Intermediate PCM stays
+under the Run directory; failed/canceled work never publishes a partial WAV.
+
 The [fixed Wan APG candidate](plans/wan-continuation-quality.md) binds a built-in
 guidance recipe and installed-source observation to new continuation plans.
 Native execution rechecks the snapshot; legacy plans retain their identities.

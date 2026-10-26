@@ -1,5 +1,6 @@
 """Typed offline Chatterbox adapter using the installed clone_pl.py contract."""
 
+import json
 import os
 import wave
 from pathlib import Path
@@ -11,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from ai_station_runner.config import get_settings
 from ai_station_runner.security import resolve_child
+from ai_station_runner.speech_chunks import text_chunks
 from ai_station_runner.telemetry import collect
 
 
@@ -102,6 +104,26 @@ def start_audio(manager, body):
         "--out",
         str(output),
     ]
+    chunks = text_chunks(body.text)
+    if len(chunks) > 1:
+        work = resolve_child(root, f"runs/{run_id}/speech")
+        if work != root / f"runs/{run_id}/speech" or work.exists():
+            raise HTTPException(409, "Inspect existing speech work before retrying")
+        work.mkdir(parents=True, mode=0o700)
+        config = work / "request.json"
+        config.write_text(
+            json.dumps(
+                {
+                    "script": argv[1],
+                    "reference": str(reference),
+                    "output": str(output),
+                    "chunks": chunks,
+                },
+                ensure_ascii=False,
+            )
+        )
+        config.chmod(0o600)
+        argv = [argv[0], str(Path(__file__).with_name("speech_chunks_job.py")), str(config)]
     environment = {
         **os.environ,
         "HF_HOME": str(Path(settings.chatterbox_cache).expanduser()),

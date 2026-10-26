@@ -1,3 +1,10 @@
+Long-speech correction in qualification (2026-10-26): a fresh 575-character
+narration exposed the installed model's per-call 1000-token cap. The existing
+avatar composition preserved all generated samples, but that does not prove the
+requested ending was spoken. [The native wrapper](plans/complete-long-speech.md)
+keeps short-text behavior and chunks longer scripts without altering the original
+runtime. Real complete narration/avatar acceptance and rollout remain open.
+
 Wan continuation regression (2026-10-26), PR #451: fixed one-frame APG passes a
 complete actual ten-second/240-frame, three-window film at 1280×704, 20 steps,
 CFG 5 and the bounded 11-GiB/zero-swap profile. Detail and exposure are retained

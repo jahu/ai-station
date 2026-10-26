@@ -1,3 +1,8 @@
+[Complete long speech](plans/complete-long-speech.md) keeps bounded text chunks
+inside one owned Chatterbox Run. A fixed native wrapper calls the configured
+offline CLI sequentially and publishes only the complete PCM output; the original
+installed runtime/script and short-text dispatch remain unchanged.
+
 The [fixed Wan APG candidate](plans/wan-continuation-quality.md) binds a built-in
 guidance recipe and installed-source observation to new continuation plans.
 Native execution rechecks the snapshot; legacy plans retain their identities.
