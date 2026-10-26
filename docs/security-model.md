@@ -1,3 +1,9 @@
+The [fixed Wan APG candidate](plans/wan-continuation-quality.md) binds a built-in
+guidance recipe and installed-source observation to new continuation plans.
+Native execution rechecks the snapshot; legacy plans retain their identities.
+No caller-supplied node, graph, command or model path is introduced. Full-film
+qualification and rollout remain separate gates.
+
 The [Wan continuation candidate](plans/wan-continuation-quality.md) adds only a
 typed choice of one or seventeen preceding frames inside the existing owned-video
 operation. One-frame requests cannot carry raw latent checkpoints. Hash, path,

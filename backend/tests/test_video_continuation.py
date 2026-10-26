@@ -32,6 +32,48 @@ def test_new_continuous_video_freezes_last_frame_for_all_segments(session):
     assert session.get(Run, plan["compose_run_id"]).parameters["continuation_strategy"] == "last_frame_v1"
 
 
+def test_capable_runner_freezes_guided_anchor_and_implementation_in_plan_and_runs(session):
+    source = {"size_bytes": 100, "sha256": "a" * 64}
+    profile = {
+        "available": True,
+        "continuation_frames": [1, 17],
+        "continuation_guidance": ["standard", "apg_v1"],
+        "guidance_observation": source,
+    }
+    body = LongVideoRequest(client_request_id=uuid4(), prompt="Lake", duration_seconds=10)
+    result = publish_video(session, body, observed_profile=profile)
+    plan = session.get(Task, result["task_id"]).metadata_json["media_plan"]
+    assert plan["continuation_strategy"] == "last_frame_apg_v1"
+    assert plan["guidance_observation"] == source
+    source["sha256"] = "b" * 64
+    assert plan["guidance_observation"]["sha256"] == "a" * 64
+    assert [s["first_frame"] for s in plan["timing"]["segments"]] == [0, 1, 1]
+    for identifier in [*plan["segment_run_ids"], plan["compose_run_id"]]:
+        run = session.get(Run, identifier)
+        assert run.parameters["continuation_strategy"] == "last_frame_apg_v1"
+        assert run.parameters["guidance_observation"]["sha256"] == "a" * 64
+
+
+@pytest.mark.parametrize(
+    "observation", [None, {}, {"size_bytes": True, "sha256": "a" * 64}, {"size_bytes": 100, "sha256": "bad"}]
+)
+def test_incomplete_advertised_guidance_cannot_silently_downgrade_or_queue(session, observation):
+    from fastapi import HTTPException
+    from sqlalchemy import select
+
+    profile = {
+        "available": True,
+        "continuation_frames": [1, 17],
+        "continuation_guidance": ["apg_v1"],
+        "guidance_observation": observation,
+    }
+    body = LongVideoRequest(client_request_id=uuid4(), prompt="Lake", duration_seconds=10)
+    with pytest.raises(HTTPException) as error:
+        publish_video(session, body, observed_profile=profile)
+    assert error.value.status_code == 409
+    assert not list(session.scalars(select(Run)))
+
+
 @pytest.mark.parametrize("advertised", [None, [17], [True], "1"])
 def test_old_or_unrecognized_runner_capability_keeps_legacy_conditioning(session, advertised):
     body = LongVideoRequest(client_request_id=uuid4(), prompt="Lake", duration_seconds=10)
@@ -114,11 +156,16 @@ class RecordingRunner:
         return {"status": "running"}
 
 
-@pytest.mark.parametrize("strategy", [None, "cached_latents_v1", "last_frame_v1"])
+@pytest.mark.parametrize("strategy", [None, "cached_latents_v1", "last_frame_v1", "last_frame_apg_v1"])
 def test_continuation_dispatch_keeps_frozen_or_legacy_strategy(session, owned_video_pair, strategy):
     run, video, motion = owned_video_pair
     if strategy is not None:
         run.parameters = {**run.parameters, "continuation_strategy": strategy}
+        if strategy == "last_frame_apg_v1":
+            run.parameters = {
+                **run.parameters,
+                "guidance_observation": {"size_bytes": 100, "sha256": "a" * 64},
+            }
         session.commit()
     runner = RecordingRunner()
     VideoExecutor()._start(runner, run, "0", "unused")
@@ -127,9 +174,14 @@ def test_continuation_dispatch_keeps_frozen_or_legacy_strategy(session, owned_vi
     assert payload["continuation"]["sha256"] == video.sha256
     assert payload["frames"] == 81 and payload["seed"] == 43
     assert payload["image_relative"] is None
-    if strategy == "last_frame_v1":
+    if strategy in ("last_frame_v1", "last_frame_apg_v1"):
         assert payload["continuation_frames"] == 1
         assert "motion_context" not in payload
+        if strategy == "last_frame_apg_v1":
+            assert payload["continuation_guidance"] == "apg_v1"
+            assert payload["guidance_observation"] == run.parameters["guidance_observation"]
+        else:
+            assert "continuation_guidance" not in payload
     else:
         assert payload["motion_context"]["sha256"] == motion.sha256
 
@@ -159,6 +211,21 @@ def test_every_continuation_requires_its_owned_available_video(session, owned_vi
     with pytest.raises(ValueError, match="prior motion context"):
         VideoExecutor()._start(runner, run, "0", "unused")
     assert not runner.calls
+
+
+def test_guided_recipe_never_changes_the_initial_unconditioned_window(session, owned_video_pair):
+    run, video, motion = owned_video_pair
+    run.parameters = {
+        **run.parameters,
+        "continuation_strategy": "last_frame_apg_v1",
+        "guidance_observation": {"size_bytes": 100, "sha256": "a" * 64},
+    }
+    run.parameters = {key: value for key, value in run.parameters.items() if key != "previous_video_run_id"}
+    session.commit()
+    runner = RecordingRunner()
+    VideoExecutor()._start(runner, run, "0", "unused")
+    assert "continuation_guidance" not in runner.calls[0][2]
+    assert "continuation" not in runner.calls[0][2]
 
 
 @pytest.mark.parametrize("strategy", ["unknown", None, {"strategy": "pixels"}])

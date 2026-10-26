@@ -14,6 +14,7 @@ from ai_station_runner.avatars import owned
 from ai_station_runner.config import get_settings
 from ai_station_runner.media_compose import MediaInput, verified_path
 from ai_station_runner.telemetry import collect
+from ai_station_runner.wan_guidance import apg_observation
 from ai_station_runner.wan_profiles import BOUNDED, MEMORY_MIB, validate_profile
 
 
@@ -21,6 +22,12 @@ class FileObservation(BaseModel):
     model_config = ConfigDict(extra="forbid")
     size_bytes: int = Field(ge=0)
     mtime: float = Field(ge=0, allow_inf_nan=False)
+
+
+class GuidanceObservation(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    size_bytes: int = Field(ge=1, le=65536)
+    sha256: str = Field(pattern=r"^[0-9a-f]{64}$", min_length=64, max_length=64)
 
 
 class VideoRequest(BaseModel):
@@ -35,6 +42,8 @@ class VideoRequest(BaseModel):
     continuation: MediaInput | None = None
     motion_context: MediaInput | None = None
     continuation_frames: StrictInt = Field(default=17, ge=1, le=17)
+    continuation_guidance: Literal["standard", "apg_v1"] = "standard"
+    guidance_observation: GuidanceObservation | None = None
     image_relative: str | None = Field(default=None, max_length=500)
     width: int = Field(default=1280, ge=128, le=1280, multiple_of=32)
     height: int = Field(default=704, ge=128, le=1280, multiple_of=32)
@@ -53,6 +62,10 @@ class VideoRequest(BaseModel):
             values.pop("memory_profile", None)
         if self.continuation_frames == 17:
             values.pop("continuation_frames", None)
+        if self.continuation_guidance == "standard":
+            values.pop("continuation_guidance", None)
+        if self.guidance_observation is None:
+            values.pop("guidance_observation", None)
         return values
 
     @model_validator(mode="after")
@@ -73,6 +86,10 @@ class VideoRequest(BaseModel):
             raise ValueError("Choose a supported bounded continuation prefix")
         if self.continuation_frames == 1 and (not self.continuation or self.motion_context):
             raise ValueError("Single-frame continuation requires a preceding video without a raw checkpoint")
+        if self.continuation_guidance != "standard" and (not self.continuation or self.motion_context):
+            raise ValueError("Projected guidance requires preceding video pixels without a raw checkpoint")
+        if (self.continuation_guidance == "standard") != (self.guidance_observation is None):
+            raise ValueError("Projected guidance requires its frozen implementation observation")
         if self.width * self.height > 1280 * 704:
             raise ValueError("Video dimensions exceed the profile limit")
         return self
@@ -104,6 +121,7 @@ def profile():
 def capabilities():
     try:
         paths = profile()
+        guidance = apg_observation(paths)
         observation = {
             key: {"size_bytes": paths[key].stat().st_size, "mtime": paths[key].stat().st_mtime}
             for key in ("wan_model", "wan_text_encoder", "wan_vae")
@@ -121,6 +139,8 @@ def capabilities():
             "available": True,
             "backend": "wan2.2-5b",
             "continuation_frames": [1, 17],
+            "continuation_guidance": ["standard", "apg_v1"] if guidance else ["standard"],
+            **({"guidance_observation": guidance} if guidance else {}),
             "modes": ["generate", "animate"],
             "fps": 24,
             "memory_estimate_mib": memory_mib,
@@ -158,6 +178,12 @@ def start_video(manager, body):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise HTTPException(403, "Video read/write permissions are required")
     paths = profile()
+    if body.continuation_guidance != "standard":
+        guidance = apg_observation(paths)
+        if guidance is None:
+            raise HTTPException(409, "The configured ComfyUI installation has no compatible APG method")
+        if guidance != body.guidance_observation.model_dump():
+            raise HTTPException(409, "The APG implementation changed after this video plan was prepared")
     prefix = []
     if body.memory_profile == BOUNDED:
         from ai_station_runner.memory_scope import scope_prefix

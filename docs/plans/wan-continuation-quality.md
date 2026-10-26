@@ -128,3 +128,34 @@ package's profile descriptions aligned with the actual verified outcome.
 Single-frame anchoring also does not prove preservation of temporal velocity
 across windows. A corrected candidate must pass a new complete multi-window
 visual gate before review/merge/rollout; this document is not a deployment receipt.
+
+## Fixed APG integration candidate
+
+The controlled failed-third-window probes are terminal. Both APG and CFGNorm
+prevented bleaching with one-frame conditioning. Seventeen-frame variants also
+prevented bleaching but showed a visible colour shift and a small exposure pulse
+at the boundary. Select one-frame APG from these actual comparisons; this is an
+image-stability choice, not proof that temporal velocity is preserved. Retain
+`guidance-three-way.png`, `guidance-seventeen-way.png` and all probe receipts.
+
+New capable Runners advertise the fixed installed APG method (eta 0, norm
+threshold 5, momentum 0) with a bounded source hash/size observation. New plans
+freeze `last_frame_apg_v1` and that observation in every segment, composition Run
+and Task. Only continuation windows apply guidance; the first text-to-video
+window stays unchanged. Translation identity and guided checkpoint identity
+include the frozen implementation. Missing or changed implementations fail
+closed before execution or publication. Legacy `cached_latents_v1` and
+`last_frame_v1` records retain their original behaviour and dispatch identity.
+
+This reuses the installed built-in method without changing ComfyUI or weights,
+adding dependencies, arbitrary nodes, commands, graphs or UI tuning controls.
+Readiness checks parse bounded source without importing Torch into the API.
+The child receives serialized string paths; regression coverage verifies the
+same observation as the native Path-based configuration.
+
+Release qualification must now execute the whole ten-second three-window film
+through the integrated normal worker/native operation, at the same prompt,
+seed, 1280×704, 20 steps, CFG 5 and bounded 11 GiB/zero-swap profile. Private
+patched-job probes cannot substitute for that execution. Keep PR #451 draft
+until complete-film visual review, compiled desktop/phone playback and final
+local checks pass. No rollout has happened for this candidate.

@@ -36,7 +36,7 @@ def continuation_pixels(path, sha256, width, height, context_frames=17):
     return np.stack(list(prior)).astype(np.float32) / 255
 
 
-def profile_key(paths, memory_profile="default"):
+def profile_key(paths, memory_profile="default", guidance="standard"):
     observed = {
         key: {"size_bytes": Path(paths[key]).stat().st_size, "mtime": Path(paths[key]).stat().st_mtime}
         for key in ("wan_model", "wan_text_encoder", "wan_vae")
@@ -46,6 +46,18 @@ def profile_key(paths, memory_profile="default"):
     identity = (
         observed if memory_profile == "default" else {"models": observed, "memory_profile": memory_profile}
     )
+    if guidance != "standard":
+        from ai_station_runner.wan_guidance import apg_observation
+
+        observation = apg_observation(paths)
+        if guidance != "apg_v1" or observation is None:
+            raise ValueError("Unsupported fixed Wan guidance checkpoint profile")
+        identity = {
+            "models": observed,
+            "memory_profile": memory_profile,
+            "guidance": guidance,
+            "guidance_source": observation,
+        }
     return hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 

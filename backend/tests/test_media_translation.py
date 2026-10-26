@@ -275,6 +275,14 @@ def test_video_translation_identity_binds_new_strategy_without_changing_old_rece
     run.parameters = {**parameters, "continuation_strategy": "cached_latents_v1"}
     assert source_hash(run, fields) not in {legacy, anchored}
     assert anchored != legacy
+    run.parameters = {
+        **parameters,
+        "continuation_strategy": "last_frame_apg_v1",
+        "guidance_observation": {"size_bytes": 100, "sha256": "a" * 64},
+    }
+    implementation_a = source_hash(run, fields)
+    run.parameters = {**run.parameters, "guidance_observation": {"size_bytes": 100, "sha256": "b" * 64}}
+    assert source_hash(run, fields) != implementation_a
 
 
 def test_changed_video_strategy_after_translation_cannot_dispatch_generation(fake, monkeypatch):

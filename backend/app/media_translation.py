@@ -155,10 +155,12 @@ def source_hash(run, fields):
     }.get(run.executor_type)
     if keys is not None:
         inputs = {key: run.parameters.get(key) for key in keys}
-        if run.executor_type == "wan_video" and "continuation_strategy" in run.parameters:
+        if run.executor_type == "wan_video":
             # Preserve the exact input identity of pre-strategy receipts, while
             # binding new plans to their frozen conditioning policy.
-            inputs["continuation_strategy"] = run.parameters["continuation_strategy"]
+            for key in ("continuation_strategy", "guidance_observation"):
+                if key in run.parameters:
+                    inputs[key] = run.parameters[key]
         return digest(
             {
                 "executor": run.executor_type,

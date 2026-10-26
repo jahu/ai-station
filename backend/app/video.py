@@ -18,6 +18,18 @@ router = APIRouter(prefix="/api/video", tags=["video"])
 DB = Annotated[Session, Depends(session_scope)]
 
 
+def valid_guidance_observation(value):
+    return (
+        isinstance(value, dict)
+        and set(value) == {"size_bytes", "sha256"}
+        and type(value["size_bytes"]) is int
+        and 0 < value["size_bytes"] <= 65536
+        and isinstance(value["sha256"], str)
+        and len(value["sha256"]) == 64
+        and all(character in "0123456789abcdef" for character in value["sha256"])
+    )
+
+
 def recommended_profile(profile, available_mib):
     standard = profile.get("memory_estimate_mib")
     bounded = any(
@@ -163,8 +175,12 @@ class VideoExecutor(MotionArtifacts, HostMediaExecutor):
 
     def _start(self, runner, run, allocated, output):
         strategy = run.parameters.get("continuation_strategy", "cached_latents_v1")
-        if strategy not in ("cached_latents_v1", "last_frame_v1"):
+        if strategy not in ("cached_latents_v1", "last_frame_v1", "last_frame_apg_v1"):
             raise ValueError("Unknown frozen video continuation strategy")
+        if strategy == "last_frame_apg_v1" and not valid_guidance_observation(
+            run.parameters.get("guidance_observation")
+        ):
+            raise ValueError("The frozen APG implementation observation is missing or invalid")
         continuation = None
         motion = None
         if run.parameters.get("previous_video_run_id"):
@@ -219,7 +235,19 @@ class VideoExecutor(MotionArtifacts, HostMediaExecutor):
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
                 **({"continuation": continuation} if continuation else {}),
-                **({"continuation_frames": 1} if continuation and strategy == "last_frame_v1" else {}),
+                **(
+                    {"continuation_frames": 1}
+                    if continuation and strategy in ("last_frame_v1", "last_frame_apg_v1")
+                    else {}
+                ),
+                **(
+                    {
+                        "continuation_guidance": "apg_v1",
+                        "guidance_observation": run.parameters["guidance_observation"],
+                    }
+                    if continuation and strategy == "last_frame_apg_v1"
+                    else {}
+                ),
                 **(
                     {"motion_context": {k: motion[k] for k in ("relative_path", "sha256", "size_bytes")}}
                     if motion

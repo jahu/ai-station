@@ -22,7 +22,13 @@ from app.resources import RESOURCE_WAIT_KEY, latest_resource_wait
 from app.runs import create_run, run_dict
 from app.state import TERMINAL
 from app.task_control import cancel_task, lock_task
-from app.video import VideoRequest, capabilities, create_video_run, memory_reservation
+from app.video import (
+    VideoRequest,
+    capabilities,
+    create_video_run,
+    memory_reservation,
+    valid_guidance_observation,
+)
 from app.video_schema import LongVideoSettings
 from app.video_schema import VideoScene as VideoScene
 
@@ -104,13 +110,24 @@ def publish_video(
         type(value) is int and value == 1 for value in prefixes
     )
     continuation_strategy = "last_frame_v1" if single_anchor else "cached_latents_v1"
+    guidance_modes = observed_profile.get("continuation_guidance")
+    guidance_source = observed_profile.get("guidance_observation")
+    if single_anchor and isinstance(guidance_modes, list) and "apg_v1" in guidance_modes:
+        if not valid_guidance_observation(guidance_source):
+            raise HTTPException(409, "The Runner advertised APG without a valid implementation observation")
+        continuation_strategy = "last_frame_apg_v1"
+    guidance_snapshot = (
+        {"guidance_observation": dict(guidance_source)}
+        if continuation_strategy == "last_frame_apg_v1"
+        else {}
+    )
     timing = timeline(
         frames=duration_frames(body.duration_seconds, 24),
         fps=24,
         seed=body.seed,
         mode=body.composition_mode,
         scene_frames=[scene.duration_seconds * 24 for scene in body.scenes] if body.scenes else None,
-        context_frames=1 if continuation_strategy == "last_frame_v1" else 17,
+        context_frames=1 if continuation_strategy in ("last_frame_v1", "last_frame_apg_v1") else 17,
     )
     scene_index = 0
     scene_end = body.scenes[0].duration_seconds * 24 if body.scenes else 0
@@ -149,6 +166,7 @@ def publish_video(
             "media_segment": segment.model_dump(),
             "internal_media": True,
             "continuation_strategy": continuation_strategy,
+            **guidance_snapshot,
             "profile_observation": observed_profile.get("profile_observation"),
         }
         if body.scenes:
@@ -185,6 +203,7 @@ def publish_video(
             "backend": "wan2.2-5b",
             "composition_mode": body.composition_mode,
             "continuation_strategy": continuation_strategy,
+            **guidance_snapshot,
             **({"memory_profile": body.memory_profile} if body.memory_profile != "default" else {}),
             **(
                 {"prompt": body.prompt, "scenes": [scene.model_dump() for scene in body.scenes]}
@@ -209,6 +228,7 @@ def publish_video(
             "kind": "video",
             "mode": body.composition_mode,
             "continuation_strategy": continuation_strategy,
+            **guidance_snapshot,
             "timing": timing.model_dump(mode="json"),
             "segment_run_ids": [r.id for r in runs],
             **({"translation_consumer_run_ids": translation_ids} if translation_ids else {}),
