@@ -1,6 +1,6 @@
 # Internal acceptance and operator test coverage
 
-Review date: 2026-10-26. This maps all 161 stable operator cases in catalog v14
+Review date: 2026-10-26. This maps all 161 stable operator cases in catalog v15
 to the current source and recorded acceptance. It does not fill operator results
 or declare platform completion. The current release and exact local qualification
 are in [the release audit](../plans/platform-acceptance-audit.md).
@@ -20,12 +20,15 @@ and conversation routing, not quote fetching, activation or real inbox delivery.
 Fixtures and a module name are not evidence of real inference. Historical real
 receipts remain bound to their original release, model and parameters. Receipt
 paths below are relative to ignored `data/acceptance/`; retained files, not this
-table alone, are the evidence. **External setup** is an open release gate.
+table alone, are the evidence. The owner confirms Tailscale access and explicitly
+defers SMTP on 2026-10-26; the latter is outside current release acceptance.
+No workbook case is prefilled from that statement. CONNECT-003 and AGENT-013
+retain their IDs and explain the optional future scope.
 
 | Stable cases | Source / regression boundary | Acceptance and exact outstanding scope |
 | --- | --- | --- |
 | START-001–005 | Startup supervisor, migrations, recovery and backup services; `scripts/start.sh`, `backend/tests/test_runs.py` | Current owned deployment, image/SQL/SSE smoke, backup and original-data preservation in `unified-natural-agent-intent-20261025/`. Launch does not prove arbitrary host bootstrap. |
-| ACCESS-001–007 | `test_operator_auth.py`, `test_private_ui.py`; native `test_tailnet*.py` | LAN/password and actual private daemon lifecycle qualified; current daemon is installed 1.104.2, `NeedsLogin`, `serving: false`. Actual account enrollment/HTTPS/phone outside LAN remains **external setup**. |
+| ACCESS-001–007 | `test_operator_auth.py`, `test_private_ui.py`; native `test_tailnet*.py` | LAN/password and actual private daemon lifecycle qualified; current daemon is installed 1.104.2, owned, online and serving the exact private HTTPS endpoint. The owner confirms access works; device/network details were not supplied. Local exact-authority health200/protected-data401 is independent evidence, not a simulated remote-phone result. See `operator-final-handoff-20261026/owner-scope-and-current-access.json`. |
 | CHAT-001–011 | `test_chat.py`, `test_chat_turns.py`, `test_chat_providers.py`, `test_chat_reasoning.py`, `test_chat_cookie_concurrency.py` | Current compiled direct reply/stream/Stop/history flows plus earlier real llama.cpp, 27B context and Vision receipts. Physical-device rendering and operator model preference remain operator QA. |
 | WORK-001–007; UNIFIED-001–006 | `test_chat_execution_mode.py`, `test_agent_request_intent.py`, `test_conversation_data.py`, `test_conversation_agent_control.py` | `unified-assistant-chat-20261025/` and `unified-natural-agent-intent-20261025/` prove desktop/phone viewport, direct reply/media review/retry/Stop, polite disabled drafts, default Web isolation and old-history/draft preservation. Inference is injected in those compiled checks. Real executors have separate receipts below. |
 | WEB-001–007 | `test_web_search.py`, `test_chat_rendered_pages.py`, `test_work_web_routing.py` | Real search/follow-up: `chat-contextual-search-20261015/real-smoke-result.json`; real direct page reading: `chat-direct-page-reading-20261022/production-smoke-result.json`. Public-source relevance is not guaranteed for every future query. Native/private service URL rejection is regression-qualified. |
@@ -40,7 +43,7 @@ table alone, are the evidence. **External setup** is an open release gate.
 | MODEL-001–005 | `test_model_catalog.py`, `test_llama.py`; native `test_llama_runtime.py`, `test_model_verify.py` | `gguf-context-20261013/long-context-result.json` and actual website 131072-context profile. Model metadata/training context is not an admission or quality guarantee for every quantization/VRAM allocation. |
 | LIB-001–011 | `test_artifact_purge.py`, artifacts API and compiled Library/inspector | `library-permanent-deletion-20261025/` and follow-up #440 cover bypass Trash, one/selected/all Trash, receipts, source tombstones and live refresh. Use disposable uploads; never empty an operator collection to satisfy a case. |
 | RUN-001–005 | `test_runs.py`, `test_worker_slots.py`, `test_worker_database_busy.py`; native `test_processes.py` | Current complete suite plus exact image API/worker/SSE/persistence and three actual worker heartbeats. Lost leases remain inspectable rather than blindly replaying side effects. No claim of an arbitrary-duration stress benchmark. |
-| CONNECT-001–004 | `test_connectors.py`, `test_github_connector.py`, `test_email_tls_sink.py`, `test_agent_report_email_delivery.py` | Named GET and existing authenticated GitHub reads; private TLS SMTP single submission/attachment hashes in `agent-data-email-attachments-20261024/real-cpu-tls-result.json`. Read-only live DB audit finds zero email connectors: actual external account/delivery is **external setup**, not a passed inbox test. |
+| CONNECT-001–004 | `test_connectors.py`, `test_github_connector.py`, `test_email_tls_sink.py`, `test_agent_report_email_delivery.py` | Named GET and existing authenticated GitHub reads; private TLS SMTP single submission/attachment hashes in `agent-data-email-attachments-20261024/real-cpu-tls-result.json`. Read-only live DB audit finds zero email connectors. The owner explicitly defers SMTP; CONNECT-003 and AGENT-013 are optional future cases, not passed inbox tests. |
 | SYSTEM-001–003 | `test_dashboard.py`; native `test_telemetry.py`, typed diagnostics | Current native observation sees both real GPUs, available media and actual private Runner; compiled page/gate coverage separates System and Settings. A readiness GET starts no inference. |
 | UX-001–004 | Compiled 1440px/390px flows and frontend tests | Final #444/#445 flows show no mode switch, overflow or JavaScript errors; keyboard/focus/empty/error component coverage remains in the full frontend suite. A phone viewport is not a physical-phone test. |
 | PROJECT-001–004 | `test_projects.py`, `test_agent_workspace.py`, `test_agent_website_policy.py`; native `test_gitinspect.py` | Real `agent-website-real-20261022/result.json`: isolated Auto-loaded local build, preview and follow-up, original checkout retained. Advanced repository policies and bounded validation stay available without expanding standalone IDE scope. |
@@ -110,11 +113,11 @@ truncated narration and failed/private composition attempts remain archived.
 2. Decide and verify the declared quality envelope for longer Video/Avatar
    against actual output, not merely decode/readiness. Retain the user's longer
    media requirement; do not silently drop it or relabel known drift as perfect.
-3. Complete owner-controlled Tailscale enrollment/HTTPS and an actual remote
-   device connection. Current installed `NeedsLogin` is an observed open gate.
-4. With an owner-configured mail account and explicitly reviewed message/recipient,
-   verify actual delivery without exposing credentials or sending invented mail.
-   There is no email connector in the current application DB.
+3. Preserve the owner-confirmed Tailscale access and observed active private Serve.
+   Device/network specifics remain unrecorded until the operator fills QA.
+4. SMTP is explicitly deferred by the owner; preserve its implementation and
+   negative/unperformed real-delivery status. Push remains future backlog.
+   Neither SMTP configuration nor a new push channel gates this release.
 5. Freeze the release after remaining fixes, generate the final Polish XLSX/CSV
    package with fixtures and exact profiles, inspect/round-trip the actual files,
    and hand it off. All 161 operator results remain **Nie testowano**.

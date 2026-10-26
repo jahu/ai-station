@@ -1,3 +1,12 @@
+Current release scope (2026-10-26): the owner confirms Tailscale access works and
+explicitly defers SMTP/inbox acceptance. Push notifications are future backlog.
+Preserve implemented mail boundaries and prior results; do not count unperformed
+delivery as passed. The final operator package uses catalog v15/161 stable cases,
+with exact model/media profiles and the two SMTP cases explicitly optional.
+[Current acceptance](plans/platform-acceptance-audit.md),
+[notification scope](plans/notification-delivery.md) and
+[QA instructions](qa/README.md) supersede historical pending-account labels below.
+
 Portrait-anchored avatar continuation (2026-10-26), PR #456: the fixed recipe
 reduces cumulative red/magenta drift while retaining latent motion and complete
 audio. Actual 36.52-second/913-frame/14-window product execution matches the

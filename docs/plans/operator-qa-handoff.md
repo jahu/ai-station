@@ -15,6 +15,18 @@ test fixtures. Portrait/speech quality cases still need appropriate real media.
 The final package remains a release gate: recheck coverage against the completed
 platform and freeze the real release before handing it to the operator.
 
+## Current release scope, 2026-10-26
+
+The owner confirms Tailscale access works; native status independently confirms
+an owned, online node with the exact private HTTPS endpoint serving. Preserve
+that owner statement separately from automated tests: device/network specifics
+were not supplied. SMTP configuration and actual inbox delivery are explicitly
+deferred by the owner and are no longer gates for this handoff. Push is a future
+idea only. Catalog v15 retains both SMTP test IDs with an explicit scope exclusion;
+all exported operator answer cells still start **Nie testowano**. The final package
+records exact qualified profiles, known media quality issues and the actual app
+commit, independently of the newer documentation/catalog commit.
+
 ## Delivery and timing
 
 - Keep a version-controlled test-case catalog with stable case IDs and trace each

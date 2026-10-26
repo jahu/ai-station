@@ -132,6 +132,13 @@ deployment. First prove this with a disposable static site and the local model.
 
 ### 3. Recurring price alerts and real email
 
+**Scope update, 2026-10-26:** the owner explicitly deferred SMTP configuration
+and real-inbox acceptance beyond the current release. Existing in-app agent
+notices, scheduling and public price observations remain in scope. Preserve the
+SMTP implementation and its prior test evidence; no email is sent or represented
+as qualified delivery. Optional push delivery is a future backlog item, not a
+replacement implemented in this release. See [notification delivery](notification-delivery.md).
+
 Add a real typed quote-data tool with configured provider, reviewed instruments,
 quote timestamps, numeric values and source provenance. Use deterministic code
 for thresholds and comparisons with the last valid saved observation. Stale or

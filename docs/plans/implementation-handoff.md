@@ -1,3 +1,16 @@
+Current handoff, 2026-10-26: live application `81c8765` remains healthy; later
+changes are documentation/offline QA only. The owner confirms Tailscale access
+works and explicitly defers SMTP/inbox acceptance. Push remains future backlog,
+not a substitute implemented now. Catalog v15 retains 161 stable cases; both
+SMTP cases are explicitly optional. The current release-specific Polish package
+is prepared at `data/qa/AI-Station-QA-81c87650f480/`, with native Calc/feedback
+verification, exact profiles, known visual limitations and all initial results
+**Nie testowano**. Evidence: `data/acceptance/operator-final-handoff-20261026/`.
+Follow the [current audit](platform-acceptance-audit.md) and
+[notification scope](notification-delivery.md). Earlier active-session and missing
+account labels below are historical; never relaunch their already-terminal GPU jobs.
+Preserve unrelated root Memory WIP, original operator data and private account state.
+
 Latest candidate, PR #448: fresh natural media-agent runtime defaults are implemented without changing saved/running or explicit allowances. Actual local 9B model returns null→7200 and explicit 5 min→300; both five-second-video drafts stay disabled. Compiled 1440/390 Settings/reload checks pass with no new Runs. Normal 4141-case coverage: frozen baseline 4131 passes/nine skips/one obsolete internal-Proposal assertion, corrected to verify resolved ordinary 600 and explicit 7200; all 39 final budget/media module cases pass. Application source is identical across these gates and collected per-function counts match. Retain the old failed log, do not call it a fresh all-green baseline. Eight offline exporter checks pass; catalog v10 has 157 cases. Final image/source mappings, review and rollout: `data/acceptance/agent-draft-runtime-defaults-20261025/`.
 
 Separate live GPU qualification: `data/acceptance/long-video-standard-20261025`, session 93739, source 5ebddec, isolated `/tmp/ais-long-std-20261025`, normal worker/private Runner, actual 10 seconds/four windows/20 steps/bounded 11g. It is in progress; poll the existing handle, never restart from a timeout. Archived 60-second/four-step frames visibly degrade (detail loss/cyan saturation); review under `long-media-visual-audit-20261025/`. This is technical duration evidence, not clean standard-quality footage. Remaining owner Tailscale enrollment/HTTPS/phone and actual configured mail plus final Polish QA package remain open. Preserve root WIP/data/auth/E5/native/private services and the active isolated job during a controller-only rollout.

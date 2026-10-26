@@ -190,8 +190,9 @@ and [product ledger](docs/product-completion.md) retain exact tested profiles,
 adverse results and remaining gates. Longer media may show identity, color or
 lip-sync limitations; a successful decode alone is not a visual-quality pass.
 
-Actual outside-LAN access and operator-inbox delivery require owner-controlled
-setup and acceptance. Remote execution nodes, additional runtime/connector
+The owner has confirmed private Tailscale access. SMTP remains optional and its
+real-inbox acceptance is deferred; push notifications are
+[future work](docs/plans/notification-delivery.md). Remote execution nodes, additional runtime/connector
 families and standalone IDE parity remain future work. Existing code/worktree
 services are retained. New integrations must meet the same observable permission,
 Stop, artifact and recovery contracts before being presented as operational.
