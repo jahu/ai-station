@@ -77,3 +77,28 @@ viable seam comparison before another complete generation. Evidence:
 `data/acceptance/echo-continuation-quality-20261026/` (decode-context-probe,
 guidance-2, pixel-prefix and portrait-prefix). No live defaults or upstream files
 have changed.
+
+## Integration shape if end anchoring passes
+
+The next private diagnostic keeps the existing raw temporal prefix and adds the
+original portrait as the upstream inpainting end-image only on continuation
+windows. The first window, speech bytes, timing, seeds, steps, CFG and memory
+scope remain controlled. The installed inference function already supports this
+separate end-image condition; the project-owned diagnostic wrapper uses it
+without editing upstream files. It is an experiment, not an available profile.
+
+If both appearance and exact seams improve, implement a fixed, typed appearance
+recipe in AI Station's native wrapper. Freeze its version and implementation/model
+observations in the full media plan, all child requests, artifact provenance and
+retry identity. Keep omitted old values on the original behavior and preserve
+legacy serialization/hashes, saved plans, in-flight Runs and agent snapshots.
+Do not reinterpret an old plan against a newly recommended profile on resume.
+
+Only new jobs may select a qualified recommendation from capabilities. Use the
+same recipe for manual and agent full-avatar jobs. Keep the existing original
+portrait hash, complete audio, owned motion checkpoint validation, process
+ownership, memory budget, permissions, cancellation and recovery. An unavailable
+recipe fails with an actionable error rather than silently mixing conditions.
+No user-supplied CLI arguments, Python hooks, arbitrary graphs or new Chat/Work
+mode may be introduced. Qualify a complete same-input narration/avatar before
+promoting the recommendation; shorter diagnostic output cannot satisfy that gate.
