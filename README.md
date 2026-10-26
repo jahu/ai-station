@@ -229,6 +229,7 @@ also explains how to add executors, capabilities, providers, tools and connector
 
 | Explore | Guides |
 | --- | --- |
+| Project landing page | [Standalone website source and local preview](website/README.md) |
 | Understand the platform | [Architecture](docs/architecture.md) · [Security](docs/security-model.md) · [Execution](docs/execution-model.md) |
 | Run local models | [Models](docs/models.md) · [llama.cpp](docs/managed-llama.md) · [Chat](docs/local-chat.md) |
 | Create media | [Images](docs/image-workflows.md) · [Video](docs/video.md) · [Avatars](docs/avatars.md) · [Audio](docs/audio.md) |

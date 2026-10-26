@@ -1,0 +1,35 @@
+{
+  "media": "Existing owner-approved neutral README showcase, reused byte-for-byte. Separate demo dataset; no production Library export.",
+  "media_sha256": {
+    "conversation.png": {
+      "sha256": "d036fda30feddd833356edff08209ab35a397c129cac8bbe1afb51190ff330ad",
+      "size_bytes": 108004
+    },
+    "library.png": {
+      "sha256": "d1493b4e29ad64f42927cdf0abdd5d958dfbc2fc8ecdda84965d4399c53a1162",
+      "size_bytes": 303604
+    },
+    "agents.png": {
+      "sha256": "60931e31eea1f97ac871aa00fe20214023317cdfdbe3f1b4fd06feeb357c5570",
+      "size_bytes": 106496
+    },
+    "video.png": {
+      "sha256": "bca1ad0ba712e600f62a5942fd3e0e991d609a9c2dccc8bc22fc73a2e562d759",
+      "size_bytes": 274851
+    },
+    "station-tour.mp4": {
+      "sha256": "a8144eff48c7e9e1ac5ce5f0dd1b1bc2c06555987be6b24e29e36ced0033d2db",
+      "size_bytes": 1391977
+    }
+  },
+  "font": {
+    "source": "https://github.com/vercel/geist-font/tree/b5d164a0c066c2c9bfcd5ab65dd8244551f0ac06",
+    "file": "fonts/Geist/webfonts/Geist[wght].woff2",
+    "license": "SIL Open Font License 1.1; assets/fonts/OFL.txt",
+    "sha256": "2ffebe993e969069a9789d15164b7715d42491b5835516c5e3b935d5f81b05f1",
+    "license_text_note": "Full upstream OFL text; trailing whitespace normalized without changing terms.",
+    "upstream_license_sha256": "c683bfbcc7e087f5d37a54ef628f10387c451a83ddc459b151403a164ac46c90",
+    "included_license_sha256": "942560b236adfa83745b2c64e5fc09ebaf91cb331751b1157eb92187e5d6e930"
+  },
+  "logo": "Existing frontend/public/station.svg"
+}
