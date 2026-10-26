@@ -46,3 +46,6 @@ remains a separate quality issue, and tiny ASR is not a pronunciation or exact
 lip-sync guarantee. The Polish catalog adds AUDIO-006 to test the actual ending;
 operator answers remain **Nie testowano**. Deployment receipts determine live
 status. The full platform and final QA handoff remain open.
+
+Follow the [Echo appearance investigation](echo-continuation-quality.md) for the
+controlled negative candidates and the remaining appearance/continuity gate.
