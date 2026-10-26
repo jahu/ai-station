@@ -1,198 +1,240 @@
-# AI Station
+<div align="center">
 
-A local-first AI workstation control plane: one conversation for questions,
-files, images and agent tasks, backed by inspectable execution on your machine.
+# ✳ AI Station
 
-Open the application, choose a model if needed and describe the outcome you want.
-The orchestrator chooses a direct answer, tools or a workflow. Progress, sources,
-artifacts and follow-ups stay in the same conversation. Dedicated workspaces
-remain available for direct control.
+### Your AI. Your hardware. Your rules.
 
-## What you can do
+**Chat. Create. Automate. One local workstation.**
 
-| Workspace | Use it for |
+Your models, images, videos, voices, music and agents — together, on your machine.
+
+[Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
+
+`v0.0.1` · `Linux first` · `Local inference` · `Cloud optional`
+
+![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
+
+</div>
+
+Imagine describing what you want and letting your own computer do the work.
+An answer. A photograph. A short film. A voiceover. A soundtrack. An agent that
+keeps working after you close the conversation.
+
+**That is what we are building.** AI Station brings local AI into one workspace,
+with a familiar conversation at the center and dedicated tools when you want
+more control. Start with an idea; keep the conversation, files and results together.
+
+> **The destination:** download, install, create. Your hardware is detected,
+> compatible models are offered and the setup takes care of itself.
+> **Today:** v0.0.1 is a working, Linux-first workstation release. You still need
+> Docker, Python and configured local models/runtimes. Guided setup, model downloads
+> and broader GPU compatibility are on the roadmap — not hidden prerequisites
+> disguised as completed features.
+
+## 🎛 One station. Many ways to create.
+
+| You want to… | AI Station gives you… |
 | --- | --- |
-| Conversation | Stream answers, attach documents/images/audio, search the web, read pages, analyse files and request media or agent actions. |
-| Agents | Review a draft, choose tools and permissions, enable a schedule, run now, pause or stop, inspect results and continue an agent's project. |
-| Images | Generate, edit, recompose and upscale using configured photo-pipeline or LUSTIFY runtimes. Reuse ordered references from Library. |
-| Video and Avatars | Generate bounded scenes or segmented films; animate a portrait against a recording or generated speech. Inspect progress and resume compatible unfinished work. |
-| Audio | Generate speech/music and transcribe recordings with configured local runtimes. |
-| Library and Runs | Inspect files, provenance, logs and parameters; edit metadata, reuse results, manage Trash and explicitly confirm permanent deletion. |
-| Memory | Inspect, edit and search scoped contextual entries, summaries and provenance, including optional managed CPU embeddings. |
-| Models, System and Settings | Discover models, manage owned llama.cpp instances, inspect hardware/health and configure providers, integrations and access. |
+| **Talk and think** | Streaming conversations, local model selection, optional reasoning controls, attachments, web search and page reading. |
+| **Make and transform images** | Generate, Edit, Recompose and Upscale; ordered references, prompts, parameters and reusable results. |
+| **Create video and avatars** | Local video generation, multi-shot films, resumable segments and portraits animated against a recording or generated speech. |
+| **Work with sound** | Speech from text and a reference voice, transcription and local music generation. |
+| **Put agents to work** | Natural-language drafts, reviewed tools and permissions, schedules, history and in-app notices. |
+| **Do something with your files** | Local spreadsheet/document analysis, Python tools, generated files and isolated website/project workflows with follow-ups. |
+| **Keep your creative work** | A shared Library, source lineage, downloads, metadata, Trash and confirmed permanent deletion. |
+| **Operate your workstation** | Owned llama.cpp models, GPU allocation, runtime health, memory, diagnostics and inspectable Runs. |
 
-Local agents can analyse Excel/CSV/documents and create files, or build a website
-in an isolated project with validation and a preview. Projects and advanced Git
-workflows retain their existing services; the main product is agent-oriented.
-Models, media runtimes and external accounts must be configured before their
-capabilities become available. The application reports actual availability.
+<table>
+<tr>
+<td width="50%"><img src="docs/media/conversation.png" alt="AI Station conversation with a local model and an example film-planning discussion" /></td>
+<td width="50%"><img src="docs/media/video.png" alt="Video workspace with a completed, locally generated landscape film" /></td>
+</tr>
+<tr><td align="center"><strong>One conversation to begin.</strong></td><td align="center"><strong>A workspace when you want control.</strong></td></tr>
+</table>
 
-## Install and start
+<details>
+<summary>Explore the Library and agent workspace</summary>
 
-Prerequisites: Linux, Python 3.12+ with venv support, Git, Docker Engine and
-Docker Compose, usable by your user. Host Node is unnecessary: the project frontend
-helper uses Docker. A GPU, models and cloud credentials are optional for starting
-the control plane and running normal tests.
+![Library with selected neutral demonstration images and a local film](docs/media/library.png)
+![Agent workspace with example draft definitions](docs/media/agents.png)
+
+</details>
+
+*Screenshots show the actual application with a separate demonstration dataset.
+Example conversation and agent text is seeded for privacy; the selected images
+and landscape film come from recorded local generation. [Media provenance](docs/media/README.md).*
+
+## 🔓 Local by choice. Yours to control.
+
+**No cloud inference account is required for configured local workflows.** Run
+compatible models on your workstation, keep your files and history there, and
+choose the models you want — including compatible uncensored weights. You choose the model, its capabilities
+and its behavior.
+
+Local generation uses your hardware, with no AI Station per-token charge. Your
+conversations, artifacts and application state live on your workstation. External
+inference is opt-in; web search, downloads and private remote access use networks.
+Choose the tools you want for each task.
+
+Model choice is broad; machine access stays explicit. Agents use reviewed tools,
+owned workspaces and scoped permissions. You can inspect what ran, where it ran,
+what changed and which files it produced.
+
+## 🧭 How does it fit alongside other projects?
+
+These projects cover overlapping ground. Here is where each places its emphasis
+and why you might choose AI Station alongside them.
+
+| Project | Its emphasis | AI Station's emphasis |
+| --- | --- | --- |
+| [Open WebUI](https://docs.openwebui.com/features/) | A broad AI interface spanning conversations, knowledge, tools, voice, images and automations. | Bring that conversation into a host-aware workstation with a shared lifecycle for models, media, local agent jobs and artifacts. |
+| [LM Studio](https://lmstudio.ai/docs/app/offline) | Download and run local LLMs, chat with documents and serve local inference. | Coordinate LLMs alongside image, video, audio and persistent agent workflows in one place. |
+| [AnythingLLM](https://docs.anythingllm.com/chatting-with-documents/introduction) | Document-centered workspaces, retrieval and [tool-using agents](https://docs.anythingllm.com/features/ai-agents). | Keep knowledge and agents alongside creative media, GPU resources and inspectable execution. |
+| [ComfyUI](https://github.com/Comfy-Org/ComfyUI) | A visual graph and execution engine for generative-media workflows. | Offer an everyday conversation and focused workspaces while integrating configured media runtimes underneath. |
+| [Pinokio](https://desktop.pinokio.co/) | Discover, install, launch and automate local apps. | Build a connected experience across tasks, conversations, models and results, rather than asking the user to manage each app separately. |
+| [Maestro / RunMaestro](https://github.com/RunMaestro/Maestro) | Coordinate coding agents and multiple projects from a desktop command center. | Put coding-capable agents inside a broader personal AI workstation for media, research, files and automation. |
+
+These tools can coexist. AI Station can use compatible existing services;
+you do not have to replace a working local setup to adopt the control plane.
+
+## ⚡ Real hardware. Real results.
+
+Measured on an **Intel Core i7-6900K, 32 GB RAM and two NVIDIA RTX 3060 12 GB cards**.
+This is the development workstation, not a minimum requirement or a hard-coded
+hardware profile. Two GPUs provide separate 12 GB devices, not a universal 24 GB pool.
+
+| Workload | Recorded settings | Observed result |
+| --- | --- | --- |
+| **Local LLM generation** | RVN 27B Q4_K_M; llama.cpp; both GPUs; 46,080-token context allocation; Q8 KV cache; 467 prompt / 345 generated tokens | **16.9 generated tokens/s**; prompt processing **380.2 tokens/s**, measured separately. |
+| **Generate an image** | LUSTIFY v10 Turbo Q4_0; 768×1024; 8 steps; CFG 1; two-GPU profile | **1 min 40 s** |
+| **Edit an image** | Same model/size/steps; one reference, aligned layout | **2 min 27 s** |
+| **Recompose an image** | Same model/size/steps; one reference, beside layout | **2 min 29 s** |
+| **Recompose with two references** | Same model/size/steps; ordered scene and person references | **3 min 10 s** |
+| **Generate two video shots in parallel** | Wan2.2 5B; 2 × 2-second shots; 1280×704; 20 steps; separate GPUs | **7 min 58 s** for the full four-second film and composition. |
+| **Generate a continuous one-minute film** | Wan2.2 5B; 1280×704; 24 fps; 20 steps; 18 sequential windows; bounded host RAM | **3 h 16 min** for the complete 1,440-frame workflow. |
+| **Create a one-minute speaking avatar** | EchoMimic V3; 384 px; 8 steps; 24 windows; one GPU; 60-second recording | **48 min 18 s**, including fresh source-speech preparation and composition. |
+
+These are recorded observations, not a cross-project benchmark or a speed promise.
+The LLM row is one captured completion; allocated context is not prompt length.
+Media times include their recorded Run/workflow boundaries, not diffusion-only
+kernel speed. Long-video color drift and avatar contrast/facial-detail changes
+remain visible; duration success is not a promise of perfect visual quality.
+[Method, exact scope and evidence](docs/benchmarks.md).
+
+## 🚀 Get started
+
+**Current release prerequisites:** Linux, Git, Python 3.12 with venv support,
+Docker Engine and Docker Compose. GPU media additionally requires a compatible
+configured runtime and model. The currently exercised media paths use NVIDIA/CUDA;
+other GPU vendors are a compatibility goal, not a blanket v0.0.1 claim.
 
 ```bash
-git clone https://github.com/jahu/ai-station.git
+git clone --branch master https://github.com/jahu/ai-station.git
 cd ai-station
-git switch develop
 cp .env.example .env
 ./scripts/bootstrap.sh
+# Configure your existing model/runtime paths in .env — see the setup guide.
 ./scripts/start.sh
 ```
 
-Open **http://127.0.0.1:8765**. Startup builds the application image, starts or
-reuses a compatible native Host Runner, checks health and supervises the deployment
-in the foreground. Ctrl+C stops this invocation's owned services and retains data.
-Use `./scripts/start.sh --no-build` to reuse an existing application image.
+Open **http://127.0.0.1:8765**. Your models and integrations report their real
+availability; starting the app does not silently download a model collection.
 
-Bootstrap creates project Python dependencies in `.venv`; it does not install
-GPU drivers, alter CUDA, download AI models or replace existing AI software.
-An existing Runner must match the checkout's native source identity. Inspect active
-work before restarting its owning service; the launcher does not replace an
-unrelated or incompatible Runner. [Runner compatibility](docs/runner-source-compatibility.md).
+**[Follow the setup guide →](docs/getting-started.md)** for configuration, existing
+llama.cpp/Ollama services, optional media runtimes and development commands.
+[Download v0.0.1](https://github.com/jahu/ai-station/releases/tag/v0.0.1) for the
+first tagged release. `master` is the release branch; contributors work through
+feature branches and PRs into `develop`.
 
-## Configure your workstation
+## 🌱 Where we're going
 
-Use [.env.example](.env.example) as the configuration reference. Set host paths
-for the integrations you actually have, then restart the affected AI Station
-services. Start with model roots and an inference provider; media integrations
-can be added independently. Diagnostics distinguishes available, unavailable,
-misconfigured and unknown integrations.
+The ambition is simple: **a person with a home GPU should be able to install
+AI Station and start creating without learning model servers, Python environments
+or GPU flags.** A familiar chat experience, plus local tools for the things you
+would otherwise spread across separate AI apps.
 
-- `AI_STATION_DATA_HOST_PATH` defaults to `./data`, mounted as `/data` in Docker.
-  It contains SQLite, uploads, artifacts, logs and other persistent state. App-owned
-  database paths are relative to this root. Containers can be replaced without
-  moving external repositories or model files.
-- `AI_STATION_MODEL_ROOTS` selects existing host model roots.
-  `AI_STATION_ALLOWED_ROOTS` constrains permitted host filesystem access.
-  Discovery reads metadata; it does not move or delete model files.
-- AI Station can load compatible discovered GGUFs through an owned **llama.cpp**
-  runtime, including discovered multi-GPU configurations. Existing llama.cpp,
-  Ollama and other compatible servers can also be configured as providers.
-  Use Models and the conversation model picker; a model's advertised context
-  alone does not establish that the chosen profile fits your hardware.
-- `AI_STATION_LLM_BASE_URL` is the host inference endpoint. The default
-  `AI_STATION_LLM_TRANSPORT=runner` reaches loopback-only host servers through the
-  private Runner. For direct container networking use
-  `AI_STATION_LLM_CONTAINER_BASE_URL`; Compose provides `host.docker.internal`.
-  [Provider and networking guide](docs/local-model-bridge.md).
-- Configure the original photo pipeline and other media runtimes using their
-  documented environment keys. AI Station adapts existing installations and
-  preserves the original scripts and model files.
+- **Guided first launch:** detect hardware, explain what fits and offer sensible defaults.
+- **Model setup inside the app:** explicit downloads, verified files, progress, cancellation and storage estimates.
+- **Easier media setup:** prepare compatible runtimes and presets instead of asking people to wire them together.
+- **Hardware-aware choices:** propose a model, quantization and context that fit the available devices.
+- **A friendlier daily experience:** clearer language, strong mobile UX and optional push notifications.
+- **More capabilities over time:** additional models, runtimes and devices through the existing execution boundaries.
 
-Keep `.env` and secrets out of Git. Secrets belong in environment/secret files or
-configured secret references, not prompts or ordinary metadata responses.
-[Configuration and operations](docs/operations.md) covers backups, upgrades,
-owned process recovery and guarded restore.
+The goal is the familiarity of a ChatGPT-style conversation and a creative suite,
+powered by local models such as llama.cpp-compatible LLMs, Wan, EchoMimic,
+Chatterbox and ACE-Step. [The consumer setup plan](docs/plans/consumer-first-setup.md)
+keeps that direction concrete.
 
-## Access from another device
+## 🏗 A workstation, with a control plane
 
-Localhost is the default listener. To add a home-LAN listener, first save an
-operator password in Settings, then configure `AI_STATION_LAN_HOST` with the
-workstation's private IPv4 address. LAN access requires an authenticated operator
-session; public bind addresses are refused. [LAN access](docs/private-network-access.md).
+The interface can be simple while the execution stays visible.
+Every workload follows **Task → Run → Events → Artifacts**.
 
-Settings → Access → **Access from anywhere** provides optional private Tailscale
-setup using an AI Station-owned userspace service. The owner must sign in, approve
-HTTPS and verify their device's remote connection. An installed service or
-`NeedsLogin` is not remote readiness. This does not expose a public Funnel or
-change unrelated system Tailscale services.
-[Private access and acceptance](docs/plans/private-tailnet-access.md).
-
-Browser microphone capture requires a secure browser context and device consent;
-HTTP access over a LAN does not grant microphone permission. SMTP delivery likewise
-requires your configured account and a reviewed message/recipient or explicitly
-activated scoped agent policy. Search and public-page tools need no finance API key.
-
-## How execution works
-
-The architecture is a modular monolith: **Docker control plane + native user-level
-Host Runner**, communicating through typed HTTP over a private Unix socket.
-
-The control plane owns the UI/API, metadata, scheduling and durable run engine.
-The Runner owns constrained native work such as Git worktrees, installed CLI/media
-adapters, owned processes and hardware inspection. Container executors are also
-launched behind that controlled boundary.
-
-Every application workload follows **Task → Run → Events → Artifacts**. HTTP
-handlers enqueue; workers execute. GPU/worktree reservations, live events, Stop,
-approvals and conservative recovery belong to the shared lifecycle. Three worker
-slots are the default; `AI_STATION_WORKER_SLOTS` can configure 1–8 slots.
-
-The control plane receives no privileged container, Docker socket or unrestricted
-host mount. The Runner exposes typed operations rather than an arbitrary shell.
-Canonical root checks, process identity and owned groups constrain filesystem and
-cancellation actions. External services are not implicitly adopted or stopped.
-Read the [architecture](docs/architecture.md), [domain](docs/domain-model.md),
-[execution](docs/execution-model.md) and [security](docs/security-model.md) contracts.
-
-## Development and verification
-
-```bash
-./scripts/dev.sh                 # Runner, Docker API/worker/scheduler and Vite
-# Development UI: http://127.0.0.1:5173
-./scripts/check-all.sh           # Python, frontend, Compose and image checks
-./scripts/check.sh               # Python lint/format and backend/Runner tests
-./scripts/frontend.sh ci         # Install frontend dependencies
+```mermaid
+flowchart TB
+    User["You · conversation or workspace"] --> UI
+    subgraph Control["Docker control plane"]
+        UI["React interface"] --> API["FastAPI · task intent"]
+        API --> Engine["Run engine · workers · permissions"]
+        Scheduler["Persistent scheduler"] --> Engine
+        Engine --> State["SQLite · events · memory · artifact metadata"]
+    end
+    Engine -->|"Typed HTTP over a private Unix socket"| Runner
+    subgraph Host["Native user-level Host Runner"]
+        Runner["Validate paths · own processes · enforce limits"]
+        Runner --> LLM["llama.cpp · local models"]
+        Runner --> Media["Image · video · voice · music runtimes"]
+        Runner --> Tools["Git worktrees · bounded code and file tools"]
+    end
+    LLM --> Hardware["Discovered GPUs and CPU"]
+    Media --> Hardware
+    Tools --> Results["Files and results"]
+    Media --> Results
+    Results --> Library["Library · conversation · Run history"]
+    State --> Library
+    style Control fill:#101b14,stroke:#3e5940,color:#d9e8d0
+    style Host fill:#101b14,stroke:#3e5940,color:#d9e8d0
+    classDef normal fill:#18221a,color:#e1edda,stroke:#42543a
+    class User,API,Engine,Scheduler,State,LLM,Media,Tools,Hardware,Results normal
+    classDef accent fill:#b9f58a,color:#10150f,stroke:#b9f58a
+    class UI,Runner,Library accent
 ```
 
-Normal tests use temporary databases, fake providers and disposable processes;
-they do not consume cloud tokens or launch model/GPU generation. Real integration
-and browser/recovery probes are separate opt-ins. See [verification](docs/verification.md)
-for commands and the distinction between unit, integration and actual hardware
-results. Tests passing is not a claim that every model or quality profile works.
+The Docker control plane gets no privileged container, Docker socket or unrestricted
+host mount. The native Runner exposes typed operations, not an arbitrary shell.
+Existing external services keep their ownership. Cloud providers are optional
+adapters, not a dependency of the local execution path.
 
-The Polish [operator QA package](docs/qa/README.md) contains stable cases, XLSX/CSV,
-synthetic input files and release-specific instructions. Its offline feedback
-importer preserves returned answers and produces a triage list without executing
-spreadsheet formulas or changing the app. Final operator handoff is separate from
-internal qualification; unperformed operator tests remain **Nie testowano**.
+<details>
+<summary><strong>For builders: architecture, development and verification</strong></summary>
 
-Ordinary generated results appear in Library and their Runs. Isolated acceptance
-probes have separate databases/data roots and record file locations in their
-receipts. Developer exports such as `data/test-previews` are independent local
-copies; they do not automatically create entries in the running Library.
+The foundation is a modular monolith: FastAPI, SQLAlchemy/Alembic and SQLite WAL,
+React/TypeScript/Vite, a durable worker/scheduler and a private native bridge.
 
-Contributions use feature/fix branches, full diff review and successful checks,
-then squash PRs into `develop`. Hosted Actions are currently manual; equivalent
-local verification is authorized by the maintainer. Actual failing checks are
-never waived. Follow [AGENTS.md](AGENTS.md); `main`/`master` are protected release
-branches and are not autonomous push/merge targets.
+```bash
+./scripts/dev.sh
+./scripts/check-all.sh
+```
 
-## Extend AI Station
+Normal tests use temporary databases and fake executors. Expensive real integrations
+are opt-in. Recorded local qualification includes 4,219 backend/Runner passes,
+nine opt-in skips and 847 frontend tests; newer offline QA tools have their own
+26 tests and 21 subtests. Those numbers do not automatically qualify every model,
+media profile or machine. [Verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
-- **Executor:** implement the existing `app.executor.Executor` contract; test
-  permissions, cancellation, recovery and resource release before registration.
-- **Capability:** validate intent and scoped inputs, then enqueue ordinary Runs
-  through shared domain services.
-- **Tool:** declare schemas, permissions, risk, timeout and a real implementation.
-- **Provider:** use the provider adapter boundary rather than tying domains to one
-  model server. Preserve actual local/external disclosure and secret references.
-- **Connector:** expose real health and capabilities with server-side credentials.
-  Incomplete adapters stay unavailable.
+Read [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)
+also explains how to add executors, capabilities, providers, tools and connectors.
 
-## Detailed guides and current scope
+</details>
 
-| Topic | Guide |
+| Explore | Guides |
 | --- | --- |
-| Models and local inference | [Models](docs/models.md), [managed llama.cpp](docs/managed-llama.md), [chat](docs/local-chat.md) |
-| Images and results | [Images](docs/image-workflows.md), [Library](docs/library.md), [image models](docs/plans/krea2-lustify-images.md) |
-| Media | [Long jobs](docs/long-media.md), [video](docs/video.md), [avatars](docs/avatars.md), [audio](docs/audio.md) |
-| Agents and projects | [Agents](docs/agents.md), [agent-first direction](docs/plans/agent-first-product.md), [projects](docs/projects.md), [local code](docs/local-coding.md) |
-| Context and tools | [Memory](docs/memory.md), [web search](docs/web-search.md), [page reading](docs/plans/chat-page-reading.md), [Skills](docs/skills.md), [connectors](docs/connectors.md) |
-| Operations | [Operations](docs/operations.md), [private access](docs/private-network-access.md), [QA](docs/qa/README.md) |
+| Understand the platform | [Architecture](docs/architecture.md) · [Security](docs/security-model.md) · [Execution](docs/execution-model.md) |
+| Run local models | [Models](docs/models.md) · [llama.cpp](docs/managed-llama.md) · [Chat](docs/local-chat.md) |
+| Create media | [Images](docs/image-workflows.md) · [Video](docs/video.md) · [Avatars](docs/avatars.md) · [Audio](docs/audio.md) |
+| Work with agents | [Agents](docs/agents.md) · [Projects](docs/projects.md) · [Memory](docs/memory.md) |
+| Operate your station | [Library](docs/library.md) · [Private access](docs/private-network-access.md) · [Backups](docs/operations.md) |
 
-Supported settings and recorded qualification are distinct. The [release audit](docs/plans/platform-acceptance-audit.md)
-and [product ledger](docs/product-completion.md) retain exact tested profiles,
-adverse results and remaining gates. Longer media may show identity, color or
-lip-sync limitations; a successful decode alone is not a visual-quality pass.
+---
 
-The owner has confirmed private Tailscale access. SMTP remains optional and its
-real-inbox acceptance is deferred; push notifications are
-[future work](docs/plans/notification-delivery.md). Remote execution nodes, additional runtime/connector
-families and standalone IDE parity remain future work. Existing code/worktree
-services are retained. New integrations must meet the same observable permission,
-Stop, artifact and recovery contracts before being presented as operational.
+**Build an AI workstation you want to come back to.** ✳
