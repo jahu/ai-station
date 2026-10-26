@@ -239,7 +239,22 @@ def export(
         "E2",
     )
     for row in tests.iter_rows(min_row=2):
-        tests.row_dimensions[row[0].row].height = 112
+        lines = max(
+            sum(
+                max(
+                    1,
+                    len(
+                        wrap_text(
+                            paragraph,
+                            max(8, int(tests.column_dimensions[cell.column_letter].width * 0.85)),
+                        )
+                    ),
+                )
+                for paragraph in str(cell.value or "").split("\n")
+            )
+            for cell in row
+        )
+        tests.row_dimensions[row[0].row].height = min(409, max(112, 16 * (lines + 1)))
         for index in [1, 6, 7, 8, 9, 14, 15, 16, 17]:
             row[index].fill = editable
 
