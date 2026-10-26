@@ -13,24 +13,24 @@ directly to `master` or `main`, rewrite history or move a published release tag.
 
 ## GitHub enforcement
 
-On 2026-10-26, GitHub's branch-protection and ruleset APIs both returned HTTP 403
-for this private repository: these features require upgrading to GitHub Pro or
-making the repository public. **Server-enforced protection is not enabled.**
-The repository has not been made public.
+The owner made the repository public on 2026-10-26. The earlier private/free-plan
+restriction no longer applies. **Server-enforced protection is active on master**,
+verified through GitHub's branch-protection API:
 
-[CODEOWNERS](../.github/CODEOWNERS) declares @jahu as the code owner, but it does
-not by itself prevent direct pushes, other reviews or merges. This is currently
-a contributor/agent policy, not a technical access-control guarantee. GitHub's
-CODEOWNERS feature itself also requires a supported plan for private repositories;
-the file is prepared for that future configuration.
-
-When the plan supports protection, configure an exact `master` rule in
-**Settings → Branches** (or **Rules → Rulesets**) to:
-
-- Require a pull request and code-owner approval before merging.
+- Require a pull request with one approving review and code-owner approval.
+- [CODEOWNERS](../.github/CODEOWNERS) names only @jahu.
 - Dismiss stale approvals after new commits and require resolved review conversations.
-- Block force pushes and deletion; prevent bypass where supported.
-- Keep only the owner authorized for release merges; collaborators use PRs.
+- Block force pushes and branch deletion.
+- Enforce these requirements for administrators too; no review bypass is configured.
+
+Required hosted status checks remain unset under the existing local-verification
+policy. This does not waive actual failed checks. Linear history is not required,
+so release promotions can preserve `develop` ancestry with merge commits.
+
+The owner-only release merge policy above still applies: required code-owner
+review gates approval, but does not restrict the merge button to a named user.
+Classic named-user push restrictions are unavailable for personal repositories.
+Review or change the rule under **Settings → Branches → master**.
 
 Code-owner review makes the owner's approval necessary; it does not stop others
 from leaving advisory reviews. GitHub also prevents authors from approving their
