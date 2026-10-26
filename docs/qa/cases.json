@@ -1,6 +1,6 @@
 {
-  "version": 14,
-  "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
+  "version": 15,
+  "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
     "docs/plans/operator-qa-handoff.md",
@@ -14,7 +14,8 @@
     "docs/plans/natural-agent-intent.md",
     "docs/plans/agent-draft-runtime-defaults.md",
     "docs/plans/wan-continuation-quality.md",
-    "docs/plans/assisted-agent-drafts.md"
+    "docs/plans/assisted-agent-drafts.md",
+    "docs/plans/notification-delivery.md"
   ],
   "cases": [
     {
@@ -2639,7 +2640,7 @@
       "priority": "P1",
       "prerequisites": [
         "Przekazana wersja AI Station; dostęp do własnej sesji operatora; używaj wyłącznie jednorazowych danych QA.",
-        "Przypadki wymagające własnego konta wykonuj dopiero po jego świadomej konfiguracji; brak warunku zapisz jako Zablokowany."
+        "Poza zakresem bieżącego wydania: właściciel odłożył SMTP (2026-10-26). Nie konfiguruj konta ani nie wysyłaj wiadomości tylko dla tego testu. Wpisz Nie dotyczy z powodem: SMTP odłożone decyzją właściciela. Instrukcje poniżej zachowano do przyszłej, jawnie zatwierdzonej kwalifikacji."
       ],
       "steps": [
         "Na własnym testowym koncie SMTP i własnym odbiorcy przygotuj raport QA",
@@ -2649,7 +2650,7 @@
       "expected": [
         "Raport i wysyłka mają oddzielne stany; dociera właściwa treść, bez sekretów w logach."
       ],
-      "resources": "Własne konto testowe; niektóre przypadki wymagają SMTP/GitHub",
+      "resources": "Opcjonalny przyszły test SMTP; obecnie bez konfiguracji konta i bez wysyłki",
       "minutes": 5,
       "requirements": [
         "spec-85",
@@ -3046,7 +3047,7 @@
       "priority": "P1",
       "prerequisites": [
         "Przekazana wersja AI Station; własna sesja operatora i wyłącznie jednorazowe dane QA.",
-        "Wymagane konto lub model muszą być świadomie przygotowane; w przeciwnym razie zapisz Zablokowany i powód."
+        "Poza zakresem bieżącego wydania: właściciel odłożył SMTP (2026-10-26). Nie konfiguruj konta ani nie wysyłaj wiadomości tylko dla tego testu. Wpisz Nie dotyczy z powodem: SMTP odłożone decyzją właściciela. Instrukcje poniżej zachowano do przyszłej, jawnie zatwierdzonej kwalifikacji."
       ],
       "steps": [
         "Na własnym skonfigurowanym koncie testowym przygotuj agenta tworzącego mały CSV QA.",
@@ -3056,7 +3057,7 @@
       "expected": [
         "Dociera zweryfikowany wynik, nie źródłowy prywatny plik ani kod; generowanie i mail mają oddzielne stany."
       ],
-      "resources": "CPU; własny SMTP i odbiorca; świadoma zgoda na wysyłkę",
+      "resources": "Opcjonalny przyszły test SMTP; obecnie bez konfiguracji konta i bez wysyłki",
       "minutes": 10,
       "requirements": [
         "wyniki agenta; email"

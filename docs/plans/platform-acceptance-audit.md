@@ -7,6 +7,16 @@ feature PR, an available runtime badge or fixture output for full acceptance.
 
 ## Current audit, 2026-10-26
 
+**Owner scope update:** Tailscale access is now confirmed working by the owner;
+current native status independently shows the owned node online and private Serve
+active. Automated loopback checks with the exact HTTPS authority return health
+200 and protected-data 401 without a session. They do not simulate a remote phone.
+SMTP configuration/inbox delivery is explicitly deferred beyond this release.
+Push is future backlog only. Final QA uses catalog v15/161 stable cases, with the
+two SMTP cases explicitly optional. No operator case is prefilled as passed.
+Current evidence: `operator-final-handoff-20261026/`; previous missing-account
+observations below remain historical. See [notification scope](notification-delivery.md).
+
 Current running application source is `81c87650f480c1ad4713d65e84e50ffe83b7e3c4`
 (PR #457). Full normal qualification is 4,228 cases: 4,219 passed and nine opt-in
 skips; frontend qualification retains 847 tests/all five gates by exact source
@@ -38,14 +48,15 @@ complete owned-process/resource cleanup pass. This closes the short-profile
 two-GPU execution gate, not arbitrary concurrency or continuous-shot parallelism.
 See [the exact scope](../parallel-video-shots.md#actual-two-gpu-acceptance--2026-10-26).
 
-Current operator catalog is v14/161 cases in 21 areas. The inspected draft is
+The previous operator catalog was v14/161 cases in 21 areas. Its inspected draft is
 `market-agent-qa-20261026/candidate-81c8765/`, with every result **Nie testowano**.
 The offline feedback importer is qualified through 26 tests/21 subtests and actual
 original/Calc-saved XLSX, CSV and synthetic bug/retest round-trips in
-`operator-qa-feedback-20261026/`. Final handoff still needs readiness and updated
-qualified-profile notes, including the minute recording scope above. Actual
-Tailscale account/outside-LAN and operator-inbox delivery remain owner-controlled
-open gates. No operator answers have been supplied or invented.
+`operator-qa-feedback-20261026/`. The final current-release package is now
+`data/qa/AI-Station-QA-81c87650f480/`, with v15 scope, minute recording/two-GPU
+notes, native Calc and actual XLSX/CSV feedback round-trips. Original drafts remain
+unchanged. The owner scope update above supersedes the former Tailscale/SMTP gates.
+No workbook answers have been supplied or invented.
 
 The PR #445 identities below are historical. The audited deployment before the
 market-draft correction is
@@ -165,15 +176,15 @@ they do not establish Auto loading. Keep these distinctions in the final report.
    determine live status. See
    [the continuation investigation](wan-continuation-quality.md), preserving the
    failed visual receipt. Current capability checks start no inference.
-3. Keep external-account acceptance explicit. The owned Tailscale helper currently
-   reports `NeedsLogin`, not serving: worldwide mobile acceptance is unperformed.
-   SMTP private-sink qualification is not real operator-inbox delivery. These
-   require owner-controlled setup and, for a real message, concrete send approval;
-   never request passwords/tokens in chat or manufacture successful receipts.
-4. Generate the actual release-specific Polish QA package after internal readiness:
-   six-sheet XLSX, CSV feedback/retest templates, instructions, manifest and
-   accurate qualified profiles/test prerequisites. All operator results start
-   **Nie testowano**. A catalog or a draft export is not this final handoff.
+3. Preserve the current owner-confirmed private access and explicit SMTP deferral.
+   The owned Tailscale node is online with the exact HTTPS endpoint serving;
+   device/network specifics were not supplied. SMTP private-sink qualification
+   remains separate from unperformed inbox delivery, now outside this release
+   by owner decision. Push remains future backlog; do not invent delivery results.
+4. Deliver the verified current-release Polish QA package: six-sheet XLSX, CSV
+   feedback/retest templates, instructions, manifest, synthetic inputs, archived
+   catalog and exact qualified profiles. All operator results remain
+   **Nie testowano**; actual operator feedback and fixes follow separately.
    The offline exporter now includes synthetic CSV/two-sheet XLSX/document/PNG
    inputs, an intentionally invalid input and checked values/hashes. Its eight
    offline checks pass; neither those inputs nor a draft export prove inference.

@@ -3,7 +3,7 @@
 The versioned [catalog](cases.json) contains 161 Polish operator cases across 21
 areas, including all four permanent-deletion journeys and real semantic-memory
 acceptance and the single assistant conversation. It is a test definition, not evidence that the product is complete.
-Catalog v14 includes ready-to-upload synthetic data with independently checkable
+Catalog v15 retains ready-to-upload synthetic data with independently checkable
 answers, so CSV/Excel/document and basic Vision cases need no manual boilerplate.
 AGENT-014 checks sensible new media-agent allowances and preservation of an
 explicit short runtime without rendering another film.
@@ -14,6 +14,11 @@ film; a successful technical status alone cannot pass this operator quality case
 AVATAR-005 checks portrait appearance throughout a complete 30–60-second
 narration, exact segment joins and the final spoken ending. Technical success
 alone cannot pass this visual-quality case.
+The owner deferred SMTP on 2026-10-26. CONNECT-003 and AGENT-013 retain their
+stable IDs and future instructions, with an explicit out-of-scope prerequisite:
+record **Nie dotyczy** and that decision rather than configuring or sending mail.
+Their initial workbook results remain **Nie testowano**. Missing setup for an
+in-scope capability still means **Zablokowany**, never an invented pass.
 Follow the [handoff plan](../plans/operator-qa-handoff.md): the operator will test
 after implementation and internal qualification, not while features are unfinished.
 
@@ -23,6 +28,19 @@ prerequisites, reproducible steps, an expected result, workload and requirement
 traceability. Do not hide missing promised capabilities as “Nie dotyczy”.
 Use disposable data for destructive tests; Empty Trash must never require purging
 the operator's existing collection.
+
+## Operator handoff, 2026-10-26
+
+The release-specific package is `data/qa/AI-Station-QA-81c87650f480/`,
+with a matching ZIP beside it. Its application identity remains the running
+`81c87650f480c1ad4713d65e84e50ffe83b7e3c4`; catalog v15 is a later, separately
+versioned document. All 161 results remain untested. The package includes Start,
+the complete workbook/CSV/guide/manifest, synthetic inputs and an archived catalog
+for safe feedback import. Native Calc opens/recalculates all cases and renders
+complete profile notes and optional SMTP prerequisites. Original, Calc-saved
+XLSX and CSV feedback forms pass offline import. Evidence and file hashes are in
+`data/acceptance/operator-final-handoff-20261026/`. Earlier drafts are preserved;
+this handoff does not assert universal media quality or a completed future roadmap.
 
 ## Export and verification
 
