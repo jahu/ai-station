@@ -30,15 +30,26 @@ def wav_bytes():
 @pytest.fixture
 def audio_bridge(tmp_path, monkeypatch):
     script = tmp_path / "speech.py"
-    script.write_text("""import os, sys, wave, time
+    script.write_text("""import os, sys, wave, time, json
+from pathlib import Path
 assert os.environ['HF_HUB_OFFLINE'] == '1'
 assert os.environ['TRANSFORMERS_OFFLINE'] == '1'
 assert os.environ['CUDA_VISIBLE_DEVICES'] == '7'
 text = sys.argv[sys.argv.index('--text')+1]
+text = text[:220]  # Simulate an installed model's per-call generation cap.
+with Path(__file__).with_suffix('.calls').open('a') as calls:
+ calls.write(json.dumps(text, ensure_ascii=False) + '\\n')
+Path(__file__).with_suffix('.childpid').write_text(str(os.getpid()))
 if text == 'wait': time.sleep(30)
+if 'WAIT_CHILD' in text: time.sleep(30)
 if text == 'fail': sys.exit(3)
+if 'BROKEN_PART' in text: sys.exit(3)
+if 'BAD_PCM' in text:
+ Path(sys.argv[sys.argv.index('--out')+1]).write_bytes(b'not PCM')
+ sys.exit(0)
 with wave.open(sys.argv[sys.argv.index('--out')+1], 'wb') as wav:
- wav.setnchannels(1); wav.setsampwidth(2); wav.setframerate(24000)
+ wav.setnchannels(1); wav.setsampwidth(2)
+ wav.setframerate(16000 if 'FORMAT_CHANGE' in text else 24000)
  wav.writeframes(b'\\0\\0' * 4800)
 print('speech generated')
 """)
@@ -211,3 +222,90 @@ def test_audio_runner_never_overwrites_existing_output(audio_bridge):
         )
         assert response.status_code == 409
         assert path.read_bytes() == b"existing output"
+
+
+def test_long_speech_preserves_last_sentence_and_combines_all_parts(audio_bridge):
+    import json
+    import os
+    from pathlib import Path
+
+    text = ("To jest kolejna część dłuższej opowieści. " * 17) + "Ostatnie zdanie musi pozostać."
+    with TestClient(app) as client:
+        source = reference(client)
+        run = client.post(
+            "/api/audio/runs", json={"text": text, "reference_artifact_id": source["id"]}
+        ).json()
+        with session_factory()() as session:
+            tick(session, "complete-speech")
+            assert session.get(Run, run["id"]).status == "succeeded"
+            assert not active_locks(session)
+        calls = Path(os.environ["AI_STATION_CHATTERBOX_SCRIPT"]).with_suffix(".calls")
+        actual = [json.loads(line) for line in calls.read_text().splitlines()]
+        assert len(actual) > 1
+        assert " ".join(actual) == text
+        assert actual[-1].endswith("Ostatnie zdanie musi pozostać.")
+        artifacts = client.get("/api/artifacts", params={"run_id": run["id"]}).json()
+        assert len(artifacts) == 1
+        output = client.get(f"/api/artifacts/{artifacts[0]['id']}/file")
+        with wave.open(io.BytesIO(output.content)) as wav:
+            assert wav.getnframes() == 4800 * len(actual)
+        assert artifacts[0]["parent_artifact_ids"] == [source["id"]]
+
+
+@pytest.mark.parametrize("failure", ["BROKEN_PART", "BAD_PCM", "FORMAT_CHANGE"])
+def test_middle_speech_part_failure_never_publishes_partial_audio(audio_bridge, failure):
+    text = "Pierwsze zdanie. " * 15 + failure + ". " + "Dalsze zdanie. " * 12
+    with TestClient(app) as client:
+        source = reference(client)
+        run = client.post(
+            "/api/audio/runs", json={"text": text, "reference_artifact_id": source["id"]}
+        ).json()
+        with session_factory()() as session:
+            tick(session, "complete-speech-failure")
+            assert session.get(Run, run["id"]).status == "failed"
+            assert not active_locks(session)
+        assert not client.get("/api/artifacts", params={"run_id": run["id"]}).json()
+        output = get_settings().data_dir / f"artifacts/{run['id'][:2]}/{run['id'][2:4]}/{run['id']}.wav"
+        assert not output.exists()
+
+
+def test_cancel_long_speech_signals_the_wrapper_and_child(audio_bridge, monkeypatch):
+    import os
+    import time
+    from pathlib import Path
+
+    original = RunnerClient.request
+    child_pid = None
+
+    def request(self, method, path, json=None):
+        nonlocal child_pid
+        result = original(self, method, path, json)
+        if path == "/v1/runs/audio":
+            child = Path(os.environ["AI_STATION_CHATTERBOX_SCRIPT"]).with_suffix(".childpid")
+            deadline = time.monotonic() + 5
+            while not child.exists():
+                assert time.monotonic() < deadline, "Expected a running speech child"
+                time.sleep(0.01)
+            child_pid = int(child.read_text())
+            os.kill(child_pid, 0)
+            with session_factory()() as session:
+                request_cancel(session, session.get(Run, json["run_id"]))
+                session.commit()
+        return result
+
+    monkeypatch.setattr(RunnerClient, "request", request)
+    with TestClient(app) as client:
+        source = reference(client)
+        run = client.post(
+            "/api/audio/runs",
+            json={"text": "WAIT_CHILD " + "długa wypowiedź " * 25, "reference_artifact_id": source["id"]},
+        ).json()
+        with session_factory()() as session:
+            tick(session, "complete-speech-cancel")
+            assert session.get(Run, run["id"]).status == "canceled"
+            assert not active_locks(session)
+        assert not host_app.manager().inspect(run["id"])["alive"]
+        assert child_pid is not None
+        state = Path(f"/proc/{child_pid}/stat")
+        assert not state.exists() or state.read_text().rsplit(") ", 1)[1].startswith("Z ")
+        assert not client.get("/api/artifacts", params={"run_id": run["id"]}).json()

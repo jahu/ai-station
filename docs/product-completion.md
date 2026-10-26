@@ -1,3 +1,13 @@
+Complete long-speech candidate qualified (2026-10-26), PR #453: the real
+575-character narration no longer stops before its ending. The native wrapper
+uses the existing CLI in three bounded calls without changing the installed
+script/model. All 4194 normal tests pass, with nine opt-in skips. Actual speech
+35.76 seconds and an integrated 36.52-second/14-window avatar retain the complete
+narration; CPU ASR, complete final audio and compiled desktop/phone playback
+pass. Echo color/appearance drift remains explicit; exact lip-sync is unqualified.
+[Contracts and evidence](plans/complete-long-speech.md). Catalog v12 has 159
+Polish cases. Deployment and final platform acceptance remain separate gates.
+
 Wan continuation regression (2026-10-26), PR #451: fixed one-frame APG passes a
 complete actual ten-second/240-frame, three-window film at 1280×704, 20 steps,
 CFG 5 and the bounded 11-GiB/zero-swap profile. Detail and exposure are retained

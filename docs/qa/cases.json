@@ -1,5 +1,5 @@
 {
-  "version": 11,
+  "version": 12,
   "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
   "sources": [
     "docs/product-completion.md",
@@ -1270,6 +1270,32 @@
       "requirements": [
         "spec-91",
         "działające media"
+      ]
+    },
+    {
+      "id": "AUDIO-006",
+      "area": "Audio",
+      "title": "Dłuższa mowa zachowuje końcowe zdanie",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station z poprawką dłuższej mowy; dostęp do własnej sesji operatora.",
+        "Działający lokalny syntezator i własne nagranie referencyjne QA, do którego masz prawo."
+      ],
+      "steps": [
+        "W Audio → Create speech wybierz własne nagranie referencyjne i wklej cały tekst: Wyobraź sobie spokojny poranek nad jeziorem. Słońce powoli wschodzi nad linią drzew, a lekki wiatr porusza liśćmi. Na drewnianym stole stoi kubek ciepłej herbaty i leży otwarta książka. W oddali słychać ptaki, które witają nowy dzień. Możesz usiąść wygodnie, spojrzeć na wodę i przez chwilę po prostu odpocząć. Nie trzeba się spieszyć ani planować kolejnych obowiązków. Każda fala przynosi nowy, delikatny odblask światła. Ten krótki spacer kończy się przy małym pomoście, gdzie czeka cisza i piękny widok. Teraz opowieść dobiega końca, a my wracamy do spokojnego rytmu dnia.",
+        "Uruchom generowanie, a następnie odsłuchaj wynik aż do końca. Sprawdź zwłaszcza ostatnie zdanie zaczynające się od „Teraz opowieść”.",
+        "Pobierz WAV, odśwież widok i odtwórz ten sam wynik z Library."
+      ],
+      "expected": [
+        "Słychać wszystkie zdania w kolejności, w tym końcówkę „a my wracamy do spokojnego rytmu dnia”; wypowiedź nie urywa się w połowie.",
+        "Powstaje jeden kompletny WAV z właściwym nagraniem referencyjnym i powiązanym Runem; pobrany plik oraz wynik po odświeżeniu są takie same."
+      ],
+      "resources": "Lokalny Chatterbox; GPU i własne nagranie QA. Tempo i długość wyniku mogą się różnić.",
+      "minutes": 10,
+      "requirements": [
+        "spec-91",
+        "pełna mowa z tekstu",
+        "regresja urwanego końcowego zdania"
       ]
     },
     {

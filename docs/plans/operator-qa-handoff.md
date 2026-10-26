@@ -6,7 +6,7 @@ then use the returned results as structured bug/improvement input. This is a
 required product deliverable, not a request for operator testing now.
 
 The initial [versioned catalog and offline exporter](../qa/README.md) now cover
-158 Polish cases in 21 areas and produce a six-sheet XLSX, three CSV templates,
+159 Polish cases in 21 areas and produce a six-sheet XLSX, three CSV templates,
 a readable guide and a release/catalog manifest. Drafts have no prefilled passes.
 Catalog v10 additionally ships synthetic CSV/two-sheet Excel/document/PNG inputs,
 a deliberate invalid-input case and checked expected values, with input hashes in
