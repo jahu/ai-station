@@ -39,10 +39,38 @@ HEADERS = (
     "ID zgłoszeń",
     "Wymagania",
 )
+ISSUE_HEADERS = (
+    "ID zgłoszenia",
+    "Typ",
+    "ID testów",
+    "Tytuł",
+    "Kroki odtworzenia",
+    "Oczekiwane",
+    "Rzeczywiste",
+    "Częstotliwość",
+    "Waga",
+    "Dowód / ID wykonania",
+    "Wersja / urządzenie / model",
+    "Stan triage",
+    "Poprawka / retest",
+)
+RETEST_HEADERS = (
+    "ID zgłoszenia",
+    "ID testu",
+    "Wersja poprawki",
+    "Data",
+    "Kroki / zakres",
+    "Wynik retestu",
+    "Uwagi",
+    "Dowód",
+)
 
 
 def load_catalog(path: Path = CATALOG) -> dict:
-    value = json.loads(path.read_text(encoding="utf-8"))
+    return validate_catalog(json.loads(path.read_text(encoding="utf-8")))
+
+
+def validate_catalog(value: dict) -> dict:
     cases = value["cases"]
     ids = [item["id"] for item in cases]
     if not cases or len(ids) != len(set(ids)):
@@ -273,25 +301,10 @@ def export(
             f"B2:B{last}",
             CellIsRule(operator="equal", formula=[f'"{status}"'], fill=PatternFill("solid", fgColor=color)),
         )
-    issue_headers = [
-        "ID zgłoszenia",
-        "Typ",
-        "ID testów",
-        "Tytuł",
-        "Kroki odtworzenia",
-        "Oczekiwane",
-        "Rzeczywiste",
-        "Częstotliwość",
-        "Waga",
-        "Dowód / ID wykonania",
-        "Wersja / urządzenie / model",
-        "Stan triage",
-        "Poprawka / retest",
-    ]
     capacity = max(100, len(catalog["cases"]) * 2)
     issues = sheet(
         "Zgłoszenia",
-        issue_headers,
+        ISSUE_HEADERS,
         [[f"ZGL-{i:03}", *([""] * 12)] for i in range(1, capacity + 1)],
         [18, 20, 24, 48, 72, 60, 60, 22, 20, 48, 48, 24, 36],
         "E2",
@@ -303,16 +316,7 @@ def export(
     )
     retests = sheet(
         "Retesty",
-        [
-            "ID zgłoszenia",
-            "ID testu",
-            "Wersja poprawki",
-            "Data",
-            "Kroki / zakres",
-            "Wynik retestu",
-            "Uwagi",
-            "Dowód",
-        ],
+        RETEST_HEADERS,
         [[""] * 8 for _ in range(capacity)],
         [20, 20, 44, 22, 80, 24, 70, 50],
     )
