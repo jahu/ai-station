@@ -1,6 +1,14 @@
 # Longer local video and avatars on bounded hardware
 
-Status: **design, not implemented or hardware-qualified**, 2026-10-14.
+Original design, 2026-10-14. Segmented execution, durable Stop/resume and verified
+composition are implemented. The baseline facts below describe the pre-delivery
+system. Actual current qualification covers a sixty-second Wan film and a
+36.52-second portrait-anchored avatar, with recorded visual limitations. A full
+sixty-second uploaded-recording avatar is the next distinct acceptance profile;
+its outcome must be recorded before extending the qualified range. Broader
+durations, quality settings and concurrent two-GPU shots are separate gates.
+See [current release acceptance](platform-acceptance-audit.md) and the implemented
+[execution contract](../long-media.md).
 Part of the [delivery brief](2026-10-chat-work-media.md). User intent is useful
 longer films and full speaking avatars, with good UI and existing two-GPU hardware.
 The solution must produce new generated motion, not stretch, loop or freeze a

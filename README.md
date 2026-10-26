@@ -1,366 +1,38 @@
-Full-avatar continuation uses a fixed portrait-anchored recipe for newly queued
-qualified jobs. It reduces cumulative color drift while keeping continuous
-motion; saved legacy jobs retain their settings. Actual qualification covers
-one complete 36.52-second portrait/voice workflow, with residual facial-detail
-changes and no perfect-identity claim. See [scope and evidence](docs/plans/echo-continuation-quality.md);
-deployment receipts determine the live version.
-
-Data agents can retain every analysis while notifying only when a reviewed criterion matches. The separate alert-check Run keeps model/check failures distinct from completed data results. [Contracts and delivery status](docs/plans/data-result-alerts.md).
-
-Settings → Access → **Access from anywhere** provides explicit private-access
-installation, Tailscale sign-in/HTTPS approval, an exact private address and owned
-Disable. It uses ordinary Tasks/Runs and an isolated native userspace service;
-account keys stay outside Docker and agent filesystem roots. Local qualification
-is complete; actual account enrollment and phone-outside-LAN acceptance remain
-operator steps. [Setup and evidence](docs/plans/private-tailnet-access.md).
-
-A completed analysis can expose **Use result file** and explicit follow-ups such
-as “Sort this result file”. These use the complete inspected CSV/XLSX output;
-ordinary input-file references retain their original source. See
-[result continuation contracts](docs/plans/data-result-file-continuations.md).
-
-Natural data-file follow-ups can reuse the exact inspected files or offline
-captures of a completed conversation-linked data agent. The new task has its own
-workspace and budget; the agent is not rerun. See
-[agent data continuations](docs/plans/conversation-agent-data-actions.md).
-
-Explicit image follow-ups can select a completed linked agent image. The source
-is checked on Send and through the existing frozen-input dispatch guard; unfinished
-or ambiguous results do not fall back to an older image.
-[Agent image actions](docs/plans/conversation-agent-image-actions.md).
-
-Conversation follow-ups reuse saved data answers and coding reviews with verified
-source bytes. Media references describe published metadata and explicitly do not
-claim content inspection. No new execution or tools are granted.
-[Result families](docs/plans/conversation-agent-result-families.md).
-
-Agent execution status follows actual generation stages, with email approval and
-transport shown separately. Graph publication alone is not a successful result;
-verified bounded repairs preserve their history. [Outcome contracts](docs/plans/agent-workflow-outcomes.md).
-
-Conversation **Run now** buttons queue a durable, exact-card agent action and
-retain its execution in chat history. The pending composer and saved Chat mode
-remain intact; retries reuse the receipt. Stop follows only the verified owned
-background workflow. [Conversation buttons](docs/plans/conversation-agent-run-button.md).
-
-Follow-up Chat/Work replies can quote a completed conversation-linked agent
-report with verified bytes, bounded context and visible source provenance.
-Unfinished or unavailable reports are identified explicitly; reading a result
-does not start another agent or grant tools.
-See [agent report context](docs/plans/conversation-agent-results.md).
-
-Work can operate the last agent created in the conversation: **Run this agent**,
-**Pause this agent** (future runs) and **Stop this agent** (current execution).
-Existing review/enable, approvals, permissions and Task-wide Stop remain in force.
-The background execution does not block further conversation.
-See [conversation agent controls](docs/plans/conversation-agent-control.md).
-
-Saved HTTP connections can be explicitly attached to agents as **Connected API**.
-The saved target revision, server-only credentials, bounded capture and normal
-Stop/permission contracts reuse the existing worker. Local Python receives only
-verified captured data. See [saved API sources](docs/plans/agent-http-connectors.md).
-
 # AI Station
 
-Memory offers managed **Multilingual E5 Small** CPU embeddings: explicitly confirm
-the approximately 130-MiB download, then preparation checks the model and indexes
-memories automatically. Semantic matches appear inline with the selected scope;
-FTS continues to work during setup. No GPU/chat-model changes. Existing compatible
-embedding endpoints remain advanced configuration. [Memory guide](docs/memory.md).
+A local-first AI workstation control plane: one conversation for questions,
+files, images and agent tasks, backed by inspectable execution on your machine.
 
-Images offers compatible models for each operation and **Use as default** for
-Generate, Edit and Recompose independently. Qwen and Juggernaut remain available;
-the optional Krea 2 / LUSTIFY adapter uses a separate pinned native installation.
-Its GPU-only profile never falls back to CPU model offload. Setup remains explicit
-and the adapter is disabled until configured. See the
-[setup, model selection and qualification](docs/plans/krea2-lustify-images.md).
+Open the application, choose a model if needed and describe the outcome you want.
+The orchestrator chooses a direct answer, tools or a workflow. Progress, sources,
+artifacts and follow-ups stay in the same conversation. Dedicated workspaces
+remain available for direct control.
 
-Images and Chat/Work edits can follow the submitted instruction without implicit
-portrait/skin styling. **Use classic identity template** restores the original
-Edit/Recompose profile. Generate and the external photo pipeline remain unchanged.
-[Image profile contracts](docs/image-workflows.md#instruction-only-editing).
+## What you can do
 
-Research agents can use **Notifications → Only notify when** to alert on a
-reviewed finding instead of every successful report. Each report stays in history;
-the workspace shows the actual decision and compared report. The criterion gates
-success notices and configured result email; sender/recipient approval and failure
-notifications retain their own settings. [Conditional report alerts](docs/plans/agent-report-alerts.md).
+| Workspace | Use it for |
+| --- | --- |
+| Conversation | Stream answers, attach documents/images/audio, search the web, read pages, analyse files and request media or agent actions. |
+| Agents | Review a draft, choose tools and permissions, enable a schedule, run now, pause or stop, inspect results and continue an agent's project. |
+| Images | Generate, edit, recompose and upscale using configured photo-pipeline or LUSTIFY runtimes. Reuse ordered references from Library. |
+| Video and Avatars | Generate bounded scenes or segmented films; animate a portrait against a recording or generated speech. Inspect progress and resume compatible unfinished work. |
+| Audio | Generate speech/music and transcribe recordings with configured local runtimes. |
+| Library and Runs | Inspect files, provenance, logs and parameters; edit metadata, reuse results, manage Trash and explicitly confirm permanent deletion. |
+| Memory | Inspect, edit and search scoped contextual entries, summaries and provenance, including optional managed CPU embeddings. |
+| Models, System and Settings | Discover models, manage owned llama.cpp instances, inspect hardware/health and configure providers, integrations and access. |
 
-Ask **“Create a CSV table…”** or **“Utwórz arkusz Excel…”**, or choose
-**Files & data → Create files from instructions** in Chat/Work or an agent.
-Describe the contents; no dummy upload or repository setup is needed. Verified
-files appear inline and in Library. **Use the created file** starts a new analysis
-of the checked output. File creation also uses bounded earlier plain messages from
-the same conversation; expand **Using earlier messages** to inspect the exact text.
-Attachments and website contents are not inherited. [Creation contracts](docs/plans/local-file-creation.md).
+Local agents can analyse Excel/CSV/documents and create files, or build a website
+in an isolated project with validation and a preview. Projects and advanced Git
+workflows retain their existing services; the main product is agent-oriented.
+Models, media runtimes and external accounts must be configured before their
+capabilities become available. The application reports actual availability.
 
-In Chat/Work, choose **Files & data → Use public sources**, enter the URLs and
-optionally select **Read these pages with JavaScript**. The local browser captures
-text for offline Python analysis; results and sources stay in the conversation.
-No persistent Agent is required. [Direct rendered data](docs/plans/conversation-rendered-data.md).
+## Install and start
 
-Local code and Python/data agents can combine **Browser** with their reviewed
-public URLs to read JavaScript-rendered text before working offline. Select the
-tool and review the source URLs before enabling; captures and screenshots stay
-inspectable in the execution history. [Rendered research](docs/plans/agent-rendered-research.md).
-
-Data agents can attach their generated **CSV, Excel, PNG chart or text report**
-to result emails. Choose formats in **Notifications → Email delivery**; selected
-formats are created with each result. Delivery review lists the exact files and
-sizes. Automatic activation separately approves those files and recipients.
-[Generated attachment scope](docs/plans/agent-data-email-attachments.md).
-
-Agents can optionally prepare an email from a completed report or a result-only
-summary. In **Agent settings → Notifications → Email delivery**, choose a saved
-mail account and allowed recipients. **Review each message** is the default;
-the complete frozen message appears in the workspace for approval. Automatic
-delivery requires a separate confirmation when enabling the saved definition.
-Pause before editing an automatically approved definition. Code/media emails
-contain status and result IDs. Data attachments require an explicit format selection. SMTP acceptance and
-uncertain outcomes remain separate from the original successful result.
-[Result-email contracts and qualification](docs/plans/agent-report-email.md).
-
-Avatars and avatar agents can offer **Reduced RAM · full precision** at 384×384
-with 8+ steps when the optional native profile is locally qualified and enabled.
-The selection remains visible and saved; existing jobs keep their settings.
-[Avatar profile setup and qualification](docs/plans/echo-memory-loading.md).
-
-Video-agent reviews offer **Use suggested setup** for a suitable time limit and
-available-memory profile. Agents keeps the change in the form until **Save
-definition**; a conversation offers **Apply and save setup**. Existing larger
-limits and selected sources remain intact. Editing unrelated settings preserves
-the next scheduled execution time. [Reviewed video setup](docs/plans/agent-video-setup.md).
-
-New text-only Video and Chat/Work requests can select the available reduced-RAM
-profile when Standard's reservation exceeds currently observed free memory.
-The selected profile stays visible and is frozen on Send; manual choices and
-saved jobs retain their settings. Image animation keeps its existing default.
-The worker still checks actual RAM/GPU availability before starting.
-[Recommendation behavior](docs/plans/video-memory-recommendation.md).
-
-Video and video agents offer **Advanced settings → Generation profile → Reduced
-RAM** when explicitly enabled for the configured native runtime. It uses an
-11-GiB, zero-swap limit, existing weights and 1280×704 landscape output with 20+ steps. Standard
-remains available. Generation can take many minutes per short segment; choose a
-suitable agent time limit. [Setup and exact quality qualification](docs/plans/wan-memory-profile.md).
-
-Agent daily schedules use a time picker and an explicit timezone. New drafts start
-with your browser timezone; existing schedules retain UTC. Choose **Custom cron**
-for more complex calendars. Forward clock changes skip missing times; repeated
-times run once. Interval and one-shot UTC schedules keep their existing behavior.
-See [agent scheduling](docs/plans/agent-schedule-timezones.md).
-
-**Attach files** also accepts a single recording (WAV, MP3, M4A, Ogg, WebM or
-FLAC, up to 20 MiB/five minutes). Preview or remove it, then ask for a transcript,
-summary, translation or answer. Transcription runs locally; analysis uses the
-selected conversation model. [Recording conversations](docs/plans/conversation-recordings.md).
-
-After inspecting an uploaded image in Chat, refer to it directly: **“Zmień to zdjęcie
-na portret w zimowym ubraniu”**, **“Powiększ to zdjęcie”**, or **“Opisz ten obraz”**.
-The source link identifies the inspected input. Multiple inputs require an explicit
-group reference for description/recomposition; otherwise select one image. A changed
-or unavailable source must be attached or inspected again.
-
-Persistent media agents use the existing Images, Music, full scene Video and Polish speech engines. In **Agents**,
-attach **Create media**, choose the output and review its settings before enabling.
-An exact saved description runs without loading a text model; goal-based output
-uses the selected local model and any reviewed research sources. Run now and
-saved schedules show results inline and in Library. **Stop current media
-generation** cancels the whole execution. Vocal music can use your exact lyrics
-or **Write lyrics each run** with goal-based preparation. The local model writes
-original words from the goal and optional guidance; the actual song text appears
-beside the finished track and is saved with its Library artifact.
-See [the media-agent contract and qualification](docs/plans/agent-media-generation.md).
-For spoken output, select a Library WAV voice, review the text or goal-based
-writing instructions and enable the agent. A draft can wait for voice selection.
-The saved spoken text appears beside the finished recording in Agents and Audio.
-See [speech-agent setup and verification](docs/plans/agent-speech-generation.md).
-Video output supports a complete 1–60 second film, continuous motion or a reviewed
-shot sequence and an optional Library first frame. The workspace shows segment
-progress and the final verified film. Review the runtime budget for longer/high
-quality output; Stop cancels the entire execution. **Time limit** offers readable
-10/30-minute and 1/2/4-hour choices in Agents and the conversation editor;
-**Custom duration** preserves exact seconds. The budget includes resource waiting
-and every generation/assembly stage. A longer film can take longer than an hour
-to generate; playback duration is separate. Existing saved/default limits stay
-unchanged until you edit them. Retry by running the reviewed agent again. [Video-agent contracts](docs/plans/agent-motion-generation.md).
-
-Media jobs that cannot start show **Waiting for memory** or **Waiting for an
-available GPU**. The RAM notice includes the last observed availability, required
-reservation and safety headroom. Checks repeat automatically; leave the page or
-Stop the task at any time. The notice links to the waiting Run and disappears
-after admission or Stop; it does not claim generation has begun.
-
-In Chat or Work, **Create a song…** can write original lyrics with the selected
-conversation model and then generate the vocal track locally. **Generate music →
-With lyrics** also offers **Write lyrics each run** or **Use my lyrics**. Supplied
-words stay exact; instrumental and supplied-word tracks need no text inference.
-Actual song text appears beside the checked audio result. Stop during writing
-prevents music generation. [Conversation music contracts](docs/plans/conversational-music.md).
-
-For an **Avatar** output, choose a Library portrait and WAV, then select new Polish
-speech or the complete saved recording. Goal mode prepares words for generated
-speech, or motion direction for a recording; the reviewed sources remain fixed.
-A draft can wait for source selection. Progress covers the whole speech and
-assembled video (up to 60 seconds); Stop covers every stage. See
-[the full avatar execution contract](docs/plans/agent-motion-generation.md).
-
-
-Local coding agents can combine **web_search**, **Read search sources** and
-**HTTP fetch** before writing code. Review a public search query and any explicit
-URLs in the same definition; results retain source snapshots and partial-read
-warnings. The existing private workspace, checks and Stop cover the whole task.
-With automatic project checks enabled, a local agent may correct failing code
-once within the original time limit. Failed checks remain inspectable; a second
-failure ends the attempt.
-[Research before local code](docs/plans/agent-research-coding.md).
-
-Local coding agents can use an [automatic private workspace](docs/agent-workspaces.md):
-review the goal, model and tools, then enable. A project is created on the first Run;
-manual repository registration remains optional.
-
-Agents → **Create draft** uses the selected local model to prepare a disabled,
-reviewable definition. Local-model **Work** requests such as “create an agent”
-use the same queued preparation. Inspect tools, public scope and schedule timezone
-before enabling. Conversation results use a compact summary with a review link;
-full inline editing remains available. Preparation supports Stop and a reload-safe return link; **Without
-AI** preserves quick keyword-based drafting. See [assisted drafts](docs/plans/assisted-agent-drafts.md).
-
-Current direction: [agents that can execute local code](docs/plans/agent-first-product.md).
-Chat and Agents lead the experience. **Advanced** in the station navigation keeps
-existing Coding conversations/history and Projects available; saved URLs and
-command-palette shortcuts still work. Project-task selection in Work is optional.
-Existing Coding/Git services supply isolated
-workspaces and inspectable results. Standalone IDE expansion and further external
-coding CLI integrations are deferred. CSV/Excel data agents generate local Python, run it in an offline container,
-and return a verified answer, table and CSV download. Price-watch agents can use
-[explicitly approved SMTP delivery](docs/agent-market-watch.md). Ordinary stock
-research uses public search or reviewed pages and the selected local model,
-without a financial-data account. Review the public query or URL before enabling;
-research reports do not promise exact price-threshold alerts or email delivery.
-Optional [Read search sources](docs/agent-search-pages.md) reads up to three public
-result pages from the agent's own reviewed search, preserving source provenance.
-Finnhub accounts are optional advanced configuration for deterministic stock
-alerts; only that integration requires a user-owned key. See
-[the plan](docs/plans/stock-price-agents.md). No real Finnhub account or external
-inbox delivery has been tested.
-See [data-agent setup and verification](docs/python-data-agents.md).
-
-Chat and Work also support direct CSV/Excel analysis. Use **Attach files** to
-select CSV/XLSX, or choose **CSV / Excel** for the dedicated selector and Library.
-Wait for **Ready for analysis**, then ask your question. The tool uses a fitting local llama.cpp model
-and an offline Python workspace, even when the conversation selects an external
-provider. The result includes an answer, table, CSV download and inspectable Python
-source; no persistent agent or manually configured repository is required.
-See [the delivery and verification plan](docs/plans/conversation-data.md).
-After a completed analysis, **Ask another question about these files** selects
-the same inputs and opens their review beside your next question. Your draft is
-preserved; execution starts only when you Send. You can remove or replace the
-selected files before sending.
-You can also ask **“Policz średnią z tych danych”** or **“Calculate the average
-from these input files”** after a completed analysis. The same original inputs
-are checked again and used in a new local analysis; the conversation names the
-files and links the source. For one file out of a group, choose it explicitly.
-[Data reference contract](docs/plans/conversation-data-references.md).
-
-Ask **“Narysuj wykres sprzedaży i przygotuj plik Excel oraz raport tekstowy”**
-to get actual files from the same local analysis. Charts appear inline; download
-PNG, Excel, text or CSV and inspect their sources in Library. With a chart, the
-result table stays under **View result table**. The export-capable optional Python
-image is described in [setup and qualification](docs/plans/data-output-files.md).
-
-Ordinary PNG/JPEG/WebP attachments also use stored, ordered image references.
-Review their previews and Send a question for local Vision, or an edit/reference
-instruction for the local image tools. Up to four images can be attached at once;
-advanced image controls retain their existing reference limits. Pixels stay local.
-Explicit project/other-file scopes retain their own attachment behavior.
-See [conversation image contracts](docs/plans/conversation-images.md).
-
-**Conversation entry:** type immediately at `/` or `/chat`; the first Send creates
-the conversation. Chat supports replies and media tools; Work adds scoped project,
-coding and agent actions. See [first-send contracts](docs/first-send.md).
-Entry and saved conversations share a compact composer; desktop history stays
-visible, phone history opens in a drawer, and settings/context open in a dialog.
-Reading earlier messages preserves scroll during updates.
-See [conversation workspace behavior](docs/conversation-shell.md).
-
-To read a public page that needs JavaScript, enable **Web → Search options →
-Read JavaScript pages** for that message and include its URL. The optional
-[Browser executor](docs/browser.md) must already be configured. Chat keeps the
-capture, screenshot and source links; follow-ups can reuse the saved page.
-The normal answer uses captured text. To inspect the captured design, expand its
-sources and choose **Analyze visual design**, then Send. The existing local Vision
-tool inspects the selected screenshot and saved page text, records its model and
-returns a source-linked analysis. Same-page follow-ups can reuse that observation.
-See [visual page analysis](docs/plans/page-screenshot-vision.md) for qualification.
-
-In Work, **Create project & build** accepts a name and goal, creates the owned
-repository/environment and queues its first isolated coding Task. Local AI is the
-default; Cursor/Codex require explicit sharing consent. See the
-[composed project workflow](docs/assistant-project-build.md).
-
-In Chat, selecting an installed llama.cpp model does not start it. Send queues its
-owned load when needed, using saved preferences or discovered devices. See
-[model selection and real autoload acceptance](docs/chat-model-selection.md).
-Chat and General preferences now use [one searchable model picker](docs/model-catalog.md)
-for llama.cpp, local servers and configured external providers. Endpoint discovery
-is explicit; model selection starts no workload.
-
-**One assistant:** the [one-assistant decision](docs/plans/unified-assistant-chat.md)
-supersedes the earlier Chat/Work split. The entry is one conversation:
-the orchestrator chooses a direct reply or applicable tools/workflows from the
-user's request. PR #444 removes the switch while preserving history and approvals.
-Model and verified reasoning selection remain simple, alongside separate
-System/Settings, and longer local video/avatars. The earlier
-[implementation brief and model handoff](docs/plans/2026-10-chat-work-media.md)
-retains implementation history; the one-assistant plan records the current contract
-and qualification. Deployment receipts determine the actual live version.
-For the current release, preserved WIP and exact remaining PR sequence, use the
-[updated GPT-6.1-Sol handoff](docs/plans/implementation-handoff.md). This distinguishes
-delivered entry/Settings/local autoload from planned reasoning and longer media.
-
-**Settings** now has General, Providers, Integrations, Access and Maintenance.
-**System** shows workstation observations and execution health, with separate
-integration diagnostics. See [workspace ownership and links](docs/settings.md).
-
-A local-first AI workstation control plane. Work is represented by **Task → Run → Events → Artifacts**, with a Dockerized control plane and a native, user-level Host Runner.
-
-Development targets the [complete product vision](docs/product-completion.md). Earlier [local acceptance evidence](docs/mvp-acceptance.md) records verified milestones, not completion of that vision.
-
-## What works now
-
-Agent details separate a results-first [workspace](docs/agent-workspace.md) from saved settings. Run now keeps progress and results on the agent; existing coding task links remain available for continuation.
-
-- Platform assistant: the default conversation routes instructions to images, agent drafts (the conversation shows the saved schedule, attached tools from the registry, reviewable attached skills, instructions, retry and in-app notice policies, next/last run and ordinary execution history and can save a local model, a public search query, reviewed fetch URLs, a timezone-aware schedule, approval, retry, notice, workflow and bounded tool calling policies, instructions, identity, description, or a linked project on that definition, show other agents on that same project, remove an unavailable attached tool or a missing skill, attach an operational registry tool or an installed catalog skill, enable, pause, duplicate or Run now without inventing a conversation Run; Enable stays off until the saved definition can activate; duplicate stays disabled, Enter inspects a history Run, a failed snapshot with a saved manual retry policy can Retry as a new workflow from that history, a waiting Run can Approve and queue or Deny through the existing approval endpoint without opening the inspector, an in-progress history Run can Stop through the existing cancel endpoint without opening the inspector, the latest ordinary agent report is shown inline from its stored markdown artifact, independently recorded search sources, fetched pages and registry tool calls from that report stay next to it, workflow steps of the last parent stay next to history, a saved workflow observation opens Memory, Inspect this agent's memory stays on the draft, and Run now queues a new workflow from that saved definition without opening the inspector) and explicitly scoped Cursor/Codex/local coding, showing ordinary Runs and media results inline. Arrow keys choose an explicit action; Space or Enter selects it with a unique Action name and does not send. There is no inspectable action-selection Run. Arrow keys choose a registered coding project; Space or Enter selects it with a unique Project name and does not send. Inspect project and View tagged Runs stay on that row and do not send. There is no inspectable project-selection Run. Arrow keys choose Auto or an installed Cursor/Codex CLI model; Space or Enter selects it with a unique Model name and does not send. Auto remains that provider's CLI default. There is no inspectable model-selection Run. Automatic file discovery is available for Cursor, Codex and Local AI; Space or Enter selects that Explore checkbox and does not send. Cursor and Codex stay repository-only. After a coding Task, the same conversation shows the cumulative diff with a keyboard file listbox that reveals only the selected patch, the saved validation commands from that validation Run, can download the stored patch, can queue a reviewed task-branch commit, and can approve a draft GitHub PR using the existing Git services. Inspect project and View tagged Runs stay on a coding result with a saved project_id and do not start a coding Run. Arrow keys choose a reviewed proposal or successful commit from this conversation; Space or Enter selects it with a unique Proposal or Commit name and does not send, commit or publish. There is no inspectable proposal-selection or commit-selection Run. Typed load/unload actions start or stop only an owned llama.cpp instance with a user-selected GGUF. Arrow keys choose a discovered GGUF or an owned runtime; Space or Enter selects it with a unique GGUF or Runtime name and does not send. External servers are not listed. There is no inspectable GGUF-selection or runtime-selection Run. Images and WAV recordings can be selected from Library or reused directly from conversation results, with ordered image references. Inline images can Edit, Recompose, Upscale or become an Avatars portrait without another Run; WAV results can open in Audio or become Avatars speech the same way. A failed, canceled or interrupted Images child can Retry as a new run in the conversation through the existing image retry endpoint; the inspector is not opened. Audio and avatar retries stay unpublished. Edit details and Trash on those results use the same Library actions and do not queue a Run. Arrow keys move through staged image references; Remove and reorder stay on the selected reference and Enter does not send. There is no inspectable reference Run. Existing workspaces remain available. See [orchestrator contracts and roadmap](docs/orchestrator.md).
-
-- Local chat: persisted conversations, an explicit provider registry with secret references, selectable managed llama.cpp GGUFs across multiple GPUs alongside Ollama/compatible providers, model discovery, streaming Markdown, bounded text/PDF/image attachments, stop, regeneration, and inspectable Runs. Arrow keys choose the saved conversation Mode or Provider; Space or Enter selects the focused row with a unique Mode or Provider name and does not create, save or send. There is no inspectable conversation-mode or provider-selection Run. The conversation list and transcript are labelled landmarks; arrow keys move through them and Enter opens a conversation or inspects a message Run. Arrow keys move through registered chat providers in System; Remove stays on the selected row. There is no inspectable provider Run. Arrow keys choose the Search the web toggle; Space or Enter selects it with a unique Search name and does not send. There is no inspectable search-toggle Run. Arrow keys choose this turn's execution mode; Space or Enter selects it with a unique Turn name and does not send or rewrite the saved conversation mode. There is no inspectable turn-mode Run.
-- Agents: disabled natural-language drafts (schedules, approval, gated steps, retry, notices, quoted public queries, remember-reports, remember-workflow observations and tool calling are copied for review), explicit activation, local reports, opt-in report and workflow-step memory with source Runs, scoped context tools including reviewed public HTTP GET, versioned Skills as instruction packs, optional durable approval before each Run, sequential or gated workflow steps as inspectable child Runs, optional bounded registry tool calling during the report, explicit manual retry and in-app notice policies, persistent UTC schedules, pause/resume, duplication and execution history. Arrow keys move through the agent list; Enter inspects the selected definition. Arrow keys move through execution history; Enter inspects the selected Run. The platform assistant shows that same history after agent.create; a failed snapshot with a saved manual retry policy can Retry as a new workflow from that history. A waiting Run can Approve and queue or Deny from that history and from Agents; granting queues the parked Run and does not start tools there. An in-progress history Run can Stop through the existing cancel endpoint without opening the inspector. The latest ordinary agent report is shown inline from its stored markdown artifact. Independently recorded search sources, fetched pages and registry tool calls from that report stay next to it. Workflow steps of the last parent stay next to history from that parent's `workflow.steps`; Enter inspects the child Run. A saved observation opens Memory. The conversation can Inspect this agent's memory. Attached skills can Review instructions from the installed catalog; a missing id stays visible and does not invent a Skill Run. The conversation can remove that missing skill or attach an installed catalog skill, without calling Enable. At most four. Attached tools come from `GET /api/agents/tools`; unavailable tools stay visible and do not invent a tool-selection Run. Enable stays off until those tools are operational, a local model is selected, and web_search or http_fetch have their saved query or URLs. The conversation can save that local model, a public search query when web_search is attached, reviewed URLs when http_fetch is attached, a timezone-aware schedule, approval, retry, notice, workflow and bounded tool calling policies, instructions, identity, description, or a linked project, and can remove an unavailable or unknown attached tool or attach an operational registry tool, without calling Enable. Unpublished adapters cannot be added. Attached remember-reports or remember-workflow tools show how observations are stored. The conversation can also remove a missing attached skill or attach an installed catalog skill the same way. At most four. An enabled idle definition can Run now from that conversation through the existing run endpoint; the new workflow stays on the transcript. Arrow keys move through workflow steps on the parent Run; Enter inspects the child Run. Cancel stays outside that list. Arrow keys move through fetched page cards; Enter opens the selected public URL. JavaScript is not executed. Arrow keys move through registry tool calls on the report Run; there is no inspectable tool-call Run. Arrow keys move through installed Skills and tools on the definition; Space or Enter selects the focused row with unique Skill and Tool names. Review instructions stays on that skill. The conversation shows the same Review instructions for attached skills from the installed catalog. Selecting a skill or tool does not invent a Run. Arrow keys move through approval, retry and notice policies; Space or Enter selects the focused row with unique Approval, Retry and Notice names and does not invent a Run. Arrow keys move through bounded tool calling and sequential or gated workflow mode; Space or Enter selects the focused row with unique Tool calling and Workflow names and does not invent a Run. Arrow keys move through a linked project; Space or Enter selects the focused row with unique Linked project names and does not invent a Run. Save definition tags this agent's Runs for filtering and does not grant coding, Git or repository access. The Agents list shows that project name and can Filter linked project. Inspect project and View tagged Runs stay on that card and on a saved definition link and do not call Enable or Run now. View tagged Runs stays on a saved agent even without a project. The tagged Runs list and Run inspector open that agent and project with unique Inspect agent and Inspect project names. View tagged Runs stays on a saved project_id even without an agent, and on a saved agent_id even without a project. Those links do not Enable or Run now. Project details list those linked agents from GET /api/agents?project_id=; Enter inspects the selected definition with a unique Inspect agent name. View tagged Runs stays on that row. Project details also open tagged Runs through /runs?project_id=. View all linked agents opens the Agents filter. That list does not grant coding, Git or repository access and does not Enable or Run now. The Agents definition shows other agents on that same project and omits the current definition. The conversation shows that same list after agent.create and omits the current definition. That list does not Enable or Run now.
-- Memory: scoped FTS search, validated provenance, editing, pin/disable controls, immutable pinned Chat context, rolling summaries that chunk oversized older messages, opt-in agent report/workflow observations, and optional embeddings only after an explicit local endpoint/model setup (no weight downloads, no zero vectors). Arrow keys move through the entry list; Enter inspects the selected memory. Arrow keys move through pin and enabled flags; Space or Enter selects the focused row with unique Memory names and does not invent a Run.
-- External runtimes: read-only process observations and configured local endpoint health, with durable history and explicit external ownership in System. Arrow keys move through observations; Enter inspects the source Run when one exists.
-- Connectors: named HTTP GET of one reviewed public URL with secret references and inspectable health Runs. Arrow keys move through named connectors; Enter inspects the last check when one exists. Arrow keys also move through unpublished adapter kinds without enabling them. Read-only GitHub snapshots and [reviewed TLS SMTP delivery](docs/reviewed-email.md) use their own settings and inspectable Runs. Email requires a saved sender/recipient scope and explicit approval of each complete message; saving or checking a connection sends nothing. Autonomous agent email, account browser automation, calendar and social adapters remain unavailable. See [connectors](docs/connectors.md).
-- Models: managed metadata-only discovery Runs, persistent file observations, curated definitions with load presets, declared format/runtime compatibility, explicit local installation that never downloads GGUFs or pulls images, owned llama.cpp health/restart Runs, category/search/detail views and report artifacts. Arrow keys move through observed files or definitions; Enter inspects the selected card.
-- Projects: name-only creation with an owned folder, Git branches and an offline Python environment; existing repository import, branch policies and validation commands remain available in advanced settings. Arrow keys move through the project cards; Enter inspects the selected project. View tagged Runs stays on a saved project and does not Enable or Run now or start a coding Run. Arrow keys move through prepared worktrees; Enter inspects the preparation Run. View tagged Runs stays on that row. Those links do not Enable or Run now or start a coding Run. Arrow keys move through Git workflow policy checkboxes; Space or Enter selects the focused row with unique Policy names and does not invent a commit, push, or PR Run. Arrow keys move through linked agents on a project; Enter inspects the selected definition with a unique Inspect agent name. View tagged Runs stays on that row. View all linked agents opens the Agents filter. That list uses GET /api/agents?project_id= and does not grant coding, Git or repository access or Enable or Run now. Arrow keys move through coding conversations on a project; Enter opens the selected conversation. View tagged Runs stays on that row. View all coding conversations opens the Coding filter. That list uses GET /api/coding/sessions?project_id= and does not start a coding Run.
-- Codex and Cursor coding: explicit provider-specific external-AI consent, automatic source discovery or explicit-file proposals in a fresh worktree, checked writes, diff review and automatic saved validation. Both are selectable in Coding and the central Assistant. Arrow keys choose a registered project; Space or Enter selects it with a unique Project name and does not start a coding Run. Inspect project and View tagged Runs stay on that row and do not start a coding Run. There is no inspectable project-selection Run. Arrow keys choose Auto or an installed Cursor/Codex CLI model; Space or Enter selects it with a unique Model name and does not start a coding Run. Auto remains that provider's CLI default. There is no inspectable model-selection Run. Arrow keys move through coding conversations; Enter opens the selected session. Inspect project and View tagged Runs stay on a saved project and do not start a coding Run. Filter project uses GET /api/coding/sessions?project_id= and does not start a coding Run. Arrow keys choose the consent toggle; Space or Enter selects it with a unique Consent name and does not start a coding Run. There is no inspectable consent Run.
-- Owned worktree preparation: a queued local Run creates an isolated task branch, captures logs, and records a JSON artifact without changing the active checkout. Arrow keys move through prepared worktrees; Enter inspects the preparation Run. View tagged Runs stays on that row. Those links do not Enable or Run now or start a coding Run.
-- Audio: local Polish speech with the installed Chatterbox pipeline, bounded WAV voice references, cancelable Runs and playable Library artifacts. Generation stays in the workspace with live state, Stop, the finished WAV and shared source/derived lineage; the Run inspector remains available for logs, and the Run ID is preserved in the URL. Use as voice reference on that result stages it as the next source without queueing a Run and without visiting Library. Use as speech stages it into Avatars without another Run. Edit details and Trash on that result use the same Library actions and do not queue a Run. Arrow keys move through the inline Library picker; Enter attaches the focused recording. Arrow keys choose a GPU target; Space or Enter selects it with a unique Target GPU name and does not queue a Run. There is no inspectable GPU-target Run. See [speech setup](docs/audio.md).
-- Images: Qwen/Juggernaut Generate, Edit, multi-reference Recompose, and 4× Upscale through the existing photo pipeline. Generation stays in the workspace with live state, Stop, the finished image and shared source/derived lineage; the Run inspector remains available for logs, and the Run ID is preserved in the URL. Failed, canceled or interrupted generation can Retry as a new run here through the existing image retry endpoint; the new Run ID replaces the previous one in the URL. Edit, Recompose and Upscale on that result stage it as the next source without queueing a Run. Use as portrait stages it into Avatars without another Run. Edit details and Trash on that result use the same Library actions and do not queue a Run. Edit, Recompose and Upscale can attach existing Library images without another upload. Arrow keys choose Generate, Edit, Recompose or Upscale; Space or Enter selects it with a unique Operation name and does not queue a Run. There is no inspectable operation Run. Arrow keys choose a Generate backend; Space or Enter selects it with a unique Backend name and does not queue a Run. There is no inspectable backend Run. Arrow keys choose a GPU target; Space or Enter selects it with a unique Target GPU name and does not queue a Run. There is no inspectable GPU-target Run.
-- Library: image/WAV import, search and type filters, editable names and notes, reversible Trash, source reuse, preserved Run history, and shared source/derived lineage across image, audio and video artifacts. Arrow keys move through the collection; Enter inspects the selected artifact. Edit details, Trash and Restore stay on the selected card and do not invent a Run. The inspector, Images/Audio/Avatars results and assistant inline media list resolved sources and derived artifacts as keyboard sequences with unique Source and Derived names; Enter inspects the related artifact and does not invent a lineage Run. Images/Audio/Avatars results and assistant inline media can Edit details or Trash with unique names without opening the inspector. Missing IDs are omitted; Trash remains visible. The input picker uses the same sequence; Enter selects or deselects a file. See [Library management](docs/library.md).
-- Avatars and Video: local EchoMimic portrait animation from an image and speech, with inline playback and reusable Library outputs. Images, Audio and Library can stage a portrait or WAV through the URL without queueing a Run. Edit details and Trash on a finished video use the same Library actions and do not queue a Run. Portrait and speech pickers use the same inline Library sequence. Arrow keys choose Quality or Clip length; Space or Enter selects the focused row with unique Quality or Clip names and does not queue a Run. There is no inspectable quality or clip-length Run. Arrow keys choose a GPU target; Space or Enter selects it with a unique Target GPU name and does not queue a Run. There is no inspectable GPU-target Run.
-- One-command startup of the native runner, API, worker, scheduler, and web UI.
-- Live GPU/CPU/RAM/storage dashboard, telemetry history, worker health with inspect-only held/expired leases, read-only diagnostics, optional operator password and loopback session in Settings, and hashed loopback node invitations. After that password is stored, the workspace chrome can sign out the loopback session. The session cookie is httpOnly and SameSite=strict (not Secure on loopback HTTP); it idles out after 30 minutes without API use and cannot outlive 12 hours from sign-in. Optional private UI access requires an operator password; see [LAN and Tailscale](docs/private-network-access.md). Arrow keys move through hashed loopback node invitations; Revoke stays on the selected row and there is no inspectable node Run. Arrow keys move through integration checks; there is no inspectable diagnostic Run. Arrow keys move through worker heartbeats; there is no inspectable heartbeat Run. Arrow keys move through held leases; Enter inspects the Run. System never replays expired leases from that list.
-- Durable run state, atomic claims, leases, cancellation, conservative recovery, event replay over SSE, and a run inspector. Arrow keys move through the current page of execution events; older and newer paging stays outside that list. A tagged agent or project filter opens that definition with unique Inspect agent and Inspect project names. The inspector opens that agent the same way. View tagged Runs stays on a saved project_id even without an agent, and on a saved agent_id even without a project. Those links do not Enable or Run now.
-- Alembic migrations and SQLite WAL persistence under one application-owned data directory, with explicit integrity-checked backup Runs. A successful copy can be re-checked in place or downloaded as the stored file without writing the live database. Arrow keys move through recent copies; Enter inspects the backup Run. System can compare the `ai-station:local` tag with running control-plane containers without applying a new image. Arrow keys move through those containers; rollout stays unpublished. `compose down` keeps bind-mounted data. Verified copies show an offline recovery guide using `./scripts/restore.sh`; restore never replaces a live database through HTTP. See [operations](docs/operations.md#offline-database-recovery). Image rollout from the UI stays unpublished.
-- Home attention list: inspect, Stop, Retry as a new run, Mark inspected, Mark read, Approve or Deny from one place. Arrow keys move between attention rows while the list is focused; Enter inspects the selected row; those actions stay on that row and name the work they affect, including a short Run or notice id. Reuses the shared list keyboard. Mark read uses the existing notice endpoint and does not replay work. Approve uses the existing approval endpoint and queues the parked Run without starting tools from Home. An interrupted Images Run can Retry as a new run through the existing image retry endpoint without leaving Home or opening the inspector; Mark inspected still does not replay. Audio and avatar retries stay unpublished. A failed agent notice whose saved policy allows manual retry can Retry as a new workflow through the existing retry-workflow endpoint; that does not call Run now or Mark read. Inspect agent, Inspect project and View tagged Runs stay on that notice or in-progress or waiting agent Run when a linked project is saved and do not Enable or Run now. View tagged Runs stays on a saved agent even without a project. Inspect project and View tagged Runs stay on an in-progress coding or worktree Run with a saved project_id even without an agent and do not start a coding Run. Home sections, compute telemetry and the resource chart expose labelled landmarks. Upcoming schedules, enabled agents, recent conversations, recent artifacts and runtime observations are each a keyboard sequence with unique Inspect names; runtime rows open System. A saved linked project on those agent rows opens the project with a unique Inspect project name and the tagged Runs filter with a unique View tagged Runs name. Those links do not grant coding, Git or repository access and do not Enable or Run now. The tagged Runs list and Run inspector open that agent and project with unique Inspect agent and Inspect project names. View tagged Runs stays on a saved project_id even without an agent, and on a saved agent_id even without a project. Those links do not Enable or Run now. Skip link to the workspace. Command palette (`Ctrl+K` / `Cmd+K`) also opens backup and upgrade readiness. After a palette or in-app navigation the workspace receives keyboard focus, the document title matches the destination, and a polite live region announces that workspace. Overlay dialogs expose titles, search fields have accessible names, and sidebar/placeholder contrast meets WCAG AA. Coding review lists changed files as a listbox for arrow-key selection, shows only the selected patch, uses unique File names, and reuses the shared list keyboard. Enter does not open a Run. Repository exploration steps use that sequence with unique Step names; there is no inspectable exploration Run. Agent Skills and tools on a definition use that sequence with unique Skill and Tool names; Space or Enter selects the focused row and does not invent a Run. Home GPU cards use that sequence with unique GPU names; live telemetry stays on Home and there is no inspectable GPU Run. Home CPU, memory, storage and in-progress Run cards use that sequence with unique Metric names; Enter inspects Runs from that card and does not invent a telemetry Run. Staged Chat text attachments and assistant image references use that sequence with unique Attachment and Image reference names; Remove and reorder stay on the selected item and Enter does not send. Saved Chat transcript attachments are a nested sequence with unique Saved attachment names; Enter opens the selected file and does not inspect a Run. Images sources use that sequence with unique Source names; Remove stays on the selected image and Enter does not queue a Run. GPU allocation checkboxes in Chat, Models and the assistant load form use that sequence with unique Allocate GPU names; Space or Enter selects the focused card and does not invent a Run. Explicit Coding and assistant file checkboxes use that sequence with unique Edit file names; Space or Enter removes the focused path and does not start a coding Run. Agent approval, retry and notice policies use that sequence with unique Approval, Retry and Notice names; Space or Enter selects the focused row and does not invent a Run. Bounded tool calling and sequential or gated workflow mode use that sequence with unique Tool calling and Workflow names; Space or Enter selects the focused row and does not invent a Run. Agent linked project radios use that sequence with unique Linked project names; Space or Enter selects the focused row and does not invent a Run. The Chat Search the web toggle uses that sequence with a unique Search name; Space or Enter selects it and does not send. Memory pin and enabled flags use that sequence with unique Memory names; Space or Enter selects the focused row and does not invent a Run. Automatic conversation-memory maintenance uses that sequence with a unique Summary name; Space or Enter selects it and does not invent a summary Run. Git workflow policy checkboxes use that sequence with unique Policy names; Space or Enter selects the focused row and does not invent a commit, push, or PR Run. Coding and assistant external-AI consent uses that sequence with a unique Consent name; Space or Enter selects it and does not start a coding Run. GitHub publication approval uses that sequence with a unique Publication name; Space or Enter selects it and does not publish. Coding review acknowledgement uses that sequence with a unique Review name; Space or Enter selects it and does not queue a commit. Automatic Coding file discovery uses that sequence with a unique Explore name; Space or Enter selects it and does not start a coding Run. Local AI repair budget radios use that sequence with unique Repair names; Space or Enter selects the focused budget and does not start a coding Run. Chat this-turn execution mode radios use that sequence with unique Turn names; Space or Enter selects the focused mode and does not send or rewrite the saved conversation mode. Images, Audio and Avatars GPU target radios use that sequence with unique Target GPU names; Space or Enter selects the focused card and does not queue a Run. Images Generate backend radios use that sequence with unique Backend names; Space or Enter selects Qwen or Juggernaut and does not queue a Run. Assistant action radios use that sequence with unique Action names; Space or Enter selects the focused action and does not send. Avatars Quality and Clip length radios use that sequence with unique Quality and Clip names; Space or Enter selects the focused row and does not queue a Run. Saved Chat Mode and Provider radios use that sequence with unique Mode and Provider names; Space or Enter selects the focused row and does not create, save or send. Coding executor radios use that sequence with unique Executor names; Space or Enter selects Auto, Local AI, Cursor or Codex and does not start a coding Run. Native Cursor and Codex model radios use that sequence with unique Model names; Space or Enter selects Auto or an installed CLI model and does not start a coding Run. Coding project radios use that sequence with unique Project names; Space or Enter selects the focused project and does not start a coding Run. Inspect project and View tagged Runs stay on that row and do not start a coding Run. Images operation tabs use that sequence with unique Operation names; Space or Enter selects Generate, Edit, Recompose or Upscale and does not queue a Run. Assistant coding project radios use that sequence with unique Project names; Space or Enter selects the focused project and does not send. Inspect project and View tagged Runs stay on that row and do not send. Assistant Cursor and Codex model radios reuse the Coding list with unique Model names; Space or Enter selects Auto or an installed CLI model and does not send. Assistant GGUF and owned-runtime radios use that sequence with unique GGUF and Runtime names; Space or Enter selects a discovered GGUF or owned instance and does not send. Assistant proposal and reviewed-commit radios use that sequence with unique Proposal and Commit names; Space or Enter selects a conversation proposal or commit and does not send, commit or publish. It states cumulative totals against the task base and links the stored patch artifact. Library uses the same keyboard sequence on its collection grid, on Run inspector artifact cards, and on inspector, Images/Audio/Avatars and assistant source and derived lineage strips with unique Source and Derived names. Enter inspects the related artifact. There is no inspectable lineage Run. Chat conversation history and transcripts expose Conversations and Messages landmarks with the same sequence. The Agents, Memory, Projects, Models, Coding conversation, Connectors, unpublished connector adapters, runtime observation, Chat provider, project worktree with unique View tagged Runs names, project coding conversations with unique Inspect and View tagged Runs names, project linked agents, backup copy, worker lease, worker heartbeat, compose container, Library picker, inline Audio/Avatars MediaInput picker, interrupted Run, integration check, model picker, node, Run event timeline, workflow step, agent execution history, search source, fetched page, registry tool-call, validation command and dependency-install lists use that sequence on their cards. Remaining keyboard workflows stay in progress.
-
-The bounded Codex, Cursor and Local AI adapters are operational. Claude Code remains an inactive draft; reviewed changes can be committed to the owned task branch from Coding or the Platform assistant; approved task-branch pushes and draft GitHub PRs are available from successful commit Runs. Saved project validation and declared Python dependency installs run in prepared worktrees through the native sandbox.
-
-Advanced project settings support [component validation environments](docs/self-development-validation.md):
-a development dependency lock, frontend package folder, worktree Python source
-folders and a bounded validation deadline. Simple projects keep automatic detection.
-
-## Prerequisites and installation
-
-Linux, Python 3.12+ with venv support, Git, and Docker Engine with Docker Compose. Docker must be usable by your current user. A GPU, installed models, and coding CLI credentials are not required to start the control plane or run tests. Node is provided by a project-scoped Docker container; no host Node installation is necessary.
+Prerequisites: Linux, Python 3.12+ with venv support, Git, Docker Engine and
+Docker Compose, usable by your user. Host Node is unnecessary: the project frontend
+helper uses Docker. A GPU, models and cloud credentials are optional for starting
+the control plane and running normal tests.
 
 ```bash
 git clone https://github.com/jahu/ai-station.git
@@ -371,572 +43,150 @@ cp .env.example .env
 ./scripts/start.sh
 ```
 
-Open **http://127.0.0.1:8765**. Startup builds one application image, starts or reuses a compatible native runner, checks health, and supervises the deployment in the foreground. Ctrl+C stops the containers and the runner started by this invocation. It does not remove data or touch other Docker projects. A pre-existing Compose deployment is never taken over for cleanup. `./scripts/start.sh --no-build` reuses an already built image.
+Open **http://127.0.0.1:8765**. Startup builds the application image, starts or
+reuses a compatible native Host Runner, checks health and supervises the deployment
+in the foreground. Ctrl+C stops this invocation's owned services and retains data.
+Use `./scripts/start.sh --no-build` to reuse an existing application image.
 
-An existing Host Runner must report the same native source identity as the
-checkout being started. Older or different sources stop startup before building
-the image; inspect active Runs and restart the Runner's owning service from the
-intended checkout. The launcher never replaces that service automatically.
-Control-plane-only updates can reuse identical native sources across checkouts.
-See [Runner compatibility](docs/runner-source-compatibility.md).
+Bootstrap creates project Python dependencies in `.venv`; it does not install
+GPU drivers, alter CUDA, download AI models or replace existing AI software.
+An existing Runner must match the checkout's native source identity. Inspect active
+work before restarting its owning service; the launcher does not replace an
+unrelated or incompatible Runner. [Runner compatibility](docs/runner-source-compatibility.md).
 
-Bootstrap installs Python dependencies only in `.venv`. It never installs drivers, changes CUDA, downloads AI models, or modifies existing AI software.
+## Configure your workstation
 
-## Configuration and persistence
+Use [.env.example](.env.example) as the configuration reference. Set host paths
+for the integrations you actually have, then restart the affected AI Station
+services. Start with model roots and an inference provider; media integrations
+can be added independently. Diagnostics distinguishes available, unavailable,
+misconfigured and unknown integrations.
 
-Copy `.env.example`; configure existing integrations using host paths. Relative paths resolve from the repository root. `AI_STATION_DATA_HOST_PATH` defaults to `./data`, mounted as `/data` in containers. That path is a bind mount, not a named volume, so replacing containers or running `compose down` without `--volumes` keeps SQLite, artifacts and backups. Database records store app-owned paths relative to this root. External repositories/models remain references. See [upgrade and recovery](docs/operations.md).
+- `AI_STATION_DATA_HOST_PATH` defaults to `./data`, mounted as `/data` in Docker.
+  It contains SQLite, uploads, artifacts, logs and other persistent state. App-owned
+  database paths are relative to this root. Containers can be replaced without
+  moving external repositories or model files.
+- `AI_STATION_MODEL_ROOTS` selects existing host model roots.
+  `AI_STATION_ALLOWED_ROOTS` constrains permitted host filesystem access.
+  Discovery reads metadata; it does not move or delete model files.
+- AI Station can load compatible discovered GGUFs through an owned **llama.cpp**
+  runtime, including discovered multi-GPU configurations. Existing llama.cpp,
+  Ollama and other compatible servers can also be configured as providers.
+  Use Models and the conversation model picker; a model's advertised context
+  alone does not establish that the chosen profile fits your hardware.
+- `AI_STATION_LLM_BASE_URL` is the host inference endpoint. The default
+  `AI_STATION_LLM_TRANSPORT=runner` reaches loopback-only host servers through the
+  private Runner. For direct container networking use
+  `AI_STATION_LLM_CONTAINER_BASE_URL`; Compose provides `host.docker.internal`.
+  [Provider and networking guide](docs/local-model-bridge.md).
+- Configure the original photo pipeline and other media runtimes using their
+  documented environment keys. AI Station adapts existing installations and
+  preserves the original scripts and model files.
 
-The normal launcher uses `data/runtime/runner/runner.sock` with mode `0600` in a private directory; configure `AI_STATION_RUNNER_SOCKET` to place it elsewhere (filename `runner.sock`). Containers run as your uid/gid and mount only application data and the socket directory. The runner can also be started independently with `./scripts/runner-dev.sh`, using its configured socket or the user's XDG runtime directory by default.
+Keep `.env` and secrets out of Git. Secrets belong in environment/secret files or
+configured secret references, not prompts or ordinary metadata responses.
+[Configuration and operations](docs/operations.md) covers backups, upgrades,
+owned process recovery and guarded restore.
 
-Configure `AI_STATION_LLM_BASE_URL` with the host endpoint. Compose defaults to `AI_STATION_LLM_TRANSPORT=runner`, carrying typed model requests over the private socket so loopback-only servers remain reachable without reconfiguration. Direct connections remain available with `AI_STATION_LLM_TRANSPORT=direct` and `AI_STATION_LLM_CONTAINER_BASE_URL`; `host.docker.internal` maps to the Linux host gateway. See [local model bridge](docs/local-model-bridge.md).
+## Access from another device
 
-Do not commit `.env` or secrets. The UI/API port is bound to localhost. Settings can store an operator password hash; after that, loopback UI/API require a session cookie and the workspace chrome can sign that session out. The cookie expires after 30 minutes idle or 12 hours from sign-in. An optional additional private IPv4 listener is enabled with `AI_STATION_LAN_HOST` after storing a password. Public bind addresses are refused. See [LAN and Tailscale](docs/private-network-access.md). See [nodes](docs/nodes.md).
+Localhost is the default listener. To add a home-LAN listener, first save an
+operator password in Settings, then configure `AI_STATION_LAN_HOST` with the
+workstation's private IPv4 address. LAN access requires an authenticated operator
+session; public bind addresses are refused. [LAN access](docs/private-network-access.md).
 
-## Local chat
+Settings → Access → **Access from anywhere** provides optional private Tailscale
+setup using an AI Station-owned userspace service. The owner must sign in, approve
+HTTPS and verify their device's remote connection. An installed service or
+`NeedsLogin` is not remote readiness. This does not expose a public Funnel or
+change unrelated system Tailscale services.
+[Private access and acceptance](docs/plans/private-tailnet-access.md).
 
-Optional image instructions, video prompts and music descriptions can be translated with a selected local LLM under
-**Settings → Generation → Translate media prompts** (initially off). Images has
-a per-request override and optional review/edit before generation. Original and
-effective prompts remain inspectable in the result and Library. Identical film
-segment instructions share one translation; all film descriptions are prepared
-before its GPUs are allocated. Video and Music expose the same per-request
-controls and optional review. Ordinary Chat,
-speech and lyrics keep their original text. Managed llama.cpp models use the
-existing GPU handoff; externally owned local servers are never stopped.
-See [the translation contract](docs/plans/media-prompt-translation-implementation.md)
-for current qualification and scope.
-The [Video/music increment](docs/plans/media-language-workflows.md) records its
-qualification status, grouped preparation and explicit retry/Resume contracts.
+Browser microphone capture requires a secure browser context and device consent;
+HTTP access over a LAN does not grant microphone permission. SMTP delivery likewise
+requires your configured account and a reviewed message/recipient or explicitly
+activated scoped agent policy. Search and public-page tools need no finance API key.
 
-Use **Dictate** beside Send to prepare a locally transcribed, editable draft in
-Chat or Work. Nothing is submitted automatically. **Dictation options** contains
-Auto/Polish, the saved recording and an audio-file fallback for HTTP LAN, where
-browser microphone capture requires HTTPS. The existing **Record audio** attachment
-action remains available for recording analysis. See [recording and dictation](docs/chat-recording.md).
+## How execution works
 
-With **Web** on, include one public URL and ask about its design, colors or a
-promotional image prompt. AI Station captures the page and inspects it with an
-installed local Vision model, which may load automatically. No advanced tool
-selection or API key is required. Ask for **text only** / **tylko treść** to use
-page text without Vision. **Read JavaScript pages** remains available in Search
-options for ordinary JavaScript-dependent text reads; a custom search query keeps
-its exact-search behavior. See [website design questions](docs/plans/chat-website-design.md).
+The architecture is a modular monolith: **Docker control plane + native user-level
+Host Runner**, communicating through typed HTTP over a private Unix socket.
 
-Click the **model selector** when creating a conversation, or the model button in its header to switch. One searchable picker lists GGUFs under **llama.cpp** and models from the configured local server. Arrow keys move through that list; Enter marks a model. Choose a model and press **Use model**; a first GGUF load starts automatically, with messages waiting until it is ready. **GPU, context and advanced options** lets you choose GPUs and context size before that first load. Arrow keys move through those GPU checkboxes; Space or Enter selects the focused card. There is no inspectable allocation Run. Multiple selected GPUs share the model by layers. Stop unloads only AI Station's owned instance. Later messages automatically reload that model with its saved GPU/context settings. Image generation and other model loads can evict idle managed models; active conversations remain protected. Use Models to scan configured roots first. The Runner uses the already-installed image selected by `AI_STATION_LLAMA_IMAGE` and never pulls models or images automatically. See [runtime lifecycle](docs/managed-llama.md).
+The control plane owns the UI/API, metadata, scheduling and durable run engine.
+The Runner owns constrained native work such as Git worktrees, installed CLI/media
+adapters, owned processes and hardware inspection. Container executors are also
+launched behind that controlled boundary.
 
-Configure `AI_STATION_LLM_BASE_URL` (for example `http://127.0.0.1:11434/v1` for Ollama or `http://127.0.0.1:8080/v1` for llama.cpp) and optionally `AI_STATION_LLM_MODEL`. An existing compatible server must already be running; the private runner bridge reaches it on the host, and AI Station does not launch or reconfigure it. If required, supply its key through `AI_STATION_LLM_API_KEY`, never in the URL.
+Every application workload follows **Task → Run → Events → Artifacts**. HTTP
+handlers enqueue; workers execute. GPU/worktree reservations, live events, Stop,
+approvals and conservative recovery belong to the shared lifecycle. Three worker
+slots are the default; `AI_STATION_WORKER_SLOTS` can configure 1–8 slots.
 
-Open Chat, choose a provider, select or enter a model name, set a system prompt, and create a conversation. Send with the button or Ctrl/Cmd+Enter. Responses stream into persistent history and link to their Run. Stop closes the active provider connection even if no tokens arrive. Regenerate preserves the previous response and creates a new Run for the same Task. A conversation permits one active Run; settings can be changed when it is idle.
-
-The built-in local provider stays on localhost, host.docker.internal and loopback/private IPs. Additional OpenAI-compatible providers are added in Settings with an HTTPS endpoint and a secret reference (`env:NAME`) or a write-only stored secret. The UI never displays the secret value; a missing secret fails closed. Public/cloud URLs on the built-in local provider, credentials in URLs, and redirects are rejected. Markdown images do not load remote content. Context is a visible bounded policy: the latest 16 eligible messages, at most 56,000 history characters plus the system prompt. Full history remains persisted; the UI shows the latest 200 messages as a labelled, keyboard-navigable transcript. In Conversation memory, update an inspectable rolling summary manually or enable automatic maintenance after longer exchanges. Arrow keys choose that automatic-memory toggle; Space or Enter selects it with a unique Summary name and does not invent a summary Run. Automatic updates use the selected provider and appear as cancellable Runs. Saved conversation Mode and Provider radios reuse the shared list keyboard with unique Mode and Provider names; Space or Enter selects the focused row and does not create, save or send. There is no inspectable conversation-mode or provider-selection Run. Each turn can override the saved conversation mode (Conversation only vs Platform assistant) without rewriting settings. Arrow keys choose that this-turn override; Space or Enter selects the focused row with a unique Turn name and does not send. There is no inspectable turn-mode Run. Qualified owned llama.cpp vision models can inspect stored images; see [Chat vision](docs/chat-vision.md). See [chat execution](docs/local-chat.md).
-
-Attach up to four files in the Chat composer: UTF-8 text/code (16 KB each, 24 KB combined), PDFs (1 MiB, eight pages of extractable text) or PNG/JPEG/WebP (2 MiB, 4 megapixels). Preview or remove them before sending; the prompt and serialized attachment context share a 32,000-character limit. PDFs that have no extractable text are rejected instead of pretending the model saw the page. Image pixels are stored as artifacts and are not sent to the current local text models. Files keep hashes and message/Run provenance, remain downloadable after restart, and are included in regeneration and explicit summaries. Arrow keys move through staged composer attachments; Remove stays on the selected file and Enter does not send. Saved attachments in the transcript are a nested keyboard sequence with unique Saved attachment names; Enter opens the selected file. There is no inspectable attachment Run. See [Chat attachments](docs/chat-attachments.md).
-
-Qualified owned llama.cpp models offer an optional Thinking switch in Chat. Use
-**Model → Thinking support → Check thinking support** before enabling it; the
-check and generation are cancellable Runs. See [local thinking](docs/chat-thinking.md).
-
-## Images
-
-After a page/design prompt, **Wygeneruj tę grafikę** selects the existing image
-workflow and reuses verified page observations. After an image result, **Opisz tę
-grafikę**, **Powiększ tę grafikę**, **Edit this image: …** or **Animate it** can use
-that conversation's final image. Ordinary Web can stay available; an explicit
-search query or JavaScript option keeps its research scope. See
-[natural image continuations](docs/plans/conversational-graphics.md).
-
-Set `AI_STATION_PHOTO_PYTHON` and `AI_STATION_PHOTO_SCRIPT` to absolute paths for the existing Python environment and `photo_pipe.py`; `AI_STATION_SD_CLI` helps diagnostics. Restart AI Station after changing configuration. The original script remains independent and unchanged.
-
-Open Images, select an operation and GPU (or Auto), and submit. Arrow keys choose Generate, Edit, Recompose or Upscale; Space or Enter selects it with a unique Operation name and does not queue a Run. There is no inspectable operation Run. Edit, Recompose and Upscale still force Qwen. For Generate, arrow keys choose Qwen or Juggernaut; Space or Enter selects it with a unique Backend name and does not queue a Run. There is no inspectable backend Run. Arrow keys choose that GPU target; Space or Enter selects it with a unique Target GPU name and does not queue a Run. There is no inspectable GPU-target Run. The worker creates an ordinary Run, reserves a discovered GPU, and calls the native runner. Generation shows its live state, Stop and the finished image in place; the Run inspector remains available for logs. The result's Run ID is preserved in the URL for reopening after navigation or refresh. Shared source/derived lineage uses the same Library graph; Enter inspects the related artifact and does not invent a lineage Run. Edit, Recompose and Upscale on that result stage it as the next source without queueing a Run. Completed images also remain in Library with actual dimensions, parameters, and source links. Library actions reuse an image for Edit, Recompose, or Upscale. Those operations can also attach existing Library images from the workspace without another upload; arrow keys move through that picker and Enter selects or deselects. Arrow keys also move through staged sources; Remove stays on the selected image and Enter does not queue a Run. There is no inspectable source Run. Uploads accept PNG/JPEG/WebP up to 20 MiB and 64 megapixels; upscale output is capped at 64 megapixels. Qwen's existing pipeline does not use seed/negative-prompt controls, so those controls appear only for Juggernaut.
-
-Models must already be installed/cached. The runner sets Hugging Face offline mode; it never downloads missing Juggernaut weights. The external script still owns its existing cache/temp conventions. All six mode/backend cases passed small real GPU acceptance Runs; normal automated tests use a fake pipeline.
-
-Failed, canceled, or interrupted image runs may be explicitly retried from the Images workspace, the conversation, Home, or the Run inspector after the runner confirms the original process is gone. A retry has a new ID/output path, shares the Task, and links to its parent Run. The workspace keeps the new Run in the URL instead of opening the inspector. The conversation stays on that transcript and does not open Images or the inspector. Inspect partial output before retrying an interrupted run; recovery does not automatically adopt orphaned output or repeat generation. Audio and avatar retries stay unpublished.
-
-## Projects
-
-Include your repository roots in `AI_STATION_ALLOWED_ROOTS` (colon-separated host paths) and restart the runner. Open Projects → Register project and enter an existing Git repository's host path. The runner checks its canonical root and metadata; registering a subdirectory or symlink cannot create a duplicate project. AI Station's own checkout can be registered the same way.
-
-Project details show the current branch and working-tree changes on explicit refresh. Linked agents come from GET /api/agents?project_id=; Enter inspects the selected definition. View tagged Runs stays on that row. View all linked agents opens the Agents filter. Linking does not grant coding, Git or repository access. That list does not Enable or Run now. Coding conversations come from GET /api/coding/sessions?project_id=; Enter opens the selected conversation. View tagged Runs stays on that row. View all coding conversations opens the Coding filter. That list does not start a coding Run. Configure default/integration branches, protected branches, executor preference, test/lint/build commands, and agent guidance. Commands use one JSON argv array per line, such as `["pytest", "-q"]`. Saving does not execute commands or alter the repository. Stale edits and edits during active project Runs are rejected. Repository paths are immutable; removal is not exposed yet. See [Projects](docs/projects.md).
-
-Choose **Prepare isolated worktree** to queue a local Run from the project's existing integration branch. The worker asks the runner to create `ai/<run-id>-workspace` under `worktrees/<project-id>/<run-id>`, leaving your current checkout and index unchanged. The Run captures logs and a JSON report; Projects lists the preserved worktree. Owned worktrees are preserved until you explicitly remove them; inactivity never deletes your work. **Remove worktree** queues a confirmed Run that deletes only that owned checkout and local task branch. It does not change your current repository or GitHub remotes. Cancellation signals only its owned process group. No coding agent, validation command, commit, push, or PR is launched. Hooks/filters are disabled during preparation, submodules are not initialized, and partial data is preserved for inspection after errors. Custom `core.worktree`, partial clones, and alternate object stores are not supported. See [owned worktrees](docs/worktrees.md).
-
-Choose **Install project dependencies** on a prepared worktree to install `requirements.txt` or `pyproject.toml` `[project.dependencies]` into that worktree's Python environment. A `vendor/` directory of wheels is used offline; otherwise the Run may fetch wheels from PyPI after confirming public DNS. Only binary wheels are installed. URLs, VCS refs, extra indexes and arbitrary pip flags are rejected. Choose **Run saved validation** to enqueue saved test, lint and build commands. The runner requires the installed Cursor native sandbox helper and fails closed if isolation is unavailable. Validation commands can write only inside the worktree; Git metadata stays read-only and network access is blocked. Packages must already be in the worktree environment or system runtime paths. Both Runs include live logs, cancellation and a JSON report. Arrow keys move through validation commands or dependency installs on that Run; there is no inspectable child Run. See [validation and dependency boundary](docs/coding-boundary.md).
-
-## Coding with Cursor
-
-Open Projects → New project and enter a name, then choose a project and agent in Coding and describe the outcome. Arrow keys choose a registered project; Space or Enter selects it with a unique Project name and does not start a coding Run. Inspect project and View tagged Runs stay on that row and do not start a coding Run. There is no inspectable project-selection Run. Arrow keys choose Auto, Local AI, Cursor or Codex; Space or Enter selects it with a unique Executor name and does not start a coding Run. There is no inspectable executor Run. Claude Code stays unavailable. Auto follows the project’s preferred executor. Arrow keys choose Auto or an installed Cursor/Codex CLI model; Space or Enter selects it with a unique Model name and does not start a coding Run. Model Auto uses that provider’s CLI default, never a silent provider switch. There is no inspectable model-selection Run. Available external models are listed from installed CLI metadata. File discovery is automatic; explicit paths are an advanced option with keyboard-navigable Edit file checkboxes. Space or Enter removes the focused path and does not start a coding Run. External execution requires approval to share relevant source and guidance. A fresh task branch/worktree starts from the configured integration branch. Cursor proposes complete file rewrites or unique snippet replacements with tools disabled; the runner checks paths and source hashes before applying them. Selected-file removal is supported and marked Deleted in the review. Inspect the linked Coding Run for the summary, changed files, a keyboard-navigable cumulative diff and downloadable patch artifact, then follow its separate validation Run for test/lint/build results. The worktree remains available under the application data root for human review.
-
-The installed, authenticated `cursor-agent` CLI is required. Credentials are used by the CLI and never copied by AI Station. The initial adapter allows at most 32 KB per file and 64 KB of selected context, with a five-minute provider limit. The root `.gitignore` is supported; other hidden/credential paths and binary edits are excluded. Selected-file removals use checked snapshots and appear explicitly in the review. Source exploration uses bounded Runner list/read/search operations with provider-native tools disabled. Saved validation additionally needs Cursor's installed native sandbox helper and worktree-local or system dependencies. No commit, push, merge or restart follows a coding result. Codex uses a separate [reviewed proposal adapter](docs/coding-codex.md); Claude Code remains unavailable. Local AI coding uses the same reviewed workflow described below. See [Cursor execution and limits](docs/coding-cursor.md). Coding conversations appear under the Coding navigation item and preserve their worktree across follow-up prompts. See [coding workspace behavior](docs/coding-workspaces.md).
+The control plane receives no privileged container, Docker socket or unrestricted
+host mount. The Runner exposes typed operations rather than an arbitrary shell.
+Canonical root checks, process identity and owned groups constrain filesystem and
+cancellation actions. External services are not implicitly adopted or stopped.
+Read the [architecture](docs/architecture.md), [domain](docs/domain-model.md),
+[execution](docs/execution-model.md) and [security](docs/security-model.md) contracts.
 
 ## Development and verification
 
-The worker uses three independent slots so long media jobs leave capacity for
-unrelated work. Set `AI_STATION_WORKER_SLOTS=1` for serial execution or choose
-2–8 in `.env` and restart AI Station. GPU and worktree reservations remain
-exclusive; System shows each slot's heartbeat and held Run leases.
-
 ```bash
-./scripts/dev.sh                 # runner + Docker backend/worker/scheduler + Vite
-# Open http://127.0.0.1:5173; Ctrl+C shuts down this deployment.
-./scripts/check.sh               # Python lint, format, backend and runner tests
-./scripts/frontend.sh ci
-./scripts/frontend.sh run lint
-./scripts/frontend.sh run typecheck
-./scripts/frontend.sh test
-./scripts/frontend.sh run build
-docker compose config --quiet
-docker compose -f compose.yaml -f compose.dev.yaml config --quiet
-docker build -t ai-station:local .
-.venv/bin/python scripts/smoke.py # opt-in, temporary Docker deployment and fake executor
-.venv/bin/python scripts/chat_smoke.py # opt-in Chromium test; loopback fake provider, no inference
-.venv/bin/python scripts/projects_smoke.py # opt-in Chromium + native UDS runner; disposable Git repository
+./scripts/dev.sh                 # Runner, Docker API/worker/scheduler and Vite
+# Development UI: http://127.0.0.1:5173
+./scripts/check-all.sh           # Python, frontend, Compose and image checks
+./scripts/check.sh               # Python lint/format and backend/Runner tests
+./scripts/frontend.sh ci         # Install frontend dependencies
 ```
 
-Normal tests use temporary databases and disposable processes. They never call AI providers, consume cloud tokens, or generate GPU images. Set `AI_STATION_BROWSER_SMOKE=1 AI_STATION_IMAGE_SMOKE=1` to add the fake image browser flow on a workstation with a discoverable GPU (the fake pipeline never uses that GPU). The Docker smoke test checks the UI/API, native UDS telemetry, worker execution, SSE, restart persistence, and cleanup. Its optional `AI_STATION_BROWSER_SMOKE=1` mode requires Playwright and Chromium separately installed for development; it writes screenshots under `/tmp`.
-
-`AI_STATION_ENABLE_TEST_EXECUTOR=true` enables `POST /api/testing/runs` for fake execution; it is disabled by default. Actual GPU/coding/provider workloads remain separate opt-in tests. See [verification](docs/verification.md) for exactly what has been exercised.
-
-## Architecture and extension points
-
-Read [architecture](docs/architecture.md), [domain model](docs/domain-model.md), [execution model](docs/execution-model.md), and [security model](docs/security-model.md).
-
-- **Executor:** implement `app.executor.Executor`, use the run lifecycle, commit before external I/O, and register only after testing cancellation and recovery.
-- **Capability:** validate intent, permissions, resources, and parameters before enqueueing a task/run. HTTP handlers do not execute workloads.
-- **Tool:** declare schemas, permissions, risk, timeout, and a real implementation; unavailable integrations remain unavailable.
-- **Model provider:** implement behind the provider adapter rather than coupling domains to a runtime.
-- **Connector:** expose actual status/capabilities and secret references, never plaintext credentials.
-
-The scheduler enqueues normal runs and samples telemetry. Short SQLite transactions serialize claims, event sequencing, and resource reservations. Raw telemetry is retained six hours, then one observed sample per hour for 30 days (not an averaged measurement).
-
-## Security boundaries and limitations
-
-The runner is not a shell daemon. Its enabled API offers host inspection, validated photo launches, owned worktree preparation and explicit removal, model metadata discovery, bounded Codex/Cursor/local proposals, sandboxed saved validation, sandboxed Python dependency install, and cancellation of recorded, verified process groups. Boot identity, process start ticks, session, and group membership protect against PID reuse. Read-only Git inspection disables repository command helpers and enforces metadata roots, time/output bounds, and revision validation. Partial clones and alternate object stores are not supported for inspection yet. Draft filesystem/Git mutation routes are unavailable. Existing external services are never stopped or imported implicitly. Managed llama.cpp containers are available; additional managed runtime families and remote nodes remain future work.
-
-Uncertain host execution keeps its reservations pending inspection; recovery never blindly repeats side effects. If a worker disappears after dispatch, the run requires inspection when the process is gone. SQLite uses short serialized transactions; multi-node/distributed execution is not implemented. A real local OpenAI-compatible `qwen3:8b` completion and persisted response were verified on 2026-09-25. Real Qwen/Juggernaut generation, Edit, one/multiple-reference Recompose and Upscale passed small GPU acceptance Runs. A real Cursor selected-file coding task passed with diff review and sandboxed validation. A real Codex synthetic selected-file proposal, native sandbox validation and reviewed commit also passed.
-
-Contributions use reviewed feature PRs to `develop`; `main` is the release branch. See [AGENTS.md](AGENTS.md).
-
-### Memory workspace
-
-Memory now supports scoped FTS search, provenance inspection, versioned editing, pinning, disabling and confirmed deletion. Arrow keys move through pin and enabled flags; Space or Enter selects the focused row. Disabled or unpinned entries leave historical Chat snapshots unchanged. There is no inspectable memory-flag Run. Enabled pinned global and conversation entries are snapshotted into new Chat Runs. See [memory contracts](docs/memory.md) and the [MVP acceptance ledger](docs/mvp-status.md). Agents can retrieve enabled entries from their own scope when the memory tool is selected. Conversation memory now supports [explicit rolling summary updates](docs/conversation-summaries.md), with source Runs, preserved history, chunked oversized messages and editable/disableable scoped Memory. Optional embeddings need an already-running local `/v1` embeddings endpoint; they are not downloaded and are not used until that setup is saved.
-
-### Models workspace
-
-Models now discovers existing host files through a cancellable worker Run, persists observations and exposes category/search/detail views. Set `AI_STATION_MODEL_ROOTS` to colon-separated host model directories. Discovery does not load or modify weights. Discovered GGUF files can be selected in Chat for managed llama.cpp execution. See [discovery contracts](docs/models.md) and [runtime lifecycle](docs/managed-llama.md).
-
-### Agents workspace
-
-Describe a task in Agents, inspect and edit the disabled definition, select a local model, tools, any installed Skills and an optional linked project, then enable it explicitly. Schedules use UTC. HTTP fetch GETs only the public URLs saved on the definition. Arrow keys move through fetched page cards; Enter opens the selected public URL. Arrow keys move through installed Skills and tools; Space or Enter selects the focused row. Skills inject reviewed instruction text and do not grant extra tools. There is no inspectable Skill or tool-selection Run. Optional approval parks each Run until you grant it in the conversation, Agents, Home or the inspector. Arrow keys move through approval, retry, notice, tool-calling and workflow-mode policies; Space or Enter selects the focused row. Arrow keys move through a linked project; Space or Enter selects the focused row with unique Linked project names. Save definition tags this agent's Runs for filtering and does not grant coding, Git or repository access. The Agents list shows that project name and can Filter linked project. Inspect project and View tagged Runs stay on that card and on a saved definition link and do not call Enable or Run now. View tagged Runs stays on a saved agent even without a project. The tagged Runs list and Run inspector open that agent and project with unique Inspect agent and Inspect project names. View tagged Runs stays on a saved project_id even without an agent, and on a saved agent_id even without a project. Those links do not Enable or Run now. Project details list those linked agents from GET /api/agents?project_id=; Enter inspects the selected definition with a unique Inspect agent name. View tagged Runs stays on that row. Project details also open tagged Runs through /runs?project_id=. View all linked agents opens the Agents filter. That list does not grant coding, Git or repository access and does not Enable or Run now. The Agents definition shows other agents on that same project and omits the current definition. The conversation shows that same list after agent.create and omits the current definition. That list does not Enable or Run now. There is no inspectable project-link Run. Optional bounded tool calling during the report may request selected registry tools; invented tools, URLs and commands fail closed. Sequential or gated mode still parks only the report after context tools when gated is selected. Run now, pause, duplicate and execution history share the global Runs inspector. A draft created from the platform assistant also shows next/last run and that execution history in the conversation, and can duplicate as a disabled draft or Run now when enabled and idle; Enter inspects a history Run. A failed snapshot with a saved manual retry policy can Retry as a new workflow from that history without calling Run now. A waiting Run can Approve and queue or Deny from that history and from Agents without calling Run now. An in-progress history Run can Stop from that list without calling Run now. The latest ordinary agent report is shown inline from its stored markdown artifact. Independently recorded search sources, fetched pages and registry tool calls from that report stay next to it. Workflow steps of the last parent stay next to history; Enter inspects the child Run. A saved observation opens Memory. The conversation can Inspect this agent's memory. Attached skills can Review instructions from the installed catalog; a missing id stays visible and does not invent a Skill Run. The conversation can remove that missing skill or attach an installed catalog skill, without calling Enable. At most four. Attached tools come from `GET /api/agents/tools`; unavailable tools stay visible and still block activation. Enable stays off until those tools are operational, a local model is selected, and web_search or http_fetch have their saved query or URLs. The conversation can save that local model, a public search query when web_search is attached, or reviewed URLs when http_fetch is attached, and can attach an operational registry tool or an installed catalog skill or save a timezone-aware schedule, approval, retry, notice, workflow and bounded tool calling policies, instructions, identity, description, or a linked project, through `PUT /api/agents/{id}` without calling Enable or inventing a conversation Run. Unpublished adapters cannot be added. Attached remember-reports or remember-workflow tools show how observations are stored. At most four skills. An enabled idle definition can Run now from that conversation through the existing run endpoint without opening the inspector. See [agent contracts and limits](docs/agents.md) and [Skills](docs/skills.md).
-
-Runtime observations are refreshed through a normal Run from **System → Observe runtimes**. Process presence, endpoint availability and model files remain separate. See [runtime observation semantics](docs/runtimes.md).
-
-**Settings → Maintenance → Backup and upgrade readiness** queues an integrity-checked SQLite backup Run, re-checks a successful copy without restoring it, downloads that stored file, compares the running compose image with `ai-station:local`, lists interrupted work for inspection, and states that compose down keeps bind-mounted data. Verified copies show an offline recovery guide using `./scripts/restore.sh`; restore never replaces a live database through HTTP. See [operations](docs/operations.md#offline-database-recovery). Image rollout from the UI stays unpublished.
-
-
-The Home workspace leads with a unified attention list: interrupted Runs (Mark inspected, no replay; interrupted Images can Retry as a new run without leaving Home), unread notices (Mark read, no replay), parked approvals (Approve queues the Run; Deny cancels it; tools have not started), and in-progress work with Stop. The list is one keyboard sequence (arrows, Home, End, Enter) with unique Inspect and action names that include a short Run or notice id. Reuses the shared list keyboard. The conversation, Agents and the Run inspector can still grant or deny the same parked Run. Upcoming schedules, enabled agents, recent conversations, recent artifacts and runtime observations are each a separate keyboard sequence with unique Inspect names. Enter inspects the agent, conversation or artifact; runtime rows open System and do not invent an observation Run. Hardware follows as labelled regions. Arrow keys move through Home GPU cards; there is no inspectable GPU Run. Arrow keys move through CPU, memory, storage and in-progress Run cards with unique Metric names; Enter inspects Runs from that card and does not invent a telemetry Run. Quick actions and Ctrl+K open workspaces without starting a workload.
-
-Runs supports combined status, capability, executor, execution target, project, agent, GPU and creation-time filters. Filters are kept in the page URL and paging makes older history accessible. Dates are entered in local time and submitted with an explicit timezone. Arrow keys move through the Run table; Enter inspects the selected row. The inspector event timeline uses that sequence on the current Activity or All-events page. Older and newer paging stays outside the list. Workflow steps on a parent Run use that sequence; Enter inspects the child. Cancel stays outside the list.
-
-Library’s collection grid uses the same keyboard sequence. Enter inspects the selected artifact.
-
-Chat conversation history uses that sequence. Enter opens the selected conversation. Chat transcripts use it on the message list; Enter inspects the selected message’s Run when one exists.
-
-Agents uses the same sequence on its definition cards. Enter inspects the selected agent. Execution history uses that sequence; Enter inspects the selected Run. Workflow steps of the last parent use that sequence with unique Inspect step names; Enter inspects the child Run.
-
-Memory uses that sequence on scoped entries. Enter inspects the selected memory.
-
-Projects uses that sequence on repository cards. Enter inspects the selected project.
-
-Models uses that sequence on observed files and curated definitions. Enter inspects the selected card.
-
-Coding conversations use that sequence. Enter opens the selected session.
-
-Connectors uses that sequence on named HTTP GET rows. Enter inspects the last check when one exists. Unavailable adapters stay listed and are not part of that inspect sequence.
-
-Runtime observations use that sequence. Enter inspects the source Run when one exists. Observation still does not control external processes.
-
-Chat providers use arrow keys, Home and End on registered endpoints. Remove stays on the selected row. There is no inspectable provider Run.
-
-Project worktrees use that sequence. Enter inspects the preparation Run. Install, validate, keep and remove stay on the selected row.
-
-Backup copies use that sequence. Enter inspects the backup Run. Inspect copy and Download copy stay on the selected row. Successful checked copies expose the offline host recovery guide; in-app restore stays unpublished.
-
-Worker leases use that sequence. Enter inspects the held Run. The list does not recover, requeue or restore.
-
-The Library picker uses that sequence. Enter selects or deselects the focused file.
-
-Interrupted Runs use that sequence. Enter inspects the Run. Mark inspected stays on the selected row and does not restore or replay.
-
-## Local validation and hosted CI
-
-Run `./scripts/check-all.sh` for Python tests/lint, frontend checks/tests/build, Compose validation and a Docker image build. The script stops on the first failure and does not restart the application. GitHub Actions remains available by manual dispatch; automated hosted runs are paused because the maintainer's free credits are exhausted. Per maintainer instruction (2026-09-28), reviewed PRs may merge into `develop` using equivalent successful local checks. Failing code checks are never waived.
-
-For an explicit real worker-crash check with the **already installed** optional
-Python executor image:
-
-```bash
-AI_STATION_REAL_RECOVERY_TESTS=1 .venv/bin/python scripts/worker_recovery_smoke.py \
-  --image ai-station-python:local --output-dir /tmp/ai-station-recovery-evidence
-```
-
-Choose your installed `ai-station-python:<tag>` and a new evidence directory.
-The command uses an isolated database/repository/private Runner and real CPU
-containers; it performs no model inference, image download or live-service restart.
-It verifies actual worker death, conservative inspection without replay and owned
-cancellation/cleanup. [Recovery scope](docs/plans/owned-python-worker-recovery.md).
-
-Add `--failure-target runner` to kill/restart only that probe's private Host
-Runner while the CPU job continues. The original worker must record transport
-loss; the restarted Runner must inspect/cancel the same owned job without replay.
-Use a different new evidence directory for each invocation.
-[Native restart contract](docs/plans/owned-python-runner-recovery.md).
-
-Portrait-driven video is available in **Avatars** and **Video**, including assistant dispatch and inline playback. Configure the existing offline EchoMimic installation as described in [avatar execution](docs/avatars.md).
-
-After a Coding proposal and its configured validation pass, inspect the diff and choose **Commit reviewed changes**. Arrow keys choose the review acknowledgement; Space or Enter selects it with a unique Review name and does not queue a commit. There is no inspectable review-ack Run. This queues a local task-branch commit containing exactly the reviewed file snapshots. Changed files, staged edits and protected branches are rejected. See [reviewed commits](docs/coding-commits.md).
-
-
-### Local coding
-
-Open **Coding → Local AI**, choose a project and model using the same llama.cpp/local-server picker as Chat, describe the change and let Local AI find the relevant files, or select up to ten source paths explicitly. With automatic discovery, public URLs in the task are fetched automatically, and Local AI may GET further public pages (private/loopback blocked; no browser). AI Station creates an isolated worktree, applies a checked proposal, runs saved validation and presents the diff for review. No external-AI consent is needed for local execution. See [local coding](docs/local-coding.md) for verified behavior and the opt-in real-model smoke.
-
-In the central Assistant, choose **Coding with Local AI**, select the project and enable automatic source discovery or specify source paths, then send your instruction. It uses the model selected for that conversation and shows progress and review artifacts in the same chat.
-
-### Optional web search
-
-Ordinary Chat starts with **Search the web** enabled; turning it off is remembered across conversations and devices. Work keeps search available as an explicit option. Arrow keys choose that toggle; Space or Enter selects it with a unique Search name and does not send. Use the optional **Search query** field to send a short public query instead of the message itself. The local model receives up to five result snippets; clickable source cards and the search timestamp remain attached to the answer. Arrow keys move through those sources; Enter opens the selected public URL. This is search, not browser automation. Only the query is sent to search engines. Automatic follow-ups use bounded recent text to prepare a self-contained query; attachments and hidden memory are excluded. Enter an explicit Search query to bypass conversational context. There is no inspectable search-toggle Run.
-
-Normal `./scripts/start.sh` and development startup include a private, pinned SearXNG service with no host port or credentials. `AI_STATION_WEB_SEARCH_URL` overrides the trusted provider endpoint; native development must configure one explicitly. A failed search remains visible and can be canceled. This is web search, not autonomous page browsing. See [contracts and verification](docs/web-search.md).
-
-In **Agents**, select **web_search**, enter the public query, choose a local model and save before enabling the schedule. Each execution produces a readable report with recorded sources in Run details. Goals and memory are not sent to search engines. Both agent forms use the same local-server/llama.cpp model picker as Chat.
-
-Local coding and the Assistant offer an optional **Automatic repair** budget of one or two attempts, off by default. Arrow keys choose that budget; Space or Enter selects the focused row with a unique Repair name and does not start a coding Run. There is no inspectable repair-budget Run. After a Local AI coding task fails its saved project validation, open its coding review and choose **Repair with Local AI**. The same model works in the task worktree, using the failing output and original file scope. Checks run again and the cumulative diff remains reviewable before committing. See [local repair](docs/local-coding.md#repair-failed-validation).
-
-Reviewed commits can now be published from their Run details as a task branch and draft GitHub PR, after project policy and exact-scope user approval. Arrow keys choose that approval; Space or Enter selects it with a unique Publication name and does not publish. There is no inspectable publication-approval Run. Existing host `gh` authentication is reused. If a publication Run stops after GitHub may already have the branch or PR, **Reconcile with GitHub** inspects the remote and can record or open the approved draft PR without pushing again. See [publication requirements and recovery](docs/github-publication.md).
-
-The platform assistant can answer **Pokaż użycie GPU i RAM** with an actual workstation snapshot, without loading a model. **Inspect workstation** also selects it explicitly. Reports stay in the conversation, Runs and Library; see [station inspection](docs/station-inspection.md).
-
-Local coding context is fitted from supported GGUF attention metadata during owned load Runs. See [model-context.md](docs/model-context.md) for the allocation policy and hardware acceptance.
-
-The default Platform assistant now reads image pixels locally: **Add images**, then ask “Describe this image” or choose **Inspect images**. It selects an installed vision GGUF/projector pair, loads an owned runtime when needed and saves a description linked to the source images. See [Chat vision](docs/chat-vision.md).
-
-Persistent agents can also select **Local coding** with a Project and local model. Each execution creates a fresh isolated coding task with diff and configured checks, accessible from agent history. Save and enable explicitly; results still need review. See [coding agents](docs/agent-coding.md).
-
-Image generation and edits can now queue a dependent 4× Upscale with the existing photo executor. The result/completion and child publication are atomic, and Images follows the active stage after refresh. See [image workflows](docs/image-workflows.md).
-
-Portraits can now use a voice reference and typed Polish speech through a sequential Chatterbox → EchoMimic workflow, retaining both outputs and following the active stage after refresh. See [speaking avatars](docs/speaking-avatars.md).
-
-
-Public-page browsing is available as an optional isolated agent workflow tool,
-with JavaScript, Library screenshots, bounded text, exact container ownership and
-cancellation/recovery. It requires an explicitly built local executor image and
-configuration; missing setup remains unavailable. See [browser setup and security](docs/browser.md).
-
-
-Agents can explicitly attach **Project memory** to read enabled context from their
-saved linked project. This adds a separate read permission; a project link alone
-does not grant access. Retrieved entries, versions and provenance are saved in the
-child Run and report context. Other projects and global/disabled memories are
-excluded. See [memory](docs/memory.md#explicit-project-memory).
-
-
-General local video is available in **Video**: generate a scene from text or animate
-a Library/uploaded image with an installed Wan 2.2 TI2V 5B profile. The Assistant
-uses the same queued execution and returns the video inline. Talking avatars stay
-a separate mode. See [video configuration and verification](docs/video.md).
-
-
-The Assistant's **Image → video** action generates a first frame and then animates
-it with Wan, keeping both outputs in Library. For example: “Generate an image of
-a forest, then animate it: mist drifts between the trees”. See [image workflows](docs/image-workflows.md).
-
-To research an image subject, choose **Generate image** (or use Auto), turn on
-**Search the web**, enter a short **Search query** and describe the visual result.
-The Assistant researches, prepares a prompt with your selected model and
-queues image generation, keeping source cards and the image in the conversation.
-
-Generate now follows your prompt without adding face/skin styling. Enable
-**Add portrait styling** in Images to use the original photographic portrait
-profile. Edit and Recompose keep their identity-preserving behavior.
-
-In the Platform assistant, choose **Create project** and enter a name. Or type
-“Stwórz projekt o nazwie Pogoda”. When Git/environment setup finishes, **Continue
-here with Local AI** selects it for your next coding prompt; no manual path is
-required. Advanced policies remain in Projects.
-
-System and the central workstation report now include bounded NVIDIA compute
-process observations: GPU, executable basename, PID and reported VRAM. They
-never expose command lines or control external processes. See
-[GPU process reporting](docs/gpu-processes.md).
-
-## Long video and whole-speech avatars
-
-Video offers 15/30/60-second continuous scenes or a sequence of shots. Avatars
-defaults to the complete recording or generated speech, up to 60 seconds. Both
-use a durable job card with real segment progress, Stop and Resume unfinished
-work; the checked final MP4 appears in Library. Existing short previews remain.
-See [long-media execution](docs/long-media.md) for requirements, architecture
-and the distinction between integration and hardware verification.
-
-For a deliberate shot sequence, choose **Sequence of shots → Plan individual
-scenes**. Describe each scene, set its duration, and reorder or remove it. The
-shared instructions apply to every scene; the total is calculated automatically.
-Saved jobs retain the scene plan and show its progress. See [storyboards](docs/video-storyboard.md).
-
-Coding now defaults to **Auto · local long-context model**, selecting an installed
-GGUF with observed 100k+ context and preserving the user's GPU allocation. Choose
-a model to override it; selection performs no inference. Work and Create project
-& build also offer Auto versus the conversation model. See
-[automatic coding selection](docs/coding-auto-model.md).
-
-The main Chat/Work conversation also creates these jobs: choose Video length or
-request a film of 1–60 seconds; attach a portrait and WAV for a complete talking
-avatar. Progress, Stop, Resume and the finished player remain in the conversation.
-See [conversational media](docs/conversational-media.md).
-
-
-Conversation Stop cancels the complete active Task, including project preparation
-and later validation. Shared model startup is preserved for other active
-conversations; stopping one conversation never stops their pending inference.
-
-In an existing Work conversation, **Choose coding task** searches saved Coding
-sessions by task/project name. Select one to continue in its preserved worktree
-with the same agent and model. Selection starts nothing; the next Send continues
-that task. **General Work** detaches this choice. Existing Coding history stays
-available, and an external agent still requires explicit sharing consent.
-
-A Coding session's **Continue in Work** opens the main composer with that task
-selected. Opening it creates no conversation or Run; the first Send binds a new
-conversation and continues the same worktree atomically. The selected proposal
-version stays pinned in the draft URL, and stale drafts cannot silently submit
-against newer task results. External agents require fresh sharing consent.
-
-Local Coding requests constrained JSON-object inference for its proposals and
-source exploration. The private bridge accepts only a strict boolean for this
-format; it does not expose arbitrary provider options or schemas. Complete stream
-termination, selected-path checks and source hashes remain required before files
-can change. Malformed output reports that no proposal was applied.
-
-GitHub repository snapshots are available in Connectors: enter `owner/repository`,
-then Refresh repository. AI Station reuses the host gh login, shows open issues
-and PRs in place, and retains a JSON snapshot with Run history. No token copying
-is required. See [connector contracts](docs/connectors.md).
-
-Agents can schedule read-only GitHub reports: select the GitHub repository tool,
-choose a connected repository and a local model, review the schedule, then enable.
-Reports, source snapshots and optional scoped memories remain inspectable. See
-[agent GitHub reports](docs/agent-github-reports.md).
-
-**Audio → Transcribe recording** turns a local recording into timestamped text
-and TXT/SRT/JSON artifacts on CPU. In the main Chat, attach a recording and choose
-**Transcribe recording** or ask “Przepisz to nagranie”. The source, transcript, Stop
-and Run history remain inspectable. Requires a separately configured offline
-Whisper runtime/model; see [setup and execution contracts](docs/audio-transcription.md).
-
-Transcription also accepts MP3, M4A, Ogg, WebM and FLAC, including selection from Library. Compressed duration is verified by the native job; speech and portrait voice references remain short WAV recordings.
-
-After transcribing, ask Chat to summarize or translate that recording. It reads the stored, checked transcript in the recent conversation context and shows an Inspect source link; rolling summaries preserve source provenance. See [transcript continuity](docs/transcript-conversation-context.md).
-
-Attach a recording directly in Chat Auto and ask for a summary, translation or an answer about it. AI Station transcribes it locally on CPU, then replies with the selected model on the same Task. The original recording and TXT/SRT/JSON remain available even if the response model fails. Choose **Transcribe recording** for text only, without an LLM. See [recording questions](docs/conversational-audio-analysis.md).
-
-In Chat's **Attach files & choose tools**, **Record audio** records from your browser microphone. Finish attaches a preview; write your question and press Send. Cancel releases the microphone, and a failed attachment can be retried without recording again. See [Chat recording](docs/chat-recording.md).
-
-Conversation history offers **Active** and **Archived** views. Archive an idle conversation from its header; messages, tasks, files and memory stay intact. Restore from the same detail to continue. See [conversation archive](docs/conversation-archive.md).
-
-Persistent coding agents can explicitly use **Local AI**, **Codex** or **Cursor**. External choices disclose project-source sharing, require the external-coding permission profile and default new drafts to approval before each Run. They use existing CLI logins and models; no local LLM is loaded for external coding. Changes stay in owned worktrees for review. See [agent coding providers](docs/agent-coding-providers.md).
-
-To build from a website, create a **Local coding** agent, add **HTTP fetch**, review
-the public URLs and choose its project. It reads those pages before starting
-coding, keeps the source artifacts and uses the normal isolated review workflow.
-The natural-language factory can draft this setup from a website-building goal
-with a public URL. See [coding from reviewed pages](docs/agent-page-coding.md).
-
-New local coding-agent drafts default to **Auto Local Coding**. The agent editor also offers Auto or a specific local model; existing selections are preserved. Auto requires a fitting installed model with 100k+ context, and enabling it does not load a model before approval/execution. See [agent Auto coding](docs/agent-coding-auto.md).
-
-In the main **Work** conversation, type `W projekcie Pogoda: dodaj wykres` or
-`In project "Weather Station": fix the tests` to start an isolated Local Coding
-Auto task for a registered project. You can continue that task in the same chat;
-explicit project/agent controls remain available. See [named-project Work](docs/named-project-work.md).
-
-
-### JavaScript and TypeScript project dependencies
-
-On an owned coding worktree containing package.json, **Install project dependencies**
-creates a missing lockfile offline from verified public npm metadata, checks the
-complete npm v3 lock and installs public-registry packages with lifecycle scripts
-disabled. Existing lockfiles are preserved. **Run saved validation** then runs the
-project’s configured npm/node checks in the network-disabled sandbox. Configure
-`AI_STATION_NODE_PREFIX` for an existing Node 22+ distribution; see
-[Node project setup](docs/node-project-dependencies.md) for the optional project-local
-installer and tested security boundary. Python dependency installation is unchanged.
-
-
-### Coding projects that prepare and check themselves
-
-New projects created through the UI enable public package preparation and isolated
-checks. After Coding applies a proposal, the same Task detects root manifests,
-prepares declared Python/Node dependencies and runs saved commands or detected
-build/test presets. Existing projects retain their settings; enable these options
-under **Project settings → Validation commands and agent guidance**. Saved argv
-always take precedence. Missing tests, dependency failures and skipped checks are
-shown explicitly. See [automatic project checks](docs/coding-boundary.md).
-
-Successful checks with a build command now capture a bounded root `dist` output
-as a ZIP Artifact. **Download build** and **View in Library** appear in Coding
-progress and Coding/Work review. The archive records its validation/project
-provenance. Other output directories, unsafe links and oversized builds report
-that export is unavailable; actual command results stay visible. Generated
-HTML/JavaScript is downloaded as data. See [build artifacts](docs/coding-build-artifacts.md).
-
-Coding also keeps unsent follow-up text separately for each task in the current
-browser tab. Refresh or switching conversations restores the draft; **Discard
-draft** clears only that text. Ctrl/Cmd+Enter sends when the normal Send action
-is allowed, including external-agent consent. See [Coding conversations](docs/coding-workspaces.md).
-
-**Run checks again** in Coding/Work repeats a completed turn's recorded test,
-lint and build commands in the same owned workspace. It preserves earlier
-results and may produce a new downloadable build. It does not call a model,
-install dependencies or automatically repair failed tests. Inspect an uncertain
-previous process before repeating it. See [check reruns](docs/coding-rerun-checks.md).
-
-Coding continuation reviews the complete task diff independently of model context: up to 200 ordinary text files, 256,000 bytes per file and 2 MiB total. Generated lockfiles and changes from earlier prompts remain reviewable and committable. Reserved root execution scratch directories are excluded only when untracked; their data is retained. External model proposals retain ten files (32,000 bytes each, 64,000 combined); the separate Local AI source policy is described below. Oversized encoded reviews are rejected before applying edits. See [continuation review](docs/coding-continuation-review.md).
-
-Local AI Coding can use up to 256,000 bytes of selected source across ten files,
-including a larger component edited with unique snippet replacements. Automatic
-exploration supports bounded line windows and literal search in those files.
-Cursor/Codex retain their existing source-sharing limits. This uses the chosen
-local model and its actual context; it does not select a cloud provider. See
-[local source context](docs/local-coding-source-context.md).
-
-Video **Shots** can run independent windows on free GPUs when sufficient host RAM
-is available. The shared result shows active/queued shots and actual devices;
-Stop covers the entire film. Continuous motion keeps its required ordering.
-See [shot scheduling and verification](docs/parallel-video-shots.md).
-
-**Library data files:** Import or drop a CSV/XLSX (up to 16 MiB) to keep the original
-and inspect a bounded table preview. Sheet counts, formula warnings, Stop and
-preview Run history remain visible. This is read-only inspection; AI analysis and
-transformations are a separate workflow. See [data inputs](docs/data-inputs.md).
-
-### Offline website build preview
-
-Successful website build artifacts now have a preview view with desktop/phone
-layout, pointer and text interaction, reset and Close. It executes the saved
-static build in an offline, CPU-only Chromium container and sends image frames to
-the UI. It does not execute generated JavaScript in the authenticated UI origin.
-The optional adapter remains disabled until its image is configured; see
-[setup, security and verification](docs/agent-site-preview.md).
-
-### Optional local music
-
-The [music delivery plan](docs/plans/local-music-generation.md) includes a pinned
-ACE-Step 1.5 checkpoint manifest and explicit setup script. Running
-`scripts/install-music-model.py --destination <new-directory>` only prints an
-offline plan; `--download` explicitly fetches 6.34 GB into a new directory and
-`--verify` checks all file hashes offline. It never overwrites existing models,
-installs dependencies or enables generation. Audio → Music and Chat/Work use the
-same offline adapter, queued Runs, Stop and playable Library artifacts. Actual
-10-second instrumental and 30-second supplied-lyrics GPU cases and native Stop
-were verified. Longer lengths and subjective quality are not qualified by those
-cases. Follow the plan to configure its separate Python/source/model paths and
-allowed roots; empty configuration keeps Music unavailable.
-
-### Agents that analyse public data
-
-In an agent's settings, select **Data analysis** together with public search,
-search-page reading or public page fetching. Review its query or URLs, save and
-enable the definition, then choose **Run now** or a schedule. CSV/Excel files are
-optional with reviewed public sources (up to seven); file-only analyses still
-require selected files (up to eight). Sources are captured once and supplied to
-offline Python as a read-only JSON file. Results retain the source history, table,
-CSV and supported generated downloads. Partial reads remain visible; a search
-snippet does not mean a page was opened. See [execution and qualification](docs/plans/agent-research-data.md).
-
-### Data analysis in a conversation
-
-Choose **Data analysis** to attach CSV, Excel or JSON files, or select **Use public
-sources for this analysis** and review a public query/URLs. Files are optional
-with public sources. Strong direct computation requests with explicit public URLs
-and Web enabled can also select this tool automatically. The tool uses a fitting
-local model and offline Python, independently of the conversation's text provider.
-
-The transcript shows task-bound sources, source warnings, the answer, table and
-any generated downloads/chart. Ask another question about the same data to reuse
-the captured observations without fetching again; **Refresh public sources**
-starts a fresh capture. JSON files have a 4 MiB limit; CSV/Excel retain 16 MiB per
-file and all inputs total at most 32 MiB. Original files remain unchanged.
-See [the full contract and qualification](docs/plans/conversation-research-data.md).
-
-### Memory-aware data agents
-
-In an agent's settings, combine **Files & data** with **memory_search** to use
-its own saved observations, or **Project memory** for its explicitly linked
-project. Select **Remember reports** to save validated data answers for later
-executions. Files are optional with selected memory context. Python stays offline.
-Results link to saved memory; source cards show the exact captured versions.
-See [scope and verification](docs/plans/agent-data-memory.md).
-
-### Selected documents for agents
-
-Attach **Read documents** in an agent's tools, then upload/drop a PDF, UTF-8 text
-or Markdown file under **Selected documents**, or choose it from Library. Save the
-definition, review its scope and enable the agent. Up to four files are selected
-explicitly; the agent cannot browse host paths or choose additional files.
-
-Reports receive identified excerpts and can search/request text windows when
-bounded tool calling is enabled. Local code/data agents can combine these sources
-with their existing offline workspace; Python receives the complete captured text.
-Goal-based media agents can use a selected brief. Results link to originals, full
-captured text and the recorded source, with extraction/excerpt limits visible.
-PDF limits: 8 MiB, 64 pages; text/Markdown: 256 KiB. Image-only/scanned PDFs need
-OCR and are rejected here. Uploading/selecting files never starts a workload.
-See [document contracts and qualification](docs/plans/agent-document-context.md).
-
-### Analyze documents in a conversation
-
-Choose **Files & data** in either Chat or Work, expand **PDF & text documents**
-and upload/drop a file or select it from Library. Describe the analysis and Send.
-The existing local workflow returns an answer, table/downloads and document sources
-in the conversation, without creating a persistent Agent. CSV/Excel/JSON inputs
-and reviewed public sources can be added when useful. Send waits for uploads.
-Follow-up analysis reuses the checked capture as offline data; it grants no new
-access to the original documents or websites. See
-[conversation document scope](docs/plans/conversation-document-context.md).
-
-### Make a recurring agent from a completed analysis
-
-After a successful Files & data result, select **Create an agent from this analysis**.
-Review the original task and describe when to repeat it, then select **Prepare draft**.
-The main composer keeps your unsent text. Each result selects its own analysis,
-including older results. Local AI in a general conversation is required.
-
-You can also switch to **Work** with Local AI selected and ask, for example: **“Create an agent that repeats this analysis every morning.”**
-The existing Agent Factory prepares a disabled draft. Its original task, selected
-files/documents, local analysis model and reviewed public-source scope are retained;
-only identity and schedule are drafted. The conversation links the original analysis
-and shows whether future executions read live public sources or saved captures.
-Review/edit the definition and explicitly enable it. The agent gets a fresh private
-workspace; it does not take over the conversation's workspace or gain email access.
-See [analysis-to-agent contracts](docs/plans/conversation-data-agent-draft.md).
-
-### Create an agent with selected files, without a preliminary analysis
-
-In **Work**, choose **Files & data**, select inspected CSV/Excel/JSON files,
-PDF/text documents or reviewed public sources, and ask, for example:
-**“Create an agent that compares these inputs every weekday at 09:00.”**
-The local Agent Factory retains your selection and prepares a disabled draft.
-Review its task, sources and schedule, then explicitly enable it. Drafting does
-not execute the analysis or visit the public sources. The agent receives its own
-workspace when it runs. **Create files from instructions** can also prepare a
-recurring file-creation agent without uploads. Chat asks you to switch to Work.
-See [selected-input agents](docs/plans/selected-input-agent-draft.md).
-
-With **documents or reviewed public sources**, describe the actual job: for example,
-“Create an agent that summarizes this document each morning” or “Create an agent
-that builds a website from this brief.” The local factory proposes **Report**,
-**Local code**, or **Data analysis** and shows the chosen family with the draft.
-Review its task, tools, model and (for code) public package/build policy before
-activation. Reports need no Python/workspace; local code gets an owned workspace
-and a reviewable diff. Data-file and instruction-only creation selections retain
-Data analysis. See [selected-agent families](docs/plans/selected-agent-families.md).
+Normal tests use temporary databases, fake providers and disposable processes;
+they do not consume cloud tokens or launch model/GPU generation. Real integration
+and browser/recovery probes are separate opt-ins. See [verification](docs/verification.md)
+for commands and the distinction between unit, integration and actual hardware
+results. Tests passing is not a claim that every model or quality profile works.
+
+The Polish [operator QA package](docs/qa/README.md) contains stable cases, XLSX/CSV,
+synthetic input files and release-specific instructions. Its offline feedback
+importer preserves returned answers and produces a triage list without executing
+spreadsheet formulas or changing the app. Final operator handoff is separate from
+internal qualification; unperformed operator tests remain **Nie testowano**.
+
+Contributions use feature/fix branches, full diff review and successful checks,
+then squash PRs into `develop`. Hosted Actions are currently manual; equivalent
+local verification is authorized by the maintainer. Actual failing checks are
+never waived. Follow [AGENTS.md](AGENTS.md); `main`/`master` are protected release
+branches and are not autonomous push/merge targets.
+
+## Extend AI Station
+
+- **Executor:** implement the existing `app.executor.Executor` contract; test
+  permissions, cancellation, recovery and resource release before registration.
+- **Capability:** validate intent and scoped inputs, then enqueue ordinary Runs
+  through shared domain services.
+- **Tool:** declare schemas, permissions, risk, timeout and a real implementation.
+- **Provider:** use the provider adapter boundary rather than tying domains to one
+  model server. Preserve actual local/external disclosure and secret references.
+- **Connector:** expose real health and capabilities with server-side credentials.
+  Incomplete adapters stay unavailable.
+
+## Detailed guides and current scope
+
+| Topic | Guide |
+| --- | --- |
+| Models and local inference | [Models](docs/models.md), [managed llama.cpp](docs/managed-llama.md), [chat](docs/local-chat.md) |
+| Images and results | [Images](docs/image-workflows.md), [Library](docs/library.md), [image models](docs/plans/krea2-lustify-images.md) |
+| Media | [Long jobs](docs/long-media.md), [video](docs/video.md), [avatars](docs/avatars.md), [audio](docs/audio.md) |
+| Agents and projects | [Agents](docs/agents.md), [agent-first direction](docs/plans/agent-first-product.md), [projects](docs/projects.md), [local code](docs/local-coding.md) |
+| Context and tools | [Memory](docs/memory.md), [web search](docs/web-search.md), [page reading](docs/plans/chat-page-reading.md), [Skills](docs/skills.md), [connectors](docs/connectors.md) |
+| Operations | [Operations](docs/operations.md), [private access](docs/private-network-access.md), [QA](docs/qa/README.md) |
+
+Supported settings and recorded qualification are distinct. The [release audit](docs/plans/platform-acceptance-audit.md)
+and [product ledger](docs/product-completion.md) retain exact tested profiles,
+adverse results and remaining gates. Longer media may show identity, color or
+lip-sync limitations; a successful decode alone is not a visual-quality pass.
+
+Actual outside-LAN access and operator-inbox delivery require owner-controlled
+setup and acceptance. Remote execution nodes, additional runtime/connector
+families and standalone IDE parity remain future work. Existing code/worktree
+services are retained. New integrations must meet the same observable permission,
+Stop, artifact and recovery contracts before being presented as operational.
