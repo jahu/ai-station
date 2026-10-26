@@ -745,10 +745,9 @@ function ImageReferenceStrip({
   if (!ids.length) return null;
   return (
     <>
-      <p id={labelId} className="dashboard-note">
-        Arrow keys choose an image reference while the list is focused. Remove
-        and reorder stay on the selected reference. Enter does not send. There
-        is no inspectable reference Run.
+      <p id={labelId} className="sr-only">
+        Image references. Use arrow keys to move between images. Remove and
+        reorder act on the selected image.
       </p>
       <div
         ref={listRef}

@@ -44,10 +44,9 @@ function AttachmentCards({
   };
   return (
     <>
-      <p id={labelId} className="dashboard-note">
-        Arrow keys choose an attachment while the list is focused. Remove stays
-        on the selected file. Enter does not send. There is no inspectable
-        attachment Run.
+      <p id={labelId} className="sr-only">
+        Attached files. Use arrow keys to move between files. Remove acts on the
+        selected file.
       </p>
       <div
         ref={listRef}

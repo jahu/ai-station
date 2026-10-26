@@ -34,9 +34,7 @@ it("moves through discovered GGUFs without sending", () => {
   render(<Host />);
   const first = screen.getByLabelText("GGUF gguf-1");
   expect(first.tabIndex).toBe(0);
-  expect(
-    screen.getByText(/There is no inspectable GGUF-selection Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Local model choices. Use arrow keys/)).toBeTruthy();
   expect(screen.queryByLabelText(/GGUF ollama/i)).toBeNull();
   const list = first.closest(".gguf-choice-list") as HTMLElement;
   fireEvent.keyDown(list, { key: "End" });

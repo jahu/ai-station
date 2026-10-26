@@ -48,10 +48,9 @@ export function ProjectChoiceList({
   if (!items.length) return null;
   return (
     <>
-      <p id={labelId} className="dashboard-note">
-        Arrow keys choose a project while the list is focused. Space or Enter
-        selects it. Inspect project and View tagged Runs stay on that row and do
-        not start a coding Run. There is no inspectable project-selection Run.
+      <p id={labelId} className="sr-only">
+        Project choices. Use arrow keys to move, then Space or Enter to select.
+        Project details and history are available on each row.
       </p>
       <div
         ref={listRef}

@@ -43,11 +43,8 @@ export function CodingModelChoiceList({
   };
   return (
     <>
-      <p id={labelId} className="dashboard-note">
-        Arrow keys choose a Cursor or Codex model while the list is focused.
-        Space or Enter selects it. Enter does not start a coding Run. Auto uses
-        the selected provider's CLI default. There is no inspectable
-        model-selection Run.
+      <p id={labelId} className="sr-only">
+        Model choices. Use arrow keys to move, then Space or Enter to select.
       </p>
       <div
         ref={listRef}
@@ -74,7 +71,7 @@ export function CodingModelChoiceList({
                   <small>
                     {item.id
                       ? "Installed CLI catalog"
-                      : "Selected provider default. Never a silent provider switch."}
+                      : "Uses the selected provider’s default model."}
                   </small>
                 </span>
               </label>

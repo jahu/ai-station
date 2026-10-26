@@ -87,9 +87,7 @@ it("moves through staged text attachments with arrow keys without sending", asyn
   const second = screen.getByLabelText("Attachment notes.md");
   expect(first.tabIndex).toBe(0);
   expect(second.tabIndex).toBe(-1);
-  expect(
-    screen.getByText(/There is no inspectable attachment Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Attached files. Use arrow keys/)).toBeTruthy();
   fireEvent.keyDown(first.closest(".chat-attachment-list") as HTMLElement, {
     key: "ArrowDown",
   });

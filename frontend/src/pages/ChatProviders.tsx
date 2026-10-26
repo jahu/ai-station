@@ -57,9 +57,9 @@ function ProviderCards({
       <h3 id={headingId} className="sr-only">
         Chat providers
       </h3>
-      <p id={labelId} className="dashboard-note">
-        Arrow keys choose a provider while the list is focused. Remove stays on
-        the selected row. There is no inspectable provider Run.
+      <p id={labelId} className="sr-only">
+        Chat provider list. Use arrow keys to move between providers. Remove
+        acts on the selected provider.
       </p>
       <div
         ref={listRef}

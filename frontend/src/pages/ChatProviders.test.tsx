@@ -155,7 +155,7 @@ it("moves through chat providers with arrow keys", async () => {
   expect(first.tabIndex).toBe(0);
   expect(second.tabIndex).toBe(-1);
   expect(screen.getByRole("region", { name: "Chat providers" })).toBeTruthy();
-  expect(screen.getByText(/There is no inspectable provider Run/)).toBeTruthy();
+  expect(screen.getByText(/Chat provider list. Use arrow keys/)).toBeTruthy();
   fireEvent.keyDown(first.closest(".diagnostic-list") as HTMLElement, {
     key: "ArrowDown",
   });

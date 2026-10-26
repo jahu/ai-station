@@ -40,9 +40,7 @@ it("moves through native Cursor and Codex models without starting a Run", () => 
   render(<Host />);
   const auto = screen.getByLabelText("Model auto");
   expect(auto.tabIndex).toBe(0);
-  expect(
-    screen.getByText(/There is no inspectable model-selection Run/),
-  ).toBeTruthy();
+  expect(screen.getByText(/Model choices. Use arrow keys/)).toBeTruthy();
   expect(
     (screen.getByRole("radio", { name: /^Auto/ }) as HTMLInputElement).checked,
   ).toBe(true);
