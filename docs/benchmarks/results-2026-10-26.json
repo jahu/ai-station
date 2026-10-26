@@ -1,0 +1,134 @@
+{
+  "hardware": {
+    "cpu": "Intel Core i7-6900K",
+    "ram_gb": 32,
+    "gpu": "2 x NVIDIA RTX3060 12GB; separate devices"
+  },
+  "scope": "Single-workstation recorded observations, not cross-project or statistical benchmarks",
+  "measurements": [
+    {
+      "workload": "Generate image",
+      "model": "LUSTIFY v10 Turbo Q4_0",
+      "settings": {
+        "width": 768,
+        "height": 1024,
+        "steps": 8,
+        "cfg": 1,
+        "seed": 42,
+        "gpus": [
+          "0",
+          "1"
+        ]
+      },
+      "elapsed_seconds": 100.052977,
+      "timing_boundary": "Receipt started_at to finished_at; Run wall time, not diffusion-only kernel time",
+      "source_receipt": "data/acceptance/krea2-lustify-20261025/t2i-01.json",
+      "source_receipt_sha256": "525f7b384f2354d4ef445d337df2bd4b6a0d79c54a447f745a49e92af84cad8c"
+    },
+    {
+      "workload": "Edit image",
+      "model": "LUSTIFY v10 Turbo Q4_0",
+      "settings": {
+        "width": 768,
+        "height": 1024,
+        "steps": 8,
+        "cfg": 1,
+        "seed": 42,
+        "gpus": [
+          "0",
+          "1"
+        ]
+      },
+      "elapsed_seconds": 147.378423,
+      "timing_boundary": "Receipt started_at to finished_at; Run wall time, not diffusion-only kernel time",
+      "source_receipt": "data/acceptance/krea2-lustify-20261025/edit-01.json",
+      "source_receipt_sha256": "2add0e71f26124e73970be51bcd8ff807ffee660e0228bec57496c31bfaab69c"
+    },
+    {
+      "workload": "Recompose one reference",
+      "model": "LUSTIFY v10 Turbo Q4_0",
+      "settings": {
+        "width": 768,
+        "height": 1024,
+        "steps": 8,
+        "cfg": 1,
+        "seed": 42,
+        "gpus": [
+          "0",
+          "1"
+        ]
+      },
+      "elapsed_seconds": 149.225372,
+      "timing_boundary": "Receipt started_at to finished_at; Run wall time, not diffusion-only kernel time",
+      "source_receipt": "data/acceptance/krea2-lustify-20261025/recompose-01.json",
+      "source_receipt_sha256": "0ff0d5479c7bd381d0b2fe0adaaf5f5d9f9af38cf0806eb4a00e872aa3a74887"
+    },
+    {
+      "workload": "Recompose two references",
+      "model": "LUSTIFY v10 Turbo Q4_0",
+      "settings": {
+        "width": 768,
+        "height": 1024,
+        "steps": 8,
+        "cfg": 1,
+        "seed": 42,
+        "gpus": [
+          "0",
+          "1"
+        ]
+      },
+      "elapsed_seconds": 189.504623,
+      "timing_boundary": "Receipt started_at to finished_at; Run wall time, not diffusion-only kernel time",
+      "source_receipt": "data/acceptance/krea2-lustify-20261025/recompose-two-01.json",
+      "source_receipt_sha256": "0721705d3840234313a2de20902166e3a8f2b73a04f43dd005d4e00b1d1570e7"
+    },
+    {
+      "workload": "Two independent video shots",
+      "model": "Wan2.2 5B",
+      "elapsed_seconds": 478.0094804763794,
+      "timing_boundary": "Whole recorded workflow until verified output; excludes later browser/ASR/human review",
+      "source_receipt": "data/acceptance/parallel-wan-20261026/result.json",
+      "source_receipt_sha256": "dd9b343180477c97aa0a1b2f9e2523fb2ab7e613ed42da9496b276e0c3aa3dfd"
+    },
+    {
+      "workload": "Continuous60s video",
+      "model": "Wan2.2 5B",
+      "elapsed_seconds": 11755.001586914062,
+      "timing_boundary": "Whole recorded workflow until verified output; excludes later browser/ASR/human review",
+      "source_receipt": "data/acceptance/long-guided-video-20261026/long-fixed-result.json",
+      "source_receipt_sha256": "9cf747b6fdf72ed4607a066e20f62f189ff56a897f7d61d8735f2f3b07cb78aa"
+    },
+    {
+      "workload": "Full60s recorded avatar including fresh speech preparation",
+      "model": "EchoMimic V3 + Chatterbox",
+      "elapsed_seconds": 2897.782854318619,
+      "timing_boundary": "Whole recorded workflow until verified output; excludes later browser/ASR/human review",
+      "source_receipt": "data/acceptance/avatar-full-minute-20261026/result.json",
+      "source_receipt_sha256": "bcaa45488f7257f1ff069e35cf2767658e6f16cfa436237e9abc83b02010561e"
+    },
+    {
+      "workload": "Local LLM completion",
+      "model": "RVN-Q4_K_M-multilingual.gguf",
+      "parameter_count": 26895998464,
+      "quantization": "Q4_K_M",
+      "gpus": [
+        0,
+        1
+      ],
+      "context_allocated_tokens": 46080,
+      "kv_cache": "q8_0",
+      "prompt_tokens": 467,
+      "prompt_eval_ms": 1228.39,
+      "prompt_tokens_per_second": 380.17,
+      "generation_tokens_reported": 345,
+      "generation_eval_ms": 20350.93,
+      "generation_tokens_per_second_reported": 16.9,
+      "timing_boundary": "One existing owned server completion; llama.cpp printed prompt and decode rates. Excludes loading; no new inference launched. Allocated context is not actual prompt length.",
+      "source": "Existing managed llama.cpp server print_timing lines, captured read-only2026-10-26",
+      "safe_timing_lines": [
+        "1.04.580.158 I slot print_timing: id  0 | task 0 | prompt eval time =    1228.39 ms /   467 tokens (    2.63 ms per token,   380.17 tokens per second)",
+        "1.04.580.162 I slot print_timing: id  0 | task 0 |        eval time =   20350.93 ms /   345 tokens (   59.16 ms per token,    16.90 tokens per second)"
+      ]
+    }
+  ]
+}
