@@ -1,7 +1,8 @@
 import { ArrowUp, Paperclip } from "lucide-react";
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "../components/ui/button";
 import { useDictation } from "./useDictation";
+import { ComposerAttachmentTarget } from "./composer-attachment-target";
 
 export default function ConversationComposer({
   id,
@@ -38,6 +39,8 @@ export default function ConversationComposer({
 }) {
   const textarea = useRef<HTMLTextAreaElement>(null);
   const toolPanel = useRef<HTMLDetailsElement>(null);
+  const [attachmentTarget, setAttachmentTarget] =
+    useState<HTMLFieldSetElement | null>(null);
   const dictation = useDictation({ value, onChange, textarea, disabled: busy });
   useLayoutEffect(() => {
     if (toolSelectionKey && toolPanel.current) {
@@ -59,76 +62,84 @@ export default function ConversationComposer({
     }
   };
   return (
-    <form
-      className="new-chat-composer shared-chat-composer"
-      onSubmit={(event) => {
-        event.preventDefault();
-        submit();
-      }}
-      onKeyDown={(event) => {
-        if (
-          event.key === "Enter" &&
-          (event.target as HTMLElement).matches("input:not([type='file'])")
-        )
-          event.preventDefault();
-      }}
-    >
-      <label className="sr-only" htmlFor={id}>
-        Message
-      </label>
-      <textarea
-        ref={textarea}
-        id={id}
-        autoFocus={autoFocus}
-        rows={1}
-        maxLength={32000}
-        value={value}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (
-            event.key !== "Enter" ||
-            event.nativeEvent.isComposing ||
-            event.shiftKey ||
-            event.altKey ||
-            (sendKey === "ctrl-enter" && !event.ctrlKey && !event.metaKey)
-          )
-            return;
+    <ComposerAttachmentTarget.Provider value={attachmentTarget}>
+      <form
+        className="new-chat-composer shared-chat-composer"
+        onSubmit={(event) => {
           event.preventDefault();
           submit();
         }}
-      />
-      {dictation.panel}
-      {permissionNote && <p className="muted">{permissionNote}</p>}
-      {tools && (
-        <details ref={toolPanel} className="new-chat-tools">
-          <summary>
-            <Paperclip size={16} aria-hidden="true" />
-            <span>Attach files &amp; choose tools</span>
-          </summary>
-          <fieldset className="composer-tools-lock" disabled={dictation.busy}>
-            {tools}
-          </fieldset>
-        </details>
-      )}
-      <div className="new-chat-footer">
-        {controls}
-        {dictation.action}
-        {sendButton ?? (
-          <Button
-            type="submit"
-            aria-label={sendLabel}
-            title={
-              sendKey === "ctrl-enter"
-                ? "Ctrl / Cmd + Enter to send"
-                : "Enter to send · Shift + Enter for a new line"
-            }
-            disabled={!canSend || busy || dictation.busy}
-          >
-            <ArrowUp size={18} /> Send
-          </Button>
+        onKeyDown={(event) => {
+          if (
+            event.key === "Enter" &&
+            (event.target as HTMLElement).matches("input:not([type='file'])")
+          )
+            event.preventDefault();
+        }}
+      >
+        <fieldset
+          ref={setAttachmentTarget}
+          className="composer-selected-inputs"
+          aria-label="Selected attachments"
+          disabled={dictation.busy}
+        />
+        <label className="sr-only" htmlFor={id}>
+          Message
+        </label>
+        <textarea
+          ref={textarea}
+          id={id}
+          autoFocus={autoFocus}
+          rows={1}
+          maxLength={32000}
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (
+              event.key !== "Enter" ||
+              event.nativeEvent.isComposing ||
+              event.shiftKey ||
+              event.altKey ||
+              (sendKey === "ctrl-enter" && !event.ctrlKey && !event.metaKey)
+            )
+              return;
+            event.preventDefault();
+            submit();
+          }}
+        />
+        {dictation.panel}
+        {permissionNote && <p className="muted">{permissionNote}</p>}
+        {tools && (
+          <details ref={toolPanel} className="new-chat-tools">
+            <summary>
+              <Paperclip size={16} aria-hidden="true" />
+              <span>Attach files &amp; choose tools</span>
+            </summary>
+            <fieldset className="composer-tools-lock" disabled={dictation.busy}>
+              {tools}
+            </fieldset>
+          </details>
         )}
-      </div>
-    </form>
+        <div className="new-chat-footer">
+          {controls}
+          {dictation.action}
+          {sendButton ?? (
+            <Button
+              type="submit"
+              aria-label={sendLabel}
+              title={
+                sendKey === "ctrl-enter"
+                  ? "Ctrl / Cmd + Enter to send"
+                  : "Enter to send · Shift + Enter for a new line"
+              }
+              disabled={!canSend || busy || dictation.busy}
+            >
+              <ArrowUp size={18} /> Send
+            </Button>
+          )}
+        </div>
+      </form>
+    </ComposerAttachmentTarget.Provider>
   );
 }

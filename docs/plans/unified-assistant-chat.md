@@ -60,6 +60,23 @@ choice or consequential action, such as a provider default or which model server
 AI Station owns. Never describe internal non-existent selection Runs as product
 instructions. Apply the same distinction to System lists and provider settings.
 
+## Persistent attachment previews
+
+Selected text/PDF attachments and ordered image references remain visible beside
+the composer when the tool panel is collapsed, in both a new and saved conversation.
+Use one shared preview surface rather than duplicating selections or payload state.
+Keep remove/reorder and keyboard operation, upload errors, draft text, submission
+receipts and dictation locks intact. Staging or removing a reference executes nothing.
+Check actual desktop/phone layouts and collapsed-panel behavior before rollout.
+
+Qualification, 2026-10-26: all five frontend gates pass with 847 tests. The actual
+compiled UI and isolated API verify new and saved conversations at desktop 1440
+and phone 390: text removal, two decoded image uploads, previews outside closed
+tools, reordering transmitted on Send, unchanged drafts and no Runs until Send.
+No new LLM/GPU execution is claimed. Backend/native/schema/configuration remain
+identical to qualified `7ac543d`; rollout is tracked separately. Evidence:
+`data/acceptance/composer-attachment-previews-20261026/`.
+
 ## Boundaries and compatibility
 
 - Reuse the current router, assistant, providers and Task → Run → Events →

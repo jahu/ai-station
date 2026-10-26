@@ -6,6 +6,7 @@ import { Paperclip } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { ErrorNotice } from "../components/common";
 import { useListKeyboard } from "./useListKeyboard";
+import ComposerAttachments from "./ComposerAttachments";
 
 export type TextAttachment = {
   name: string;
@@ -317,14 +318,21 @@ export default function TextAttachments({
           </p>
         )}
       </details>
-      <ErrorNotice error={error} />
-      {attachments.length > 0 && (
-        <AttachmentCards
-          attachments={attachments}
-          busy={busy}
-          onChange={onChange}
-        />
-      )}
+      <ComposerAttachments>
+        <ErrorNotice error={error} />
+        {reading && (
+          <p className="muted" role="status">
+            Reading files…
+          </p>
+        )}
+        {attachments.length > 0 && (
+          <AttachmentCards
+            attachments={attachments}
+            busy={busy}
+            onChange={onChange}
+          />
+        )}
+      </ComposerAttachments>
     </div>
   );
 }
