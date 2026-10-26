@@ -1,3 +1,10 @@
+Full-avatar continuation uses a fixed portrait-anchored recipe for newly queued
+qualified jobs. It reduces cumulative color drift while keeping continuous
+motion; saved legacy jobs retain their settings. Actual qualification covers
+one complete 36.52-second portrait/voice workflow, with residual facial-detail
+changes and no perfect-identity claim. See [scope and evidence](docs/plans/echo-continuation-quality.md);
+deployment receipts determine the live version.
+
 Data agents can retain every analysis while notifying only when a reviewed criterion matches. The separate alert-check Run keeps model/check failures distinct from completed data results. [Contracts and delivery status](docs/plans/data-result-alerts.md).
 
 Settings → Access → **Access from anywhere** provides explicit private-access

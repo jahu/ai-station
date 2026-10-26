@@ -133,3 +133,32 @@ native dispatch or model import, and incompatible preceding motion is refused.
 The implementation adds fixed typed metadata/arguments, not a shell/graph API.
 Full local qualification and an actual complete public-product-source workflow
 remain required before merge/promotion/deployment.
+
+## Qualified product recipe
+
+Frozen executable source `d2ae81c5a592495dae9fa1bb586cbf784c2b2bb3` passed
+all 4,224 normal Python/Runner cases: 4,215 passed and nine explicit opt-in
+integrations skipped, with Ruff/format clean. The unchanged frontend retains
+PR #455's 847-test qualification. Exact backend/compiled assets in the Docker
+image, all Compose variants and isolated fake API/engine/SQL/SSE/reopen pass.
+
+The actual ordinary public API, worker and native Runner generated all 14 windows
+and composed a 36.52-second/913-frame film. All native recipe observations and
+motion checkpoint identities match the frozen plan. Every decoded pixel and the
+complete MP4 bytes equal the controlled engineering output already reviewed
+throughout and at all 13 joins. Independent full audio/decode and compiled
+1440/390 playback pass. The already-qualified canonical narration WAV was reused;
+this comparison did not rerun Chatterbox or prove universal identity/lip-sync.
+
+The GPU helper's inherited footer referenced an obsolete checker filename after
+successful output/cleanup, so that process exited nonzero. Its exact source and
+log are retained. The independent observer actually executed both correctly named
+checks successfully; the readonly final verifier reconciles all 15 successful
+Runs, hashes and receipts. No GPU output was regenerated and no predicate was
+waived. Details: `typed-qualification/postcheck-resolution.json` and
+`typed-qualification/qualification-complete.json` in the investigation folder.
+
+Catalog v13 adds AVATAR-005 (160 Polish cases/21 areas); all 12 offline exporter
+checks pass. Owner answers remain **Nie testowano**. Code review, merge and the
+backup/deployment receipts determine rollout; this is not whole-platform or
+final operator acceptance.
