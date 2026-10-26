@@ -1,14 +1,16 @@
-The [Echo appearance candidate](plans/echo-continuation-quality.md) snapshots
+The [Echo appearance recipe](plans/echo-continuation-quality.md) snapshots
 its fixed recipe in new full-avatar Tasks and agent workflows. Speech planning,
 segments, composition and retries preserve that snapshot. Resume refuses changed
 observations and reuses only compatible completed clips/checkpoints; old plans
 without a recipe retain their original native arguments and tensor identity.
 No new execution state or separate queue is introduced.
 
-Planned private remote access uses an owned native userspace Tailscale instance,
+Private remote access uses an owned native userspace Tailscale instance,
 with keys outside the control-plane mount and fixed loopback-only Serve targets.
-Initial native boundary helpers are not an operational adapter. See
-[the delivery and acceptance plan](plans/private-tailnet-access.md).
+Installation, lifecycle and operator-only setup are locally qualified. Account
+enrollment, HTTPS consent and actual outside-LAN device acceptance remain separate
+operator steps; the observed deployment is not yet serving a tailnet address.
+See [the delivery and acceptance plan](plans/private-tailnet-access.md).
 
 Agent result email uses a same-Task email.send child after verified completion,
 with an operation identity derived from the root workflow. Review waits for an
@@ -78,31 +80,37 @@ Runs dispatched by the native Runner. Source/input snapshots, bounded script log
 required output validation, exact container cleanup, task cancellation and
 conservative lease inspection are part of that same Run lifecycle.
 
-Planned extension: [conversation-first and long-media delivery](plans/2026-10-chat-work-media.md).
-The [long-media contract](plans/long-media-execution.md) reuses durable Run
-dependencies for bounded segments and CPU composition, adds idempotent stage
+The implemented [long-media contract](plans/long-media-execution.md) reuses durable Run
+dependencies for bounded segments and CPU composition, with idempotent stage
 publication and task-wide Stop/resume, and distinguishes plan-prepared from final
-artifact success. It specifies RAM-aware admission and qualified two-GPU shot
-concurrency. These are design requirements, not implemented execution behavior.
+artifact success. RAM-aware admission and exclusive GPU ownership are enforced.
+Actual recorded profiles qualify a complete sixty-second Wan film and a
+sixty-second uploaded-recording avatar. The separate complete-speech-to-avatar
+profile covers 36.52 seconds. Two-GPU concurrent-shot fit and broader
+quality/duration combinations need their own evidence; two detected devices do
+not prove simultaneous execution. See [current acceptance](plans/platform-acceptance-audit.md).
 
-> Implementation status: this document includes the target architecture. The operational slice includes Docker startup, the React dashboard, run inspector/SSE, fake worker execution, private runner transport, process ownership, telemetry history, and diagnostics. The image workspace and photo executor are enabled with fake-pipeline integration coverage. Local chat is enabled with fake-provider integration coverage. Project registration, policy editing, and read-only Git status are enabled with disposable-repository integration coverage. Owned worktree preparation is enabled through the worker and a managed native process. Scoped memory with pinned Chat context and managed model-file discovery are enabled. Local agents use disabled drafts, explicit activation, persistent schedules and bounded context tools. Bounded Cursor file-edit proposals, review artifacts and separate validation Runs are operational. Other coding adapters remain inactive. See README for runnable commands and limitations.
+> Current execution uses the shared lifecycle across conversations, local agent
+> code/data, media, models, memory and operational actions. Capability contracts
+> below describe behavior; the [release audit](plans/platform-acceptance-audit.md)
+> distinguishes normal regressions, recorded real profiles and pending acceptance.
 
 
 ## Path
 
-### Planned segmented media extension
+### Segmented media execution
 
-The [long-media design](plans/long-media-execution.md) is not yet operational.
-It composes normal Runs through existing RunDependency: prepare canonical inputs,
+The [long-media execution](long-media.md) composes normal Runs through existing
+RunDependency: prepare canonical inputs,
 generate bounded segments, compose on CPU, fully decode/verify, adopt a final
 artifact. The planner releases its worker slot after publishing the durable graph.
 Task success waits for the selected attempts' final verified output, not planner
-success. Atomic graph cancellation and resumable stage identities require new
-tested contracts; existing single-Run Stop is not evidence that they exist.
-RAM and GPU admission must be atomic and release only after owned process exit.
-Completed segments are reusable only with authoritative completion and matching
-input/profile hashes. See the [implementation handoff](plans/implementation-handoff.md)
-for delivery order and the distinction between short-clip and long-output acceptance.
+success. Atomic graph cancellation and resumable stage identities preserve
+completed work without replaying uncertain processes. RAM/GPU reservations release
+only after owned exit. Reuse requires authoritative completion and matching
+input/profile hashes, including the frozen continuation recipe/observation.
+The original [design](plans/long-media-execution.md) retains broader targets;
+the [release audit](plans/platform-acceptance-audit.md) records actual qualification.
 
 ### Current execution path
 

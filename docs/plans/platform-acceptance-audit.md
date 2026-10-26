@@ -1,11 +1,41 @@
 # Platform release acceptance audit
 
-In progress, 2026-10-25. This is an evidence map and remaining-work list, not a
+In progress, 2026-10-26. This is an evidence map and remaining-work list, not a
 claim of 100% completion. Preserve the original specification together with the
 explicit agent-first and single-conversation decisions. Do not substitute one
 feature PR, an available runtime badge or fixture output for full acceptance.
 
 ## Current audit, 2026-10-26
+
+Current running application source is `81c87650f480c1ad4713d65e84e50ffe83b7e3c4`
+(PR #457). Full normal qualification is 4,228 cases: 4,219 passed and nine opt-in
+skips; frontend qualification retains 847 tests/all five gates by exact source
+scope. Later QA catalog/importer changes are contributor tools and documentation,
+with no runtime source or deployment change. The shared deployment receipt remains
+authoritative. `market-agent-draft-condition-20261026/` records actual rollout,
+auth/data/embedding preservation, worker/scheduler health and startup inspection.
+
+`avatar-full-minute-20261026/qualification-complete.json` now qualifies the full
+60-second uploaded-recording profile: 1500 frames/25 fps, 384-square/eight steps,
+GPU 1, 24 windows under observed 11-GiB/zero-swap scopes, exact frozen recipe and
+all native checkpoints, composition, complete decode/audio and compiled desktop
+playback/mobile ending. Five throughout/join sheets cover all 23 transitions.
+Contrast/color and face-detail changes remain visible; perfect identity/lip-sync
+is not claimed. Input is a 60-second excerpt of a fresh 62.44-second narration,
+without loops/stretching/silent padding. It does not claim the complete uncut
+TTS ending. The separate 36.52-second whole-speech workflow below retains its scope.
+The original observer's missing opt-in and the first reconciliation's historical
+lock-query mistake remain recorded; independent corrected checks pass on the
+same output, with no GPU regeneration or deleted execution history.
+
+Current operator catalog is v14/161 cases in 21 areas. The inspected draft is
+`market-agent-qa-20261026/candidate-81c8765/`, with every result **Nie testowano**.
+The offline feedback importer is qualified through 26 tests/21 subtests and actual
+original/Calc-saved XLSX, CSV and synthetic bug/retest round-trips in
+`operator-qa-feedback-20261026/`. Final handoff still needs readiness and updated
+qualified-profile notes, including the minute recording scope above. Actual
+Tailscale account/outside-LAN and operator-inbox delivery remain owner-controlled
+open gates. No operator answers have been supplied or invented.
 
 The PR #445 identities below are historical. The audited deployment before the
 market-draft correction is
