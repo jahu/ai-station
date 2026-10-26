@@ -23,6 +23,13 @@ Existing controller-derived market scopes may be preserved for a recognized
 explicit quote-watch request; the model cannot change their instruments, thresholds
 or account/email bindings. Ordinary stock research keeps public tools.
 
+Market notification policy also stays controller-owned. A model may repeat the
+price threshold in `report_condition`; do not turn that text into a report-model
+check or an unconditional success notice. Keep the numeric market threshold and
+explicit notice preferences, rejecting invented tools as before. Threshold
+crossings use the existing deterministic in-app market alert. Disabled drafts
+never fetch quotes, activate schedules or acquire email authority.
+
 The model may refine a useful name, goal, instructions, output expectation, tool
 selection and supported UTC cadence. Reject unsupported fields and combinations;
 a single bounded local correction may fix a malformed definition, with a visible

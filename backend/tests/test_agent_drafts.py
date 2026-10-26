@@ -362,6 +362,62 @@ def test_recognized_public_crypto_scope_is_preserved_without_a_model_inventing_p
         assert agent["market"].get("email") is None
 
 
+@pytest.mark.parametrize("report_condition", ["", "Zmiana ceny wynosi powyżej 5% (wzrost lub spadek)"])
+@pytest.mark.parametrize("failure_notice", [False, True])
+def test_market_draft_keeps_numeric_alerts_after_model_proposes_report_classifier(
+    model, report_condition, failure_notice
+):
+    calls, responses = model
+    # Regression from actual Qwen output: the first answer invented a tool;
+    # correction removed it but retained an incompatible report criterion.
+    proposal = {
+        "name": "Monitor BTC Cena USD",
+        "goal": "Sprawdzaj publiczną cenę BTC/USD i powiadamiaj przy zmianie powyżej 5%.",
+        "tools": ["market_watch"],
+        "search_query": "Bitcoin price USD live today",
+        "trigger": "cron",
+        "cron_expr": "0 9 * * *",
+        "interval_seconds": None,
+        "maximum_runtime": None,
+        "report_condition": report_condition,
+    }
+    responses[:] = [
+        json.dumps({**proposal, "tools": ["market_watch", "report_condition"]}),
+        json.dumps(proposal),
+    ]
+    instruction = (
+        "Stwórz wyłączony szkic agenta: codziennie o 09:00 sprawdza publiczną cenę bitcoina w USD. "
+        "Przy zmianie o ponad 5% chcę powiadomienie w aplikacji. Bez e-maila i bez kluczy API. "
+        "Najpierw chcę przejrzeć definicję."
+    )
+    if failure_notice:
+        instruction += " Powiadom o błędzie."
+    with TestClient(app) as api:
+        run = submit(api, instruction=instruction, schedule_timezone="Europe/Warsaw")
+        step()
+        done = state(api, run)
+        assert done["status"] == "succeeded", done["error_message"]
+        assert len(calls) == 2
+        agent = api.get("/api/agents/" + done["metadata"]["agent_id"]).json()
+        assert not agent["enabled"] and agent["next_run_at"] is None
+        assert agent["tools"] == ["market_watch"] and agent["model"] == ""
+        assert agent["trigger"] == "cron" and agent["cron_expr"] == "0 9 * * *"
+        assert agent["schedule_timezone"] == "Europe/Warsaw"
+        assert agent["market"]["provider"] == "coinbase_exchange"
+        assert agent["market"]["instruments"] == ["BTC-USD"]
+        assert agent["market"]["threshold_percent"] == "5"
+        assert agent["market"]["direction"] == "both"
+        assert agent["market"].get("email") is None
+        assert agent["notification_policy"] == {
+            "on_success": False,
+            "on_failure": failure_notice,
+            "on_approval": False,
+        }
+        stored = api.get("/api/artifacts/" + done["metadata"]["definition_artifact_id"] + "/file").json()
+        assert stored["definition"]["notification_policy"] == agent["notification_policy"]
+        assert step() is None  # Drafting neither checks prices nor activates the agent.
+
+
 def test_generic_stock_research_does_not_require_a_financial_data_account(model):
     calls, responses = model
     responses[:] = [

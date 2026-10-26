@@ -5,6 +5,38 @@ claim of 100% completion. Preserve the original specification together with the
 explicit agent-first and single-conversation decisions. Do not substitute one
 feature PR, an available runtime badge or fixture output for full acceptance.
 
+## Current audit, 2026-10-26
+
+The PR #445 identities below are historical. The audited deployment before the
+market-draft correction is
+`73f425fe7d14ad87792c9495a0a06f3357f756c6` (PR #456), with preserved data,
+schema0036 and the same LAN address. Its complete normal qualification contains
+4,224 cases (4,215 passed, nine opt-in skips). Frontend qualification includes
+847 tests and all five gates. Deployment authority remains the shared receipt;
+these numbers do not prove later unreviewed changes.
+
+`echo-continuation-quality-20261026/` records an actual typed-worker 36.52-second,
+14-window avatar with the portrait-anchor recipe, complete audio and desktop/phone
+playback. Visible color drift is reduced; residual facial-detail changes remain.
+`operator-qa-release-20261026/candidate-73f425f/` contains the release-specific
+160-case draft workbook, synthetic inputs and native Calc inspection. It remains
+a draft with all operator answers **Nie testowano**, not the final handoff.
+
+The finite real-model factory sweep in `final-agent-factory-20261026/` created
+disabled website and Excel agents through the ordinary conversation/worker with
+the installed local Qwen3.5 9B. The BTC draft failed: a corrected model response
+still repeated the numeric price alert in `report_condition`, which was wrongly
+mapped to an incompatible report-classifier policy. This is an internal defect,
+not an external-account gate. Its focused correction is tracked in
+`market-agent-draft-condition-20261026/`; original failing responses are retained.
+Fresh Qwen3.5 9B inference now prepares the disabled BTC draft with the exact
+5-percent threshold and 09:00 Europe/Warsaw schedule, then answers a normal
+same-conversation question with `156` without creating another agent. The owned
+model is stopped afterward. This is actual drafting/reply acceptance at 8192
+context, not a new long-context coding test. Normal regression and rollout have
+their own receipts. No agent activation, quote fetch or
+website/Excel execution is implied by successful definition preparation.
+
 ## Audited baseline identity (PR #445)
 
 The shared deployment receipt below determines the current release after later
@@ -48,8 +80,8 @@ auth settings, E5 vectors, native/private services and owned model instances.
 Receipt paths in this table are below `data/acceptance/`. Historical receipts
 remain scoped to their original model, parameters, source and runtime. Normal
 regressions of newer source do not relabel an old integration as a fresh real
-execution. The operator case catalog is v11 with 158 stable IDs in 21 areas. All
-158 are mapped to source, current regression and concrete historical receipt
+execution. The operator case catalog is v13 with 160 stable IDs in 21 areas. All
+160 are mapped to source, current regression and concrete historical receipt
 scopes in [the internal coverage review](../qa/internal-coverage.md). That review
 retains unverified cases rather than marking them passed.
 

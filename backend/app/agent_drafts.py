@@ -170,7 +170,12 @@ def definition(proposal, instruction, model, schedule_timezone="UTC"):
             "schedule_timezone": schedule_timezone,
             "enabled": False,
             "permission_profile": "agent_local",
-            "notification_policy": {"on_success": True, "report_condition": proposal.report_condition}
+            # Market alerts use the controller-derived numeric policy, not a
+            # model's report classifier. Preserve explicit notice preferences;
+            # never turn a price threshold into an alert on every successful poll.
+            "notification_policy": base.notification_policy
+            if base.market is not None
+            else {"on_success": True, "report_condition": proposal.report_condition}
             if proposal.report_condition
             else {},
         }
