@@ -36,7 +36,13 @@ def active_run(session, agent_id):
 
 
 def launch_agent(
-    session: Session, agent: Agent, *, triggered_by: str, definition=None, before_publish=None
+    session: Session,
+    agent: Agent,
+    *,
+    triggered_by: str,
+    definition=None,
+    before_publish=None,
+    avatar_appearance_recipe=...,
 ) -> str:
     if not agent.enabled:
         raise ValueError("Enable the reviewed definition before running this agent")
@@ -103,10 +109,21 @@ def launch_agent(
             else freeze_inputs(session, definition.data)
         )
     media_inputs = None
+    avatar_appearance = {}
     if definition.media:
         from app.agent_media import freeze_inputs as freeze_media_inputs
 
         media_inputs = freeze_media_inputs(session, definition.media)
+        if definition.media.kind == "avatar":
+            from app.avatar_appearance import frozen_recipe, select_recipe
+            from app.avatars import capabilities as avatar_capabilities
+
+            recipe = (
+                select_recipe(avatar_capabilities(), definition.media.request)
+                if avatar_appearance_recipe is ...
+                else frozen_recipe({"appearance_recipe": avatar_appearance_recipe})
+            )
+            avatar_appearance = {"avatar_appearance_recipe": recipe}
     market_email_approval = None
     if definition.market is not None and definition.market.email is not None:
         from app.market_email import authorization
@@ -144,6 +161,7 @@ def launch_agent(
         execution_target="container",
         parameters={
             "definition": definition.model_dump(mode="json"),
+            **avatar_appearance,
             **({"media_inputs": media_inputs} if media_inputs is not None else {}),
             **({"data_inputs": data_inputs} if data_inputs is not None else {}),
             **(
@@ -288,7 +306,13 @@ def retry_workflow(session: Session, source: Run) -> str:
     from app.agent_workspace import workspace_retry_definition
 
     definition = workspace_retry_definition(session, source, definition)
-    run_id = launch_agent(session, agent, triggered_by="retry", definition=definition)
+    run_id = launch_agent(
+        session,
+        agent,
+        triggered_by="retry",
+        definition=definition,
+        avatar_appearance_recipe=source.parameters.get("avatar_appearance_recipe"),
+    )
     retry = session.get(Run, run_id)
     retry.metadata_json = {**retry.metadata_json, "retry_of": source.id}
     retry.parameters = {**retry.parameters, "retry_of": source.id}

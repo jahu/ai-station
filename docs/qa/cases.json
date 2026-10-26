@@ -1,5 +1,5 @@
 {
-  "version": 12,
+  "version": 13,
   "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
   "sources": [
     "docs/product-completion.md",
@@ -1387,6 +1387,33 @@
       "requirements": [
         "spec-91",
         "działające media"
+      ]
+    },
+    {
+      "id": "AVATAR-005",
+      "area": "Awatary",
+      "title": "Wygląd twarzy i łączenia w całej dłuższej wypowiedzi",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja AI Station i opis kwalifikowanego profilu; własny neutralny portret ubranej dorosłej osoby oraz WAV QA długości 30–60 sekund."
+      ],
+      "steps": [
+        "W Avatars użyj portretu i pełnego WAV, wybierz 384 px i 8 kroków zgodnie z opisem przekazanego profilu.",
+        "Uruchom zadanie i poczekaj na ukończenie wszystkich segmentów oraz montażu.",
+        "Odtwórz cały film; porównaj wygląd twarzy, kolor skóry i szczegóły w początku, środku i końcu z oryginalnym portretem.",
+        "Obejrzyj przejścia pomiędzy segmentami oraz posłuchaj końcowego zdania; zapisz znaczniki czasu zauważonych problemów i dołącz zrzuty do zgłoszenia."
+      ],
+      "expected": [
+        "Cała wypowiedź jest zachowana. Skóra nie staje się stopniowo pomarańczowa, czerwona ani fioletowa; szczegóły nie zamieniają się w narastające rozmycie.",
+        "Podobieństwo do portretu pozostaje rozpoznawalne, a łączenia nie powodują nagłego przestawienia głowy, oczu lub ust. Niezadowalającą jakość podobieństwa i synchronizacji również zgłoś.",
+        "Zadanie pokazuje rzeczywiste wyniki i źródła; sukces techniczny bez akceptowalnego obrazu nie oznacza zaliczenia tego testu."
+      ],
+      "resources": "GPU; kwalifikowany profil EchoMimic; własny portret i pełny WAV QA 30–60 s",
+      "minutes": 45,
+      "requirements": [
+        "spec-91",
+        "działające media",
+        "docs/plans/echo-continuation-quality.md"
       ]
     },
     {

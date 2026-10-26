@@ -140,12 +140,23 @@ class AvatarExecutor(MotionArtifacts, HostMediaExecutor):
     motion_filename = "echo-motion.safetensors"
 
     def validate_inputs(self, session, run):
+        from app.avatar_appearance import frozen_recipe
+        from app.models import Run
+
+        appearance = frozen_recipe(run.parameters)
+        if run.parameters.get("previous_video_run_id"):
+            previous = session.get(Run, run.parameters["previous_video_run_id"])
+            if previous and previous.parameters.get("appearance_recipe") != appearance:
+                raise ValueError("Preceding avatar belongs to a different appearance recipe")
         if run.parameters.get("media_inputs"):
             from app.agent_media import verify_published_inputs
 
             verify_published_inputs(session, run)
 
     def _start(self, runner, run, allocated, output):
+        from app.avatar_appearance import frozen_recipe
+
+        appearance = frozen_recipe(run.parameters)
         previous_reference = None
         motion = None
         if run.parameters.get("previous_video_run_id"):
@@ -170,6 +181,11 @@ class AvatarExecutor(MotionArtifacts, HostMediaExecutor):
                 )
                 if not artifact or artifact.trashed_at is not None:
                     raise ValueError("Successful preceding avatar motion is unavailable")
+                if (
+                    previous.parameters.get("appearance_recipe") != appearance
+                    or artifact.metadata_json.get("appearance_recipe") != appearance
+                ):
+                    raise ValueError("Preceding avatar belongs to a different appearance recipe")
                 motion = artifact.metadata_json.get("motion_context")
                 if motion:
                     context = session.get(Artifact, artifact.metadata_json.get("motion_context_artifact_id"))
@@ -189,6 +205,7 @@ class AvatarExecutor(MotionArtifacts, HostMediaExecutor):
                 **self.native_budget(run),
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **({"appearance_recipe": appearance} if appearance is not None else {}),
                 **(
                     {"memory_profile": run.parameters["memory_profile"]}
                     if run.parameters.get("memory_profile")

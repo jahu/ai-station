@@ -1,13 +1,13 @@
 # Internal acceptance and operator test coverage
 
-Review date: 2026-10-26. This maps all 159 stable operator cases in catalog v12
+Review date: 2026-10-26. This maps all 160 stable operator cases in catalog v13
 to the current source and recorded acceptance. It does not fill operator results
 or declare platform completion. The current release and exact local qualification
 are in [the release audit](../plans/platform-acceptance-audit.md).
 
 For the table, **regression** means the source-bound normal Python/Runner
 qualification identified in the release audit and latest implementation plan;
-frontend qualification includes PR #454’s reviewed copy cleanup (844 tests and
+frontend qualification includes PR #455’s persistent attachment previews (847 tests and
 all gates); deployment receipts determine the actual live version.
 Fixtures and a module name are not evidence of real inference. Historical real
 receipts remain bound to their original release, model and parameters. Receipt
@@ -24,7 +24,7 @@ table alone, are the evidence. **External setup** is an open release gate.
 | IMAGE-001–010 | `test_images.py`, `test_krea_images.py`; native `test_photo.py`, `test_photo_model_selection.py` | Six original real photo operations in `docs/mvp-acceptance.md`; current Krea four modes/Stop GPU-only in `krea2-lustify-20261025/milestone-complete.json`. Retain original scripts; unqualified FP8 weights are not enabled. |
 | VIDEO-001–005 | `test_video.py`, `test_video_continuation.py`, `test_video_storyboard.py`, `test_video_memory_profile.py`; native `test_wan_motion.py`, `test_wan_continuation.py` | Real short standard translation video and historical 60-second segmented draft exist. The standard20step four-window lake explicitly failed visual quality. The plain three-window candidate also failed. Integrated APG passes the complete ten-second three-window regression and actual compiled desktop/phone playback in `wan-continuation-quality-20261025/guided-release/`; small cool drift remains. VIDEO-005 requires exposure/detail/seam inspection, not merely decode/playback success. Scope and quality differ: see profiles below; do not relabel old technical receipts as visual passes. |
 | AUDIO-001–006 | `test_audio.py`, `test_music_model_setup.py`, native managed processes | Actual speech/music/transcription receipts in the product ledger; actual ten-second ACE music in `agent-media-generation-20261023/real-agent-media-result.json` and translator/music receipt. The complete-long-speech-20261026 receipts verify the real 575-character ending through three CLI calls and a full 36.52-second avatar, with source-audio preservation and playback. Voice-reference quality needs the appropriate supplied recording, not a synthetic tone. |
-| AVATAR-001–004 | `test_avatars.py`, `test_avatar_budgets.py`, `test_avatar_memory_profile.py`; native `test_echo_motion.py` | Actual five-second bounded-memory and historical 30-second avatar, full decode and recorded joins/playback. General word-level lip-sync and all long profiles are **not qualified**. |
+| AVATAR-001–005 | `test_avatars.py`, `test_avatar_budgets.py`, `test_avatar_memory_profile.py`, `test_avatar_appearance.py`; native `test_echo_motion.py`, `test_echo_appearance.py` | Complete speech and the controlled 36.52-second/14-window end-anchor diagnostic retain full audio and sampled joins with substantially reduced color drift. The actual typed recipe passes all 14 windows plus composition, exact-pixel comparison, full audio and compiled desktop/phone playback in `echo-continuation-quality-20261026/typed-qualification/`; deployment receipts determine live status. General phoneme-level lip-sync and universal portrait identity are not claimed. AVATAR-005 requires actual throughout/joins/ending review, not only success status. |
 | AGENT-001–014 | `test_agent_drafts.py`, `test_agent_coding.py`, `test_agent_outcome.py`, `test_agent_media_drafts.py`, `test_agent_email_attachments.py` | Real website/data and image/music pipelines have separate receipts. `agent-video-release-20261025/` actually qualifies natural drafting, goal preparation, two GPU windows and a five-second film; PR #448 separately checks proposed and explicit runtimes with actual local inference and compiled Settings. The earlier `agent-long-media-output-20261023/production-agent-result.json` stays **false**. Longer-film quality has its own open gate. Mail attachments use actual private TLS SMTP with injected inference, not operator-inbox delivery. |
 | SCHED-001–004 | `test_agents.py`, `test_schedule_timezones.py`, `test_agent_recurrence.py`, `test_agent_settings_schedule.py` | Durable atomic dispatch/timezones/restarts and deployed due-instant preservation. Do not alter existing schedules for QA; create/pause disposable definitions. |
 | DATA-001–008 | `test_python_data_agents.py`, `test_required_data_exports.py`, `test_data_result_reference.py` | Corrected real Auto chain: `data-agent-input-contract-20261022/production-smoke-result.json`, total 150, source preserved. Real context/output chain: `file-creation-conversation-context-20261024/post-deployment-qualified.json`. The QA package ships input CSV, two-sheet XLSX, document and explicit invalid input. |
@@ -109,7 +109,7 @@ truncated narration and failed/private composition attempts remain archived.
    There is no email connector in the current application DB.
 5. Freeze the release after remaining fixes, generate the final Polish XLSX/CSV
    package with fixtures and exact profiles, inspect/round-trip the actual files,
-   and hand it off. All 159 operator results remain **Nie testowano**.
+   and hand it off. All 160 operator results remain **Nie testowano**.
 
 The original self-development/large IDE expansion is explicitly deferred by the
 agent-first decision; existing data and functioning code/worktree services are

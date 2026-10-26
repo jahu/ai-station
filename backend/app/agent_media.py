@@ -397,12 +397,15 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
     elif prepared_scope.kind == "avatar":
         from app.media_jobs import FullAvatarRequest, publish_avatar
 
+        root = session.get(Run, run.parent_run_id)
         publish_avatar(
             session,
             FullAvatarRequest(client_request_id=UUID(run.id), **prepared_scope.request.model_dump()),
             task=run.task,
             parent_run_id=run.id,
             execution_deadline_at=run.parameters["execution_deadline_at"],
+            observed_profile=profile,
+            appearance_snapshot={"appearance_recipe": root.parameters.get("avatar_appearance_recipe")},
         )
         plan = run.task.metadata_json["media_plan"]
         child = session.get(Run, plan.get("planner_run_id") or plan["compose_run_id"])

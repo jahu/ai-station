@@ -1,3 +1,14 @@
+Portrait-anchored avatar continuation (2026-10-26), PR #456: the fixed recipe
+reduces cumulative red/magenta drift while retaining latent motion and complete
+audio. Actual 36.52-second/913-frame/14-window product execution matches the
+reviewed engineering output byte for byte; full decode/audio and desktop/phone
+playback pass. New manual/agent snapshots freeze the recipe; old plans and queued
+agents stay legacy. All 4215 normal tests pass, nine opt-in integrations skip;
+exact Docker/Compose and unchanged 847-test UI qualify. Catalog v13 has 160 Polish
+cases and 12 exporter checks. Residual facial-detail changes and exact lip-sync
+remain scoped honestly. [Contracts and receipts](plans/echo-continuation-quality.md).
+Deployment and final platform/operator acceptance remain separate gates.
+
 Complete long-speech candidate qualified (2026-10-26), PR #453: the real
 575-character narration no longer stops before its ending. The native wrapper
 uses the existing CLI in three bounded calls without changing the installed

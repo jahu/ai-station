@@ -27,7 +27,9 @@ class WorkbookTests(unittest.TestCase):
         self.assertGreaterEqual(len(catalog["cases"]), 120)
         self.assertGreaterEqual(len({case["area"] for case in catalog["cases"]}), 20)
         ids = {case["id"] for case in catalog["cases"]}
-        self.assertTrue({"LIB-005", "LIB-006", "LIB-007", "LIB-008", "MEM-007", "PROJECT-001"} <= ids)
+        self.assertTrue(
+            {"LIB-005", "LIB-006", "LIB-007", "LIB-008", "MEM-007", "PROJECT-001", "AVATAR-005"} <= ids
+        )
 
     def test_workbook_exports_are_usable_feedback_without_prefilled_success(self):
         with tempfile.TemporaryDirectory() as folder:
