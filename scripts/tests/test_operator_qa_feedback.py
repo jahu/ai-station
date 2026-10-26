@@ -124,6 +124,8 @@ class FeedbackTests(unittest.TestCase):
         self.issue(1, actual="")
         result = self.ingest()
         self.assertEqual(len(result["triage"]), 2)
+        self.assertFalse(result["triage"][0]["needs_clarification"])
+        self.assertTrue(result["triage"][1]["needs_clarification"])
         self.assertTrue(
             any(item["actual"] == "Szczegółowy wynik bez odpowiedzi" for item in result["triage"])
         )

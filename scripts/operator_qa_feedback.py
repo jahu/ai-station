@@ -187,7 +187,10 @@ def compile_feedback(tables, catalog, *, csv_input):
             {
                 "id": issue["id"],
                 "kind": row["Typ"] or "Do wyjaśnienia",
-                "title": row["Tytuł"] or issue["id"],
+                "title": row["Tytuł"] or f"Zgłoszenie {issue['id']} (brak tytułu)",
+                "needs_clarification": not row["Typ"]
+                or not row["Tytuł"].strip()
+                or (row["Typ"] == "Błąd" and not row["Rzeczywiste"].strip()),
                 "case_ids": sorted(issue["case_ids"]),
                 "severity": row["Waga"],
                 "steps": row["Kroki odtworzenia"],
@@ -203,6 +206,9 @@ def compile_feedback(tables, catalog, *, csv_input):
                     "id": "case:" + key,
                     "kind": "Błąd" if row["Wynik"] == "Błąd" else "Blokada",
                     "title": row["Cel testu"],
+                    "needs_clarification": not (
+                        row["Rzeczywisty rezultat"] or row["Uwagi / powód blokady"]
+                    ).strip(),
                     "case_ids": [key],
                     "severity": "",
                     "steps": row["Kroki"],
@@ -246,6 +252,7 @@ def compile_feedback(tables, catalog, *, csv_input):
     ranked.sort(
         key=lambda row: (
             {"Błąd": 0, "Blokada": 1, "Usprawnienie": 2}.get(row["kind"], 3),
+            row["needs_clarification"],
             {"Krytyczny": 0, "Wysoki": 1, "Średni": 2, "Niski": 3}.get(row["severity"], 4),
             row["priority"] or "P9",
             row["id"],
@@ -282,10 +289,15 @@ def markdown(result):
             "ID źródłowe: " + ", ".join(safe(row["id"]) for row in finding["members"]),
             "Testy: " + (", ".join(finding["case_ids"]) or "obserwacja poza katalogiem"),
             f"Waga: {safe(finding['severity']) or 'nie podano'}; priorytet testu: {finding['priority'] or 'brak'}",
+            "Stan: " + ("wymaga wyjaśnienia" if finding["needs_clarification"] else "do przeglądu"),
             "",
         ]
         for label, field in (("Kroki", "steps"), ("Oczekiwane", "expected"), ("Rzeczywiste", "actual")):
-            lines += [label + ":", *("> " + safe(line) for line in finding[field].splitlines()), ""]
+            lines += [
+                label + ":",
+                *("> " + safe(line) for line in (finding[field] or "Nie podano.").splitlines()),
+                "",
+            ]
         for member in finding["members"]:
             source = member["source"]
             evidence = [
@@ -303,7 +315,7 @@ def markdown(result):
                 "Dowód / kontekst "
                 + safe(member["id"])
                 + ": "
-                + "; ".join(safe(value) for value in evidence if value),
+                + ("; ".join(safe(value) for value in evidence if value) or "nie podano"),
                 "",
             ]
     lines += ["## Uwagi do wyjaśnienia", "", *("- " + safe(line) for line in result["warnings"])]
