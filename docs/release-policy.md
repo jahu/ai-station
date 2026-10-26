@@ -33,10 +33,40 @@ Classic named-user push restrictions are unavailable for personal repositories.
 Review or change the rule under **Settings → Branches → master**.
 
 Code-owner review makes the owner's approval necessary; it does not stop others
-from leaving advisory reviews. GitHub also prevents authors from approving their
-own PRs. Automation currently authenticates as @jahu, so an owner-authored release
-PR needs a separate contributor/App identity as author before mandatory owner
-approval can be satisfied. Do not weaken protection or count an agent acting as
-@jahu as the owner's human approval.
+from leaving advisory reviews. GitHub prevents authors from approving their own
+PRs, so release PRs are created by **github-actions[bot]**, not the owner's CLI
+identity. Do not weaken protection or count an agent acting as @jahu as the
+owner's human approval.
+
+## Prepare a release PR
+
+After reviewing and validating `develop`, the owner or an authorized agent using
+the owner's CLI session runs:
+
+```bash
+gh workflow run ci.yml --ref develop -f operation=release-pr
+```
+
+The existing manually dispatched CI workflow has two operations. Its default,
+`checks`, retains the normal checks. `release-pr` runs only the short release job
+with GitHub's automatically issued, repository-scoped token: `contents: read` and
+`pull-requests: write`. It performs no checkout, code execution from the worktree,
+approval, merge, push, tag or deployment, and needs no stored PAT/App secret or
+additional account. The owner must enable Actions' **Allow GitHub Actions to
+create and approve pull requests** repository setting; despite the setting's
+combined name, this workflow only creates PRs and cannot satisfy @jahu's required
+code-owner approval.
+
+Only an owner-triggered run on `develop` can prepare the fixed `develop → master`
+PR. Repeated runs reuse an existing bot-authored PR; no file differences create
+no PR. An existing release PR with another author is reported for owner
+resolution, never closed or replaced silently. Release jobs serialize to prevent
+duplicate PRs. This operation prepares a proposal; it does not assert that checks
+or human review have passed.
+
+Use the PR link in the run summary, inspect the final diff and verification,
+then approve and merge using the human owner account. New commits dismiss the
+approval. Agents never submit that approval or merge master. See
+[workflow token authentication](https://docs.github.com/en/actions/tutorials/authenticate-with-github_token).
 
 See GitHub's [protected branch documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).

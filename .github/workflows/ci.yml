@@ -2,10 +2,19 @@ name: CI
 on:
   # Hosted Actions credits are exhausted; local verification is authoritative.
   workflow_dispatch:
+    inputs:
+      operation:
+        description: Run checks or prepare the owner-reviewed release PR
+        type: choice
+        default: checks
+        options:
+          - checks
+          - release-pr
 permissions:
   contents: read
 jobs:
   python:
+    if: inputs.operation != 'release-pr'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,6 +26,7 @@ jobs:
       - run: .venv/bin/pip install --no-deps -e backend -e host-runner
       - run: ./scripts/check.sh
   frontend:
+    if: inputs.operation != 'release-pr'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,6 +40,7 @@ jobs:
       - run: npm run format:check && npm run lint && npm run typecheck && npm test && npm run build
         working-directory: frontend
   docker:
+    if: inputs.operation != 'release-pr'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,3 +48,50 @@ jobs:
       - run: docker compose -f compose.yaml -f compose.dev.yaml config --quiet
       - run: docker build -t ai-station:ci .
       - run: docker build -f python-executor/Dockerfile -t ai-station-python:ci .
+  release-pr:
+    if: inputs.operation == 'release-pr'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: release-pr-master
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Open or reuse the release PR as github-actions[bot]
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            if (context.ref !== 'refs/heads/develop' || context.actor !== owner) {
+              throw new Error('Release preparation requires develop and the repository owner.');
+            }
+            const { data: existing } = await github.rest.pulls.list({
+              owner, repo, state: 'open', base: 'master', head: `${owner}:develop`
+            });
+            if (existing.length) {
+              if (existing[0].user.login !== 'github-actions[bot]') {
+                throw new Error('Existing release PR has a different author; owner must resolve it first.');
+              }
+              await core.summary.addLink('Existing release PR', existing[0].html_url).write();
+              return;
+            }
+            const { data: comparison } = await github.rest.repos.compareCommits({
+              owner, repo, base: 'master', head: 'develop'
+            });
+            if (!comparison.files?.length) {
+              await core.summary.addRaw('No release changes to propose.').write();
+              return;
+            }
+            const { data: pr } = await github.rest.pulls.create({
+              owner, repo, base: 'master', head: 'develop',
+              title: 'Release: promote develop to master',
+              body: [
+                'Prepared by github-actions[bot] so the human owner can approve this PR.',
+                `@${owner} must inspect the full diff and validation before approving and merging.`,
+                'Use a merge commit to preserve develop ancestry. No automatic approval, merge, deployment or tagging is performed.',
+                'Existing published release tags remain immutable.'
+              ].join('\n\n')
+            });
+            await core.summary.addLink('Release PR for owner review', pr.html_url).write();
