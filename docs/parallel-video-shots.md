@@ -1,8 +1,8 @@
 # Independent video shots and truthful concurrent progress
 
-Shot-mode video currently adds the same previous-segment dependency as continuous
-video, both at creation and resume. Independent shots cannot use free GPUs even
-when the existing resource scheduler would admit them.
+Shot-mode video publishes independent segment Runs at creation and resume.
+Available GPUs can generate separate shots concurrently when the conservative
+host-memory admission also permits them. Continuous windows remain sequential.
 
 ## Delivery
 
@@ -14,9 +14,10 @@ no inter-shot dependency. Preserve the Task Stop/receipt/lease contracts.
 
 Do not weaken GPU ownership or conservative host RAM admission. Dynamic devices
 and actual reservations decide concurrency; a one-GPU/low-RAM host stays serial.
-Do not reduce profile RAM estimates without measurements. The present installed
-Wan profile advertises 15811 MiB/shot, so concurrent generation on the current
-32 GB host is not assumed or advertised as hardware-qualified.
+Do not reduce profile RAM estimates without measurements. The original installed
+Wan profile advertises 15811 MiB/shot. The later bounded landscape profile uses
+an enforced 11264-MiB scope per shot; its measured two-device acceptance is below.
+This does not change admission or qualify concurrency for the original profile.
 
 Expose running and waiting shot counts plus actual allocated GPU IDs in the shared
 job projection/result, so queued/composing stages are not mislabeled as active
@@ -52,3 +53,34 @@ the existing 27B runtime remained ready. Evidence:
 
 The next [queue fairness fix](media-resource-wait-fairness.md) prevents resource
 waiting in a large shot batch from hiding new interactive CPU work.
+
+## Actual two-GPU acceptance — 2026-10-26
+
+Unchanged running source `81c87650f480c1ad4713d65e84e50ffe83b7e3c4`
+completed the ordinary API → three-slot worker → private Runner → two independent
+Wan Runs → CPU composition path in an isolated database. Two distinct owned CUDA
+PIDs were observed simultaneously on the two discovered RTX 3060 devices;
+20 observations include both devices at 100% utilization. Each native process
+had an observed 11-GiB kernel memory limit and zero swap allowance. Neither
+production data nor unrelated services were changed.
+
+The exact profile is two two-second landscape shots, 1280×704, 20 steps, CFG 5,
+seed 43, GPU Auto and `bounded_11g`. Each generated 49 frames; ordered composition
+retained 48 from each for 96 frames/24 fps/four seconds, with a deliberate cut at
+frame 48. The complete workflow took 478 seconds. This is a measured result,
+not an equal-workload serial speedup benchmark or a promised completion time.
+
+Both shots have no inter-shot dependency. Source hashes, ordered artifact parents,
+all decoded output frames and their match to the ordered source clips pass.
+Every measured health request completed in under 0.025 seconds. Actual compiled
+1440px full playback and 390px ending playback pass without JavaScript errors,
+horizontal overflow or workload requests. Inspected shot beginnings/endings
+retain the requested landscape detail and exposure. All owned processes stopped
+and no active resource reservations remained.
+
+Evidence: `data/acceptance/parallel-wan-20261026/qualification-complete.json`,
+`result.json`, `independent-output-check.json`, `release-player-result.json` and
+`visual-review.json`. The local independent preview is
+`data/test-previews/Filmy/04-Wan-2GPU-dwa-ujecia-4s.mp4`.
+This qualifies the recorded short-shot profile; continuous motion, longer scenes,
+different quality profiles and other machines retain their separate acceptance.
