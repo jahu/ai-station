@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Your personal local AI workstation. Chat, create images and video, work with voice and music, and put agents to work on your own hardware."
+    />
+    <meta name="theme-color" content="#101310" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="{{NAME}} — Your AI. Your hardware. Your rules."
+    />
+    <meta
+      property="og:description"
+      content="Chat. Create. Automate. One local workstation, powered by your own models."
+    />
+    {{CANONICAL_META}}
+    <title>{{NAME}} — Your AI. Your hardware. Your rules.</title>
+    <link rel="icon" href="assets/station.svg" type="image/svg+xml" />
+    <link
+      rel="preload"
+      href="assets/fonts/geist-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="assets/style.css" />
+    <script src="assets/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="shell header-inner">
+        <a class="brand" href="#top" aria-label="{{NAME}} home"
+          ><img src="assets/station.svg" width="32" height="32" alt="" /><span
+            >{{NAME}}</span
+          ></a
+        >
+        <button
+          class="menu-toggle"
+          aria-expanded="false"
+          aria-controls="navigation"
+          hidden
+        >
+          Menu <span aria-hidden="true">☰</span>
+        </button>
+        <nav id="navigation" aria-label="Main navigation">
+          <a href="#possibilities">Possibilities</a
+          ><a href="#local">Why local</a><a href="#benchmarks">The numbers</a>
+          <a class="nav-github" href="{{REPO}}"
+            ><svg width="18" height="18" aria-hidden="true">
+              <use href="#icon-github" />
+            </svg>
+            GitHub <span aria-hidden="true">↗</span></a
+          >
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero shell" id="top" aria-labelledby="hero-title">
+        <a class="release-pill" href="{{RELEASE_URL}}"
+          ><span class="status-dot" aria-hidden="true"></span>Meet {{NAME}}
+          <span class="pill-version">v{{VERSION}}</span
+          ><span aria-hidden="true">↗</span></a
+        >
+        <p class="eyebrow">YOUR PERSONAL AI WORKSTATION</p>
+        <h1 id="hero-title">
+          Big ideas.<br /><span>Local intelligence.</span>
+        </h1>
+        <p class="hero-copy">
+          Chat, create and put agents to work.<br />Your models. Your hardware.
+          One place for all of it.
+        </p>
+        <div class="hero-actions">
+          <a class="button primary" href="#install"
+            >Build your station <span aria-hidden="true">↗</span></a
+          ><a class="button secondary" href="assets/station-tour.mp4" data-tour
+            ><span class="play-icon" aria-hidden="true">▶</span> Take a look
+            around</a
+          >
+        </div>
+        <p class="hero-footnote">
+          Linux first <span>·</span> Cloud optional <span>·</span> Free for
+          noncommercial use
+        </p>
+
+        <div class="workspace-preview">
+          <div class="window-bar">
+            <span class="window-dots" aria-hidden="true"
+              ><i></i><i></i><i></i></span
+            ><span>Your workspace, on your machine</span
+            ><span class="local-label"
+              ><span class="status-dot" aria-hidden="true"></span>
+              LOCAL-FIRST</span
+            >
+          </div>
+          <div
+            class="workspace-tabs"
+            role="tablist"
+            aria-label="Explore the workspace"
+            hidden
+          >
+            <button
+              id="tab-chat"
+              role="tab"
+              aria-selected="true"
+              aria-controls="workspace-panel"
+              tabindex="0"
+              data-screen="chat"
+            >
+              <svg aria-hidden="true"><use href="#icon-chat" /></svg>Chat
+            </button>
+            <button
+              id="tab-create"
+              role="tab"
+              aria-selected="false"
+              aria-controls="workspace-panel"
+              tabindex="-1"
+              data-screen="create"
+            >
+              <svg aria-hidden="true"><use href="#icon-image" /></svg>Create
+            </button>
+            <button
+              id="tab-video"
+              role="tab"
+              aria-selected="false"
+              aria-controls="workspace-panel"
+              tabindex="-1"
+              data-screen="video"
+            >
+              <svg aria-hidden="true"><use href="#icon-play" /></svg>Video
+            </button>
+            <button
+              id="tab-agents"
+              role="tab"
+              aria-selected="false"
+              aria-controls="workspace-panel"
+              tabindex="-1"
+              data-screen="agents"
+            >
+              <svg aria-hidden="true"><use href="#icon-agent" /></svg>Agents
+            </button>
+          </div>
+          <div
+            id="workspace-panel"
+            role="tabpanel"
+            aria-labelledby="tab-chat"
+            tabindex="0"
+          >
+            <img
+              id="workspace-image"
+              src="assets/conversation.png"
+              width="1440"
+              height="960"
+              alt="Actual conversation interface with a local model and an example film-planning discussion"
+              fetchpriority="high"
+            />
+            <button
+              class="expand-screen"
+              aria-label="Enlarge workspace screenshot"
+              hidden
+            >
+              <svg width="18" height="18" aria-hidden="true">
+                <use href="#icon-expand" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="preview-caption">
+          <p id="screen-caption">
+            Start with a conversation. Keep your ideas, files and results
+            together.
+          </p>
+          <a href="{{MEDIA_URL}}"
+            >Actual UI · private demo dataset
+            <span aria-hidden="true">↗</span></a
+          >
+        </div>
+      </section>
+
+      <section
+        class="runtime-strip shell"
+        aria-label="Compatible local runtimes"
+      >
+        <p>Built around real local runtimes</p>
+        <div>
+          <span>llama.cpp</span><span>Wan</span><span>EchoMimic</span
+          ><span>Chatterbox</span><span>ACE-Step</span>
+        </div>
+      </section>
+
+      <section
+        class="possibilities section shell"
+        id="possibilities"
+        aria-labelledby="possibilities-title"
+      >
+        <div class="section-heading">
+          <p class="eyebrow">LESS SWITCHING. MORE MAKING.</p>
+          <h2 id="possibilities-title">
+            An entire AI workflow.<br /><span>All in one place.</span>
+          </h2>
+          <p>
+            Go from the first question to the final file.<br />Everything has a
+            place. Everything leaves a trail.
+          </p>
+        </div>
+        <div class="capability-grid">
+          <article>
+            <div class="capability-top">
+              <span class="index">01 / THINK</span
+              ><svg aria-hidden="true"><use href="#icon-chat" /></svg>
+            </div>
+            <h3>A conversation<br />with possibilities.</h3>
+            <p>
+              Choose a local model. Bring your files, search the web when you
+              need it, or ask the assistant to turn an idea into a workflow.
+            </p>
+            <div class="tags">
+              <span>Local LLMs</span><span>Documents</span
+              ><span>Web tools</span>
+            </div>
+          </article>
+          <article>
+            <div class="capability-top">
+              <span class="index">02 / CREATE</span
+              ><svg aria-hidden="true"><use href="#icon-image" /></svg>
+            </div>
+            <h3>Give your ideas<br />some dimensions.</h3>
+            <p>
+              Images, edits, short films, talking portraits, speech and music.
+              Keep the inputs, settings and results in one shared Library.
+            </p>
+            <div class="tags">
+              <span>Images & video</span><span>Voice & music</span>
+            </div>
+          </article>
+          <article>
+            <div class="capability-top">
+              <span class="index">03 / AUTOMATE</span
+              ><svg aria-hidden="true"><use href="#icon-agent" /></svg>
+            </div>
+            <h3>Put an idea<br />on a schedule.</h3>
+            <p>
+              Draft an agent in plain language. Review its tools and
+              permissions, then let it handle recurring research, local files or
+              small coding tasks.
+            </p>
+            <div class="tags">
+              <span>Agents</span><span>Python tools</span><span>Schedules</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="local-section" id="local" aria-labelledby="local-title">
+        <div class="shell local-layout">
+          <div class="local-intro">
+            <p class="eyebrow">OWN THE WORKSPACE</p>
+            <h2 id="local-title">
+              Your machine.<br />Your models.<br /><span>Your rules.</span>
+            </h2>
+            <p>
+              AI should feel personal.<br />So should the computer it runs on.
+            </p>
+            <a class="text-link" href="{{MODELS_URL}}"
+              >Explore model support <span aria-hidden="true">↗</span></a
+            >
+          </div>
+          <div class="local-principles">
+            <article>
+              <span class="principle-icon" aria-hidden="true">↳</span>
+              <div>
+                <h3>Local is a first-class choice.</h3>
+                <p>
+                  Use your own GPU and compatible model weights, including
+                  uncensored models. Configured local inference needs no cloud
+                  AI account.
+                </p>
+              </div>
+            </article>
+            <article>
+              <span class="principle-icon" aria-hidden="true">◎</span>
+              <div>
+                <h3>Every action has a trail.</h3>
+                <p>
+                  Inspect the model, execution target, permissions, logs and
+                  output files. Cancel owned Runs, pause scheduled agents and
+                  keep a history you can return to.
+                </p>
+              </div>
+            </article>
+            <article>
+              <span class="principle-icon" aria-hidden="true">⌘</span>
+              <div>
+                <h3>Cloud when you choose it.</h3>
+                <p>
+                  Your local workflows stay local. External inference is opt-in;
+                  web search, downloads and private remote access use the
+                  network.
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="section shell benchmarks"
+        id="benchmarks"
+        aria-labelledby="benchmark-title"
+      >
+        <div class="benchmark-heading">
+          <div>
+            <p class="eyebrow">FROM THE REFERENCE WORKSTATION</p>
+            <h2 id="benchmark-title">
+              Real hardware.<br /><span>Actual results.</span>
+            </h2>
+          </div>
+          <div class="hardware">
+            <span class="hardware-label">THE TEST STATION</span
+            ><strong>2 × RTX 3060 · 12 GB each</strong
+            ><span>Intel i7-6900K · 32 GB RAM</span>
+          </div>
+        </div>
+        <div class="benchmark-grid">
+          <article>
+            <span class="metric-label">IMAGE GENERATION</span>
+            <p class="metric">100<span>s</span></p>
+            <p>LUSTIFY · 768 × 1024<br />Q4_0 · 8 steps</p>
+          </article>
+          <article>
+            <span class="metric-label">4-SECOND FILM</span>
+            <p class="metric">7<span>m</span> 58<span>s</span></p>
+            <p>Wan · 1280 × 704<br />Two shots on separate GPUs</p>
+          </article>
+          <article>
+            <span class="metric-label">LOCAL CHAT</span>
+            <p class="metric">16.9<span> tok/s</span></p>
+            <p>RVN 27B · Q4_K_M<br />One observed completion</p>
+          </article>
+          <article>
+            <span class="metric-label">60-SECOND AVATAR</span>
+            <p class="metric">48<span>m</span> 18<span>s</span></p>
+            <p>EchoMimic · 384 px<br />Includes speech and assembly</p>
+          </article>
+        </div>
+        <div class="benchmark-note">
+          <p>
+            Recorded on one workstation, with specific models and presets.
+            Results vary with hardware, settings and workload; these are not
+            universal speed or quality guarantees.
+          </p>
+          <a class="text-link" href="{{BENCHMARKS_URL}}"
+            >Settings & full methodology <span aria-hidden="true">↗</span></a
+          >
+        </div>
+      </section>
+
+      <section class="under-hood shell" aria-label="Architecture">
+        <details>
+          <summary>
+            <span
+              ><span class="eyebrow">FOR THE CURIOUS</span
+              ><strong>Your workstation, made transparent.</strong></span
+            ><span class="details-plus" aria-hidden="true">+</span>
+          </summary>
+          <div class="architecture-content">
+            <p>
+              The Docker control plane keeps the interface, history and
+              orchestration together. A native user-level Host Runner handles
+              typed host operations over a private Unix socket.
+            </p>
+            <div
+              class="architecture-flow"
+              aria-label="User intent flows through Tasks and Runs to local execution and inspectable artifacts"
+            >
+              <span>Your intent</span><b aria-hidden="true">→</b
+              ><span>Task / Run</span><b aria-hidden="true">→</b
+              ><span>Local execution</span><b aria-hidden="true">→</b
+              ><span>Events / Artifacts</span>
+            </div>
+            <a class="text-link" href="{{ARCHITECTURE_URL}}"
+              >Read the architecture <span aria-hidden="true">↗</span></a
+            >
+          </div>
+        </details>
+      </section>
+
+      <section
+        class="install-section shell"
+        id="install"
+        aria-labelledby="install-title"
+      >
+        <div class="install-card">
+          <div class="install-intro">
+            <span class="install-version">LINUX · v{{VERSION}}</span>
+            <h2 id="install-title">Your next idea<br />starts here.</h2>
+            <p>Bring a workstation. Make it your own.</p>
+            <a class="button dark-button" href="{{SETUP_URL}}"
+              >Follow the setup guide <span aria-hidden="true">↗</span></a
+            >
+            <p class="install-requirements">
+              Today: Linux, Python 3.12+, Docker and configured models/runtimes.
+              Guided setup and in-app model downloads are on the roadmap.
+            </p>
+          </div>
+          <div class="terminal">
+            <div class="terminal-bar">
+              <span><i aria-hidden="true"></i> GET STARTED</span
+              ><button class="copy-button" hidden>
+                Copy commands
+                <svg width="15" height="15" aria-hidden="true">
+                  <use href="#icon-copy" />
+                </svg>
+              </button>
+            </div>
+            <pre><code id="install-code"><span class="terminal-comment"># Get the release branch</span>
+git clone --branch {{BRANCH}} {{REPO}}.git
+cd {{REPO_NAME}}
+cp .env.example .env
+
+<span class="terminal-comment"># Prepare your workstation</span>
+./scripts/bootstrap.sh
+
+<span class="terminal-comment"># Set model/runtime paths in .env, then:</span>
+./scripts/start.sh</code></pre>
+            <div class="terminal-foot">
+              <span class="status-dot" aria-hidden="true"></span> Your workspace
+              → http://127.0.0.1:8765
+            </div>
+            <p id="copy-status" role="status" aria-live="polite"></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section shell faq" aria-labelledby="faq-title">
+        <div>
+          <p class="eyebrow">A FEW GOOD QUESTIONS</p>
+          <h2 id="faq-title">Before you<br />plug in.</h2>
+          <p>
+            Still curious?<br /><a class="text-link" href="{{REPO}}/issues"
+              >Join the conversation <span aria-hidden="true">↗</span></a
+            >
+          </p>
+        </div>
+        <div class="faq-list">
+          <details>
+            <summary>
+              Does everything run locally?<span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              Configured local LLM and media workflows run on your workstation.
+              You can choose external providers, and tools such as web search
+              need network access. The website itself has no analytics, account
+              signup or external font requests.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Can I use my own models?<span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              Yes, through compatible runtimes and providers. {{NAME}} supports
+              owned llama.cpp models and OpenAI-compatible endpoints, alongside
+              configured media runtimes. Model compatibility, licensing, VRAM
+              and context size still matter.
+              <a href="{{MODELS_URL}}">Read the model guide.</a>
+            </p>
+          </details>
+          <details>
+            <summary>
+              Do I need two GPUs?<span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              No. The architecture discovers devices dynamically; the reference
+              machine has two RTX 3060 cards, but that is not a requirement.
+              Each workload must fit its runtime and hardware. Current exercised
+              media paths use NVIDIA/CUDA; broader GPU compatibility is a
+              roadmap goal.
+            </p>
+          </details>
+          <details>
+            <summary>
+              Is it ready for a nontechnical user?<span aria-hidden="true"
+                >+</span
+              >
+            </summary>
+            <p>
+              The destination is download, install, create. Today, v{{VERSION}}
+              needs Linux setup, Docker, Python and configured model/runtime
+              paths. It is a working early release for people comfortable with
+              that setup.
+              <a href="{{ROADMAP_URL}}">See the guided-setup plan.</a>
+            </p>
+          </details>
+          <details>
+            <summary>
+              Is {{NAME}} open source?<span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              It is source-available under
+              <a href="{{LICENSE_URL}}">PolyForm Noncommercial 1.0.0</a>.
+              Permitted noncommercial use is free. Other commercial use requires
+              a separate written license. Models and third-party components
+              retain their own terms.
+              <a href="{{COMMERCIAL_URL}}">Commercial licensing details.</a>
+            </p>
+          </details>
+          <details>
+            <summary>
+              Can I contribute?<span aria-hidden="true">+</span>
+            </summary>
+            <p>
+              Absolutely. Report an issue, improve the docs or propose a
+              feature. Contributors retain copyright; external contributions
+              need a separate signed agreement permitting commercial relicensing
+              before merge.
+              <a href="{{CONTRIBUTING_URL}}"
+                >Start with the contribution guide.</a
+              >
+            </p>
+          </details>
+        </div>
+      </section>
+
+      <section class="closing shell">
+        <div>
+          <p class="eyebrow">INDEPENDENT INTELLIGENCE.</p>
+          <h2>Make the machine<br /><span>work for you.</span></h2>
+        </div>
+        <a class="button primary" href="#install"
+          >Get {{NAME}} <span aria-hidden="true">↗</span></a
+        >
+      </section>
+    </main>
+
+    <footer class="shell footer">
+      <a class="brand" href="#top"
+        ><img
+          src="assets/station.svg"
+          width="27"
+          height="27"
+          alt=""
+        />{{NAME}}</a
+      >
+      <p>Your AI. Your hardware. Your rules.</p>
+      <nav aria-label="Footer navigation">
+        <a href="{{REPO}}">GitHub</a><a href="{{SETUP_URL}}">Docs</a
+        ><a href="{{LICENSE_URL}}">License</a
+        ><a href="{{COMMERCIAL_URL}}">Commercial use</a>
+      </nav>
+      <small>© 2026 Jacek Gralak. Free for permitted noncommercial use.</small>
+    </footer>
+
+    <dialog id="tour-dialog" aria-labelledby="tour-title">
+      <div class="dialog-bar">
+        <h2 id="tour-title">A look around {{NAME}}</h2>
+        <form method="dialog">
+          <button aria-label="Close product tour">×</button>
+        </form>
+      </div>
+      <video
+        controls
+        playsinline
+        preload="none"
+        poster="assets/conversation.png"
+        aria-label="Twelve-second tour of the real application using neutral demonstration data"
+      >
+        <source src="assets/station-tour.mp4" type="video/mp4" />
+      </video>
+      <p>
+        Actual interface, separate demo dataset.
+        <a href="{{MEDIA_URL}}">About these previews ↗</a>
+      </p>
+    </dialog>
+    <dialog id="screen-dialog" aria-label="Enlarged workspace screenshot">
+      <div class="dialog-bar">
+        <span>Workspace preview</span>
+        <form method="dialog">
+          <button aria-label="Close screenshot">×</button>
+        </form>
+      </div>
+      <img alt="" width="1440" height="960" />
+    </dialog>
+
+    <svg
+      class="icon-definitions"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <defs>
+        <symbol id="icon-github" viewBox="0 0 24 24">
+          <path
+            fill="currentColor"
+            d="M12 .8a11.2 11.2 0 0 0-3.54 21.83c.56.1.77-.24.77-.54v-2.08c-3.13.68-3.8-1.33-3.8-1.33-.51-1.3-1.25-1.65-1.25-1.65-1.02-.7.08-.69.08-.69 1.13.08 1.72 1.16 1.72 1.16 1 1.72 2.62 1.22 3.26.93.1-.73.39-1.23.71-1.51-2.5-.29-5.13-1.25-5.13-5.57 0-1.23.44-2.24 1.15-3.03-.11-.28-.5-1.43.11-2.98 0 0 .94-.3 3.08 1.15a10.7 10.7 0 0 1 5.61 0c2.14-1.45 3.07-1.15 3.07-1.15.61 1.55.23 2.7.12 2.98.72.79 1.15 1.8 1.15 3.03 0 4.33-2.63 5.28-5.14 5.56.4.35.76 1.03.76 2.08v3.1c0 .3.21.65.78.54A11.2 11.2 0 0 0 12 .8Z"
+          />
+        </symbol>
+        <symbol id="icon-chat" viewBox="0 0 24 24">
+          <path
+            d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l-2 2V11.5A8.5 8.5 0 0 1 10.5 3h2a8.5 8.5 0 0 1 8.5 8.5Z"
+          />
+          <path d="M7 9h9M7 13h6" />
+        </symbol>
+        <symbol id="icon-image" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="4" />
+          <path d="m3 17 5-5 4 4 4-7 5 8" />
+          <circle cx="8" cy="8" r="1" />
+        </symbol>
+        <symbol id="icon-play" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="4" />
+          <path d="m10 8 6 4-6 4Z" />
+        </symbol>
+        <symbol id="icon-agent" viewBox="0 0 24 24">
+          <rect x="4" y="7" width="16" height="13" rx="4" />
+          <path d="M12 3v4M8 12v2m8-2v2m-8 3h8M1 11v5m22-5v5" />
+        </symbol>
+        <symbol id="icon-expand" viewBox="0 0 24 24">
+          <path d="M9 3H3v6m12-6h6v6M3 15v6h6m12-6v6h-6" />
+        </symbol>
+        <symbol id="icon-copy" viewBox="0 0 24 24">
+          <rect x="8" y="8" width="12" height="13" rx="2" />
+          <path d="M16 8V3H3v13h5" />
+        </symbol>
+      </defs>
+    </svg>
+  </body>
+</html>
