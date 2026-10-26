@@ -17,6 +17,14 @@ def main(config_path):
     from ai_station_runner.wan_profiles import prepare_job
 
     weight_dtype = prepare_job(request)
+    from ai_station_runner.wan_guidance import apg_observation
+
+    guidance = request.get("continuation_guidance", "standard")
+    guidance_source = apg_observation(paths) if guidance != "standard" else None
+    if guidance != "standard" and (
+        guidance_source is None or guidance_source != request.get("guidance_observation")
+    ):
+        raise ValueError("The frozen APG implementation changed before execution")
     signal.alarm(3600)
     sys.path.insert(0, paths["comfy_dir"])
     sys.argv = [
@@ -65,30 +73,17 @@ def main(config_path):
         vae = nodes.VAELoader().load_vae(aliases["wan_vae"])[0]
         image = None
         if config.get("previous_video") and not config.get("motion_context"):
-            import hashlib
+            from ai_station_runner.wan_motion import continuation_pixels
 
-            source = Path(config["previous_video"])
-            digest = hashlib.sha256()
-            with source.open("rb") as handle:
-                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                    digest.update(chunk)
-            if digest.hexdigest() != request["continuation"]["sha256"]:
-                raise ValueError("Continuation segment content changed")
-            from collections import deque
-
-            prior = deque(maxlen=17)
-            count = 0
-            with av.open(str(source)) as container:
-                for frame in container.decode(video=0):
-                    if frame.width != request["width"] or frame.height != request["height"]:
-                        raise ValueError("Continuation segment dimensions changed")
-                    prior.append(frame.to_ndarray(format="rgb24"))
-                    count += 1
-                    if count > 81:
-                        raise ValueError("Continuation input exceeds native segment size")
-            if len(prior) < 17:
-                raise ValueError("Continuation needs seventeen preceding motion frames")
-            image = torch.from_numpy(np.stack(list(prior)).astype(np.float32) / 255)
+            image = torch.from_numpy(
+                continuation_pixels(
+                    Path(config["previous_video"]),
+                    request["continuation"]["sha256"],
+                    request["width"],
+                    request["height"],
+                    request.get("continuation_frames", 17),
+                )
+            )
         elif config["image"]:
             with Image.open(config["image"]) as source:
                 image = torch.from_numpy(np.array(source.convert("RGB"), dtype=np.float32) / 255).unsqueeze(0)
@@ -126,6 +121,11 @@ def main(config_path):
         stage("loading Wan 2.2")
         model = nodes.UNETLoader().load_unet(aliases["wan_model"], weight_dtype)[0]
         model = ModelSamplingSD3().patch(model, 8.0)[0]
+        from ai_station_runner.wan_guidance import apply_guidance
+
+        model = apply_guidance(model, guidance)
+        if guidance != "standard" and apg_observation(paths) != guidance_source:
+            raise ValueError("The frozen APG implementation changed while loading")
         stage("generating frames")
         samples = nodes.KSampler().sample(
             model,
@@ -144,16 +144,20 @@ def main(config_path):
 
         checkpoint = Path(config["output"]).with_suffix(".safetensors")
         partial_checkpoint = checkpoint.with_suffix(".partial.safetensors")
+        if guidance != "standard" and apg_observation(paths) != guidance_source:
+            raise ValueError("The frozen APG implementation changed during sampling")
         save_file(
             {"motion": samples["samples"][:, :, -5:].detach().cpu().float().contiguous()},
             str(partial_checkpoint),
-            metadata={"station.wan_profile": profile_key(paths, request.get("memory_profile", "default"))},
+            metadata={
+                "station.wan_profile": profile_key(paths, request.get("memory_profile", "default"), guidance)
+            },
         )
         validate_checkpoint(
             partial_checkpoint,
             request["width"],
             request["height"],
-            profile_key(paths, request.get("memory_profile", "default")),
+            profile_key(paths, request.get("memory_profile", "default"), guidance),
         )
         partial_checkpoint.replace(checkpoint)
         comfy.model_management.unload_all_models()
@@ -197,6 +201,20 @@ def main(config_path):
             json.dumps(
                 {
                     **execution_profile,
+                    **({"continuation_frames": 1} if request.get("continuation_frames") == 1 else {}),
+                    **(
+                        {
+                            "continuation_guidance": {
+                                "method": "apg_v1",
+                                "eta": 0.0,
+                                "norm_threshold": 5.0,
+                                "momentum": 0.0,
+                                "implementation": guidance_source,
+                            }
+                        }
+                        if guidance != "standard"
+                        else {}
+                    ),
                     "motion_context": {
                         "relative_path": str(checkpoint.relative_to(Path(config["root"]))),
                         "sha256": checkpoint_hash,

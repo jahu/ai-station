@@ -48,8 +48,8 @@ auth settings, E5 vectors, native/private services and owned model instances.
 Receipt paths in this table are below `data/acceptance/`. Historical receipts
 remain scoped to their original model, parameters, source and runtime. Normal
 regressions of newer source do not relabel an old integration as a fresh real
-execution. The operator case catalog is v10 with 157 stable IDs in 21 areas. All
-157 are mapped to source, current regression and concrete historical receipt
+execution. The operator case catalog is v11 with 158 stable IDs in 21 areas. All
+158 are mapped to source, current regression and concrete historical receipt
 scopes in [the internal coverage review](../qa/internal-coverage.md). That review
 retains unverified cases rather than marking them passed.
 
@@ -80,7 +80,19 @@ they do not establish Auto loading. Keep these distinctions in the final report.
    Its deployment receipt determines whether the correction is live.
 2. Reconcile Video/Avatar duration and quality claims with exact recorded profiles:
    earlier real 60-second Wan draft and 30-second avatar do not prove every longer
-   or higher-quality profile. Current capability checks start no inference.
+   or higher-quality profile. The actual four-window ten-second Wan test at
+   20 steps passes decode/assembly/playback but fails visual quality with
+   progressive whitening. A read-only VAE probe identifies a temporal boundary
+   mismatch in raw-tail reuse. The last-frame candidate's complete ten-second
+   film also fails at its third window despite successful technical/player
+   checks. The integrated fixed-APG candidate now passes the complete actual
+   ten-second/three-window regression, both joins, ending and compiled playback
+   at the same prompt/seed/20 steps/CFG 5/bounded profile. Small cool drift
+   remains; this does not qualify every duration/scene. Source and review:
+   `wan-continuation-quality-20261025/guided-release/`. PR #451/deployment receipts
+   determine live status. See
+   [the continuation investigation](wan-continuation-quality.md), preserving the
+   failed visual receipt. Current capability checks start no inference.
 3. Keep external-account acceptance explicit. The owned Tailscale helper currently
    reports `NeedsLogin`, not serving: worldwide mobile acceptance is unperformed.
    SMTP private-sink qualification is not real operator-inbox delivery. These

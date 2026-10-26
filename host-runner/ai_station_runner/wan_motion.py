@@ -8,7 +8,35 @@ from pathlib import Path
 MAX_BYTES = 4 * 1024 * 1024
 
 
-def profile_key(paths, memory_profile="default"):
+def continuation_pixels(path, sha256, width, height, context_frames=17):
+    """Verify and decode the exact bounded RGB prefix for the next native window."""
+    from collections import deque
+
+    import av
+    import numpy as np
+
+    if type(context_frames) is not int or context_frames not in (1, 17):
+        raise ValueError("Unsupported bounded continuation prefix")
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    if digest.hexdigest() != sha256:
+        raise ValueError("Continuation segment content changed")
+    prior = deque(maxlen=context_frames)
+    with av.open(str(path)) as container:
+        for count, frame in enumerate(container.decode(video=0), start=1):
+            if frame.width != width or frame.height != height:
+                raise ValueError("Continuation segment dimensions changed")
+            if count > 81:
+                raise ValueError("Continuation input exceeds native segment size")
+            prior.append(frame.to_ndarray(format="rgb24"))
+    if len(prior) < context_frames:
+        raise ValueError("Continuation does not contain its required preceding frames")
+    return np.stack(list(prior)).astype(np.float32) / 255
+
+
+def profile_key(paths, memory_profile="default", guidance="standard"):
     observed = {
         key: {"size_bytes": Path(paths[key]).stat().st_size, "mtime": Path(paths[key]).stat().st_mtime}
         for key in ("wan_model", "wan_text_encoder", "wan_vae")
@@ -18,6 +46,18 @@ def profile_key(paths, memory_profile="default"):
     identity = (
         observed if memory_profile == "default" else {"models": observed, "memory_profile": memory_profile}
     )
+    if guidance != "standard":
+        from ai_station_runner.wan_guidance import apg_observation
+
+        observation = apg_observation(paths)
+        if guidance != "apg_v1" or observation is None:
+            raise ValueError("Unsupported fixed Wan guidance checkpoint profile")
+        identity = {
+            "models": observed,
+            "memory_profile": memory_profile,
+            "guidance": guidance,
+            "guidance_source": observation,
+        }
     return hashlib.sha256(json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 

@@ -1,9 +1,22 @@
+The [fixed Wan APG candidate](plans/wan-continuation-quality.md) binds a built-in
+guidance recipe and installed-source observation to new continuation plans.
+Native execution rechecks the snapshot; legacy plans retain their identities.
+No caller-supplied node, graph, command or model path is introduced. Full-film
+qualification and rollout remain separate gates.
+
 Current conversation contract: one assistant interface, with no Chat/Work
 selector or replacement execution-mode choice. The orchestrator routes each
 prompt to a direct response, permitted tools or an applicable workflow. Routing
 never grants permissions; sensitive actions retain their existing approvals.
 Specialist workspaces remain available. This decision overrides older two-mode
 descriptions below. See the [single-assistant plan](plans/unified-assistant-chat.md).
+
+The [Wan continuation candidate](plans/wan-continuation-quality.md) freezes a
+capability-selected conditioning strategy with each new video plan and its Runs.
+Last-frame anchoring uses the existing owned clip, private typed Runner and
+exact-duration composition. Legacy plans retain their original conditioning on
+resume; historical records are not rewritten. Qualification and rollout remain
+separate from implementation.
 
 Data-agent notification criteria run as a separate durable, source-bound child after the verified Python result. Model/check failures leave analysis successful and never replay Python. Existing ordinary report checks retain their inline lifecycle. [Contracts](plans/data-result-alerts.md).
 

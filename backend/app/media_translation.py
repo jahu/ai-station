@@ -154,12 +154,19 @@ def source_hash(run, fields):
         ],
     }.get(run.executor_type)
     if keys is not None:
+        inputs = {key: run.parameters.get(key) for key in keys}
+        if run.executor_type == "wan_video":
+            # Preserve the exact input identity of pre-strategy receipts, while
+            # binding new plans to their frozen conditioning policy.
+            for key in ("continuation_strategy", "guidance_observation"):
+                if key in run.parameters:
+                    inputs[key] = run.parameters[key]
         return digest(
             {
                 "executor": run.executor_type,
                 "fields": fields,
                 "gpu": run.requested_gpu,
-                "inputs": {key: run.parameters.get(key) for key in keys},
+                "inputs": inputs,
             }
         )
     return digest(
