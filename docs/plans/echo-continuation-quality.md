@@ -51,3 +51,29 @@ do not silently trade color drift for join jumps or hide defects with a shorter
 test. Run appropriate full local gates, review a PR to develop and deploy only a
 satisfactory result. Exact lip-sync and universal identity guarantees remain
 unproved unless separately tested; whole-platform completion remains open.
+
+## Controlled findings (2026-10-26)
+
+The installed VAE-only replay agrees with published initial pixels after accounting
+for the upstream color transfer and two H.264 encodes. Correct temporal-history
+versus standalone checkpoint decode differs by approximately 0.0003–0.0005 mean
+normalized RGB in the final 17 frames. This does not support a large VAE boundary
+fault as the main cause; do not import the Wan correction without Echo evidence.
+
+The actual same-input 14-window audio-CFG-2 candidate still develops red skin and
+magenta lips. Pixel-only continuation at the original CFG 3 reduces saturation
+but progressively blurs and broadens the face across five windows. Independent
+original-portrait windows retain appearance better across five windows, but reset
+eye, mouth and head state at joins; all four exact composition joins have larger
+face-crop RGB discontinuities than baseline. These controlled ablations implicate
+recursive temporal conditioning in the visible drift, without proving a single
+upstream defect. No candidate passes both appearance and continuity requirements.
+
+Keep all negative evidence. The five-window diagnostics intentionally cancel the
+remaining job after collecting comparable output; they are not full-duration
+qualification. Next inspect how original portrait/appearance conditioning and
+temporal motion can remain separate, using exact installed source. Require a
+viable seam comparison before another complete generation. Evidence:
+`data/acceptance/echo-continuation-quality-20261026/` (decode-context-probe,
+guidance-2, pixel-prefix and portrait-prefix). No live defaults or upstream files
+have changed.
