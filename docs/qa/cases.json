@@ -1,5 +1,5 @@
 {
-  "version": 13,
+  "version": 14,
   "status": "Catalog for draft workbook; final handoff requires the completed and internally qualified release.",
   "sources": [
     "docs/product-completion.md",
@@ -13,7 +13,8 @@
     "docs/plans/conversation-prompt-language.md",
     "docs/plans/natural-agent-intent.md",
     "docs/plans/agent-draft-runtime-defaults.md",
-    "docs/plans/wan-continuation-quality.md"
+    "docs/plans/wan-continuation-quality.md",
+    "docs/plans/assisted-agent-drafts.md"
   ],
   "cases": [
     {
@@ -3662,6 +3663,32 @@
         "AGENT-DRAFT-RUNTIME-DEFAULTS",
         "MVP-119",
         "MVP-120"
+      ]
+    },
+    {
+      "id": "AGENT-015",
+      "area": "Agenci",
+      "title": "Szkic alertu BTC i powrót do zwykłej rozmowy",
+      "priority": "P0",
+      "prerequisites": [
+        "Przekazana wersja jednego chatu; dostępny lokalny LLM; użyj jednorazowego szkicu QA. Nie potrzebujesz klucza giełdowego ani konta pocztowego."
+      ],
+      "steps": [
+        "W nowym chacie poproś: Stwórz wyłączony szkic agenta, który codziennie o 09:00 czasu Warszawy sprawdza publiczną cenę bitcoina w USD i przy zmianie o ponad 5% powiadamia mnie w aplikacji. Bez e-maila i kluczy API. Najpierw chcę przejrzeć definicję.",
+        "Przejrzyj szkic: narzędzie market_watch, BTC-USD, próg 5%, harmonogram 09:00 i strefa Europe/Warsaw. Sprawdź widoczne okno porównania i kierunek zmiany; nie aktywuj agenta.",
+        "W tej samej rozmowie zapytaj: Ile to 12 razy 13? Odpowiedz samą liczbą.",
+        "Sprawdź odpowiedź i historię. Pozostaw szkic wyłączony; nie klikaj Run now."
+      ],
+      "expected": [
+        "Powstaje jeden wyłączony szkic bez błędu walidacji. Próg ceny korzysta z polityki rynkowej, a nie z warunku klasyfikacji raportu ani powiadomienia po każdym udanym sprawdzeniu. Ustawienia nie dodają e-maila, klucza API ani innych narzędzi. Zwykłe pytanie daje odpowiedź 156 bez kolejnego agenta. Samo tworzenie szkicu nie pobiera notowań, nie włącza harmonogramu i nie wysyła powiadomień."
+      ],
+      "resources": "Lokalny LLM; jeden wyłączony szkic; bez pobierania notowań",
+      "minutes": 5,
+      "requirements": [
+        "MVP-119",
+        "MVP-120",
+        "UNIFIED-CHAT",
+        "MARKET-DRAFT-CONDITION"
       ]
     }
   ]
