@@ -1,8 +1,9 @@
 # Wan continuation: preserve exposure and detail
 
-Candidate implemented; full-film visual gate **failed**, 2026-10-26. PR #451 stays
-draft, unmerged and undeployed. This is a visual-quality release gate,
-not a claim that a decodable MP4 is an acceptable long video.
+The fixed APG candidate passes the complete ten-second regression, 2026-10-26.
+The earlier plain last-frame candidate failed and remains documented below.
+Qualification is complete for the recorded profile; merge/rollout status comes
+from PR #451 and its deployment receipt, not this document alone.
 
 ## Reproduction and evidence
 
@@ -159,3 +160,39 @@ seed, 1280×704, 20 steps, CFG 5 and bounded 11 GiB/zero-swap profile. Private
 patched-job probes cannot substitute for that execution. Keep PR #451 draft
 until complete-film visual review, compiled desktop/phone playback and final
 local checks pass. No rollout has happened for this candidate.
+
+## Integrated APG qualification
+
+Frozen runtime source `0112e56a2d96cbcc0e3e33a46ef8ce2687632149` completed the
+actual normal API → worker → private Runner → three GPU windows → composition
+path, without an engineering job override. It reused the exact previously
+real-9B-prepared prompt, seed 43, 1280×704, 20 steps, CFG 5 and 11-GiB/zero-swap
+profile. The initial window is byte-identical to the baseline; both subsequent
+published artifacts record APG and the frozen implementation observation.
+All owned processes stopped and no owned native process group remains alive.
+
+The complete output has 240 decoded frames and lasts ten seconds; actual wall
+time was 2015.6 seconds (about 34 minutes). Full-frame metrics and samples
+throughout the film and both joins retain cloud detail and the lake horizon.
+The ending's nearly-white fraction is 0.0036%, versus about 47% for the failed
+plain candidate. All-frame maximum is 0.316%; no progressive white collapse or
+pronounced exposure jump remains in this case. Small gradual cool/blue drift
+remains. This calm-scene result is not arbitrary duration, identity fidelity,
+perfect colour invariance or temporal-velocity qualification.
+
+Actual MP4 playback advanced in the unchanged compiled UI at 1440px and 390px,
+with correct ten-second metadata, four completed stages, no JavaScript errors
+and no horizontal overflow. Its isolated playback API deliberately has no
+Runner; the setup warning in that private screenshot does not describe live
+production readiness. The complete normal suite passed 4,189 tests with nine
+explicit opt-in skips (4,198 collected, no exclusions), Ruff/format, 11 offline
+QA checks, exact Docker/backend/assets, three Compose variants and isolated
+fake-executor API/worker/SQL/SSE/reopen checks. Frontend source/assets are
+unchanged from the qualified 844-test baseline.
+
+Evidence: `data/acceptance/wan-continuation-quality-20261025/guided-release/`,
+including actual MP4, full metrics, `visual-review.json`, native profile reports,
+player screenshots and normal/image receipts. Failed earlier receipts remain
+unchanged. Later documentation-only commits must retain identical qualified
+executable/test source; rollout rechecks that mapping. Whole-platform acceptance
+and the final Polish QA handoff remain separate open work.
