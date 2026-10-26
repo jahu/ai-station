@@ -1,6 +1,7 @@
 import type { AnalysisAgentSource } from "./AnalysisAgentDialog";
 import { uploadImageFiles } from "./image-upload";
 import ConversationDataControls from "./ConversationDataControls";
+import ComposerAttachments from "./ComposerAttachments";
 import AgentDataResult from "./AgentDataResult";
 import AgentCodeResearch from "./AgentCodeResearch";
 import type { ConversationDataScope } from "./useDataInputs";
@@ -1517,18 +1518,22 @@ export default function AssistantActions({
               Drop images here. Order matters — for example, person first,
               clothing second. Use the arrows to reorder.
             </p>
-            <ImageReferenceStrip
-              ids={value.image_artifact_ids}
-              busy={busy}
-              onChange={(image_artifact_ids) =>
-                onChange({
-                  ...value,
-                  image_artifact_ids,
-                  speech_text:
-                    image_artifact_ids.length === 1 ? value.speech_text : null,
-                })
-              }
-            />
+            <ComposerAttachments>
+              <ImageReferenceStrip
+                ids={value.image_artifact_ids}
+                busy={busy}
+                onChange={(image_artifact_ids) =>
+                  onChange({
+                    ...value,
+                    image_artifact_ids,
+                    speech_text:
+                      image_artifact_ids.length === 1
+                        ? value.speech_text
+                        : null,
+                  })
+                }
+              />
+            </ComposerAttachments>
           </div>
         )}
         {value.action === "github.inspect" && (
