@@ -19,4 +19,5 @@ Read `docs/architecture.md`, `docs/security-model.md`, and `README.md` before ch
 - Run `./scripts/check.sh` for backend/runner changes; frontend changes also require lint, typecheck, and a production build. Validate Compose and the Docker image when deployment files change.
 - Keep startup instructions and implementation status accurate. Preserve existing work and make focused changes.
 - Only the human owner @jahu may approve and merge PRs into `master`. Agents prepare reviewed release PRs and wait; authenticating as @jahu is not human approval. See `docs/release-policy.md`.
+- Prepare `develop` → `master` PRs as `github-actions[bot]` with `gh workflow run ci.yml --ref develop -f operation=release-pr`; do not create them with the owner's CLI identity, which cannot self-approve. Review and validation precede dispatch.
 - External contributions require the separately signed commercial-relicensing permission described in `CONTRIBUTING.md` before merge. A PR or DCO sign-off alone is insufficient.
