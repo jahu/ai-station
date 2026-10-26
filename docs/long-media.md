@@ -15,7 +15,8 @@ and inspects uncertain owned processes before creating replacement attempts.
 A completed speech WAV is reused when resuming the avatar planner.
 
 New Wan plans freeze the capability-selected continuation and guidance recipe.
-The qualified `last_frame_v1` with `apg_v1` uses one preceding frame; saved legacy
+The qualified plan strategy `last_frame_apg_v1` uses one preceding frame and
+native `apg_v1` guidance; saved legacy
 plans retain their seventeen-frame cached-latent conditioning. Recipe/source
 observations are rechecked before native dispatch, never silently changed on Resume.
 The overlapped frames are removed from the final timeline; each remaining frame is
@@ -86,8 +87,12 @@ composition and artifact lineage retain timeline order when completion is out of
 order. Partial preview follows the last completed selected attempt; resume reuses
 successful independent shots after a failed gap. Normal tests use fake GPU work
 with real CPU MP4 composition, including simultaneous owned processes, Stop,
-explicit-device/one-device/RAM serialization and ordered decoded frames. This
-does not claim real simultaneous GPU generation on this workstation.
+explicit-device/one-device/RAM serialization and ordered decoded frames.
+Actual simultaneous generation is now separately qualified for two two-second,
+1280×704/20-step bounded landscape shots on the two discovered GPUs. Complete
+four-second composition, source order, kernel limits, cleanup and compiled
+desktop/mobile playback pass. See [the exact measured profile](parallel-video-shots.md#actual-two-gpu-acceptance--2026-10-26).
+This does not parallelize a continuous scene or qualify arbitrary two-GPU profiles.
 
 A real 30-second avatar at the normal 384-pixel/eight-step settings subsequently
 completed twelve windows plus composition in about 35 minutes. Full independent

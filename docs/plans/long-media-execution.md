@@ -6,7 +6,9 @@ system. Actual current qualification covers a sixty-second Wan film and a
 sixty-second uploaded-recording avatar, with recorded visual limitations. The
 complete-speech-to-avatar chain has separate 36.52-second qualification. These
 are concrete profiles, not guarantees for every source or combination. Broader
-durations, quality settings and concurrent two-GPU shots are separate gates.
+durations and quality settings are separate gates. A short independent-shot
+profile now has [actual two-GPU acceptance](../parallel-video-shots.md#actual-two-gpu-acceptance--2026-10-26);
+it does not qualify every parallel profile or parallel continuous motion.
 See [current release acceptance](platform-acceptance-audit.md) and the implemented
 [execution contract](../long-media.md).
 Part of the [delivery brief](2026-10-chat-work-media.md). User intent is useful

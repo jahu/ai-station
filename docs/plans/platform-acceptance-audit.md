@@ -28,6 +28,16 @@ The original observer's missing opt-in and the first reconciliation's historical
 lock-query mistake remain recorded; independent corrected checks pass on the
 same output, with no GPU regeneration or deleted execution history.
 
+`parallel-wan-20261026/qualification-complete.json` additionally proves real
+same-time computation by two owned CUDA processes on two discovered GPUs.
+Two independent two-second shots at 1280×704/20 steps, CFG 5 and `bounded_11g`
+completed under separate observed 11-GiB/zero-swap scopes. Ordered composition
+produced all 96 frames/four seconds in 478 seconds; independent source/frame
+comparison, inspected shot endpoints, compiled desktop/mobile playback and
+complete owned-process/resource cleanup pass. This closes the short-profile
+two-GPU execution gate, not arbitrary concurrency or continuous-shot parallelism.
+See [the exact scope](../parallel-video-shots.md#actual-two-gpu-acceptance--2026-10-26).
+
 Current operator catalog is v14/161 cases in 21 areas. The inspected draft is
 `market-agent-qa-20261026/candidate-81c8765/`, with every result **Nie testowano**.
 The offline feedback importer is qualified through 26 tests/21 subtests and actual
