@@ -2,16 +2,19 @@
 
 Real UX-003 browser QA found a failed Task displaying a green “succeeded” data
 card with “Preparing data analysis” and “View progress and Stop”. The card used
-the latest filtered data Run, which could be the successful graph publisher.
-Its failing model-load prerequisite was present only in the complete Task steps.
+the latest data Run rather than the Task outcome. In the captured graph that was
+successful runtime cleanup after a failed model load. Both the model failure and
+the downstream `PrerequisiteFailed` generation were present in the Run list.
 
 Pass the existing Task outcome and steps into the shared data result card. A
 terminal failure/cancellation/interruption takes precedence over successful
 preparation when no verified result exists, and execution details point to the
 actual non-superseded terminal step. Publication alone is still preparing; an
 otherwise finished Task without a verified result is explicitly unavailable.
-Prefer the failing prerequisite outside the filtered data graph to its downstream
-failure. Keep long native startup traces in execution details, with a short model
+Prefer the concrete failing prerequisite to downstream `PrerequisiteFailed`
+Runs, even when both are present in the data graph. The real post-rollout browser
+retest exposed that both could be present; membership outside that list did not
+identify the cause. Keep long native startup traces in execution details, with a short model
 startup failure in the conversation.
 Already verified results remain visible even when a later delivery/notification
 step fails. No persisted Run state, recovery policy or retry authority changes.
