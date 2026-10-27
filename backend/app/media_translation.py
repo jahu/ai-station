@@ -756,7 +756,7 @@ def prepare_retry(session, source, retry, choice):
         RECEIPT: {
             key: value
             for key, value in receipt.items()
-            if key not in {"artifact_id", "artifact_sha256", "review_run_id"}
+            if key not in {"artifact_id", "artifact_sha256", "review_run_id", "reused_from_run_id"}
         }
         | {"status": "original", "effective": receipt["original"], "bypass_of": source.id},
     }

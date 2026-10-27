@@ -277,8 +277,9 @@ def test_stop_during_native_inspection_forks_retry_without_reopening_old_task(fa
         ("ace_step_music", "music.generate", {"caption": "QA instrumental music"}),
     ],
 )
+@pytest.mark.parametrize("reused_receipt", [False, True])
 def test_other_finished_media_retries_use_the_same_independent_stop_contract(
-    fake, executor, capability, params
+    fake, executor, capability, params, reused_receipt
 ):
     from app.runs import create_task
     from app.task_control import cancel_task
@@ -288,12 +289,33 @@ def test_other_finished_media_retries_use_the_same_independent_stop_contract(
         run = create_run(
             session, task, run_type="media", capability=capability, executor_type=executor, parameters=params
         )
+        if reused_receipt:
+            field = "caption" if executor == "ace_step_music" else "prompt"
+            run.metadata_json = {
+                "prompt_translation": {
+                    "status": "ready",
+                    "original": {field: "Oryginalny opis QA"},
+                    "effective": {field: params[field]},
+                    "policy": {"model": "fixture", "target_language": "en"},
+                    "reused_from_run_id": str(uuid4()),
+                }
+            }
         cancel_task(session, task)
         session.commit()
-        response = client.post(f"/api/generation/media/{run.id}/retry", json={"translation": "reuse"})
+        response = client.post(
+            f"/api/generation/media/{run.id}/retry",
+            json={"translation": "original" if reused_receipt else "reuse"},
+        )
         assert response.status_code == 202, response.text
         assert response.json()["task_id"] != task.id and response.json()["parent_run_id"] is None
-        assert response.json()["parameters"] == params
+        if reused_receipt:
+            assert "reused_from_run_id" not in response.json()["metadata"]["prompt_translation"]
+            assert response.json()["parameters"][field] == "Oryginalny opis QA"
+            from app.media_translation import validate_media_translation
+
+            validate_media_translation(session, session.get(Run, response.json()["id"]))
+        else:
+            assert response.json()["parameters"] == params
 
 
 @pytest.mark.parametrize("existing", [False, True])
