@@ -450,8 +450,11 @@ class Script(OutputFiles):
 INSTRUCTIONS = """Return exactly one JSON object with a "script" Python string and an "outputs" list (empty for ordinary table/CSV analysis). No markdown or tool calls.
 Use standard Python and openpyxl (no pandas). Actual files are read-only and offline.
 When the goal asks for a file, declare only available_optional_outputs from runtime and write every declared file.
+Create optional exports only when the current goal requests them. Reading an XLSX input does not request an XLSX output, chart or text report. Ordinary calculations return the mandatory table/CSV with "outputs": [].
 chart.png: real chart from the full data; use matplotlib with Agg, savefig, tight_layout and close the figure. Label axes and use a readable restrained style. No show().
 result.xlsx: an openpyxl workbook with literal values, clear headings and sensible column widths. No formulas, links, macros, named expressions or embedded objects.
+Use `import openpyxl` before `openpyxl.load_workbook(...)` or `openpyxl.Workbook()`. An openpyxl Workbook is NOT a context manager: never use `with Workbook()` or `with openpyxl.Workbook()`.
+To export, use `wb_out = openpyxl.Workbook(); ws = wb_out.active`, append the headers and data rows, then `wb_out.save(os.path.join(output_dir, "result.xlsx"))`. Read-only input workbooks are closed with `wb.close()` after reading, not with a `with` statement.
 report.txt: a UTF-8 report. Never declare or create any other export filename.
 The outputs list names only chart.png, result.xlsx and/or report.txt; never include result.csv or result.json there. For an Excel and chart use "outputs": ["result.xlsx", "chart.png"].
 Optional exports accompany the mandatory result.csv and result.json, not replace them. Do not claim a file was created unless you declare it and write it.
@@ -463,7 +466,7 @@ Start with: inputs = json.loads(os.environ["AI_STATION_INPUTS"])
 Then use: path = inputs[input_name] and open(path), NOT open(os.environ["AI_STATION_INPUTS"]).
 The runtime.input_map below shows the exact mapping available in the container. Its VALUES are file paths; keys are only filenames.
 For CSV use csv.DictReader(open(path, newline="", encoding="utf-8-sig")); compute from every actual row, not only the preview.
-For XLSX use openpyxl.load_workbook(read_only=True, data_only=True, keep_links=False); never evaluate formulas or macros.
+For XLSX use openpyxl.load_workbook(path, read_only=True, data_only=True, keep_links=False); never evaluate formulas or macros.
 For a sheet with column headers, use the first row to identify columns; do not count or convert that header as a data record. Treat control/summary sheets separately from source transactions.
 Write mandatory result.csv and result.json under os.environ["AI_STATION_OUTPUT_DIR"].
 result.csv is the requested result table, with a header. result.json must contain exactly

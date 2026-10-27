@@ -107,6 +107,12 @@ def definition(proposal, instruction, model, schedule_timezone="UTC"):
                 "fetch_urls": [],
                 "report_condition": "",
                 "media": None,
+                # A tools-free numeric adapter cannot implement a model's
+                # invented rolling averages or other calculation promises.
+                "description": base.description,
+                "goal": base.goal,
+                "system_prompt": base.system_prompt,
+                "output_expectation": base.output_expectation,
             }
         )
     if "create_media" in proposal.tools and proposal.media is None:
