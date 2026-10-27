@@ -71,6 +71,21 @@ and CSV-reading examples; only the already-approved files are mapped. Repairs
 explicitly diagnose the prior stderr/error and return corrected complete source.
 This changes no permissions, mounts, output validation or retry budgets.
 
+Browser QA found that a local model could omit the `inputs` initialization even
+on its repair attempt. Newly generated scripts now include visible, fixed
+sandbox bindings for `inputs` and `output_dir` before model code. The complete
+prepared source is the artifact hashed and dispatched to the existing offline
+executor. Docstrings and future imports retain their Python semantics; the final
+source still fits the original byte limit. This grants access only to the same
+approved, read-only input map and output directory. Old scripts and attempts are
+not rewritten or replayed. Live XLSX retesting remains separate from unit checks.
+
+A managed model whose allocated context already meets the 100k+ requirement can
+be reused while serving another consumer, even if the ideal next allocation is
+slightly larger. It is not stopped or requantized merely to reach that ideal.
+Actual context verification before execution remains mandatory. A genuinely
+undersized busy runtime still needs the separate durable-upgrade queue fix.
+
 A deployed acceptance exposed the earlier ambiguity: a Polish CSV task tried to
 open the JSON string as a filename and repeated that script. The revised contract
 passed the same instruction with six actual rows and an expected total of 150,

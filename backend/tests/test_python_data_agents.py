@@ -413,6 +413,9 @@ def test_generation_receives_exact_container_input_map_and_failed_attempt_contex
 
             source = session.get(Artifact, generation.metadata_json["script_artifact_id"])
             original_code = (get_settings().data_dir / source.relative_path).read_text()
+            assert generation.metadata_json["runtime_bindings"] == "data-inputs-v1"
+            assert original_code.startswith("# AI Station sandbox bindings:")
+            assert SCRIPT in original_code
     first, repaired = state["model_requests"]
     request = json.loads(first["messages"][1]["content"])
     filename = artifact["id"] + ".csv"
