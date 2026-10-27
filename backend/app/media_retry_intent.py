@@ -26,7 +26,13 @@ def existing_fresh(session, source, identity, *, replayable):
     reference = source.metadata_json.get(FRESH)
     if reference is None:
         return None
-    valid = isinstance(reference, dict) and set(reference) == {"run_id", "task_id", "request"}
+    valid = (
+        isinstance(reference, dict)
+        and set(reference) == {"run_id", "task_id", "request"}
+        and isinstance(reference.get("request"), dict)
+        and set(reference["request"]) == {"id", "translation"}
+        and reference["request"].get("translation") in {"reuse", "retry", "original"}
+    )
     if valid:
         try:
             valid = all(str(UUID(reference[key])) == reference[key] for key in ("run_id", "task_id"))
@@ -36,6 +42,13 @@ def existing_fresh(session, source, identity, *, replayable):
     origin = {"run_id": source.id, "task_id": source.task_id}
     if not (
         child
+        and source.status in {"failed", "canceled", "interrupted"}
+        and source.task.metadata_json.get("stop_requested_at")
+        and child.metadata_json.get(
+            "image_retry_request" if source.executor_type == "photo_pipe" else "media_retry_request"
+        )
+        == reference["request"]
+        and child.task.metadata_json.get("translation_choice") == reference["request"]["translation"]
         and child.task_id == reference["task_id"] != source.task_id
         and child.parent_run_id is None
         and child.metadata_json.get(SOURCE) == origin

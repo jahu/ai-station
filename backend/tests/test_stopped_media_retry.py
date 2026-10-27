@@ -170,7 +170,8 @@ def test_translation_enqueue_failure_rolls_back_new_task_and_messages(fake, monk
             assert session.scalar(select(func.count()).select_from(Message)) == 2
 
 
-def test_fresh_retry_binding_tamper_fails_closed(fake):
+@pytest.mark.parametrize("tamper", ["task_source", "run_request"])
+def test_fresh_retry_binding_tamper_fails_closed(fake, tamper):
     with TestClient(app) as client:
         rid, tid, cid = stopped_media(client)
         body = {"translation": "original", "client_request_id": str(uuid4())}
@@ -178,7 +179,14 @@ def test_fresh_retry_binding_tamper_fails_closed(fake):
         assert first.status_code == 202
         with session_factory()() as session:
             task = session.get(Task, first.json()["task_id"])
-            task.metadata_json = {SOURCE: {"run_id": str(uuid4()), "task_id": tid}}
+            if tamper == "task_source":
+                task.metadata_json = {SOURCE: {"run_id": str(uuid4()), "task_id": tid}}
+            else:
+                retry = session.get(Run, first.json()["id"])
+                retry.metadata_json = {
+                    **retry.metadata_json,
+                    "image_retry_request": {"id": str(uuid4()), "translation": "original"},
+                }
             session.commit()
         assert client.post(f"/api/images/runs/{rid}/retry", json=body).status_code == 409
         with session_factory()() as session:
