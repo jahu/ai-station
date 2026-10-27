@@ -14,6 +14,9 @@ Read-only inputs close explicitly. Generated code still runs only in the
 existing offline owned Python workspace. Do not monkey-patch third-party
 objects, execute model code in the control plane, silently rewrite its logic,
 increase the reviewed repair budget, or publish failed partial outputs.
+Optional exports follow the current request: an Excel input is not a request to
+also create a workbook, chart and text report. Ordinary calculations already
+have their mandatory result table and complete CSV.
 
 Acceptance requires a fresh actual browser analysis of both sheets in the frozen
 QA workbook, correct six transactions/150 total/A65/B85, an original-file hash
