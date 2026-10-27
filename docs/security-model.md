@@ -409,6 +409,19 @@ SQLite backups require `manage_station` and write under the data root. Inspectin
 
 ## Secrets
 
+Git ignores `.env` and `.env.*` at every directory depth, except the portable
+`.env.example` template. Keep that template free of real credentials. Ignoring a
+file does not remove previously committed values; it can also be overridden with
+`git add -f`. Secret scanning and push protection are additional safeguards, not
+proof that a repository contains no secrets.
+
+Before publishing, scan the full Git history and public branches, including PR
+references, as well as release assets and available workflow logs. Review scanner
+findings individually; do not exclude whole test or documentation directories.
+Keep scanner reports private and redact credential values. If a real credential
+was published, revoke or rotate it first: deleting the file or rewriting history
+does not invalidate copies already downloaded by others.
+
 Secrets are environment variables or files outside Git. Database rows store references (`env:NAME` or a data-root file path). Logs, events, errors, and prompts pass through a redactor for common token patterns. Connector and chat-provider responses omit secret values; the UI may show that a secret is present and the environment reference name. Chat provider URLs cannot embed credentials. External chat providers require a secret reference and fail closed when it is missing. The built-in local provider may run without a key.
 
 ## External runtimes
