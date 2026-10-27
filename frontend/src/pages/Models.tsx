@@ -408,13 +408,14 @@ export function ModelDetail() {
     refetchInterval: 5000,
   });
   const definition = model.data?.definitions?.[0];
-  const instance =
-    runtimes.data?.instances?.find(
-      (item) => item.metadata.model_file_id === id && item.status !== "stopped",
-    ) ??
-    runtimes.data?.instances?.find(
+  const matchingInstances =
+    runtimes.data?.instances?.filter(
       (item) => item.metadata.model_file_id === id,
-    );
+    ) ?? [];
+  const instance =
+    matchingInstances.find(
+      (item) => !["stopped", "failed"].includes(item.status),
+    ) ?? matchingInstances.at(-1);
   const [name, setName] = useState<string | null>(null);
   const [context, setContext] = useState<number | null>(null);
   const [cacheType, setCacheType] = useState<"f16" | "q8_0" | null>(null);
