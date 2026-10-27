@@ -51,7 +51,21 @@ function ResultTable({ result }: { result: Result }) {
   );
 }
 
-export default function AgentDataResult({ runs }: { runs: Run[] }) {
+export default function AgentDataResult({
+  runs,
+  taskStatus,
+  taskSteps,
+}: {
+  runs: Run[];
+  taskStatus?: string;
+  taskSteps?: {
+    id: string;
+    status: string;
+    error_message?: string;
+    superseded?: boolean;
+    capability?: string;
+  }[];
+}) {
   const task = runs[0]?.task_id;
   const current = runs.filter((run) => run.task_id === task);
   const resultRun = current.find(
@@ -78,13 +92,41 @@ export default function AgentDataResult({ runs }: { runs: Run[] }) {
   const chart = result?.exports?.find((file) => file.mime_type === "image/png");
   const latest = current[0];
   if (!latest) return null;
-  const stopped = ["failed", "canceled", "interrupted"].includes(latest.status);
+  const taskStopped =
+    !!taskStatus && ["failed", "canceled", "interrupted"].includes(taskStatus);
+  const missingResult = !result && taskStatus === "succeeded";
+  const status = result
+    ? "succeeded"
+    : missingResult
+      ? "unavailable"
+      : taskStopped
+        ? taskStatus!
+        : latest.status === "succeeded"
+          ? "preparing"
+          : latest.status;
+  const failedSteps = taskStopped
+    ? taskSteps?.filter(
+        (step) => !step.superseded && step.status === taskStatus,
+      )
+    : undefined;
+  const failedStep =
+    failedSteps?.find((step) => !current.some((run) => run.id === step.id)) ??
+    failedSteps?.[0];
+  const stopped =
+    missingResult || ["failed", "canceled", "interrupted"].includes(status);
+  const rawError = failedStep?.error_message || latest.error_message;
+  const error =
+    rawError && rawError.length <= 400 && !rawError.includes("\n")
+      ? rawError
+      : undefined;
+  const detailsId = failedStep?.id ?? latest.id;
   const operation = creating ? "File creation" : "Analysis";
   const terminalMessage = {
     failed: `${operation} failed. Open execution details to inspect the error.`,
     canceled: `${operation} stopped. No new result was published.`,
     interrupted: `${operation} was interrupted. Inspect execution before retrying.`,
-  }[latest.status];
+    unavailable: `${operation} finished without a verified result. Open execution details.`,
+  }[status];
   return (
     <section
       className="agent-data-result"
@@ -99,7 +141,7 @@ export default function AgentDataResult({ runs }: { runs: Run[] }) {
               : "File creation"
             : "Data analysis"}
         </h3>
-        <Badge status={result ? "succeeded" : latest.status} />
+        <Badge status={status} />
       </div>
       {result && resultRun ? (
         <>
@@ -190,8 +232,11 @@ export default function AgentDataResult({ runs }: { runs: Run[] }) {
         </>
       ) : (
         <>
-          <p className={latest.error_message ? "notice" : "muted"}>
-            {latest.error_message ||
+          <p className={error || stopped ? "notice" : "muted"}>
+            {error ||
+              (status === "failed" && failedStep?.capability === "runtime.load"
+                ? "The local model could not start. Open execution details."
+                : undefined) ||
               terminalMessage ||
               ({
                 agent_data_generate:
@@ -203,7 +248,7 @@ export default function AgentDataResult({ runs }: { runs: Run[] }) {
               }[latest.executor_type] ??
                 "Preparing data analysis…")}
           </p>
-          <Link to={`/runs/${latest.id}`} className="text-link">
+          <Link to={`/runs/${detailsId}`} className="text-link">
             {stopped ? "Execution details" : "View progress and Stop"}
           </Link>
         </>
