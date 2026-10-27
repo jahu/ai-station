@@ -18,7 +18,9 @@ def requested(content, *, agent=False):
     ):
         return False
     if re.search(
-        r"\b(?:from|using|z|na podstawie)\b.{0,50}\b(?:files?|data|csv|xlsx|sources?|stron\w*|plik\w*|dany\w*|arkusz\w*)\b",
+        r"\b(?:from|using|na podstawie)\b.{0,50}\b(?:files?|data|csv|xlsx|sources?|stron\w*|plik\w*|dany\w*|arkusz\w*)\b"
+        r"|\b(?:z|ze)\s+(?:(?:tego|tych|załączonego|zalaczonego|załączonych|zalaczonych|istniejącego|istniejacego|mojego|moich|lokalnego|lokalnych|wybranego|wybranych)\s+){0,3}"
+        r"(?:pliku|plików|plikow|danych|csv|xlsx|arkusza|arkuszy|źródeł|zrodel|strony|stron)\b",
         text,
         re.I,
     ):
@@ -36,7 +38,7 @@ def requested(content, *, agent=False):
         if agent
         else r"^(?:(?:please|now|then|and|proszę|prosze|teraz)\s+){0,3}(?:(?:can|could|would) you\s+)?"
     )
-    modifiers = r"(?:(?:a|an|the|new|blank|sample|example|empty|me|mi|nowy|nową|nowe|pusty|przykładowy|plik|file)\s+){0,6}"
+    modifiers = r"(?:(?:a|an|the|new|blank|sample|example|empty|real|actual|downloadable|me|mi|nowy|nową|nowe|pusty|przykładowy|prawdziwy|gotowy|plik|file)\s+){0,6}"
     return bool(re.search(prefix + rf"\b{verb}\s+{modifiers}{target}\b", text, re.I))
 
 
