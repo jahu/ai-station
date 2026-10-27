@@ -262,3 +262,119 @@ it("shows the verified chart inline with named file downloads and Library links"
     ).toBe(`/library/${id}`);
   }
 });
+
+const waitingModel = (values: Partial<Run> = {}) =>
+  run({
+    id: "waiting-model",
+    executor_type: "llama_load",
+    status: "queued",
+    resource_wait: {
+      run_id: "waiting-model",
+      reason: "gpu",
+      checked_at: "2026-10-27T14:00:00Z",
+      required_mib: 0,
+      available_mib: 24000,
+      reserved_mib: 0,
+      headroom_mib: 1024,
+    },
+    ...values,
+  });
+
+it("shows the exact queued GPU dependency despite a running graph publisher", () => {
+  render(
+    <MemoryRouter>
+      <AgentDataResult
+        taskStatus="queued"
+        runs={[
+          run({ id: "publisher", executor_type: "agent_workflow" }),
+          waitingModel(),
+        ]}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText("queued")).toBeTruthy();
+  expect(screen.getByText("Waiting for an available GPU")).toBeTruthy();
+  expect(screen.queryByText("Preparing data analysis…")).toBeNull();
+  expect(
+    screen
+      .getByRole("link", { name: "Inspect waiting Run" })
+      .getAttribute("href"),
+  ).toBe("/runs/waiting-model");
+  expect(
+    screen
+      .getByRole("link", { name: "View progress and Stop" })
+      .getAttribute("href"),
+  ).toBe("/runs/waiting-model");
+});
+
+it("shows reported memory admission and then loading after the wait clears", () => {
+  const waiting = waitingModel();
+  waiting.resource_wait = {
+    ...waiting.resource_wait!,
+    reason: "memory",
+    required_mib: 12288,
+    available_mib: 4096,
+  };
+  const view = render(
+    <MemoryRouter>
+      <AgentDataResult runs={[waiting]} />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText("Waiting for memory")).toBeTruthy();
+  expect(screen.getByText(/RAM needed: 12.0 GiB/)).toBeTruthy();
+  view.rerender(
+    <MemoryRouter>
+      <AgentDataResult runs={[waitingModel({ status: "running" })]} />
+    </MemoryRouter>,
+  );
+  expect(screen.queryByRole("region", { name: "Resource wait" })).toBeNull();
+  expect(screen.getByText("Loading your local model…")).toBeTruthy();
+});
+
+it.each(["failed", "canceled", "interrupted", "succeeded", "cancel_requested"])(
+  "does not show an automatic retry notice for a %s task",
+  (taskStatus) => {
+    render(
+      <MemoryRouter>
+        <AgentDataResult taskStatus={taskStatus} runs={[waitingModel()]} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("region", { name: "Resource wait" })).toBeNull();
+  },
+);
+
+it.each(["failed", "canceled", "interrupted", "cancel_requested"])(
+  "preserves the latest %s agent execution when no aggregate task status is supplied",
+  (status) => {
+    render(
+      <MemoryRouter>
+        <AgentDataResult
+          runs={[run({ id: "latest", status }), waitingModel()]}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("region", { name: "Resource wait" })).toBeNull();
+    expect(screen.getByText(status.replaceAll("_", " "))).toBeTruthy();
+    if (status === "cancel_requested") {
+      expect(screen.getByText("Analysis is stopping…")).toBeTruthy();
+      expect(screen.queryByText("Running Python locally…")).toBeNull();
+    }
+  },
+);
+
+it.each(["other-task", "wrong-run", "stale-status"])(
+  "does not adopt a %s resource notice",
+  (problem) => {
+    const wait = waitingModel();
+    if (problem === "other-task") wait.task_id = "other";
+    if (problem === "wrong-run") wait.resource_wait!.run_id = "unrelated";
+    if (problem === "stale-status") wait.status = "succeeded";
+    render(
+      <MemoryRouter>
+        <AgentDataResult runs={[run({ id: "current" }), wait]} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("region", { name: "Resource wait" })).toBeNull();
+    expect(screen.getByText("Running Python locally…")).toBeTruthy();
+  },
+);

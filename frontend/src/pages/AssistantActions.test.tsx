@@ -1774,3 +1774,48 @@ it("links a fresh task from stopped untranslatable media without offering duplic
     screen.queryByRole("button", { name: /Retry as a new run/ }),
   ).toBeNull();
 });
+
+it("shows the actual queued model dependency in the conversation result", () => {
+  mountResults({
+    task_status: "queued",
+    steps: [],
+    data_runs: [
+      {
+        id: "publisher",
+        task_id: "task",
+        executor_type: "agent_workflow",
+        status: "running",
+        parameters: {},
+        metadata: {},
+      } as Run,
+      {
+        id: "load",
+        task_id: "task",
+        executor_type: "llama_load",
+        status: "queued",
+        parameters: {},
+        metadata: {},
+        resource_wait: {
+          run_id: "load",
+          reason: "gpu",
+          checked_at: "2026-10-27T14:00:00Z",
+          required_mib: 0,
+          available_mib: 24000,
+          reserved_mib: 0,
+          headroom_mib: 1024,
+        },
+      } as Run,
+    ],
+  });
+  const data = within(
+    screen.getByRole("region", { name: "Data analysis result" }),
+  );
+  expect(data.getByText("queued")).toBeTruthy();
+  expect(data.getByText("Waiting for an available GPU")).toBeTruthy();
+  expect(data.queryByText("Preparing data analysis…")).toBeNull();
+  expect(
+    data
+      .getByRole("link", { name: "Inspect waiting Run" })
+      .getAttribute("href"),
+  ).toBe("/runs/load");
+});
