@@ -53,7 +53,9 @@ def _media_web_options(body):
 
 
 def followup_action(content):
-    text = content.strip()
+    from app.chat_pages import _instruction_text
+
+    text = re.sub(r"\s+", " ", content).strip()
     if re.fullmatch(
         rf"(?:describe|inspect|opisz|obejrzyj)\s+(?:{_REFERENCE}|{_PLURAL_REFERENCE})[.!]?", text, re.I
     ):
@@ -66,11 +68,35 @@ def followup_action(content):
         re.I,
     ):
         return "video.generate"
-    edit = r"(?:edit|modify|change|edytuj|zmień|zmien)"
+    edit = r"(?:(?:please|now|then|proszę|prosze|teraz|następnie|nastepnie)\s+){0,3}(?:edit|modify|change|edytuj|zmień|zmien)"
     joiner = r"(?:\s*[:—-]\s*|\s+(?:to|into|na)\s+)"
     if re.fullmatch(rf"{edit}\s+{_PLURAL_REFERENCE}{joiner}\S.+", text, re.I):
         return "image.recompose"
     if re.fullmatch(rf"{edit}\s+{_REFERENCE}{joiner}\S.+", text, re.I):
+        return "image.edit"
+    # Natural edits often name the object first and the existing image later:
+    # "Change the bicycle to blue in the previous image". Require that explicit
+    # image location/source; a mention in quoted text is never an instruction.
+    text = re.sub(r"\s+", " ", _instruction_text(content)).strip()
+    if not re.match(rf"^{edit}\s+", text, re.I):
+        return None
+    if re.match(
+        rf"^{edit}\s+(?:(?:the|this|my|our|ten|tę|te|mój|moj|nasz)\s+){{0,2}}"
+        r"(?:code|script|project|repository|documentation|description|caption|prompt|kod\w*|skrypt\w*|projekt\w*|repozytor\w*|dokumentacj\w*|opis\w*|instrukcj\w*)\b",
+        text,
+        re.I,
+    ):
+        return None
+    image = r"(?:image|picture|photo|graphic|obraz|obrazu|obrazie|obrazek|obrazka|obrazku|zdjęcie|zdjecie|zdjęcia|zdjecia|zdjęciu|zdjeciu|grafikę|grafike|grafice|fotografię|fotografie|fotografii)"
+    reference = (
+        r"\b(?:in|on|from|using)\s+(?:(?:the|this|that|same|previous|last|attached|uploaded)\s+){0,3}"
+        + image
+        + r"\b|\b(?:w|na|z|ze|użyj|uzyj|wykorzystaj)\s+"
+        r"(?:(?:tym|tego|tę|te|tą|ta|poprzednim|poprzedniego|poprzedniej|ostatnim|ostatniego|ostatniej|załączonym|zalaczonym|załączonego|zalaczonego|załączonej|zalaczonej|przesłanym|przeslanym)\s+){0,3}"
+        + image
+        + r"\b"
+    )
+    if re.search(reference, text, re.I):
         return "image.edit"
     return None
 
