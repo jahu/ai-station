@@ -458,11 +458,13 @@ Optional exports accompany the mandatory result.csv and result.json, not replace
 Always create EVERY filename in runtime.required_outputs. The controller collects requested exports even if you omit them from the outputs declaration.
 When runtime.capture_undeclared_outputs is true, supported files you actually create are also collected even if omitted from outputs. Never claim a file exists unless you write it.
 AI_STATION_INPUTS is a JSON STRING containing a direct filename-to-path dictionary, NOT a file, directory, list, or an object with an "inputs" key.
+The controller includes visible sandbox bindings in the executed source: inputs is the decoded mapping and output_dir is the approved output directory, even if your script omits their initialization.
 Start with: inputs = json.loads(os.environ["AI_STATION_INPUTS"])
 Then use: path = inputs[input_name] and open(path), NOT open(os.environ["AI_STATION_INPUTS"]).
 The runtime.input_map below shows the exact mapping available in the container. Its VALUES are file paths; keys are only filenames.
 For CSV use csv.DictReader(open(path, newline="", encoding="utf-8-sig")); compute from every actual row, not only the preview.
 For XLSX use openpyxl.load_workbook(read_only=True, data_only=True, keep_links=False); never evaluate formulas or macros.
+For a sheet with column headers, use the first row to identify columns; do not count or convert that header as a data record. Treat control/summary sheets separately from source transactions.
 Write mandatory result.csv and result.json under os.environ["AI_STATION_OUTPUT_DIR"].
 result.csv is the requested result table, with a header. result.json must contain exactly
 {"answer": "factual answer in the user's language", "columns": ["headers"], "rows": [["string values"]]}.
@@ -623,7 +625,9 @@ class DataGenerateExecutor:
                 if capability.get("optional_outputs") is True
                 else []
             )
-            script = proposal.script
+            from app.data_script import prepare_script
+
+            script = prepare_script(proposal.script)
             if any(name not in available_outputs for name in proposal.outputs):
                 raise ValueError(
                     "Rebuild the configured AI Station Python image to enable generated file exports"
@@ -648,6 +652,7 @@ class DataGenerateExecutor:
             run.metadata_json = {
                 **run.metadata_json,
                 "script_artifact_id": artifact.id,
+                "runtime_bindings": "data-inputs-v1",
                 "data_output_files": output_files,
                 "required_data_output_files": required,
                 "declared_data_output_files": proposal.outputs,

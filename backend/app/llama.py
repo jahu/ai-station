@@ -870,6 +870,7 @@ def initial_preset(session, file_id):
 
 def prepare_consumer(session, run):
     """Reuse a pending load or reload with the user's last saved GPU/context selection."""
+    from app.coding_model_routing import MINIMUM_CONTEXT
     from app.dependencies import depend_on
     from app.providers import ProviderError
 
@@ -896,6 +897,8 @@ def prepare_consumer(session, run):
     needs_upgrade = bool(
         instance is not None
         and target
+        # An adequate live allocation need not be replaced to reach the next ideal preset.
+        and instance.metadata_json.get("context_size", 4096) < MINIMUM_CONTEXT
         and (
             instance.metadata_json.get("cache_type", "f16") != "q8_0"
             or instance.metadata_json.get("context_size", 4096) < target
