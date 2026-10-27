@@ -9,7 +9,7 @@ import re
 from sqlalchemy import select
 
 from app.events import append_event
-from app.http_fetch import execute_fetch, prompt_public_urls, public_url
+from app.http_fetch import PROMPT_URL, execute_fetch, prompt_public_urls, public_url
 from app.models import Artifact, Message, Run
 from app.paths import safe_join
 from app.providers import ProviderError
@@ -55,7 +55,16 @@ def _instruction_text(text):
             prefix,
             re.I,
         )
-        return value if requested and (public_url(value) or public_url("https://" + value)) else " "
+        return (
+            value
+            if requested
+            and (
+                public_url(value)
+                or public_url("https://" + value)
+                or re.fullmatch(r"https?://[^\s]+", value, re.I)
+            )
+            else " "
+        )
 
     for pattern in [r'"([^"]*)"', r"'([^']*)'", r"“([^”]*)”", r"„([^”]*)”", r"`([^`\n]*)`"]:
         text = re.sub(pattern, quoted, text)
@@ -96,6 +105,16 @@ def freeze_page_read(session, conversation_id, user, options):
     # Attachments, memories, summaries and generated model text cannot choose URLs.
     text = user.metadata_json.get("user_text", user.content)
     try:
+        instruction = _instruction_text(text) if isinstance(text, str) else ""
+        if options.get("render_pages"):
+            instruction = "Read " + instruction
+        if _READ.search(instruction) and any(
+            public_url(url.rstrip(".,;:)]}")) is None for url in PROMPT_URL.findall(instruction)
+        ):
+            return {
+                "error": "Public page reading cannot access private/local addresses or unsupported URLs. "
+                "Choose a public HTTP(S) page on port 80 or 443, without credentials."
+            }
         urls = requested_pages(
             "Read " + _instruction_text(text)
             if options.get("render_pages") and isinstance(text, str)
