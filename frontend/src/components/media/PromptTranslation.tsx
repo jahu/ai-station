@@ -172,12 +172,21 @@ export function PromptReceipt({
   );
 }
 
-export function FreshMediaRetry({ run }: { run: Run }) {
+export function FreshMediaRetry({
+  run,
+  embedded = false,
+}: {
+  run: Run;
+  embedded?: boolean;
+}) {
   const fresh = run.metadata?.fresh_media_retry as
     { run_id: string } | undefined;
   if (!fresh) return null;
   return (
-    <div className="prompt-translation-panel" role="status">
+    <div
+      className={embedded ? undefined : "prompt-translation-panel"}
+      role="status"
+    >
       <p>A new task was started. This earlier task remains stopped.</p>
       <Link to={`/runs/${fresh.run_id}`}>Open new attempt →</Link>
     </div>
@@ -278,7 +287,7 @@ export default function PromptTranslation({
         className="prompt-translation-panel"
         aria-label="Prompt translation"
       >
-        <FreshMediaRetry run={run} />
+        <FreshMediaRetry run={run} embedded />
         <PromptReceipt
           receipt={receipt}
           dispatched={run.status === "running" || run.status === "succeeded"}
