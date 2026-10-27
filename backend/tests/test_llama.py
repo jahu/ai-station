@@ -781,6 +781,46 @@ def test_already_large_q8_runtime_is_reused(coding_fit):
             assert not list(session.scalars(select(Run).where(Run.executor_type == "llama_stop")))
 
 
+@pytest.mark.parametrize("executor", ["local_proposal", "agent_data_generate"])
+@pytest.mark.parametrize("cache_type", ["q8_0", "f16"])
+def test_busy_sufficient_context_is_reused_without_ideal_size_upgrade(
+    coding_fit, monkeypatch, executor, cache_type
+):
+    from app.llama import prepare_consumer
+    from app.runs import create_run, create_task
+
+    model_id, _ = coding_fit
+    monkeypatch.setattr("app.llama.coding_context_target", lambda *args, **kwargs: 131072)
+    with TestClient(app) as client:
+        load(client, model_id)
+        tick_once()
+        with session_factory()() as session:
+            instance = instances(session)[0]
+            instance.metadata_json = {
+                **instance.metadata_json,
+                "context_size": 129280,
+                "cache_type": cache_type,
+            }
+            task = create_task(session, title="chat", prompt="hi", capability="chat.completion")
+            busy = create_run(
+                session,
+                task,
+                run_type="chat",
+                capability="chat.completion",
+                executor_type="chat",
+                parameters={"model": "llamacpp:" + model_id, "endpoint": instance.endpoint},
+            )
+            run = proposal(session, model_id)
+            run.executor_type = executor
+            prepare_consumer(session, run)
+            session.commit()
+            assert run.parameters["endpoint"] == instance.endpoint
+            assert instance.status == "ready" and instance.metadata_json["context_size"] == 129280
+            assert instance.metadata_json["cache_type"] == cache_type and busy.status == "queued"
+            assert not list(session.scalars(select(Run).where(Run.executor_type == "llama_stop")))
+            assert len(list(session.scalars(select(Run).where(Run.executor_type == "llama_load")))) == 1
+
+
 def test_stopped_reload_uses_fitted_q8_not_saved_4096(coding_fit):
     from app.llama import prepare_consumer
 
