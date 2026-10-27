@@ -1582,6 +1582,8 @@ def local_coding_bridge(owned_runner, tmp_path, monkeypatch):
                 )
             if control.get("proposal"):
                 proposal = json.dumps(control["proposal"])
+            if control.get("proposal_sequence"):
+                proposal = json.dumps(control["proposal_sequence"].pop(0))
             truncated = control["mode"] == "truncated"
             if control["mode"] == "budget":
                 # Fake provider with four characters per token: honor the requested cap.
