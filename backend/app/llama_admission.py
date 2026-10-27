@@ -5,7 +5,7 @@ from datetime import timedelta
 from app.config import get_settings
 from app.db import utcnow
 from app.events import append_event
-from app.resources import RESOURCE_WAIT_KEY
+from app.resources import RESOURCE_WAIT_KEY, memory_observation
 from app.task_control import lock_task
 
 
@@ -30,7 +30,12 @@ def memory_available(session, run, hardware):
     if not blocked:
         return True
     now = utcnow()
-    wait = {"reason": "gpu", "checked_at": now.isoformat(), "gpu_memory": blocked}
+    wait = {
+        "reason": "gpu",
+        "checked_at": now.isoformat(),
+        "gpu_memory": blocked,
+        **memory_observation(session, run, ((hardware or {}).get("memory") or {}).get("available_mib"), 0),
+    }
     run.metadata_json = {**run.metadata_json, "resource_wait": wait}
     lock_task(session, run.task)
     until = now + timedelta(seconds=max(2, get_settings().heartbeat_seconds * 2))

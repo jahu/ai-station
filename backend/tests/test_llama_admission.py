@@ -34,7 +34,7 @@ def test_observed_occupancy_waits_then_starts_original_load_after_clearance(
                     **({"memory_used_mib": used} if field == "used" else {"memory_free_mib": 12288 - used}),
                 }
             )
-        return {"gpus": rows}
+        return {"gpus": rows, "memory": {"available_mib": 24000}}
 
     monkeypatch.setattr(RunnerClient, "hardware", hardware)
     with TestClient(app) as client:
@@ -43,6 +43,10 @@ def test_observed_occupancy_waits_then_starts_original_load_after_clearance(
         waiting = client.get("/api/runs/" + original["id"]).json()
         assert waiting["status"] == "queued"
         assert waiting["resource_wait"]["reason"] == "gpu"
+        assert waiting["resource_wait"]["available_mib"] == 24000
+        assert waiting["resource_wait"]["required_mib"] == 0
+        assert waiting["resource_wait"]["reserved_mib"] == 0
+        assert waiting["resource_wait"]["headroom_mib"] == 1024
         assert waiting["resource_wait"]["gpu_memory"][0]["index"] == occupied
         assert not waiting["metadata"].get("dispatch_attempted")
         assert waiting["parameters"]["context_size"] == original["parameters"]["context_size"]
