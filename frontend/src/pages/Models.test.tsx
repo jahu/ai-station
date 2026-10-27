@@ -258,3 +258,83 @@ it("moves through observed model files with arrow keys", async () => {
   });
   expect(first.tabIndex).toBe(0);
 });
+
+it.each(["ready", "loading"])(
+  "shows the %s runtime and targets its health check instead of an older failed load",
+  async (status) => {
+    const fetch = vi.fn(async (url: string, options?: RequestInit) => ({
+      ok: true,
+      json: async () =>
+        url.endsWith("/llama")
+          ? {
+              instances: [
+                {
+                  id: "old-failed",
+                  status: "failed",
+                  metadata: {
+                    model_file_id: "file-1",
+                    health_run_id: "old-health",
+                  },
+                },
+                {
+                  id: "current",
+                  status,
+                  metadata: {
+                    model_file_id: "file-1",
+                    health_run_id: "current-health",
+                  },
+                },
+              ],
+            }
+          : url.endsWith("/hardware")
+            ? { gpus: [] }
+            : options?.method === "POST"
+              ? { id: "new-health" }
+              : {
+                  id: "file-1",
+                  filename: "Qwen.gguf",
+                  format: "gguf",
+                  category: "llm",
+                  host_path: "/models/Qwen.gguf",
+                  root_label: "/models",
+                  family: "qwen",
+                  quantization: "Q4_K_M",
+                  capabilities: ["chat"],
+                  size_bytes: 1024,
+                  availability: "present",
+                  definitions: [],
+                },
+    }));
+    vi.stubGlobal("fetch", fetch);
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter initialEntries={["/models/file-1"]}>
+          <Routes>
+            <Route path="/models/:id" element={<ModelDetail />} />
+            <Route path="/runs/:id" element={<h1>Health Run</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByText(status, { exact: true })).toBeTruthy();
+    expect(screen.queryByText("failed", { exact: true })).toBeNull();
+    expect(
+      screen
+        .getByRole("link", { name: "Latest health Run" })
+        .getAttribute("href"),
+    ).toBe("/runs/current-health");
+    fireEvent.click(screen.getByRole("button", { name: "Check health" }));
+    expect(
+      await screen.findByRole("heading", { name: "Health Run" }),
+    ).toBeTruthy();
+    expect(
+      fetch.mock.calls
+        .filter(([, options]) => options?.method === "POST")
+        .map(([url]) => url),
+    ).toEqual(["/api/llama/current/health"]);
+  },
+);
