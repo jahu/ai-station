@@ -108,7 +108,9 @@ def enqueue_local_repair(session, source_id):
     if source.parameters.get("explore"):
         files = review["exploration"][-1]["request"]["files"]
     failures = [item for item in validation.metadata_json["validation"]["commands"] if item["exit_code"] != 0]
-    evidence = json.dumps(failures, ensure_ascii=False)[:2000]
+    output_check = validation.metadata_json["validation"].get("output_check")
+    observations = {"failed_commands": failures, "output_check": output_check} if output_check else failures
+    evidence = json.dumps(observations, ensure_ascii=False)[:2000]
     events = list(
         session.scalars(
             select(RunEvent)

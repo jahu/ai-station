@@ -4,7 +4,7 @@ from pathlib import PurePosixPath
 from typing import Annotated, Literal
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select, update
 
 from app.db import utcnow
@@ -44,6 +44,7 @@ class RecordedChecks(BaseModel):
     manifest_snapshot: PlanManifest | None = None
     node_manifest_snapshot: PlanManifest | None = None
     validation_environment: ValidationEnvironment | None = None
+    output_contract: Literal["static_site"] | None = None
 
     @model_validator(mode="after")
     def bounded(self):
@@ -130,16 +131,24 @@ def enqueue_check_rerun(session, source_id, expected_validation_id):
     if preparation is None or preparation.status != "succeeded" or preparation.project_id != project.id:
         raise HTTPException(409, "Workspace preparation must still be valid")
     try:
+        from app.coding_output import validation_contract
+
+        validation_contract(session, previous)
         snapshot = RecordedChecks.model_validate(
             {
                 "commands": previous.parameters.get("commands"),
                 **{
                     key: previous.parameters.get(key)
-                    for key in ("manifest_snapshot", "node_manifest_snapshot", "validation_environment")
+                    for key in (
+                        "manifest_snapshot",
+                        "node_manifest_snapshot",
+                        "validation_environment",
+                        "output_contract",
+                    )
                 },
             }
         ).model_dump(mode="json", exclude_none=True)
-    except ValidationError as exc:
+    except ValueError as exc:
         raise HTTPException(409, "Recorded checks are invalid; inspect the previous Run") from exc
     task.metadata_json = {
         key: value for key, value in task.metadata_json.items() if key != "stop_requested_at"

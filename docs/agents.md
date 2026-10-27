@@ -140,3 +140,18 @@ one-year bounds. “Co 5 minut” therefore saves 300 seconds, never 60 minutes 
 manual schedule. Unsupported/out-of-range intervals remain disabled manual drafts
 for review; they are never clamped or interpreted as a following clock hour.
 No model inference, activation or existing schedule change occurs during drafting.
+
+## Website build acceptance
+
+An explicit website-building goal with automatic checks enabled freezes a
+`static_site` expectation on the coding Run. Completion requires a verified build
+archive containing a nonempty root `index.html`; command exit zero alone is
+insufficient. Missing commands or output fail validation with a concrete reason
+and use the existing bounded local correction budget. Repairs, same-workspace
+follow-ups and explicit check repeats retain that expectation and their original
+file permissions. A previous `dist` directory is preserved in the validation
+Run's scratch directory before building, so an old site cannot satisfy a new
+build. Empty or missing entrypoints do not publish a ready preview/download.
+Generic project checks retain their existing behavior. See the
+[QA repair plan](plans/qa-website-output-contract.md) for the original defect and
+browser acceptance requirements.

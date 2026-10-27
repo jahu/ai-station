@@ -5,6 +5,7 @@ import json
 import os
 import selectors
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -56,6 +57,26 @@ def execute_command(argv, workspace, env, *, deadline, timeout=None):
     return {"exit_code": code, "duration_seconds": round(time.monotonic() - started, 3)}
 
 
+def preserve_previous_build(workspace, scratch):
+    """Fresh website checks cannot pass using a previous build; never delete it."""
+    root = os.open(workspace, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    backup = None
+    try:
+        backup = os.open(scratch, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+        try:
+            info = os.stat("dist", dir_fd=root, follow_symlinks=False)
+        except FileNotFoundError:
+            return None
+        if not stat.S_ISDIR(info.st_mode):
+            raise ValueError("Previous website build must be an ordinary directory")
+        os.rename("dist", "previous-dist", src_dir_fd=root, dst_dir_fd=backup)
+        return str((scratch / "previous-dist").relative_to(workspace))
+    finally:
+        if backup is not None:
+            os.close(backup)
+        os.close(root)
+
+
 def validate(run_id):
     if os.getpid() != os.getpgrp():
         raise RuntimeError("Validation requires a separately owned process group")
@@ -90,6 +111,9 @@ def validate(run_id):
             component_directory(workspace, environment.node_directory), body.node_manifest_snapshot
         )
     scratch = Path(tempfile.mkdtemp(prefix=".ai-station-validation-", dir=workspace))
+    previous_build = None
+    if body.output_contract and any(command.kind == "build" for command in body.commands):
+        previous_build = preserve_previous_build(workspace, scratch)
     env = {
         "PATH": "/usr/local/bin:/usr/bin:/bin",
         "HOME": str(scratch),
@@ -146,6 +170,9 @@ def validate(run_id):
         "succeeded": all(result["exit_code"] == 0 for result in results),
         "scratch_relative": str(scratch.relative_to(workspace)),
     }
+    if body.output_contract:
+        report["output_contract"] = body.output_contract
+        report["previous_build_relative"] = previous_build
     build_path = request_path(run_id, "build.zip")
     if all(result["exit_code"] == 0 for result in results) and any(
         result["kind"] == "build" for result in results

@@ -234,7 +234,7 @@ def queue_validation(
         if queue_project_checks(session, coding_run):
             return
     commands = coding_run.parameters["commands"] if commands is None else commands
-    if not commands:
+    if not commands and not coding_run.parameters.get("output_contract"):
         coding_run.metadata_json = {**coding_run.metadata_json, "validation_status": "not_configured"}
         return
     run = create_run(
@@ -251,6 +251,11 @@ def queue_validation(
             "worktree_id": coding_run.parameters["worktree_id"],
             "worktree_run_id": coding_run.parameters["worktree_run_id"],
             "commands": commands,
+            **(
+                {"output_contract": coding_run.parameters["output_contract"]}
+                if coding_run.parameters.get("output_contract")
+                else {}
+            ),
             **({"manifest_snapshot": manifest_snapshot} if manifest_snapshot is not None else {}),
             **(
                 {"node_manifest_snapshot": node_manifest_snapshot}
