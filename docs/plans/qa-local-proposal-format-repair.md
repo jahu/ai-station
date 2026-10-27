@@ -25,3 +25,17 @@ success and repeated failure; every invalid candidate leaves files untouched.
 Then perform an actual local-model website continuation in the browser, inspect
 the changed heading, build download and unchanged workspace/history. This is a
 repair plan and implementation contract, not a claim that browser QA is closed.
+
+The first real post-deployment continuation preserved the correct task and
+workspace but rejected two non-unique edits. The requested name occurred in the
+HTML title, h1 and footer; the generic validator reason did not help the local
+model choose an unambiguous edit. Keep that failed browser retest in Excel.
+
+The validator now reports the number of matches without logging the source
+snippet. For this rejection, the single existing correction asks for complete
+content on files within the existing 32,000-byte limit, changing only the
+requested occurrence. Larger existing files still require uniquely anchored
+replacements; the full-content size restriction is not relaxed. All selected
+paths, original file snapshots, concurrent-change checks and the two-completion
+budget remain intact. Compare title/footer, build and both versions in the real
+same-workspace browser retest before closing QA-016.

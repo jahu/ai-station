@@ -80,3 +80,45 @@ def test_valid_proposal_does_not_spend_an_extra_completion(monkeypatch, capsys):
     text, _ = local_coding_job.collect_proposal(SimpleNamespace(prompt="Change", guidance=""), SELECTED)
     assert json.loads(text) == VALID and len(calls) == 1
     assert not capsys.readouterr().out
+
+
+@pytest.mark.parametrize("large", [False, True])
+def test_ambiguous_edit_correction_retains_other_occurrences_and_large_file_policy(
+    monkeypatch, capsys, large
+):
+    name = "QA Example Garden"
+    prefix = "x" * 32001 if large else ""
+    original = prefix + f"<title>{name}</title><h1>{name}</h1><footer>{name}</footer>"
+    selected = [{"path": "src/index.html", "content": original}]
+    invalid = {
+        "summary": "Rename heading",
+        "files": [{"path": "src/index.html", "replacements": [{"old": name, "new": name + " — Updated"}]}],
+    }
+    unique = {"old": f"<h1>{name}</h1>", "new": f"<h1>{name} — Updated</h1>"}
+    expected = original.replace(unique["old"], unique["new"])
+    good = {
+        "summary": "Change only heading",
+        "files": [
+            {"path": "src/index.html", **({"replacements": [unique]} if large else {"content": expected})}
+        ],
+    }
+    requests = []
+
+    def complete(body, message, *, max_tokens):
+        requests.append(message)
+        return json.dumps(invalid if len(requests) == 1 else good), {}
+
+    monkeypatch.setattr(local_coding_job, "collect_completion", complete)
+    text, _ = local_coding_job.collect_proposal(
+        SimpleNamespace(prompt="Change only h1", guidance=""), selected
+    )
+    from ai_station_runner.coding_files import parse_proposal
+
+    parsed = parse_proposal(text, selected, local_context=True)
+    assert parsed["files"][0]["content"] == expected
+    assert "<title>" + name + "</title>" in expected and "<footer>" + name + "</footer>" in expected
+    assert len(requests) == 2 and "complete content field" in requests[1]
+    assert "32000 UTF-8 bytes" in requests[1] and "For larger existing files" in requests[1]
+    event = json.loads(capsys.readouterr().out)
+    assert "found 3 matches" in event["reason"]
+    assert selected[0]["content"] == original
