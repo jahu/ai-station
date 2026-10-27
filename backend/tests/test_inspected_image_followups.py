@@ -53,6 +53,10 @@ def inspected(client, monkeypatch, *, count=1, conversation_id=None):
         ("Powiększ to zdjęcie", "image.upscale"),
         ("Opisz ten obraz", "image.describe"),
         ("Animate this image", "video.generate"),
+        (
+            "Zmień czerwony kwadrat na żółty w poprzednim załączonym obrazku. Zachowaj inne figury i wymiary. Utwórz nowy obraz, nie opis tekstowy.",
+            "image.edit",
+        ),
     ],
 )
 def test_current_inspected_input_is_selected_and_receipt_replays(vision_runtime, monkeypatch, prompt, action):

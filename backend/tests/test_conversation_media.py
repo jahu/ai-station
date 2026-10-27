@@ -56,6 +56,17 @@ def conversation(client, mode="work"):
         ("Animate it into a 5 second video", "video.generate"),
         ("Zmień ten obraz: dodaj kapelusz", "image.edit"),
         ("Edit this image: add a red hat", "image.edit"),
+        (
+            "Zmień kolor roweru na niebieski. Zachowaj resztę obrazu i użyj poprzedniego zdjęcia jako źródła.",
+            "image.edit",
+        ),
+        (
+            "Zmień czerwony kwadrat na żółty w poprzednim załączonym obrazku. Zachowaj inne figury i wymiary. Utwórz nowy obraz, nie opis tekstowy.",
+            "image.edit",
+        ),
+        ("Change the bicycle to blue in the previous image. Keep the background.", "image.edit"),
+        ("Proszę zmień ten obraz na portret w zimowym ubraniu", "image.edit"),
+        ('Edytuj ten obraz: "dodaj niebieski kapelusz"', "image.edit"),
     ],
 )
 @pytest.mark.parametrize("web_enabled", [False, True])
@@ -85,6 +96,24 @@ def test_followup_is_bound_to_visible_same_conversation_result(content, action, 
         assert user["metadata"]["conversation_reference"]["run_id"] == producer
         assert user["metadata"]["images"][0]["id"] == aid
         assert client.post("/api/chat/turns", json=request).json()["run"]["id"] == run["id"]
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "Jak zmienić kolor roweru w poprzednim zdjęciu?",
+        "Explain how to change the bicycle in the previous image",
+        "Do not change the bicycle in the previous image",
+        "Zmień prompt, aby opisywał rower na poprzednim zdjęciu",
+        "Zmień kod Pythona, aby wykrywał rower na poprzednim zdjęciu",
+        "Change the documentation explaining the bicycle in the previous image",
+        "> Zmień rower na niebieski na poprzednim zdjęciu",
+        "```text\nChange the bicycle to blue in the previous image\n```",
+        'Explain the instruction "Change the bicycle to blue in the previous image"',
+    ],
+)
+def test_image_mentions_in_advice_quotes_or_code_edits_do_not_select_pixels(content):
+    assert followup_action(content) is None
 
 
 @pytest.mark.parametrize("problem", ["trashed", "failed", "ambiguous"])
