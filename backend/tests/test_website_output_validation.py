@@ -157,12 +157,14 @@ def test_missing_output_queues_one_scoped_repair_with_real_diagnostic(
 
 
 @pytest.mark.parametrize("automatic", [False, True])
-def test_agent_freezes_website_expectation_only_with_reviewed_checks(automatic):
+@pytest.mark.parametrize("install", [False, True])
+def test_agent_freezes_website_expectation_only_with_reviewed_checks(automatic, install):
     from test_agent_coding import project, start
 
     with TestClient(app) as client, session_factory()() as session:
         row = project(session)
         row.auto_validate = automatic
+        row.auto_install_dependencies = install
         session.commit()
         _, parent = start(client, row.id, goal="Odczytaj stronę i zbuduj nową wersję HTML/CSS")
         assert tick(session, "website-agent") == parent["id"]
@@ -171,6 +173,9 @@ def test_agent_freezes_website_expectation_only_with_reviewed_checks(automatic):
         assert request.get("output_contract") == ("static_site" if automatic else None)
         if automatic:
             assert "nonempty dist/index.html" in request["guidance"]
+            assert "network disabled" in request["guidance"]
+            assert "Dependency installation: " + ("enabled" if install else "disabled") in request["guidance"]
+            assert "node:fs" in request["guidance"] and "cpSync" in request["guidance"]
         assert "external_ai" not in prep.effective_permissions
 
 

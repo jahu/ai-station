@@ -37,3 +37,20 @@ nonempty index success, unchanged generic builds, bounded repair and preserved
 continuation scope. Then rerun the actual website agent in the browser, inspect
 the real preview, download its build, and test the same-worktree follow-up.
 This document describes work in progress, not completed acceptance.
+
+
+The first real retest on the deployed output/format fixes correctly rejected the
+old echo-only build. Its bounded correction then chose `npx copyfiles` and
+`html-minifier` even though dependency setup was disabled. Native validation
+kept its network isolation and recorded the actual EAI_AGAIN/exit-one failure;
+no preview or successful build is claimed for that attempt. The workbook retains
+that failed retest and its original goal/source history.
+
+Website guidance must describe the actual frozen build environment: no network
+or interactive input, dependency setup enabled only in its separate declared
+step or explicitly disabled. Include a concrete zero-dependency Node built-in
+copy example for plain HTML/CSS sources instead of expecting the small local
+model to invent available packaging tools. This changes instructions, not native
+permissions, project commands or the required real output check. Repeat the
+original agent goal in a fresh owned worktree after reviewed deployment; do not
+hand-edit its generated source to obtain a passing QA result.
