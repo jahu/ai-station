@@ -220,7 +220,9 @@ def create_image_run(session, body: ImageRequest, *, task=None, parent_run_id=No
             width, height = parents[0].metadata_json.get("width"), parents[0].metadata_json.get("height")
             if not width or not height:
                 raise HTTPException(422, "Krea Edit requires verified source dimensions")
-            scale = min(body.max_side or 1024, 2048) / max(width, height)
+            # max_side is an upper bound. Editing a small source must not
+            # silently enlarge it; callers can still request explicit dimensions.
+            scale = min(1.0, min(body.max_side or 1024, 2048) / max(width, height))
             parameters["width"] = body.width or max(256, round(width * scale / 32) * 32)
             parameters["height"] = body.height or max(256, round(height * scale / 32) * 32)
         if parameters["width"] * parameters["height"] > 2_097_152:

@@ -1,6 +1,7 @@
 """Shared image API/worker/native lifecycle with synthetic Krea inference only."""
 
 import hashlib
+import io
 import sys
 
 import pytest
@@ -13,6 +14,7 @@ from app.engine import tick
 from app.models import ModelDefinition, ModelFile, Run
 from app.resources import active_locks
 from fastapi.testclient import TestClient
+from PIL import Image
 from test_images import bridge as bridge
 from test_images import upload
 
@@ -117,3 +119,49 @@ def test_krea_shared_vertical_slice(krea_bridge, mode, count):
         assert artifacts[0]["metadata"]["image_model"]["definition_id"] == krea_bridge
         assert client.get("/api/images/runs/" + run["id"] + "/workflow").status_code == 200
         assert client.get("/api/artifacts/" + artifacts[0]["id"] + "/thumbnail").status_code == 200
+
+
+@pytest.mark.parametrize(
+    "source_size,settings,expected",
+    [
+        ((384, 256), {}, (384, 256)),
+        ((768, 1024), {}, (768, 1024)),
+        ((1536, 1024), {}, (1024, 672)),
+        ((384, 256), {"width": 512, "height": 384}, (512, 384)),
+        ((768, 1024), {"max_side": 512}, (384, 512)),
+    ],
+)
+def test_krea_edit_maximum_side_does_not_enlarge_small_source(krea_bridge, source_size, settings, expected):
+    buffer = io.BytesIO()
+    Image.new("RGB", source_size, "red").save(buffer, format="PNG")
+    with TestClient(app) as client:
+        uploaded = client.post(
+            "/api/images/uploads", files={"file": ("original.png", buffer.getvalue(), "image/png")}
+        )
+        assert uploaded.status_code == 201, uploaded.text
+        parent = uploaded.json()
+        response = client.post(
+            "/api/images/runs",
+            json={
+                "mode": "img2img",
+                "backend": "krea2",
+                "model_id": krea_bridge,
+                "edit_prompt": "Change red to yellow; retain the dimensions",
+                "input_artifact_ids": [parent["id"]],
+                **settings,
+            },
+        )
+        assert response.status_code == 202, response.text
+        run = response.json()
+        assert (run["parameters"]["width"], run["parameters"]["height"]) == expected
+        with session_factory()() as session:
+            assert tick(session, "krea-size-worker") == run["id"]
+            actual = session.get(Run, run["id"])
+            assert actual.status == "succeeded", actual.error_message
+        artifact = client.get("/api/artifacts?run_id=" + run["id"]).json()[0]
+        delivered = client.get("/api/artifacts/" + artifact["id"] + "/file")
+        assert delivered.status_code == 200
+        with Image.open(io.BytesIO(delivered.content)) as image:
+            assert image.size == expected
+        source = client.get("/api/artifacts/" + parent["id"] + "/file")
+        assert hashlib.sha256(source.content).hexdigest() == hashlib.sha256(buffer.getvalue()).hexdigest()
