@@ -113,7 +113,7 @@ def freeze_page_read(session, conversation_id, user, options):
         ):
             return {
                 "error": "Public page reading cannot access private/local addresses or unsupported URLs. "
-                "Choose a public HTTP(S) page on port 80 or 443, without credentials."
+                "Choose an explicit public page URL using HTTP(S) on port 80 or 443, without credentials."
             }
         urls = requested_pages(
             "Read " + _instruction_text(text)
