@@ -13,6 +13,7 @@ from sqlalchemy import select
 from app.agent_schema import AgentSettings
 from app.chat_policy import agent_draft_policy, agent_draft_requested
 from app.conversation_data_schema import DataScope
+from app.draft_schedule import schedule_values
 from app.models import Artifact, Message, Run
 
 ERROR = "Choose a completed analysis in this conversation with available, unchanged sources."
@@ -259,7 +260,7 @@ def repeat_definition(source, proposal, timezone):
     return AgentSettings.model_validate(
         {
             **base,
-            **proposal.model_dump(mode="json"),
+            **schedule_values(proposal.model_dump(mode="json")),
             "schedule_timezone": timezone,
             "enabled": False,
             "project_id": None,

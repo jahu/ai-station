@@ -59,3 +59,20 @@ Conversation results show a compact goal/model/tools/schedule summary with a
 review link; they do not expand the full settings form by default. Existing
 in-conversation controls stay available through an explicit edit action, with
 reports still visible. Model names resolve through the read-only catalog.
+
+## Browser QA: canonical schedules and fixed market scopes
+
+A new disabled draft may contain redundant schedule fields from local inference
+(for example, a daily cron plus `interval_seconds=86400`). Clear only inactive
+schedule fields before the unchanged AgentSettings validation. Apply the same
+mapping to ordinary, repeated-analysis and selected-input draft paths. Invalid
+active cron expressions, missing intervals or timezone-less one-shot times still
+fail closed. Existing definitions and their edits are not normalized or changed.
+
+When the deterministic controller has already derived an exclusive numeric market
+watch, it owns the tool/source/notification scope. Model-authored search, memory,
+media and classifier extras are discarded from that disabled proposal; they cannot
+expand the fixed market capability. Other draft families retain strict tool and
+URL validation. Keep the raw inference response in Run events and publish the
+actual reviewable definition. No execution or activation occurs during drafting.
+Real local-model browser retries remain separate from these regression checks.
