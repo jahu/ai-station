@@ -2,8 +2,9 @@
 
 Real UX-003 browser QA found a failed Task displaying a green “succeeded” data
 card with “Preparing data analysis” and “View progress and Stop”. The card used
-the latest filtered data Run, which could be the successful graph publisher.
-Its failing model-load prerequisite was present only in the complete Task steps.
+the latest data Run rather than the Task outcome. In the captured graph that was
+successful runtime cleanup after a failed model load. Both the model failure and
+the downstream `PrerequisiteFailed` generation were present in the Run list.
 
 Pass the existing Task outcome and steps into the shared data result card. A
 terminal failure/cancellation/interruption takes precedence over successful
