@@ -146,7 +146,8 @@ it("keeps a draft inactive and makes unsupported tools inspectable and removable
   ).toBe(true);
   expect(fetch.mock.calls.every((call) => !call[1])).toBe(true);
 });
-it("enables a draft after unavailable tools are removed and saved", async () => {
+it("enables the just-saved revision before a slow detail refresh returns", async () => {
+  let holdRefresh = false;
   let agent = {
     id: "draft",
     name: "Draft",
@@ -174,6 +175,9 @@ it("enables a draft after unavailable tools are removed and saved", async () => 
     runs: [] as unknown[],
   };
   const fetch = vi.fn(async (url: string, options?: RequestInit) => {
+    if (holdRefresh && url.endsWith("/agents/draft") && !options?.method) {
+      await new Promise(() => {});
+    }
     if (
       options &&
       String(url).includes("/agents/draft") &&
@@ -184,6 +188,7 @@ it("enables a draft after unavailable tools are removed and saved", async () => 
         ...JSON.parse(String(options.body)),
         updated_at: "2026-09-25T12:01:00Z",
       };
+      holdRefresh = true;
     }
     return {
       ok: true,
@@ -230,6 +235,16 @@ it("enables a draft after unavailable tools are removed and saved", async () => 
   expect(
     fetch.mock.calls.every((call) => !String(call[0]).endsWith("/enabled")),
   ).toBe(true);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Enable saved definition" }),
+  );
+  await waitFor(() => {
+    const request = fetch.mock.calls.find(([url]) => url.endsWith("/enabled"));
+    expect(request).toBeTruthy();
+    expect(JSON.parse(String(request?.[1]?.body)).expected_updated_at).toBe(
+      "2026-09-25T12:01:00Z",
+    );
+  });
 });
 it("keeps Enable disabled when a saved skill is missing from the catalog", async () => {
   const fetch = vi.fn(async (url: string) => ({
