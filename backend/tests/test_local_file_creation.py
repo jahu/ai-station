@@ -447,6 +447,9 @@ def test_real_file_request_after_advice_uses_file_workflow_without_manual_tool_s
         ("Utwórz nowy arkusz Excel z liczbami 1 do 10", "result.xlsx"),
         ("Create a text file with a weekly checklist", "report.txt"),
         ("Utwórz plik tekstowy z listą zadań", "report.txt"),
+        ("Utwórz prawdziwy plik Excel z arkuszem Produkty", "result.xlsx"),
+        ("Create a real downloadable workbook", "result.xlsx"),
+        ("Utwórz gotowy plik tekstowy z listą zadań", "report.txt"),
     ],
 )
 def test_requested_creation_file_is_mandatory_even_if_model_omits_its_manifest(goal, filename):

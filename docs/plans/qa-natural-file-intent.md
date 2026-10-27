@@ -13,6 +13,8 @@ references retain their grammatical source forms (`z pliku`, `z danych`,
 external input. Existing-input analysis, URLs, quotations, explanatory questions,
 explicit Conversation actions and owned coding contexts retain their boundaries.
 No new tool, permission, executor, path or model-loading policy is introduced.
+The same ordinary modifiers are recognized by the required-export policy, so a
+requested workbook or text file remains mandatory if a model omits its manifest.
 
 Acceptance: in the real unified chat, ask for advice without execution, then
 request the three-product CSV from the frozen WORK-001 case with Auto selected.
