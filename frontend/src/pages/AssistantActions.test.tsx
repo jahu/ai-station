@@ -125,7 +125,7 @@ it("shows a failed child even when planning succeeded", () => {
   ).toBe("/runs/image");
 });
 
-it("shows a failed data prerequisite outside the filtered published data graph", () => {
+it("shows the actual failed prerequisite even when both failures are in the data graph", () => {
   mountResults({
     task_status: "failed",
     data_runs: [
@@ -146,6 +146,16 @@ it("shows a failed data prerequisite outside the filtered published data graph",
         metadata: {},
         error_type: "PrerequisiteFailed",
         error_message: "Required Runs did not succeed: load",
+      } as unknown as Run,
+      {
+        id: "load",
+        task_id: "task",
+        executor_type: "llama_load",
+        status: "failed",
+        parameters: {},
+        metadata: {},
+        error_type: "RuntimeFailed",
+        error_message: "Runtime startup diagnostics\nCUDA out of memory",
       } as unknown as Run,
     ],
     steps: [

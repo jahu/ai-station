@@ -109,8 +109,13 @@ export default function AgentDataResult({
         (step) => !step.superseded && step.status === taskStatus,
       )
     : undefined;
+  const dependencyFailures = new Set(
+    current
+      .filter((run) => run.error_type === "PrerequisiteFailed")
+      .map((run) => run.id),
+  );
   const failedStep =
-    failedSteps?.find((step) => !current.some((run) => run.id === step.id)) ??
+    failedSteps?.find((step) => !dependencyFailures.has(step.id)) ??
     failedSteps?.[0];
   const stopped =
     missingResult || ["failed", "canceled", "interrupted"].includes(status);
