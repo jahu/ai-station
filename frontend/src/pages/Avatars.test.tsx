@@ -14,12 +14,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 function mount(entry = "/avatars") {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[entry]}>
         <Routes>
           <Route path="/avatars" element={<Avatars />} />
@@ -27,6 +26,7 @@ function mount(entry = "/avatars") {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return client;
 }
 it("selects existing inputs, queues video and keeps the live result beside the form", async () => {
   const artifacts = [
@@ -425,8 +425,8 @@ function setupFetch(profile: () => Promise<SetupProfile>, ok = true) {
     },
   }));
   vi.stubGlobal("fetch", fetch);
-  mount("/avatars?image=portrait&audio=speech");
-  return fetch;
+  const client = mount("/avatars?image=portrait&audio=speech");
+  return { fetch, client };
 }
 
 it("waits for runtime readiness before enabling a fully configured form", async () => {
@@ -434,7 +434,7 @@ it("waits for runtime readiness before enabling a fully configured form", async 
   const pending = new Promise<SetupProfile>((done) => {
     resolve = done;
   });
-  const fetch = setupFetch(() => pending);
+  const { fetch } = setupFetch(() => pending);
   await screen.findByText("Checking local avatar runtime…");
   await screen.findByText("Portrait.png");
   await screen.findByText("Speech.wav");
@@ -451,7 +451,7 @@ it("waits for runtime readiness before enabling a fully configured form", async 
 it.each([false, true])(
   "keeps an unavailable or failed runtime form inspectable without submission (error=%s)",
   async (failed) => {
-    const fetch = setupFetch(
+    const { fetch } = setupFetch(
       async () => ({ available: false, reason: "Echo runtime is absent" }),
       !failed,
     );
@@ -476,3 +476,21 @@ it.each([false, true])(
       ).toBe("/system");
   },
 );
+
+it("does not submit from stale available data after the runtime recheck fails", async () => {
+  let failed = false;
+  const { fetch, client } = setupFetch(async () => {
+    if (failed) throw new Error("Avatar runtime check failed");
+    return { available: true };
+  });
+  const button = screen.getByRole("button", { name: "Generate avatar video" });
+  await vi.waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+  failed = true;
+  await client.invalidateQueries({ queryKey: ["avatar-capabilities"] });
+  await screen.findByText("Avatar runtime check failed");
+  expect(button.hasAttribute("disabled")).toBe(true);
+  fireEvent.submit(button.closest("form")!);
+  expect(fetch.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(
+    true,
+  );
+});

@@ -296,6 +296,31 @@ def avatar_sources(client):
     }
 
 
+def test_standard_avatar_resume_rejects_lost_setup_without_changing_saved_work(
+    full_avatar_bridge, monkeypatch
+):
+    with TestClient(app) as api:
+        queued = api.post("/api/media/jobs/avatar", json=avatar_sources(api))
+        assert queued.status_code == 202, queued.text
+        task_id = queued.json()["task_id"]
+        stopped = api.post("/api/media/jobs/" + task_id + "/cancel").json()
+        assert stopped["resume_allowed"]
+        with session_factory()() as session:
+            before = [(r.id, r.status) for r in session.scalars(select(Run).where(Run.task_id == task_id))]
+        monkeypatch.setattr("app.avatars.capabilities", lambda: {"available": False})
+        resumed = api.post(
+            "/api/media/jobs/" + task_id + "/resume",
+            json={"client_request_id": str(uuid4()), "expected_revision": stopped["revision"]},
+        )
+        assert resumed.status_code == 409 and "needs setup" in resumed.json()["detail"]
+        assert api.get("/api/media/jobs/" + task_id).json()["revision"] == stopped["revision"]
+        with session_factory()() as session:
+            assert [
+                (r.id, r.status) for r in session.scalars(select(Run).where(Run.task_id == task_id))
+            ] == before
+        assert not full_avatar_bridge
+
+
 @pytest.mark.parametrize("speech_text", [None, "A full spoken sentence"])
 def test_full_avatar_preserves_complete_sound_once_and_continuous_windows(full_avatar_bridge, speech_text):
     import av

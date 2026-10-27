@@ -587,13 +587,12 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
 
         verify_recipe(avatar_capabilities(), frozen_recipe(plan))
     profile = capabilities() if plan["kind"] == "video" else {}
-    if plan.get("request", {}).get("memory_profile", "default") != "default":
-        if plan["kind"] == "avatar":
-            from app.avatars import memory_reservation as avatar_memory
+    if plan["kind"] == "avatar":
+        from app.avatars import memory_reservation as avatar_memory
 
-            avatar_memory(FullAvatarRequest.model_validate(plan["request"]))
-        else:
-            memory_reservation(LongVideoRequest.model_validate(plan["request"]), profile)
+        avatar_memory(FullAvatarRequest.model_validate(plan["request"]))
+    elif plan.get("request", {}).get("memory_profile", "default") != "default":
+        memory_reservation(LongVideoRequest.model_validate(plan["request"]), profile)
     observed = profile.get("profile_observation")
     if plan.get("profile_observation") and observed != plan["profile_observation"]:
         raise HTTPException(409, "Runtime model files changed; start a new media job")

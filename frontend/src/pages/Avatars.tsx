@@ -79,7 +79,7 @@ function AvatarForm({
   const [seed, setSeed] = useState(initialRequest?.seed ?? 43);
   const [gpu, setGpu] = useState(initialRequest?.gpu ?? "auto");
   const capability = useAvatarCapabilities();
-  const available = capability.data?.available === true;
+  const available = capability.data?.available === true && !capability.isError;
   const [chosenProfile, setChosenProfile] = useState<AvatarProfile | null>(
     initialRequest ? (initialRequest.memory_profile ?? "default") : null,
   );
@@ -354,7 +354,7 @@ function AvatarForm({
                 Checking local avatar runtime…
               </p>
             )}
-            {capability.data && !available && (
+            {capability.data && !capability.data.available && (
               <p className="notice" role="status">
                 Local avatar generation needs setup. {capability.data.reason}{" "}
                 <Link to="/system">Inspect system</Link>
