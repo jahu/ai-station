@@ -41,9 +41,11 @@ def select_coding_model(session):
     history = list(session.scalars(select(RuntimeInstance).where(RuntimeInstance.ownership == "managed")))
     load_ids = [i.metadata_json.get("load_run_id") for i in history if i.metadata_json.get("load_run_id")]
     loads = {
-        rid: (created, status)
-        for rid, created, status in session.execute(
-            select(Run.id, Run.created_at, Run.status).where(Run.id.in_(load_ids))
+        rid: (created, status, parameters, executor)
+        for rid, created, status, parameters, executor in session.execute(
+            select(Run.id, Run.created_at, Run.status, Run.parameters, Run.executor_type).where(
+                Run.id.in_(load_ids)
+            )
         )
     }
     loaded_at = {rid: values[0] for rid, values in loads.items()}
@@ -62,12 +64,27 @@ def select_coding_model(session):
     ):
         if not loadable_model(model):
             continue
+
+        def matches_file(instance):
+            if instance.runtime_key != "llama.cpp":
+                return False
+            meta = instance.metadata_json
+            if meta.get("model_size_bytes") == model.size_bytes and meta.get("model_mtime") == model.mtime:
+                return True
+            load = loads.get(meta.get("load_run_id"))
+            if load is None or load[1] != "succeeded" or load[3] != "llama_load":
+                return False
+            params = load[2]
+            return (
+                params.get("instance_id") == instance.id
+                and params.get("gpus") == meta.get("gpus")
+                and params.get("model_path") == model.host_path
+                and params.get("size_bytes") == model.size_bytes
+                and params.get("mtime") == model.mtime
+            )
+
         observations = [
-            i
-            for i in history
-            if i.metadata_json.get("model_file_id") == model.id
-            and i.metadata_json.get("model_size_bytes") == model.size_bytes
-            and i.metadata_json.get("model_mtime") == model.mtime
+            i for i in history if i.metadata_json.get("model_file_id") == model.id and matches_file(i)
         ]
         if any(i.status == "unknown" for i in observations):
             continue

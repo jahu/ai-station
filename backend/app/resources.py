@@ -29,7 +29,13 @@ def resource_ready_condition(now):
         .exists()
     )
     return and_(
-        or_(Run.requested_gpu.is_(None), Run.requested_gpu.in_(("none", "")), ~waiting),
+        or_(
+            and_(
+                or_(Run.requested_gpu.is_(None), Run.requested_gpu.in_(("none", ""))),
+                Run.executor_type != "llama_load",
+            ),
+            ~waiting,
+        ),
         or_(Run.executor_type != "site_preview", ~waiting),
     )
 
