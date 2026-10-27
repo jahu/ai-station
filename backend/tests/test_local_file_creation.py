@@ -243,6 +243,9 @@ def test_creation_defaults_omit_operation_from_legacy_scope_and_agent_identity()
         "Create a CSV table with the numbers 1 to 10 and their squares",
         "Utwórz nowy arkusz Excel z liczbami 1 do 10",
         "Please create a workbook showing a sample monthly budget",
+        "Teraz utwórz prawdziwy plik CSV z kolumnami produkt i cena oraz trzema wierszami: Notes10,Kubek20,Torba40. Udostępnij gotowy plik do pobrania.",
+        "Utwórz plik Excel QA-produkty.xlsx z arkuszem Produkty, trzema produktami i sumą cen.",
+        "Create a real downloadable CSV with three products and prices",
     ],
 )
 def test_clear_current_file_creation_routes_without_planner_or_web(content):
@@ -263,6 +266,14 @@ def test_clear_current_file_creation_routes_without_planner_or_web(content):
         "Create an Excel comparing current prices",
         "Create a workbook from https://example.com/",
         "Create a photograph of a workbook",
+        "Utwórz plik Excel z pliku CSV",
+        "Utwórz plik CSV z danych arkusza",
+        "Utwórz plik CSV z mojego arkusza",
+        "Utwórz plik Excel z lokalnego pliku CSV",
+        "Utwórz arkusz Excel ze źródeł publicznych",
+        "Utwórz plik CSV na podstawie istniejącego arkusza",
+        "Explain how to create a real downloadable CSV",
+        "> Teraz utwórz prawdziwy plik CSV z kolumnami produkt i cena",
     ],
 )
 def test_unclear_source_or_other_capability_does_not_gain_creation(content):
@@ -378,6 +389,54 @@ def test_natural_first_send_is_durable_and_keeps_external_conversation_model_unu
         assert any(r.metadata_json.get("data_result", {}).get("operation") == "create" for r in rows), [
             (r.executor_type, r.status, r.error_message) for r in rows
         ]
+        assert len(data_environment["jobs"]) == 1
+
+
+def test_real_file_request_after_advice_uses_file_workflow_without_manual_tool_selection(
+    data_environment, monkeypatch
+):
+    from app.api import app
+    from app.db import session_factory
+    from app.models import Message
+    from fastapi.testclient import TestClient
+
+    monkeypatch.setattr(
+        "app.coding_model_routing.select_coding_model", lambda session: {"model": data_environment["model"]}
+    )
+    with TestClient(app) as api:
+        conversation = api.post(
+            "/api/chat/conversations", json={"model": "unused", "execution_mode": "chat"}
+        ).json()
+        # Prior advice is conversation context; it must not consume the next
+        # explicit file request or require the user to choose a tool manually.
+        with session_factory()() as db:
+            db.add(
+                Message(
+                    conversation_id=conversation["id"],
+                    role="user",
+                    content="Describe a garden website; do not build it.",
+                )
+            )
+            db.add(
+                Message(
+                    conversation_id=conversation["id"],
+                    role="assistant",
+                    content="Use a home page and a gallery.",
+                )
+            )
+            db.commit()
+        response = api.post(
+            "/api/chat/conversations/" + conversation["id"] + "/messages",
+            json={
+                "content": "Teraz utwórz prawdziwy plik CSV z kolumnami produkt i cena oraz trzema wierszami: Notes10,Kubek20,Torba40. Udostępnij gotowy plik do pobrania."
+            },
+        )
+        assert response.status_code == 202, response.text
+        root = response.json()
+        assert root["parameters"]["data"]["operation"] == "create"
+        assert root["parameters"]["data"]["input_artifact_ids"] == []
+        rows = drain(root)
+        assert any(r.metadata_json.get("data_result", {}).get("operation") == "create" for r in rows)
         assert len(data_environment["jobs"]) == 1
 
 
