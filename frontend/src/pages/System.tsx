@@ -1,5 +1,6 @@
 import RuntimeObservations from "./RuntimeObservations";
 import GpuProcesses from "./GpuProcesses";
+import GpuCards from "./GpuCards";
 import { useId, type KeyboardEvent } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +12,13 @@ import {
   useHardware,
   useStatus,
 } from "../api";
-import { Badge, ErrorNotice, Loading, PageTitle } from "../components/common";
+import {
+  Badge,
+  ErrorNotice,
+  Loading,
+  Meter,
+  PageTitle,
+} from "../components/common";
 import { Button } from "../components/ui/button";
 import { number, time } from "../lib/utils";
 import { useListKeyboard } from "./useListKeyboard";
@@ -125,7 +132,33 @@ export default function System() {
         </div>
       </div>
       <ErrorNotice error={hardware.error ?? status.error} />
-      <div className="metrics-grid">
+      <div className="metrics-grid system-metrics-grid">
+        <section className="panel metric" aria-label="CPU utilization">
+          <span>CPU utilization</span>
+          <strong>{number(hardware.data?.cpu.utilization, "%")}</strong>
+          <Meter
+            value={hardware.data?.cpu.utilization ?? null}
+            label="CPU utilization"
+          />
+        </section>
+        <section className="panel metric" aria-label="RAM usage">
+          <span>RAM in use</span>
+          <strong>
+            {hardware.data
+              ? `${(hardware.data.memory.used_mib / 1024).toFixed(1)} GiB`
+              : "Unavailable"}
+          </strong>
+          <small>
+            {hardware.data
+              ? `of ${(hardware.data.memory.total_mib / 1024).toFixed(1)} GiB`
+              : "Memory information unavailable"}
+          </small>
+          <Meter
+            value={hardware.data?.memory.used_mib ?? null}
+            total={hardware.data?.memory.total_mib}
+            label="RAM utilization"
+          />
+        </section>
         <section className="panel metric">
           <span>CPU temperature</span>
           <strong>{number(hardware.data?.cpu.temperature_c, "°C")}</strong>
@@ -149,6 +182,7 @@ export default function System() {
           <small>{time(status.data?.scheduler.last_heartbeat ?? null)}</small>
         </section>
       </div>
+      <GpuCards gpus={hardware.data?.gpus ?? []} />
       <GpuProcesses gpus={hardware.data?.gpus ?? []} />
       <p className="muted">
         Configure models, providers and operator access in{" "}
