@@ -10,6 +10,16 @@ from app.runner_client import RunnerClient
 MINIMUM_CONTEXT = 100352  # First supported 256-token allocation above 100k.
 
 
+def observed_context(instance):
+    metadata = instance.metadata_json
+    observation = metadata.get("observation")
+    requested = metadata.get("context_size")
+    actual = observation.get("n_ctx") if isinstance(observation, dict) else None
+    if type(requested) is not int or type(actual) is not int or min(requested, actual) <= 0:
+        return 0
+    return min(requested, actual)
+
+
 def select_coding_model(session):
     try:
         devices = RunnerClient().hardware().get("gpus", [])
@@ -67,7 +77,7 @@ def select_coding_model(session):
         profile = profiles[0]
         proven = max(
             [
-                int(i.metadata_json.get("context_size", 0))
+                observed_context(i)
                 for i in matching
                 if i.status in {"ready", "stopped"}
                 and i.metadata_json.get("cache_type") == "q8_0"
@@ -91,6 +101,10 @@ def select_coding_model(session):
         )
         if context < MINIMUM_CONTEXT:
             continue
+        # A slightly larger estimate is not worth discarding an already proven
+        # usable allocation. Requested settings alone never prove runtime size.
+        if proven >= MINIMUM_CONTEXT:
+            context = min(context, proven)
         verified = proven >= context
         candidates.append(
             (
