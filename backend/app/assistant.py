@@ -927,6 +927,14 @@ def explicit_plan(params):
             )
         return Plan(action="image.generate", reason="Generate an image from your instruction.")
     if params["image_artifact_ids"]:
+        from app.image_composition_intent import requested as composition_requested
+
+        if composition_requested(params["content"]):
+            return Plan(
+                action="image.recompose" if len(params["image_artifact_ids"]) > 1 else "image.edit",
+                reason="Compose the selected image inputs in their original order.",
+            )
+    if params["image_artifact_ids"]:
         from app.conversation_media import followup_action
 
         referenced = followup_action(params["content"])
