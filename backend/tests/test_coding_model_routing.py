@@ -69,6 +69,59 @@ def test_auto_routes_to_proven_local_context_and_preserves_gpu_selection(session
     assert result["context_verified"] and result["gpus"] == [2, 7]
 
 
+@pytest.mark.parametrize("tamper", [None, "instance", "path", "mtime", "gpus", "status", "executor"])
+def test_successful_later_vision_load_preserves_unchanged_file_coding_proof(session, hardware, tamper):
+    model, _ = candidate(session)
+    task = create_task(session, title="Vision model", prompt="", capability="runtime.load")
+    load = create_run(
+        session, task, run_type="runtime", capability="runtime.load", executor_type="llama_load"
+    )
+    load.status = "succeeded"
+    vision = RuntimeInstance(
+        runtime_key="llama.cpp",
+        name="Vision",
+        ownership="managed",
+        status="stopped",
+        metadata_json={
+            "model_file_id": model.id,
+            "load_run_id": load.id,
+            "gpus": [2, 7],
+            "context_size": 32768,
+            "cache_type": "f16",
+        },
+    )
+    session.add(vision)
+    session.flush()
+    params = {
+        "instance_id": vision.id,
+        "model_path": model.host_path,
+        "size_bytes": model.size_bytes,
+        "mtime": model.mtime,
+        "gpus": [2, 7],
+    }
+    if tamper == "instance":
+        params["instance_id"] = "unrelated"
+    elif tamper == "path":
+        params["model_path"] = "/models/another.gguf"
+    elif tamper == "mtime":
+        params["mtime"] = 2
+    elif tamper == "gpus":
+        params["gpus"] = [7]
+    elif tamper == "status":
+        load.status = "failed"
+    elif tamper == "executor":
+        load.executor_type = "fake"
+    load.parameters = params
+    session.flush()
+    if tamper:
+        with pytest.raises(ProviderError, match="100k"):
+            select_coding_model(session)
+    else:
+        result = select_coding_model(session)
+        assert result["model"] == "llamacpp:" + model.id
+        assert result["context_verified"] and result["context_size"] >= 100352
+
+
 @pytest.mark.parametrize("change", ["changed_file", "unknown_runtime", "short_context", "missing_gpu"])
 def test_auto_rejects_unqualified_or_changed_context_without_external_fallback(
     session, hardware, monkeypatch, change
