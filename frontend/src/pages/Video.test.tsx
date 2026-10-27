@@ -226,7 +226,6 @@ it.each([5, 10])(
     expect(
       screen.getAllByRole("option", {
         name: `${seconds} seconds`,
-        exact: true,
       }),
     ).toHaveLength(1);
     expect(screen.getByDisplayValue("512 × 512")).toBeTruthy();
