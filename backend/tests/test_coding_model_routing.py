@@ -33,6 +33,7 @@ def candidate(session, *, name="Coder-27B.gguf", context=100352, size=8 * 1024**
             "model_mtime": 1,
             "gpus": [2, 7],
             "context_size": context,
+            "observation": {"n_ctx": context},
             "context_fit": "ok",
             "cache_type": "q8_0",
             "context_profile": {
@@ -97,6 +98,31 @@ def test_auto_prefer_proven_coder_over_unproven_allocation(session, hardware):
         "context_profile": {"trained_context": 262144, "q8_kv_bytes_per_token": 64 * 1024},
     }
     assert select_coding_model(session)["model"] == "llamacpp:" + model.id
+
+
+def test_auto_uses_observed_allocation_instead_of_larger_requested_settings(session, hardware):
+    model, _ = candidate(session, name="Ready-9B.gguf", context=129280, size=7 * 1024**3)
+    _, larger = candidate(session, name="Larger-27B.gguf", context=131072, size=9 * 1024**3)
+    larger.metadata_json = {**larger.metadata_json, "observation": {"n_ctx": 65536}}
+    selected = select_coding_model(session)
+    assert selected["model"] == "llamacpp:" + model.id
+    assert selected["context_verified"] and selected["context_size"] == 129280
+
+
+@pytest.mark.parametrize("actual", [None, False, 0, "131072"])
+def test_missing_or_invalid_observation_never_outranks_a_verified_model(session, hardware, actual):
+    model, _ = candidate(session, name="Qualified-9B.gguf", context=129280, size=7 * 1024**3)
+    _, runtime = candidate(session, name="Unverified-27B.gguf", context=131072, size=9 * 1024**3)
+    runtime.metadata_json = {**runtime.metadata_json, "observation": {"n_ctx": actual}}
+    selected = select_coding_model(session)
+    assert selected["model"] == "llamacpp:" + model.id and selected["context_verified"]
+
+
+def test_auto_preserves_a_sufficient_observed_context_without_speculative_upgrade(session, hardware):
+    _, runtime = candidate(session, context=129280)
+    runtime.status = "ready"
+    selected = select_coding_model(session)
+    assert selected["context_size"] == 129280 and selected["context_verified"]
 
 
 def test_auto_api_is_read_only_and_coding_snapshots_actual_model_before_dispatch(
