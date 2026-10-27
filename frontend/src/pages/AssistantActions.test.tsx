@@ -1726,3 +1726,51 @@ it("keeps failed Vision errors and inspection actions visible", () => {
     screen.queryByText("Execution details", { selector: "summary" }),
   ).toBeNull();
 });
+
+it("links a fresh task from stopped untranslatable media without offering duplicate retries", () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, json: async () => ({}) })),
+  );
+  mountResults({
+    ...failedImageResult(),
+    steps: failedImageResult().steps.map((step) => ({
+      ...step,
+      media_controls: true,
+    })),
+    media_runs: [
+      {
+        id: "image",
+        project_id: null,
+        task_id: "stopped-task",
+        parent_run_id: null,
+        capability: "image.generate",
+        execution_target: "host",
+        created_at: "2026-10-27T12:00:00Z",
+        started_at: null,
+        finished_at: null,
+        actual_gpu: null,
+        requested_gpu: "auto",
+        parameters: {},
+        effective_permissions: [],
+        summary: "",
+        error_type: "",
+        error_message: "",
+        worker_id: null,
+        status: "canceled",
+        executor_type: "photo_pipe",
+        metadata: {
+          fresh_media_retry: { run_id: "fresh-image", task_id: "fresh-task" },
+        },
+      } satisfies Run,
+    ],
+  });
+  expect(
+    screen
+      .getByRole("link", { name: "Open new attempt →" })
+      .getAttribute("href"),
+  ).toBe("/runs/fresh-image");
+  expect(
+    screen.queryByRole("button", { name: /Retry as a new run/ }),
+  ).toBeNull();
+});

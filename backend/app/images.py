@@ -20,7 +20,7 @@ from app.db import session_scope
 from app.image_models import resolve_request
 from app.image_models import router as image_model_router
 from app.image_schema import ImageRequest
-from app.models import Artifact, Run, Task
+from app.models import Artifact, Run
 from app.paths import PathBoundaryError, safe_join
 from app.permissions import permissions_for
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
@@ -58,6 +58,11 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
     identity = {"id": str(body.client_request_id), "translation": body.translation}
 
     def existing_retry():
+        from app.media_retry_intent import existing_fresh, locked_source
+
+        locked_source(session, original)
+        if fresh := existing_fresh(session, original, identity, replayable=bool(body.client_request_id)):
+            return fresh
         child = session.scalar(
             select(Run).where(Run.parent_run_id == original.id, Run.executor_type == "photo_pipe")
         )
@@ -86,7 +91,7 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
     session.commit()
     try:
         info = RunnerClient().inspect_process(original.id)
-        if info.get("alive"):
+        if info.get("alive") or info.get("completion_pending"):
             raise HTTPException(409, "The original process is still running")
     except RunnerUnavailable as exc:
         raise HTTPException(409, "Runner must be reachable before retrying") from exc
@@ -99,7 +104,9 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
     for relative in original.parameters.get("inputs", []):
         if not safe_join(get_settings().data_dir, relative).is_file():
             raise HTTPException(422, "A source image is missing")
-    task = session.get(Task, original.task_id)
+    from app.media_retry_intent import finish_retry, task_for_retry
+
+    task = task_for_retry(session, original, body.translation)
     retry = create_run(
         session,
         task,
@@ -115,7 +122,7 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
         requested_resources=original.requested_resources,
         permissions=original.effective_permissions,
         retry_class="safe",
-        parent_run_id=original.id,
+        parent_run_id=original.id if task.id == original.task_id else None,
         metadata={
             "image_retry_request": identity,
             **({"prompt_translation": receipt} if receipt and body.translation == "reuse" else {}),
@@ -129,7 +136,9 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
         )
     elif receipt and body.translation == "original":
         original_receipt = {
-            key: value for key, value in receipt.items() if key not in {"artifact_id", "artifact_sha256"}
+            key: value
+            for key, value in receipt.items()
+            if key not in {"artifact_id", "artifact_sha256", "reused_from_run_id"}
         }
         retry.parameters = {
             **retry.parameters,
@@ -149,7 +158,7 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
         append_event(
             session, retry.id, "media.translation.bypassed", {"original_run_id": original.id, "by": "user"}
         )
-    original.metadata_json = {**original.metadata_json, "retry_run_id": retry.id}
+    finish_retry(session, original, retry, identity)
     session.commit()
     return run_dict(retry)
 
