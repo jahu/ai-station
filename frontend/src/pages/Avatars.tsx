@@ -79,6 +79,7 @@ function AvatarForm({
   const [seed, setSeed] = useState(initialRequest?.seed ?? 43);
   const [gpu, setGpu] = useState(initialRequest?.gpu ?? "auto");
   const capability = useAvatarCapabilities();
+  const available = capability.data?.available === true && !capability.isError;
   const [chosenProfile, setChosenProfile] = useState<AvatarProfile | null>(
     initialRequest ? (initialRequest.memory_profile ?? "default") : null,
   );
@@ -177,7 +178,7 @@ function AvatarForm({
           className="panel media-composer"
           onSubmit={(event) => {
             event.preventDefault();
-            if (!busy && !uploading) generate.mutate();
+            if (available && !busy && !uploading) generate.mutate();
           }}
         >
           <div className="media-composer-heading">
@@ -347,11 +348,23 @@ function AvatarForm({
               </div>
               <ErrorNotice error={hardware.error} />
             </details>
-            <ErrorNotice error={generate.error} />
+            <ErrorNotice error={generate.error ?? capability.error} />
+            {capability.isPending && (
+              <p className="media-privacy" role="status">
+                Checking local avatar runtime…
+              </p>
+            )}
+            {capability.data && !capability.data.available && (
+              <p className="notice" role="status">
+                Local avatar generation needs setup. {capability.data.reason}{" "}
+                <Link to="/system">Inspect system</Link>
+              </p>
+            )}
             <Button
               type="submit"
               className="media-generate"
               disabled={
+                !available ||
                 !image ||
                 !audio ||
                 !prompt.trim() ||
