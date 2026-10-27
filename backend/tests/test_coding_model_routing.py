@@ -1,5 +1,7 @@
 import pytest
 from app.coding_model_routing import select_coding_model
+from app.events import append_event
+from app.llama import update_instance
 from app.models import ModelFile, RuntimeInstance
 from app.providers import ProviderError
 from app.runner_client import RunnerClient
@@ -123,6 +125,59 @@ def test_auto_preserves_a_sufficient_observed_context_without_speculative_upgrad
     runtime.status = "ready"
     selected = select_coding_model(session)
     assert selected["context_size"] == 129280 and selected["context_verified"]
+
+
+def stopped_candidate(session):
+    model, runtime = candidate(session, name="Stopped-9B.gguf", context=129280, size=7 * 1024**3)
+    payload = {
+        "instance_id": runtime.id,
+        "gpus": [2, 7],
+        "cache_type": "q8_0",
+        "context_size": 129280,
+        "n_ctx": 129280,
+    }
+    runtime.status = "ready"
+    update_instance(session, runtime, {"status": "stopped", "alive": False})
+    assert "n_ctx" not in runtime.metadata_json["observation"]
+    return model, runtime, payload
+
+
+def test_real_stop_observation_retains_successful_load_measurement_for_auto(session, hardware):
+    model, runtime, payload = stopped_candidate(session)
+    append_event(session, runtime.metadata_json["load_run_id"], "runtime.ready", payload)
+    candidate(session, name="Larger-27B.gguf", context=65536, size=9 * 1024**3)
+    chosen = select_coding_model(session)
+    assert chosen["model"] == "llamacpp:" + model.id
+    assert chosen["context_verified"] and chosen["context_size"] == 129280
+
+
+@pytest.mark.parametrize(
+    "change",
+    ["instance", "gpus", "cache", "missing_actual", "string_actual", "zero_actual", "failed_load", "ready"],
+)
+def test_stopped_context_proof_requires_matching_successful_native_measurement(session, hardware, change):
+    from app.models import Run
+
+    _, runtime, payload = stopped_candidate(session)
+    if change == "instance":
+        payload["instance_id"] = "another-instance"
+    elif change == "gpus":
+        payload["gpus"] = [2]
+    elif change == "cache":
+        payload["cache_type"] = "f16"
+    elif change == "missing_actual":
+        payload.pop("n_ctx")
+    elif change == "string_actual":
+        payload["n_ctx"] = "129280"
+    elif change == "zero_actual":
+        payload["n_ctx"] = 0
+    elif change == "failed_load":
+        session.get(Run, runtime.metadata_json["load_run_id"]).status = "failed"
+    elif change == "ready":
+        runtime.status = "ready"
+    append_event(session, runtime.metadata_json["load_run_id"], "runtime.ready", payload)
+    alternative, _ = candidate(session, name="Qualified-8B.gguf", context=129280, size=6 * 1024**3)
+    assert select_coding_model(session)["model"] == "llamacpp:" + alternative.id
 
 
 def test_auto_api_is_read_only_and_coding_snapshots_actual_model_before_dispatch(

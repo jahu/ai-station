@@ -3,18 +3,30 @@
 from sqlalchemy import select
 
 from app.llama import fit_coding_context, loadable_model
-from app.models import ModelFile, Run, RuntimeInstance
+from app.models import ModelFile, Run, RunEvent, RuntimeInstance
 from app.providers import ProviderError
 from app.runner_client import RunnerClient
 
 MINIMUM_CONTEXT = 100352  # First supported 256-token allocation above 100k.
 
 
-def observed_context(instance):
+def observed_context(instance, loaded=None):
     metadata = instance.metadata_json
     observation = metadata.get("observation")
     requested = metadata.get("context_size")
     actual = observation.get("n_ctx") if isinstance(observation, dict) else None
+    # A stop observation describes process liveness and may omit n_ctx. The
+    # successful load's persisted native measurement remains allocation proof;
+    # requested settings or another instance's event never substitute for it.
+    if (
+        actual is None
+        and instance.status == "stopped"
+        and isinstance(loaded, dict)
+        and loaded.get("instance_id") == instance.id
+        and loaded.get("gpus") == metadata.get("gpus")
+        and loaded.get("cache_type") == metadata.get("cache_type") == "q8_0"
+    ):
+        actual = loaded.get("n_ctx")
     if type(requested) is not int or type(actual) is not int or min(requested, actual) <= 0:
         return 0
     return min(requested, actual)
@@ -35,6 +47,13 @@ def select_coding_model(session):
         )
     }
     loaded_at = {rid: values[0] for rid, values in loads.items()}
+    load_observations = {}
+    for rid, payload in session.execute(
+        select(RunEvent.run_id, RunEvent.payload)
+        .where(RunEvent.run_id.in_(load_ids), RunEvent.event_type == "runtime.ready")
+        .order_by(RunEvent.sequence.desc())
+    ):
+        load_observations.setdefault(rid, payload)
     candidates = []
     for model in session.scalars(
         select(ModelFile).where(
@@ -77,7 +96,7 @@ def select_coding_model(session):
         profile = profiles[0]
         proven = max(
             [
-                observed_context(i)
+                observed_context(i, load_observations.get(i.metadata_json.get("load_run_id")))
                 for i in matching
                 if i.status in {"ready", "stopped"}
                 and i.metadata_json.get("cache_type") == "q8_0"
