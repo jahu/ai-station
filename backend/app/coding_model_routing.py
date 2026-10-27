@@ -106,7 +106,7 @@ def select_coding_model(session):
             or [0]
         )
         failed = [
-            int(i.metadata_json.get("failed_context_size", 0))
+            int(i.metadata_json.get("failed_context_size") or i.metadata_json.get("context_size", 0))
             for i in matching
             if i.metadata_json.get("context_fit") == "too_large"
         ]

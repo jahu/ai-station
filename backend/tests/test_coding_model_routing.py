@@ -180,6 +180,33 @@ def test_stopped_context_proof_requires_matching_successful_native_measurement(s
     assert select_coding_model(session)["model"] == "llamacpp:" + alternative.id
 
 
+@pytest.mark.parametrize("failed_size", ["missing", None, 0])
+def test_auto_respects_legacy_allocation_failure_before_selecting_a_model(session, hardware, failed_size):
+    model, _ = candidate(session, name="Qualified-9B.gguf", context=129280, size=7 * 1024**3)
+    _, larger = candidate(session, name="Larger-27B.gguf", context=131072, size=9 * 1024**3)
+    task = create_task(session, title="Failed later load", prompt="", capability="runtime.load")
+    load = create_run(
+        session, task, run_type="runtime", capability="runtime.load", executor_type="llama_load"
+    )
+    load.status = "failed"
+    failed = {**larger.metadata_json, "load_run_id": load.id, "context_fit": "too_large"}
+    if failed_size != "missing":
+        failed["failed_context_size"] = failed_size
+    session.add(
+        RuntimeInstance(
+            runtime_key="llama.cpp",
+            name=larger.name,
+            ownership="managed",
+            status="failed",
+            metadata_json=failed,
+        )
+    )
+    # The loader falls back to context_size when old OOM metadata has no
+    # separate failed_context_size. Auto must apply that same allocation bound.
+    chosen = select_coding_model(session)
+    assert chosen["model"] == "llamacpp:" + model.id and chosen["context_verified"]
+
+
 def test_auto_api_is_read_only_and_coding_snapshots_actual_model_before_dispatch(
     session, hardware, monkeypatch
 ):

@@ -17,5 +17,9 @@ This is a read-only projection over existing events, not a migration or rewrite
 of old observations. Loading, resource management, permissions and the final
 actual-context guard before code generation remain unchanged. Tests use the
 real stop-observation update and reject mismatched or incomplete event proof.
+The real database also exposed an older allocation failure whose metadata has
+`context_fit=too_large` and `context_size`, without `failed_context_size`. Auto
+now uses that existing size as the failed bound, matching the loader's current
+policy instead of promising a larger allocation that loading will halve.
 Final acceptance requires the exact CSV request while the qualified model starts
 stopped, followed by a real download and verification of the resulting file.
