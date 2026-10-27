@@ -600,9 +600,23 @@ class TranslationApplyExecutor:
         return "done"
 
 
-def validate_media_translation(session, run):
+def validate_media_translation(session, run, *, _seen=()):
     receipt = run.metadata_json.get(RECEIPT)
     if not receipt:
+        return
+    if receipt.get("reused_from_run_id"):
+        from app.media_retry_intent import REUSED, reuse_source
+
+        if run.id in _seen or len(_seen) >= 16:
+            raise ValueError("Translation reuse exceeds its inspection bound")
+        source = reuse_source(session, run, receipt[REUSED])
+        validate_media_translation(session, source, _seen=(*_seen, run.id))
+        if (
+            receipt != {**source.metadata_json.get(RECEIPT, {}), REUSED: source.id}
+            or image_fields(run) != receipt.get("effective")
+            or source_hash(run, receipt["original"]) != source_hash(source, receipt["original"])
+        ):
+            raise ValueError("Reused translation differs from the verified source")
         return
     if receipt.get("status") == "original":
         if image_fields(run) != receipt.get("original") or receipt.get("effective") != receipt.get(
@@ -778,6 +792,11 @@ def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
     identity = {"id": str(body.client_request_id), "translation": body.translation}
 
     def previous():
+        from app.media_retry_intent import existing_fresh, locked_source
+
+        locked_source(session, source)
+        if fresh := existing_fresh(session, source, identity, replayable=bool(body.client_request_id)):
+            return fresh
         item = session.scalar(
             select(Run).where(Run.parent_run_id == source.id, Run.executor_type == source.executor_type)
         )
@@ -802,9 +821,12 @@ def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
     session.refresh(source)
     if item := previous():
         return run_dict(item)
+    from app.media_retry_intent import finish_retry, task_for_retry
+
+    task = task_for_retry(session, source, body.translation)
     retry = create_run(
         session,
-        source.task,
+        task,
         run_type=source.run_type,
         capability=source.capability,
         executor_type=source.executor_type,
@@ -814,13 +836,13 @@ def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
         requested_resources=dict(source.requested_resources),
         permissions=list(source.effective_permissions),
         retry_class="inspect",
-        parent_run_id=source.id,
+        parent_run_id=source.id if task.id == source.task_id else None,
         metadata={"media_retry_request": identity},
     )
     entry = prepare_retry(session, source, retry, body.translation)
     if entry:
         enqueue_groups(session, [entry])
-    source.metadata_json = {**source.metadata_json, "retry_run_id": retry.id}
+    finish_retry(session, source, retry, identity)
     session.commit()
     return run_dict(retry)
 

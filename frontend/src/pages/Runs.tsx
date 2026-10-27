@@ -1,3 +1,4 @@
+import { FreshMediaRetry } from "../components/media/PromptTranslation";
 import ResourceWaitNotice from "../components/ResourceWaitNotice";
 import RunTimeline from "./RunTimeline";
 import { useRunEvents } from "./useRunEvents";
@@ -629,7 +630,11 @@ export function RunDetail() {
                 </Link>
               </p>
             )}
+            {run.data.metadata?.fresh_media_retry && (
+              <FreshMediaRetry run={run.data} />
+            )}
             {run.data.executor_type === "photo_pipe" &&
+              !run.data.metadata?.fresh_media_retry &&
               ["failed", "canceled", "interrupted"].includes(
                 run.data.status,
               ) && (
