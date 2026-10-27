@@ -25,6 +25,23 @@ class ProjectValidationExecutor:
             if run.status == "cancel_requested":
                 transition(session, run, RunStatus.CANCELED, event_type="run.canceled", payload={})
             return "done"
+        from app.coding_output import validation_contract
+
+        contract = validation_contract(session, run)
+        if contract and not run.parameters["commands"]:
+            transition(session, run, RunStatus.PREPARING, event_type="executor.preparing", payload={})
+            return self.complete(
+                session,
+                run,
+                {
+                    "run_id": run.id,
+                    "project_id": run.project_id,
+                    "worktree_run_id": run.parameters["worktree_run_id"],
+                    "commands": [],
+                    "succeeded": False,
+                    "source": "control_plane_expected_output_check",
+                },
+            )
         from app.project_checks import freeze_environment_manifests
 
         if not freeze_environment_manifests(session, run):
@@ -38,7 +55,7 @@ class ProjectValidationExecutor:
             "permissions": run.effective_permissions,
             **{
                 key: run.parameters[key]
-                for key in ("validation_environment", "node_manifest_snapshot")
+                for key in ("validation_environment", "node_manifest_snapshot", "output_contract")
                 if key in run.parameters
             },
             **(
@@ -121,28 +138,48 @@ class ProjectValidationExecutor:
             report["run_id"] != run.id
             or report["project_id"] != run.project_id
             or report["worktree_run_id"] != run.parameters["worktree_run_id"]
+            or report.get("output_contract") != contract
             or [{"kind": item["kind"], "argv": item["argv"]} for item in report["commands"]]
             != run.parameters["commands"]
         ):
             raise ValueError("Validation report does not match its request")
+        return self.complete(session, run, report)
+
+    def complete(self, session, run, report):
+        from app.coding_output import output_check, validation_contract
+
+        contract = validation_contract(session, run)
         succeeded = all(item["exit_code"] == 0 for item in report["commands"])
-        with tempfile.NamedTemporaryFile(mode="w+", suffix=".json") as handle:
-            json.dump(report, handle, indent=2)
-            handle.flush()
-            register_file(
-                session,
-                source=Path(handle.name),
-                artifact_type="json",
-                mime_type="application/json",
-                original_filename="validation.json",
-                run_id=run.id,
-                metadata={"project_id": run.project_id},
+        checked = None
+        try:
+            files = register_build(
+                session, run, report, required_entrypoint="index.html" if contract else None
             )
-        register_build(session, run, report)
+            checked = output_check(contract, files)
+            if checked:
+                report = {**report, "output_check": checked}
+                append_event(session, run.id, "validation.output_checked", checked)
+                succeeded = succeeded and checked["succeeded"]
+        finally:
+            # Preserve the native report even if archive adoption fails closed.
+            with tempfile.NamedTemporaryFile(mode="w+", suffix=".json") as handle:
+                json.dump(report, handle, indent=2)
+                handle.flush()
+                register_file(
+                    session,
+                    source=Path(handle.name),
+                    artifact_type="json",
+                    mime_type="application/json",
+                    original_filename="validation.json",
+                    run_id=run.id,
+                    metadata={"project_id": run.project_id},
+                )
         for index, result in enumerate(report["commands"]):
             append_event(session, run.id, "validation.completed", {"index": index, **result})
         run.metadata_json = {**run.metadata_json, "validation": report}
         run.summary = f"{sum(item['exit_code'] == 0 for item in report['commands'])}/{len(report['commands'])} project commands passed."
+        if checked and not checked["succeeded"]:
+            run.summary += " Website output is missing; preview is not ready."
         if succeeded:
             transition(session, run, RunStatus.SUCCEEDED, event_type="run.completed", payload={})
         else:
@@ -150,7 +187,9 @@ class ProjectValidationExecutor:
                 session,
                 run,
                 "ValidationFailed",
-                "One or more project commands failed; inspect the validation report",
+                checked["error"]
+                if checked and not checked["succeeded"]
+                else "One or more project commands failed; inspect the validation report",
             )
             from app.local_coding import queue_automatic_repair
 

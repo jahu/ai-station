@@ -17,7 +17,7 @@ from app.models import Artifact
 MAX_BYTES = 32 * 1024 * 1024
 
 
-def register_build(session, run, report):
+def register_build(session, run, report, *, required_entrypoint=None):
     exported = report.get("build_export")
     if exported is None:
         return
@@ -93,6 +93,12 @@ def register_build(session, run, report):
             ):
                 raise ValueError("Unsafe build archive member")
             seen.add(name)
+    files = {member.filename for member in members if member.file_size > 0}
+    if required_entrypoint and required_entrypoint not in files:
+        reason = "The verified build has no nonempty " + required_entrypoint + "; preview is not ready."
+        run.metadata_json = {**run.metadata_json, "build_export": {"status": "unavailable", "reason": reason}}
+        append_event(session, run.id, "build.export.unavailable", {"reason": reason})
+        return files
     artifact_id = str(uuid5(NAMESPACE_URL, f"ai-station:build:{run.id}"))
     existing = session.get(Artifact, artifact_id)
     if existing is not None:
@@ -123,3 +129,4 @@ def register_build(session, run, report):
                 },
             )
     run.metadata_json = {**run.metadata_json, "build_artifact_id": artifact.id, "build_export": exported}
+    return files

@@ -15,7 +15,9 @@ from test_node_project_runs import fake_node  # noqa: F401
 from test_projects import owned_runner, prepared_validation, repository, validation_sandbox  # noqa: F401
 
 
-def source_proposal(client, repository, owned_runner, *, automatic=True, environment=None):
+def source_proposal(
+    client, repository, owned_runner, *, automatic=True, environment=None, output_contract=None
+):
     project, tree = prepared_validation(client, repository, [])
     workspace = owned_runner.data_dir / tree["relative_path"]
     (workspace / "package.json").write_text(
@@ -40,6 +42,7 @@ def source_proposal(client, repository, owned_runner, *, automatic=True, environ
                 "worktree_id": tree["id"],
                 "worktree_run_id": prep.id,
                 "project_check_policy": project_check_policy(row),
+                **({"output_contract": output_contract} if output_contract else {}),
             },
         )
         source.status = "succeeded"
