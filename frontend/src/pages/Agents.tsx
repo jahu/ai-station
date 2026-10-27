@@ -1024,6 +1024,11 @@ function AgentEditor({ agent, active }: { agent: Agent; active: boolean }) {
         ),
       ),
     onSuccess: (result) => {
+      cache.setQueryData(["agent", agent.id], (previous?: Agent) => ({
+        ...previous,
+        ...result,
+        runs: result.runs ?? previous?.runs ?? [],
+      }));
       setDirty(false);
       setValues(result);
       setFetchText(fetchLines(result.fetch_urls));

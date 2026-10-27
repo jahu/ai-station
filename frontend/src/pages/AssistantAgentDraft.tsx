@@ -29,6 +29,8 @@ import AgentWorkspacePolicy, {
 } from "./AgentWorkspacePolicy";
 import AgentDataFiles, { type DataScope } from "./AgentDataFiles";
 import AgentDataResult from "./AgentDataResult";
+import AgentMediaResult from "./AgentMediaResult";
+import { fixedAgentMedia } from "./agent-media";
 import GithubAgentScope from "./GithubAgentScope";
 import HttpAgentScope from "./HttpAgentScope";
 import AgentDocuments from "./AgentDocuments";
@@ -847,15 +849,17 @@ export function AssistantAgentDraft({
     );
     const modelName = external
       ? `${agent?.tools?.includes("coding_cursor") ? "Cursor" : "Codex"} · CLI default`
-      : agent?.model === "auto"
-        ? "Auto · local coding"
-        : agent?.tools?.includes("market_watch")
-          ? "No model needed"
-          : agent?.model.startsWith("llamacpp:")
-            ? (localModels.data?.models.find(
-                (item) => item.id === agent.model.slice(9),
-              )?.name ?? "Local llama.cpp model")
-            : agent?.model || "Choose a local model";
+      : agent && fixedAgentMedia(agent)
+        ? "Saved media settings · no text model needed"
+        : agent?.model === "auto"
+          ? "Auto · local coding"
+          : agent?.tools?.includes("market_watch")
+            ? "No model needed"
+            : agent?.model.startsWith("llamacpp:")
+              ? (localModels.data?.models.find(
+                  (item) => item.id === agent.model.slice(9),
+                )?.name ?? "Local llama.cpp model")
+              : agent?.model || "Choose a local model";
     const interval = agent?.interval_seconds ?? 0;
     const daily =
       agent?.trigger === "cron"
@@ -934,10 +938,9 @@ export function AssistantAgentDraft({
             {videoSetup}
             {agent.enabled && (
               <p className="muted assistant-agent-brief-note">
-                In Work, say “Run this agent”, “Pause this agent” or “Stop this
-                agent” to control the most recently referenced agent in this
-                conversation. Pause turns off future runs; Stop targets its
-                current execution.
+                Say “Run this agent”, “Pause this agent” or “Stop this agent” to
+                control the most recently referenced agent in this conversation.
+                Pause turns off future runs; Stop targets its current execution.
               </p>
             )}
             {!agent.enabled && (
@@ -995,7 +998,9 @@ export function AssistantAgentDraft({
               />
             )}
             {history.length ? (
-              agent.tools?.includes("python_data") ? (
+              agent.tools?.includes("create_media") ? (
+                <AgentMediaResult runs={history} />
+              ) : agent.tools?.includes("python_data") ? (
                 <AgentDataResult runs={history} />
               ) : (
                 <AgentLatestReport runs={history} />
@@ -1758,7 +1763,9 @@ export function AssistantAgentDraft({
                   }
                 />
               )}
-              {agent.tools?.includes("python_data") ? (
+              {agent.tools?.includes("create_media") ? (
+                <AgentMediaResult runs={history} />
+              ) : agent.tools?.includes("python_data") ? (
                 <AgentDataResult runs={history} />
               ) : (
                 <>
