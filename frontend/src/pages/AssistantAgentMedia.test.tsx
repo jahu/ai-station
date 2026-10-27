@@ -49,30 +49,35 @@ function mountMedia(latestPending = false) {
       },
     ],
   };
-  const fetch = vi.fn(async (path: string, _options?: RequestInit) => ({
-    ok: true,
-    json: async () =>
-      path.includes("/artifacts?run_id=photo")
-        ? [
-            {
-              id: "garden",
-              type: "image",
-              mime_type: "image/png",
-              run_id: "photo",
-              metadata: {},
-              parent_artifact_ids: [],
-            },
-          ]
-        : path.endsWith("/lineage")
-          ? { id: "garden", sources: [], derived: [] }
-          : path.endsWith("/hardware")
-            ? { gpus: [] }
-            : path.endsWith("/chat/provider")
-              ? { models: [] }
-              : path.includes("/agents/image-agent")
-                ? agent
-                : [],
-  }));
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+    if (options?.method && options.method !== "GET") {
+      throw new Error("Viewing agent results must not mutate or execute work");
+    }
+    return {
+      ok: true,
+      json: async () =>
+        path.includes("/artifacts?run_id=photo")
+          ? [
+              {
+                id: "garden",
+                type: "image",
+                mime_type: "image/png",
+                run_id: "photo",
+                metadata: {},
+                parent_artifact_ids: [],
+              },
+            ]
+          : path.endsWith("/lineage")
+            ? { id: "garden", sources: [], derived: [] }
+            : path.endsWith("/hardware")
+              ? { gpus: [] }
+              : path.endsWith("/chat/provider")
+                ? { models: [] }
+                : path.includes("/agents/image-agent")
+                  ? agent
+                  : [],
+    };
+  });
   vi.stubGlobal("fetch", fetch);
   render(
     <QueryClientProvider
