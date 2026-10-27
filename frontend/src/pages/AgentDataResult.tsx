@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ArrowUpRight, Download, FileCode, Table2 } from "lucide-react";
 import type { Run } from "../api";
 import { Badge } from "../components/common";
+import ResourceWaitNotice from "../components/ResourceWaitNotice";
 import { Button } from "../components/ui/button";
 
 type Result = {
@@ -95,15 +96,34 @@ export default function AgentDataResult({
   const taskStopped =
     !!taskStatus && ["failed", "canceled", "interrupted"].includes(taskStatus);
   const missingResult = !result && taskStatus === "succeeded";
+  const waiting =
+    !result &&
+    !taskStopped &&
+    !missingResult &&
+    taskStatus !== "cancel_requested" &&
+    latest.status !== "cancel_requested" &&
+    !(
+      !taskStatus &&
+      ["failed", "canceled", "interrupted"].includes(latest.status)
+    )
+      ? current.find(
+          (run) =>
+            run.status === "queued" && run.resource_wait?.run_id === run.id,
+        )
+      : undefined;
   const status = result
     ? "succeeded"
     : missingResult
       ? "unavailable"
       : taskStopped
         ? taskStatus!
-        : latest.status === "succeeded"
-          ? "preparing"
-          : latest.status;
+        : taskStatus === "cancel_requested"
+          ? "cancel_requested"
+          : waiting
+            ? "queued"
+            : latest.status === "succeeded"
+              ? "preparing"
+              : latest.status;
   const failedSteps = taskStopped
     ? taskSteps?.filter(
         (step) => !step.superseded && step.status === taskStatus,
@@ -124,13 +144,14 @@ export default function AgentDataResult({
     rawError && rawError.length <= 400 && !rawError.includes("\n")
       ? rawError
       : undefined;
-  const detailsId = failedStep?.id ?? latest.id;
+  const detailsId = failedStep?.id ?? waiting?.id ?? latest.id;
   const operation = creating ? "File creation" : "Analysis";
   const terminalMessage = {
     failed: `${operation} failed. Open execution details to inspect the error.`,
     canceled: `${operation} stopped. No new result was published.`,
     interrupted: `${operation} was interrupted. Inspect execution before retrying.`,
     unavailable: `${operation} finished without a verified result. Open execution details.`,
+    cancel_requested: `${operation} is stopping…`,
   }[status];
   return (
     <section
@@ -237,22 +258,28 @@ export default function AgentDataResult({
         </>
       ) : (
         <>
-          <p className={error || stopped ? "notice" : "muted"}>
-            {error ||
-              (status === "failed" && failedStep?.capability === "runtime.load"
-                ? "The local model could not start. Open execution details."
-                : undefined) ||
-              terminalMessage ||
-              ({
-                agent_data_generate:
-                  "Writing the analysis with your local model…",
-                python: "Running Python locally…",
-                agent_data_result: "Checking the result…",
-                project_setup: "Creating a private workspace…",
-                worktree_prepare: "Preparing the analysis workspace…",
-              }[latest.executor_type] ??
-                "Preparing data analysis…")}
-          </p>
+          {waiting ? (
+            <ResourceWaitNotice wait={waiting.resource_wait} />
+          ) : (
+            <p className={error || stopped ? "notice" : "muted"}>
+              {error ||
+                (status === "failed" &&
+                failedStep?.capability === "runtime.load"
+                  ? "The local model could not start. Open execution details."
+                  : undefined) ||
+                terminalMessage ||
+                ({
+                  agent_data_generate:
+                    "Writing the analysis with your local model…",
+                  python: "Running Python locally…",
+                  llama_load: "Loading your local model…",
+                  agent_data_result: "Checking the result…",
+                  project_setup: "Creating a private workspace…",
+                  worktree_prepare: "Preparing the analysis workspace…",
+                }[latest.executor_type] ??
+                  "Preparing data analysis…")}
+            </p>
+          )}
           <Link to={`/runs/${detailsId}`} className="text-link">
             {stopped ? "Execution details" : "View progress and Stop"}
           </Link>
