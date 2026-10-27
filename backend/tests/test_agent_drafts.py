@@ -371,7 +371,10 @@ def test_market_draft_keeps_numeric_alerts_after_model_proposes_report_classifie
     # Even an invented extra tool cannot expand the controller's fixed numeric scope.
     proposal = {
         "name": "Monitor BTC Cena USD",
-        "goal": "Sprawdzaj publiczną cenę BTC/USD i powiadamiaj przy zmianie powyżej 5%.",
+        "goal": "Porównaj cenę BTC ze średnią kroczącą z 48 godzin i alarmuj przy zmianie 5%.",
+        "description": "A rolling-average trading signal",
+        "system_prompt": "Compute the rolling average from a complete historical price series.",
+        "output_expectation": "A chart of the historical average",
         "tools": ["market_watch"],
         "search_query": "Bitcoin price USD live today",
         "trigger": "cron",
@@ -402,6 +405,10 @@ def test_market_draft_keeps_numeric_alerts_after_model_proposes_report_classifie
         agent = api.get("/api/agents/" + done["metadata"]["agent_id"]).json()
         assert not agent["enabled"] and agent["next_run_at"] is None
         assert agent["tools"] == ["market_watch"] and agent["model"] == ""
+        assert agent["goal"] == instruction
+        assert "rolling" not in agent["description"]
+        assert "historical price series" not in agent["system_prompt"]
+        assert "historical average" not in agent["output_expectation"]
         assert agent["trigger"] == "cron" and agent["cron_expr"] == "0 9 * * *"
         assert agent["schedule_timezone"] == "Europe/Warsaw"
         assert agent["market"]["provider"] == "coinbase_exchange"

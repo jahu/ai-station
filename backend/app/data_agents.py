@@ -452,6 +452,8 @@ Use standard Python and openpyxl (no pandas). Actual files are read-only and off
 When the goal asks for a file, declare only available_optional_outputs from runtime and write every declared file.
 chart.png: real chart from the full data; use matplotlib with Agg, savefig, tight_layout and close the figure. Label axes and use a readable restrained style. No show().
 result.xlsx: an openpyxl workbook with literal values, clear headings and sensible column widths. No formulas, links, macros, named expressions or embedded objects.
+Use `import openpyxl` before `openpyxl.load_workbook(...)` or `openpyxl.Workbook()`. An openpyxl Workbook is NOT a context manager: never use `with Workbook()` or `with openpyxl.Workbook()`.
+To export, use `wb_out = openpyxl.Workbook(); ws = wb_out.active`, append the headers and data rows, then `wb_out.save(os.path.join(output_dir, "result.xlsx"))`. Read-only input workbooks are closed with `wb.close()` after reading, not with a `with` statement.
 report.txt: a UTF-8 report. Never declare or create any other export filename.
 The outputs list names only chart.png, result.xlsx and/or report.txt; never include result.csv or result.json there. For an Excel and chart use "outputs": ["result.xlsx", "chart.png"].
 Optional exports accompany the mandatory result.csv and result.json, not replace them. Do not claim a file was created unless you declare it and write it.
