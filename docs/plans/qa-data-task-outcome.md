@@ -10,6 +10,9 @@ terminal failure/cancellation/interruption takes precedence over successful
 preparation when no verified result exists, and execution details point to the
 actual non-superseded terminal step. Publication alone is still preparing; an
 otherwise finished Task without a verified result is explicitly unavailable.
+Prefer the failing prerequisite outside the filtered data graph to its downstream
+failure. Keep long native startup traces in execution details, with a short model
+startup failure in the conversation.
 Already verified results remain visible even when a later delivery/notification
 step fails. No persisted Run state, recovery policy or retry authority changes.
 

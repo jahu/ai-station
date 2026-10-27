@@ -137,13 +137,34 @@ it("shows a failed data prerequisite outside the filtered published data graph",
         parameters: {},
         metadata: {},
       } as unknown as Run,
+      {
+        id: "generation",
+        task_id: "task",
+        executor_type: "agent_data_generate",
+        status: "failed",
+        parameters: {},
+        metadata: {},
+        error_type: "PrerequisiteFailed",
+        error_message: "Required Runs did not succeed: load",
+      } as unknown as Run,
     ],
     steps: [
+      {
+        id: "generation",
+        capability: "agent.data.generate",
+        status: "failed",
+        error_message: "Required Runs did not succeed: load",
+        summary: "",
+        location: "local",
+      },
       {
         id: "load",
         capability: "runtime.load",
         status: "failed",
-        error_message: "Not enough GPU memory",
+        error_message:
+          "Runtime startup diagnostics\n" +
+          "Native trace ".repeat(80) +
+          "\nCUDA out of memory",
         summary: "",
         location: "local",
       },
@@ -154,7 +175,12 @@ it("shows a failed data prerequisite outside the filtered published data graph",
   );
   expect(result.getByText("failed")).toBeTruthy();
   expect(result.queryByText("succeeded")).toBeNull();
-  expect(result.getByText("Not enough GPU memory")).toBeTruthy();
+  expect(
+    result.getByText(
+      "The local model could not start. Open execution details.",
+    ),
+  ).toBeTruthy();
+  expect(result.queryByText(/Native trace/)).toBeNull();
   expect(result.queryByText("Preparing data analysis…")).toBeNull();
   expect(
     result.queryByRole("link", { name: "View progress and Stop" }),

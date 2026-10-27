@@ -63,6 +63,7 @@ export default function AgentDataResult({
     status: string;
     error_message?: string;
     superseded?: boolean;
+    capability?: string;
   }[];
 }) {
   const task = runs[0]?.task_id;
@@ -103,12 +104,21 @@ export default function AgentDataResult({
         : latest.status === "succeeded"
           ? "preparing"
           : latest.status;
-  const failedStep = taskStopped
-    ? taskSteps?.find((step) => !step.superseded && step.status === taskStatus)
+  const failedSteps = taskStopped
+    ? taskSteps?.filter(
+        (step) => !step.superseded && step.status === taskStatus,
+      )
     : undefined;
+  const failedStep =
+    failedSteps?.find((step) => !current.some((run) => run.id === step.id)) ??
+    failedSteps?.[0];
   const stopped =
     missingResult || ["failed", "canceled", "interrupted"].includes(status);
-  const error = failedStep?.error_message || latest.error_message;
+  const rawError = failedStep?.error_message || latest.error_message;
+  const error =
+    rawError && rawError.length <= 400 && !rawError.includes("\n")
+      ? rawError
+      : undefined;
   const detailsId = failedStep?.id ?? latest.id;
   const operation = creating ? "File creation" : "Analysis";
   const terminalMessage = {
@@ -224,6 +234,9 @@ export default function AgentDataResult({
         <>
           <p className={error || stopped ? "notice" : "muted"}>
             {error ||
+              (status === "failed" && failedStep?.capability === "runtime.load"
+                ? "The local model could not start. Open execution details."
+                : undefined) ||
               terminalMessage ||
               ({
                 agent_data_generate:
