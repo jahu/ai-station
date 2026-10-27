@@ -413,7 +413,7 @@ def test_generation_receives_exact_container_input_map_and_failed_attempt_contex
 
             source = session.get(Artifact, generation.metadata_json["script_artifact_id"])
             original_code = (get_settings().data_dir / source.relative_path).read_text()
-            assert generation.metadata_json["runtime_bindings"] == "data-inputs-v1"
+            assert generation.metadata_json["runtime_bindings"] == "data-inputs-v2"
             assert original_code.startswith("# AI Station sandbox bindings:")
             assert SCRIPT in original_code
     first, repaired = state["model_requests"]
@@ -424,6 +424,7 @@ def test_generation_receives_exact_container_input_map_and_failed_attempt_contex
     assert request["runtime"]["required_outputs"] == ["result.json", "result.csv"]
     assert "json.loads(os.environ" in first["messages"][0]["content"]
     assert "NOT a file" in first["messages"][0]["content"]
+    assert "csv, json and os are imported" in first["messages"][0]["content"]
     retry = json.loads(repaired["messages"][1]["content"])
     assert retry["runtime"] == request["runtime"]
     assert retry["repair"]["previous_script"] == original_code
