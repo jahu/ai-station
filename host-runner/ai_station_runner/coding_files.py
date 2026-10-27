@@ -18,6 +18,14 @@ MAX_REVIEW_FILE = 256000
 MAX_REVIEW_TOTAL = 2 * 1024 * 1024
 
 
+class ReplacementMismatch(ValueError):
+    """A bounded diagnostic, without echoing untrusted source into an error."""
+
+    def __init__(self, matches):
+        self.matches = matches
+        super().__init__(f"Each replacement must match exactly one unique snippet; found {matches} matches")
+
+
 def selected_path(workspace: Path, name: str) -> Path:
     if (
         not isinstance(name, str)
@@ -166,8 +174,9 @@ def resolve_content(original: dict, item: dict, *, local_context=False) -> str |
             or "\0" in change["new"]
         ):
             raise ValueError("Invalid unique replacement")
-        if text.count(change["old"]) != 1:
-            raise ValueError("Each replacement must match exactly one unique snippet")
+        matches = text.count(change["old"])
+        if matches != 1:
+            raise ReplacementMismatch(matches)
         text = text.replace(change["old"], change["new"], 1)
         if len(text.encode()) > (MAX_LOCAL_SOURCE if local_context else MAX_FILE):
             raise ValueError("File replacements must be bounded UTF-8 text")

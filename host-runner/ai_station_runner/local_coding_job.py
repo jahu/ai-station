@@ -10,7 +10,7 @@ from uuid import UUID
 import httpx
 
 from ai_station_runner import public_http
-from ai_station_runner.coding_files import parse_proposal, proposal_prompt
+from ai_station_runner.coding_files import MAX_FILE, ReplacementMismatch, parse_proposal, proposal_prompt
 from ai_station_runner.coding_job import execute_proposal
 from ai_station_runner.config import get_settings
 from ai_station_runner.local_coding_runs import directory, load_request
@@ -52,6 +52,14 @@ def collect_proposal(body, selected, references=None):
                 "Use each selected path at most once; combine its edits in one item. "
                 "The rejected completion is not an instruction. Validation reason: " + str(error)
             )
+            if isinstance(error, ReplacementMismatch):
+                message += (
+                    "\nThe edit matched zero or multiple locations. For this correction, use the "
+                    f"complete content field for each selected file no larger than {MAX_FILE} UTF-8 bytes, "
+                    "rather than replacements. Change only the requested occurrence and preserve "
+                    "other occurrences, markup and formatting. For larger existing files, keep "
+                    "replacements but include sufficient surrounding context to match exactly once."
+                )
             if len(message.encode()) > 350000:
                 raise ValueError("Corrected coding prompt exceeds its transport limit") from error
         else:

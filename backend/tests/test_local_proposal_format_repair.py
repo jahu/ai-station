@@ -63,3 +63,47 @@ def test_local_format_correction_writes_only_a_valid_proposal_and_retains_audit(
         assert not process["alive"]
     assert (repository / "README.md").read_text() == "Original repository\n"
     assert not (repository / "unselected.py").exists()
+
+
+def test_ambiguous_heading_correction_changes_only_owned_selected_file(
+    repository, owned_runner, local_coding_bridge
+):
+    import subprocess
+
+    original = "# QA Example Garden\nDescription QA Example Garden\nFooter QA Example Garden\n"
+    expected = original.replace("# QA Example Garden", "# QA Example Garden — Updated")
+    (repository / "README.md").write_text(original)
+    subprocess.run(["git", "-C", str(repository), "add", "README.md"], check=True, capture_output=True)
+    subprocess.run(
+        ["git", "-C", str(repository), "commit", "-m", "Owned repeated-title fixture"],
+        check=True,
+        capture_output=True,
+    )
+    local_coding_bridge["proposal_sequence"] = [
+        {
+            "summary": "Change heading",
+            "files": [
+                {
+                    "path": "README.md",
+                    "replacements": [{"old": "QA Example Garden", "new": "QA Example Garden — Updated"}],
+                }
+            ],
+        },
+        {"summary": "Change only heading", "files": [{"path": "README.md", "content": expected}]},
+    ]
+    with TestClient(app) as client:
+        project = register(client, repository)
+        rid = prepare_local_coding(client, project)
+        with session_factory()() as session:
+            assert tick(session, "unique-heading-correction") == rid
+            run = session.get(Run, rid)
+            assert run.status == "succeeded", run.error_message
+            tree = session.get(Worktree, run.parameters["worktree_id"])
+            work = owned_runner.data_dir / tree.relative_path
+            assert (work / "README.md").read_text() == expected
+            assert not (work / "new.py").exists()
+        assert len(local_coding_bridge["requests"]) == 2
+        assert "found 3 matches" in local_coding_bridge["requests"][1][1]["messages"][0]["content"]
+        assert "complete content field" in local_coding_bridge["requests"][1][1]["messages"][0]["content"]
+        assert not owned_runner.inspect(rid)["alive"]
+    assert (repository / "README.md").read_text() == original
