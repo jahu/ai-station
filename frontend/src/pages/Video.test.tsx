@@ -29,15 +29,28 @@ function mount(entry = "/video", available = true) {
                 mime_type: "image/png",
                 original_filename: "scene.png",
               }
-            : path.includes("/runs")
+            : path.includes("/media/jobs")
               ? {
-                  id: "video-run",
+                  task_id: "video-job",
+                  revision: 1,
+                  kind: "video",
+                  mode: "continuous",
                   status: "queued",
-                  parameters: options?.body
-                    ? JSON.parse(String(options.body))
-                    : {},
+                  active_run_ids: [],
+                  duration_seconds: 10,
+                  completed_segments: 0,
+                  total_segments: 3,
+                  final_artifact_id: null,
                 }
-              : [],
+              : path.includes("/runs")
+                ? {
+                    id: "video-run",
+                    status: "queued",
+                    parameters: options?.body
+                      ? JSON.parse(String(options.body))
+                      : {},
+                  }
+                : [],
   }));
   vi.stubGlobal("fetch", fetch);
   render(
@@ -157,56 +170,96 @@ it("does not submit animation without a first frame through the form", async () 
   );
 });
 
-it("restores exact custom duration, scene and dimensions from a saved media job", async () => {
-  const fetch = vi.fn(async (url: string, init?: RequestInit) => {
-    expect(init?.method).not.toBe("POST");
-    return {
-      ok: true,
-      json: async () =>
-        url.includes("/media/jobs/")
-          ? {
-              task_id: "saved",
-              revision: 1,
-              kind: "video",
-              mode: "continuous",
-              status: "succeeded",
-              duration_seconds: 5,
-              completed_segments: 2,
-              total_segments: 2,
-              active_run_ids: [],
-              final_artifact_id: null,
-              resume_allowed: false,
-              error_message: "",
-              request: {
-                prompt: "Saved forest scene",
-                negative_prompt: "No captions",
-                width: 512,
-                height: 512,
-                duration_seconds: 5,
-                composition_mode: "continuous",
-                steps: 4,
-                seed: 43,
-                gpu: "auto",
-              },
-            }
-          : url.endsWith("/hardware")
-            ? { gpus: [] }
-            : { available: true, modes: ["generate", "animate"] },
-    };
+it.each([5, 10])(
+  "restores exact %s second duration, scene and dimensions from a saved media job",
+  async (seconds) => {
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      expect(init?.method).not.toBe("POST");
+      return {
+        ok: true,
+        json: async () =>
+          url.includes("/media/jobs/")
+            ? {
+                task_id: "saved",
+                revision: 1,
+                kind: "video",
+                mode: "continuous",
+                status: "succeeded",
+                duration_seconds: seconds,
+                completed_segments: 2,
+                total_segments: 2,
+                active_run_ids: [],
+                final_artifact_id: null,
+                resume_allowed: false,
+                error_message: "",
+                request: {
+                  prompt: "Saved forest scene",
+                  negative_prompt: "No captions",
+                  width: 512,
+                  height: 512,
+                  duration_seconds: seconds,
+                  composition_mode: "continuous",
+                  steps: 4,
+                  seed: 43,
+                  gpu: "auto",
+                },
+              }
+            : url.endsWith("/hardware")
+              ? { gpus: [] }
+              : { available: true, modes: ["generate", "animate"] },
+      };
+    });
+    vi.stubGlobal("fetch", fetch);
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <MemoryRouter initialEntries={["/video?job=saved"]}>
+          <Video />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    await screen.findByDisplayValue("Saved forest scene");
+    expect(screen.getByDisplayValue(`${seconds} seconds`)).toBeTruthy();
+    expect(
+      screen.getAllByRole("option", {
+        name: `${seconds} seconds`,
+        exact: true,
+      }),
+    ).toHaveLength(1);
+    expect(screen.getByDisplayValue("512 × 512")).toBeTruthy();
+  },
+);
+
+it("offers a new ten-second continuous film without requiring a restored job", async () => {
+  const fetch = mount();
+  fireEvent.change(screen.getByLabelText("Scene and motion"), {
+    target: { value: "A quiet lake" },
   });
-  vi.stubGlobal("fetch", fetch);
-  render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
-      <MemoryRouter initialEntries={["/video?job=saved"]}>
-        <Video />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
-  await screen.findByDisplayValue("Saved forest scene");
-  expect(screen.getByDisplayValue("5 seconds")).toBeTruthy();
-  expect(screen.getByDisplayValue("512 × 512")).toBeTruthy();
+  fireEvent.change(screen.getByLabelText("Duration"), {
+    target: { value: "10s" },
+  });
+  expect(
+    (screen.getByLabelText("Composition") as HTMLSelectElement).value,
+  ).toBe("continuous");
+  expect(
+    fetch.mock.calls.some(([, options]) => options?.method === "POST"),
+  ).toBe(false);
+  const submit = screen.getByRole("button", { name: "Generate video" });
+  await waitFor(() => expect(submit.hasAttribute("disabled")).toBe(false));
+  fireEvent.click(submit);
+  await waitFor(() => {
+    const call = fetch.mock.calls.find(
+      ([path, options]) =>
+        path === "/api/media/jobs/video" && options?.method === "POST",
+    );
+    expect(call).toBeTruthy();
+    expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({
+      duration_seconds: 10,
+      composition_mode: "continuous",
+      prompt: "A quiet lake",
+    });
+  });
 });
