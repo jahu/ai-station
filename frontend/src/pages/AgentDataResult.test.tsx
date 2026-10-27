@@ -16,6 +16,14 @@ it("shows verified result text, a literal table, download and source", () => {
   render(
     <MemoryRouter>
       <AgentDataResult
+        taskStatus="failed"
+        taskSteps={[
+          {
+            id: "notification",
+            status: "failed",
+            error_message: "Notification failed",
+          },
+        ]}
         runs={[
           run({
             id: "result-run",
@@ -100,6 +108,82 @@ it("labels canceled analysis without pretending it is still running", () => {
   expect(screen.queryByText("Running Python locally…")).toBeNull();
   expect(screen.getByRole("link", { name: "Execution details" })).toBeTruthy();
   expect(screen.queryByRole("link", { name: "Download CSV" })).toBeNull();
+});
+
+it.each(["failed", "canceled", "interrupted"])(
+  "uses the actual %s task outcome when only successful publication is in data runs",
+  (status) => {
+    render(
+      <MemoryRouter>
+        <AgentDataResult
+          runs={[
+            run({
+              id: "publisher",
+              executor_type: "agent_workflow",
+              status: "succeeded",
+            }),
+          ]}
+          taskStatus={status}
+          taskSteps={[
+            {
+              id: "superseded",
+              status,
+              superseded: true,
+              error_message: "Old error",
+            },
+            {
+              id: "model-load",
+              status,
+              error_message: status === "failed" ? "GPU out of memory" : "",
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(status)).toBeTruthy();
+    expect(screen.queryByText("succeeded")).toBeNull();
+    expect(screen.queryByText("Preparing data analysis…")).toBeNull();
+    expect(screen.queryByText("Old error")).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: "View progress and Stop" }),
+    ).toBeNull();
+    expect(
+      screen
+        .getByRole("link", { name: "Execution details" })
+        .getAttribute("href"),
+    ).toBe("/runs/model-load");
+    if (status === "failed")
+      expect(screen.getByText("GPU out of memory")).toBeTruthy();
+  },
+);
+
+it("does not equate successful graph publication with a verified result", () => {
+  const view = render(
+    <MemoryRouter>
+      <AgentDataResult
+        runs={[run({ status: "succeeded", executor_type: "agent_workflow" })]}
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText("preparing")).toBeTruthy();
+  expect(screen.queryByText("succeeded")).toBeNull();
+  view.rerender(
+    <MemoryRouter>
+      <AgentDataResult
+        runs={[run({ status: "succeeded" })]}
+        taskStatus="succeeded"
+      />
+    </MemoryRouter>,
+  );
+  expect(screen.getByText("unavailable")).toBeTruthy();
+  expect(
+    screen.getByText(
+      "Analysis finished without a verified result. Open execution details.",
+    ),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("link", { name: "View progress and Stop" }),
+  ).toBeNull();
 });
 
 it("shows the verified chart inline with named file downloads and Library links", () => {

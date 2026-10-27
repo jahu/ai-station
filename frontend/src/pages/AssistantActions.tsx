@@ -364,7 +364,11 @@ export function AssistantResults({
             runs={result.data_runs}
             taskId={dataRoot?.task_id ?? ""}
           />
-          <AgentDataResult runs={result.data_runs} />
+          <AgentDataResult
+            runs={result.data_runs}
+            taskStatus={result.task_status}
+            taskSteps={result.steps}
+          />
           {onRepeatAnalysis &&
             hasDataResult &&
             dataRoot?.status === "succeeded" &&
