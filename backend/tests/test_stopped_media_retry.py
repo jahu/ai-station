@@ -294,3 +294,35 @@ def test_other_finished_media_retries_use_the_same_independent_stop_contract(
         assert response.status_code == 202, response.text
         assert response.json()["task_id"] != task.id and response.json()["parent_run_id"] is None
         assert response.json()["parameters"] == params
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_archived_conversation_blocks_new_intent_but_not_receipt_replay(fake, existing):
+    with TestClient(app) as client:
+        rid, tid, cid = stopped_media(client)
+        body = {"translation": "original", "client_request_id": str(uuid4())}
+        if existing:
+            first = client.post(f"/api/images/runs/{rid}/retry", json=body)
+            assert first.status_code == 202
+            work()
+        conversation = client.get(f"/api/chat/conversations/{cid}").json()
+        archive = client.put(
+            f"/api/chat/conversations/{cid}/archive",
+            json={"archived": True, "expected_settings_version": conversation["settings_version"]},
+        )
+        assert archive.status_code == 200, archive.text
+        with session_factory()() as session:
+            before = (
+                session.scalar(select(func.count()).select_from(Task)),
+                session.scalar(select(func.count()).select_from(Message)),
+            )
+        response = client.post(f"/api/images/runs/{rid}/retry", json=body)
+        assert response.status_code == (202 if existing else 409), response.text
+        if existing:
+            assert response.json()["id"] == first.json()["id"]
+        with session_factory()() as session:
+            assert before == (
+                session.scalar(select(func.count()).select_from(Task)),
+                session.scalar(select(func.count()).select_from(Message)),
+            )
+            assert session.get(Conversation, cid).archived_at is not None

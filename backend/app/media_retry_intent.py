@@ -74,6 +74,10 @@ def task_for_retry(session, source, choice):
         return old
     if source.conversation_id != old.conversation_id:
         raise HTTPException(409, "Media conversation ownership needs inspection")
+    if source.conversation_id:
+        conversation = session.get(Conversation, source.conversation_id)
+        if conversation is None or conversation.archived_at is not None:
+            raise HTTPException(409, "Restore the original conversation before starting a new attempt")
     return create_task(
         session,
         title=old.title,
