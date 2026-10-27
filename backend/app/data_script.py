@@ -3,10 +3,11 @@
 import ast
 
 BINDINGS = """# AI Station sandbox bindings: approved inputs only; no extra file or network authority.
-import json as _ai_station_json
-import os as _ai_station_os
-inputs = _ai_station_json.loads(_ai_station_os.environ["AI_STATION_INPUTS"])
-output_dir = _ai_station_os.environ["AI_STATION_OUTPUT_DIR"]
+import csv
+import json
+import os
+inputs = json.loads(os.environ["AI_STATION_INPUTS"])
+output_dir = os.environ["AI_STATION_OUTPUT_DIR"]
 """
 
 

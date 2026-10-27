@@ -461,7 +461,8 @@ Optional exports accompany the mandatory result.csv and result.json, not replace
 Always create EVERY filename in runtime.required_outputs. The controller collects requested exports even if you omit them from the outputs declaration.
 When runtime.capture_undeclared_outputs is true, supported files you actually create are also collected even if omitted from outputs. Never claim a file exists unless you write it.
 AI_STATION_INPUTS is a JSON STRING containing a direct filename-to-path dictionary, NOT a file, directory, list, or an object with an "inputs" key.
-The controller includes visible sandbox bindings in the executed source: inputs is the decoded mapping and output_dir is the approved output directory, even if your script omits their initialization.
+The controller includes visible sandbox bindings in the executed source: csv, json and os are imported standard-library modules, inputs is the decoded mapping and output_dir is the approved output directory, even if your script omits their initialization.
+Import any other required module before its first use. An import at the end of a script does not make earlier code work.
 Start with: inputs = json.loads(os.environ["AI_STATION_INPUTS"])
 Then use: path = inputs[input_name] and open(path), NOT open(os.environ["AI_STATION_INPUTS"]).
 The runtime.input_map below shows the exact mapping available in the container. Its VALUES are file paths; keys are only filenames.
@@ -655,7 +656,7 @@ class DataGenerateExecutor:
             run.metadata_json = {
                 **run.metadata_json,
                 "script_artifact_id": artifact.id,
-                "runtime_bindings": "data-inputs-v1",
+                "runtime_bindings": "data-inputs-v2",
                 "data_output_files": output_files,
                 "required_data_output_files": required,
                 "declared_data_output_files": proposal.outputs,
