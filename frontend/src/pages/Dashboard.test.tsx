@@ -77,7 +77,9 @@ it("moves through Home GPU cards with arrow keys without inventing a Run", async
   expect(first.tabIndex).toBe(0);
   expect(second.tabIndex).toBe(-1);
   expect(screen.getByRole("region", { name: "Compute" })).toBeTruthy();
-  expect(screen.getByText(/There is no inspectable GPU Run/)).toBeTruthy();
+  expect(
+    screen.getByText(/Use arrow keys to move between detected GPUs/),
+  ).toBeTruthy();
   fireEvent.keyDown(first.closest(".gpu-grid") as HTMLElement, {
     key: "ArrowDown",
   });
