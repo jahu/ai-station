@@ -12,12 +12,13 @@ from app.api import app
 from app.config import get_settings
 from app.db import session_factory
 from app.engine import tick
-from app.models import Run
+from app.models import Run, Task
 from app.resources import active_locks
 from app.runner_client import RunnerClient, RunnerError
 from app.runs import request_cancel
 from fastapi.testclient import TestClient
 from PIL import Image
+from sqlalchemy import func, select
 
 
 def inputs(client):
@@ -35,6 +36,29 @@ def inputs(client):
     speech = client.post("/api/audio/uploads", files={"file": ("speech.wav", audio.getvalue(), "audio/wav")})
     assert portrait.status_code == speech.status_code == 201
     return portrait.json(), speech.json()
+
+
+@pytest.mark.parametrize("full", [False, True])
+@pytest.mark.parametrize("spoken", [False, True])
+def test_missing_avatar_setup_rejects_before_queuing_or_generating_speech(monkeypatch, full, spoken):
+    monkeypatch.setattr(
+        "app.avatars.capabilities", lambda: {"available": False, "reason": "Test runtime is absent"}
+    )
+    with TestClient(app) as client:
+        portrait, speech = inputs(client)
+        body = {"image_artifact_id": portrait["id"], "audio_artifact_id": speech["id"]}
+        if full:
+            body["client_request_id"] = str(uuid4())
+        if spoken:
+            body["speech_text"] = "A neutral test sentence."
+        with session_factory()() as session:
+            before = [session.scalar(select(func.count()).select_from(model)) for model in (Task, Run)]
+        response = client.post("/api/media/jobs/avatar" if full else "/api/avatars/runs", json=body)
+        assert response.status_code == 409 and "needs setup" in response.json()["detail"]
+        with session_factory()() as session:
+            assert [
+                session.scalar(select(func.count()).select_from(model)) for model in (Task, Run)
+            ] == before
 
 
 @pytest.fixture

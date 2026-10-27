@@ -221,6 +221,10 @@ def full_avatar_bridge(bridge, tmp_path, monkeypatch):
     from ai_station_runner import audio as native_audio
     from ai_station_runner import avatars as native_avatar
 
+    # Inference is replaced by the synthetic avatar below, so advertise that
+    # test adapter explicitly instead of relying on missing production weights.
+    monkeypatch.setattr(native_avatar, "capabilities", lambda: {"available": True})
+
     for key in ("ECHOMIMIC_PYTHON", "CHATTERBOX_PYTHON"):
         monkeypatch.setenv("AI_STATION_" + key, sys.executable)
     for key in ("ECHOMIMIC_DIR", "ECHOMIMIC_MODELS", "CHATTERBOX_CACHE"):
