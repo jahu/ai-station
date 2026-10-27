@@ -6,6 +6,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -122,6 +123,47 @@ it("shows a failed child even when planning succeeded", () => {
   expect(
     screen.getByRole("link", { name: "image.recompose" }).getAttribute("href"),
   ).toBe("/runs/image");
+});
+
+it("shows a failed data prerequisite outside the filtered published data graph", () => {
+  mountResults({
+    task_status: "failed",
+    data_runs: [
+      {
+        id: "publisher",
+        task_id: "task",
+        executor_type: "agent_workflow",
+        status: "succeeded",
+        parameters: {},
+        metadata: {},
+      } as unknown as Run,
+    ],
+    steps: [
+      {
+        id: "load",
+        capability: "runtime.load",
+        status: "failed",
+        error_message: "Not enough GPU memory",
+        summary: "",
+        location: "local",
+      },
+    ],
+  });
+  const result = within(
+    screen.getByRole("region", { name: "Data analysis result" }),
+  );
+  expect(result.getByText("failed")).toBeTruthy();
+  expect(result.queryByText("succeeded")).toBeNull();
+  expect(result.getByText("Not enough GPU memory")).toBeTruthy();
+  expect(result.queryByText("Preparing data analysis…")).toBeNull();
+  expect(
+    result.queryByRole("link", { name: "View progress and Stop" }),
+  ).toBeNull();
+  expect(
+    result
+      .getByRole("link", { name: "Execution details" })
+      .getAttribute("href"),
+  ).toBe("/runs/load");
 });
 
 it("retries a failed image step in the conversation without opening the inspector", async () => {
