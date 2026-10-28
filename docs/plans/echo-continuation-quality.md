@@ -162,3 +162,14 @@ Catalog v13 adds AVATAR-005 (160 Polish cases/21 areas); all 12 offline exporter
 checks pass. Owner answers remain **Nie testowano**. Code review, merge and the
 backup/deployment receipts determine rollout; this is not whole-platform or
 final operator acceptance.
+
+## Operator acceptance, 2026-10-28
+
+The operator reports progressive facial deformation, particularly the eyes, in
+the full QA avatar. Record AVATAR-005 as failed (QA-020), retaining earlier
+technical qualification and color improvements as historical evidence. Those
+results do not prove final facial stability. The portrait end anchor is already
+active; proposing it again is not a new correction. Evaluate the model's quality
+ceiling as well as recursive continuation; see the
+[controlled model comparison](avatar-model-quality-evaluation.md). No additional
+recipe or replacement engine is qualified by that plan alone.
