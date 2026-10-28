@@ -67,8 +67,11 @@ loops, silent padding or a shorter final acceptance clip.
 Set a kernel-enforced host-memory/swap bound, explicit time limit, one selected
 discovered GPU, and owned process-group cleanup. Measure RSS, peak VRAM, full
 elapsed time and source/model/implementation hashes. Yield to active operator
-work; do not stop another runtime merely to benchmark. Existing models,
-installations, drivers and CUDA remain unchanged. A failed fit is useful evidence;
+work. An idle AI Station-managed model may be temporarily stopped through the
+normal typed API only after saving its exact profile; a finally controller
+restores that profile unless new operator work or another model choice intervenes.
+Never stop an external runtime. Model files, existing installations, drivers and
+CUDA remain unchanged. A failed fit is useful evidence;
 never relax ownership, memory or filesystem boundaries to obtain a green result.
 
 ## Promotion and public workflow
@@ -90,7 +93,60 @@ speech and understandable quality choice; do not add technical mode switches.
 ## Current acceptance state
 
 The owner-reported eye deformation is a failed QA case, not an unavailable-device
-case. Seven separate physical-device/network cases remain unverified; this report
-neither passes them nor infers an audio-quality verdict. The initial 19 fixed
-issues remain historical successes. The new open issue requires a real visual
-retest; no alternative engine has yet passed one on this workstation.
+case. The owner subsequently confirmed all seven phone/network cases; these are
+human-reported passes, not AI browser emulation. The current frozen QA catalog has
+158 passes, one avatar-quality failure, no blocked cases and two SMTP cases marked
+not applicable. The first-pass results and failed retests are preserved.
+The initial 19 fixed issues remain confirmed successes. This report does not infer
+an audio-quality verdict from phone acceptance. QA-020 requires a real visual
+retest; no alternative engine has yet passed the complete comparison.
+
+## Measured InfiniteTalk technical probe — 2026-10-28
+
+The pinned WanGP implementation above loaded verified INT8 weights and completed
+one **81-frame, 384×384, 25-fps** window with **four** denoising steps. Measured
+wall time was **445.64 seconds for 3.24 seconds of output**, with a Torch allocated
+VRAM peak of **6,461,834,752 bytes** on one RTX 3060 12 GB. The worker was bounded
+by an 18-GiB host-memory cgroup, no swap and a 600-second deadline. This is the
+measured profile, not a general speed claim for InfiniteTalk or every offload
+configuration. A preceding constrained-memory attempt hit its real deadline;
+failed attempts are retained.
+
+The benchmark temporarily stopped one idle **Station-managed** llama.cpp instance
+through the ordinary API. Its exact original two-GPU, 131072-context, Q8-cache
+profile was restored and verified ready afterward. No external runtime was
+stopped, and no existing environment was upgraded.
+
+The clip is a **technical probe, not a quality acceptance**: four steps are below
+the non-accelerated reference setting, the clip is short, and early frames already
+show color/detail changes. Do not infer that a full-quality model is good or bad
+from this reduced-step output. Do not dispatch an hours-long comparison blindly
+from this result. The native experiment was imported into the private Library as
+a clearly labeled diagnostic without inventing a normal application Run; browser
+playback and downloaded bytes were verified. It is not published with repository
+media.
+
+Private local receipts: `infinitetalk-short-smoke-result.json`,
+`infinitetalk-exclusive-model-restore.json`, and
+`infinitetalk-library-browser-proof.json` under
+`data/acceptance/browser-qa-20261026/`. The current production engine/defaults
+remain unchanged.
+
+## Sonic staged evaluation
+
+Sonic source is pinned to `c1bd2d133ecc72f1a5abd990f1de101efcc3cfdb`.
+Public source weights and supporting SVD/Whisper files were downloaded into a
+separate evaluation cache and hash-verified. A CPU-only load verified all 1492
+trained UNet state keys with `strict=True`, no missing/unexpected keys and no meta
+parameters. Consequently the redundant base SVD UNet weights are not required:
+the complete trained checkpoint is loaded into the same configured architecture,
+including its audio adapters. This verifies loading, not numerical equivalence
+of different precision/offload strategies or generated quality.
+
+The unchanged full source recording produced 1002 input audio frames and a
+768×512 portrait/mask. Its complete 40.08 seconds remain the eventual acceptance
+input. A bounded short generation at the native 25-step setting precedes that
+comparison. No Sonic runtime is offered in production, and CPU preprocessing alone
+is not evidence of GPU fit, complete output or stable facial motion. The inspected
+source license is CC-BY-NC-SA 4.0; model/component terms remain separate and no
+commercial redistribution compatibility is established here.
