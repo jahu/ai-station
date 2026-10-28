@@ -18,6 +18,11 @@ Evidence: `data/acceptance/avatar-full-minute-20261026/qualification-complete.js
 The [earlier 30-second timing/playback record](long-avatar-qualification.md#executed-2026-10-15)
 remains historical; it is not the current whole-narration quality proof.
 
+Operator visual acceptance on 2026-10-28 reports progressive eye/facial
+deformation (QA-020). That quality issue remains open despite successful full
+recording, timing and playback checks. A [controlled engine comparison](plans/avatar-model-quality-evaluation.md)
+is in preparation; no replacement engine is yet qualified or offered.
+
 The direct short-Run adapter and earlier verification below remain compatible;
 their per-window frame limits are not the current workspace's duration limit.
 
