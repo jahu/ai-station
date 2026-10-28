@@ -23,6 +23,19 @@ consistent eyes, facial appearance and skin color than the adverse Echo result.
 This is promising evidence for integration, not a repaired application workflow
 or subjective lip-sync acceptance.
 
+The owner subsequently judged the face improved overall but still too soft,
+closer to 240p than HD. That is a rejection of final sharpness, not permission to
+promote the low-resolution result. An actual **512×768, 25-step, two-second**
+comparison then completed in **598.80 seconds**, peaking at **5,719,515,136 bytes**
+of allocated VRAM. Its first/last samples retain more source skin and eye detail.
+The exact original LLM profile was restored afterward. This is still below a
+720-pixel short side and does not qualify a complete higher-resolution workflow.
+An existing RealESRGAN image Run also produced a sharper **1024×1536** comparison
+frame from the 256×384 movie; this is explicitly upscaled, not native HD, and
+temporal consistency has not been verified. Compare native detail and finishing
+on short motion before another costly full-duration run. Do not call a larger
+container, CSS enlargement or an unreviewed upscale a sharpness fix.
+
 Source is pinned to `c1bd2d133ecc72f1a5abd990f1de101efcc3cfdb`. Required weights were
 separately downloaded and verified. The original runtime, model files, drivers and
 CUDA were not modified. Private evidence remains under
@@ -67,11 +80,14 @@ hide a missing tail. Non-integral durations may differ by less than one video
 frame; source samples and provenance remain exact.
 
 Upstream scales the shortest image side. Passing 384 blindly can create a
-1536-px dimension on a 4:1 input. Freeze a 64-aligned canvas bounded by 384 px,
+1536-px dimension on a 4:1 input. Freeze an explicit 64-aligned resolution canvas,
 fit/pad the unchanged portrait into it, and revalidate natively. Do not crop or
 stretch the source. The measured 2:3 profile is 256×384; a square canvas needs
 a larger admitted memory budget and separate qualification. Do not present the
-rectangle's shared-GPU measurement as proof of every geometry's fit.
+rectangle's shared-GPU measurement as proof of every geometry's fit. The helper
+requires the caller to provide a 384- or 768-pixel bound explicitly; it does not
+silently select the rejected smaller profile. A 2:3 canvas with the larger bound
+is 512×768 and retains the reference portrait's native dimensions in this QA.
 
 `whole_avatar_timing.py` starts these pure boundary contracts without importing
 inference dependencies or marking an executor available. Native model Python

@@ -70,7 +70,7 @@ def test_rejects_invalid_or_out_of_profile_canonical_audio(samples, rate):
     ],
 )
 def test_canvas_bounds_upstream_shortest_side_scaling_without_cropping(width, height, expected):
-    canvas = portrait_canvas(width, height)
+    canvas = portrait_canvas(width, height, max_side=384)
     assert canvas == expected
     assert max(canvas) == 384
     assert all(side % 64 == 0 for side in canvas)
@@ -96,4 +96,36 @@ def test_canvas_bounds_upstream_shortest_side_scaling_without_cropping(width, he
 )
 def test_canvas_rejects_unsupported_or_noninteger_source_geometry(width, height):
     with pytest.raises(ValueError):
-        portrait_canvas(width, height)
+        portrait_canvas(width, height, max_side=384)
+
+
+@pytest.mark.parametrize(
+    "width,height,expected",
+    [
+        (1024, 1536, (512, 768)),
+        (1536, 1024, (768, 512)),
+        (8192, 2048, (768, 192)),
+        (2048, 8192, (192, 768)),
+        (1024, 1024, (768, 768)),
+        (1000, 1333, (640, 768)),
+    ],
+)
+def test_larger_profile_preserves_source_fit_without_silent_low_resolution(width, height, expected):
+    canvas = portrait_canvas(width, height, max_side=768)
+    assert canvas == expected
+    scale = Fraction(768, max(width, height))
+    assert width * scale <= canvas[0]
+    assert height * scale <= canvas[1]
+    assert max(canvas) == 768
+    assert all(side % 64 == 0 for side in canvas)
+
+
+@pytest.mark.parametrize("maximum", [True, False, 384.0, 768.0, "768", None, 0, 512, 1024, -768])
+def test_profile_must_be_an_explicit_supported_integer_bound(maximum):
+    with pytest.raises(ValueError):
+        portrait_canvas(512, 768, max_side=maximum)
+
+
+def test_missing_profile_does_not_silently_choose_the_rejected_low_resolution():
+    with pytest.raises(TypeError):
+        portrait_canvas(512, 768)

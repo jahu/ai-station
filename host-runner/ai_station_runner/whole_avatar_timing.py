@@ -44,12 +44,14 @@ class WholeAvatarTiming:
         return self.target_frames - (self.base_frames * 2 - 1)
 
 
-def portrait_canvas(width, height):
-    """Return a 64-aligned canvas bounded by 384 px without cropping the source.
+def portrait_canvas(width, height, *, max_side):
+    """Return a canvas bounded by the explicitly frozen resolution profile.
 
     Fit/pad the source into this canvas before calling upstream preprocessing,
     which otherwise scales the *shortest* side and can exceed the GPU budget.
     """
+    if type(max_side) is not int or max_side not in {384, 768}:
+        raise ValueError("Choose an explicit bounded 384- or 768-pixel profile")
     if (
         type(width) is not int
         or type(height) is not int
@@ -60,6 +62,6 @@ def portrait_canvas(width, height):
     longest = max(width, height)
 
     def aligned(side):
-        return ((side * 384 + longest * 64 - 1) // (longest * 64)) * 64
+        return ((side * max_side + longest * 64 - 1) // (longest * 64)) * 64
 
     return aligned(width), aligned(height)
