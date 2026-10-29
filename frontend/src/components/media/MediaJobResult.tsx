@@ -12,6 +12,14 @@ import PromptTranslation, {
 } from "./PromptTranslation";
 import { useMediaRun } from "./media-run";
 
+function animationTime(seconds: number) {
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  const hours = Math.floor(minutes / 60);
+  return hours
+    ? `${hours} h${minutes % 60 ? ` ${minutes % 60} min` : ""}`
+    : `${minutes} min`;
+}
+
 function FilmPrompt({
   id,
   onRecover,
@@ -205,6 +213,18 @@ export default function MediaJobResult({
                             ? "Your full video is ready."
                             : `${job.completed_segments} of ${job.total_segments} ${job.mode === "shots" ? "shots" : "segments"} complete`}
             </p>
+            {whole &&
+              busy &&
+              job.status === "generating" &&
+              native?.phase === "animating" &&
+              !job.resource_wait &&
+              typeof job.estimated_animation_seconds === "number" &&
+              job.estimated_animation_seconds > 0 && (
+                <p className="muted" aria-label="Estimated animation time">
+                  About {animationTime(job.estimated_animation_seconds)} of
+                  animation left. Saving and checks follow.
+                </p>
+              )}
           </div>
           {job.kind === "video" &&
           job.mode === "shots" &&

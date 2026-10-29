@@ -1,3 +1,11 @@
+The [whole-recording Sonic adapter](plans/whole-recording-avatars.md) accepts only
+frozen source hashes, a configured recipe, allocated GPUs and an absolute
+deadline over the private typed Runner API. The owned child verifies installed
+source/model bytes before imports and publication, within an actual 18-GiB,
+zero-swap scope. Callers cannot supply commands, model paths or memory limits.
+Saved progress events may supply a read-only animation-time estimate; they
+cannot authorize completion, retry or a longer budget.
+
 The [Echo appearance candidate](plans/echo-continuation-quality.md) accepts only
 one built-in recipe and its exact source/model observation. It preserves owned
 portrait/audio/motion boundaries, process groups, memory scopes and permissions.

@@ -26,6 +26,7 @@ export type MediaJob = {
   completed_stages?: number;
   total_stages?: number;
   whole_run_id?: string | null;
+  estimated_animation_seconds?: number | null;
   native_progress?: {
     phase: "preparing" | "animating" | "finishing";
     completed_windows: number;
