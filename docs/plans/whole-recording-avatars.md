@@ -3,8 +3,14 @@
 2026-10-29, QA-020. The optional application integration was reviewed, merged and
 deployed to the controlled workstation preview. A real two-second agent Run,
 complete decode and browser playback passed at native 512×768 on both GPUs.
-The full 40.08-second application recording is running; quality acceptance is
-still open. Old Echo requests retain their frozen settings.
+The full 40.08-second application recording subsequently completed at native
+512×768/25 fps: all 1002 frames, canonical speech, source/output hashes, normal
+Library visibility and complete desktop-browser playback pass. End-to-end
+completion observation took 8838 seconds on two RTX 3060 12-GB GPUs. The
+[explicit quality follow-up](../qa/whole-avatar-follow-up.md) retains the original
+Echo failure and the owner's pending sharpness/lip-sync judgment. This is not
+native HD or whole-platform acceptance. Old Echo requests retain their frozen
+settings.
 
 ## Evidence and decision
 

@@ -15,8 +15,11 @@ It is **disabled by default**. Configure `AI_STATION_SONIC_PYTHON`,
 offline files; it never downloads weights or starts inference. An initial hash
 check reports checking. GPU discovery and owned user memory scopes are required.
 Manual full-detail jobs permit four hours; reviewed agents keep their own limit.
-Detailed rendering can take hours. Short native qualification passed, but the
-full higher-resolution recording/quality gate is still open (QA-020). This is
+Detailed rendering can take hours. The real complete 40.08-second application
+recording passed full decode, canonical audio, hash and Library/browser checks at
+native 512×768/25 fps. A separate two-second agent journey also passed. The
+[quality follow-up](qa/whole-avatar-follow-up.md) retains the owner's pending
+sharpness/lip-sync judgment and the original Echo failure (QA-020). This is
 not an HD or perfect-identity claim. The controlled workstation preview now uses
 this profile for new requests; existing Echo histories retain their settings.
 
@@ -49,9 +52,11 @@ The [earlier 30-second timing/playback record](long-avatar-qualification.md#exec
 remains historical; it is not the current whole-narration quality proof.
 
 Operator visual acceptance on 2026-10-28 reports progressive eye/facial
-deformation (QA-020). That quality issue remains open despite successful full
-recording, timing and playback checks. A [controlled engine comparison](plans/avatar-model-quality-evaluation.md)
-is in preparation; no replacement engine is yet qualified or offered.
+deformation (QA-020). That historical quality failure remains open despite its
+successful timing/playback checks. The subsequent
+[controlled engine comparison](plans/avatar-model-quality-evaluation.md) led to
+the optional whole-recording Sonic integration described above; its complete
+512×768 output is now available for the separate owner quality review.
 
 The direct short-Run adapter and earlier verification below remain compatible;
 their per-window frame limits are not the current workspace's duration limit.
