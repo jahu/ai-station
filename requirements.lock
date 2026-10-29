@@ -39,11 +39,17 @@ fastapi==0.141.1
     #   ai-station (backend/pyproject.toml)
     #   ai-station-runner (host-runner/pyproject.toml)
 filelock==4.2.4
-    # via huggingface-hub
+    # via
+    #   -c requirements.lock
+    #   huggingface-hub
 flatbuffers==25.12.19
-    # via onnxruntime
+    # via
+    #   -c requirements.lock
+    #   onnxruntime
 fsspec==2026.9.0
-    # via huggingface-hub
+    # via
+    #   -c requirements.lock
+    #   huggingface-hub
 greenlet==3.5.6
     # via
     #   -c requirements.lock
@@ -55,13 +61,17 @@ h11==0.16.0
     #   httpcore2
     #   uvicorn
 hf-xet==1.7.0
-    # via huggingface-hub
+    # via
+    #   -c requirements.lock
+    #   huggingface-hub
 httpcore==1.0.9
     # via
     #   -c requirements.lock
     #   httpx
 httpcore2==2.16.0
-    # via httpx2
+    # via
+    #   -c requirements.lock
+    #   httpx2
 httptools==0.8.0
     # via
     #   -c requirements.lock
@@ -72,9 +82,13 @@ httpx==0.28.1
     #   ai-station (backend/pyproject.toml)
     #   ai-station-runner (host-runner/pyproject.toml)
 httpx2==2.16.0
-    # via huggingface-hub
+    # via
+    #   -c requirements.lock
+    #   huggingface-hub
 huggingface-hub==2.3.0
-    # via tokenizers
+    # via
+    #   -c requirements.lock
+    #   tokenizers
 idna==3.20
     # via
     #   -c requirements.lock
@@ -90,11 +104,16 @@ markupsafe==3.0.3
     #   -c requirements.lock
     #   mako
 numpy==2.5.4
-    # via onnxruntime
+    # via
+    #   -c requirements.lock
+    #   onnxruntime
 onnxruntime==1.31.0
-    # via ai-station (backend/pyproject.toml)
+    # via
+    #   -c requirements.lock
+    #   ai-station (backend/pyproject.toml)
 packaging==26.3
     # via
+    #   -c requirements.lock
     #   huggingface-hub
     #   onnxruntime
 pillow==12.3.0
@@ -103,7 +122,9 @@ pillow==12.3.0
     #   ai-station (backend/pyproject.toml)
     #   ai-station-runner (host-runner/pyproject.toml)
 protobuf==7.36.2
-    # via onnxruntime
+    # via
+    #   -c requirements.lock
+    #   onnxruntime
 pydantic==2.13.5
     # via
     #   -c requirements.lock
@@ -120,6 +141,8 @@ pydantic-settings==2.15.0
     #   -c requirements.lock
     #   ai-station (backend/pyproject.toml)
     #   ai-station-runner (host-runner/pyproject.toml)
+pyotp==2.9.0
+    # via ai-station (backend/pyproject.toml)
 pypdf==6.19.0
     # via
     #   -c requirements.lock
@@ -156,11 +179,16 @@ starlette==1.7.0
     #   -c requirements.lock
     #   fastapi
 tokenizers==0.23.3
-    # via ai-station (backend/pyproject.toml)
+    # via
+    #   -c requirements.lock
+    #   ai-station (backend/pyproject.toml)
 tqdm==4.70.1
-    # via huggingface-hub
+    # via
+    #   -c requirements.lock
+    #   huggingface-hub
 truststore==0.10.5
     # via
+    #   -c requirements.lock
     #   httpcore2
     #   httpx2
 typing-extensions==4.16.0

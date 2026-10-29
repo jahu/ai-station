@@ -5,6 +5,11 @@ single-operator access model remains in place until migration/preservation and
 the full A/B/admin denial matrix pass. Shared models/GPUs never imply shared
 prompts, memory, files, credentials or execution logs.
 
+Staged [account services](accounts.md) preserve legacy credential/session material,
+isolate device revocation and validate optional TOTP with replay protection and
+one-use recovery codes. They are not connected to public authentication routes
+until the complete private-resource ownership boundary is qualified.
+
 The [whole-recording Sonic adapter](plans/whole-recording-avatars.md) accepts only
 frozen source hashes, a configured recipe, allocated GPUs and an absolute
 deadline over the private typed Runner API. The owned child verifies installed
