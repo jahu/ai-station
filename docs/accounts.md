@@ -77,6 +77,47 @@ for a usable backup. Database-only restoration must not silently disable MFA.
 Rollbackable database transactions do not delete secret files: expired/replaced
 enrollment files can remain until a separately reviewed retention operation.
 
+## Private repository boundary in development
+
+Migration 0038 adds indexed owner references to ten private roots and backfills
+the existing installation to its sole initial identity. All UUIDs and artifact
+paths remain stable. Messages/events and the other dependent records inherit
+access through their private parents. Only personal connector/provider uniqueness
+needs a table rebuild: keys become unique per owner, so users may independently
+call a provider `openai`, for example. Existing email-delivery references are
+restored by exact ID within the migration transaction; preservation and foreign
+key checks cover that relationship. Multi-user databases with ambiguous legacy
+ownership are rejected instead of guessed. Downgrade is allowed only on an empty,
+unused bootstrap installation; populated ownership cannot be discarded.
+
+`ScopedSession` is staged separately from the live session factory. It binds an
+immutable data scope, filters roots and dependent records before counts/limits,
+and validates private references and writes. Missing scopes, raw SQL, bulk writes
+and unknown model policies fail closed. Ownerless transitional rows stay
+quarantined, including in general admin inspection. An identity-map lookup must
+still validate ownership. Administrative inspection can read all owned private
+data; it cannot silently create a new execution referencing another owner.
+Worker execution uses a plain owner scope, without the admin inspection flag.
+
+The explicit request-session factory rechecks the real account role and current
+device, rather than accepting a caller's administrative flag. The worker factory
+verifies the persisted Run against its frozen owner and rejects disabled accounts;
+it does not grant admin inspection to an admin-owned agent. These factories still
+need to replace the old request/worker session lifetimes at the cutover.
+
+Personal provider/connector credentials use account-and-record namespaces. A
+scoped user cannot select another record's file, an authenticator secret or a host
+environment variable. Reference validation happens before replacing an existing
+credential. The fixed built-in local-model endpoint may use its configured model
+service credential; changing its endpoint cannot carry that credential elsewhere.
+FTS mutation uses a small typed index-maintenance helper after an owner lookup,
+within the same transaction. Search retains ownership filtering before limits.
+
+These repository tests are not the HTTP privacy gate. The existing factory is
+deliberately unchanged until authentication, worker/session lifetime, per-owner
+credentials/settings, raw FTS mutations and the complete route inventory are
+integrated. Additional user accounts remain unavailable through the application.
+
 ## Remaining enablement gate
 
 - Add immutable owners/backfill to private roots and enforce them in repository

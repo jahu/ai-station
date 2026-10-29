@@ -27,6 +27,12 @@ def new_id() -> str:
     return str(uuid.uuid4())
 
 
+class Owned:
+    """Private roots. Transitional NULLs are quarantined by scoped sessions."""
+
+    owner_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+
+
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
@@ -91,7 +97,7 @@ class AccountEvent(Base):
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow, index=True)
 
 
-class Task(Base):
+class Task(Owned, Base):
     __tablename__ = "tasks"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -110,7 +116,7 @@ class Task(Base):
     runs: Mapped[list[Run]] = relationship(back_populates="task")
 
 
-class Run(Base):
+class Run(Owned, Base):
     __tablename__ = "runs"
     __table_args__ = (Index("uq_run_task_operation", "task_id", "operation_key", unique=True),)
     operation_key: Mapped[str | None] = mapped_column(String(160), nullable=True)
@@ -178,7 +184,7 @@ class RunEvent(Base):
     run: Mapped[Run] = relationship(back_populates="events")
 
 
-class Artifact(Base):
+class Artifact(Owned, Base):
     __tablename__ = "artifacts"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -201,7 +207,7 @@ class Artifact(Base):
     purge_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
 
-class Conversation(Base):
+class Conversation(Owned, Base):
     __tablename__ = "conversations"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -255,7 +261,7 @@ class Message(Base):
     conversation: Mapped[Conversation] = relationship(back_populates="messages")
 
 
-class Project(Base):
+class Project(Owned, Base):
     __tablename__ = "projects"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -292,7 +298,7 @@ class Worktree(Base):
     expires_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True, index=True)
 
 
-class Agent(Base):
+class Agent(Owned, Base):
     __tablename__ = "agents"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -339,7 +345,7 @@ class Agent(Base):
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
 
-class Approval(Base):
+class Approval(Owned, Base):
     __tablename__ = "approvals"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -353,7 +359,7 @@ class Approval(Base):
     resolution: Mapped[str] = mapped_column(String(40), default="pending")
 
 
-class MemoryEntry(Base):
+class MemoryEntry(Owned, Base):
     __tablename__ = "memories"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
@@ -483,11 +489,12 @@ class RuntimeInstance(Base):
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
 
-class Connector(Base):
+class Connector(Owned, Base):
     __tablename__ = "connectors"
+    __table_args__ = (UniqueConstraint("owner_id", "key", name="uq_connector_owner_key"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    key: Mapped[str] = mapped_column(String(80), unique=True)
+    key: Mapped[str] = mapped_column(String(80))
     name: Mapped[str] = mapped_column(String(200))
     kind: Mapped[str] = mapped_column(String(80), default="http")
     status: Mapped[str] = mapped_column(String(40), default="unconfigured")
@@ -501,11 +508,12 @@ class Connector(Base):
     updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
 
 
-class ChatProvider(Base):
+class ChatProvider(Owned, Base):
     __tablename__ = "chat_providers"
+    __table_args__ = (UniqueConstraint("owner_id", "key", name="uq_chat_provider_owner_key"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
-    key: Mapped[str] = mapped_column(String(80), unique=True)
+    key: Mapped[str] = mapped_column(String(80))
     name: Mapped[str] = mapped_column(String(200))
     kind: Mapped[str] = mapped_column(String(80), default="openai-compatible")
     location: Mapped[str] = mapped_column(String(20), default="local")

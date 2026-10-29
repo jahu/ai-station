@@ -68,10 +68,16 @@ def test_legacy_password_sessions_and_data_survive_without_plaintext_or_session_
     with session_factory()() as session:
         session.add(Setting(key="operator_auth", value=secret))
         session.add_all(Setting(key=key, value=value) for key, value in records.items())
-        task = Task(title="Legacy task", prompt="Synthetic private prompt")
-        session.add(task)
+        task_id = str(uuid4())
+        # Insert through the actual old schema, which predates owner columns.
+        session.execute(
+            Task.__table__.insert().values(
+                id=task_id,
+                title="Legacy task",
+                prompt="Synthetic private prompt",
+            )
+        )
         session.commit()
-        task_id = task.id
     file = get_settings().data_dir / "artifacts" / "legacy-fixture.txt"
     file.write_text("Synthetic bytes remain unchanged")
     migrate()
@@ -157,7 +163,7 @@ def test_account_storage_cannot_be_dropped_after_use():
         session.add(User(id=str(uuid4()), username="Alice", normalized_username="alice"))
         session.commit()
     reset_engine()
-    with pytest.raises(RuntimeError, match="Accounts have been used"):
+    with pytest.raises(RuntimeError, match="restore a reviewed stopped-service backup"):
         command.downgrade(alembic_config(), "0036")
     with session_factory()() as session:
         assert session.query(User).count() == 2
