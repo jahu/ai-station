@@ -71,6 +71,16 @@ compatible models on your workstation, keep your files and history there, and
 choose the models you want — including compatible uncensored weights. You choose the model, its capabilities
 and its behavior.
 
+Compatible uncensored models can also be used for adult/NSFW creation. The chosen
+model and runtime determine supported content and behavior; AI Station does not
+remove a model's built-in restrictions or make every model format compatible.
+
+You are responsible for the inputs you use, the content you create and how you
+share it, including consent, privacy, intellectual-property rights, applicable
+law and each model's license. The software is provided under the warranty and
+liability terms of the [license](LICENSE); those terms do not override applicable
+law or grant permission to misuse someone else's content or likeness.
+
 Local generation uses your hardware, with no AI Station per-token charge. Your
 conversations, artifacts and application state live on your workstation. External
 inference is opt-in; web search, downloads and private remote access use networks.
@@ -147,6 +157,11 @@ llama.cpp/Ollama services, optional media runtimes and development commands.
 [Download the latest release](https://github.com/jahu/ai-station/releases/latest).
 [What's new in 0.0.2](docs/releases/0.0.2.md). `master` is the release branch; contributors work through
 feature branches and PRs into `develop`.
+
+Development toward **0.1.0** follows the [next-release plan](docs/plans/next-release-0.1.md):
+private accounts, persistent creative workspaces, prompt/search improvements,
+expressive audio, timeline editing and guided setup. These remain development
+targets rather than features claimed for v0.0.2.
 
 ## 🌱 Where we're going
 
