@@ -245,6 +245,17 @@ class Recovery:
         if not endpoint.startswith("unix:///") or any(char in endpoint for char in "\n\r\0"):
             raise RecoveryError("Recovery requires a local Docker Unix endpoint")
 
+    def start_created_roles(self, services):
+        started = []
+        for role in ("worker", "scheduler"):
+            original = services[role]
+            latest = self.inspect([original["Id"]])[0]
+            self.owned(latest)
+            if original["State"].get("Status") == "created" and latest["State"].get("Status") == "created":
+                self.command(["docker", "start", original["Id"]])
+                started.append(role)
+        return started
+
     def repair(self):
         c = self.config
         self.require_local_docker()
@@ -278,6 +289,19 @@ class Recovery:
                 raise RecoveryError("Inspect the partial UI publish mapping")
             if api["State"].get("Running"):
                 self.wait_for(self.health, "The existing API needs inspection; no service was restarted")
+                if api["Config"]["Labels"]["com.docker.compose.project.config_files"] != ",".join(
+                    map(str, c.files)
+                ):
+                    # A prior API repair may have completed after its reply was
+                    # lost. Resume only the same never-started owned roles.
+                    started = self.start_created_roles(services)
+                    if started:
+                        return {
+                            "status": "recovered",
+                            "changed": True,
+                            "image": api["Image"],
+                            "started_created_services": started,
+                        }
                 return {"status": "healthy", "changed": False}
         error = (api["State"].get("Error") or "").lower()
         binding_failed = any(
@@ -326,14 +350,7 @@ class Recovery:
             timeout=90,
         )
         self.wait_for(self.health, "The recreated owned API did not become healthy; inspect its logs")
-        started = []
-        for role in ("worker", "scheduler"):
-            original = services[role]
-            latest = self.inspect([original["Id"]])[0]
-            self.owned(latest)
-            if original["State"].get("Status") == "created" and latest["State"].get("Status") == "created":
-                self.command(["docker", "start", original["Id"]])
-                started.append(role)
+        started = self.start_created_roles(services)
         return {
             "status": "recovered",
             "changed": True,

@@ -98,6 +98,9 @@ def stack(tmp_path, monkeypatch):
             state["health"] = True
             return ""
         if argv[:2] == ["docker", "start"]:
+            next(item for item in items if item["Id"] == argv[2])["State"].update(
+                Running=True, Status="running"
+            )
             return argv[2]
         raise AssertionError(argv)
 
@@ -166,6 +169,28 @@ def test_recovery_starts_only_never_started_created_roles(stack):
     state["items"][2]["State"].update(Running=False, Status="exited", Error="")
     assert service.run()["started_created_services"] == ["worker"]
     assert mutations(state)[1] == ["docker", "start", state["items"][1]["Id"]]
+
+
+def test_lost_recreate_reply_resumes_only_created_roles_without_repeating_api_repair(stack, monkeypatch):
+    service, state = stack
+    fail_binding(state)
+    for item in state["items"][1:]:
+        item["State"].update(Running=False, Status="created")
+    original = service.command
+
+    def lost_reply(argv, timeout=20):
+        result = original(argv, timeout)
+        if "up" in argv:
+            raise recovery.subprocess.TimeoutExpired(argv, timeout)
+        return result
+
+    monkeypatch.setattr(service, "command", lost_reply)
+    with pytest.raises(recovery.subprocess.TimeoutExpired):
+        service.run()
+    monkeypatch.setattr(service, "command", original)
+    assert service.run()["started_created_services"] == ["worker", "scheduler"]
+    assert service.run() == {"status": "healthy", "changed": False}
+    assert len([cmd for cmd in mutations(state) if "up" in cmd]) == 1
 
 
 @pytest.mark.parametrize(
