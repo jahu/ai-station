@@ -105,6 +105,28 @@ def test_lost_start_reply_reuses_exact_owned_journal_without_a_second_dispatch(p
     assert recovered["pid"] == 77 and len(manager.calls) == 1
 
 
+def test_expired_lost_reply_can_still_inspect_its_exact_owned_process(prepared, monkeypatch):
+    body, manager, arguments = prepared
+    jobs.start_qualification(manager, body, **arguments)
+    monkeypatch.setattr("ai_station_runner.sonic_contract.time.time", lambda: body.deadline_at + 1)
+    recovered_body = jobs.WholeAvatarRequest.model_validate(body.model_dump(mode="json"))
+    owned = jobs.start_qualification(manager, recovered_body, **arguments)
+    assert owned["pid"] == 77 and len(manager.calls) == 1
+
+
+@pytest.mark.parametrize("offset", [-1, 14401])
+def test_inspectable_deadline_is_not_permission_to_start_an_expired_or_unbounded_process(
+    prepared, monkeypatch, offset
+):
+    body, manager, arguments = prepared
+    now = time.time()
+    monkeypatch.setattr("ai_station_runner.sonic_contract.time.time", lambda: now)
+    body = jobs.WholeAvatarRequest.model_validate({**body.model_dump(), "deadline_at": now + offset})
+    with pytest.raises(ValueError, match="deadline"):
+        jobs.start_qualification(manager, body, **arguments)
+    assert not manager.calls and not (manager.data_dir / "runs").exists()
+
+
 @pytest.mark.parametrize(
     "change", ["body", "python", "runtime", "models", "receipt", "request", "wrong-executor", "journal-gone"]
 )

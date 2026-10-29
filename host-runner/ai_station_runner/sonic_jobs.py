@@ -40,7 +40,9 @@ class WholeAvatarRequest(BaseModel):
         if len(set(self.gpus)) != len(self.gpus) or any(gpu < 0 for gpu in self.gpus):
             raise ValueError("Choose distinct allocated GPU indexes")
         checked_recipe(self.recipe)
-        checked_request(self.native_request())
+        # Deserialize an existing receipt even after its deadline. Inspection
+        # never starts a new process; fresh dispatch enforces time below.
+        checked_request(self.native_request(), check_deadline=False)
         return self
 
     def native_request(self):
@@ -52,7 +54,7 @@ def start_qualification(manager, body, *, python, runtime, models, hardware):
     """Configuration paths are trusted internal arguments, never API fields."""
     if os.environ.get("AI_STATION_REAL_GPU_TESTS") != "1":
         raise ValueError("Whole-recording qualification requires an explicit real-GPU opt-in")
-    checked_request(body.native_request())
+    checked_request(body.native_request(), check_deadline=False)
     python = Path(python).expanduser().absolute()  # Preserve the venv executable symlink.
     runtime, models = Path(runtime).expanduser().resolve(), Path(models).expanduser().resolve()
     if not python.is_file() or not os.access(python, os.X_OK):
@@ -93,6 +95,7 @@ def start_qualification(manager, body, *, python, runtime, models, hardware):
         pass
     else:
         raise ValueError("Inspect existing owned process before creating whole-recording work")
+    checked_request(body.native_request())
     # Hash before creating any work or starting an owned process. Native entry
     # independently rechecks source, weights, input bytes and frozen dimensions.
     if installation_observation(runtime, models) != body.recipe["observation"]:

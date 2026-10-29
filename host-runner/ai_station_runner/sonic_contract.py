@@ -115,7 +115,7 @@ def checked_recipe(value):
     return dict(value)
 
 
-def checked_request(value):
+def checked_request(value, *, check_deadline=True):
     expected = {
         "version",
         "run_id",
@@ -151,7 +151,9 @@ def checked_request(value):
     if (
         type(value["deadline_at"]) not in {int, float}
         or not math.isfinite(value["deadline_at"])
-        or not 0 < value["deadline_at"] - time.time() <= 14400
+        or value["deadline_at"] <= 0
+        or check_deadline
+        and not 0 < value["deadline_at"] - time.time() <= 14400
     ):
         raise ValueError("Whole-recording deadline must be within the next four hours")
     observation = value["observed_input"]
