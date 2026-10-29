@@ -30,6 +30,14 @@ comparison then completed in **598.80 seconds**, peaking at **5,719,515,136 byte
 of allocated VRAM. Its first/last samples retain more source skin and eye detail.
 The exact original LLM profile was restored afterward. This is still below a
 720-pixel short side and does not qualify a complete higher-resolution workflow.
+The same two-second 512×768/25-step profile also completed with both discovered
+GPUs in **417.25 seconds**, versus 598.80 seconds on one: about **30% less elapsed
+time**. Independent guidance branches retain the complete 25-frame attention
+context. Allocated peaks were **9,439,037,440** and **5,456,757,248 bytes**. This is
+neither a twofold speed claim nor qualification of a larger square canvas or a
+40-second high-resolution recording. Decoded single/dual comparisons measured
+SSIM 0.9881 over the frame and 0.9832 in the face crop; they are not bit-identical.
+The original managed llama.cpp profile was restored through the typed API.
 An existing RealESRGAN image Run also produced a sharper **1024×1536** comparison
 frame from the 256×384 movie; this is explicitly upscaled, not native HD, and
 temporal consistency has not been verified. Compare native detail and finishing
@@ -92,6 +100,40 @@ is 512×768 and retains the reference portrait's native dimensions in this QA.
 `whole_avatar_timing.py` starts these pure boundary contracts without importing
 inference dependencies or marking an executor available. Native model Python
 also imports it, so it remains Python 3.10 compatible.
+
+## Native qualification implementation
+
+The owned `sonic_entry.py` and its internal typed launcher now implement the
+next qualification boundary. They are **not exposed by an HTTP route or advertised
+as an available executor**. `AI_STATION_REAL_GPU_TESTS=1` and a matching, actual
+18-GiB/zero-swap user scope are mandatory before model imports. The scope retains
+ProcessManager PID/group ownership and a four-hour maximum; a shorter absolute
+caller deadline is never extended. Existing memory profiles retain their exact
+one-hour fuse and serialization.
+
+The launcher binds canonical portrait/PCM observations, permissions, exact
+installed-source/weight/adapter hashes, seed and allocated GPU identities. A lost
+reply inspects the same journal and frozen receipt; unknown work is not replayed.
+Only configuration supplies runtime/Python/model paths. No caller commands,
+graphs, inference code or weight paths are accepted. The current resolution
+qualification ceiling is 512×768 pixels of area within the explicit 768-px bound;
+a 768×768 request is rejected pending a separate resource qualification.
+
+The fixed native entry uses upstream audio preparation without replacing its
+conditioning or diffusion math. Capturing the actual pipeline arguments avoids
+the upstream helper's final whole-movie CPU→GPU→CPU copy. Normalization mutates
+the sole decoded CPU buffer; interpolation/encoding holds neighboring frames
+rather than a second complete rendered movie. The single-GPU variant serializes
+three independent guidance branches; the two-GPU variant scatters those branches
+while preserving each full temporal context. RIFE weights load strictly with
+`weights_only=True`. Source files and existing environments remain unchanged.
+
+Full decoded frame timestamps, dimensions, audio duration and decoded speech
+sample count gate atomic publication. Partial output remains in the owned work
+directory. No `-shortest`, audio trim, static-face replacement or independently
+generated portrait windows are introduced. The production plan, resume, agent,
+resource admission and UI integration described above are still outstanding;
+this implementation alone does not close QA-020 or establish HD quality.
 
 ## UX and acceptance
 

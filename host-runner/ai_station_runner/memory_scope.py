@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 from uuid import UUID
 
-APPROVED_LIMITS_MIB = frozenset({11264, 12288})
+APPROVED_LIMITS_MIB = frozenset({11264, 12288, 18432})
 
 
 def available() -> bool:
@@ -46,7 +46,9 @@ def scope_prefix(run_id: str, maximum_mib: int) -> list[str]:
         raise ValueError("A user systemd memory scope is unavailable")
     # --scope execs the child without changing its session/process group. The
     # existing ProcessManager remains responsible for ownership and absolute
-    # deadlines; RuntimeMaxSec is the unchanged one-hour per-invocation fuse.
+    # deadlines. Existing profiles retain their one-hour fuse; only the fixed
+    # opt-in whole-recording candidate uses the four-hour maximum.
+    runtime_seconds = 14400 if limit == 18432 else 3600
     return [
         binary,
         "--user",
@@ -56,7 +58,7 @@ def scope_prefix(run_id: str, maximum_mib: int) -> list[str]:
         "--property=MemoryMax=" + str(limit) + "M",
         "--property=MemorySwapMax=0",
         "--property=CPUQuota=400%",
-        "--property=RuntimeMaxSec=3600",
+        "--property=RuntimeMaxSec=" + str(runtime_seconds),
         "--",
     ]
 
