@@ -1,8 +1,10 @@
 # Stable whole-recording avatars
 
-2026-10-28, QA-020. Implementation in progress; the production default is still
-Echo. A downloaded model or native experiment does not advertise an available
-application executor.
+2026-10-29, QA-020. The optional application integration was reviewed, merged and
+deployed to the controlled workstation preview. A real two-second agent Run,
+complete decode and browser playback passed at native 512×768 on both GPUs.
+The full 40.08-second application recording is running; quality acceptance is
+still open. Old Echo requests retain their frozen settings.
 
 ## Evidence and decision
 
@@ -166,8 +168,10 @@ Public dispatch journals the owned process before expensive model hashing, so a
 lost HTTP reply cannot hide a later launch. The child independently rehashes all
 source/model/adapter bytes before imports and before publication. Missing weights, symlink imports, absent
 GPUs or unavailable user scopes report unavailable. Existing Echo readiness is
-unchanged. The new integration remains disabled by default and is not enabled in
-the deployed workstation configuration until application qualification.
+unchanged. The integration remains disabled by default in portable configuration.
+It is explicitly enabled in the controlled workstation preview after local
+application gates and actual short native qualification; complete long-film
+quality acceptance remains separate.
 
 Version-two plans publish a single `sonic_whole` Run rather than invented
 segments or a redundant composition stage. Optional speech uses the existing

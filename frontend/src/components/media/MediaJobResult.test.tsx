@@ -99,12 +99,31 @@ it("distinguishes finishing from a verified complete whole-recording result", ()
       completed_windows: 525,
       total_windows: 525,
     },
+    estimated_animation_seconds: 100,
   });
   expect(
     screen.getByText("Saving and checking the complete recording…"),
   ).toBeTruthy();
   expect(screen.queryByText("Your full video is ready.")).toBeNull();
   expect(screen.queryByLabelText("Generated full video")).toBeNull();
+  expect(screen.queryByLabelText("Estimated animation time")).toBeNull();
+});
+
+it("labels a measured animation estimate separately from saving and final verification", () => {
+  mount("generating", undefined, {
+    kind: "avatar",
+    mode: "whole_recording",
+    native_progress: {
+      phase: "animating",
+      completed_windows: 100,
+      total_windows: 525,
+    },
+    estimated_animation_seconds: 8100,
+  });
+  expect(screen.getByLabelText("Estimated animation time").textContent).toBe(
+    "About 2 h 15 min of animation left. Saving and checks follow.",
+  );
+  expect(screen.queryByText("Your full video is ready.")).toBeNull();
 });
 it("reports actual segment progress and stops the entire job", async () => {
   const writes = mount();

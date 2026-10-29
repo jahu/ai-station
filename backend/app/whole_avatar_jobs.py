@@ -1,5 +1,6 @@
 """Version-two whole-recording plans, preserving the legacy segment contract."""
 
+import math
 import wave
 from datetime import timedelta
 
@@ -10,7 +11,7 @@ from sqlalchemy import select
 from app import whole_avatars as whole
 from app.db import utcnow
 from app.dependencies import depend_on
-from app.models import Artifact, Run, Task
+from app.models import Artifact, Run, RunEvent, Task
 from app.resources import latest_resource_wait
 from app.runs import create_run
 from app.state import TERMINAL
@@ -39,6 +40,50 @@ def inspect_sources(session, portrait, audio, *, reference=False):
         return whole.inspect_sources(session, portrait, audio, reference=reference)
     except (OSError, ValueError, EOFError, wave.Error, Image.DecompressionBombError) as exc:
         raise HTTPException(422, "Choose an intact portrait and bounded canonical PCM recording") from exc
+
+
+def animation_estimate(session, run):
+    """Read-only projection of measured diffusion speed, excluding preparation.
+
+    No hardware-specific timings or client-local timers. Saved events preserve
+    the observation across API/browser restarts; finalization is not estimated.
+    """
+    if run is None or run.status != "running":
+        return None
+    progress = run.metadata_json.get("avatar_progress") or {}
+    if progress.get("phase") != "animating":
+        return None
+    statement = select(RunEvent).where(
+        RunEvent.run_id == run.id,
+        RunEvent.event_type == "avatar.progress",
+        RunEvent.payload["phase"].as_string() == "animating",
+    )
+    first = session.scalar(statement.order_by(RunEvent.sequence.asc()).limit(1))
+    last = session.scalar(statement.order_by(RunEvent.sequence.desc()).limit(1))
+    if first is None or last is None:
+        return None
+    initial, completed, total = (
+        first.payload.get("completed_windows"),
+        last.payload.get("completed_windows"),
+        last.payload.get("total_windows"),
+    )
+    if (
+        any(type(value) is not int for value in (initial, completed, total))
+        or not 0 < initial < completed < total
+        or completed - initial < 3
+        or first.payload.get("total_windows") != total
+        or progress.get("completed_windows") != completed
+        or progress.get("total_windows") != total
+    ):
+        return None
+    elapsed = (last.created_at - first.created_at).total_seconds()
+    age = (utcnow() - last.created_at).total_seconds()
+    if not 0 < elapsed <= whole.MAX_SECONDS:
+        return None
+    seconds_per_window = elapsed / (completed - initial)
+    if not 0 <= age <= max(120, seconds_per_window * 3):
+        return None  # Hide a stale estimate instead of counting down a stall.
+    return math.ceil((total - completed) * seconds_per_window)
 
 
 def view(session, task):
@@ -86,6 +131,7 @@ def view(session, task):
         "preview_artifact_id": None,
         "active_run_ids": [run.id for run in active],
         "native_progress": generation.metadata_json.get("avatar_progress") if generation else None,
+        "estimated_animation_seconds": animation_estimate(session, generation),
         "resource_wait": latest_resource_wait(active),
         "final_artifact_id": plan.get("final_artifact_id"),
         "result_geometry": {"width": observation["width"], "height": observation["height"], "fps": 25}

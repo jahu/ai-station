@@ -17,7 +17,16 @@ check reports checking. GPU discovery and owned user memory scopes are required.
 Manual full-detail jobs permit four hours; reviewed agents keep their own limit.
 Detailed rendering can take hours. Short native qualification passed, but the
 full higher-resolution recording/quality gate is still open (QA-020). This is
-not an HD or perfect-identity claim and has not yet replaced deployed Echo.
+not an HD or perfect-identity claim. The controlled workstation preview now uses
+this profile for new requests; existing Echo histories retain their settings.
+
+During animation, the workspace estimates remaining animation time from saved
+progress events after at least three measured windows. Model preparation is
+excluded; saving and final verification follow that estimate. Refreshing the
+browser retains the measurement. Queued, stopped, finishing or stale progress
+has no countdown. This is a read-only projection, never authority to complete,
+retry or extend a Run. The estimate uses observed speed rather than a fixed GPU
+benchmark.
 
 ## Existing Echo engine
 

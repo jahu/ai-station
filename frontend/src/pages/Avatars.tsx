@@ -332,7 +332,8 @@ function AvatarForm({
             <details className="media-advanced">
               <summary>
                 <Settings2 size={15} />
-                Advanced settings<span>Steps, seed, GPU</span>
+                Advanced settings
+                <span>{wholeRecording ? "Seed, GPU" : "Steps, seed, GPU"}</span>
               </summary>
               {!wholeRecording && (
                 <AvatarMemoryProfile
