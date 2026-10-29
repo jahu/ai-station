@@ -279,24 +279,30 @@ export function PurgeActivity({ artifactId }: { artifactId?: string } = {}) {
     },
     onSettled: () => cache.invalidateQueries({ queryKey: ["library-purges"] }),
   });
+  const recentFinished = rows
+    .filter(
+      (run) =>
+        terminal.has(run.status) &&
+        !(
+          run.status === "canceled" &&
+          !Object.keys(run.metadata?.purge_outcomes ?? {}).length
+        ),
+    )
+    .slice(0, 3);
+  const progressRows = [
+    ...rows.filter((run) => !terminal.has(run.status)),
+    ...recentFinished,
+  ];
   return (
     <>
       <ErrorNotice error={query.error ?? cancel.error ?? dismiss.error} />
-      {rows
-        .filter(
-          (run) =>
-            !(
-              run.status === "canceled" &&
-              !Object.keys(run.metadata?.purge_outcomes ?? {}).length
-            ),
-        )
-        .slice(0, 3)
+      {progressRows
         // Closing a card must not immediately fill its slot with an older,
         // indistinguishable completion. Keep the same recent window on refresh.
         .filter(
           (run) =>
-            !dismissed.includes(run.id) &&
-            (!terminal.has(run.status) ||
+            !terminal.has(run.status) ||
+            (!dismissed.includes(run.id) &&
               !run.metadata?.purge_progress_dismissed_at),
         )
         .map((run) => {

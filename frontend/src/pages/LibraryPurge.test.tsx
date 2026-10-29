@@ -343,3 +343,31 @@ it("an active deletion keeps Stop and cannot be hidden by a stale presentation m
     screen.queryByRole("button", { name: "Dismiss deletion progress" }),
   ).toBeNull();
 });
+
+it("older active work keeps its controls ahead of the recent completion window", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      response([
+        ...["first", "second", "third", "older"].map((id) => ({
+          ...run,
+          id,
+          status: "succeeded",
+        })),
+        { ...run, id: "still-deleting", status: "running" },
+      ]),
+    ),
+  );
+  mount(<PurgeActivity />);
+  await screen.findByText("Deleting artifacts");
+  expect(screen.getAllByText("Permanent deletion complete")).toHaveLength(3);
+  const panels = screen.getAllByRole("region", {
+    name: "Permanent deletion progress",
+  });
+  expect(within(panels[0]).getByRole("button", { name: "Stop" })).toBeTruthy();
+  expect(
+    within(panels[0])
+      .getByRole("link", { name: "Inspect execution history" })
+      .getAttribute("href"),
+  ).toBe("/runs/still-deleting");
+});
