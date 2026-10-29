@@ -1,6 +1,6 @@
 # Recorded workstation results
 
-These are observations from real AI Station work, recorded on 2026-10-25/26:
+These are observations from real AI Station work, recorded on 2026-10-25/26 and 29:
 Intel Core i7-6900K, 32 GB RAM and two NVIDIA RTX 3060 cards with 12 GB VRAM each.
 The devices are separately allocated; this is not an architecture requirement or
 a claim that any model can use their VRAM as one unrestricted pool.
@@ -26,6 +26,24 @@ and composition; later independent ASR, browser playback and human review are
 excluded. They are not sampling-kernel timings. The avatar input is exactly the
 first 60 seconds of a fresh 62.44-second narration, not the entire uncut source text.
 No silence extension, loop or time stretching was used to manufacture duration.
+
+## Whole-recording avatar follow-up, 2026-10-29
+
+The [separate sanitized measurement](benchmarks/results-2026-10-29.json) records
+the actual Sonic whole-recording application path: native 512×768, 25 diffusion
+steps, seed 43, both GPUs and the complete 40.08-second source recording.
+End-to-end observation took **8838.01 seconds (2 h 27 min 18 s)**, from accepted
+UI request to observed terminal worker result, including preparation, generation,
+CPU interpolation, mux, native checks and completion polling. Later browser and
+visual review are excluded. This timing boundary differs from the historical
+workflow timestamps above; neither is a diffusion-only kernel benchmark.
+
+The final 1002 frames/25 fps and all 961920 source speech samples passed complete
+decode/hash checks and ordinary Library playback. The observed 18-GiB/zero-swap
+process scope is a host-memory boundary, not an 18-GB GPU requirement. The short
+side is 512 pixels: this is not native HD. The owner's sharpness/lip-sync judgment
+is pending; retain the original Echo quality failure. See the
+[explicit acceptance supplement](qa/whole-avatar-follow-up.md).
 
 ## Local language model
 

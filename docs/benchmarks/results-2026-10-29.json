@@ -1,0 +1,30 @@
+{
+  "date": "2026-10-29",
+  "hardware": {
+    "cpu": "Intel Core i7-6900K",
+    "ram_gib": 32,
+    "gpu": "NVIDIA RTX 3060 12 GB",
+    "gpu_count": 2
+  },
+  "operation": "whole-recording avatar",
+  "application_commit": "c3372c8b0e025caf5653b16dd409ee4a2c88f84f",
+  "profile": "sonic_whole_768_v1",
+  "recipe_observation": "51127afa1794095e8554a480957f87dc082a92da6faadf2a081747be97c96509",
+  "seed": 43,
+  "diffusion_steps": 25,
+  "width": 512,
+  "height": 768,
+  "base_frames": 501,
+  "output_frames": 1002,
+  "fps": 25,
+  "duration_seconds": 40.08,
+  "source_audio_samples": 961920,
+  "source_audio_sample_rate": 24000,
+  "elapsed_seconds": 8838.007519721985,
+  "timing_boundary": "UI accepted request -> terminal normal-worker result observed; includes preparation, generation, CPU interpolation, mux, native checks and polling; excludes later browser and human review",
+  "complete_media_and_hash_verification": true,
+  "complete_browser_playback": true,
+  "owner_quality_acceptance": "pending",
+  "native_hd": false,
+  "source_receipt_sha256": "4486503c99c6b39f0709ad4f52df6a971bb0f2b7649e2164854d4d6204a54243"
+}
