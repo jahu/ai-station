@@ -1,7 +1,9 @@
 The [whole-recording avatar plan](plans/whole-recording-avatars.md) evaluates a
 stable global-generation profile after the owner-reported Echo eye deformation.
-Its pure timing/geometry contracts are under implementation; production dispatch
-and defaults remain unchanged. A native experiment is not an operational adapter.
+Its timing/geometry contracts and bounded native qualification entry are
+implemented; production dispatch and defaults remain unchanged. The ordinary
+application workflow and full-resolution long recording still need qualification.
+A native experiment is not an operational adapter.
 
 The [Echo portrait continuation candidate](plans/echo-continuation-quality.md)
 freezes an appearance recipe and source/model observation in new full-avatar

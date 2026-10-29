@@ -135,6 +135,26 @@ generated portrait windows are introduced. The production plan, resume, agent,
 resource admission and UI integration described above are still outstanding;
 this implementation alone does not close QA-020 or establish HD quality.
 
+The actual new launcher/entry subsequently generated a **512×768, 50-frame,
+25-fps, two-second** recording with complete speech. Its independent final
+decode/source/model checks passed; the complete qualification controller took
+574.85 seconds, including setup, two process-lifecycle fixtures, hashing,
+generation, interpolation and verification. This is not a denoising-only timing
+or a full-duration application Run. Actual 18-GiB/zero-swap scope fixtures also
+confirmed owned process-group cancellation and an earlier absolute deadline;
+neither left live children. Repeated dispatch returned the same owned PID.
+The pre-reboot managed LLM was restored with its exact saved configuration.
+
+Code review found that an expired deadline must still permit reconciliation of
+an already-owned dispatch whose reply was lost. The corrected launcher inspects
+an identical frozen receipt/journal after expiry while rejecting fresh expired
+or unbounded dispatches before creating any work. Three regression cases cover
+this distinction. The complete 4608-case normal collection passed on the native
+qualification head (4599 passed, nine ordinary opt-in skips); the final affected
+189-case family and global Python lint/format checks passed after the review fix.
+No inference implementation changed in that fix. The HTTP/application/agent/UI
+and high-resolution full-duration gates above remain outstanding.
+
 ## UX and acceptance
 
 Keep portrait and speech primary. A clear quality choice should identify the
