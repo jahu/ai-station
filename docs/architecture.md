@@ -4,6 +4,11 @@ creative sessions, local prompt/search preparation, expressive sound/editing and
 guided cross-platform installation. It preserves the existing execution engine;
 these planned account/session boundaries are not yet operational.
 
+The staged [account services](accounts.md) add identity/session storage and local
+credential/TOTP verification without exposing additional users. Private-resource
+ownership, HTTP cutover and account-aware worker/browser state remain an explicit
+enablement gate; the existing operator boundary continues to serve the workstation.
+
 The [whole-recording avatar plan](plans/whole-recording-avatars.md) evaluates a
 stable global-generation profile after the owner-reported Echo eye deformation.
 The optional configured Sonic adapter uses one version-two media plan and one

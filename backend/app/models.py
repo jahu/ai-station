@@ -27,6 +27,70 @@ def new_id() -> str:
     return str(uuid.uuid4())
 
 
+class User(Base):
+    __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint("NOT bootstrap_pending OR (is_admin AND NOT enabled)", name="ck_user_bootstrap"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    username: Mapped[str] = mapped_column(String(64))
+    normalized_username: Mapped[str] = mapped_column(String(128), unique=True)
+    display_name: Mapped[str] = mapped_column(String(120), default="")
+    is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    bootstrap_pending: Mapped[bool] = mapped_column(Boolean, default=False)
+    legacy_operator: Mapped[bool] = mapped_column(Boolean, default=False)
+    password_record: Mapped[dict] = mapped_column(JSON, default=dict, deferred=True)
+    password_changed_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+    totp_secret_ref: Mapped[str | None] = mapped_column(String(200), nullable=True, deferred=True)
+    totp_enabled_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+    totp_last_step: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    recovery_code_hashes: Mapped[list] = mapped_column(JSON, default=list, deferred=True)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    lookup_hash: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
+    token_record: Mapped[dict] = mapped_column(JSON, deferred=True)
+    label: Mapped[str] = mapped_column(String(160), default="")
+    legacy_operator_key: Mapped[str | None] = mapped_column(String(200), unique=True, nullable=True)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    revoked_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+    mfa_verified_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+class UserSetting(Base):
+    __tablename__ = "user_settings"
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_user_setting"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    key: Mapped[str] = mapped_column(String(160))
+    value: Mapped[dict] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow, onupdate=utcnow)
+
+
+class AccountEvent(Base):
+    __tablename__ = "account_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    actor_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    subject_user_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    action: Mapped[str] = mapped_column(String(80), index=True)
+    details: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow, index=True)
+
+
 class Task(Base):
     __tablename__ = "tasks"
 
