@@ -68,6 +68,7 @@ from app.tools import get_tool
 from app.transcription import TranscriptionExecutor
 from app.validation_executor import ProjectValidationExecutor
 from app.video import VideoExecutor
+from app.whole_avatars import WholeAvatarExecutor
 from app.worktree_executor import WorktreeExecutor
 from app.worktree_remove import WorktreeRemoveExecutor
 
@@ -335,6 +336,7 @@ EXECUTORS = {
     "ace_step_music": MusicExecutor(),
     "whisper_transcribe": TranscriptionExecutor(),
     "echomimic": AvatarExecutor(),
+    "sonic_whole": WholeAvatarExecutor(),
     "wan_video": VideoExecutor(),
     CompositionExecutor.name: CompositionExecutor(),
     AvatarPlannerExecutor.name: AvatarPlannerExecutor(),

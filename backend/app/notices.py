@@ -88,6 +88,7 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
         "wan_video",
         "media_compose",
         "echomimic",
+        "sonic_whole",
         "avatar_media_plan",
     }:
         from app.agent_workflow import workflow_parent
@@ -97,13 +98,11 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
             definition = root.parameters.get("definition") or {}
             if definition.get("media"):
                 media = definition
-    if (
-        media
-        and media.get("media", {}).get("kind") == "avatar"
-        and status == "succeeded"
-        and run.executor_type != "media_compose"
-    ):
-        return None
+    if media and media.get("media", {}).get("kind") == "avatar" and status == "succeeded":
+        from app.media_results import final_media_executor
+
+        if run.executor_type != final_media_executor(media["media"]):
+            return None
     if media and (
         status == "succeeded"
         and (run.executor_type in {"agent_media", "wan_video"} or run.metadata_json.get("upscale_run_id"))

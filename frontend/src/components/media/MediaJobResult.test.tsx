@@ -61,6 +61,51 @@ function mount(
   );
   return writes;
 }
+
+it("shows measured whole-recording animation progress without inventing segments", () => {
+  mount("generating", undefined, {
+    kind: "avatar",
+    mode: "whole_recording",
+    total_segments: 0,
+    completed_segments: 0,
+    total_stages: 1,
+    completed_stages: 0,
+    native_progress: {
+      phase: "animating",
+      completed_windows: 210,
+      total_windows: 525,
+    },
+    result_geometry: { width: 512, height: 768, fps: 25 },
+  });
+  const progress = screen.getByRole("progressbar", {
+    name: "Avatar animation progress",
+  });
+  expect(progress.getAttribute("max")).toBe("525");
+  expect(progress.getAttribute("value")).toBe("210");
+  expect(
+    screen.getByText("Animating the complete recording · 40%"),
+  ).toBeTruthy();
+  expect(screen.queryByText(/0 of 0/)).toBeNull();
+});
+
+it("distinguishes finishing from a verified complete whole-recording result", () => {
+  mount("generating", undefined, {
+    kind: "avatar",
+    mode: "whole_recording",
+    total_segments: 0,
+    completed_segments: 0,
+    native_progress: {
+      phase: "finishing",
+      completed_windows: 525,
+      total_windows: 525,
+    },
+  });
+  expect(
+    screen.getByText("Saving and checking the complete recording…"),
+  ).toBeTruthy();
+  expect(screen.queryByText("Your full video is ready.")).toBeNull();
+  expect(screen.queryByLabelText("Generated full video")).toBeNull();
+});
 it("reports actual segment progress and stops the entire job", async () => {
   const writes = mount();
   expect(screen.getByText("2 of 23 segments complete")).toBeTruthy();

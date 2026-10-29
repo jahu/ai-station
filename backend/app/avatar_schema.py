@@ -16,6 +16,13 @@ class AvatarMemorySettings(BaseModel):
         values = handler(self)
         if self.memory_profile == "default":
             values.pop("memory_profile", None)
+        if getattr(self, "generation_profile", None) is None:
+            values.pop("generation_profile", None)
+        else:
+            # The fixed whole-recording engine has its own frozen 25-step
+            # resolution profile. Do not persist misleading Echo defaults.
+            values.pop("size", None)
+            values.pop("steps", None)
         return values
 
     @model_validator(mode="after")
@@ -35,3 +42,14 @@ class FullAvatarSettings(AvatarMemorySettings):
     steps: StrictInt = Field(default=8, ge=4, le=30)
     seed: StrictInt = Field(default=43, ge=0, le=2147483647)
     gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]{1,12})$")
+    generation_profile: Literal["sonic_whole_768_v1"] | None = None
+
+    @model_validator(mode="after")
+    def whole_profile_controls(self):
+        if self.generation_profile is not None and (
+            self.memory_profile != "default" or {"size", "steps"} & self.model_fields_set
+        ):
+            raise ValueError(
+                "The whole-recording quality profile owns resolution and steps; omit Echo controls"
+            )
+        return self

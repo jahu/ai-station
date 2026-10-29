@@ -91,6 +91,16 @@ class AgentAvatarScope(BaseModel):
     request: AgentAvatarRequest
     description_source: Literal["fixed", "goal"] = "fixed"
 
+    @model_validator(mode="after")
+    def whole_recorded_scope(self):
+        if (
+            self.request.generation_profile
+            and self.request.speech_text is None
+            and self.description_source == "goal"
+        ):
+            raise ValueError("Use fixed whole-recording mode or generate new spoken words from the goal")
+        return self
+
 
 AgentMediaScope = Annotated[
     AgentImageScope | AgentMusicScope | AgentSpeechScope | AgentVideoScope | AgentAvatarScope,

@@ -15,6 +15,10 @@ import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import MediaInput from "../components/media/MediaInput";
 import MediaResult from "../components/media/MediaResult";
+import AvatarWholeProfile, {
+  useWholeAvatarCapabilities,
+  WHOLE_AVATAR_PROFILE,
+} from "../components/media/AvatarWholeProfile";
 import AvatarMemoryProfile, {
   useAvatarCapabilities,
   type AvatarProfile,
@@ -79,7 +83,21 @@ function AvatarForm({
   const [seed, setSeed] = useState(initialRequest?.seed ?? 43);
   const [gpu, setGpu] = useState(initialRequest?.gpu ?? "auto");
   const capability = useAvatarCapabilities();
-  const available = capability.data?.available === true && !capability.isError;
+  const whole = useWholeAvatarCapabilities();
+  const savedLegacy = !!initialRequest && !initialRequest.generation_profile;
+  const wholeRecording =
+    fullRecording &&
+    (!!initialRequest?.generation_profile ||
+      (!savedLegacy &&
+        (whole.isPending ||
+          whole.isError ||
+          whole.data?.available ||
+          (whole.data?.readiness && whole.data.readiness !== "disabled"))));
+  const checkingWhole =
+    wholeRecording && (whole.isPending || whole.data?.readiness === "checking");
+  const available = wholeRecording
+    ? whole.data?.available === true && !whole.isError
+    : capability.data?.available === true && !capability.isError;
   const [chosenProfile, setChosenProfile] = useState<AvatarProfile | null>(
     initialRequest ? (initialRequest.memory_profile ?? "default") : null,
   );
@@ -102,12 +120,11 @@ function AvatarForm({
     mutationFn: async () => {
       if (fullRecording) {
         const body = {
-          ...profileParameters,
+          ...(wholeRecording
+            ? { generation_profile: WHOLE_AVATAR_PROFILE }
+            : { ...profileParameters, prompt, size, steps }),
           image_artifact_id: image,
           audio_artifact_id: audio,
-          prompt,
-          size,
-          steps,
           seed,
           gpu,
           ...(voiceMode === "text" ? { speech_text: speechText } : {}),
@@ -168,7 +185,11 @@ function AvatarForm({
       <PageTitle
         eyebrow={video ? "CREATE / VIDEO" : "CREATE / AVATARS"}
         title="Bring a portrait to life."
-        action={<span className="media-runtime">EchoMimic · Local</span>}
+        action={
+          <span className="media-runtime">
+            {wholeRecording ? "Sonic" : "EchoMimic"} · Local
+          </span>
+        }
       >
         Combine a portrait with speech to create a talking avatar. Preview the
         finished film without leaving your workspace.
@@ -260,29 +281,34 @@ function AvatarForm({
               Need a voice recording? Create speech in Audio{" "}
               <ArrowUpRight size={13} />
             </Link>
-            <label className="media-text-label">
-              <span>
-                Scene & motion <small>Optional direction</small>
-              </span>
-              <textarea
-                aria-label="Scene and motion"
-                required
-                maxLength={2000}
-                rows={3}
-                value={prompt}
-                onChange={(event) => setPrompt(event.target.value)}
-                placeholder="Describe the expression, motion or camera…"
-              />
-            </label>
-            <div className="media-field-pair">
-              <div>
-                <span>Quality</span>
-                <AvatarQualityChoiceList
-                  value={size}
-                  disabled={busy || uploading}
-                  onChange={setSize}
+            {wholeRecording && <AvatarWholeProfile checking={checkingWhole} />}
+            {!wholeRecording && (
+              <label className="media-text-label">
+                <span>
+                  Scene & motion <small>Optional direction</small>
+                </span>
+                <textarea
+                  aria-label="Scene and motion"
+                  required
+                  maxLength={2000}
+                  rows={3}
+                  value={prompt}
+                  onChange={(event) => setPrompt(event.target.value)}
+                  placeholder="Describe the expression, motion or camera…"
                 />
-              </div>
+              </label>
+            )}
+            <div className="media-field-pair">
+              {!wholeRecording && (
+                <div>
+                  <span>Quality</span>
+                  <AvatarQualityChoiceList
+                    value={size}
+                    disabled={busy || uploading}
+                    onChange={setSize}
+                  />
+                </div>
+              )}
               <div>
                 <span>Length</span>
                 <label className="work-context-consent">
@@ -308,24 +334,28 @@ function AvatarForm({
                 <Settings2 size={15} />
                 Advanced settings<span>Steps, seed, GPU</span>
               </summary>
-              <AvatarMemoryProfile
-                value={memoryProfile}
-                onChange={setChosenProfile}
-                disabled={busy || uploading}
-                supported={supportedProfile}
-                recommended={chosenProfile === null}
-              />
+              {!wholeRecording && (
+                <AvatarMemoryProfile
+                  value={memoryProfile}
+                  onChange={setChosenProfile}
+                  disabled={busy || uploading}
+                  supported={supportedProfile}
+                  recommended={chosenProfile === null}
+                />
+              )}
               <div className="media-field-pair">
-                <label>
-                  Steps
-                  <input
-                    type="number"
-                    min={4}
-                    max={30}
-                    value={steps}
-                    onChange={(event) => setSteps(Number(event.target.value))}
-                  />
-                </label>
+                {!wholeRecording && (
+                  <label>
+                    Steps
+                    <input
+                      type="number"
+                      min={4}
+                      max={30}
+                      value={steps}
+                      onChange={(event) => setSteps(Number(event.target.value))}
+                    />
+                  </label>
+                )}
                 <label>
                   Seed
                   <input
@@ -347,19 +377,41 @@ function AvatarForm({
                 />
               </div>
               <ErrorNotice error={hardware.error} />
+              {wholeRecording && (
+                <small className="muted">
+                  Auto uses up to two available GPUs. Select one GPU to leave
+                  the other free.
+                </small>
+              )}
             </details>
-            <ErrorNotice error={generate.error ?? capability.error} />
-            {capability.isPending && (
+            <ErrorNotice
+              error={
+                generate.error ??
+                (wholeRecording ? whole.error : capability.error)
+              }
+            />
+            {!wholeRecording && capability.isPending && (
               <p className="media-privacy" role="status">
                 Checking local avatar runtime…
               </p>
             )}
-            {capability.data && !capability.data.available && (
-              <p className="notice" role="status">
-                Local avatar generation needs setup. {capability.data.reason}{" "}
-                <Link to="/system">Inspect system</Link>
-              </p>
-            )}
+            {!wholeRecording &&
+              capability.data &&
+              !capability.data.available && (
+                <p className="notice" role="status">
+                  Local avatar generation needs setup. {capability.data.reason}{" "}
+                  <Link to="/system">Inspect system</Link>
+                </p>
+              )}
+            {wholeRecording &&
+              !checkingWhole &&
+              whole.data &&
+              !whole.data.available && (
+                <p className="notice" role="status">
+                  High-detail avatar generation needs setup.{" "}
+                  <Link to="/system">Inspect system</Link>
+                </p>
+              )}
             <Button
               type="submit"
               className="media-generate"
@@ -367,8 +419,10 @@ function AvatarForm({
                 !available ||
                 !image ||
                 !audio ||
-                !prompt.trim() ||
-                (memoryProfile === "bounded_11g" && !supportedProfile) ||
+                (!wholeRecording && !prompt.trim()) ||
+                (!wholeRecording &&
+                  memoryProfile === "bounded_11g" &&
+                  !supportedProfile) ||
                 (voiceMode === "text" && !speechText.trim()) ||
                 uploading ||
                 busy

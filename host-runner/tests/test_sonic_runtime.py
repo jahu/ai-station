@@ -67,9 +67,16 @@ def configured(tmp_path, monkeypatch):
         monkeypatch.setenv(key, value)
     clear_settings_cache()
     runtime._observed.cache_clear()
+    runtime._readiness.clear()
     monkeypatch.setattr(runtime, "scope_available", lambda: True)
     monkeypatch.setattr(runtime, "collect", lambda root: {"gpus": [{"index": 7, "uuid": "GPU-test"}]})
     yield source, models
+    for future in list(runtime._readiness.values()):
+        try:
+            future.result(timeout=2)
+        except (OSError, ValueError):
+            pass
+    runtime._readiness.clear()
     runtime._observed.cache_clear()
     clear_settings_cache()
 
@@ -94,11 +101,11 @@ def test_repeated_readiness_uses_stat_cache_but_replaced_weight_changes_observat
         return original(*args)
 
     monkeypatch.setattr(runtime, "installation_observation", observed)
-    first = runtime.capabilities()
+    first = wait_ready()
     assert first["available"] and first["recipe"]["id"] == PROFILE
     assert runtime.capabilities() == first and len(calls) == 1
     (models / MODEL_FILES[0]).write_text("FIXED tiny fixture")
-    second = runtime.capabilities()
+    second = wait_ready()
     assert second["recipe"] != first["recipe"] and len(calls) == 2
 
 
@@ -118,9 +125,43 @@ def test_incomplete_or_changed_native_installations_are_not_operational(configur
         monkeypatch.setattr(runtime, "collect", lambda root: {"gpus": []})
     else:
         # Also reject an added symlink directory after a successful cached poll.
-        assert runtime.capabilities()["available"]
+        assert wait_ready()["available"]
         (source / "src/imported").symlink_to(models, target_is_directory=True)
     assert runtime.capabilities()["available"] is False
+
+
+def wait_ready():
+    end = time.monotonic() + 2
+    while True:
+        result = runtime.capabilities()
+        if result["available"]:
+            return result
+        assert time.monotonic() < end, result
+        time.sleep(0.005)
+
+
+def test_initial_metadata_hash_never_holds_the_http_request(configured, monkeypatch):
+    import threading
+
+    original = runtime.installation_observation
+    release = threading.Event()
+
+    def slow(*args):
+        assert release.wait(timeout=2)
+        return original(*args)
+
+    monkeypatch.setattr(runtime, "installation_observation", slow)
+    try:
+        started = time.monotonic()
+        response = runtime.capabilities()
+        assert response["available"] is False and "background" in response["reason"]
+        assert time.monotonic() - started < 1
+        assert len(runtime._readiness) == 1
+        runtime.capabilities()
+        assert len(runtime._readiness) == 1
+    finally:
+        release.set()
+    assert wait_ready()["available"]
 
 
 def test_typed_route_is_disabled_without_an_explicit_installation_flag(tmp_path, monkeypatch):
@@ -178,3 +219,4 @@ def test_configured_route_uses_only_native_configuration_and_the_existing_owned_
     assert owner is manager and body.permissions == ["filesystem_read", "workspace_write"]
     assert options["runtime"] == source and options["models"] == models
     assert options["python"] == Path(sys.executable).absolute()
+    assert options["verify_installation"] is False

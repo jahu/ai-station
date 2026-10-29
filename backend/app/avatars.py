@@ -57,6 +57,13 @@ def capabilities():
         return {"available": False, "reason": "Host Runner avatar integration is unavailable"}
 
 
+@router.get("/whole-capabilities")
+def whole_capabilities():
+    from app.whole_avatars import capabilities
+
+    return capabilities()
+
+
 def memory_reservation(body, observed_profile=None):
     # Legacy plans may pass an empty profile to retain their frozen appearance.
     # Recheck setup without changing that recipe or the persisted request.
@@ -129,7 +136,7 @@ def create_avatar_run(session, body, *, task=None, parent_run_id=None, observed_
 def workflow(run_id: UUID, session: Annotated[Session, Depends(session_scope)]):
     from app.media_workflow import workflow_steps
 
-    return workflow_steps(session, run_id, {"chatterbox", "echomimic"})
+    return workflow_steps(session, run_id, {"chatterbox", "echomimic", "sonic_whole"})
 
 
 @router.post("/runs", status_code=202)

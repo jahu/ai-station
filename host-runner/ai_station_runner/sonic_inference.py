@@ -11,7 +11,7 @@ from ai_station_runner.sonic_frames import capture_inputs
 from ai_station_runner.sonic_guidance import install_guidance
 
 
-def generate(runtime, models, portrait, audio, timing, width, height, seed, device_count):
+def generate(runtime, models, portrait, audio, timing, width, height, seed, device_count, progress=None):
     import torch
     from accelerate import init_empty_weights
     from diffusers import AutoencoderKLTemporalDecoder, EulerDiscreteScheduler
@@ -149,6 +149,14 @@ def generate(runtime, models, portrait, audio, timing, width, height, seed, devi
         del audio_token, audio_bucket, whisper, batch
         torch.cuda.empty_cache()
         print(f"avatar.generating: {timing.base_frames} global frames, 25 steps", flush=True)
+        if progress is not None:
+
+            def completed_window(pipeline, index, timestep, values):
+                for device in range(device_count):
+                    torch.cuda.synchronize(device)
+                return progress.advance(pipeline, index, timestep, values)
+
+            keyword["callback_on_step_end"] = completed_window
         frames = pipe(*positional, **keyword).frames
         if list(frames.shape) != [1, 3, timing.base_frames, height, width] or frames.device.type != "cpu":
             raise ValueError("Invalid complete decoded Sonic recording")

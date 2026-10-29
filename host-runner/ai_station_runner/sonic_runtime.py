@@ -5,6 +5,8 @@ unconfigured Echo executor appear operational, or change an old request's model.
 """
 
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from pathlib import Path
 
@@ -20,6 +22,14 @@ from ai_station_runner.sonic_contract import (
     installation_observation,
 )
 from ai_station_runner.telemetry import collect
+
+_hash_workers = ThreadPoolExecutor(max_workers=1, thread_name_prefix="avatar-observation")
+_hash_lock = threading.Lock()
+_readiness = {}
+
+
+class ObservationPending(ValueError):
+    pass
 
 
 def installation():
@@ -73,6 +83,32 @@ def current_recipe(runtime, models):
     return {"id": PROFILE, "observation": _observed(runtime, models, signature)}
 
 
+def ready_recipe(runtime, models):
+    """Bounded, read-only discovery; hashing never blocks an HTTP handler.
+
+    This imports no models and starts no execution. A single metadata reader
+    uses a fixed-size hash buffer; changed installations remain unavailable
+    until their complete observed bytes have been checked.
+    """
+    signature = _signature(runtime, models)
+    key = (runtime, models, signature)
+    with _hash_lock:
+        future = _readiness.get(key)
+        if future is None:
+            for previous, job in list(_readiness.items()):
+                if job.done() and len(_readiness) >= 4:
+                    del _readiness[previous]
+            if len(_readiness) >= 4:
+                raise ObservationPending("Verifying changed avatar installations; retry shortly")
+            future = _hash_workers.submit(_observed, runtime, models, signature)
+            _readiness[key] = future
+    if not future.done():
+        raise ObservationPending(
+            "Verifying installed avatar files; this initial check runs in the background"
+        )
+    return {"id": PROFILE, "observation": future.result()}
+
+
 def capabilities():
     base = {
         "backend": "sonic",
@@ -85,14 +121,30 @@ def capabilities():
         "gpu_counts": [1, 2],
         "offline": True,
     }
+    if not get_settings().sonic_whole_enabled:
+        return {
+            **base,
+            "available": False,
+            "readiness": "disabled",
+            "reason": "Whole-recording avatar integration is not enabled",
+        }
     try:
         _, runtime, models = installation()
-        recipe = current_recipe(runtime, models)
-        if not collect(get_settings().host_data_dir()).get("gpus"):
+        recipe = ready_recipe(runtime, models)
+        gpus = collect(get_settings().host_data_dir()).get("gpus", [])
+        if not gpus:
             raise ValueError("No CUDA GPU is detected for whole-recording avatars")
-        return {**base, "available": True, "recipe": recipe}
+        return {
+            **base,
+            "available": True,
+            "readiness": "ready",
+            "recipe": recipe,
+            "detected_gpu_count": len(gpus),
+        }
+    except ObservationPending as exc:
+        return {**base, "available": False, "readiness": "checking", "reason": str(exc)}
     except (OSError, ValueError) as exc:
-        return {**base, "available": False, "reason": str(exc)}
+        return {**base, "available": False, "readiness": "unavailable", "reason": str(exc)}
 
 
 def start_whole_avatar(manager, body):
@@ -104,5 +156,14 @@ def start_whole_avatar(manager, body):
         raise HTTPException(409, str(exc)) from exc
     # Readiness's cached observation never substitutes for launch/native checks.
     return _start_owned(
-        manager, body, python=python, runtime=runtime, models=models, hardware=collect(manager.data_dir)
+        manager,
+        body,
+        python=python,
+        runtime=runtime,
+        models=models,
+        hardware=collect(manager.data_dir),
+        # The owned child verifies the full snapshot BEFORE importing models.
+        # Do not hash gigabytes before journaling PID/deadline: an HTTP timeout
+        # could otherwise hide a later accepted launch from worker recovery.
+        verify_installation=False,
     )

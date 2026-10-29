@@ -16,6 +16,7 @@ import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import MusicScope from "./MusicScope";
 import AgentVideoScope from "./AgentVideoScope";
 import AgentAvatarScope from "./AgentAvatarScope";
+import { useWholeAvatarCapabilities } from "../components/media/AvatarWholeProfile";
 import {
   agentMediaIssue,
   newAgentMedia,
@@ -42,7 +43,12 @@ export default function AgentMediaScopeEditor({
 }) {
   const [uploading, setUploading] = useState(false);
   const hardware = useHardware();
+  const wholeAvatar = useWholeAvatarCapabilities();
   const scope = value ?? newAgentMedia("image", goal);
+  const recordedWhole =
+    scope.kind === "avatar" &&
+    !!scope.request.generation_profile &&
+    scope.request.speech_text === null;
   const image = scope.kind === "image" ? scope.request : null;
   const caption =
     scope.kind === "avatar"
@@ -100,7 +106,11 @@ export default function AgentMediaScopeEditor({
                 className={scope.kind === kind ? "active" : ""}
                 onClick={() =>
                   onChange({
-                    ...newAgentMedia(kind, goal),
+                    ...newAgentMedia(
+                      kind,
+                      goal,
+                      wholeAvatar.data?.available === true,
+                    ),
                     description_source: scope.description_source,
                   })
                 }
@@ -140,6 +150,11 @@ export default function AgentMediaScopeEditor({
               onChange={(event) =>
                 onChange({
                   ...scope,
+                  description_source:
+                    event.target.value === "recording" &&
+                    scope.request.generation_profile
+                      ? "fixed"
+                      : scope.description_source,
                   request: {
                     ...scope.request,
                     speech_text:
@@ -198,7 +213,7 @@ export default function AgentMediaScopeEditor({
             </select>
           </label>
         )}
-        {image?.mode !== "upscale" && (
+        {image?.mode !== "upscale" && !recordedWhole && (
           <>
             <label>
               Description policy
@@ -307,7 +322,16 @@ export default function AgentMediaScopeEditor({
           <AgentAvatarScope
             value={scope.request}
             disabled={disabled || uploading}
-            onChange={(request) => onChange({ ...scope, request })}
+            onChange={(request) =>
+              onChange({
+                ...scope,
+                request,
+                description_source:
+                  request.generation_profile && request.speech_text === null
+                    ? "fixed"
+                    : scope.description_source,
+              })
+            }
             onBusy={(busy) => {
               setUploading(busy);
               onBusy(busy);

@@ -1,5 +1,26 @@
 # Local avatar video
 
+## Optional stable-detail engine
+
+The configured Sonic integration animates the whole recording in one Run and
+keeps the original portrait proportions, up to a 768-pixel side and 512×768
+pixel-area budget. Avatars offers portrait + recording or voice reference + new
+spoken text, real generation progress, Stop, explicit Resume and a final Library
+film. Reviewed avatar agents use the same pipeline; existing saved Echo settings
+are preserved. See the [whole-recording plan](plans/whole-recording-avatars.md).
+
+It is **disabled by default**. Configure `AI_STATION_SONIC_PYTHON`,
+`AI_STATION_SONIC_DIR`, `AI_STATION_SONIC_MODELS` and explicitly enable
+`AI_STATION_SONIC_WHOLE_ENABLED` on the native Runner. Readiness verifies existing
+offline files; it never downloads weights or starts inference. An initial hash
+check reports checking. GPU discovery and owned user memory scopes are required.
+Manual full-detail jobs permit four hours; reviewed agents keep their own limit.
+Detailed rendering can take hours. Short native qualification passed, but the
+full higher-resolution recording/quality gate is still open (QA-020). This is
+not an HD or perfect-identity claim and has not yet replaced deployed Echo.
+
+## Existing Echo engine
+
 The current workspace defaults to **Full recording (up to 60 seconds)** through
 [durable long-media jobs](long-media.md). Generated speech uses the same complete
 recording plan; bounded motion windows share one canonical audio timeline. The

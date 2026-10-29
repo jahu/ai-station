@@ -108,12 +108,20 @@ class AudioExecutor(HostMediaExecutor):
     mime_type = "audio/wav"
 
     def validate_inputs(self, session, run):
+        if run.parameters.get("whole_avatar_sources"):
+            from app.whole_avatars import verify_snapshots
+
+            verify_snapshots(session, run.parameters["whole_avatar_sources"])
         if run.parameters.get("media_inputs"):
             from app.agent_media import verify_published_inputs
 
             verify_published_inputs(session, run)
 
     def on_success(self, session, run, artifact):
+        if run.parameters.get("whole_avatar_sources"):
+            from app.whole_avatars import verify_snapshots
+
+            verify_snapshots(session, run.parameters["whole_avatar_sources"])
         definition = run.parameters.get("avatar_after_speech")
         if not definition:
             return
