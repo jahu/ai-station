@@ -940,3 +940,9 @@ report or local-code recipes; data files and instruction-only creation retain th
 data recipe. Source snapshots and existing AgentSettings remain unchanged. The
 controller maps tools/models/workspace policy, and normal explicit activation
 starts the existing report or code/data workflow. No new execution system/schema.
+
+Operator startup recovery stays outside agent tools and the Docker control plane.
+The [recovery utility](operations.md#recovering-an-api-port-after-network-startup)
+repairs a failed publish mapping only for the validated owned API and its existing
+image. It does not stop running workers, restart native executors or apply an
+upgrade.

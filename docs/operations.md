@@ -123,3 +123,40 @@ Conservative recovery still parks uncertain dispatched work as `interrupted` aft
 
 Private LAN publishing is implemented separately by the launcher and Operator
 access settings. It does not enable in-app restore, image rollout or public exposure.
+## Recovering an API port after network startup
+
+Docker may start before the workstation receives its configured private LAN
+address. A failed port bind can leave an exited API, or an internally healthy
+container without a host publish mapping. `./scripts/recover.sh` inspects that
+specific failure and waits for the configured address and matching private Host
+Runner. It recreates only the owned API with its existing immutable image.
+Running workers, native processes, models, the database and other Docker projects
+are preserved. A newly tagged image is never applied by recovery.
+
+Recovery requires a local Docker Unix endpoint and validates the Compose project, exact checkout/config files, user,
+data/socket mounts, hardening and intended loopback/private binds. An occupied
+port, unknown deployment or partial mapping requires inspection. An absent
+project, deliberately stopped API or existing foreground supervisor is left
+alone. Created-but-never-started worker/scheduler containers may be started
+after successful repair; running or deliberately stopped roles are preserved.
+There is no recovery endpoint or agent tool. This is a local operator utility.
+
+For recovery when your user session starts:
+
+```bash
+./scripts/recover.sh --install-user-service
+systemctl --user status ai-station-recovery.service
+```
+
+This installs only AI Station's user unit, without sudo, driver changes or
+enabling lingering. Existing unrelated units are never overwritten. It retries
+after an unavailable network or Runner. The selected checkout and environment
+file are fixed in that unit; rerun the installer when switching to another
+checkout. An external environment file can be selected with `--env-file`.
+Disable with `systemctl --user disable --now ai-station-recovery.service`.
+Ordinary startup remains `./scripts/start.sh`.
+
+The API's image pin is retained in `runtime/recovery/` with private permissions
+so subsequent recovery can validate its Compose provenance. Normal explicit
+upgrades use their own image policy. Recovery does not build, pull, upgrade,
+restart the Host Runner, take over cleanup ownership or modify application rows.
