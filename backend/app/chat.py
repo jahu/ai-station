@@ -39,9 +39,9 @@ from app.models import (
     Message,
     ModelFile,
     Run,
-    Setting,
     Task,
 )
+from app.personal_settings import preference_row
 from app.runs import create_run, create_task, run_dict
 from app.serialize import conversation_dict, iso, message_dict
 from app.state import TERMINAL
@@ -859,7 +859,7 @@ def accept_turn(body: TurnBody, session: DB):
     )
     session.add(receipt)
     if body.conversation_id is None:
-        saved = session.get(Setting, "conversation_preferences")
+        saved = preference_row(session, "conversation_preferences", default={})
         previous = ChatPreferences.model_validate(saved.value if saved else {})
         values = previous.model_copy(
             update={
@@ -869,10 +869,7 @@ def accept_turn(body: TurnBody, session: DB):
                 "model": row.model,
             }
         ).model_dump()
-        if saved is None:
-            session.add(Setting(key="conversation_preferences", value=values))
-        else:
-            saved.value = values
+        saved.value = values
     session.commit()
     return turn_receipt(session, receipt)
 
@@ -898,13 +895,13 @@ class ChatPreferences(BaseModel):
 
 @router.get("/preferences")
 def preferences(session: DB):
-    row = session.get(Setting, "conversation_preferences")
+    row = preference_row(session, "conversation_preferences")
     return ChatPreferences.model_validate(row.value if row else {}).model_dump()
 
 
 @router.put("/preferences")
 def save_preferences(body: ChatPreferences, session: DB):
-    row = session.get(Setting, "conversation_preferences")
+    row = preference_row(session, "conversation_preferences", default={}, lock=True)
     current = ChatPreferences.model_validate(row.value if row else {})
     if current.version != body.version:
         raise HTTPException(409, "Preferences changed; refresh before saving")
@@ -914,11 +911,7 @@ def save_preferences(body: ChatPreferences, session: DB):
     if "web_search_enabled" not in body.model_fields_set:
         updates["web_search_enabled"] = current.web_search_enabled
     values = body.model_copy(update=updates).model_dump()
-    if row is None:
-        row = Setting(key="conversation_preferences", value=values)
-        session.add(row)
-    else:
-        row.value = values
+    row.value = values
     session.commit()
     return values
 

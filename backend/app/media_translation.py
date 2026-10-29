@@ -12,8 +12,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
-from sqlalchemy import select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.artifacts import register_file
@@ -31,9 +30,10 @@ from app.media_translation_text import (
     digest,
     encode_fields,
 )
-from app.models import Artifact, ModelDefinition, ModelFile, Run, RunDependency, RuntimeInstance, Setting
+from app.models import Artifact, ModelDefinition, ModelFile, Run, RunDependency, RuntimeInstance
 from app.paths import safe_join
 from app.permissions import require
+from app.personal_settings import preference_row
 from app.runs import create_run, mark_failed, request_cancel, run_dict, transition
 from app.state import TERMINAL, RunStatus
 
@@ -45,7 +45,7 @@ DEFAULT = {"revision": 0, "enabled": False, "model": "", "target_language": "en"
 
 
 def preferences(session):
-    row = session.get(Setting, KEY)
+    row = preference_row(session, KEY)
     return {**DEFAULT, **(row.value if row else {})}
 
 
@@ -96,15 +96,7 @@ def get_preferences(session: DB):
 def save_preferences(body: PreferencesWrite, session: DB):
     if body.enabled:
         validate_model(session, body.model)
-    if session.get(Setting, KEY) is None:
-        try:
-            with session.begin_nested():
-                session.add(Setting(key=KEY, value=dict(DEFAULT)))
-                session.flush()
-        except IntegrityError:
-            pass
-    session.execute(update(Setting).where(Setting.key == KEY).values(value=Setting.value))
-    current = session.get(Setting, KEY, populate_existing=True)
+    current = preference_row(session, KEY, default=DEFAULT, lock=True)
     if current.value["revision"] != body.revision:
         raise HTTPException(409, "Generation settings changed; refresh before saving")
     current.value = {**body.model_dump(), "revision": body.revision + 1}

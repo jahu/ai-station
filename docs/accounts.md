@@ -2,9 +2,9 @@
 
 Implementation for [NR-11](plans/next-release-0.1.md) is in progress. The identity,
 credential, session and optional authenticator services below are internal only.
-They do not expose registration, change the current operator middleware or make
-the existing globally readable application safe for multiple users. Additional
-accounts must remain inaccessible until the complete ownership gate passes.
+The account API/profile is exercised on the real application in tests but is not
+registered in the shipped application yet. Additional accounts remain inaccessible
+until the complete ownership gate passes; a partial migration is not a release.
 
 ## Identity migration
 
@@ -117,6 +117,45 @@ These repository tests are not the HTTP privacy gate. The existing factory is
 deliberately unchanged until authentication, worker/session lifetime, per-owner
 credentials/settings, raw FTS mutations and the complete route inventory are
 integrated. Additional user accounts remain unavailable through the application.
+
+## HTTP and execution integration in development
+
+The account API provides local first-admin setup, username/password sign-in,
+per-device logout/revocation, password rotation, administrator account policies
+and reauthenticated credential/MFA reset, and authenticator enrollment/recovery.
+Durable per-identity and global attempt budgets commit before verification; a
+failed request cannot reset them, change casing or spoof a forwarded address to
+evade them. Private API responses disable HTTP caching. Successful account
+switching revokes the previous browser's device without revoking other devices.
+Legacy operator cookies can migrate without extending their original expiry;
+password-only compatibility endpoints are closed in the account profile.
+
+The real monolith tests exercise A/B isolation for Runs, event lists and SSE,
+Library files/Range/thumbnails/lineage, memory/FTS and personal preferences.
+Administrator requests normally use their own data. Explicit all-account
+inspection is restricted to read-only administrator requests, so it never
+silently broadens an ordinary conversation's memory context. Machine management
+and host-authenticated coding/GitHub operations require administrator authority.
+This is partial route coverage, not the complete inventory acceptance gate.
+
+Owner-bound Runs execute in a fresh scoped session, and secondary sessions inherit
+the owner through request/execution context. An administrator-owned task does not
+inherit the account's global inspection or configuration rights. Saved agent
+scheduling uses that definition's owner, and disabled accounts cannot launch.
+Changing a role or disabling an account pauses its agents, cancels queued work
+and requests cancellation of active work using only that owner's scoped graph in
+the same transaction. The worker performs native cancellation later; the account
+HTTP handler never signals host processes. Re-enabling does not resume paused work.
+
+GPU availability and total RAM reservations remain workstation-wide. Typed
+admission helpers expose physical GPU keys and aggregate RAM, not another
+account's Run IDs or prompts. Reservation records and release stay owner-scoped.
+
+The final cutover must remove the transitional unbound-session/ownerless-execution
+paths, integrate the remaining typed model/configuration/recovery and tool
+boundaries, complete the route matrix and deliver the account-aware browser UI.
+Do not deploy migration 0038 or enable the account profile on the workstation
+before those gates pass.
 
 ## Remaining enablement gate
 

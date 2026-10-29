@@ -35,7 +35,7 @@ from app.connectors import router as connector_router
 from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
 from app.data_inputs import router as data_inputs_router
-from app.db import migrate, session_factory, session_scope, utcnow
+from app.db import get_engine, migrate, session_factory, session_scope, utcnow
 from app.email_delivery import router as email_router
 from app.embeddings import router as embedding_router
 from app.events import event_dict, list_events
@@ -118,11 +118,35 @@ async def local_requests(request: Request, call_next):
             return JSONResponse({"detail": "Cross-site writes are not allowed"}, status_code=403)
     # SQLite may wait on another writer. Keep that wait off the event loop
     # so in-flight responses can finish and release their database sessions.
-    gated = await run_in_threadpool(require_operator_session, request)
+    accounts_active = getattr(request.app.state, "account_access_enabled", False)
+    if accounts_active:
+        from app.account_http import require_account_session
+
+        guard = require_account_session
+    else:
+        guard = require_operator_session
+    gated = await run_in_threadpool(guard, request)
     if gated is not None:
         return gated
-    response = await call_next(request)
-    await run_in_threadpool(refresh_operator_cookie, request, response)
+    if accounts_active:
+        from app.account_http import inspection_requested, refresh_account_cookie
+        from app.data_access import DataScope
+        from app.data_context import bind_data_scope
+
+        try:
+            inspect_all = inspection_requested(request)
+        except HTTPException as exc:
+            return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+        principal = request.state.account_principal
+        scope = (
+            DataScope(principal.user_id, inspect_all, administrator=principal.is_admin) if principal else None
+        )
+        with bind_data_scope(scope):
+            response = await call_next(request)
+        await run_in_threadpool(refresh_account_cookie, request, response)
+    else:
+        response = await call_next(request)
+        await run_in_threadpool(refresh_operator_cookie, request, response)
     # The entry document selects versioned bundles; caching it can retain an old UI after deployment.
     if request.url.path.startswith("/api/operator-auth") or request.url.path in {"/", "/index.html"}:
         response.headers["Cache-Control"] = "no-store"
@@ -168,8 +192,10 @@ def get_run(session: Session, run_id: UUID) -> Run:
 
 
 @app.get("/api/health")
-def health(session: DB):
-    session.execute(text("SELECT 1"))
+def health():
+    # Public readiness checks reveal no account rows or application history.
+    with get_engine().connect() as connection:
+        connection.execute(text("SELECT 1"))
     return {"status": "ok", "version": "0.1.0"}
 
 

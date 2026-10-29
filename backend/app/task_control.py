@@ -1,7 +1,7 @@
 """Task-wide Stop serialized with child publication in the existing database."""
 
 from fastapi import HTTPException
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from app.db import utcnow
 from app.events import append_event
@@ -10,7 +10,7 @@ from app.state import TERMINAL
 
 
 def lock_task(session, task):
-    session.execute(update(Task).where(Task.id == task.id).values(updated_at=Task.updated_at))
+    session.execute(select(Task.id).where(Task.id == task.id).with_for_update())
     session.refresh(task, ["metadata_json"])
 
 

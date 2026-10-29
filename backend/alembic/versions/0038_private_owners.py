@@ -1,5 +1,8 @@
 """Private root ownership without rebuilding populated SQLite parent tables."""
 
+import uuid
+from datetime import datetime, timezone
+
 import sqlalchemy as sa
 from alembic import op
 
@@ -64,6 +67,31 @@ def upgrade():
         connection.execute(
             sa.text("UPDATE email_deliveries SET connector_id=:connector WHERE id=:id"),
             {"connector": connector_id, "id": identity},
+        )
+    settings = sa.table("settings", sa.column("key", sa.String()), sa.column("value", sa.JSON()))
+    personal = sa.table(
+        "user_settings",
+        sa.column("id", sa.String()),
+        sa.column("user_id", sa.String()),
+        sa.column("key", sa.String()),
+        sa.column("value", sa.JSON()),
+        sa.column("updated_at", sa.DateTime()),
+    )
+    for key, value in connection.execute(
+        sa.select(settings.c.key, settings.c.value).where(
+            settings.c.key.in_(
+                ["conversation_preferences", "media_prompt_translation", "image_model_defaults"]
+            )
+        )
+    ):
+        connection.execute(
+            personal.insert().values(
+                id=str(uuid.uuid4()),
+                user_id=owner,
+                key=key,
+                value=value,
+                updated_at=datetime.now(timezone.utc).replace(tzinfo=None),
+            )
         )
 
 

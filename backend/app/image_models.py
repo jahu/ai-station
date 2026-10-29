@@ -6,12 +6,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import session_scope
-from app.models import ModelDefinition, ModelFile, Setting
+from app.models import ModelDefinition, ModelFile
+from app.personal_settings import preference_row
 
 router = APIRouter(prefix="/images", tags=["images"])
 DB = Annotated[Session, Depends(session_scope)]
@@ -36,7 +36,7 @@ DEFAULTS = {"revision": 0, "choices": {mode: "realesrgan" if mode == "upscale" e
 
 
 def defaults(session):
-    row = session.get(Setting, KEY)
+    row = preference_row(session, KEY)
     if row is None:
         return {"revision": 0, "choices": dict(DEFAULTS["choices"])}
     return {"revision": row.value["revision"], "choices": {**DEFAULTS["choices"], **row.value["choices"]}}
@@ -176,17 +176,7 @@ class DefaultsWrite(BaseModel):
 @router.put("/defaults")
 def change_default(body: DefaultsWrite, session: DB):
     frozen_model(session, body.choice, body.mode)
-    row = session.get(Setting, KEY)
-    if row is None:
-        try:
-            with session.begin_nested():
-                session.add(Setting(key=KEY, value=DEFAULTS))
-                session.flush()
-        except IntegrityError:
-            pass
-    # Acquire the same SQLite writer serialization used by other operator policy.
-    session.execute(update(Setting).where(Setting.key == KEY).values(value=Setting.value))
-    row = session.get(Setting, KEY, populate_existing=True)
+    row = preference_row(session, KEY, default=DEFAULTS, lock=True)
     current = defaults(session)
     if current["revision"] != body.revision:
         raise HTTPException(409, "Image defaults changed; refresh before saving")

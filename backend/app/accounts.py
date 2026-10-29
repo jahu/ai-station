@@ -334,9 +334,38 @@ def update_user(session: Session, actor: Principal, user_id: str, *, enabled: bo
     # Revocation on either role change prevents stale privileged principals.
     if user.enabled != enabled or user.is_admin != is_admin:
         revoke_sessions(session, user.id)
+        stop_account_work(session, user.id)
     user.enabled, user.is_admin = enabled, is_admin
     _audit(session, "account.updated", user, actor)
     return user
+
+
+def stop_account_work(session: Session, user_id: str) -> None:
+    """Revoke queued/active authority without signaling any host process here.
+
+    Share the transaction through a savepoint, but use the subject's data scope
+    so workflow cancellation cannot traverse another account's private graph.
+    Native cancellation remains the worker's owned-process operation.
+    """
+    from app.data_access import DataScope, ScopedSession
+    from app.data_context import bind_data_scope
+    from app.models import Agent, Run
+    from app.runs import request_cancel
+    from app.state import TERMINAL
+
+    session.flush()
+    scope = DataScope(user_id, execution=True)
+    with ScopedSession(
+        bind=session.connection(), scope=scope, join_transaction_mode="create_savepoint"
+    ) as owned:
+        with bind_data_scope(scope):
+            for agent in owned.scalars(select(Agent).where(Agent.enabled.is_(True))):
+                agent.enabled, agent.next_run_at = False, None
+            for run in list(owned.scalars(select(Run).where(Run.status.not_in(TERMINAL)))):
+                if run.status not in TERMINAL and run.status != "cancel_requested":
+                    request_cancel(owned, run)
+            owned.commit()
+    session.expire_all()
 
 
 def change_password(session: Session, actor: Principal, current_password: str, new_password: str) -> None:
@@ -346,6 +375,11 @@ def change_password(session: Session, actor: Principal, current_password: str, n
     record = make_password_record(new_password)
     user.password_record, user.password_changed_at = record, utcnow()
     revoke_sessions(session, user.id)
+    _retire_legacy_operator(session, user)
+    _audit(session, "account.password_changed", user, actor)
+
+
+def _retire_legacy_operator(session: Session, user: User) -> None:
     if user.legacy_operator:
         # A password rotation must not leave the former operator password or
         # cookie as an alternate path through compatibility endpoints.
@@ -359,7 +393,44 @@ def change_password(session: Session, actor: Principal, current_password: str, n
         ):
             session.delete(row)
         user.legacy_operator = False
-    _audit(session, "account.password_changed", user, actor)
+
+
+def reset_user_credentials(
+    session: Session,
+    actor: Principal,
+    user_id: str,
+    *,
+    admin_password: str,
+    new_password: str,
+    second_factor: str | None = None,
+    reset_mfa: bool = False,
+) -> User:
+    administrator = _actor(session, actor, admin=True)
+    if not password_matches(administrator.password_record, admin_password):
+        raise AccountError(403, "Current administrator password is required")
+    if administrator.totp_enabled_at is not None:
+        from app.account_mfa import verify_second_factor
+
+        if second_factor is None:
+            raise AccountError(403, "Additional verification is required")
+        # Serialize replay/recovery consumption with other account operations.
+        administrator = session.scalar(select(User).where(User.id == administrator.id).with_for_update())
+        verify_second_factor(session, administrator, second_factor)
+    user = session.scalar(select(User).where(User.id == user_id).with_for_update())
+    if user is None:
+        raise AccountError(404, "Account not found")
+    if user.bootstrap_pending:
+        raise AccountError(409, "Complete local administrator setup first")
+    user.password_record = make_password_record(new_password)
+    user.password_changed_at = utcnow()
+    revoke_sessions(session, user.id)
+    _retire_legacy_operator(session, user)
+    if reset_mfa:
+        user.totp_secret_ref, user.totp_enabled_at, user.totp_last_step = None, None, None
+        user.recovery_code_hashes = []
+        _audit(session, "account.mfa_reset", user, actor)
+    _audit(session, "account.password_reset", user, actor)
+    return user
 
 
 def list_devices(session: Session, actor: Principal) -> list[dict]:

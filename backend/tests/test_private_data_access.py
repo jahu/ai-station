@@ -159,7 +159,7 @@ def test_admin_inspection_does_not_authorize_new_cross_owner_execution(users):
     with scoped(admin, inspect_all=True) as current:
         assert current.get(Task, second[1]) is not None
         current.add(Run(task_id=second[1]))
-        with pytest.raises(DataAccessError, match="unavailable"):
+        with pytest.raises(DataAccessError, match="read-only"):
             current.flush()
 
 
@@ -236,7 +236,7 @@ def test_accounts_and_machine_configuration_are_not_general_private_data(users):
     with scoped(admin, inspect_all=True) as current:
         # Account administration must use the reauthenticated account service.
         current.add(User(username="Bypass", normalized_username="bypass"))
-        with pytest.raises(DataAccessError, match="account or machine"):
+        with pytest.raises(DataAccessError, match="read-only"):
             current.flush()
 
 

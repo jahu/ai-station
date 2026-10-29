@@ -98,10 +98,35 @@ def sqlite_busy(error) -> bool:
     return isinstance(code, int) and (code & 255) in {sqlite3.SQLITE_BUSY, sqlite3.SQLITE_LOCKED}
 
 
-def session_factory() -> sessionmaker[Session]:
+def control_session_factory() -> sessionmaker[Session]:
+    """Trusted authentication/configuration/queue coordination, never user data lookup."""
     get_engine()
     assert _session_factory is not None
     return _session_factory
+
+
+def _context_session() -> Session:
+    from app.data_context import UNBOUND, current_data_scope
+
+    scope = current_data_scope()
+    if scope is UNBOUND:
+        # Existing worker/startup code remains in place during the staged
+        # cutover. Bound requests, including missing principals, never use it.
+        return control_session_factory()()
+    from app.data_access import ScopedSession
+
+    return ScopedSession(bind=get_engine(), scope=scope, expire_on_commit=False)
+
+
+def session_factory():
+    # Resolve at invocation, so factories captured before a task starts still
+    # inherit its owner. asyncio.to_thread propagates the owning context too.
+    return _context_session
+
+
+def control_session_scope() -> Iterator[Session]:
+    with control_session_factory()() as session:
+        yield session
 
 
 def session_scope() -> Iterator[Session]:

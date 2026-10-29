@@ -43,6 +43,57 @@ def tick(
         session.commit()
         return None
     session.commit()
+    if run.owner_id is not None:
+        from app.data_access import DataAccessError, data_session_for_run
+        from app.data_context import bind_data_scope
+
+        try:
+            with data_session_for_run(run.id, run.owner_id) as owned:
+                with bind_data_scope(owned.scope):
+                    _execute_claimed(owned, owned.get(type(run), run.id), worker_id, executors)
+        except DataAccessError as exc:
+            session.rollback()
+            mark_failed(session, run, "AccountUnavailable", str(exc))
+            release_run_locks(session, run.id)
+            session.commit()
+        finally:
+            session.expire_all()
+        return run.id
+    # Transitional legacy service path. The final account cutover must reject
+    # ownerless Runs; no additional-account API is enabled in the live app yet.
+    return _execute_claimed(session, run, worker_id, executors)
+
+
+def _execute_claimed(session, run, worker_id, executors):
+    if run.owner_id is not None:
+        from app.models import User
+
+        user = session.get(User, run.owner_id)
+        host_account_executors = {
+            "cursor_proposal",
+            "codex_proposal",
+            "github_publication",
+            "publication_reconcile",
+            "github_read",
+            "sqlite_backup",
+            "private_access",
+            "runtime_observation",
+            "station_snapshot",
+        }
+        if (
+            user is None
+            or not user.enabled
+            or run.executor_type in host_account_executors
+            and not user.is_admin
+        ):
+            mark_failed(
+                session,
+                run,
+                "AccountPermissionDenied",
+                "This operation requires an enabled authorized account",
+            )
+            session.commit()
+            return run.id
     failures = failed_prerequisites(session, run)
     if failures:
         mark_failed(

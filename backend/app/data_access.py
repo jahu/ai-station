@@ -22,6 +22,13 @@ class DataAccessError(PermissionError):
 class DataScope:
     user_id: str
     inspect_all: bool = False
+    administrator: bool = False
+    read_only: bool = False
+    execution: bool = False
+
+    def __post_init__(self):
+        if self.inspect_all:
+            object.__setattr__(self, "read_only", True)
 
 
 ROOTS = (
@@ -37,11 +44,12 @@ ROOTS = (
     m.ChatProvider,
 )
 SHARED = (m.ModelFile, m.ModelDefinition, m.Runtime, m.RuntimeInstance, m.TelemetrySample)
-ADMIN = (m.Setting, m.StationNode, m.WorkerRow, m.ResourceLock)
+ADMIN = (m.Setting, m.StationNode, m.WorkerRow)
 ACCOUNTS = (m.User, m.UserSession, m.UserSetting, m.AccountEvent)
 
 # Each inherited record is visible only through all of its private parents.
 PARENTS = {
+    m.ResourceLock: (("run_id", m.Run),),
     m.RunDependency: (("run_id", m.Run), ("prerequisite_id", m.Run)),
     m.RunEvent: (("run_id", m.Run),),
     m.Message: (("conversation_id", m.Conversation), ("run_id", m.Run)),
@@ -139,11 +147,11 @@ class ScopedSession(Session):
 def data_session_for(principal, *, inspect_all: bool = False) -> ScopedSession:
     """HTTP service factory: recheck the device/account before granting a scope."""
     from app.accounts import _actor
-    from app.db import get_engine, session_factory
+    from app.db import control_session_factory, get_engine
 
-    with session_factory()() as auth:
+    with control_session_factory()() as auth:
         user = _actor(auth, principal, admin=inspect_all)
-        scope = DataScope(user.id, inspect_all)
+        scope = DataScope(user.id, inspect_all, administrator=user.is_admin, read_only=inspect_all)
     return ScopedSession(bind=get_engine(), scope=scope, expire_on_commit=False)
 
 
@@ -153,16 +161,16 @@ def data_session_for_run(run_id: str, expected_owner: str) -> ScopedSession:
     This is not an HTTP lookup/impersonation operation. Administrative identity
     never grants an executor the ability to inspect every account's context.
     """
-    from app.db import get_engine, session_factory
+    from app.db import control_session_factory, get_engine
 
-    with session_factory()() as queue:
+    with control_session_factory()() as queue:
         run = queue.get(m.Run, run_id)
         if run is None or run.owner_id is None or run.owner_id != expected_owner:
             raise DataAccessError("The execution owner does not match the Run")
         user = queue.get(m.User, run.owner_id)
         if user is None or not user.enabled or user.bootstrap_pending:
             raise DataAccessError("The execution account is disabled")
-        scope = DataScope(user.id)
+        scope = DataScope(user.id, execution=True)
     return ScopedSession(bind=get_engine(), scope=scope, expire_on_commit=False)
 
 
@@ -175,7 +183,7 @@ def _filter(execute):
     for mapper in execute.all_mappers:
         if mapper.class_ not in known:
             raise DataAccessError("No data ownership policy exists for this record")
-        if mapper.class_ in ADMIN and not scope.inspect_all:
+        if mapper.class_ in ADMIN and not scope.administrator:
             raise DataAccessError("Machine administration requires administrator access")
     options = [
         with_loader_criteria(model, _criterion(model, scope), include_aliases=True)
@@ -241,6 +249,10 @@ def _references(session: ScopedSession, row, owner: str) -> None:
 @event.listens_for(ScopedSession, "before_flush")
 def _check_changes(session: ScopedSession, _context, _instances):
     scope = session.scope
+    if scope.read_only and (
+        session.new or session.deleted or any(session.is_modified(row) for row in session.dirty)
+    ):
+        raise DataAccessError("Administrative inspection is read-only")
     for row in set(session.new) | set(session.dirty) | set(session.deleted):
         if isinstance(row, m.Owned):
             state = inspect(row)
@@ -266,6 +278,25 @@ def _check_changes(session: ScopedSession, _context, _instances):
             owner = _owner(session, row)
             if owner != scope.user_id and (row in session.new or not scope.inspect_all):
                 raise DataAccessError("Private record is unavailable")
+        elif isinstance(row, m.UserSetting):
+            from app.personal_settings import KEYS
+
+            state = inspect(row)
+            if row.user_id != scope.user_id or row.key not in KEYS:
+                raise DataAccessError("Personal setting is unavailable")
+            if row not in session.new and (
+                state.attrs.user_id.history.has_changes() or state.attrs.key.history.has_changes()
+            ):
+                raise DataAccessError("Personal setting ownership is immutable")
+        elif (
+            type(row) in ADMIN
+            and scope.administrator
+            or type(row) in SHARED
+            and (scope.administrator or scope.execution)
+        ):
+            # The authenticated operator may edit typed machine configuration.
+            # Execution scopes never carry this administrative capability.
+            continue
         else:
             # Authentication/admin services have their own explicit gates;
             # ordinary task execution cannot mutate identities or machine state.
