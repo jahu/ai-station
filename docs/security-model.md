@@ -973,3 +973,11 @@ manage_agents and scoped filesystem_read and executes no future tools. Review an
 explicit activation determine future permissions. The child drafting model must
 match the originating conversation model; report Auto uses that frozen local
 selection. Source snapshot/default-family compatibility is preserved.
+
+[Operator startup recovery](operations.md#recovering-an-api-port-after-network-startup)
+uses the local Docker Unix endpoint from a native trusted CLI, never an API or
+agent tool. Exact project/checkout labels, user, hardened mounts and declared
+private binds gate an API-only recreation pinned to its existing image. Active
+workers, native processes, other projects and deliberately stopped services are
+not taken over. Optional user-service installation cannot replace an unrelated
+unit.
