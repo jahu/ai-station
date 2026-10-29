@@ -186,6 +186,23 @@ def list_purges(session: DB):
     ]
 
 
+@router.post("/purges/{run_id}/dismiss")
+def dismiss_purge_progress(run_id: UUID, session: DB):
+    """Hide a terminal progress card; retain the deletion's complete history."""
+    run = session.scalar(
+        select(Run).where(Run.id == str(run_id), Run.executor_type == "artifact_purge").with_for_update()
+    )
+    if run is None:
+        raise HTTPException(404, "Deletion run not found")
+    if run.status not in TERMINAL:
+        raise HTTPException(409, "Finish or stop the deletion before dismissing its progress")
+    if not run.metadata_json.get("purge_progress_dismissed_at"):
+        run.metadata_json = {**run.metadata_json, "purge_progress_dismissed_at": iso(utcnow())}
+        append_event(session, run.id, "library.purge_progress.dismissed")
+        session.commit()
+    return run_public(session, run)
+
+
 def _unlink_owned(relative: str, *, thumbnail: bool, expected_hash: str = "", expected_size=None):
     """Pin every directory with NOFOLLOW; never resolve a symlink into another tree."""
     parts = validate_relative(relative).split("/")

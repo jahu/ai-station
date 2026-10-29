@@ -16,7 +16,10 @@ type Outcome = {
 };
 type PurgeRun = Run & {
   parameters: Run["parameters"] & { items: Item[]; scope: string };
-  metadata: Run["metadata"] & { purge_outcomes?: Record<string, Outcome> };
+  metadata: Run["metadata"] & {
+    purge_outcomes?: Record<string, Outcome>;
+    purge_progress_dismissed_at?: string;
+  };
 };
 const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
 const keys = [
@@ -263,19 +266,39 @@ export function PurgeActivity({ artifactId }: { artifactId?: string } = {}) {
     mutationFn: (id: string) => api(`/runs/${id}/cancel`, { method: "POST" }),
     onSuccess: () => cache.invalidateQueries({ queryKey: ["library-purges"] }),
   });
+  const dismiss = useMutation({
+    mutationFn: (id: string) =>
+      api<PurgeRun>(`/library/purges/${id}/dismiss`, { method: "POST" }),
+    onMutate: (id) => setDismissed((old) => [...old, id]),
+    onError: (_, id) =>
+      setDismissed((old) => old.filter((item) => item !== id)),
+    onSuccess: (updated) => {
+      cache.setQueryData<PurgeRun[]>(["library-purges"], (old) =>
+        old?.map((item) => (item.id === updated.id ? updated : item)),
+      );
+    },
+    onSettled: () => cache.invalidateQueries({ queryKey: ["library-purges"] }),
+  });
   return (
     <>
-      <ErrorNotice error={query.error ?? cancel.error} />
+      <ErrorNotice error={query.error ?? cancel.error ?? dismiss.error} />
       {rows
         .filter(
           (run) =>
-            !dismissed.includes(run.id) &&
             !(
               run.status === "canceled" &&
               !Object.keys(run.metadata?.purge_outcomes ?? {}).length
             ),
         )
         .slice(0, 3)
+        // Closing a card must not immediately fill its slot with an older,
+        // indistinguishable completion. Keep the same recent window on refresh.
+        .filter(
+          (run) =>
+            !dismissed.includes(run.id) &&
+            (!terminal.has(run.status) ||
+              !run.metadata?.purge_progress_dismissed_at),
+        )
         .map((run) => {
           const outcomes = run.metadata?.purge_outcomes ?? {};
           const deleted = Object.values(outcomes).filter(
@@ -318,7 +341,7 @@ export function PurgeActivity({ artifactId }: { artifactId?: string } = {}) {
                   <Button
                     variant="ghost"
                     aria-label="Dismiss deletion progress"
-                    onClick={() => setDismissed((old) => [...old, run.id])}
+                    onClick={() => dismiss.mutate(run.id)}
                   >
                     <X size={16} />
                   </Button>
