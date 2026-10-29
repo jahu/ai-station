@@ -28,6 +28,96 @@ function mount(entry = "/avatars") {
   );
   return client;
 }
+
+function wholeRuntime(checking = false) {
+  const writes: Record<string, unknown>[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, options?: RequestInit) => {
+      const input = {
+        id: path.endsWith("portrait") ? "portrait" : "speech",
+        type: path.endsWith("portrait") ? "image" : "audio",
+        mime_type: path.endsWith("portrait") ? "image/png" : "audio/wav",
+        original_filename: "Input",
+      };
+      const job = {
+        task_id: "whole-task",
+        revision: 1,
+        kind: "avatar",
+        mode: "whole_recording",
+        status: "queued",
+        active_run_ids: ["whole-run"],
+        total_segments: 0,
+        completed_segments: 0,
+        total_stages: 1,
+        completed_stages: 0,
+        final_artifact_id: null,
+        duration_seconds: 40.08,
+        resume_allowed: false,
+        error_message: "",
+      };
+      if (options?.method === "POST")
+        writes.push(JSON.parse(String(options.body)));
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("whole-capabilities")
+            ? {
+                available: !checking,
+                backend: "sonic",
+                readiness: checking ? "checking" : "ready",
+              }
+            : path.endsWith("capabilities")
+              ? { available: true }
+              : path.endsWith("hardware")
+                ? { gpus: [] }
+                : path.includes("/media/jobs")
+                  ? job
+                  : input,
+      };
+    }),
+  );
+  return writes;
+}
+
+it("defaults new full recordings to stable detail and sends only applicable controls", async () => {
+  const writes = wholeRuntime();
+  mount("/avatars?image=portrait&audio=speech");
+  await screen.findByRole("region", { name: "High-detail avatar quality" });
+  expect(screen.queryByLabelText("Scene and motion")).toBeNull();
+  expect(screen.queryByLabelText("Quality 384")).toBeNull();
+  const generate = screen.getByRole("button", {
+    name: "Generate avatar video",
+  });
+  await vi.waitFor(() => expect(generate.hasAttribute("disabled")).toBe(false));
+  fireEvent.click(generate);
+  await vi.waitFor(() => expect(writes.length).toBe(1));
+  expect(writes[0]).toEqual(
+    expect.objectContaining({
+      image_artifact_id: "portrait",
+      audio_artifact_id: "speech",
+      generation_profile: "sonic_whole_768_v1",
+      seed: 43,
+      gpu: "auto",
+    }),
+  );
+  expect(writes[0]).not.toHaveProperty("steps");
+  expect(writes[0]).not.toHaveProperty("size");
+  expect(writes[0]).not.toHaveProperty("memory_profile");
+});
+
+it("keeps high-detail submission disabled during verification instead of switching to Echo", async () => {
+  const writes = wholeRuntime(true);
+  mount("/avatars?image=portrait&audio=speech");
+  await screen.findByText("Checking the installed model files…");
+  expect(
+    screen
+      .getByRole("button", { name: "Generate avatar video" })
+      .hasAttribute("disabled"),
+  ).toBe(true);
+  expect(screen.queryByLabelText("Quality 384")).toBeNull();
+  expect(writes).toHaveLength(0);
+});
 it("selects existing inputs, queues video and keeps the live result beside the form", async () => {
   const artifacts = [
     {

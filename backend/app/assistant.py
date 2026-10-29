@@ -1240,19 +1240,29 @@ class AssistantExecutor:
         elif plan.action == "avatar.animate":
             from app.avatars import capabilities as avatar_capabilities
             from app.media_jobs import FullAvatarRequest, publish_avatar
+            from app.whole_avatars import PROFILE as whole_profile
+            from app.whole_avatars import capabilities as whole_capabilities
 
             if len(images) != 1 or not params.get("audio_artifact_id"):
                 message.content = "Attach exactly one portrait and one speech WAV to animate an avatar."
             else:
                 try:
-                    avatar_profile = avatar_capabilities().get("recommended_memory_profile", "default")
+                    whole = whole_capabilities()
+                    if whole.get("available"):
+                        avatar_profile = "default"
+                        quality = {"generation_profile": whole_profile}
+                    elif whole.get("readiness") in {"checking", "unavailable"}:
+                        raise HTTPException(409, whole.get("reason") or "Inspect the local avatar setup")
+                    else:
+                        avatar_profile = avatar_capabilities().get("recommended_memory_profile", "default")
+                        quality = {"memory_profile": avatar_profile}
                     request = FullAvatarRequest(
                         client_request_id=UUID(run.id),
                         image_artifact_id=images[0],
                         audio_artifact_id=params["audio_artifact_id"],
                         prompt=params["content"][:2000],
                         speech_text=params.get("speech_text") or avatar_speech_text(params["content"]),
-                        memory_profile=avatar_profile,
+                        **quality,
                     )
                     publish_avatar(session, request, task=run.task, parent_run_id=run.id)
                 except (ValidationError, HTTPException) as exc:

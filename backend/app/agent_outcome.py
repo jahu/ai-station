@@ -107,13 +107,9 @@ def final_runs(root, runs):
     tools = definition.get("tools", [])
     media = definition.get("media")
     if media:
-        expected = {
-            "image": "photo_pipe",
-            "music": "ace_step_music",
-            "speech": "chatterbox",
-            "video": "media_compose",
-            "avatar": "media_compose",
-        }.get(media.get("kind"))
+        from app.media_results import final_media_executor
+
+        expected = final_media_executor(media)
         return [
             run
             for run in runs

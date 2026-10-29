@@ -14,7 +14,7 @@ from pathlib import Path
 from uuid import UUID
 
 from ai_station_runner.security import resolve_child
-from ai_station_runner.whole_avatar_timing import WholeAvatarTiming, portrait_canvas
+from ai_station_runner.whole_avatar_timing import WholeAvatarTiming, portrait_canvas, whole_portrait_canvas
 
 PROFILE = "sonic_whole_768_v1"
 SOURCE_REVISION = "c1bd2d133ecc72f1a5abd990f1de101efcc3cfdb"
@@ -41,6 +41,8 @@ IMPLEMENTATION_FILES = (
     "sonic_guidance.py",
     "sonic_inference.py",
     "sonic_jobs.py",
+    "sonic_runtime.py",
+    "sonic_progress.py",
     "whole_avatar_timing.py",
     "memory_scope.py",
     "security.py",
@@ -201,7 +203,11 @@ def checked_media(root, value):
     ):
         raise ValueError("Choose a bounded observed portrait or canonical PCM recording")
     path = direct_file(root, value["relative_path"])
-    if path.stat().st_size != value["size_bytes"] or digest(path) != value["sha256"]:
+    if (
+        path.stat().st_nlink != 1
+        or path.stat().st_size != value["size_bytes"]
+        or digest(path) != value["sha256"]
+    ):
         raise ValueError("Avatar source bytes changed")
     return path
 
@@ -217,7 +223,7 @@ def inspect_inputs(root, portrait, audio):
         portrait_canvas(*image.size, max_side=768)
         image.verify()
     with Image.open(portrait_path) as image:
-        width, height = portrait_canvas(*ImageOps.exif_transpose(image).size, max_side=768)
+        width, height = whole_portrait_canvas(*ImageOps.exif_transpose(image).size)
     with wave.open(str(audio_path), "rb") as source:
         samples, rate, channels, sample_width = (
             source.getnframes(),

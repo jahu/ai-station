@@ -1,7 +1,31 @@
 from fractions import Fraction
 
 import pytest
-from ai_station_runner.whole_avatar_timing import WholeAvatarTiming, portrait_canvas
+from ai_station_runner.whole_avatar_timing import WholeAvatarTiming, portrait_canvas, whole_portrait_canvas
+
+
+@pytest.mark.parametrize(
+    "size,expected",
+    [
+        ((512, 768), (512, 768)),
+        ((768, 512), (768, 512)),
+        ((512, 512), (576, 576)),
+        ((768, 1024), (512, 640)),
+        ((1024, 768), (640, 512)),
+        ((32, 128), (192, 768)),
+    ],
+)
+def test_whole_canvas_fits_common_source_aspects_without_exceeding_attention_budget(size, expected):
+    canvas = whole_portrait_canvas(*size)
+    assert canvas == expected
+    assert canvas[0] * canvas[1] <= 512 * 768
+    assert all(192 <= dimension <= 768 and dimension % 64 == 0 for dimension in canvas)
+
+
+@pytest.mark.parametrize("size", [(31, 128), (32, 129), (0, 512), (True, 512), (512.0, 768)])
+def test_whole_canvas_rejects_unsafe_source_geometry(size):
+    with pytest.raises(ValueError):
+        whole_portrait_canvas(*size)
 
 
 @pytest.mark.parametrize(

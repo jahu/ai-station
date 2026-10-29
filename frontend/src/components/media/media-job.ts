@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { api, type ResourceWait } from "../../api";
 import type { TranslationOptions } from "./PromptTranslation";
+import type { AvatarGenerationProfile } from "./AvatarWholeProfile";
 
 export type MediaRequest = {
+  generation_profile?: AvatarGenerationProfile;
   translation?: TranslationOptions;
   image_artifact_id?: string | null;
   audio_artifact_id?: string;
@@ -21,6 +23,15 @@ export type MediaRequest = {
   scenes?: { prompt: string; duration_seconds: number }[] | null;
 };
 export type MediaJob = {
+  completed_stages?: number;
+  total_stages?: number;
+  whole_run_id?: string | null;
+  native_progress?: {
+    phase: "preparing" | "animating" | "finishing";
+    completed_windows: number;
+    total_windows: number;
+  } | null;
+  result_geometry?: { width: number; height: number; fps: number } | null;
   translation_consumer_run_ids?: string[];
   prompt_preparation_status?: "translating" | "review";
   resource_wait?: ResourceWait | null;

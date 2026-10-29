@@ -65,3 +65,19 @@ def portrait_canvas(width, height, *, max_side):
         return ((side * max_side + longest * 64 - 1) // (longest * 64)) * 64
 
     return aligned(width), aligned(height)
+
+
+def whole_portrait_canvas(width, height):
+    """Fit every allowed source aspect inside the frozen pixel budget.
+
+    Keep the measured 512×768 portrait unchanged. Other aspect ratios use a
+    smaller aligned canvas when needed, with uniform fit/pad during preprocessing.
+    A square source must not accidentally allocate a 768×768 attention window.
+    """
+    portrait_canvas(width, height, max_side=768)  # Validate source bounds first.
+    longest = max(width, height)
+    for bound in range(768, 191, -64):
+        canvas = tuple(((side * bound + longest * 64 - 1) // (longest * 64)) * 64 for side in (width, height))
+        if canvas[0] * canvas[1] <= 512 * 768:
+            return canvas
+    raise ValueError("Portrait does not fit the bounded whole-recording canvas")

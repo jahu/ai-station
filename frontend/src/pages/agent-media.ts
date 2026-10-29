@@ -1,4 +1,8 @@
 import type { MusicScopeOptions } from "./music-scope";
+import {
+  WHOLE_AVATAR_PROFILE,
+  type AvatarGenerationProfile,
+} from "../components/media/AvatarWholeProfile";
 
 export type ImageMediaRequest = {
   mode: "t2i" | "img2img" | "recompose" | "upscale";
@@ -31,6 +35,7 @@ export type VideoMediaRequest = {
   gpu?: string;
 };
 export type AvatarMediaRequest = {
+  generation_profile?: AvatarGenerationProfile;
   memory_profile?: "default" | "bounded_11g";
   image_artifact_id: string | null;
   audio_artifact_id: string | null;
@@ -79,6 +84,7 @@ export type AgentMediaScope =
 export function newAgentMedia(
   kind: AgentMediaScope["kind"],
   goal: string,
+  wholeAvatar = false,
 ): AgentMediaScope {
   if (kind === "avatar")
     return {
@@ -89,8 +95,9 @@ export function newAgentMedia(
         audio_artifact_id: null,
         speech_text: goal.slice(0, 1000),
         prompt: "A person speaking naturally, static camera.",
-        size: 384,
-        steps: 8,
+        ...(wholeAvatar
+          ? { generation_profile: WHOLE_AVATAR_PROFILE }
+          : { size: 384, steps: 8 }),
         seed: 43,
         gpu: "auto",
       },
@@ -151,6 +158,16 @@ export function newAgentMedia(
       };
 }
 
+export function stableAvatarRequest(
+  value: AvatarMediaRequest,
+): AvatarMediaRequest {
+  const request = { ...value, generation_profile: WHOLE_AVATAR_PROFILE };
+  delete request.size;
+  delete request.steps;
+  delete request.memory_profile;
+  return request;
+}
+
 export function fixedAgentMedia(agent: {
   tools?: string[];
   media?: AgentMediaScope | null;
@@ -169,6 +186,19 @@ export function agentMediaIssue(
   if (!scope) return "Choose the output and save its creative settings.";
   if (scope.kind === "avatar") {
     const p = scope.request;
+    if (
+      p.generation_profile &&
+      (p.size !== undefined ||
+        p.steps !== undefined ||
+        p.memory_profile === "bounded_11g")
+    )
+      return "Use the stable-detail setup without legacy resolution or step controls.";
+    if (
+      p.generation_profile &&
+      p.speech_text === null &&
+      scope.description_source === "goal"
+    )
+      return "Use fixed recording mode, or type words for a fresh spoken briefing.";
     if (
       p.memory_profile === "bounded_11g" &&
       ((p.size ?? 384) !== 384 || (p.steps ?? 8) < 8)

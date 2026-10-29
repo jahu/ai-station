@@ -1,6 +1,7 @@
 """No inference: qualify observations, complete timing and source boundaries."""
 
 import json
+import os
 import wave
 from uuid import uuid4
 
@@ -71,6 +72,7 @@ def test_whole_recording_retains_non_integral_tail_and_native_portrait(inputs):
         "absolute",
         "traversal",
         "symlink",
+        "hardlink",
         "noncanonical",
         "backslash",
         "outside-artifacts",
@@ -96,6 +98,8 @@ def test_media_identity_cannot_follow_changed_bytes_or_paths(inputs, change):
         target = root / "artifacts/link.png"
         target.symlink_to(portrait)
         value["relative_path"] = "artifacts/link.png"
+    elif change == "hardlink":
+        os.link(portrait, root / "artifacts/alias.png")
     elif change == "noncanonical":
         value["relative_path"] = "artifacts//portrait.png"
     elif change == "backslash":

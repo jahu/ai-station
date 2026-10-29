@@ -1,7 +1,7 @@
-"""Typed internal qualification launcher, using the existing ProcessManager.
+"""Typed configured whole-recording launcher using the owned ProcessManager.
 
-No HTTP route or operational capability is added until the whole application
-workflow, recovery and full-resolution long recording have been qualified.
+The public native adapter stays disabled unless explicitly configured. Real-GPU
+qualification is a separate opt-in entry through this same launch contract.
 """
 
 import json
@@ -54,6 +54,11 @@ def start_qualification(manager, body, *, python, runtime, models, hardware):
     """Configuration paths are trusted internal arguments, never API fields."""
     if os.environ.get("AI_STATION_REAL_GPU_TESTS") != "1":
         raise ValueError("Whole-recording qualification requires an explicit real-GPU opt-in")
+    return _start_owned(manager, body, python=python, runtime=runtime, models=models, hardware=hardware)
+
+
+def _start_owned(manager, body, *, python, runtime, models, hardware, verify_installation=True):
+    """Only qualification or the configured typed native adapter may call this."""
     checked_request(body.native_request(), check_deadline=False)
     python = Path(python).expanduser().absolute()  # Preserve the venv executable symlink.
     runtime, models = Path(runtime).expanduser().resolve(), Path(models).expanduser().resolve()
@@ -98,7 +103,7 @@ def start_qualification(manager, body, *, python, runtime, models, hardware):
     checked_request(body.native_request())
     # Hash before creating any work or starting an owned process. Native entry
     # independently rechecks source, weights, input bytes and frozen dimensions.
-    if installation_observation(runtime, models) != body.recipe["observation"]:
+    if verify_installation and installation_observation(runtime, models) != body.recipe["observation"]:
         raise ValueError("Sonic implementation or model observation changed")
     if inspect_inputs(root, body.portrait.model_dump(), body.audio.model_dump()) != body.observed_input:
         raise ValueError("Frozen portrait geometry or canonical PCM changed")
@@ -112,7 +117,11 @@ def start_qualification(manager, body, *, python, runtime, models, hardware):
     if len(set(selected)) != len(selected):
         raise ValueError("Allocated GPU identities must be distinct")
     output = resolve_child(root, f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.mp4")
-    if output != root / f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.mp4" or output.exists():
+    if (
+        output != root / f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.mp4"
+        or output.exists()
+        or output.with_suffix(".json").exists()
+    ):
         raise ValueError("Inspect existing or changed whole-recording output")
     prefix = scope_prefix(run_id, 18432)
     launch.mkdir(parents=True, mode=0o700)

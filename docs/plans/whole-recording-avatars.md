@@ -103,9 +103,9 @@ also imports it, so it remains Python 3.10 compatible.
 
 ## Native qualification implementation
 
-The owned `sonic_entry.py` and its internal typed launcher now implement the
-next qualification boundary. They are **not exposed by an HTTP route or advertised
-as an available executor**. `AI_STATION_REAL_GPU_TESTS=1` and a matching, actual
+At the native-foundation checkpoint, `sonic_entry.py` and its internal launcher
+were not exposed through HTTP or advertised as an application executor. The
+subsequent application integration is described below. `AI_STATION_REAL_GPU_TESTS=1` and a matching, actual
 18-GiB/zero-swap user scope are mandatory before model imports. The scope retains
 ProcessManager PID/group ownership and a four-hour maximum; a shorter absolute
 caller deadline is never extended. Existing memory profiles retain their exact
@@ -132,8 +132,8 @@ Full decoded frame timestamps, dimensions, audio duration and decoded speech
 sample count gate atomic publication. Partial output remains in the owned work
 directory. No `-shortest`, audio trim, static-face replacement or independently
 generated portrait windows are introduced. The production plan, resume, agent,
-resource admission and UI integration described above are still outstanding;
-this implementation alone does not close QA-020 or establish HD quality.
+resource admission and UI were outstanding at that checkpoint;
+the native implementation alone does not close QA-020 or establish HD quality.
 
 The actual new launcher/entry subsequently generated a **512×768, 50-frame,
 25-fps, two-second** recording with complete speech. Its independent final
@@ -152,8 +152,50 @@ or unbounded dispatches before creating any work. Three regression cases cover
 this distinction. The complete 4608-case normal collection passed on the native
 qualification head (4599 passed, nine ordinary opt-in skips); the final affected
 189-case family and global Python lint/format checks passed after the review fix.
-No inference implementation changed in that fix. The HTTP/application/agent/UI
-and high-resolution full-duration gates above remain outstanding.
+No inference implementation changed in that fix. The high-resolution
+full-duration acceptance gate remains outstanding.
+
+## Application integration in progress
+
+The private Runner now has a separate whole-recording readiness operation and a
+typed start operation. It uses explicitly configured native paths and the same
+owned launcher, not a second execution service. Readiness caches verified hashes
+against canonical file/inode/size/mtime/ctime observations. Initial hashes run in
+one bounded read-only background thread; readiness stays `checking` meanwhile.
+Public dispatch journals the owned process before expensive model hashing, so a
+lost HTTP reply cannot hide a later launch. The child independently rehashes all
+source/model/adapter bytes before imports and before publication. Missing weights, symlink imports, absent
+GPUs or unavailable user scopes report unavailable. Existing Echo readiness is
+unchanged. The new integration remains disabled by default and is not enabled in
+the deployed workstation configuration until application qualification.
+
+Version-two plans publish a single `sonic_whole` Run rather than invented
+segments or a redundant composition stage. Optional speech uses the existing
+speech executor and an exact owned-planner handoff. Full source hashes, recipe,
+seed, dimensions and deadline are frozen. Resume requires unchanged sources and
+recipe, confirms any uncertain preceding process is gone, preserves completed
+speech and creates a new Run identity. Agent retries retain the original recipe
+and time limit; recorded Sonic agents use fixed speech, while goal mode may write
+new speech before the same animation path. Only the verified final film produces
+the success notice.
+
+Canvas selection fits/pads without stretching or cropping, with a 768-pixel
+maximum side and 512×768 pixel-area ceiling. This produces 512×768 for the QA
+portrait, 576×576 for a square and 640×512 for a landscape 4:3 source. Automatic
+allocation uses up to two discovered GPUs, atomic reservations and observed
+free VRAM; idle owned LLMs may be reclaimed through normal admission. External
+services are never stopped. An actual 18-GiB/zero-swap owned scope bounds the
+process; manual jobs allow four hours and agents retain their reviewed deadline.
+
+The UI defaults new configured requests to Stable detail, shows portrait and
+recording first, and keeps seed/GPU advanced. Existing Echo histories and agents
+keep their old fields and execution path until explicitly changed. The assistant
+uses the configured whole engine for new avatar requests, with no silent fallback
+while it is checking/unavailable. A queued job shows resource wait; generation
+shows completed global windows; finishing remains distinct from success. The
+movie is adopted only after complete audio/video verification and matching
+source/recipe/output hashes. Normal API/worker/agent tests use fake inference and
+real small CPU media, not evidence of a full model-quality pass.
 
 ## UX and acceptance
 

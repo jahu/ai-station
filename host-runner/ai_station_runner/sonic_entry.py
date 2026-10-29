@@ -17,6 +17,7 @@ from pathlib import Path
 from ai_station_runner.sonic_contract import (
     checked_media,
     checked_request,
+    digest,
     inspect_inputs,
     installation_observation,
 )
@@ -108,6 +109,7 @@ def run(options):
         or output != root / f"artifacts/{run_id[:2]}/{run_id[2:4]}/{run_id}.mp4"
         or work.exists()
         or output.exists()
+        or output.with_suffix(".json").exists()
     ):
         raise ValueError("Inspect existing or changed whole-recording work before retrying")
     work.mkdir(parents=True, mode=0o700)
@@ -130,8 +132,10 @@ def run(options):
     sys.path.insert(0, str(runtime))
     from ai_station_runner.sonic_frames import encode_recording
     from ai_station_runner.sonic_inference import generate, load_interpolator
+    from ai_station_runner.sonic_progress import Progress
 
     timing = WholeAvatarTiming(observed["samples"], observed["sample_rate"])
+    progress = Progress(work, run_id, request["recipe"], timing.base_frames)
     frames = generate(
         runtime,
         models,
@@ -142,7 +146,9 @@ def run(options):
         observed["height"],
         request["seed"],
         request["device_count"],
+        progress=progress,
     )
+    progress.finishing()
     print("avatar.finishing: interpolating the complete recording", flush=True)
     silent, partial = work / "silent.mp4", work / "complete.mp4"
     import torch
@@ -186,10 +192,29 @@ def run(options):
         raise ValueError("Sonic implementation or model observation changed during generation")
     if time.time() >= request["deadline_at"]:
         raise ValueError("Whole-recording deadline expired before publication")
+    report = {
+        "version": 1,
+        "verified": True,
+        "run_id": run_id,
+        "backend": "sonic",
+        "recipe": request["recipe"],
+        "observed_input": observed,
+        "input_sha256": {key: request[key]["sha256"] for key in ("portrait", "audio")},
+        "video_sha256": digest(partial),
+    }
     # Recheck canonical output boundaries immediately before atomic publication.
     if output != resolve_child(root, output.relative_to(root).as_posix()) or output.exists():
         raise ValueError("Avatar output boundary changed before publication")
     partial.chmod(0o600)
+    from ai_station_runner.security import resolve_child
+
+    report_path = output.with_suffix(".json")
+    if report_path != resolve_child(root, report_path.relative_to(root).as_posix()) or report_path.exists():
+        raise ValueError("Avatar verification boundary changed before publication")
+    report_work = work / "verified.json"
+    report_work.write_text(json.dumps(report, sort_keys=True))
+    report_work.chmod(0o600)
+    report_work.replace(report_path)
     partial.replace(output)
     print("avatar.completed: verified complete recording", flush=True)
     return output
