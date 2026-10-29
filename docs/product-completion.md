@@ -4,7 +4,7 @@ history/progress, editing/prompt quality, expressive audio, timeline, account
 privacy/2FA, search, naming/docs and consumer-installation work. It is planned
 work, separate from the published v0.0.2 and its historical qualification.
 The first qualified increment fixes persistent dismissal of completed Library
-deletion progress (NR-05): 4757 Python/Runner passes/nine opt-in skips, 890 UI
+deletion progress (NR-05): 4757 Python/Runner passes/nine opt-in skips, 891 UI
 tests and isolated real API/worker/image/browser gates. Other requested features
 remain planned; actual deployment receipts determine the live workstation state.
 

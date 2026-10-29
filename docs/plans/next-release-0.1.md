@@ -243,7 +243,7 @@ gates. The human owner still approves/merges master; tags remain immutable.
 
 First qualified increment: NR-05 has durable terminal-only dismissal, a stable
 recent-card window and visible rollback on save failure. Full normal coverage
-passes: 4757 Python/Runner cases and nine opt-in skips, 890 frontend tests, global
+passes: 4757 Python/Runner cases and nine opt-in skips, 891 frontend tests, global
 format/lint/types/build, Docker/Compose and actual isolated image/worker/API and
 compiled desktop/mobile browser checks. Private evidence:
 `data/acceptance/release-0.1-foundation-20261029/`. Deployment is tracked separately.
