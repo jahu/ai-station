@@ -241,5 +241,13 @@ Extend the operator workbook as a new version; never rewrite issued v15 results.
 Preserve the normal full local backend/Runner, UI, Docker/Compose and fake-worker
 gates. The human owner still approves/merges master; tags remain immutable.
 
-Initial state: NR-05 implementation in progress; all other items planned, with
-the research candidates above unqualified. Planning is not completion.
+First qualified increment: NR-05 has durable terminal-only dismissal, a stable
+recent-card window and visible rollback on save failure. Full normal coverage
+passes: 4757 Python/Runner cases and nine opt-in skips, 890 frontend tests, global
+format/lint/types/build, Docker/Compose and actual isolated image/worker/API and
+compiled desktop/mobile browser checks. Private evidence:
+`data/acceptance/release-0.1-foundation-20261029/`. Deployment is tracked separately.
+All other items remain planned; research candidates are unqualified. The account
+inventory covers 197 HTTP operations (193 API) and 31 ORM tables, without claiming
+ownership enforcement. Planning, a route list or this first increment does not
+complete the full next-release scope.
