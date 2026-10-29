@@ -2,7 +2,9 @@
 
 Owner direction, 2026-10-26: someone with a home GPU should be able to download,
 install and use AI Station without knowing model servers, venvs or GPU flags.
-Keep this separate from the current v0.0.1 manual Linux prerequisites.
+Keep this separate from the current v0.0.2 manual Linux prerequisites. The
+[next-release contract](next-release-0.1.md#installers-catalog-and-automatic-setup)
+adds the explicit Windows/macOS/Linux, account-bootstrap and model-catalog gates.
 
 1. Package a discoverable installation path. Check prerequisites and explain any
    missing component in plain language. Keep the Docker control plane/native

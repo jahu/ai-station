@@ -1,5 +1,13 @@
 # Library management
 
+Completed permanent-deletion cards can be closed with X. Dismissal is stored on
+that terminal deletion Run and survives navigation/reload; it does not remove
+the Run, its events, approval or per-file outcomes. The recent three-card window
+stays stable so an older identical completion does not immediately replace a
+closed card. A failed save restores the card with an error. Active deletions
+in the fetched history stay ahead of completed cards with Stop available and
+cannot be dismissed through the progress endpoint.
+
 Library manages general Artifacts, not an image-only store. Import uses the existing bounded image/WAV upload adapters; generated outputs retain their Run and parent relationships. Search, type filters and pagination operate on persisted artifact records. The collection grid is one keyboard sequence (arrows, Home, End, Enter inspects) with unique Inspect names; decorative type icons stay out of the tab order. Edit details, Trash and Restore stay on the selected card through the same Library actions and do not invent a Run. Run inspector artifact cards reuse that sequence. The input picker uses the same sequence with unique Choose names; Enter selects or deselects the focused file. Images Edit/Recompose/Upscale attach through that dialog. A finished Images result offers the same Edit, Recompose and Upscale actions in place; they stage that artifact as the next source and do not queue a Run. A finished Audio result offers Use as voice reference the same way. Finished Images and Audio results, and Library inspect, can also stage a portrait or WAV into Avatars without queueing a Run. Images, Audio, Avatars and assistant inline results can Edit details or Trash through the same Library actions without opening the inspector; that does not queue a Run. A failed, canceled or interrupted Images generation can Retry as a new run in the workspace or the conversation through `POST /api/images/runs/{id}/retry`; the new Run stays in Images or on that transcript. Audio and avatar retries stay unpublished. Audio and Avatars keep an inline picker with the same sequence; Enter attaches the focused file.
 
 The inspector, Images/Audio/Avatars result panels and assistant inline media load `GET /api/artifacts/{id}/lineage` and show resolved source and derived artifacts across image, audio and video records. Sources keep stored parent order; derived rows are newest first, at most 50. Missing IDs are omitted; self-references and duplicate parents are ignored. Artifacts in Trash stay in the graph. Each strip is a keyboard sequence with unique Source or Derived names; Enter inspects the related artifact. The endpoint does not create a Run.

@@ -1,3 +1,10 @@
+The [next-release account boundary](plans/next-release-0.1.md#accounts-and-data-ownership)
+requires private resource ownership, owner-bound workers/tools, protected file
+and event access, per-account browser state and optional TOTP. The current
+single-operator access model remains in place until migration/preservation and
+the full A/B/admin denial matrix pass. Shared models/GPUs never imply shared
+prompts, memory, files, credentials or execution logs.
+
 The [whole-recording Sonic adapter](plans/whole-recording-avatars.md) accepts only
 frozen source hashes, a configured recipe, allocated GPUs and an absolute
 deadline over the private typed Runner API. The owned child verifies installed
