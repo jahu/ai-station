@@ -1,3 +1,9 @@
+The [next-release contract](plans/next-release-0.1.md), owner direction
+2026-10-29, plans private accounts and shared machine resources, persistent
+creative sessions, local prompt/search preparation, expressive sound/editing and
+guided cross-platform installation. It preserves the existing execution engine;
+these planned account/session boundaries are not yet operational.
+
 The [whole-recording avatar plan](plans/whole-recording-avatars.md) evaluates a
 stable global-generation profile after the owner-reported Echo eye deformation.
 The optional configured Sonic adapter uses one version-two media plan and one

@@ -1,3 +1,9 @@
+Next milestone (owner direction, 2026-10-29): the
+[0.1 release plan](plans/next-release-0.1.md) tracks all requested creative
+history/progress, editing/prompt quality, expressive audio, timeline, account
+privacy/2FA, search, naming/docs and consumer-installation work. It is planned
+work, separate from the published v0.0.2 and its historical qualification.
+
 Current avatar follow-up (2026-10-29): the real whole-recording application path
 now produces a complete native 512×768/40.08-second Sonic film with verified
 speech, hashes and Library/browser playback. A separate two-second agent path
