@@ -155,6 +155,17 @@ qualification head (4599 passed, nine ordinary opt-in skips); the final affected
 No inference implementation changed in that fix. The HTTP/application/agent/UI
 and high-resolution full-duration gates above remain outstanding.
 
+## Application integration in progress
+
+The private Runner now has a separate whole-recording readiness operation and a
+typed start operation. It uses explicitly configured native paths and the same
+owned launcher, not a second execution service. Readiness caches verified hashes
+against canonical file/inode/size/mtime/ctime observations; dispatch and native
+entry still independently rehash bytes. Missing weights, symlink imports, absent
+GPUs or unavailable user scopes report unavailable. Existing Echo readiness is
+unchanged. The new integration remains disabled by default and is not enabled in
+the deployed workstation configuration while planning, agent and UI work proceeds.
+
 ## UX and acceptance
 
 Keep portrait and speech primary. A clear quality choice should identify the

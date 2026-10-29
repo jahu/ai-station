@@ -54,6 +54,11 @@ def start_qualification(manager, body, *, python, runtime, models, hardware):
     """Configuration paths are trusted internal arguments, never API fields."""
     if os.environ.get("AI_STATION_REAL_GPU_TESTS") != "1":
         raise ValueError("Whole-recording qualification requires an explicit real-GPU opt-in")
+    return _start_owned(manager, body, python=python, runtime=runtime, models=models, hardware=hardware)
+
+
+def _start_owned(manager, body, *, python, runtime, models, hardware):
+    """Only qualification or the configured typed native adapter may call this."""
     checked_request(body.native_request(), check_deadline=False)
     python = Path(python).expanduser().absolute()  # Preserve the venv executable symlink.
     runtime, models = Path(runtime).expanduser().resolve(), Path(models).expanduser().resolve()

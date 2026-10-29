@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     echomimic_dir: str = ""
     echomimic_models: str = ""
     echo_bounded_profile: bool = False
+    sonic_python: str = ""
+    sonic_dir: str = ""
+    sonic_models: str = ""
+    sonic_whole_enabled: bool = False
     video_python: str = ""
     comfy_dir: str = ""
     wan_model: str = ""

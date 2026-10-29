@@ -41,6 +41,7 @@ IMPLEMENTATION_FILES = (
     "sonic_guidance.py",
     "sonic_inference.py",
     "sonic_jobs.py",
+    "sonic_runtime.py",
     "whole_avatar_timing.py",
     "memory_scope.py",
     "security.py",

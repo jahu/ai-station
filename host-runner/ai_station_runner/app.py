@@ -69,6 +69,7 @@ from ai_station_runner.reviewed_commits import CommitRequest, commit_report, sta
 from ai_station_runner.runtime_observation import observe
 from ai_station_runner.security import PathBoundaryError, ensure_within, resolve_child
 from ai_station_runner.site_preview_runs import PreviewAction, PreviewRequest
+from ai_station_runner.sonic_jobs import WholeAvatarRequest
 from ai_station_runner.source_identity import SOURCE_FINGERPRINT
 from ai_station_runner.station_image import inspect_station_image
 from ai_station_runner.tailnet_api import router as tailnet_router
@@ -763,6 +764,25 @@ def avatar_run(body: AvatarRequest):
     except PathBoundaryError as exc:
         raise HTTPException(403, str(exc)) from exc
     except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.get("/v1/avatar/whole-capabilities")
+def whole_avatar_capabilities():
+    from ai_station_runner.sonic_runtime import capabilities
+
+    return capabilities()
+
+
+@app.post("/v1/runs/whole-avatar")
+def whole_avatar_run(body: WholeAvatarRequest):
+    from ai_station_runner.sonic_runtime import start_whole_avatar
+
+    try:
+        return {**start_whole_avatar(manager(), body), "runner_id": get_settings().runner_id}
+    except PathBoundaryError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except (ValueError, OSError) as exc:
         raise HTTPException(422, str(exc)) from exc
 
 
