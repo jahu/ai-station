@@ -24,7 +24,7 @@
   "timing_boundary": "UI accepted request -> terminal normal-worker result observed; includes preparation, generation, CPU interpolation, mux, native checks and polling; excludes later browser and human review",
   "complete_media_and_hash_verification": true,
   "complete_browser_playback": true,
-  "owner_quality_acceptance": "pending",
+  "owner_quality_acceptance": "substantial_improvement_confirmed",
   "native_hd": false,
   "source_receipt_sha256": "4486503c99c6b39f0709ad4f52df6a971bb0f2b7649e2164854d4d6204a54243"
 }

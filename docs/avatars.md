@@ -18,8 +18,8 @@ Manual full-detail jobs permit four hours; reviewed agents keep their own limit.
 Detailed rendering can take hours. The real complete 40.08-second application
 recording passed full decode, canonical audio, hash and Library/browser checks at
 native 512×768/25 fps. A separate two-second agent journey also passed. The
-[quality follow-up](qa/whole-avatar-follow-up.md) retains the owner's pending
-sharpness/lip-sync judgment and the original Echo failure (QA-020). This is
+[quality follow-up](qa/whole-avatar-follow-up.md) records the owner's confirmation
+of substantially improved quality and retains the original Echo failure (QA-020). This is
 not an HD or perfect-identity claim. The controlled workstation preview now uses
 this profile for new requests; existing Echo histories retain their settings.
 
@@ -56,7 +56,7 @@ deformation (QA-020). That historical quality failure remains open despite its
 successful timing/playback checks. The subsequent
 [controlled engine comparison](plans/avatar-model-quality-evaluation.md) led to
 the optional whole-recording Sonic integration described above; its complete
-512×768 output is now available for the separate owner quality review.
+512×768 output received positive overall quality feedback from the owner.
 
 The direct short-Run adapter and earlier verification below remain compatible;
 their per-window frame limits are not the current workspace's duration limit.

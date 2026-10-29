@@ -41,8 +41,9 @@ workflow timestamps above; neither is a diffusion-only kernel benchmark.
 The final 1002 frames/25 fps and all 961920 source speech samples passed complete
 decode/hash checks and ordinary Library playback. The observed 18-GiB/zero-swap
 process scope is a host-memory boundary, not an 18-GB GPU requirement. The short
-side is 512 pixels: this is not native HD. The owner's sharpness/lip-sync judgment
-is pending; retain the original Echo quality failure. See the
+side is 512 pixels: this is not native HD. The owner subsequently confirmed
+substantial overall improvement; precise lip-sync remains
+unqualified. Retain the original Echo quality failure. See the
 [explicit acceptance supplement](qa/whole-avatar-follow-up.md).
 
 ## Local language model

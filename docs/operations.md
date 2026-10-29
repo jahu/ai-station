@@ -13,7 +13,7 @@ Ctrl+C on the owned supervisor stops only that deployment's containers and, if t
 1. Confirm there are no Runs you still need to finish. System reports `active_runs`. Interrupted work stays inspectable; recovery never blindly repeats uncertain side effects.
 2. From **Settings → Maintenance → Backup and upgrade readiness**, queue **Back up SQLite**. Wait for the Run to succeed and keep the integrity-checked copy under `backups/<run-id>.sqlite`. **Inspect copy** re-checks that file in place; applying it over the live database stays unpublished in-app.
 3. Stop the owned supervisor (Ctrl+C) or `docker compose down` without `--volumes`.
-4. Check out a reviewed commit on `develop` in a new isolated worktree if you are replacing a running preview. Do not treat preview `:8765` as containing later PRs.
+4. For a normal release upgrade, check out the chosen published tag from `master` in an isolated checkout. A development preview may instead use a reviewed commit on `develop` in a new isolated worktree. Do not treat preview `:8765` as containing later PRs.
 5. Rebuild the application image (`./scripts/start.sh`, or `--no-build` only when that image already contains the reviewed commit).
 6. Alembic runs on API startup against the existing database. Migrations are additive. For a necessary database recovery, use the stopped-service procedure below; never copy over a live WAL database.
 7. Open `http://127.0.0.1:8765` and confirm health. Existing conversations, Runs, artifacts and settings remain.
