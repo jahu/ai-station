@@ -8,7 +8,8 @@ The full 40.08-second application recording subsequently completed at native
 Library visibility and complete desktop-browser playback pass. End-to-end
 completion observation took 8838 seconds on two RTX 3060 12-GB GPUs. The
 [explicit quality follow-up](../qa/whole-avatar-follow-up.md) retains the original
-Echo failure and the owner's pending sharpness/lip-sync judgment. This is not
+Echo failure and records the owner's confirmation of substantially improved
+quality in the new complete film. Precise lip-sync remains unqualified. This is not
 native HD or whole-platform acceptance. Old Echo requests retain their frozen
 settings.
 

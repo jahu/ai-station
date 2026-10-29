@@ -58,7 +58,10 @@ The generated full film is available in the owner's Library. Review the actual
 3. Check mouth timing against speech and retention of the spoken ending.
 4. Record whether sharpness is sufficient, along with any exact failing timestamps.
 
-The owner's judgment of the new complete profile is pending. Keep QA-020 open
-and the issued workbook/results unchanged until that response is reconciled.
-Any later acceptance must name this replacement profile and preserve the old
-failure rather than silently passing the original Echo definition.
+The owner subsequently confirmed that the new complete film is substantially
+better. Record that positive overall quality feedback against
+`sonic_whole_768_v1`, not against the rejected Echo or 256×384 profiles. It does
+not assert perfect lip synchronization or native HD. The replacement is deployed;
+the historical QA-020 failure and issued v15 workbook/results remain unchanged.
+Release notes distinguish the delivered improvement from the old failing
+definition rather than silently recording that original test as passed.
