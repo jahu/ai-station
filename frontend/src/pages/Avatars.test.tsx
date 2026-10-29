@@ -14,12 +14,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 function mount(entry = "/avatars") {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+    <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[entry]}>
         <Routes>
           <Route path="/avatars" element={<Avatars />} />
@@ -27,7 +26,98 @@ function mount(entry = "/avatars") {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return client;
 }
+
+function wholeRuntime(checking = false) {
+  const writes: Record<string, unknown>[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, options?: RequestInit) => {
+      const input = {
+        id: path.endsWith("portrait") ? "portrait" : "speech",
+        type: path.endsWith("portrait") ? "image" : "audio",
+        mime_type: path.endsWith("portrait") ? "image/png" : "audio/wav",
+        original_filename: "Input",
+      };
+      const job = {
+        task_id: "whole-task",
+        revision: 1,
+        kind: "avatar",
+        mode: "whole_recording",
+        status: "queued",
+        active_run_ids: ["whole-run"],
+        total_segments: 0,
+        completed_segments: 0,
+        total_stages: 1,
+        completed_stages: 0,
+        final_artifact_id: null,
+        duration_seconds: 40.08,
+        resume_allowed: false,
+        error_message: "",
+      };
+      if (options?.method === "POST")
+        writes.push(JSON.parse(String(options.body)));
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("whole-capabilities")
+            ? {
+                available: !checking,
+                backend: "sonic",
+                readiness: checking ? "checking" : "ready",
+              }
+            : path.endsWith("capabilities")
+              ? { available: true }
+              : path.endsWith("hardware")
+                ? { gpus: [] }
+                : path.includes("/media/jobs")
+                  ? job
+                  : input,
+      };
+    }),
+  );
+  return writes;
+}
+
+it("defaults new full recordings to stable detail and sends only applicable controls", async () => {
+  const writes = wholeRuntime();
+  mount("/avatars?image=portrait&audio=speech");
+  await screen.findByRole("region", { name: "High-detail avatar quality" });
+  expect(screen.queryByLabelText("Scene and motion")).toBeNull();
+  expect(screen.queryByLabelText("Quality 384")).toBeNull();
+  const generate = screen.getByRole("button", {
+    name: "Generate avatar video",
+  });
+  await vi.waitFor(() => expect(generate.hasAttribute("disabled")).toBe(false));
+  fireEvent.click(generate);
+  await vi.waitFor(() => expect(writes.length).toBe(1));
+  expect(writes[0]).toEqual(
+    expect.objectContaining({
+      image_artifact_id: "portrait",
+      audio_artifact_id: "speech",
+      generation_profile: "sonic_whole_768_v1",
+      seed: 43,
+      gpu: "auto",
+    }),
+  );
+  expect(writes[0]).not.toHaveProperty("steps");
+  expect(writes[0]).not.toHaveProperty("size");
+  expect(writes[0]).not.toHaveProperty("memory_profile");
+});
+
+it("keeps high-detail submission disabled during verification instead of switching to Echo", async () => {
+  const writes = wholeRuntime(true);
+  mount("/avatars?image=portrait&audio=speech");
+  await screen.findByText("Checking the installed model files…");
+  expect(
+    screen
+      .getByRole("button", { name: "Generate avatar video" })
+      .hasAttribute("disabled"),
+  ).toBe(true);
+  expect(screen.queryByLabelText("Quality 384")).toBeNull();
+  expect(writes).toHaveLength(0);
+});
 it("selects existing inputs, queues video and keeps the live result beside the form", async () => {
   const artifacts = [
     {
@@ -46,13 +136,15 @@ it("selects existing inputs, queues video and keeps the live result beside the f
   const fetch = vi.fn(async (path: string) => ({
     ok: true,
     json: async () =>
-      path.endsWith("/hardware")
-        ? { gpus: [] }
-        : path.includes("/runs")
-          ? { id: "avatar", status: "queued" }
-          : path.endsWith("/artifacts")
-            ? artifacts
-            : artifacts.find((a) => path.endsWith(a.id)),
+      path.endsWith("/capabilities")
+        ? { available: true }
+        : path.endsWith("/hardware")
+          ? { gpus: [] }
+          : path.includes("/runs")
+            ? { id: "avatar", status: "queued" }
+            : path.endsWith("/artifacts")
+              ? artifacts
+              : artifacts.find((a) => path.endsWith(a.id)),
   }));
   vi.stubGlobal("fetch", fetch);
   mount();
@@ -82,6 +174,13 @@ it("selects existing inputs, queues video and keeps the live result beside the f
     .closest(".avatar-quality-choice-list") as HTMLElement;
   fireEvent.keyDown(qualityList, { key: "Home" });
   fireEvent.keyDown(qualityList, { key: "Enter" });
+  await vi.waitFor(() =>
+    expect(
+      screen
+        .getByRole("button", { name: "Generate avatar video" })
+        .hasAttribute("disabled"),
+    ).toBe(false),
+  );
   fireEvent.click(
     screen.getByRole("button", { name: "Generate avatar video" }),
   );
@@ -143,6 +242,7 @@ it("stages a portrait and speech from the URL without queueing a Run", async () 
     ok: options === undefined,
     json: async () => {
       const url = String(path);
+      if (url.endsWith("/capabilities")) return { available: true };
       if (url.endsWith("/hardware")) return { gpus: [] };
       return artifacts.find((artifact) => url.endsWith(artifact.id)) ?? {};
     },
@@ -177,6 +277,7 @@ it("queues typed speech with a voice reference while keeping recording mode unch
   const fetch = vi.fn(async (path: string) => ({
     ok: true,
     json: async () => {
+      if (path.endsWith("/capabilities")) return { available: true };
       if (path.endsWith("/hardware")) return { gpus: [] };
       if (path.includes("/runs")) return { id: "speech", status: "queued" };
       if (path.endsWith("/artifacts")) return artifacts;
@@ -197,6 +298,13 @@ it("queues typed speech with a voice reference while keeping recording mode unch
   fireEvent.change(screen.getByLabelText("Words to say"), {
     target: { value: "Cześć!" },
   });
+  await vi.waitFor(() =>
+    expect(
+      screen
+        .getByRole("button", { name: "Generate avatar video" })
+        .hasAttribute("disabled"),
+    ).toBe(false),
+  );
   fireEvent.click(
     screen.getByRole("button", { name: "Generate avatar video" }),
   );
@@ -233,6 +341,7 @@ it("restores a speech-to-avatar workflow and stops its active animation", async 
     json: async () => {
       if (path.endsWith("/workflow")) return { steps: [first, child] };
       if (path.includes("/artifacts?")) return [];
+      if (path.endsWith("/capabilities")) return { available: true };
       if (path.endsWith("/hardware")) return { gpus: [] };
       if (options?.method === "POST") return child;
       return first;
@@ -266,6 +375,7 @@ it("defaults to the complete recording and restores its durable job", async () =
     ok: true,
     json: async () => {
       if (init?.method === "POST") expect(path).toBe("/api/media/jobs/avatar");
+      if (path.endsWith("/capabilities")) return { available: true };
       if (path.endsWith("/hardware")) return { gpus: [] };
       if (path.includes("/media/jobs"))
         return {
@@ -298,6 +408,13 @@ it("defaults to the complete recording and restores its durable job", async () =
       ) as HTMLInputElement
     ).checked,
   ).toBe(true);
+  await vi.waitFor(() =>
+    expect(
+      screen
+        .getByRole("button", { name: "Generate avatar video" })
+        .hasAttribute("disabled"),
+    ).toBe(false),
+  );
   fireEvent.click(
     screen.getByRole("button", { name: "Generate avatar video" }),
   );
@@ -375,4 +492,95 @@ it("restores the saved full-avatar inputs and settings from a job URL without ru
         .querySelector("input") as HTMLInputElement
     ).checked,
   ).toBe(true);
+});
+
+type SetupProfile = { available: boolean; reason?: string };
+function setupFetch(profile: () => Promise<SetupProfile>, ok = true) {
+  const fetch = vi.fn(async (path: string, options?: RequestInit) => ({
+    ok: !path.endsWith("/capabilities") || ok,
+    json: async () => {
+      if (path.endsWith("/capabilities"))
+        return ok ? profile() : { detail: "Avatar runtime check failed" };
+      if (options?.method === "POST")
+        return { id: "unexpected", status: "queued" };
+      if (path.endsWith("/hardware")) return { gpus: [] };
+      return {
+        id: path.endsWith("portrait") ? "portrait" : "speech",
+        type: path.endsWith("portrait") ? "image" : "audio",
+        mime_type: path.endsWith("portrait") ? "image/png" : "audio/wav",
+        original_filename: path.endsWith("portrait")
+          ? "Portrait.png"
+          : "Speech.wav",
+      };
+    },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  const client = mount("/avatars?image=portrait&audio=speech");
+  return { fetch, client };
+}
+
+it("waits for runtime readiness before enabling a fully configured form", async () => {
+  let resolve!: (profile: SetupProfile) => void;
+  const pending = new Promise<SetupProfile>((done) => {
+    resolve = done;
+  });
+  const { fetch } = setupFetch(() => pending);
+  await screen.findByText("Checking local avatar runtime…");
+  await screen.findByText("Portrait.png");
+  await screen.findByText("Speech.wav");
+  const button = screen.getByRole("button", { name: "Generate avatar video" });
+  expect(button.hasAttribute("disabled")).toBe(true);
+  fireEvent.submit(button.closest("form")!);
+  expect(fetch.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(
+    true,
+  );
+  resolve({ available: true });
+  await vi.waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+});
+
+it.each([false, true])(
+  "keeps an unavailable or failed runtime form inspectable without submission (error=%s)",
+  async (failed) => {
+    const { fetch } = setupFetch(
+      async () => ({ available: false, reason: "Echo runtime is absent" }),
+      !failed,
+    );
+    await screen.findByText(
+      failed ? "Avatar runtime check failed" : /Echo runtime is absent/,
+    );
+    await screen.findByText("Portrait.png");
+    await screen.findByText("Speech.wav");
+    const button = screen.getByRole("button", {
+      name: "Generate avatar video",
+    });
+    expect(button.hasAttribute("disabled")).toBe(true);
+    fireEvent.submit(button.closest("form")!);
+    expect(fetch.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(
+      true,
+    );
+    if (!failed)
+      expect(
+        screen
+          .getByRole("link", { name: "Inspect system" })
+          .getAttribute("href"),
+      ).toBe("/system");
+  },
+);
+
+it("does not submit from stale available data after the runtime recheck fails", async () => {
+  let failed = false;
+  const { fetch, client } = setupFetch(async () => {
+    if (failed) throw new Error("Avatar runtime check failed");
+    return { available: true };
+  });
+  const button = screen.getByRole("button", { name: "Generate avatar video" });
+  await vi.waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+  failed = true;
+  await client.invalidateQueries({ queryKey: ["avatar-capabilities"] });
+  await screen.findByText("Avatar runtime check failed");
+  expect(button.hasAttribute("disabled")).toBe(true);
+  fireEvent.submit(button.closest("form")!);
+  expect(fetch.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(
+    true,
+  );
 });

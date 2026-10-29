@@ -12,6 +12,14 @@ import PromptTranslation, {
 } from "./PromptTranslation";
 import { useMediaRun } from "./media-run";
 
+function animationTime(seconds: number) {
+  const minutes = Math.max(1, Math.ceil(seconds / 60));
+  const hours = Math.floor(minutes / 60);
+  return hours
+    ? `${hours} h${minutes % 60 ? ` ${minutes % 60} min` : ""}`
+    : `${minutes} min`;
+}
+
 function FilmPrompt({
   id,
   onRecover,
@@ -98,6 +106,33 @@ export default function MediaJobResult({
     },
   });
   const busy = jobBusy(job);
+  const whole = job?.mode === "whole_recording";
+  const native = job?.native_progress;
+  const generationPercent =
+    native && native.total_windows > 0
+      ? Math.min(
+          100,
+          Math.floor((native.completed_windows * 100) / native.total_windows),
+        )
+      : null;
+  const wholeProgressText =
+    job?.status === "succeeded"
+      ? "Your full video is ready."
+      : job?.status === "cancel_requested"
+        ? "Stopping the recording…"
+        : job?.status === "canceled"
+          ? "Recording stopped. Its execution history is saved."
+          : job?.status === "failed"
+            ? "The recording needs attention. Inspect the error below."
+            : job?.resource_wait
+              ? "Queued; generation will start when resources are available."
+              : native?.phase === "finishing"
+                ? "Saving and checking the complete recording…"
+                : native?.phase === "animating"
+                  ? `Animating the complete recording · ${generationPercent}%`
+                  : job?.status === "preparing"
+                    ? "Preparing speech for the complete recording…"
+                    : "Preparing the local animation model…";
   const runningShots = job?.running_segments ?? 0;
   const activeShots = job?.active_segments ?? [];
   const shotSummary =
@@ -122,42 +157,74 @@ export default function MediaJobResult({
           <p className="muted">
             {job.duration_seconds == null
               ? "Preparing the full speech"
-              : `${job.duration_seconds} seconds`}{" "}
+              : `${job.duration_seconds.toLocaleString(undefined, { maximumFractionDigits: 2 })} seconds`}{" "}
             ·{" "}
-            {job.mode === "continuous"
-              ? "Continuous motion"
-              : "Sequence of shots"}{" "}
+            {whole
+              ? "Whole-recording animation"
+              : job.mode === "continuous"
+                ? "Continuous motion"
+                : "Sequence of shots"}{" "}
             · Local
+            {whole &&
+              job.result_geometry &&
+              ` · ${job.result_geometry.width} × ${job.result_geometry.height} · ${job.result_geometry.fps} fps`}
           </p>
           {["queued", "preparing", "generating", "composing"].includes(
             job.status,
           ) && <ResourceWaitNotice wait={job.resource_wait} />}
           <div className="media-job-progress">
             <progress
-              max={job.total_segments + 1}
-              value={
-                job.status === "succeeded"
-                  ? job.total_segments + 1
-                  : job.completed_segments
+              max={
+                whole
+                  ? (native?.total_windows ?? job.total_stages ?? 1)
+                  : job.total_segments + 1
               }
-              aria-label="Completed video stages"
+              value={
+                whole
+                  ? job.status === "succeeded"
+                    ? (native?.total_windows ?? job.total_stages ?? 1)
+                    : busy && (!native || native.phase === "preparing")
+                      ? undefined
+                      : (native?.completed_windows ?? job.completed_stages ?? 0)
+                  : job.status === "succeeded"
+                    ? job.total_segments + 1
+                    : job.completed_segments
+              }
+              aria-label={
+                whole ? "Avatar animation progress" : "Completed video stages"
+              }
             />
             <p>
-              {job.prompt_preparation_status === "review"
-                ? "Review the translated prompts below before film generation."
-                : job.prompt_preparation_status === "translating"
-                  ? "Preparing your film prompts locally…"
-                  : job.status === "composing"
-                    ? "Assembling and checking the full video…"
-                    : job.resource_wait &&
-                        (job.status === "queued" || job.status === "preparing")
-                      ? "Queued; generation will start when resources are available."
-                      : job.status === "preparing"
-                        ? "Generating speech and preparing its full timeline…"
-                        : job.status === "succeeded"
-                          ? "Your full video is ready."
-                          : `${job.completed_segments} of ${job.total_segments} ${job.mode === "shots" ? "shots" : "segments"} complete`}
+              {whole
+                ? wholeProgressText
+                : job.prompt_preparation_status === "review"
+                  ? "Review the translated prompts below before film generation."
+                  : job.prompt_preparation_status === "translating"
+                    ? "Preparing your film prompts locally…"
+                    : job.status === "composing"
+                      ? "Assembling and checking the full video…"
+                      : job.resource_wait &&
+                          (job.status === "queued" ||
+                            job.status === "preparing")
+                        ? "Queued; generation will start when resources are available."
+                        : job.status === "preparing"
+                          ? "Generating speech and preparing its full timeline…"
+                          : job.status === "succeeded"
+                            ? "Your full video is ready."
+                            : `${job.completed_segments} of ${job.total_segments} ${job.mode === "shots" ? "shots" : "segments"} complete`}
             </p>
+            {whole &&
+              busy &&
+              job.status === "generating" &&
+              native?.phase === "animating" &&
+              !job.resource_wait &&
+              typeof job.estimated_animation_seconds === "number" &&
+              job.estimated_animation_seconds > 0 && (
+                <p className="muted" aria-label="Estimated animation time">
+                  About {animationTime(job.estimated_animation_seconds)} of
+                  animation left. Saving and checks follow.
+                </p>
+              )}
           </div>
           {job.kind === "video" &&
           job.mode === "shots" &&

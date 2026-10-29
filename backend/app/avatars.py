@@ -57,13 +57,28 @@ def capabilities():
         return {"available": False, "reason": "Host Runner avatar integration is unavailable"}
 
 
+@router.get("/whole-capabilities")
+def whole_capabilities():
+    from app.whole_avatars import capabilities
+
+    return capabilities()
+
+
 def memory_reservation(body, observed_profile=None):
+    # Legacy plans may pass an empty profile to retain their frozen appearance.
+    # Recheck setup without changing that recipe or the persisted request.
+    profile = (
+        capabilities()
+        if observed_profile is None or "available" not in observed_profile
+        else observed_profile
+    )
+    if profile.get("available") is not True:
+        raise HTTPException(409, "Local avatar generation needs setup; inspect System diagnostics")
     if body.memory_profile == "default":
         return STANDARD_RAM_MIB
-    observed_profile = capabilities() if observed_profile is None else observed_profile
-    if not observed_profile.get("available") or not any(
+    if not any(
         row.get("id") == "bounded_11g" and row.get("available") and row.get("ram_mib") == 11264
-        for row in observed_profile.get("memory_profiles", [])
+        for row in profile.get("memory_profiles", [])
     ):
         raise HTTPException(409, "The reduced-RAM avatar profile is unavailable; refresh Avatars setup")
     return 11264
@@ -121,7 +136,7 @@ def create_avatar_run(session, body, *, task=None, parent_run_id=None, observed_
 def workflow(run_id: UUID, session: Annotated[Session, Depends(session_scope)]):
     from app.media_workflow import workflow_steps
 
-    return workflow_steps(session, run_id, {"chatterbox", "echomimic"})
+    return workflow_steps(session, run_id, {"chatterbox", "echomimic", "sonic_whole"})
 
 
 @router.post("/runs", status_code=202)

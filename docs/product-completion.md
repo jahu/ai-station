@@ -1,3 +1,14 @@
+Current avatar follow-up (2026-10-29): the real whole-recording application path
+now produces a complete native 512×768/40.08-second Sonic film with verified
+speech, hashes and Library/browser playback. A separate two-second agent path
+also passes. The [quality supplement](qa/whole-avatar-follow-up.md) records exact
+scope and the owner's confirmation of substantially improved quality; it does
+not turn the frozen Echo failure into a pass or claim perfect lip-sync. The
+replacement is delivered; historical QA results and broader product-roadmap
+acceptance remain separate. Reviewed animation ETA
+and conservative owned API startup recovery are merged separately; the shared
+deployment receipt determines which version is actually running.
+
 Current release scope (2026-10-26): the owner confirms Tailscale access works and
 explicitly defers SMTP/inbox acceptance. Push notifications are future backlog.
 Preserve implemented mail boundaries and prior results; do not count unperformed

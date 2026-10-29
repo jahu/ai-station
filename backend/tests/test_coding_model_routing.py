@@ -1,5 +1,7 @@
 import pytest
 from app.coding_model_routing import select_coding_model
+from app.events import append_event
+from app.llama import update_instance
 from app.models import ModelFile, RuntimeInstance
 from app.providers import ProviderError
 from app.runner_client import RunnerClient
@@ -33,6 +35,7 @@ def candidate(session, *, name="Coder-27B.gguf", context=100352, size=8 * 1024**
             "model_mtime": 1,
             "gpus": [2, 7],
             "context_size": context,
+            "observation": {"n_ctx": context},
             "context_fit": "ok",
             "cache_type": "q8_0",
             "context_profile": {
@@ -66,6 +69,59 @@ def test_auto_routes_to_proven_local_context_and_preserves_gpu_selection(session
     assert result["context_verified"] and result["gpus"] == [2, 7]
 
 
+@pytest.mark.parametrize("tamper", [None, "instance", "path", "mtime", "gpus", "status", "executor"])
+def test_successful_later_vision_load_preserves_unchanged_file_coding_proof(session, hardware, tamper):
+    model, _ = candidate(session)
+    task = create_task(session, title="Vision model", prompt="", capability="runtime.load")
+    load = create_run(
+        session, task, run_type="runtime", capability="runtime.load", executor_type="llama_load"
+    )
+    load.status = "succeeded"
+    vision = RuntimeInstance(
+        runtime_key="llama.cpp",
+        name="Vision",
+        ownership="managed",
+        status="stopped",
+        metadata_json={
+            "model_file_id": model.id,
+            "load_run_id": load.id,
+            "gpus": [2, 7],
+            "context_size": 32768,
+            "cache_type": "f16",
+        },
+    )
+    session.add(vision)
+    session.flush()
+    params = {
+        "instance_id": vision.id,
+        "model_path": model.host_path,
+        "size_bytes": model.size_bytes,
+        "mtime": model.mtime,
+        "gpus": [2, 7],
+    }
+    if tamper == "instance":
+        params["instance_id"] = "unrelated"
+    elif tamper == "path":
+        params["model_path"] = "/models/another.gguf"
+    elif tamper == "mtime":
+        params["mtime"] = 2
+    elif tamper == "gpus":
+        params["gpus"] = [7]
+    elif tamper == "status":
+        load.status = "failed"
+    elif tamper == "executor":
+        load.executor_type = "fake"
+    load.parameters = params
+    session.flush()
+    if tamper:
+        with pytest.raises(ProviderError, match="100k"):
+            select_coding_model(session)
+    else:
+        result = select_coding_model(session)
+        assert result["model"] == "llamacpp:" + model.id
+        assert result["context_verified"] and result["context_size"] >= 100352
+
+
 @pytest.mark.parametrize("change", ["changed_file", "unknown_runtime", "short_context", "missing_gpu"])
 def test_auto_rejects_unqualified_or_changed_context_without_external_fallback(
     session, hardware, monkeypatch, change
@@ -97,6 +153,111 @@ def test_auto_prefer_proven_coder_over_unproven_allocation(session, hardware):
         "context_profile": {"trained_context": 262144, "q8_kv_bytes_per_token": 64 * 1024},
     }
     assert select_coding_model(session)["model"] == "llamacpp:" + model.id
+
+
+def test_auto_uses_observed_allocation_instead_of_larger_requested_settings(session, hardware):
+    model, _ = candidate(session, name="Ready-9B.gguf", context=129280, size=7 * 1024**3)
+    _, larger = candidate(session, name="Larger-27B.gguf", context=131072, size=9 * 1024**3)
+    larger.metadata_json = {**larger.metadata_json, "observation": {"n_ctx": 65536}}
+    selected = select_coding_model(session)
+    assert selected["model"] == "llamacpp:" + model.id
+    assert selected["context_verified"] and selected["context_size"] == 129280
+
+
+@pytest.mark.parametrize("actual", [None, False, 0, "131072"])
+def test_missing_or_invalid_observation_never_outranks_a_verified_model(session, hardware, actual):
+    model, _ = candidate(session, name="Qualified-9B.gguf", context=129280, size=7 * 1024**3)
+    _, runtime = candidate(session, name="Unverified-27B.gguf", context=131072, size=9 * 1024**3)
+    runtime.metadata_json = {**runtime.metadata_json, "observation": {"n_ctx": actual}}
+    selected = select_coding_model(session)
+    assert selected["model"] == "llamacpp:" + model.id and selected["context_verified"]
+
+
+def test_auto_preserves_a_sufficient_observed_context_without_speculative_upgrade(session, hardware):
+    _, runtime = candidate(session, context=129280)
+    runtime.status = "ready"
+    selected = select_coding_model(session)
+    assert selected["context_size"] == 129280 and selected["context_verified"]
+
+
+def stopped_candidate(session):
+    model, runtime = candidate(session, name="Stopped-9B.gguf", context=129280, size=7 * 1024**3)
+    payload = {
+        "instance_id": runtime.id,
+        "gpus": [2, 7],
+        "cache_type": "q8_0",
+        "context_size": 129280,
+        "n_ctx": 129280,
+    }
+    runtime.status = "ready"
+    update_instance(session, runtime, {"status": "stopped", "alive": False})
+    assert "n_ctx" not in runtime.metadata_json["observation"]
+    return model, runtime, payload
+
+
+def test_real_stop_observation_retains_successful_load_measurement_for_auto(session, hardware):
+    model, runtime, payload = stopped_candidate(session)
+    append_event(session, runtime.metadata_json["load_run_id"], "runtime.ready", payload)
+    candidate(session, name="Larger-27B.gguf", context=65536, size=9 * 1024**3)
+    chosen = select_coding_model(session)
+    assert chosen["model"] == "llamacpp:" + model.id
+    assert chosen["context_verified"] and chosen["context_size"] == 129280
+
+
+@pytest.mark.parametrize(
+    "change",
+    ["instance", "gpus", "cache", "missing_actual", "string_actual", "zero_actual", "failed_load", "ready"],
+)
+def test_stopped_context_proof_requires_matching_successful_native_measurement(session, hardware, change):
+    from app.models import Run
+
+    _, runtime, payload = stopped_candidate(session)
+    if change == "instance":
+        payload["instance_id"] = "another-instance"
+    elif change == "gpus":
+        payload["gpus"] = [2]
+    elif change == "cache":
+        payload["cache_type"] = "f16"
+    elif change == "missing_actual":
+        payload.pop("n_ctx")
+    elif change == "string_actual":
+        payload["n_ctx"] = "129280"
+    elif change == "zero_actual":
+        payload["n_ctx"] = 0
+    elif change == "failed_load":
+        session.get(Run, runtime.metadata_json["load_run_id"]).status = "failed"
+    elif change == "ready":
+        runtime.status = "ready"
+    append_event(session, runtime.metadata_json["load_run_id"], "runtime.ready", payload)
+    alternative, _ = candidate(session, name="Qualified-8B.gguf", context=129280, size=6 * 1024**3)
+    assert select_coding_model(session)["model"] == "llamacpp:" + alternative.id
+
+
+@pytest.mark.parametrize("failed_size", ["missing", None, 0])
+def test_auto_respects_legacy_allocation_failure_before_selecting_a_model(session, hardware, failed_size):
+    model, _ = candidate(session, name="Qualified-9B.gguf", context=129280, size=7 * 1024**3)
+    _, larger = candidate(session, name="Larger-27B.gguf", context=131072, size=9 * 1024**3)
+    task = create_task(session, title="Failed later load", prompt="", capability="runtime.load")
+    load = create_run(
+        session, task, run_type="runtime", capability="runtime.load", executor_type="llama_load"
+    )
+    load.status = "failed"
+    failed = {**larger.metadata_json, "load_run_id": load.id, "context_fit": "too_large"}
+    if failed_size != "missing":
+        failed["failed_context_size"] = failed_size
+    session.add(
+        RuntimeInstance(
+            runtime_key="llama.cpp",
+            name=larger.name,
+            ownership="managed",
+            status="failed",
+            metadata_json=failed,
+        )
+    )
+    # The loader falls back to context_size when old OOM metadata has no
+    # separate failed_context_size. Auto must apply that same allocation bound.
+    chosen = select_coding_model(session)
+    assert chosen["model"] == "llamacpp:" + model.id and chosen["context_verified"]
 
 
 def test_auto_api_is_read_only_and_coding_snapshots_actual_model_before_dispatch(

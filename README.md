@@ -10,7 +10,7 @@ Your models, images, videos, voices, music and agents — together, on your mach
 
 [Get started](#-get-started) · [See it in action](#-one-station-many-ways-to-create) · [Real hardware results](#-real-hardware-real-results) · [The vision](#-where-were-going)
 
-`v0.0.1` · `Linux first` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
+`v0.0.2` · `Linux first` · `Local inference` · `Cloud optional` · [Free for noncommercial use](LICENSE)
 
 ![AI Station product tour: conversation, video creation and the artifact Library](docs/media/station-tour.gif)
 
@@ -26,7 +26,7 @@ more control. Start with an idea; keep the conversation, files and results toget
 
 > **The destination:** download, install, create. Your hardware is detected,
 > compatible models are offered and the setup takes care of itself.
-> **Today:** v0.0.1 is a working, Linux-first workstation release. You still need
+> **Today:** v0.0.2 is a working, Linux-first workstation release. You still need
 > Docker, Python and configured local models/runtimes. Guided setup, model downloads
 > and broader GPU compatibility are on the roadmap — not hidden prerequisites
 > disguised as completed features.
@@ -113,12 +113,14 @@ hardware profile. Two GPUs provide separate 12 GB devices, not a universal 24 GB
 | **Generate two video shots in parallel** | Wan2.2 5B; 2 × 2-second shots; 1280×704; 20 steps; separate GPUs | **7 min 58 s** for the full four-second film and composition. |
 | **Generate a continuous one-minute film** | Wan2.2 5B; 1280×704; 24 fps; 20 steps; 18 sequential windows; bounded host RAM | **3 h 16 min** for the complete 1,440-frame workflow. |
 | **Create a one-minute speaking avatar** | EchoMimic V3; 384 px; 8 steps; 24 windows; one GPU; 60-second recording | **48 min 18 s**, including fresh source-speech preparation and composition. |
+| **Create a whole-recording avatar with more detail** | Sonic; native 512×768; 25 steps; both GPUs; complete 40.08-second recording | **2 h 27 min 18 s** end to end; 1,002 frames at 25 fps. Owner confirms substantially improved quality; not native HD. |
 
 These are recorded observations, not a cross-project benchmark or a speed promise.
 The LLM row is one captured completion; allocated context is not prompt length.
 Media times include their recorded Run/workflow boundaries, not diffusion-only
-kernel speed. Long-video color drift and avatar contrast/facial-detail changes
-remain visible; duration success is not a promise of perfect visual quality.
+kernel speed. Historical long-video and Echo avatar results retain their observed
+color/facial-detail limitations. The newer Sonic result received positive owner
+feedback; duration success alone is not a promise of perfect visual quality.
 [Method, exact scope and evidence](docs/benchmarks.md).
 
 ## 🚀 Get started
@@ -126,7 +128,7 @@ remain visible; duration success is not a promise of perfect visual quality.
 **Current release prerequisites:** Linux, Git, Python 3.12 with venv support,
 Docker Engine and Docker Compose. GPU media additionally requires a compatible
 configured runtime and model. The currently exercised media paths use NVIDIA/CUDA;
-other GPU vendors are a compatibility goal, not a blanket v0.0.1 claim.
+other GPU vendors remain a compatibility goal, not a blanket hardware-support claim.
 
 ```bash
 git clone --branch master https://github.com/jahu/ai-station.git
@@ -142,8 +144,8 @@ availability; starting the app does not silently download a model collection.
 
 **[Follow the setup guide →](docs/getting-started.md)** for configuration, existing
 llama.cpp/Ollama services, optional media runtimes and development commands.
-[Download v0.0.1](https://github.com/jahu/ai-station/releases/tag/v0.0.1) for the
-first tagged release. `master` is the release branch; contributors work through
+[Download the latest release](https://github.com/jahu/ai-station/releases/latest).
+[What's new in 0.0.2](docs/releases/0.0.2.md). `master` is the release branch; contributors work through
 feature branches and PRs into `develop`.
 
 ## 🌱 Where we're going
@@ -161,7 +163,7 @@ would otherwise spread across separate AI apps.
 - **More capabilities over time:** additional models, runtimes and devices through the existing execution boundaries.
 
 The goal is the familiarity of a ChatGPT-style conversation and a creative suite,
-powered by local models such as llama.cpp-compatible LLMs, Wan, EchoMimic,
+powered by local models such as llama.cpp-compatible LLMs, Wan, Sonic, EchoMimic,
 Chatterbox and ACE-Step. [The consumer setup plan](docs/plans/consumer-first-setup.md)
 keeps that direction concrete.
 
@@ -217,10 +219,15 @@ React/TypeScript/Vite, a durable worker/scheduler and a private native bridge.
 ```
 
 Normal tests use temporary databases and fake executors. Expensive real integrations
-are opt-in. Recorded local qualification includes 4,219 backend/Runner passes,
-nine opt-in skips and 847 frontend tests; newer offline QA tools have their own
-26 tests and 21 subtests. Those numbers do not automatically qualify every model,
-media profile or machine. [Verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
+are opt-in. The v0.0.2 qualification covers **4,755 backend/Runner cases**, including
+nine opt-in skips, through the complete passing baseline and all changed test
+families with unchanged remaining source. The full **887 frontend tests** and
+format/lint/typecheck/build gates pass. These are equivalent local checks, not a
+claim that every Python case was rerun in one final invocation. Separate offline
+QA tools have 26 tests and 21 subtests. Those results do not automatically qualify
+every model, media profile or machine.
+[Release verification](docs/releases/0.0.2.md#verification-and-upgrade) ·
+[Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)
 also explains how to add executors, capabilities, providers, tools and connectors.
@@ -229,6 +236,7 @@ also explains how to add executors, capabilities, providers, tools and connector
 
 | Explore | Guides |
 | --- | --- |
+| Project landing page | [Standalone website source and local preview](website/README.md) |
 | Understand the platform | [Architecture](docs/architecture.md) · [Security](docs/security-model.md) · [Execution](docs/execution-model.md) |
 | Run local models | [Models](docs/models.md) · [llama.cpp](docs/managed-llama.md) · [Chat](docs/local-chat.md) |
 | Create media | [Images](docs/image-workflows.md) · [Video](docs/video.md) · [Avatars](docs/avatars.md) · [Audio](docs/audio.md) |

@@ -258,6 +258,10 @@ def preview_artifact(session, plan):
 
 def job_view(session, task):
     plan = task.metadata_json["media_plan"]
+    if plan.get("version") == 2 and plan.get("kind") == "avatar":
+        from app.whole_avatar_jobs import view
+
+        return view(session, task)
     if plan.get("timing") is None:
         ids = [plan["speech_run_id"], plan["planner_run_id"]]
         stages = list(session.scalars(select(Run).where(Run.id.in_(ids))))
@@ -581,19 +585,24 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
         raise HTTPException(409, "Media plan changed; refresh before resuming")
     if not view["resume_allowed"] or plan["revision"] >= 20:
         raise HTTPException(409, "Inspect active/completed work before resuming")
+    if plan.get("version") == 2 and plan.get("kind") == "avatar":
+        from app.whole_avatar_jobs import resume as resume_whole
+
+        if body.translation != "reuse":
+            raise HTTPException(422, "Whole-recording avatars have no prompt-translation stage")
+        return resume_whole(session, task, body, receipts=receipts, key=key)
     if plan["kind"] == "avatar" and plan.get("appearance_recipe") is not None:
         from app.avatar_appearance import frozen_recipe, verify_recipe
         from app.avatars import capabilities as avatar_capabilities
 
         verify_recipe(avatar_capabilities(), frozen_recipe(plan))
     profile = capabilities() if plan["kind"] == "video" else {}
-    if plan.get("request", {}).get("memory_profile", "default") != "default":
-        if plan["kind"] == "avatar":
-            from app.avatars import memory_reservation as avatar_memory
+    if plan["kind"] == "avatar":
+        from app.avatars import memory_reservation as avatar_memory
 
-            avatar_memory(FullAvatarRequest.model_validate(plan["request"]))
-        else:
-            memory_reservation(LongVideoRequest.model_validate(plan["request"]), profile)
+        avatar_memory(FullAvatarRequest.model_validate(plan["request"]))
+    elif plan.get("request", {}).get("memory_profile", "default") != "default":
+        memory_reservation(LongVideoRequest.model_validate(plan["request"]), profile)
     observed = profile.get("profile_observation")
     if plan.get("profile_observation") and observed != plan["profile_observation"]:
         raise HTTPException(409, "Runtime model files changed; start a new media job")
@@ -799,6 +808,18 @@ def publish_avatar(
     observed_profile=None,
     appearance_snapshot=None,
 ):
+    if body.generation_profile is not None:
+        from app.whole_avatar_jobs import publish
+
+        return publish(
+            session,
+            body,
+            task=task,
+            parent_run_id=parent_run_id,
+            execution_deadline_at=execution_deadline_at,
+            observed_profile=observed_profile,
+            appearance_snapshot=appearance_snapshot,
+        )
     import wave
 
     from app.avatars import AvatarRequest, create_avatar_run

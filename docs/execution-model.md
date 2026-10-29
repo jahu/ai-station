@@ -252,6 +252,18 @@ the other conversation keeps its model prerequisite. Newly submitted consumers
 cannot attach to a startup already being canceled. Native cancellation and
 process inspection continue through the existing worker/Runner contracts.
 
+An explicit media retry after Task Stop creates an independent Task and root
+media Run. It preserves the original stop marker and uses controller-owned
+`fresh_media_retry` / `fresh_retry_source` provenance rather than a cross-Task
+cancellation parent. The existing request identity deduplicates lost responses
+and concurrent clicks. A chat-origin retry adds a visible action/result pair in
+that same conversation; the earlier card links the new attempt and keeps its
+prompt receipt inspectable. Retries within an unstopped Task retain their
+existing same-Task chain. Reusing an effective translation across a fresh intent
+rechecks the original verified receipt through a bounded provenance chain in
+the worker; it neither fabricates a producer nor relaxes ordinary receipt
+ownership. New translation and Use original retain their explicit choices.
+
 Explicit Work task selection persists in `chat_work_contexts` (migration 0022).
 Selection checks the latest proposal and owned workspace, and increments the
 conversation settings version to reject stale sends. General Work stores an

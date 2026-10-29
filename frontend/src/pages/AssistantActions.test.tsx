@@ -6,6 +6,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
@@ -122,6 +123,83 @@ it("shows a failed child even when planning succeeded", () => {
   expect(
     screen.getByRole("link", { name: "image.recompose" }).getAttribute("href"),
   ).toBe("/runs/image");
+});
+
+it("shows the actual failed prerequisite even when both failures are in the data graph", () => {
+  mountResults({
+    task_status: "failed",
+    data_runs: [
+      {
+        id: "publisher",
+        task_id: "task",
+        executor_type: "agent_workflow",
+        status: "succeeded",
+        parameters: {},
+        metadata: {},
+      } as unknown as Run,
+      {
+        id: "generation",
+        task_id: "task",
+        executor_type: "agent_data_generate",
+        status: "failed",
+        parameters: {},
+        metadata: {},
+        error_type: "PrerequisiteFailed",
+        error_message: "Required Runs did not succeed: load",
+      } as unknown as Run,
+      {
+        id: "load",
+        task_id: "task",
+        executor_type: "llama_load",
+        status: "failed",
+        parameters: {},
+        metadata: {},
+        error_type: "RuntimeFailed",
+        error_message: "Runtime startup diagnostics\nCUDA out of memory",
+      } as unknown as Run,
+    ],
+    steps: [
+      {
+        id: "generation",
+        capability: "agent.data.generate",
+        status: "failed",
+        error_message: "Required Runs did not succeed: load",
+        summary: "",
+        location: "local",
+      },
+      {
+        id: "load",
+        capability: "runtime.load",
+        status: "failed",
+        error_message:
+          "Runtime startup diagnostics\n" +
+          "Native trace ".repeat(80) +
+          "\nCUDA out of memory",
+        summary: "",
+        location: "local",
+      },
+    ],
+  });
+  const result = within(
+    screen.getByRole("region", { name: "Data analysis result" }),
+  );
+  expect(result.getByText("failed")).toBeTruthy();
+  expect(result.queryByText("succeeded")).toBeNull();
+  expect(
+    result.getByText(
+      "The local model could not start. Open execution details.",
+    ),
+  ).toBeTruthy();
+  expect(result.queryByText(/Native trace/)).toBeNull();
+  expect(result.queryByText("Preparing data analysis…")).toBeNull();
+  expect(
+    result.queryByRole("link", { name: "View progress and Stop" }),
+  ).toBeNull();
+  expect(
+    result
+      .getByRole("link", { name: "Execution details" })
+      .getAttribute("href"),
+  ).toBe("/runs/load");
 });
 
 it("retries a failed image step in the conversation without opening the inspector", async () => {
@@ -1647,4 +1725,97 @@ it("keeps failed Vision errors and inspection actions visible", () => {
   expect(
     screen.queryByText("Execution details", { selector: "summary" }),
   ).toBeNull();
+});
+
+it("links a fresh task from stopped untranslatable media without offering duplicate retries", () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, json: async () => ({}) })),
+  );
+  mountResults({
+    ...failedImageResult(),
+    steps: failedImageResult().steps.map((step) => ({
+      ...step,
+      media_controls: true,
+    })),
+    media_runs: [
+      {
+        id: "image",
+        project_id: null,
+        task_id: "stopped-task",
+        parent_run_id: null,
+        capability: "image.generate",
+        execution_target: "host",
+        created_at: "2026-10-27T12:00:00Z",
+        started_at: null,
+        finished_at: null,
+        actual_gpu: null,
+        requested_gpu: "auto",
+        parameters: {},
+        effective_permissions: [],
+        summary: "",
+        error_type: "",
+        error_message: "",
+        worker_id: null,
+        status: "canceled",
+        executor_type: "photo_pipe",
+        metadata: {
+          fresh_media_retry: { run_id: "fresh-image", task_id: "fresh-task" },
+        },
+      } satisfies Run,
+    ],
+  });
+  expect(
+    screen
+      .getByRole("link", { name: "Open new attempt →" })
+      .getAttribute("href"),
+  ).toBe("/runs/fresh-image");
+  expect(
+    screen.queryByRole("button", { name: /Retry as a new run/ }),
+  ).toBeNull();
+});
+
+it("shows the actual queued model dependency in the conversation result", () => {
+  mountResults({
+    task_status: "queued",
+    steps: [],
+    data_runs: [
+      {
+        id: "publisher",
+        task_id: "task",
+        executor_type: "agent_workflow",
+        status: "running",
+        parameters: {},
+        metadata: {},
+      } as Run,
+      {
+        id: "load",
+        task_id: "task",
+        executor_type: "llama_load",
+        status: "queued",
+        parameters: {},
+        metadata: {},
+        resource_wait: {
+          run_id: "load",
+          reason: "gpu",
+          checked_at: "2026-10-27T14:00:00Z",
+          required_mib: 0,
+          available_mib: 24000,
+          reserved_mib: 0,
+          headroom_mib: 1024,
+        },
+      } as Run,
+    ],
+  });
+  const data = within(
+    screen.getByRole("region", { name: "Data analysis result" }),
+  );
+  expect(data.getByText("queued")).toBeTruthy();
+  expect(data.getByText("Waiting for an available GPU")).toBeTruthy();
+  expect(data.queryByText("Preparing data analysis…")).toBeNull();
+  expect(
+    data
+      .getByRole("link", { name: "Inspect waiting Run" })
+      .getAttribute("href"),
+  ).toBe("/runs/load");
 });

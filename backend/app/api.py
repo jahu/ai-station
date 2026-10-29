@@ -123,7 +123,8 @@ async def local_requests(request: Request, call_next):
         return gated
     response = await call_next(request)
     await run_in_threadpool(refresh_operator_cookie, request, response)
-    if request.url.path.startswith("/api/operator-auth"):
+    # The entry document selects versioned bundles; caching it can retain an old UI after deployment.
+    if request.url.path.startswith("/api/operator-auth") or request.url.path in {"/", "/index.html"}:
         response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response

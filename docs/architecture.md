@@ -1,3 +1,13 @@
+The [whole-recording avatar plan](plans/whole-recording-avatars.md) evaluates a
+stable global-generation profile after the owner-reported Echo eye deformation.
+The optional configured Sonic adapter uses one version-two media plan and one
+whole-recording Run, with optional preceding speech preparation. It shares owned
+process inspection, resource admission, cancellation, leases and explicit resume
+with other workloads. The UI and reviewed agents freeze its recipe and sources;
+progress reports real global diffusion windows. It stays disabled by default.
+Production defaults and full-resolution long-recording qualification remain
+separate rollout gates; a native experiment does not establish quality.
+
 The [Echo portrait continuation candidate](plans/echo-continuation-quality.md)
 freezes an appearance recipe and source/model observation in new full-avatar
 plans and agent workflow snapshots. Old plans retain legacy behavior; a resumed
@@ -930,3 +940,9 @@ report or local-code recipes; data files and instruction-only creation retain th
 data recipe. Source snapshots and existing AgentSettings remain unchanged. The
 controller maps tools/models/workspace policy, and normal explicit activation
 starts the existing report or code/data workflow. No new execution system/schema.
+
+Operator startup recovery stays outside agent tools and the Docker control plane.
+The [recovery utility](operations.md#recovering-an-api-port-after-network-startup)
+repairs a failed publish mapping only for the validated owned API and its existing
+image. It does not stop running workers, restart native executors or apply an
+upgrade.

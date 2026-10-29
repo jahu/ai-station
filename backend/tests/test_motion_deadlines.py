@@ -155,11 +155,14 @@ def test_avatar_worker_forwards_exact_absolute_budget_and_confirms_cleanup(avata
         assert response.status_code == 202
         with session_factory()() as session:
             run = session.get(Run, response.json()["id"])
-            deadline = utcnow() + timedelta(seconds=0.6)
+            # Keep time for real worker/native startup under parallel CPU load.
+            # The same absolute deadline must still cancel the owned process.
+            deadline = utcnow() + timedelta(seconds=5)
             run.parameters = {**run.parameters, "execution_deadline_at": deadline.isoformat()}
             session.commit()
             tick(session, "budgeted-avatar")
             session.refresh(run)
+            assert avatar_bridge[1] and avatar_bridge[1][-1]["run_id"] == run.id
             native = host_app.manager().inspect(run.id)
             assert run.status == "canceled" and not native["alive"]
             assert native["deadline_at"] == deadline.timestamp()

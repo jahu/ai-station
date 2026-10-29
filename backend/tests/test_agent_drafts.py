@@ -368,11 +368,13 @@ def test_market_draft_keeps_numeric_alerts_after_model_proposes_report_classifie
     model, report_condition, failure_notice
 ):
     calls, responses = model
-    # Regression from actual Qwen output: the first answer invented a tool;
-    # correction removed it but retained an incompatible report criterion.
+    # Even an invented extra tool cannot expand the controller's fixed numeric scope.
     proposal = {
         "name": "Monitor BTC Cena USD",
-        "goal": "Sprawdzaj publiczną cenę BTC/USD i powiadamiaj przy zmianie powyżej 5%.",
+        "goal": "Porównaj cenę BTC ze średnią kroczącą z 48 godzin i alarmuj przy zmianie 5%.",
+        "description": "A rolling-average trading signal",
+        "system_prompt": "Compute the rolling average from a complete historical price series.",
+        "output_expectation": "A chart of the historical average",
         "tools": ["market_watch"],
         "search_query": "Bitcoin price USD live today",
         "trigger": "cron",
@@ -382,7 +384,9 @@ def test_market_draft_keeps_numeric_alerts_after_model_proposes_report_classifie
         "report_condition": report_condition,
     }
     responses[:] = [
-        json.dumps({**proposal, "tools": ["market_watch", "report_condition"]}),
+        json.dumps(
+            {**proposal, "tools": ["web_search", "market_watch", "report_condition", "remember_report"]}
+        ),
         json.dumps(proposal),
     ]
     instruction = (
@@ -397,10 +401,14 @@ def test_market_draft_keeps_numeric_alerts_after_model_proposes_report_classifie
         step()
         done = state(api, run)
         assert done["status"] == "succeeded", done["error_message"]
-        assert len(calls) == 2
+        assert len(calls) == 1
         agent = api.get("/api/agents/" + done["metadata"]["agent_id"]).json()
         assert not agent["enabled"] and agent["next_run_at"] is None
         assert agent["tools"] == ["market_watch"] and agent["model"] == ""
+        assert agent["goal"] == instruction
+        assert "rolling" not in agent["description"]
+        assert "historical price series" not in agent["system_prompt"]
+        assert "historical average" not in agent["output_expectation"]
         assert agent["trigger"] == "cron" and agent["cron_expr"] == "0 9 * * *"
         assert agent["schedule_timezone"] == "Europe/Warsaw"
         assert agent["market"]["provider"] == "coinbase_exchange"
@@ -736,3 +744,54 @@ def test_assisted_creation_draft_uses_controller_bound_empty_scope(model):
         assert agent["data"] == {"input_artifact_ids": [], "max_repairs": 1, "operation": "create"}
         assert agent["data_readiness"]["ready"] and not agent["enabled"] and agent["model"] == "auto"
         assert json.loads(calls[0]["messages"][1]["content"])["file_creation"] is True
+
+
+@pytest.mark.parametrize("trigger", ["manual", "cron", "interval", "datetime"])
+def test_new_draft_canonicalizes_only_inactive_schedule_fields(model, trigger):
+    calls, responses = model
+    responses[:] = [
+        json.dumps(
+            {
+                "name": "Daily public report",
+                "goal": "Read the reviewed public page and summarize its facts.",
+                "tools": ["http_fetch"],
+                "fetch_urls": ["https://example.com/"],
+                "trigger": trigger,
+                "cron_expr": "0 8 * * *",
+                "interval_seconds": 86400,
+                "run_at": "2099-01-01T08:00:00+00:00",
+            }
+        )
+    ]
+    with TestClient(app) as api:
+        run = submit(api, instruction="Prepare a disabled agent that reports daily from https://example.com/")
+        step()
+        done = state(api, run)
+        assert done["status"] == "succeeded", done["error_message"]
+        assert len(calls) == 1
+        agent = api.get("/api/agents/" + done["metadata"]["agent_id"]).json()
+        assert not agent["enabled"] and agent["next_run_at"] is None
+        assert agent["trigger"] == trigger and agent["tools"] == ["http_fetch"]
+        assert agent["cron_expr"] == ("0 8 * * *" if trigger == "cron" else "")
+        assert agent["interval_seconds"] == (86400 if trigger == "interval" else None)
+        assert (agent["run_at"] is not None) == (trigger == "datetime")
+        assert agent["fetch_urls"] == ["https://example.com/"]
+
+
+@pytest.mark.parametrize(
+    "patch",
+    [
+        {"trigger": "cron", "cron_expr": "invalid"},
+        {"trigger": "interval", "interval_seconds": None},
+        {"trigger": "datetime", "run_at": "2099-01-01T08:00:00"},
+    ],
+)
+def test_active_draft_schedule_errors_still_fail_closed(model, patch):
+    _, responses = model
+    responses[:] = [json.dumps({**PROPOSAL, **patch})]
+    with TestClient(app) as api:
+        run = submit(api)
+        step()
+        assert state(api, run)["status"] == "failed"
+        with session_factory()() as session:
+            assert not list(session.scalars(select(Agent)))

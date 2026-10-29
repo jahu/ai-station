@@ -450,19 +450,25 @@ class Script(OutputFiles):
 INSTRUCTIONS = """Return exactly one JSON object with a "script" Python string and an "outputs" list (empty for ordinary table/CSV analysis). No markdown or tool calls.
 Use standard Python and openpyxl (no pandas). Actual files are read-only and offline.
 When the goal asks for a file, declare only available_optional_outputs from runtime and write every declared file.
+Create optional exports only when the current goal requests them. Reading an XLSX input does not request an XLSX output, chart or text report. Ordinary calculations return the mandatory table/CSV with "outputs": [].
 chart.png: real chart from the full data; use matplotlib with Agg, savefig, tight_layout and close the figure. Label axes and use a readable restrained style. No show().
 result.xlsx: an openpyxl workbook with literal values, clear headings and sensible column widths. No formulas, links, macros, named expressions or embedded objects.
+Use `import openpyxl` before `openpyxl.load_workbook(...)` or `openpyxl.Workbook()`. An openpyxl Workbook is NOT a context manager: never use `with Workbook()` or `with openpyxl.Workbook()`.
+To export, use `wb_out = openpyxl.Workbook(); ws = wb_out.active`, append the headers and data rows, then `wb_out.save(os.path.join(output_dir, "result.xlsx"))`. Read-only input workbooks are closed with `wb.close()` after reading, not with a `with` statement.
 report.txt: a UTF-8 report. Never declare or create any other export filename.
 The outputs list names only chart.png, result.xlsx and/or report.txt; never include result.csv or result.json there. For an Excel and chart use "outputs": ["result.xlsx", "chart.png"].
 Optional exports accompany the mandatory result.csv and result.json, not replace them. Do not claim a file was created unless you declare it and write it.
 Always create EVERY filename in runtime.required_outputs. The controller collects requested exports even if you omit them from the outputs declaration.
 When runtime.capture_undeclared_outputs is true, supported files you actually create are also collected even if omitted from outputs. Never claim a file exists unless you write it.
 AI_STATION_INPUTS is a JSON STRING containing a direct filename-to-path dictionary, NOT a file, directory, list, or an object with an "inputs" key.
+The controller includes visible sandbox bindings in the executed source: csv, json and os are imported standard-library modules, inputs is the decoded mapping and output_dir is the approved output directory, even if your script omits their initialization.
+Import any other required module before its first use. An import at the end of a script does not make earlier code work.
 Start with: inputs = json.loads(os.environ["AI_STATION_INPUTS"])
 Then use: path = inputs[input_name] and open(path), NOT open(os.environ["AI_STATION_INPUTS"]).
 The runtime.input_map below shows the exact mapping available in the container. Its VALUES are file paths; keys are only filenames.
 For CSV use csv.DictReader(open(path, newline="", encoding="utf-8-sig")); compute from every actual row, not only the preview.
-For XLSX use openpyxl.load_workbook(read_only=True, data_only=True, keep_links=False); never evaluate formulas or macros.
+For XLSX use openpyxl.load_workbook(path, read_only=True, data_only=True, keep_links=False); never evaluate formulas or macros.
+For a sheet with column headers, use the first row to identify columns; do not count or convert that header as a data record. Treat control/summary sheets separately from source transactions.
 Write mandatory result.csv and result.json under os.environ["AI_STATION_OUTPUT_DIR"].
 result.csv is the requested result table, with a header. result.json must contain exactly
 {"answer": "factual answer in the user's language", "columns": ["headers"], "rows": [["string values"]]}.
@@ -623,7 +629,9 @@ class DataGenerateExecutor:
                 if capability.get("optional_outputs") is True
                 else []
             )
-            script = proposal.script
+            from app.data_script import prepare_script
+
+            script = prepare_script(proposal.script)
             if any(name not in available_outputs for name in proposal.outputs):
                 raise ValueError(
                     "Rebuild the configured AI Station Python image to enable generated file exports"
@@ -648,6 +656,7 @@ class DataGenerateExecutor:
             run.metadata_json = {
                 **run.metadata_json,
                 "script_artifact_id": artifact.id,
+                "runtime_bindings": "data-inputs-v2",
                 "data_output_files": output_files,
                 "required_data_output_files": required,
                 "declared_data_output_files": proposal.outputs,

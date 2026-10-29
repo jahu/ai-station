@@ -23,6 +23,7 @@ from app.chat_policy import agent_draft_policy
 from app.chat_providers import BUILTIN_KEY, completion_stream, snapshot_provider
 from app.chat_reasoning import CompletionFinished
 from app.db import session_scope, utcnow
+from app.draft_schedule import schedule_values
 from app.events import append_event
 from app.execution_limits import MAX_AGENT_RUNTIME
 from app.factory import draft_agent
@@ -96,6 +97,24 @@ class Proposal(BaseModel):
 def definition(proposal, instruction, model, schedule_timezone="UTC"):
     schedule_timezone = instruction_timezone(instruction, schedule_timezone)
     base = draft_agent(instruction, model=model, schedule_timezone=schedule_timezone)
+    if base.market is not None:
+        # The controller already owns this exclusive numeric scope. Model extras
+        # cannot add research, memory, media or delivery authority to the draft.
+        proposal = proposal.model_copy(
+            update={
+                "tools": ["market_watch"],
+                "search_query": "",
+                "fetch_urls": [],
+                "report_condition": "",
+                "media": None,
+                # A tools-free numeric adapter cannot implement a model's
+                # invented rolling averages or other calculation promises.
+                "description": base.description,
+                "goal": base.goal,
+                "system_prompt": base.system_prompt,
+                "output_expectation": base.output_expectation,
+            }
+        )
     if "create_media" in proposal.tools and proposal.media is None:
         raise ValueError("Create media needs reviewable image or music settings")
     if proposal.media is not None:
@@ -145,7 +164,7 @@ def definition(proposal, instruction, model, schedule_timezone="UTC"):
     create_files = bool(base.data and base.data.get("operation") == "create")
     if create_files and proposal.tools != ["python_data"]:
         raise ValueError("Instruction-based file creation requires only the local Python data tool")
-    settings = proposal.model_dump(mode="json", exclude={"report_condition"})
+    settings = schedule_values(proposal.model_dump(mode="json", exclude={"report_condition"}))
     if proposal.maximum_runtime is None:
         # These are visible proposals for a new disabled definition, never an
         # edit of an existing or running allowance. Keep numeric requests exact.

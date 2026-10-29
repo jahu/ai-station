@@ -44,7 +44,7 @@ def required_exports(goal):
     writer = r"(?:create|make|generate|prepare|save|export|write|return|draw|plot|stw[oó]rz|utw[oó]rz|wygeneruj|przygotuj|zapisz|wyeksportuj|eksportuj|narysuj|daj|zwr[oó][ćc])"
     if re.search(r"^(?:do not|don't|nie)\s+" + writer + r"\b", text):
         return []
-    modifiers = r"(?:(?:a|an|the|new|mi|nowy|nową|nowe|plik|file|result|wynik|results|dane|do|to|as|jako|and|oraz|i|w|formacie|format|bar|line)\s+){0,6}"
+    modifiers = r"(?:(?:a|an|the|new|real|actual|downloadable|mi|nowy|nową|nowe|prawdziwy|gotowy|plik|file|result|wynik|results|dane|do|to|as|jako|and|oraz|i|w|formacie|format|bar|line)\s+){0,6}"
     has_writer = bool(re.search(r"\b" + writer + r"\b", text))
     result = []
     for name, target in [

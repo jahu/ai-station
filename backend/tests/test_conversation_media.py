@@ -49,6 +49,13 @@ def conversation(client, mode="work"):
         ("Powiększ to", "image.upscale"),
         ("Describe it", "image.describe"),
         ("Opisz tę grafikę", "image.describe"),
+        ("Co znajduje się na wygenerowanym zdjęciu? Nie twórz kolejnego obrazu.", "image.describe"),
+        ("What is in the generated image? Do not create another image.", "image.describe"),
+        ("What do you see in this photo?", "image.describe"),
+        ("How many apples are in the previous picture?", "image.describe"),
+        ("Jakiego koloru jest jabłko na wygenerowanym zdjęciu?", "image.describe"),
+        ("Opisz wygenerowane zdjęcie.", "image.describe"),
+        ("Describe the generated photograph.", "image.describe"),
         ("Powiększ tę grafikę", "image.upscale"),
         ("Edytuj tę grafikę: dodaj czerwone logo", "image.edit"),
         ("Upscale the previous image.", "image.upscale"),
@@ -56,6 +63,17 @@ def conversation(client, mode="work"):
         ("Animate it into a 5 second video", "video.generate"),
         ("Zmień ten obraz: dodaj kapelusz", "image.edit"),
         ("Edit this image: add a red hat", "image.edit"),
+        (
+            "Zmień kolor roweru na niebieski. Zachowaj resztę obrazu i użyj poprzedniego zdjęcia jako źródła.",
+            "image.edit",
+        ),
+        (
+            "Zmień czerwony kwadrat na żółty w poprzednim załączonym obrazku. Zachowaj inne figury i wymiary. Utwórz nowy obraz, nie opis tekstowy.",
+            "image.edit",
+        ),
+        ("Change the bicycle to blue in the previous image. Keep the background.", "image.edit"),
+        ("Proszę zmień ten obraz na portret w zimowym ubraniu", "image.edit"),
+        ('Edytuj ten obraz: "dodaj niebieski kapelusz"', "image.edit"),
     ],
 )
 @pytest.mark.parametrize("web_enabled", [False, True])
@@ -87,8 +105,34 @@ def test_followup_is_bound_to_visible_same_conversation_result(content, action, 
         assert client.post("/api/chat/turns", json=request).json()["run"]["id"] == run["id"]
 
 
+@pytest.mark.parametrize(
+    "content",
+    [
+        "Jak zmienić kolor roweru w poprzednim zdjęciu?",
+        "Explain how to change the bicycle in the previous image",
+        "Do not change the bicycle in the previous image",
+        "Zmień prompt, aby opisywał rower na poprzednim zdjęciu",
+        "Zmień kod Pythona, aby wykrywał rower na poprzednim zdjęciu",
+        "Change the documentation explaining the bicycle in the previous image",
+        "> Zmień rower na niebieski na poprzednim zdjęciu",
+        "```text\nChange the bicycle to blue in the previous image\n```",
+        'Explain the instruction "Change the bicycle to blue in the previous image"',
+        'Explain the question "What is in the generated image?"',
+        '"Co znajduje się na wygenerowanym zdjęciu?"',
+        "> What do you see in this photo?",
+        "```text\nCo znajduje się na wygenerowanym zdjęciu?\n```",
+        "What is the best way to edit the code for image processing?",
+        "How can I generate a photograph?",
+        "Co oznacza słowo fotografia?",
+    ],
+)
+def test_image_mentions_in_advice_quotes_or_code_edits_do_not_select_pixels(content):
+    assert followup_action(content) is None
+
+
 @pytest.mark.parametrize("problem", ["trashed", "failed", "ambiguous"])
-def test_unavailable_or_ambiguous_latest_result_never_falls_back(problem):
+@pytest.mark.parametrize("content", ["Upscale it", "What do you see in the generated image?"])
+def test_unavailable_or_ambiguous_latest_result_never_falls_back(problem, content):
     with TestClient(app) as client:
         cid = conversation(client)
         completed_image(client, cid)
@@ -110,7 +154,7 @@ def test_unavailable_or_ambiguous_latest_result_never_falls_back(problem):
                 )
             before = len(list(session.scalars(select(Run))))
             session.commit()
-        r = client.post(f"/api/chat/conversations/{cid}/messages", json={"content": "Upscale it"})
+        r = client.post(f"/api/chat/conversations/{cid}/messages", json={"content": content})
         assert r.status_code == 422, r.text
         with session_factory()() as session:
             assert len(list(session.scalars(select(Run)))) == before
@@ -197,12 +241,13 @@ def test_noncommands_never_acquire_previous_sources(text):
         {"enabled": True, "render_pages": True},
     ],
 )
-def test_explicit_research_scope_does_not_acquire_a_previous_image(web):
+@pytest.mark.parametrize("content", ["Upscale it", "What do you see in the generated image?"])
+def test_explicit_research_scope_does_not_acquire_a_previous_image(web, content):
     with TestClient(app) as client:
         cid = conversation(client)
         completed_image(client, cid)
         r = client.post(
-            f"/api/chat/conversations/{cid}/messages", json={"content": "Upscale it", "web_search": web}
+            f"/api/chat/conversations/{cid}/messages", json={"content": content, "web_search": web}
         )
         assert r.status_code == 202, r.text
         assert r.json()["parameters"]["action"] == "auto"

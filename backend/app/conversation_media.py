@@ -10,6 +10,31 @@ from app.models import Agent, Artifact, ChatWorkContext, Message, Run
 
 _PLURAL_REFERENCE = r"(?:these images|these pictures|both images|the reference images|te obrazy|te zdjęcia|te zdjecia|oba obrazy|obie fotografie|te fotografie)"
 _REFERENCE = r"(?:it|this(?: image| picture)?|the (?:last |previous )?(?:image|picture|graphic|result)|this graphic|tę grafikę|te grafike|tą grafikę|ta grafike|to|ten obraz|ten wynik|ostatni obraz|poprzedni obraz|to zdjęcie|to zdjecie|tę fotografię)"
+_IMAGE = r"(?:images?|pictures?|photos?|photographs?|graphics?|obraz|obrazu|obrazie|obrazy|obrazek|obrazka|obrazku|zdjęcie|zdjecie|zdjęcia|zdjecia|zdjęciu|zdjeciu|grafikę|grafike|grafice|fotografię|fotografie|fotografii)"
+
+
+def _visual_question(content):
+    from app.chat_pages import _instruction_text
+
+    text = re.sub(r"\s+", " ", _instruction_text(content)).strip()
+    reference = (
+        rf"\b(?:in|on|of)\s+(?:(?:the|this|that|last|previous|generated|created|attached|uploaded|resulting)\s+){{1,4}}{_IMAGE}\b"
+        rf"|\b(?:na|w)\s+(?:(?:tym|ostatnim|poprzednim|wygenerowanym|utworzonym|stworzonym|załączonym|zalaczonym|przesłanym|przeslanym)\s+){{1,3}}{_IMAGE}\b"
+    )
+    question = (
+        r"^(?:what(?:\s+(?:is|are|do|can)\b|'s\b)|how many\b|which (?:colou?rs?|objects?)\b"
+        r"|co (?:jest|znajduje|widać|widac|widzisz)\b|jak(?:i|ie|iego) (?:kolor\w*|obiekt\w*)\b"
+        r"|ile\b|czy (?:widać|widac|widzisz|na|w)\b)"
+    )
+    description = (
+        rf"^(?:describe|inspect|opisz|obejrzyj)\s+"
+        rf"(?:(?:the|this|that|last|previous|generated|created|attached|uploaded|resulting|ten|to|tę|te|tą|ta|ostatni|poprzedni|wygenerowany|wygenerowane|utworzony|utworzone|załączony|zalaczony|załączone|zalaczone)\s+){{1,4}}{_IMAGE}[.!?]?$"
+    )
+    return bool(
+        re.search(description, text, re.I)
+        or re.search(question, text, re.I)
+        and re.search(reference, text, re.I)
+    )
 
 
 def _media_web_options(body):
@@ -53,10 +78,12 @@ def _media_web_options(body):
 
 
 def followup_action(content):
-    text = content.strip()
+    from app.chat_pages import _instruction_text
+
+    text = re.sub(r"\s+", " ", content).strip()
     if re.fullmatch(
         rf"(?:describe|inspect|opisz|obejrzyj)\s+(?:{_REFERENCE}|{_PLURAL_REFERENCE})[.!]?", text, re.I
-    ):
+    ) or _visual_question(content):
         return "image.describe"
     if re.fullmatch(rf"(?:upscale|powiększ|powieksz)\s+{_REFERENCE}[.!]?", text, re.I):
         return "image.upscale"
@@ -66,11 +93,35 @@ def followup_action(content):
         re.I,
     ):
         return "video.generate"
-    edit = r"(?:edit|modify|change|edytuj|zmień|zmien)"
+    edit = r"(?:(?:please|now|then|proszę|prosze|teraz|następnie|nastepnie)\s+){0,3}(?:edit|modify|change|edytuj|zmień|zmien)"
     joiner = r"(?:\s*[:—-]\s*|\s+(?:to|into|na)\s+)"
     if re.fullmatch(rf"{edit}\s+{_PLURAL_REFERENCE}{joiner}\S.+", text, re.I):
         return "image.recompose"
     if re.fullmatch(rf"{edit}\s+{_REFERENCE}{joiner}\S.+", text, re.I):
+        return "image.edit"
+    # Natural edits often name the object first and the existing image later:
+    # "Change the bicycle to blue in the previous image". Require that explicit
+    # image location/source; a mention in quoted text is never an instruction.
+    text = re.sub(r"\s+", " ", _instruction_text(content)).strip()
+    if not re.match(rf"^{edit}\s+", text, re.I):
+        return None
+    if re.match(
+        rf"^{edit}\s+(?:(?:the|this|my|our|ten|tę|te|mój|moj|nasz)\s+){{0,2}}"
+        r"(?:code|script|project|repository|documentation|description|caption|prompt|kod\w*|skrypt\w*|projekt\w*|repozytor\w*|dokumentacj\w*|opis\w*|instrukcj\w*)\b",
+        text,
+        re.I,
+    ):
+        return None
+    image = r"(?:image|picture|photo|graphic|obraz|obrazu|obrazie|obrazek|obrazka|obrazku|zdjęcie|zdjecie|zdjęcia|zdjecia|zdjęciu|zdjeciu|grafikę|grafike|grafice|fotografię|fotografie|fotografii)"
+    reference = (
+        r"\b(?:in|on|from|using)\s+(?:(?:the|this|that|same|previous|last|attached|uploaded)\s+){0,3}"
+        + image
+        + r"\b|\b(?:w|na|z|ze|użyj|uzyj|wykorzystaj)\s+"
+        r"(?:(?:tym|tego|tę|te|tą|ta|poprzednim|poprzedniego|poprzedniej|ostatnim|ostatniego|ostatniej|załączonym|zalaczonym|załączonego|zalaczonego|załączonej|zalaczonej|przesłanym|przeslanym)\s+){0,3}"
+        + image
+        + r"\b"
+    )
+    if re.search(reference, text, re.I):
         return "image.edit"
     return None
 
@@ -118,9 +169,7 @@ def resolve_result_reference(session, conversation, body, mode):
         return body, None
     # "Describe it" is also an ordinary text follow-up. Only the current result
     # may make that generic phrase a pixel request, never an unrelated old image.
-    generic_description = action == "image.describe" and not re.search(
-        r"\b(?:image|picture|graphic|obraz|grafik)\w*", body.content, re.I
-    )
+    generic_description = action == "image.describe" and not re.search(rf"\b{_IMAGE}\b", body.content, re.I)
     description_task = None
     if generic_description:
         recent = session.scalars(

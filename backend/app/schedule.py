@@ -43,6 +43,7 @@ def launch_agent(
     definition=None,
     before_publish=None,
     avatar_appearance_recipe=...,
+    avatar_whole_recipe=...,
 ) -> str:
     if not agent.enabled:
         raise ValueError("Enable the reviewed definition before running this agent")
@@ -115,15 +116,29 @@ def launch_agent(
 
         media_inputs = freeze_media_inputs(session, definition.media)
         if definition.media.kind == "avatar":
-            from app.avatar_appearance import frozen_recipe, select_recipe
-            from app.avatars import capabilities as avatar_capabilities
+            if definition.media.request.generation_profile:
+                from app.whole_avatars import capabilities as whole_capabilities
+                from app.whole_avatars import frozen_recipe as frozen_whole
+                from app.whole_avatars import verify_recipe as verify_whole
 
-            recipe = (
-                select_recipe(avatar_capabilities(), definition.media.request)
-                if avatar_appearance_recipe is ...
-                else frozen_recipe({"appearance_recipe": avatar_appearance_recipe})
-            )
-            avatar_appearance = {"avatar_appearance_recipe": recipe}
+                profile = whole_capabilities()
+                recipe = (
+                    verify_whole(profile, profile.get("recipe"))
+                    if avatar_whole_recipe is ...
+                    else frozen_whole(avatar_whole_recipe)
+                )
+                verify_whole(profile, recipe)
+                avatar_appearance = {"avatar_whole_recipe": recipe}
+            else:
+                from app.avatar_appearance import frozen_recipe, select_recipe
+                from app.avatars import capabilities as avatar_capabilities
+
+                recipe = (
+                    select_recipe(avatar_capabilities(), definition.media.request)
+                    if avatar_appearance_recipe is ...
+                    else frozen_recipe({"appearance_recipe": avatar_appearance_recipe})
+                )
+                avatar_appearance = {"avatar_appearance_recipe": recipe}
     market_email_approval = None
     if definition.market is not None and definition.market.email is not None:
         from app.market_email import authorization
@@ -312,6 +327,7 @@ def retry_workflow(session: Session, source: Run) -> str:
         triggered_by="retry",
         definition=definition,
         avatar_appearance_recipe=source.parameters.get("avatar_appearance_recipe"),
+        avatar_whole_recipe=source.parameters.get("avatar_whole_recipe"),
     )
     retry = session.get(Run, run_id)
     retry.metadata_json = {**retry.metadata_json, "retry_of": source.id}

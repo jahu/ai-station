@@ -47,6 +47,7 @@ class ValidationRequest(BaseModel):
     manifest_snapshot: ManifestSnapshot | None = None
     node_manifest_snapshot: ManifestSnapshot | None = None
     validation_environment: ValidationEnvironment | None = None
+    output_contract: Literal["static_site"] | None = None
 
     @model_validator(mode="after")
     def bounded_request(self):

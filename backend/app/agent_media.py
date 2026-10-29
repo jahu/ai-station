@@ -43,7 +43,12 @@ def require_profile(scope):
         ready = profile.get("available") and "pl" in profile.get("languages", [])
     elif scope.kind == "avatar":
         try:
-            profile = RunnerClient().request("GET", "/v1/avatar/capabilities")
+            path = (
+                "/v1/avatar/whole-capabilities"
+                if scope.request.generation_profile
+                else "/v1/avatar/capabilities"
+            )
+            profile = RunnerClient().request("GET", path)
             ready = profile.get("available")
             if scope.request.speech_text is not None:
                 speech = RunnerClient().request("GET", "/v1/audio/capabilities")
@@ -113,16 +118,19 @@ def runtime_readiness():
         avatar = RunnerClient().request("GET", "/v1/avatar/capabilities")
     except (RunnerError, RunnerUnavailable):
         avatar = {}
+    try:
+        whole_avatar = RunnerClient().request("GET", "/v1/avatar/whole-capabilities")
+    except (RunnerError, RunnerUnavailable):
+        whole_avatar = {}
+    avatar_ready = bool(avatar.get("available") or whole_avatar.get("available"))
     image_ready = bool(photo.get("available") and "t2i" in photo.get("modes", []))
     music_ready = bool(music.get("available") and music.get("profile_sha256") == PROFILE_SHA256)
     speech_ready = bool(speech.get("available") and "pl" in speech.get("languages", []))
     return {
         "avatar": {
-            "ready": bool(avatar.get("available")),
+            "ready": avatar_ready,
             "speech_ready": bool(speech.get("available") and "pl" in speech.get("languages", [])),
-            "reason": None
-            if avatar.get("available")
-            else "Local avatar engine is unavailable; inspect Avatars setup",
+            "reason": None if avatar_ready else "Local avatar engine is unavailable; inspect Avatars setup",
         },
         "video": {
             "ready": bool(video.get("available")),
@@ -405,10 +413,14 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
             parent_run_id=run.id,
             execution_deadline_at=run.parameters["execution_deadline_at"],
             observed_profile=profile,
-            appearance_snapshot={"appearance_recipe": root.parameters.get("avatar_appearance_recipe")},
+            appearance_snapshot={"whole_recipe": root.parameters.get("avatar_whole_recipe")}
+            if prepared_scope.request.generation_profile
+            else {"appearance_recipe": root.parameters.get("avatar_appearance_recipe")},
         )
         plan = run.task.metadata_json["media_plan"]
-        child = session.get(Run, plan.get("planner_run_id") or plan["compose_run_id"])
+        child = session.get(
+            Run, plan.get("planner_run_id") or plan.get("whole_run_id") or plan.get("compose_run_id")
+        )
         child.operation_key = key
         context = {
             "media_inputs": list(run.parameters.get("media_inputs", [])),

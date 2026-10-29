@@ -9,6 +9,7 @@ from app.agent_schema import AgentSettings
 from app.chat_policy import agent_draft_policy, agent_draft_requested
 from app.conversation_data_schema import DataScope
 from app.data_agent_draft import RepeatProposal
+from app.draft_schedule import schedule_values
 from app.models import Artifact, ChatWorkContext, Message, Run
 from app.permissions import require
 
@@ -201,7 +202,7 @@ def definition(source, proposal, timezone, *, report_model=None):
     base = source["definition"]
     values = {
         **base,
-        **proposal.model_dump(mode="json", exclude={"family"}),
+        **schedule_values(proposal.model_dump(mode="json", exclude={"family"})),
         "schedule_timezone": timezone,
         "enabled": False,
         "project_id": None,

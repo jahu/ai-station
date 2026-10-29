@@ -10,6 +10,7 @@ import MusicScope from "./MusicScope";
 import PromptTranslation from "../components/media/PromptTranslation";
 import { randomId } from "../lib/random-id";
 import {
+  FreshMediaRetry,
   PromptTranslationControl,
   type TranslationOptions,
 } from "../components/media/PromptTranslation";
@@ -220,6 +221,12 @@ function ConversationMediaPreparation({
   const cache = useQueryClient();
   const receipt = run.metadata?.prompt_translation as
     { status?: string } | undefined;
+  if (run.metadata?.fresh_media_retry)
+    return receipt ? (
+      <PromptTranslation run={run} />
+    ) : (
+      <FreshMediaRetry run={run} />
+    );
   if (!receipt && !RETRYABLE.has(run.status)) return null;
   return (
     <div
@@ -364,7 +371,11 @@ export function AssistantResults({
             runs={result.data_runs}
             taskId={dataRoot?.task_id ?? ""}
           />
-          <AgentDataResult runs={result.data_runs} />
+          <AgentDataResult
+            runs={result.data_runs}
+            taskStatus={result.task_status}
+            taskSteps={result.steps}
+          />
           {onRepeatAnalysis &&
             hasDataResult &&
             dataRoot?.status === "succeeded" &&

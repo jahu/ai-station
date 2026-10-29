@@ -4,6 +4,7 @@ import { api } from "../../api";
 export type AvatarProfile = "default" | "bounded_11g";
 export type AvatarCapabilities = {
   available: boolean;
+  reason?: string;
   recommended_memory_profile?: AvatarProfile;
   memory_profiles?: { id: string; available: boolean }[];
 };

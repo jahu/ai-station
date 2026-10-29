@@ -386,11 +386,12 @@ function VideoForm({
                     <option value={49}>2 seconds</option>
                     <option value={81}>3.4 seconds</option>
                     {duration.endsWith("s") &&
-                      !["15s", "30s", "60s"].includes(duration) && (
+                      !["10s", "15s", "30s", "60s"].includes(duration) && (
                         <option value={duration}>
                           {duration.slice(0, -1)} seconds
                         </option>
                       )}
+                    <option value="10s">10 seconds</option>
                     <option value="15s">15 seconds</option>
                     <option value="30s">30 seconds</option>
                     <option value="60s">1 minute</option>

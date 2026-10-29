@@ -1,5 +1,38 @@
 # Local avatar video
 
+## Optional stable-detail engine
+
+The configured Sonic integration animates the whole recording in one Run and
+keeps the original portrait proportions, up to a 768-pixel side and 512×768
+pixel-area budget. Avatars offers portrait + recording or voice reference + new
+spoken text, real generation progress, Stop, explicit Resume and a final Library
+film. Reviewed avatar agents use the same pipeline; existing saved Echo settings
+are preserved. See the [whole-recording plan](plans/whole-recording-avatars.md).
+
+It is **disabled by default**. Configure `AI_STATION_SONIC_PYTHON`,
+`AI_STATION_SONIC_DIR`, `AI_STATION_SONIC_MODELS` and explicitly enable
+`AI_STATION_SONIC_WHOLE_ENABLED` on the native Runner. Readiness verifies existing
+offline files; it never downloads weights or starts inference. An initial hash
+check reports checking. GPU discovery and owned user memory scopes are required.
+Manual full-detail jobs permit four hours; reviewed agents keep their own limit.
+Detailed rendering can take hours. The real complete 40.08-second application
+recording passed full decode, canonical audio, hash and Library/browser checks at
+native 512×768/25 fps. A separate two-second agent journey also passed. The
+[quality follow-up](qa/whole-avatar-follow-up.md) records the owner's confirmation
+of substantially improved quality and retains the original Echo failure (QA-020). This is
+not an HD or perfect-identity claim. The controlled workstation preview now uses
+this profile for new requests; existing Echo histories retain their settings.
+
+During animation, the workspace estimates remaining animation time from saved
+progress events after at least three measured windows. Model preparation is
+excluded; saving and final verification follow that estimate. Refreshing the
+browser retains the measurement. Queued, stopped, finishing or stale progress
+has no countdown. This is a read-only projection, never authority to complete,
+retry or extend a Run. The estimate uses observed speed rather than a fixed GPU
+benchmark.
+
+## Existing Echo engine
+
 The current workspace defaults to **Full recording (up to 60 seconds)** through
 [durable long-media jobs](long-media.md). Generated speech uses the same complete
 recording plan; bounded motion windows share one canonical audio timeline. The
@@ -17,6 +50,13 @@ It does not claim the uncut TTS text's ending inside that excerpt. A separate
 Evidence: `data/acceptance/avatar-full-minute-20261026/qualification-complete.json`.
 The [earlier 30-second timing/playback record](long-avatar-qualification.md#executed-2026-10-15)
 remains historical; it is not the current whole-narration quality proof.
+
+Operator visual acceptance on 2026-10-28 reports progressive eye/facial
+deformation (QA-020). That historical quality failure remains open despite its
+successful timing/playback checks. The subsequent
+[controlled engine comparison](plans/avatar-model-quality-evaluation.md) led to
+the optional whole-recording Sonic integration described above; its complete
+512×768 output received positive overall quality feedback from the owner.
 
 The direct short-Run adapter and earlier verification below remain compatible;
 their per-window frame limits are not the current workspace's duration limit.

@@ -3,11 +3,33 @@
 from sqlalchemy import select
 
 from app.llama import fit_coding_context, loadable_model
-from app.models import ModelFile, Run, RuntimeInstance
+from app.models import ModelFile, Run, RunEvent, RuntimeInstance
 from app.providers import ProviderError
 from app.runner_client import RunnerClient
 
 MINIMUM_CONTEXT = 100352  # First supported 256-token allocation above 100k.
+
+
+def observed_context(instance, loaded=None):
+    metadata = instance.metadata_json
+    observation = metadata.get("observation")
+    requested = metadata.get("context_size")
+    actual = observation.get("n_ctx") if isinstance(observation, dict) else None
+    # A stop observation describes process liveness and may omit n_ctx. The
+    # successful load's persisted native measurement remains allocation proof;
+    # requested settings or another instance's event never substitute for it.
+    if (
+        actual is None
+        and instance.status == "stopped"
+        and isinstance(loaded, dict)
+        and loaded.get("instance_id") == instance.id
+        and loaded.get("gpus") == metadata.get("gpus")
+        and loaded.get("cache_type") == metadata.get("cache_type") == "q8_0"
+    ):
+        actual = loaded.get("n_ctx")
+    if type(requested) is not int or type(actual) is not int or min(requested, actual) <= 0:
+        return 0
+    return min(requested, actual)
 
 
 def select_coding_model(session):
@@ -19,12 +41,21 @@ def select_coding_model(session):
     history = list(session.scalars(select(RuntimeInstance).where(RuntimeInstance.ownership == "managed")))
     load_ids = [i.metadata_json.get("load_run_id") for i in history if i.metadata_json.get("load_run_id")]
     loads = {
-        rid: (created, status)
-        for rid, created, status in session.execute(
-            select(Run.id, Run.created_at, Run.status).where(Run.id.in_(load_ids))
+        rid: (created, status, parameters, executor)
+        for rid, created, status, parameters, executor in session.execute(
+            select(Run.id, Run.created_at, Run.status, Run.parameters, Run.executor_type).where(
+                Run.id.in_(load_ids)
+            )
         )
     }
     loaded_at = {rid: values[0] for rid, values in loads.items()}
+    load_observations = {}
+    for rid, payload in session.execute(
+        select(RunEvent.run_id, RunEvent.payload)
+        .where(RunEvent.run_id.in_(load_ids), RunEvent.event_type == "runtime.ready")
+        .order_by(RunEvent.sequence.desc())
+    ):
+        load_observations.setdefault(rid, payload)
     candidates = []
     for model in session.scalars(
         select(ModelFile).where(
@@ -33,12 +64,27 @@ def select_coding_model(session):
     ):
         if not loadable_model(model):
             continue
+
+        def matches_file(instance):
+            if instance.runtime_key != "llama.cpp":
+                return False
+            meta = instance.metadata_json
+            if meta.get("model_size_bytes") == model.size_bytes and meta.get("model_mtime") == model.mtime:
+                return True
+            load = loads.get(meta.get("load_run_id"))
+            if load is None or load[1] != "succeeded" or load[3] != "llama_load":
+                return False
+            params = load[2]
+            return (
+                params.get("instance_id") == instance.id
+                and params.get("gpus") == meta.get("gpus")
+                and params.get("model_path") == model.host_path
+                and params.get("size_bytes") == model.size_bytes
+                and params.get("mtime") == model.mtime
+            )
+
         observations = [
-            i
-            for i in history
-            if i.metadata_json.get("model_file_id") == model.id
-            and i.metadata_json.get("model_size_bytes") == model.size_bytes
-            and i.metadata_json.get("model_mtime") == model.mtime
+            i for i in history if i.metadata_json.get("model_file_id") == model.id and matches_file(i)
         ]
         if any(i.status == "unknown" for i in observations):
             continue
@@ -67,7 +113,7 @@ def select_coding_model(session):
         profile = profiles[0]
         proven = max(
             [
-                int(i.metadata_json.get("context_size", 0))
+                observed_context(i, load_observations.get(i.metadata_json.get("load_run_id")))
                 for i in matching
                 if i.status in {"ready", "stopped"}
                 and i.metadata_json.get("cache_type") == "q8_0"
@@ -77,7 +123,7 @@ def select_coding_model(session):
             or [0]
         )
         failed = [
-            int(i.metadata_json.get("failed_context_size", 0))
+            int(i.metadata_json.get("failed_context_size") or i.metadata_json.get("context_size", 0))
             for i in matching
             if i.metadata_json.get("context_fit") == "too_large"
         ]
@@ -91,6 +137,10 @@ def select_coding_model(session):
         )
         if context < MINIMUM_CONTEXT:
             continue
+        # A slightly larger estimate is not worth discarding an already proven
+        # usable allocation. Requested settings alone never prove runtime size.
+        if proven >= MINIMUM_CONTEXT:
+            context = min(context, proven)
         verified = proven >= context
         candidates.append(
             (

@@ -1,5 +1,10 @@
 # Operator QA catalog and workbook
 
+2026-10-29: [the whole-recording avatar follow-up](whole-avatar-follow-up.md)
+qualifies a complete replacement Sonic profile separately from the original
+Echo failure. It preserves the issued v15 workbook and records positive owner
+feedback on the replacement; it is not a silent change to AVATAR-005 or its result.
+
 The versioned [catalog](cases.json) contains 161 Polish operator cases across 21
 areas, including all four permanent-deletion journeys and real semantic-memory
 acceptance and the single assistant conversation. It is a test definition, not evidence that the product is complete.

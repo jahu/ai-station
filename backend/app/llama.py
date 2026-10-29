@@ -484,7 +484,7 @@ def enqueue_stop(session, instance, *, task=None):
     return run
 
 
-def reserve(session, run, indexes):
+def reserve(session, run, indexes, *, hardware=None):
     selected = run.parameters["gpus"]
     if any(g not in indexes for g in selected):
         raise ValueError("Selected GPU is not present")
@@ -496,6 +496,10 @@ def reserve(session, run, indexes):
     }
     requested = {f"gpu:{g}" for g in selected}
     if (active_locks(session) - own) & requested:
+        return False
+    from app.llama_admission import memory_available
+
+    if not run.metadata_json.get("dispatch_attempted") and not memory_available(session, run, hardware):
         return False
     for key in requested - own:
         session.add(ResourceLock(resource_key=key, run_id=run.id))
@@ -632,7 +636,13 @@ class LlamaExecutor:
                     release_run_locks(session, run.id)
                     transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
                     return "done"
-            elif not reserve(session, run, indexes):
+            elif not reserve(session, run, indexes, hardware=hardware):
+                session.refresh(run)
+                if run.status == "cancel_requested" and not run.metadata_json.get("dispatch_attempted"):
+                    instance.status = "stopped"
+                    release_run_locks(session, run.id)
+                    transition(session, run, RunStatus.CANCELED, event_type="run.canceled")
+                    return "done"
                 transition(session, run, RunStatus.INTERRUPTED, event_type="resource.waiting")
                 transition(session, run, RunStatus.QUEUED, event_type="run.requeued")
                 run.queued_at = utcnow()
@@ -641,6 +651,10 @@ class LlamaExecutor:
                 evict_idle_models(session, run, indexes, desired=set(run.parameters["gpus"]))
                 session.commit()
                 return "requeued"
+            if "resource_wait" in run.metadata_json:
+                run.metadata_json = {
+                    key: value for key, value in run.metadata_json.items() if key != "resource_wait"
+                }
         session.refresh(run)
         if run.status != "cancel_requested":
             transition(session, run, RunStatus.RUNNING, event_type="executor.started")
@@ -870,6 +884,7 @@ def initial_preset(session, file_id):
 
 def prepare_consumer(session, run):
     """Reuse a pending load or reload with the user's last saved GPU/context selection."""
+    from app.coding_model_routing import MINIMUM_CONTEXT
     from app.dependencies import depend_on
     from app.providers import ProviderError
 
@@ -896,6 +911,8 @@ def prepare_consumer(session, run):
     needs_upgrade = bool(
         instance is not None
         and target
+        # An adequate live allocation need not be replaced to reach the next ideal preset.
+        and instance.metadata_json.get("context_size", 4096) < MINIMUM_CONTEXT
         and (
             instance.metadata_json.get("cache_type", "f16") != "q8_0"
             or instance.metadata_json.get("context_size", 4096) < target

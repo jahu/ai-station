@@ -1,3 +1,11 @@
+The [whole-recording Sonic adapter](plans/whole-recording-avatars.md) accepts only
+frozen source hashes, a configured recipe, allocated GPUs and an absolute
+deadline over the private typed Runner API. The owned child verifies installed
+source/model bytes before imports and publication, within an actual 18-GiB,
+zero-swap scope. Callers cannot supply commands, model paths or memory limits.
+Saved progress events may supply a read-only animation-time estimate; they
+cannot authorize completion, retry or a longer budget.
+
 The [Echo appearance candidate](plans/echo-continuation-quality.md) accepts only
 one built-in recipe and its exact source/model observation. It preserves owned
 portrait/audio/motion boundaries, process groups, memory scopes and permissions.
@@ -408,6 +416,19 @@ The `operator_auth` setting stores PBKDF2-SHA256 material only. Responses omit p
 SQLite backups require `manage_station` and write under the data root. Inspecting a copy re-opens that file read-only and never restores over the live database. Compose image inspect asks the Host Runner to compare the `ai-station:local` tag with running API/worker/scheduler containers; it does not build, tag, start or stop. Compose shutdown does not pass `--volumes`. Interrupted-run acknowledgement records inspection only and does not replay side effects. Held-lease status is inspect-only and does not recover or restore. See [operations](operations.md).
 
 ## Secrets
+
+Git ignores `.env` and `.env.*` at every directory depth, except the portable
+`.env.example` template. Keep that template free of real credentials. Ignoring a
+file does not remove previously committed values; it can also be overridden with
+`git add -f`. Secret scanning and push protection are additional safeguards, not
+proof that a repository contains no secrets.
+
+Before publishing, scan the full Git history and public branches, including PR
+references, as well as release assets and available workflow logs. Review scanner
+findings individually; do not exclude whole test or documentation directories.
+Keep scanner reports private and redact credential values. If a real credential
+was published, revoke or rotate it first: deleting the file or rewriting history
+does not invalidate copies already downloaded by others.
 
 Secrets are environment variables or files outside Git. Database rows store references (`env:NAME` or a data-root file path). Logs, events, errors, and prompts pass through a redactor for common token patterns. Connector and chat-provider responses omit secret values; the UI may show that a secret is present and the environment reference name. Chat provider URLs cannot embed credentials. External chat providers require a secret reference and fail closed when it is missing. The built-in local provider may run without a key.
 
@@ -952,3 +973,11 @@ manage_agents and scoped filesystem_read and executes no future tools. Review an
 explicit activation determine future permissions. The child drafting model must
 match the originating conversation model; report Auto uses that frozen local
 selection. Source snapshot/default-family compatibility is preserved.
+
+[Operator startup recovery](operations.md#recovering-an-api-port-after-network-startup)
+uses the local Docker Unix endpoint from a native trusted CLI, never an API or
+agent tool. Exact project/checkout labels, user, hardened mounts and declared
+private binds gate an API-only recreation pinned to its existing image. Active
+workers, native processes, other projects and deliberately stopped services are
+not taken over. Optional user-service installation cannot replace an unrelated
+unit.

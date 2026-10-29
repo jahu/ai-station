@@ -51,7 +51,29 @@ def publish_coding(session, parent, definition, *, context="", deadline_at=None,
         request = preparation.parameters[request_key]
         preparation.parameters = {**preparation.parameters, "agent_coding_deadline": deadline}
         guidance = definition.system_prompt + "\n" + request["guidance"]
+        output_fields = {}
         if request["project_check_policy"]["auto_validate"]:
+            from app.coding_output import website_output
+
+            contract = website_output(definition.goal)
+            if contract:
+                output_fields["output_contract"] = contract
+                guidance += (
+                    "\nThe website build must write a nonempty dist/index.html and its local assets "
+                    "for the verified preview/download. Checks/builds run with network disabled "
+                    "and non-interactive input. Never fetch packages during a check/build. "
+                    "Dependency installation: "
+                    + (
+                        "enabled in a separate declared-dependency step. "
+                        if request["project_check_policy"]["auto_install_dependencies"]
+                        else "disabled; use only the provided Node/Python standard libraries. "
+                    )
+                    + "For a plain HTML/CSS site, put source and local assets under src/. "
+                    "A zero-dependency package.json build script can be: "
+                    + "node -e \"require('node:fs').cpSync('src','dist',{recursive:true})\". "
+                    + "It copies the actual files, including src/index.html, to dist/. "
+                    "Do not replace builds or tests with echo-only placeholders."
+                )
             guidance += (
                 "\nThis agent's reviewed new-workspace policy runs detected checks/builds. "
                 "For a website, create a complete self-contained static site with package.json "
@@ -71,6 +93,7 @@ def publish_coding(session, parent, definition, *, context="", deadline_at=None,
             **preparation.parameters,
             request_key: {
                 **request,
+                **output_fields,
                 "guidance": guidance,
                 **(
                     {"max_repair_attempts": 1 if request["project_check_policy"]["auto_validate"] else 0}

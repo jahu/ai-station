@@ -285,6 +285,31 @@ def test_an_explicit_read_may_quote_just_the_target_url():
 
 
 @pytest.mark.parametrize(
+    "prompt",
+    [
+        "Przeczytaj http://127.0.0.1:8765/api/health",
+        'Read "http://127.0.0.1:8765/api/health"',
+        "Read http://localhost/health",
+        "Read http://169.254.169.254/latest/meta-data",
+        "Read https://example.com:8443/",
+        "Read https://example.com/ and http://192.168.1.1/",
+    ],
+)
+def test_blocked_explicit_page_is_denied_before_search_or_inference(page_tools, prompt):
+    with TestClient(app) as api:
+        route = conversation(api)
+        response = api.post(route + "/messages", json={"content": prompt, "web_search": {"enabled": True}})
+        assert response.status_code == 202, response.text
+        step()
+        answer = api.get(route).json()["messages"][-1]
+        assert answer["run_status"] == "failed", answer
+        executed = api.get("/api/runs/" + answer["run_id"]).json()
+        assert "private/local addresses" in executed["error_message"]
+        assert "follow-up search topic" not in executed["error_message"]
+    assert page_tools == ([], [], [])
+
+
+@pytest.mark.parametrize(
     "text",
     [
         'Analyze this JSON: {"url": "https://akademia.ai"}',

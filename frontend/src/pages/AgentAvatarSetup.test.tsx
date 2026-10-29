@@ -46,7 +46,7 @@ function mount(children: React.ReactNode, path = "/avatars") {
     </QueryClientProvider>,
   );
 }
-function fixture() {
+function fixture(whole = false) {
   const writes: Record<string, unknown>[] = [];
   vi.stubGlobal(
     "fetch",
@@ -56,41 +56,78 @@ function fixture() {
       return {
         ok: true,
         json: async () =>
-          url.endsWith("/capabilities")
-            ? capabilities
-            : url.endsWith("/hardware")
-              ? { gpus: [] }
-              : url.includes("/media/jobs")
-                ? {
-                    task_id: "avatar-job",
-                    revision: 1,
-                    kind: "avatar",
-                    status: "queued",
-                    active_run_ids: [],
-                    total_segments: 2,
-                    completed_segments: 0,
-                    request,
-                  }
-                : url.endsWith("portrait")
+          url.endsWith("/whole-capabilities")
+            ? {
+                backend: "sonic",
+                available: whole,
+                readiness: whole ? "ready" : "disabled",
+              }
+            : url.endsWith("/capabilities")
+              ? capabilities
+              : url.endsWith("/hardware")
+                ? { gpus: [] }
+                : url.includes("/media/jobs")
                   ? {
-                      id: "portrait",
-                      type: "image",
-                      mime_type: "image/png",
-                      original_filename: "Portrait.png",
+                      task_id: "avatar-job",
+                      revision: 1,
+                      kind: "avatar",
+                      status: "queued",
+                      active_run_ids: [],
+                      total_segments: 2,
+                      completed_segments: 0,
+                      request,
                     }
-                  : url.endsWith("speech")
+                  : url.endsWith("portrait")
                     ? {
-                        id: "speech",
-                        type: "audio",
-                        mime_type: "audio/wav",
-                        original_filename: "Speech.wav",
+                        id: "portrait",
+                        type: "image",
+                        mime_type: "image/png",
+                        original_filename: "Portrait.png",
                       }
-                    : [],
+                    : url.endsWith("speech")
+                      ? {
+                          id: "speech",
+                          type: "audio",
+                          mime_type: "audio/wav",
+                          original_filename: "Speech.wav",
+                        }
+                      : [],
       };
     }),
   );
   return writes;
 }
+
+it("offers stable detail explicitly without changing a saved agent until Apply", async () => {
+  const writes = fixture(true);
+  const apply = vi.fn();
+  mount(
+    <AgentAvatarSetup
+      value={{ ...avatar, description_source: "goal" }}
+      maximumRuntime={600}
+      onApply={apply}
+    />,
+  );
+  const button = await screen.findByRole("button", {
+    name: "Use suggested setup",
+  });
+  await screen.findByText(/Stable detail animates the whole recording/);
+  expect(apply).not.toHaveBeenCalled();
+  fireEvent.click(button);
+  const patch = apply.mock.calls[0][0];
+  expect(patch.maximum_runtime).toBe(14400);
+  expect(patch.media.description_source).toBe("fixed");
+  expect(patch.media.request).toEqual({
+    image_artifact_id: "portrait",
+    audio_artifact_id: "speech",
+    speech_text: null,
+    prompt: avatar.request.prompt,
+    seed: 9381,
+    gpu: "auto",
+    generation_profile: "sonic_whole_768_v1",
+  });
+  expect(writes).toHaveLength(0);
+});
 
 it("stages a bounded setup only after action and preserves all reviewed sources and custom limits", async () => {
   const writes = fixture();

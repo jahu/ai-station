@@ -1,8 +1,15 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import System, { SystemDiagnostics } from "./System";
+import type { Hardware } from "../api";
 
 afterEach(() => {
   cleanup();
@@ -25,6 +32,7 @@ function mount(
     diagnostics?: boolean;
     checks?: { name: string; status: string; detail: string }[];
     workers?: { id: string; available: boolean; last_heartbeat: string }[];
+    hardware?: Partial<Hardware>;
   } = {},
 ) {
   vi.stubGlobal(
@@ -46,6 +54,7 @@ function mount(
             },
             disk: { total_bytes: 1, used_bytes: 0, free_bytes: 1 },
             load: {},
+            ...extras.hardware,
           };
         }
         if (url.includes("/system/gpu-processes"))
@@ -129,6 +138,83 @@ function mount(
     </QueryClientProvider>,
   );
 }
+
+it("shows CPU, RAM and every discovered GPU using the same readouts as Home", async () => {
+  mount([], {
+    hardware: {
+      cpu: { utilization: 48, temperature_c: 60 },
+      memory: {
+        total_mib: 32768,
+        used_mib: 24576,
+        available_mib: 8192,
+        swap_used_mib: 0,
+        swap_total_mib: 8192,
+      },
+      gpus: [
+        {
+          index: 2,
+          uuid: "gpu-2",
+          name: "NVIDIA Example A",
+          utilization: 42,
+          memory_used_mib: 2048,
+          memory_total_mib: 12288,
+          temperature_c: 62,
+          fan_percent: 10,
+          power_watts: 59,
+        },
+        {
+          index: 7,
+          uuid: "gpu-7",
+          name: "NVIDIA Example B",
+          utilization: 23,
+          memory_used_mib: 4096,
+          memory_total_mib: 16384,
+          temperature_c: null,
+          fan_percent: null,
+          power_watts: null,
+        },
+      ],
+    },
+  });
+  const ram = within(await screen.findByRole("region", { name: "RAM usage" }));
+  expect(await ram.findByText("24.0 GiB")).toBeTruthy();
+  expect(ram.getByText("of 32.0 GiB")).toBeTruthy();
+  expect(
+    screen
+      .getByRole("meter", { name: "RAM utilization" })
+      .getAttribute("aria-valuenow"),
+  ).toBe("75");
+  expect(
+    screen
+      .getByRole("meter", { name: "CPU utilization" })
+      .getAttribute("aria-valuenow"),
+  ).toBe("48");
+  const first = within(
+    await screen.findByRole("region", { name: "GPU 2 gpu-2" }),
+  );
+  expect(first.getByText("Example A")).toBeTruthy();
+  expect(first.getByText("2,048 MiB")).toBeTruthy();
+  expect(first.getByText("62°C")).toBeTruthy();
+  expect(first.getByText("59 W")).toBeTruthy();
+  const second = within(screen.getByRole("region", { name: "GPU 7 gpu-7" }));
+  expect(second.getByText("Example B")).toBeTruthy();
+  expect(second.getAllByText("Unavailable").length).toBeGreaterThan(0);
+});
+
+it("retains honest unavailable readings on a CPU-only station", async () => {
+  mount([]);
+  expect(await screen.findByText("No GPUs detected")).toBeTruthy();
+  expect(
+    screen
+      .getByRole("meter", { name: "CPU utilization" })
+      .getAttribute("aria-valuenow"),
+  ).toBeNull();
+  expect(
+    screen
+      .getByRole("meter", { name: "CPU utilization" })
+      .getAttribute("aria-valuetext"),
+  ).toBe("No measurement");
+});
 
 it("lists expired leases without offering replay or restore", async () => {
   mount([{ ...lease, id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" }]);

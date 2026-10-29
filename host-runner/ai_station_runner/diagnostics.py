@@ -64,6 +64,26 @@ def http_check(name: str, url: str) -> dict:
     return check(name, "available", url)
 
 
+def _sonic() -> dict:
+    from ai_station_runner.sonic_runtime import capabilities
+
+    profile = capabilities()
+    status = (
+        "available"
+        if profile.get("available")
+        else "unknown"
+        if profile.get("readiness") == "checking"
+        else "misconfigured"
+        if profile.get("readiness") == "unavailable"
+        else "unavailable"
+    )
+    return check(
+        "Sonic whole-recording avatars",
+        status,
+        profile.get("reason", "Verified offline model and owned memory scope"),
+    )
+
+
 def collect_diagnostics(settings) -> dict:
     checks = [
         command_version("docker"),
@@ -79,6 +99,7 @@ def collect_diagnostics(settings) -> dict:
             str(Path(settings.echomimic_dir) / "infer_flash.py") if settings.echomimic_dir else "",
         ),
         directory_check("echomimic_models", settings.echomimic_models),
+        _sonic(),
         file_check("photo python", settings.photo_python),
         file_check("sd-cli", settings.sd_cli),
         http_check("llama.cpp / OpenAI-compatible endpoint", settings.llm_base_url),

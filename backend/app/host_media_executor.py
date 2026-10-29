@@ -61,7 +61,9 @@ class HostMediaExecutor:
             run.requested_resources.get("ram_mib", 0),
         )
         allocated = (
-            self.reserve_devices(session, run, indexes) if self.requires_gpu and memory_ready else None
+            self.reserve_devices_from_hardware(session, run, hardware)
+            if self.requires_gpu and memory_ready
+            else None
         )
         if not memory_ready or self.requires_gpu and allocated is None:
             release_run_locks(session, run.id)
@@ -163,6 +165,12 @@ class HostMediaExecutor:
     def reserve_devices(self, session, run, indexes):
         return reserve_gpu(session, run, indexes)
 
+    def reserve_devices_from_hardware(self, session, run, hardware):
+        # Keep existing executor overrides intact while allowing a capability
+        # to account for observed free VRAM from this same hardware snapshot.
+        indexes = [int(gpu["index"]) for gpu in hardware.get("gpus", [])]
+        return self.reserve_devices(session, run, indexes)
+
     def _start(self, runner, run, allocated, output):
         raise NotImplementedError
 
@@ -171,6 +179,9 @@ class HostMediaExecutor:
 
     def on_success(self, session, run, artifact):
         """Publish dependent work in the output/completion transaction, without I/O."""
+
+    def on_inspection(self, session, run, info):
+        """Optional progress observation; process state remains authoritative."""
 
     @staticmethod
     def _cancel_before_dispatch(session, run):
@@ -192,6 +203,7 @@ class HostMediaExecutor:
             if cancel:
                 runner.cancel_process(run.id)
             info = runner.inspect_process(run.id, **offsets)
+            self.on_inspection(session, run, info)
             for stream in ("stdout", "stderr"):
                 text = info.get(stream, "")
                 if text:

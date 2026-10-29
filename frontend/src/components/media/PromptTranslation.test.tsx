@@ -30,6 +30,7 @@ const receipt = {
 };
 function mount({
   review = true,
+  fresh = false,
   settings = false,
   control = false,
   loseAcknowledgement = false,
@@ -46,6 +47,11 @@ function mount({
       status: sourceStatus,
       parameters: { prompt: receipt.original.prompt },
       metadata: {
+        ...(fresh
+          ? {
+              fresh_media_retry: { run_id: "new-attempt", task_id: "new-task" },
+            }
+          : {}),
         prompt_translation: {
           ...receipt,
           status: review ? "waiting_for_review" : "queued",
@@ -366,4 +372,22 @@ it("saves a versioned local translator without browsing external models or launc
       },
     },
   ]);
+});
+
+it("keeps a stopped prompt inspectable and links its independent new attempt", async () => {
+  const { writes } = mount({ review: false, fresh: true });
+  const link = await screen.findByRole("link", { name: "Open new attempt →" });
+  expect(link.getAttribute("href")).toBe("/runs/new-attempt");
+  expect(
+    screen.getByText(
+      "A new task was started. This earlier task remains stopped.",
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Use original" })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "Retry translation" }),
+  ).toBeNull();
+  fireEvent.click(screen.getByText("Prompt prepared for model"));
+  expect(screen.getByText(receipt.original.prompt)).toBeTruthy();
+  expect(writes).toEqual([]);
 });

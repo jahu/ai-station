@@ -61,6 +61,70 @@ function mount(
   );
   return writes;
 }
+
+it("shows measured whole-recording animation progress without inventing segments", () => {
+  mount("generating", undefined, {
+    kind: "avatar",
+    mode: "whole_recording",
+    total_segments: 0,
+    completed_segments: 0,
+    total_stages: 1,
+    completed_stages: 0,
+    native_progress: {
+      phase: "animating",
+      completed_windows: 210,
+      total_windows: 525,
+    },
+    result_geometry: { width: 512, height: 768, fps: 25 },
+  });
+  const progress = screen.getByRole("progressbar", {
+    name: "Avatar animation progress",
+  });
+  expect(progress.getAttribute("max")).toBe("525");
+  expect(progress.getAttribute("value")).toBe("210");
+  expect(
+    screen.getByText("Animating the complete recording · 40%"),
+  ).toBeTruthy();
+  expect(screen.queryByText(/0 of 0/)).toBeNull();
+});
+
+it("distinguishes finishing from a verified complete whole-recording result", () => {
+  mount("generating", undefined, {
+    kind: "avatar",
+    mode: "whole_recording",
+    total_segments: 0,
+    completed_segments: 0,
+    native_progress: {
+      phase: "finishing",
+      completed_windows: 525,
+      total_windows: 525,
+    },
+    estimated_animation_seconds: 100,
+  });
+  expect(
+    screen.getByText("Saving and checking the complete recording…"),
+  ).toBeTruthy();
+  expect(screen.queryByText("Your full video is ready.")).toBeNull();
+  expect(screen.queryByLabelText("Generated full video")).toBeNull();
+  expect(screen.queryByLabelText("Estimated animation time")).toBeNull();
+});
+
+it("labels a measured animation estimate separately from saving and final verification", () => {
+  mount("generating", undefined, {
+    kind: "avatar",
+    mode: "whole_recording",
+    native_progress: {
+      phase: "animating",
+      completed_windows: 100,
+      total_windows: 525,
+    },
+    estimated_animation_seconds: 8100,
+  });
+  expect(screen.getByLabelText("Estimated animation time").textContent).toBe(
+    "About 2 h 15 min of animation left. Saving and checks follow.",
+  );
+  expect(screen.queryByText("Your full video is ready.")).toBeNull();
+});
 it("reports actual segment progress and stops the entire job", async () => {
   const writes = mount();
   expect(screen.getByText("2 of 23 segments complete")).toBeTruthy();
