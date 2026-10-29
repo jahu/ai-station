@@ -118,8 +118,9 @@ hardware profile. Two GPUs provide separate 12 GB devices, not a universal 24 GB
 These are recorded observations, not a cross-project benchmark or a speed promise.
 The LLM row is one captured completion; allocated context is not prompt length.
 Media times include their recorded Run/workflow boundaries, not diffusion-only
-kernel speed. Long-video color drift and avatar contrast/facial-detail changes
-remain visible; duration success is not a promise of perfect visual quality.
+kernel speed. Historical long-video and Echo avatar results retain their observed
+color/facial-detail limitations. The newer Sonic result received positive owner
+feedback; duration success alone is not a promise of perfect visual quality.
 [Method, exact scope and evidence](docs/benchmarks.md).
 
 ## 🚀 Get started
@@ -162,7 +163,7 @@ would otherwise spread across separate AI apps.
 - **More capabilities over time:** additional models, runtimes and devices through the existing execution boundaries.
 
 The goal is the familiarity of a ChatGPT-style conversation and a creative suite,
-powered by local models such as llama.cpp-compatible LLMs, Wan, EchoMimic,
+powered by local models such as llama.cpp-compatible LLMs, Wan, Sonic, EchoMimic,
 Chatterbox and ACE-Step. [The consumer setup plan](docs/plans/consumer-first-setup.md)
 keeps that direction concrete.
 
@@ -218,10 +219,15 @@ React/TypeScript/Vite, a durable worker/scheduler and a private native bridge.
 ```
 
 Normal tests use temporary databases and fake executors. Expensive real integrations
-are opt-in. Recorded local qualification includes 4,219 backend/Runner passes,
-nine opt-in skips and 847 frontend tests; newer offline QA tools have their own
-26 tests and 21 subtests. Those numbers do not automatically qualify every model,
-media profile or machine. [Verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
+are opt-in. The v0.0.2 qualification covers **4,755 backend/Runner cases**, including
+nine opt-in skips, through the complete passing baseline and all changed test
+families with unchanged remaining source. The full **887 frontend tests** and
+format/lint/typecheck/build gates pass. These are equivalent local checks, not a
+claim that every Python case was rerun in one final invocation. Separate offline
+QA tools have 26 tests and 21 subtests. Those results do not automatically qualify
+every model, media profile or machine.
+[Release verification](docs/releases/0.0.2.md#verification-and-upgrade) ·
+[Historical verification](docs/verification.md) · [Operator QA](docs/qa/README.md).
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before contributing. The [setup/development guide](docs/getting-started.md)
 also explains how to add executors, capabilities, providers, tools and connectors.
