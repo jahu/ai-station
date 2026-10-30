@@ -1,4 +1,4 @@
-import { useId, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useState, type KeyboardEvent } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import {
   useMutation,
@@ -32,6 +32,8 @@ import {
   type ImageSettings,
   type ImageModelCatalog,
   type ImageModelDefaults,
+  type ImageRecommendation,
+  recommendationReason,
 } from "./image-models";
 import {
   ImageOperationChoiceList,
@@ -132,6 +134,13 @@ function ImageForm({
 }) {
   const creative = useCreative();
   const [initial] = useState(() => creative?.draft ?? {});
+  const [initialSourceModel] = useState(
+    () =>
+      (
+        creative?.sourceRun?.metadata?.image_model_selection as
+          ImageRecommendation | undefined
+      )?.choice.id,
+  );
   const restored = (initial.formState ?? initial) as Record<string, unknown>;
   const startingMode = String(restored.mode ?? initialMode);
   const [mode, setMode] = useState<Mode>(
@@ -158,26 +167,68 @@ function ImageForm({
       protected_terms: [],
     },
   );
-  const restoredChoice = initial.model_id
-    ? (catalog.data?.items.find(
-        (item) => item.definition_id === initial.model_id,
-      )?.id ?? `unavailable:${String(initial.model_id)}`)
-    : initial.backend
-      ? startingMode === "upscale"
-        ? "realesrgan"
-        : String(initial.backend)
-      : undefined;
+  const [prompt, setPrompt] = useState(
+    String(
+      startingMode === "t2i"
+        ? (restored.prompt ?? "")
+        : (restored.edit_prompt ?? restored.prompt ?? ""),
+    ),
+  );
+  const [ids, setIds] = useState<string[]>(
+    (restored.ids ??
+      restored.input_artifact_ids ??
+      (initialInput ? [initialInput] : [])) as string[],
+  );
+  const restoredChoice =
+    initial.model_selection === "auto"
+      ? "auto"
+      : initial.model_id
+        ? (catalog.data?.items.find(
+            (item) => item.definition_id === initial.model_id,
+          )?.id ?? `unavailable:${String(initial.model_id)}`)
+        : initial.backend
+          ? startingMode === "upscale"
+            ? "realesrgan"
+            : String(initial.backend)
+          : undefined;
   const choiceId =
     choices[mode] ??
     (mode === startingMode ? restoredChoice : undefined) ??
     catalog.data?.defaults.choices[mode] ??
     (mode === "upscale" ? "realesrgan" : "qwen");
-  const selectedModel = catalog.data?.items.find(
+  const automatic = choiceId === "auto";
+  const explicitModel = catalog.data?.items.find(
     (model) => model.id === choiceId,
   );
+  const editing = mode === "img2img" || mode === "recompose";
+  const [previewPrompt, setPreviewPrompt] = useState(prompt);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setPreviewPrompt(prompt), 250);
+    return () => window.clearTimeout(timer);
+  }, [prompt]);
+  const recommendation = useQuery({
+    queryKey: ["image-edit-recommendation", mode, previewPrompt, ids.length],
+    queryFn: () =>
+      api<ImageRecommendation>("/images/models/recommendation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode,
+          prompt: previewPrompt,
+          reference_count: ids.length,
+        }),
+      }),
+    enabled:
+      editing &&
+      !!previewPrompt.trim() &&
+      (automatic || explicitModel?.backend === "krea2"),
+    staleTime: 30000,
+  });
+  const selectedModel = automatic ? recommendation.data?.choice : explicitModel;
   const backend = selectedModel?.backend ?? "qwen";
   const krea = backend === "krea2";
-  const settingsKey = `${mode}:${choiceId}`;
+  const kreaControls = krea && !automatic;
+  const settingsKey = `${mode}:${choiceId}${automatic ? `:${selectedModel?.id ?? "pending"}` : ""}`;
   const [overrides, setOverrides] = useState<
     Record<string, Partial<ImageSettings>>
   >(
@@ -186,7 +237,13 @@ function ImageForm({
   );
   const restoredSettings = Object.fromEntries(
     Object.keys(imageSettings(selectedModel, mode))
-      .filter((key) => initial[key] !== undefined)
+      .filter(
+        (key) =>
+          initial[key] !== undefined &&
+          (!automatic ||
+            selectedModel?.id === initialSourceModel ||
+            ["width", "height", "max_side"].includes(key)),
+      )
       .map((key) => [key, initial[key]]),
   ) as Partial<ImageSettings>;
   const settings = {
@@ -206,13 +263,6 @@ function ImageForm({
       [settingsKey]: { ...current[settingsKey], [key]: value },
     }));
   }
-  const [prompt, setPrompt] = useState(
-    String(
-      startingMode === "t2i"
-        ? (restored.prompt ?? "")
-        : (restored.edit_prompt ?? restored.prompt ?? ""),
-    ),
-  );
   const [negative, setNegative] = useState(String(restored.negative ?? ""));
   const [gpu, setGpu] = useState(String(restored.gpu ?? "auto"));
   const [upscaleResult, setUpscaleResult] = useState(
@@ -229,11 +279,6 @@ function ImageForm({
       restored.classicEdit ??
       (mode !== "t2i" && initial.prompt_style === "pipeline"),
     ),
-  );
-  const [ids, setIds] = useState<string[]>(
-    (restored.ids ??
-      restored.input_artifact_ids ??
-      (initialInput ? [initialInput] : [])) as string[],
   );
   useCreativeDraft({
     formState: {
@@ -276,7 +321,11 @@ function ImageForm({
     },
   });
   const maximumSources =
-    mode === "recompose" ? (selectedModel?.maximum_references ?? 8) : 1;
+    mode === "recompose"
+      ? automatic
+        ? 8
+        : (selectedModel?.maximum_references ?? 8)
+      : 1;
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
   const workflow = useImageWorkflow(run.data);
@@ -333,7 +382,12 @@ function ImageForm({
       const parameters: Record<string, unknown> = {
         mode,
         gpu,
-        backend,
+        ...(automatic
+          ? {
+              model_selection: "auto",
+              model_selection_revision: recommendation.data?.revision,
+            }
+          : { backend }),
         input_artifact_ids: mode === "t2i" ? [] : ids,
         upscale_result: mode !== "upscale" && upscaleResult,
       };
@@ -345,23 +399,31 @@ function ImageForm({
           translation.protected_terms.length)
       )
         parameters.translation = translation;
-      if (selectedModel.definition_id)
+      if (
+        automatic &&
+        (previewPrompt !== prompt ||
+          recommendation.isFetching ||
+          !recommendation.data)
+      )
+        throw new Error("Wait for the current Auto preview before queuing.");
+      if (!automatic && selectedModel.definition_id)
         parameters.model_id = selectedModel.definition_id;
       if (mode === "t2i" || mode === "recompose")
         Object.assign(parameters, { prompt, width, height, steps, cfg });
       if (mode === "t2i")
         parameters.prompt_style = portraitStyling ? "pipeline" : "prompt";
       if (mode === "img2img" || mode === "recompose")
-        parameters.prompt_style = classicEdit ? "pipeline" : "instruction";
+        parameters.prompt_style =
+          !automatic && classicEdit ? "pipeline" : "instruction";
       if (mode === "img2img")
         Object.assign(parameters, {
           edit_prompt: prompt,
           max_side: maxSide,
           steps,
         });
-      if ((mode === "t2i" && backend === "juggernaut") || krea)
+      if ((mode === "t2i" && backend === "juggernaut") || kreaControls)
         Object.assign(parameters, { seed, negative });
-      if (krea && mode !== "t2i")
+      if (kreaControls && mode !== "t2i")
         Object.assign(parameters, {
           cfg,
           reference_strength: settings.reference_strength,
@@ -419,7 +481,9 @@ function ImageForm({
     mode !== "t2i" &&
     (!ids.length || sources.some((s) => s.isPending || s.isError));
   const unavailable =
-    !selectedModel?.available || !selectedModel.modes.includes(mode);
+    !selectedModel?.available ||
+    !selectedModel.modes.includes(mode) ||
+    (automatic && (recommendation.isFetching || previewPrompt !== prompt));
   const tooManySources = mode !== "t2i" && ids.length > maximumSources;
   return (
     <>
@@ -463,13 +527,15 @@ function ImageForm({
                 <h2>{modes[mode]}</h2>
                 <span className="chip">
                   LOCAL ·{" "}
-                  {krea
-                    ? "Krea 2"
-                    : mode === "upscale"
-                      ? "RealESRGAN"
-                      : backend === "juggernaut"
-                        ? "Juggernaut"
-                        : "Qwen"}
+                  {automatic && !selectedModel
+                    ? "Matching model…"
+                    : krea
+                      ? "Krea 2"
+                      : mode === "upscale"
+                        ? "RealESRGAN"
+                        : backend === "juggernaut"
+                          ? "Juggernaut"
+                          : "Qwen"}
                 </span>
               </div>
               <label>
@@ -486,12 +552,15 @@ function ImageForm({
                     saveDefault.reset();
                   }}
                 >
-                  {!selectedModel && (
+                  {!automatic && !selectedModel && (
                     <option value={choiceId}>
                       {catalog.isPending
                         ? "Loading models…"
                         : "Selected model unavailable"}
                     </option>
+                  )}
+                  {editing && (
+                    <option value="auto">Auto · match this edit</option>
                   )}
                   {catalog.data?.items
                     .filter((model) => model.modes.includes(mode))
@@ -509,25 +578,105 @@ function ImageForm({
               </label>
               <div className="row spread">
                 <small className="muted">
-                  {catalog.data?.defaults.choices[mode] === choiceId
-                    ? `Default for ${modes[mode]}`
-                    : "Selected for this image"}
+                  {automatic
+                    ? "Auto is saved with this workspace"
+                    : catalog.data?.defaults.choices[mode] === choiceId
+                      ? `Default for ${modes[mode]}`
+                      : "Selected for this image"}
                 </small>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={
-                    unavailable ||
-                    saveDefault.isPending ||
-                    catalog.data?.defaults.choices[mode] === choiceId
-                  }
-                  onClick={() => saveDefault.mutate()}
-                >
-                  {saveDefault.isPending ? "Saving…" : "Use as default"}
-                </Button>
+                {!automatic && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={
+                      unavailable ||
+                      saveDefault.isPending ||
+                      catalog.data?.defaults.choices[mode] === choiceId
+                    }
+                    onClick={() => saveDefault.mutate()}
+                  >
+                    {saveDefault.isPending ? "Saving…" : "Use as default"}
+                  </Button>
+                )}
               </div>
-              <ErrorNotice error={saveDefault.error} />
-              {catalog.isSuccess && unavailable && (
+              <ErrorNotice
+                error={
+                  saveDefault.error ?? (automatic ? recommendation.error : null)
+                }
+              />
+              {automatic && (
+                <div
+                  className="image-model-guidance"
+                  role="status"
+                  aria-busy={
+                    recommendation.isFetching || previewPrompt !== prompt
+                  }
+                  aria-label="Automatic image model preview"
+                >
+                  {recommendation.data?.choice &&
+                  previewPrompt === prompt &&
+                  !recommendation.isFetching ? (
+                    <>
+                      <strong>
+                        Auto selects {recommendation.data.choice.name}
+                      </strong>
+                      <p className="muted">
+                        {recommendationReason(recommendation.data.reason)}
+                      </p>
+                    </>
+                  ) : (
+                    <span>
+                      {prompt.trim()
+                        ? "Matching a model to this edit…"
+                        : "Describe your edit to see the chosen model."}
+                    </span>
+                  )}
+                  <small>
+                    Exact model and settings are retained with this version.
+                  </small>
+                  {(recommendation.error || create.error) && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={recommendation.isFetching}
+                      onClick={() => void recommendation.refetch()}
+                    >
+                      Refresh model match
+                    </Button>
+                  )}
+                </div>
+              )}
+              {!automatic &&
+                krea &&
+                previewPrompt === prompt &&
+                ["pose", "object_removal"].includes(
+                  recommendation.data?.reason ?? "",
+                ) && (
+                  <div
+                    className="image-model-guidance image-model-guidance--suggestion"
+                    aria-label="Structural edit recommendation"
+                  >
+                    <strong>Try Qwen for this structural edit</strong>
+                    <p className="muted">
+                      {recommendationReason(recommendation.data!.reason)} Your
+                      selected model stays unchanged unless you switch.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() =>
+                        setChoices((current) => ({
+                          ...current,
+                          [mode]: "auto",
+                        }))
+                      }
+                    >
+                      Use Auto for this edit
+                    </Button>
+                  </div>
+                )}
+              {!automatic && catalog.isSuccess && unavailable && (
                 <p className="notice">
                   This model is unavailable for this operation. Choose another
                   model or check <Link to="/models">Models</Link>.
@@ -551,7 +700,7 @@ function ImageForm({
               )}
               {mode === "img2img" && (
                 <p className="muted">
-                  Preserves the original image as much as possible.
+                  Change what you describe while keeping the rest of the image.
                 </p>
               )}
               {mode === "recompose" && (
@@ -669,7 +818,8 @@ function ImageForm({
                   />
                 </label>
               )}
-              {((mode === "t2i" && backend === "juggernaut") || krea) && (
+              {((mode === "t2i" && backend === "juggernaut") ||
+                kreaControls) && (
                 <label>
                   Negative prompt
                   <textarea
@@ -760,7 +910,8 @@ function ImageForm({
                   </span>
                 </label>
               )}
-              {backend === "qwen" &&
+              {!automatic &&
+                backend === "qwen" &&
                 (mode === "img2img" || mode === "recompose") && (
                   <label className="image-workflow-option">
                     <input
@@ -853,7 +1004,8 @@ function ImageForm({
                   />
                 </label>
               )}
-              {((mode === "t2i" && backend === "juggernaut") || krea) && (
+              {((mode === "t2i" && backend === "juggernaut") ||
+                kreaControls) && (
                 <label>
                   Seed
                   <input
@@ -865,7 +1017,7 @@ function ImageForm({
                   />
                 </label>
               )}
-              {krea && mode !== "t2i" && (
+              {kreaControls && mode !== "t2i" && (
                 <details>
                   <summary>Reference settings</summary>
                   <label>

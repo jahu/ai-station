@@ -760,3 +760,133 @@ it("keeps an unavailable saved model visible without silently selecting Qwen", a
     screen.getByRole("option", { name: "LUSTIFY Turbo Q4 · unavailable" }),
   ).toBeTruthy();
 });
+
+it("recommends Auto for a structural edit without replacing an explicit LUSTIFY choice", async () => {
+  const catalog = withLustify();
+  catalog.defaults.choices.img2img = lustifyId;
+  const writes: Record<string, unknown>[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (path === "/api/images/runs" && init?.method === "POST")
+        writes.push(JSON.parse(String(init.body)));
+      const body = init?.body ? JSON.parse(String(init.body)) : {};
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/recommendation")
+            ? {
+                policy: "structural-edit-v1",
+                revision: 4,
+                reason: "object_removal",
+                choice: catalog.items[0],
+              }
+            : path.includes("/artifacts/")
+              ? {
+                  id: "source",
+                  type: "image",
+                  metadata: { width: 768, height: 1024 },
+                }
+              : path.endsWith("/generation/preferences")
+                ? { enabled: false, model: "local" }
+                : path.endsWith("/hardware")
+                  ? { gpus: [] }
+                  : {
+                      id: "run-id",
+                      status: "queued",
+                      parameters: body,
+                      metadata: {},
+                    },
+      };
+    }),
+  );
+  await mount("/images?mode=img2img&input=source", catalog);
+  fireEvent.change(screen.getByLabelText("Edit instruction"), {
+    target: { value: "Remove the red book" },
+  });
+  await screen.findByLabelText("Structural edit recommendation");
+  expect(
+    (screen.getByRole("combobox", { name: "Model" }) as HTMLSelectElement)
+      .value,
+  ).toBe(lustifyId);
+  expect(writes).toHaveLength(0);
+  fireEvent.click(
+    screen.getByRole("button", { name: "Use Auto for this edit" }),
+  );
+  await screen.findByText("Auto selects Qwen Image");
+  expect(screen.queryByRole("button", { name: "Use as default" })).toBeNull();
+  expect(screen.queryByLabelText("Reference strength")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Queue edit" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({
+    model_selection: "auto",
+    model_selection_revision: 4,
+    edit_prompt: "Remove the red book",
+    steps: 30,
+  });
+  expect(writes[0]).not.toHaveProperty("backend");
+  expect(writes[0]).not.toHaveProperty("model_id");
+  expect(writes[0]).not.toHaveProperty("reference_strength");
+  expect(writes[0]).not.toHaveProperty("seed");
+});
+
+it("uses the automatic nonstructural model's presets without submitting backend-only fields", async () => {
+  const catalog = withLustify();
+  catalog.defaults.choices.img2img = lustifyId;
+  const writes: Record<string, unknown>[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (path === "/api/images/runs" && init?.method === "POST")
+        writes.push(JSON.parse(String(init.body)));
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/recommendation")
+            ? {
+                policy: "structural-edit-v1",
+                revision: 4,
+                reason: "station_default",
+                choice: catalog.items.at(-1),
+              }
+            : path.includes("/artifacts/")
+              ? {
+                  id: "source",
+                  type: "image",
+                  metadata: { width: 768, height: 1024 },
+                }
+              : path.endsWith("/hardware")
+                ? { gpus: [] }
+                : {
+                    id: "run-id",
+                    status: "queued",
+                    parameters: {},
+                    metadata: {},
+                  },
+      };
+    }),
+  );
+  await mount("/images?mode=img2img&input=source&model=auto", catalog);
+  fireEvent.change(screen.getByLabelText("Edit instruction"), {
+    target: { value: "Make the lighting warmer" },
+  });
+  await screen.findByText("Auto selects LUSTIFY Turbo Q4");
+  fireEvent.click(screen.getByRole("button", { name: "Queue edit" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({
+    model_selection: "auto",
+    model_selection_revision: 4,
+    steps: 8,
+    max_side: 1024,
+    prompt_style: "instruction",
+  });
+  for (const field of [
+    "backend",
+    "model_id",
+    "seed",
+    "negative",
+    "reference_strength",
+    "reference_layout",
+  ])
+    expect(writes[0]).not.toHaveProperty(field);
+});

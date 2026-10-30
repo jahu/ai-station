@@ -1,3 +1,4 @@
+import ImageModelSelection from "../media/ImageModelSelection";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   useInfiniteQuery,
@@ -594,6 +595,11 @@ function SessionBody({
         formKey: `${row.id}:${formRevision}`,
         draft,
         setDraft,
+        sourceRun:
+          (draft._creative_parent_turn_id
+            ? turns.find((turn) => turn.id === draft._creative_parent_turn_id)
+            : turns.at(-1)
+          )?.run ?? undefined,
         generate,
       }}
     >
@@ -701,6 +707,7 @@ function SessionBody({
                   Details and logs <ArrowUpRight size={12} />
                 </Link>
               </div>
+              <ImageModelSelection run={turn.run ?? undefined} />
               {!turn.job &&
                 progressRuns(turn)
                   .filter((run) => !!run.metadata?.prompt_translation)
