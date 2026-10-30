@@ -247,10 +247,25 @@ passes: 4757 Python/Runner cases and nine opt-in skips, 891 frontend tests, glob
 format/lint/types/build, Docker/Compose and actual isolated image/worker/API and
 compiled desktop/mobile browser checks. Private evidence:
 `data/acceptance/release-0.1-foundation-20261029/`. Deployment is tracked separately.
-All other items remain planned; research candidates are unqualified. The account
-inventory covers 197 HTTP operations (193 API) and 31 ORM tables, without claiming
-ownership enforcement. Planning, a route list or this first increment does not
-complete the full next-release scope.
+NR-10's model-freedom/responsibility README update is also merged to `develop`.
+NR-11 is in active implementation: staged ownership, private request/execution
+sessions, account/security UI, recovery, shared-model coordination, Docker-local
+first-admin setup and account-aware private-connection operations have separate
+synthetic/local qualifications. The shipped application still uses its existing
+operator profile. Administrator inspection now has a staged selected-account,
+read-only UI with collection/detail/message/event and media access; its complete
+profile qualification remains part of cutover. The complete operation audit,
+remaining legacy execution-path removal and final preserved-data cutover remain
+enablement gates; see [account contracts](../accounts.md). The opt-in account
+profile now installs strict API/worker/scheduler ownership without test wrappers,
+refuses unbound data access and ownerless execution, and preserves current
+operator credentials/devices during its one-time activation. A private copy of
+the live 0036 database passed migration to 0038 with all existing table content,
+private root ownership and credentials preserved; no live switch occurred.
+The latest inventory
+contains 222 HTTP operations (214 API) and 35 ORM tables; enumeration alone is
+not an isolation pass. Other NR items remain open and research candidates remain
+unqualified. These increments do not complete the full next-release scope.
 
 NR-12 has an automatic-search candidate: the selected admitted Chat model
 prepares the first query before retrieval, with bounded ordinary-text follow-up

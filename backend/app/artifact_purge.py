@@ -12,7 +12,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -325,7 +325,9 @@ class ArtifactPurgeExecutor:
         return "done"
 
     def _remove_item(self, session, run, item):
-        row = session.get(Artifact, item["id"], populate_existing=True)
+        from app.data_access import private_for_update
+
+        row = private_for_update(session, Artifact, item["id"])
         if row is None:
             raise ValueError("Artifact record is unavailable")
         if row.purged_at:
@@ -336,20 +338,9 @@ class ArtifactPurgeExecutor:
             previous = session.get(Run, row.purge_run_id) if row.purge_run_id else None
             if row.purge_run_id and (previous is None or previous.status not in TERMINAL):
                 raise ValueError("Artifact belongs to another active deletion")
-            changed = session.execute(
-                update(Artifact)
-                .where(
-                    Artifact.id == row.id,
-                    Artifact.library_updated_at == row.library_updated_at,
-                    Artifact.purged_at.is_(None),
-                    Artifact.purge_run_id == row.purge_run_id,
-                )
-                .values(
-                    purge_run_id=run.id, trashed_at=row.trashed_at or utcnow(), library_updated_at=utcnow()
-                )
-            )
-            if changed.rowcount != 1:
-                raise ValueError("Artifact changed while starting deletion")
+            row.purge_run_id = run.id
+            row.trashed_at = row.trashed_at or utcnow()
+            row.library_updated_at = utcnow()
             session.commit()  # Durable intent precedes the first filesystem side effect.
             session.refresh(row)
         elif (row.relative_path, row.thumbnail_relative_path, row.sha256, row.size_bytes) != (

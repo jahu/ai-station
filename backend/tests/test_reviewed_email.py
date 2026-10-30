@@ -405,7 +405,7 @@ def test_email_settings_reject_a_stale_version_and_do_not_change_the_saved_accou
         assert api.get("/api/connectors/" + row["id"]).json()["name"] == "Renamed"
 
 
-def test_email_migration_preserves_existing_connectors_without_sending(session):
+def test_email_migration_preserves_existing_connectors_without_sending(session, legacy_schema):
     from alembic import command
     from app.db import alembic_config
 
@@ -415,7 +415,7 @@ def test_email_migration_preserves_existing_connectors_without_sending(session):
     session.add(row)
     session.commit()
     cid = row.id
-    command.downgrade(alembic_config(), "0029")
+    legacy_schema("0029")
     command.upgrade(alembic_config(), "head")
     session.expire_all()
     assert session.get(Connector, cid).config_json == {"url": "https://example.com"}

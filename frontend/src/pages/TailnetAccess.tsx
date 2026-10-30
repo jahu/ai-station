@@ -29,6 +29,8 @@ type Access = {
   state: string;
   configuration?: string;
   run?: AccessRun;
+  busy?: boolean;
+  needs_inspection?: boolean;
 };
 type Request = {
   operation: Operation;
@@ -124,8 +126,10 @@ export default function TailnetAccess({ configured }: { configured: boolean }) {
   });
   const value = status.data;
   const run = value?.run;
-  const busy = action.isPending || !!(run && active.has(run.status));
-  const needsInspection = run?.metadata?.cleanup_requires_inspection;
+  const busy =
+    action.isPending || value?.busy || !!(run && active.has(run.status));
+  const needsInspection =
+    value?.needs_inspection || run?.metadata?.cleanup_requires_inspection;
   const connected = !!(
     value?.enabled &&
     value.serving &&
@@ -213,8 +217,15 @@ export default function TailnetAccess({ configured }: { configured: boolean }) {
             ) : null}
             {needsInspection ? (
               <p>
-                The previous operation needs inspection. Disable the connection
-                before setting it up again.
+                {busy
+                  ? "The previous setup is still stopping. Changes are paused until cleanup is confirmed."
+                  : "The previous operation needs inspection. Disable the connection before setting it up again."}
+              </p>
+            ) : null}
+            {value?.busy && !run && !needsInspection ? (
+              <p role="status">
+                Another administrator is updating the private connection. Wait
+                for that operation to finish before making changes.
               </p>
             ) : null}
             {value?.configuration === "unexpected" ? (

@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import or_, select, text, update
+from sqlalchemy import func, or_, select, true
 from sqlalchemy.orm import Session
 
 from app.db import session_scope, utcnow
@@ -28,18 +28,18 @@ def _artifacts_in_order(session: Session, ids: list[str]) -> list[Artifact]:
 
 
 def derived_artifact_ids(session: Session, artifact_id: str, limit: int = DERIVED_LIMIT) -> list[str]:
-    rows = session.execute(
-        text(
-            "SELECT artifacts.id FROM artifacts, "
-            "json_each(artifacts.parent_artifact_ids) AS parent "
-            "WHERE parent.value = :artifact_id AND artifacts.id != :artifact_id "
-            "GROUP BY artifacts.id "
-            "ORDER BY MAX(artifacts.created_at) DESC, artifacts.id "
-            "LIMIT :limit"
-        ),
-        {"artifact_id": artifact_id, "limit": limit},
+    parents = func.json_each(Artifact.parent_artifact_ids).table_valued("value")
+    # Keep the Artifact mapper in the statement so owner restrictions apply
+    # before ordering/limiting. Raw text would bypass the scoped ORM policy.
+    rows = session.scalars(
+        select(Artifact.id, Artifact.created_at)
+        .join(parents, true())
+        .where(parents.c.value == artifact_id, Artifact.id != artifact_id)
+        .distinct()
+        .order_by(Artifact.created_at.desc(), Artifact.id)
+        .limit(limit)
     )
-    return [row[0] for row in rows]
+    return list(rows)
 
 
 def lineage_dict(session: Session, artifact: Artifact) -> dict:
@@ -117,24 +117,18 @@ class EditArtifact(Version):
 
 
 def mutate(session, artifact_id, expected, values, event):
-    row = session.get(Artifact, str(artifact_id))
+    from app.data_access import private_for_update
+
+    row = private_for_update(session, Artifact, str(artifact_id))
     if row is None:
         raise HTTPException(404, "Artifact not found")
     if row.purged_at or row.purge_run_id:
         raise HTTPException(409, "This artifact is permanently deleted or deletion has already started")
-    changed = session.execute(
-        update(Artifact)
-        .where(
-            Artifact.id == row.id,
-            Artifact.library_updated_at == expected,
-            Artifact.purged_at.is_(None),
-            Artifact.purge_run_id.is_(None),
-        )
-        .values(**values, library_updated_at=utcnow())
-        .execution_options(synchronize_session=False)
-    )
-    if changed.rowcount != 1:
+    if row.library_updated_at != expected:
         raise HTTPException(409, "This artifact changed. Reload it before saving.")
+    for key, value in values.items():
+        setattr(row, key, value)
+    row.library_updated_at = utcnow()
     if row.run_id:
         append_event(session, row.run_id, event, {"artifact_id": row.id})
     session.commit()

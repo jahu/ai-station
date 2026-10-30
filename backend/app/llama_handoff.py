@@ -18,12 +18,16 @@ KEY = "runtime_handoff"
 
 
 def eviction_needed(session, requester):
+    from app.runtime_coordination import shared_load_in_use
+
     session.refresh(requester, ["status"])
     session.refresh(requester.task, ["metadata_json"])
     return requester.status == "queued" and (
         not requester.task.metadata_json.get("stop_requested_at")
         or requester.executor_type == "llama_load"
-        and active_dependents(session, requester, other_tasks=True)
+        and (
+            active_dependents(session, requester, other_tasks=True) or shared_load_in_use(session, requester)
+        )
     )
 
 
@@ -104,6 +108,10 @@ def cancel_abandoned_restore(session, load):
         return  # Never stop shared work based on a truncated reference set.
     for consumer in consumers:
         expire_consumer(session, consumer)
+    from app.runtime_coordination import shared_load_in_use
+
+    if shared_load_in_use(session, load):
+        return
     if not any(consumer.status not in TERMINAL | {"cancel_requested"} for consumer in consumers):
         append_event(session, load.id, "runtime.restore_abandoned", {})
         request_cancel(session, load)
@@ -132,17 +140,12 @@ def consumer_identity(consumer):
 
 
 def original_observation(session, instance):
-    load = session.get(Run, instance.metadata_json.get("load_run_id"))
-    if (
-        load is None
-        or load.executor_type != "llama_load"
-        or load.status != "succeeded"
-        or load.parameters.get("instance_id") != instance.id
-    ):
+    from app.runtime_coordination import runtime_load_facts
+
+    facts = runtime_load_facts(session, instance)
+    if facts["status"] != "succeeded":
         raise ValueError("The original model startup is not verified")
-    observation = {
-        key: load.parameters.get(key) for key in ("model_path", "size_bytes", "mtime", "projector")
-    }
+    observation = facts["source"]
     if (
         not isinstance(observation["model_path"], str)
         or not observation["model_path"]
@@ -343,6 +346,16 @@ class LlamaResumeConsumerExecutor:
         if matching:
             instance = matching[0]
             load = session.get(Run, instance.metadata_json["load_run_id"])
+            from app.runtime_coordination import runtime_load_facts
+
+            facts = runtime_load_facts(session, instance)
+            if facts["source"] != observation or facts["status"] in {
+                "canceled",
+                "failed",
+                "interrupted",
+                "cancel_requested",
+            }:
+                raise ValueError("Inspect the selected model's changed or unsuccessful startup")
         else:
             # This exact previously fitted preset is enqueued without hardware
             # I/O under the Task lock. The normal native load rechecks admission,
@@ -354,12 +367,20 @@ class LlamaResumeConsumerExecutor:
             instance = session.get(RuntimeInstance, load.parameters["instance_id"])
         if load is not None and {key: load.parameters.get(key) for key in observation} != observation:
             raise ValueError("The restored model no longer matches its original source observation")
-        if load is None or load.status in {"canceled", "failed", "interrupted", "cancel_requested"}:
+        if load is not None and load.status in {"canceled", "failed", "interrupted", "cancel_requested"}:
             raise ValueError("Inspect the selected model's failed or canceled startup")
         consumer.parameters = {**consumer.parameters, "endpoint": instance.endpoint}
         if instance.status != "ready":
-            depend_on(session, consumer, load)
-        run.metadata_json = {**run.metadata_json, "instance_id": instance.id, "load_run_id": load.id}
+            if load is None:
+                from app.runtime_coordination import wait_for_runtime
+
+                readiness = wait_for_runtime(session, consumer, instance)
+                depend_on(session, consumer, readiness)
+            else:
+                depend_on(session, consumer, load)
+        run.metadata_json = {**run.metadata_json, "instance_id": instance.id}
+        if load is not None:
+            run.metadata_json = {**run.metadata_json, "load_run_id": load.id}
         run.summary = (
             "Selected model is ready; waiting work prepared."
             if instance.status == "ready"

@@ -11,6 +11,8 @@ import CreationContextNotice, {
 } from "./CreationContextNotice";
 import { browserTimezone } from "./AgentCronFields";
 import { copyText } from "../lib/clipboard";
+import { streamNeedsAuthentication } from "../api";
+import { accountStorageKey, accountEpoch } from "../lib/account-storage";
 import { useConversationAttachmentUpload } from "./attachment-upload";
 import { useDataInputs, type ConversationDataScope } from "./useDataInputs";
 import { FetchedPages, type FetchResult } from "./AgentHttpFetch";
@@ -416,13 +418,25 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
   useEffect(() => {
     if (!active?.id) return;
     const source = new EventSource(`/api/runs/${active.id}/stream`);
+    const epoch = accountEpoch();
     const refresh = () => {
+      if (epoch !== accountEpoch()) {
+        source.close();
+        return;
+      }
       void cache.invalidateQueries({ queryKey: ["conversation", id] });
     };
     source.onmessage = refresh;
-    source.addEventListener("end", () => {
+    source.addEventListener("end", (event) => {
+      if (streamNeedsAuthentication(event)) {
+        source.close();
+        if (epoch === accountEpoch())
+          window.dispatchEvent(new Event("ai-station:session-expired"));
+        return;
+      }
       refresh();
       source.close();
+      if (epoch !== accountEpoch()) return;
       void cache.invalidateQueries({ queryKey: ["conversations"] });
     });
     return () => source.close();
@@ -1137,15 +1151,15 @@ function Transcript({
 }
 function readWorkChoice(key: string) {
   try {
-    return sessionStorage.getItem(key);
+    return sessionStorage.getItem(accountStorageKey(key));
   } catch {
     return null;
   }
 }
 function saveWorkChoice(key: string, value: string | null) {
   try {
-    if (value) sessionStorage.setItem(key, value);
-    else sessionStorage.removeItem(key);
+    if (value) sessionStorage.setItem(accountStorageKey(key), value);
+    else sessionStorage.removeItem(accountStorageKey(key));
   } catch {
     /* keep the in-memory choice */
   }

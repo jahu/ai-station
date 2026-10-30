@@ -11,7 +11,7 @@ import {
   Smartphone,
   X,
 } from "lucide-react";
-import { api, type Run } from "../api";
+import { api, ApiError, type Run } from "../api";
 import { Button } from "../components/ui/button";
 import { randomId } from "../lib/random-id";
 import "./SitePreview.css";
@@ -48,35 +48,15 @@ const keys = new Set([
   "PageDown",
   " ",
 ]);
-class PreviewRequestError extends Error {
-  constructor(
-    message: string,
-    public status: number,
-  ) {
-    super(message);
-  }
-}
 async function post(path: string, body: unknown): Promise<Run> {
-  const response = await fetch(`/api${path}`, {
+  return api<Run>(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!response.ok) {
-    const value = await response.json().catch(() => ({}));
-    throw new PreviewRequestError(
-      typeof value.detail === "string"
-        ? value.detail
-        : `Preview request failed (${response.status})`,
-      response.status,
-    );
-  }
-  return response.json();
 }
 const rejected = (error: Error) =>
-  error instanceof PreviewRequestError &&
-  error.status >= 400 &&
-  error.status < 500;
+  error instanceof ApiError && error.status >= 400 && error.status < 500;
 
 export default function SitePreview() {
   const { sourceRunId, artifactId } = useParams();

@@ -13,10 +13,10 @@ from app.db import session_scope
 from app.events import append_event
 from app.models import Run, Setting
 from app.permissions import require
-from app.private_ui_state import lock, read
+from app.private_ui_state import lock, operation_facts, read
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import create_run, create_task, mark_failed, run_dict, transition
-from app.state import ACTIVE, RunStatus
+from app.state import RunStatus
 
 router = APIRouter(prefix="/api/private-access", tags=["operator"])
 DB = Annotated[Session, Depends(session_scope)]
@@ -43,7 +43,12 @@ class Action(BaseModel):
         return self
 
 
-def authority(session, *, create=False):
+def authority(session, *, create=False, run=None):
+    from app.private_access_accounts import authority as account_authority
+
+    account = account_authority(session, run=run, mutation=create)
+    if account is not None:
+        return account
     from app.operator_auth import configured, stored_secret
 
     if not configured(session):
@@ -66,7 +71,7 @@ def native_payload(run):
 
 def valid_run(session, run, *, locked=False):
     require(run.effective_permissions, "manage_private_access")
-    state = lock(session).value if locked else read(session)
+    state = lock(session, run=run).value if locked else read(session, run=run)
     if (
         run.executor_type != "private_access"
         or run.capability != "system.private_access"
@@ -82,7 +87,7 @@ def valid_run(session, run, *, locked=False):
         or state.get("pending_run_id") != run.id
         or state.get("revision") != run.parameters.get("policy_revision")
         or not run.parameters.get("authority_revision")
-        or authority(session) != run.parameters["authority_revision"]
+        or authority(session, run=run) != run.parameters["authority_revision"]
         or run.parameters.get("operation") not in OPS
     ):
         raise ValueError("Private access authority changed; review a new operation")
@@ -91,6 +96,7 @@ def valid_run(session, run, *, locked=False):
 
 @router.get("")
 def status(session: DB):
+    from app.data_access import ScopedSession
     from app.operator_auth import configured
 
     policy = read(session)
@@ -101,14 +107,37 @@ def status(session: DB):
         "enabled": policy.get("enabled") is True,
         "approved_origin": policy.get("origin") if policy.get("enabled") is True else None,
         "run": run_dict(run) if run else None,
+        **operation_facts(session, policy),
     }
-    if not configured(session):
+    try:
+        ready = bool(authority(session)) if isinstance(session, ScopedSession) else configured(session)
+    except HTTPException:
+        ready = False
+    if not ready:
         return {**result, "available": False, "state": "password_required", "serving": False}
     # SQLite reads use BEGIN IMMEDIATE. Release that transaction before native
     # I/O so an unavailable service cannot stall unrelated API/worker requests.
     session.commit()
     try:
-        return {**RunnerClient(timeout=5).request("GET", "/v1/private-access"), **result}
+        native = RunnerClient(timeout=5).request("GET", "/v1/private-access")
+        if isinstance(session, ScopedSession):
+            # The native daemon identity can be its launching account's Run.
+            # Shared service health never exposes process provenance or logs.
+            public = {
+                "available",
+                "installed",
+                "version",
+                "state",
+                "node_online",
+                "node_id",
+                "origin",
+                "serving",
+                "configuration",
+                "owned",
+                "login_required",
+            }
+            native = {key: value for key, value in native.items() if key in public}
+        return {**native, **result}
     except (RunnerError, RunnerUnavailable):
         return {**result, "available": False, "state": "runner_unavailable", "serving": False}
 
@@ -127,9 +156,10 @@ def enqueue(body: Action, session: DB):
         if previous.parameters["request"] != request:
             raise HTTPException(409, "Private access receipt has another scope")
         return run_dict(previous)
-    if previous and previous.status in ACTIVE:
+    facts = operation_facts(session, state)
+    if facts["busy"]:
         raise HTTPException(409, "A private access operation is already active")
-    if previous and previous.metadata_json.get("cleanup_requires_inspection") and body.operation != "disable":
+    if facts["needs_inspection"] and body.operation != "disable":
         raise HTTPException(409, "Disable the owned connection to resolve its uncertain operation first")
     if state.get("revision", 0) != body.expected_revision:
         raise HTTPException(409, "Private access changed; review current settings")
@@ -173,6 +203,9 @@ def link(run_id: UUID, response: Response, session: DB):
     run = session.get(Run, str(run_id))
     if run is None:
         raise HTTPException(404, "Private access operation not found")
+    from app.private_access_accounts import authority as account_authority
+
+    account_authority(session, run=run, mutation=True)
     try:
         valid_run(session, run)
     except (ValueError, HTTPException):
@@ -188,7 +221,7 @@ def link(run_id: UUID, response: Response, session: DB):
 
 
 def finish(session, run, result):
-    row = lock(session)
+    row = lock(session, run=run)
     session.refresh(run)
     if run.status == "cancel_requested":
         raise ValueError("Private access was stopped before publication")

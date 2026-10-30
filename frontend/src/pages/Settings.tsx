@@ -10,6 +10,10 @@ import Maintenance from "./Maintenance";
 import OperatorAccess from "./OperatorAccess";
 import GenerationSettings from "./GenerationSettings";
 import UnifiedModelPicker, { type Catalog } from "./UnifiedModelPicker";
+import { useAccount } from "../account-context";
+import AccountSecurity from "./AccountSecurity";
+import AccountUsers from "./AccountUsers";
+import TailnetAccess from "./TailnetAccess";
 
 const sections = [
   ["general", "General"],
@@ -30,16 +34,35 @@ type Preferences = {
 
 export default function Settings() {
   const { section } = useParams();
-  if (!sections.some(([key]) => key === section))
+  const account = useAccount();
+  const available: readonly (readonly [string, string])[] =
+    account.mode === "accounts"
+      ? [
+          ...sections.filter(
+            ([key]) => !["access", "maintenance"].includes(key),
+          ),
+          ["security", "Account"],
+          ...(account.user?.is_admin
+            ? ([
+                ["users", "Users"],
+                ["access", "Private access"],
+                ["maintenance", "Maintenance"],
+              ] as const)
+            : []),
+        ]
+      : sections;
+  if (!available.some(([key]) => key === section))
     return <Navigate to="/settings/general" replace />;
   return (
     <>
       <PageTitle eyebrow="AI STATION / SETTINGS" title="Settings">
         Preferences, integrations and access.{" "}
-        <Link to="/system/diagnostics">Check installation</Link>
+        {(account.mode !== "accounts" || account.user?.is_admin) && (
+          <Link to="/system/diagnostics">Check installation</Link>
+        )}
       </PageTitle>
       <nav className="settings-navigation" aria-label="Settings sections">
-        {sections.map(([key, name]) => (
+        {available.map(([key, name]) => (
           <NavLink key={key} to={`/settings/${key}`}>
             {name}
           </NavLink>
@@ -50,7 +73,14 @@ export default function Settings() {
         {section === "generation" && <GenerationSettings />}
         {section === "providers" && <ChatProviders />}
         {section === "integrations" && <Connectors />}
-        {section === "access" && <OperatorAccess />}
+        {section === "security" && <AccountSecurity />}
+        {section === "users" && <AccountUsers />}
+        {section === "access" &&
+          (account.mode === "accounts" ? (
+            <TailnetAccess configured={true} />
+          ) : (
+            <OperatorAccess />
+          ))}
         {section === "maintenance" && <Maintenance />}
       </div>
     </>

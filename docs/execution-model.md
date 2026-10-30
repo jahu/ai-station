@@ -36,6 +36,15 @@ workspace. One reviewed definition and deadline bind every child.
 
 # Execution model
 
+The staged account profile shares model runtimes without sharing private Run
+graphs. A consumer of another account's pending llama.cpp startup depends on an
+owner-local readiness Run bound to immutable startup/source observations. It
+yields the worker between checks, expires within its original bound and cannot
+dispatch, inspect or cancel a host process. Recovery repeats observation only;
+producer failure or source replacement fails the private prerequisite. Physical
+GPU/RAM reservations are released by exact managed-model coordination only after
+confirmed shutdown. See [account enablement contracts](accounts.md).
+
 Permanent Library deletion parks an immutable selection in an existing Approval
 before a worker removes any bytes. Per-item committed intent makes recovery
 idempotent; Stop preserves completed work and leaves later items untouched.

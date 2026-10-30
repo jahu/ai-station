@@ -36,16 +36,29 @@ def make_password_record(password: str) -> dict:
     }
 
 
-def password_matches(record: object, password: str) -> bool:
-    if not isinstance(record, dict) or record.get("algorithm") != ALGORITHM or len(password) > MAX_PASSWORD:
-        return False
+def _password_parts(record: object) -> tuple[bytes, bytes, int] | None:
+    if not isinstance(record, dict) or record.get("algorithm") != ALGORITHM:
+        return None
     try:
         salt = bytes.fromhex(record["salt"])
         expected = bytes.fromhex(record["hash"])
         iterations = int(record.get("iterations", ITERATIONS))
         if len(salt) != 16 or len(expected) != 32 or not 100_000 <= iterations <= 2_000_000:
-            return False
-        actual = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)
-        return hmac.compare_digest(expected, actual)
+            return None
+        return salt, expected, iterations
     except (KeyError, TypeError, ValueError, OverflowError):
+        return None
+
+
+def password_record_valid(record: object) -> bool:
+    """Validate bounded credential structure without testing or exposing a password."""
+    return _password_parts(record) is not None
+
+
+def password_matches(record: object, password: str) -> bool:
+    parts = _password_parts(record)
+    if parts is None or len(password) > MAX_PASSWORD:
         return False
+    salt, expected, iterations = parts
+    actual = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, iterations)
+    return hmac.compare_digest(expected, actual)

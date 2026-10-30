@@ -35,7 +35,7 @@ from app.connectors import router as connector_router
 from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
 from app.data_inputs import router as data_inputs_router
-from app.db import migrate, session_factory, session_scope, utcnow
+from app.db import control_session_factory, get_engine, migrate, session_factory, session_scope, utcnow
 from app.email_delivery import router as email_router
 from app.embeddings import router as embedding_router
 from app.events import event_dict, list_events
@@ -82,8 +82,17 @@ DB = Annotated[Session, Depends(session_scope)]
 @asynccontextmanager
 async def lifespan(_app):
     migrate()
-    with session_factory()() as session:
-        refuse_non_loopback_bind(session)
+    with control_session_factory()() as session:
+        accounts_active = getattr(_app.state, "account_access_enabled", False)
+        from app.account_profile import prepare_profile
+
+        prepare_profile(session, accounts_active=accounts_active)
+        session.commit()
+        refuse_non_loopback_bind(session, accounts_active=accounts_active)
+        if accounts_active:
+            from app.bootstrap_setup import ensure_setup_proof
+
+            ensure_setup_proof(session)
     yield
 
 
@@ -118,11 +127,42 @@ async def local_requests(request: Request, call_next):
             return JSONResponse({"detail": "Cross-site writes are not allowed"}, status_code=403)
     # SQLite may wait on another writer. Keep that wait off the event loop
     # so in-flight responses can finish and release their database sessions.
-    gated = await run_in_threadpool(require_operator_session, request)
+    accounts_active = getattr(request.app.state, "account_access_enabled", False)
+    if accounts_active:
+        from app.account_http import require_account_session
+
+        guard = require_account_session
+    else:
+        guard = require_operator_session
+    gated = await run_in_threadpool(guard, request)
     if gated is not None:
         return gated
-    response = await call_next(request)
-    await run_in_threadpool(refresh_operator_cookie, request, response)
+    if accounts_active:
+        from app.account_http import inspection_requested, refresh_account_cookie
+        from app.data_access import DataScope
+        from app.data_context import bind_data_scope
+
+        try:
+            inspect_all = inspection_requested(request)
+        except HTTPException as exc:
+            return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+        principal = request.state.account_principal
+        scope = (
+            DataScope(
+                principal.user_id,
+                inspect_all,
+                administrator=principal.is_admin,
+                session_id=principal.session_id,
+            )
+            if principal
+            else None
+        )
+        with bind_data_scope(scope):
+            response = await call_next(request)
+        await run_in_threadpool(refresh_account_cookie, request, response)
+    else:
+        response = await call_next(request)
+        await run_in_threadpool(refresh_operator_cookie, request, response)
     # The entry document selects versioned bundles; caching it can retain an old UI after deployment.
     if request.url.path.startswith("/api/operator-auth") or request.url.path in {"/", "/index.html"}:
         response.headers["Cache-Control"] = "no-store"
@@ -168,8 +208,10 @@ def get_run(session: Session, run_id: UUID) -> Run:
 
 
 @app.get("/api/health")
-def health(session: DB):
-    session.execute(text("SELECT 1"))
+def health():
+    # Public readiness checks reveal no account rows or application history.
+    with get_engine().connect() as connection:
+        connection.execute(text("SELECT 1"))
     return {"status": "ok", "version": "0.1.0"}
 
 
@@ -260,8 +302,21 @@ def events(run_id: UUID, session: DB, after: int = Query(0, ge=0)):
 
 
 def read_event_batch(run_id: str, cursor: int):
-    # The thread owns and closes its session before yielding anything to SSE.
+    from app.accounts import Principal, _actor
+    from app.data_access import DataScope
+    from app.data_context import current_data_scope
+
+    scope = current_data_scope()
+    # Authority and events share one transaction: revocation cannot slip into
+    # a gap between checking a device and reading the next private event batch.
     with session_factory()() as current:
+        if isinstance(scope, DataScope) and scope.session_id:
+            _actor(
+                current,
+                Principal(scope.user_id, scope.session_id, scope.administrator),
+                admin=scope.inspect_all,
+                lock=True,
+            )
         rows = [event_dict(row) for row in list_events(current, run_id, cursor)]
         run = current.get(Run, run_id)
         return rows, run is None or run.status in TERMINAL
@@ -278,11 +333,17 @@ def stream(
     session.rollback()
 
     async def replay():
+        from app.accounts import AccountError
+
         cursor = max(after, last_event_id or 0)
         while True:
             # SQLite may wait on another request's writer reservation. Keep that
             # wait off the HTTP event loop so response/dependency cleanup can run.
-            rows, terminal = await asyncio.to_thread(read_event_batch, str(run_id), cursor)
+            try:
+                rows, terminal = await asyncio.to_thread(read_event_batch, str(run_id), cursor)
+            except AccountError:
+                yield 'event: end\ndata: {"authentication_required": true}\n\n'
+                return
             for row in rows:
                 cursor = row["sequence"]
                 yield f"id: {cursor}\ndata: {json.dumps(row)}\n\n"
@@ -416,6 +477,11 @@ app.include_router(runtime_router)
 app.include_router(llama_router)
 app.include_router(browser_router)
 app.include_router(site_preview_router)
+
+if get_settings().access_profile == "accounts":
+    from app.account_http import install_account_access
+
+    install_account_access(app)
 
 dist = get_settings().frontend_dist
 if dist and Path(dist).is_dir():

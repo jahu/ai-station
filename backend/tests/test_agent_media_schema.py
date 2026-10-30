@@ -117,7 +117,7 @@ def test_media_scope_cannot_be_attached_to_an_unrelated_agent():
         )
 
 
-def test_nullable_media_migration_preserves_existing_agent_definition():
+def test_nullable_media_migration_preserves_existing_agent_definition(legacy_schema):
     from alembic import command
     from app.api import app
     from app.db import alembic_config
@@ -127,7 +127,7 @@ def test_nullable_media_migration_preserves_existing_agent_definition():
         original = api.post(
             "/api/agents", json={"name": "Legacy agent", "goal": "Keep this definition"}
         ).json()
-        command.downgrade(alembic_config(), "0031")
+        legacy_schema("0031")
         command.upgrade(alembic_config(), "head")
         restored = api.get("/api/agents/" + original["id"]).json()
         assert restored["media"] is None

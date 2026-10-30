@@ -78,13 +78,13 @@ def test_archive_rejects_active_run_and_keeps_pending_messages():
         assert client.get("/api/chat/conversations/" + row["id"]).json()["archived_at"] is None
 
 
-def test_migration_preserves_existing_conversation_and_history():
+def test_migration_preserves_existing_conversation_and_history(legacy_schema):
     from alembic import command
     from app.db import alembic_config
 
     with TestClient(app) as client:
         row = create(client)
-        command.downgrade(alembic_config(), "0023")
+        legacy_schema("0023")
         command.upgrade(alembic_config(), "head")
         saved = client.get("/api/chat/conversations/" + row["id"]).json()
         assert saved["title"] == row["title"] and saved["archived_at"] is None

@@ -118,13 +118,23 @@ def lan_bind_decision(bind_host: str, *, auth_configured: bool) -> dict:
     }
 
 
-def refuse_non_loopback_bind(session: Session | None = None) -> dict:
+def refuse_non_loopback_bind(session: Session | None = None, *, accounts_active: bool = False) -> dict:
     settings = get_settings()
-    auth = configured(session) if session is not None else False
+    if accounts_active:
+        from app.bootstrap_setup import administrator_configured
+
+        auth = session is not None and administrator_configured(session)
+    else:
+        auth = configured(session) if session is not None else False
     decision = lan_bind_decision(settings.bind_host, auth_configured=auth)
     if not decision["allowed"]:
         raise RuntimeError(decision["reason"])
     if private_access_enabled(session) and not auth:
+        if accounts_active:
+            raise RuntimeError(
+                "Private network access requires a configured, enabled administrator account; "
+                "complete account setup or recovery on localhost first"
+            )
         raise RuntimeError(
             "Private network access requires an operator password; configure it on localhost first"
         )

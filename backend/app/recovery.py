@@ -79,7 +79,15 @@ def recover_stale(session: Session, runner: RunnerClient | None = None) -> list[
 
         cancel_expired_run(session, run.id)
         session.commit()
-        if run.executor_type in {"llama_load", "llama_stop", "private_access", "artifact_purge"}:
+        if run.executor_type in {
+            "llama_load",
+            "llama_stop",
+            "llama_wait",
+            "private_access",
+            "artifact_purge",
+        }:
+            # A readiness waiter only reads shared infrastructure observations;
+            # it can resume without inspecting or dispatching any host process.
             # Purges resume only their approved artifact snapshot and committed
             # per-item intent. Unlinked bytes and tombstones are idempotent.
             # The native create/start/stop journal is keyed by immutable runtime

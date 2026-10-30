@@ -18,6 +18,7 @@ from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.artifacts import adopt_existing, register_file
+from app.backup_access import require_administrator
 from app.config import get_settings
 from app.db import alembic_config, session_scope, utcnow
 from app.events import append_event
@@ -50,17 +51,34 @@ def schema_revisions(session: Session) -> tuple[str | None, str | None]:
     script = ScriptDirectory.from_config(alembic_config())
     heads = script.get_heads()
     head = heads[0] if len(heads) == 1 else None
-    present = session.execute(text("SELECT version_num FROM alembic_version")).scalar()
+    # Fixed infrastructure metadata, not a general SQL capability for a scope.
+    present = session.connection().scalar(text("SELECT version_num FROM alembic_version"))
     return present, head
 
 
 def stored(session: Session) -> dict:
+    from app.data_access import ScopedSession
+
+    if isinstance(session, ScopedSession):
+        identity = session.scalar(
+            select(Run.id)
+            .where(Run.executor_type == "sqlite_backup", Run.status == "succeeded")
+            .order_by(Run.finished_at.desc(), Run.id)
+            .limit(1)
+        )
+        return {"last_backup_run_id": identity}
     row = session.get(Setting, SETUP_KEY)
     value = dict(row.value) if row and isinstance(row.value, dict) else {}
     return {"last_backup_run_id": value.get("last_backup_run_id")}
 
 
 def remember_backup(session: Session, run_id: str) -> None:
+    from app.data_access import ScopedSession
+
+    if isinstance(session, ScopedSession):
+        # Account history derives its latest copy from owned Runs. No shared
+        # Setting mutation is granted to an executor.
+        return
     payload = {"last_backup_run_id": run_id}
     row = session.get(Setting, SETUP_KEY)
     if row is None:
@@ -98,6 +116,9 @@ def interrupted_runs(session: Session, *, limit: int = 8) -> list[dict]:
 
 
 def readiness(session: Session) -> dict:
+    from app.data_access import ScopedSession
+
+    require_administrator(session)
     current, head = schema_revisions(session)
     path = database_file()
     data_dir = get_settings().data_dir.resolve()
@@ -105,9 +126,21 @@ def readiness(session: Session) -> dict:
         relative = str(path.resolve().relative_to(data_dir))
     except ValueError:
         relative = path.name
-    active = int(session.scalar(select(func.count()).select_from(Run).where(Run.status.in_(ACTIVE))) or 0)
-    journal = session.scalar(text("PRAGMA journal_mode"))
-    bind = public_status(session)
+    # Only a count of shared machine activity, never another account's history.
+    runs = Run.__table__
+    active = int(session.connection().scalar(select(func.count()).where(runs.c.status.in_(ACTIVE))) or 0)
+    journal = session.connection().scalar(text("PRAGMA journal_mode"))
+    if isinstance(session, ScopedSession):
+        from app.operator_auth import lan_bind_decision
+        from app.private_access import access_origins
+
+        settings = get_settings()
+        bind = lan_bind_decision(settings.bind_host, auth_configured=True)
+        if access_origins(session):
+            bind["lan_exposure"] = "private"
+        bind["lan_bind_allowed"] = bool(settings.lan_host)
+    else:
+        bind = public_status(session)
     last_id = stored(session)["last_backup_run_id"]
     last = session.get(Run, last_id) if last_id else None
     awaiting = interrupted_runs(session)
@@ -140,8 +173,9 @@ def readiness(session: Session) -> dict:
 
 
 def copy_database(source: Path, destination: Path) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.parent.mkdir(parents=True, mode=0o700, exist_ok=True)
     destination.unlink(missing_ok=True)
+    destination.touch(mode=0o600, exist_ok=False)
     quoted = str(destination.resolve()).replace("'", "''")
     connection = sqlite3.connect(str(source), timeout=30)
     try:
@@ -271,6 +305,7 @@ class SqliteBackupExecutor:
         destination = None
         try:
             require(run.effective_permissions, PERMISSION)
+            require_administrator(session, run)
             if self.canceled(session, run):
                 return "done"
             transition(session, run, RunStatus.PREPARING, event_type="executor.preparing")
@@ -293,6 +328,9 @@ class SqliteBackupExecutor:
             if self.canceled(session, run):
                 destination.unlink(missing_ok=True)
                 return "done"
+            # Copying runs without a write transaction. Recheck the live role
+            # before publishing bytes after an intervening disable/demotion.
+            require_administrator(session, run)
             check = integrity_ok(destination)
             if check != "ok":
                 destination.unlink(missing_ok=True)

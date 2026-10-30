@@ -209,17 +209,35 @@ def current_security(path: Path) -> dict | None:
                     "SELECT key,value FROM settings WHERE key IN ('operator_auth','operator_login_budget','private_ui_access')"
                 )
             )
-            return {
+            security = {
                 key: json.loads(rows[key]) if key in rows else None
                 for key in ("operator_auth", "operator_login_budget", "private_ui_access")
             }
+            from station_recovery.accounts import current_authority
+
+            security["account_authority"] = current_authority(connection)
+            security["account_attempts"] = {
+                key: json.loads(value)
+                for key, value in connection.execute(
+                    "SELECT key,value FROM settings WHERE key IN ('account_attempts:login','account_attempts:security','account_attempts:admin')"
+                )
+            }
+            return security
     except RecoveryError:
         raise
     except (sqlite3.Error, ValueError, TypeError):
         return None
 
 
-def normalize_copy(path: Path, security: dict | None, backup_id: str, *, password: str | None = None) -> dict:
+def normalize_copy(
+    path: Path,
+    security: dict | None,
+    backup_id: str,
+    *,
+    password: str | None = None,
+    legacy_owner: str | None = None,
+    admin_recovery=None,
+) -> dict:
     """A restored copy cannot resume work, schedules, sessions or invitation tokens."""
     from app.db import utcnow
     from app.events import append_event
@@ -239,7 +257,7 @@ def normalize_copy(path: Path, security: dict | None, backup_id: str, *, passwor
 
     if password is not None and not 12 <= len(password) <= 200:
         raise RecoveryError("A new operator password must contain 12 to 200 characters")
-    if security is None and password is None:
+    if security is None and password is None and admin_recovery is None:
         raise RecoveryError("Unreadable current credentials require a fresh operator password for recovery")
     engine = create_engine(URL.create("sqlite", database=str(path)))
     now = utcnow()
@@ -252,6 +270,16 @@ def normalize_copy(path: Path, security: dict | None, backup_id: str, *, passwor
     }
     try:
         with Session(engine) as session:
+            from station_recovery.accounts import preserve_authority
+
+            account_actions = preserve_authority(
+                session,
+                (security or {}).get("account_authority"),
+                now,
+                password=password,
+                legacy_owner=legacy_owner,
+                admin_recovery=admin_recovery,
+            )
             for agent in session.scalars(select(Agent)):
                 actions["agents_paused"] += int(agent.enabled)
                 agent.enabled, agent.next_run_at, agent.updated_at = False, None, now
@@ -316,7 +344,15 @@ def normalize_copy(path: Path, security: dict | None, backup_id: str, *, passwor
             private_required = (
                 private_policy.get("enabled") is True or private_policy.get("password_required") is True
             )
-            if private_required and not (security or {}).get("operator_auth") and password is None:
+            account_ready = bool(
+                account_actions.get("accounts_preserved") or account_actions.get("administrator_recovered")
+            )
+            if (
+                private_required
+                and not (security or {}).get("operator_auth")
+                and password is None
+                and not account_ready
+            ):
                 raise RecoveryError(
                     "Private recovery requires a fresh operator password when current credentials are missing"
                 )
@@ -335,6 +371,16 @@ def normalize_copy(path: Path, security: dict | None, backup_id: str, *, passwor
             session.flush()
             for key, value in (security or {}).items():
                 if key in {"operator_auth", "operator_login_budget"} and value is not None:
+                    if key == "operator_auth" and admin_recovery is not None:
+                        continue
+                    session.add(Setting(key=key, value=value))
+            for key in ("account_attempts:login", "account_attempts:security", "account_attempts:admin"):
+                previous = session.get(Setting, key)
+                if previous is not None:
+                    session.delete(previous)
+            session.flush()
+            for key, value in (security or {}).get("account_attempts", {}).items():
+                if key in {"account_attempts:login", "account_attempts:security", "account_attempts:admin"}:
                     session.add(Setting(key=key, value=value))
             if backup_private or current_private:
                 revisions = [p.get("revision", 0) for p in (backup_private, private_policy)]
@@ -356,6 +402,11 @@ def normalize_copy(path: Path, security: dict | None, backup_id: str, *, passwor
             if password is not None:
                 save_secret(session, password)
             session.commit()
-        return {**actions, "operator_password_reset": password is not None, "automatic_replay": False}
+        return {
+            **actions,
+            **account_actions,
+            "operator_password_reset": password is not None,
+            "automatic_replay": False,
+        }
     finally:
         engine.dispose()

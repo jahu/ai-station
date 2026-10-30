@@ -28,7 +28,9 @@ Category = Literal["llm", "image", "video", "audio", "other"]
 
 
 def file_dict(row):
-    return {
+    from app.data_access import accessible_run_id
+
+    result = {
         key: getattr(row, key)
         for key in (
             "id",
@@ -48,6 +50,9 @@ def file_dict(row):
             "availability",
         )
     }
+
+    result["last_scan_run_id"] = accessible_run_id(row, row.last_scan_run_id)
+    return result
 
 
 @router.get("")

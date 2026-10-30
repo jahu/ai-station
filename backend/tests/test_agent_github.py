@@ -229,7 +229,7 @@ def test_factory_requires_target_review_before_enable():
         assert r.status_code == 422
 
 
-def test_scope_migration_preserves_existing_agent_definitions():
+def test_scope_migration_preserves_existing_agent_definitions(legacy_schema):
     from alembic import command
     from app.db import alembic_config
     from sqlalchemy import text
@@ -240,7 +240,7 @@ def test_scope_migration_preserves_existing_agent_definitions():
             json={"name": "Existing definition", "goal": "Keep original intent", "model": "fake-local"},
         ).json()
     reset_engine()
-    command.downgrade(alembic_config(), "0022")
+    legacy_schema("0022")
     command.upgrade(alembic_config(), "head")
     with session_factory()() as session:
         old = session.execute(

@@ -427,6 +427,13 @@ The `operator_auth` setting stores PBKDF2-SHA256 material only. Responses omit p
 
 SQLite backups require `manage_station` and write under the data root. Inspecting a copy re-opens that file read-only and never restores over the live database. Compose image inspect asks the Host Runner to compare the `ai-station:local` tag with running API/worker/scheduler containers; it does not build, tag, start or stop. Compose shutdown does not pass `--volumes`. Interrupted-run acknowledgement records inspection only and does not replay side effects. Held-lease status is inspect-only and does not recover or restore. See [operations](operations.md).
 
+In the account profile, station backups additionally require a live enabled
+administrator before dispatch and publication. Their owner-bound artifacts remain
+administrator-only after completion, including cached lookups and task inputs;
+demotion cannot preserve a member's access to other users through an old database
+copy. Files start with mode 0600. Fixed schema/journal reads and an aggregate active
+Run count grant no general SQL or foreign history access to a request or executor.
+
 ## Secrets
 
 Git ignores `.env` and `.env.*` at every directory depth, except the portable

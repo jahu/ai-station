@@ -356,20 +356,59 @@ def due_agents(session: Session):
 
 
 def scheduler_tick(session: Session) -> list[str]:
+    from app.account_profile import accounts_enabled, waiting_for_first_admin
+
+    if waiting_for_first_admin(session):
+        return []
     created = []
     for agent in due_agents(session):
-        if active_run(session, agent.id):
-            # Coalesce missed recurring slots; never overlap or accumulate backlog.
-            if agent.trigger != "datetime":
-                agent.next_run_at = compute_next(agent)
-            continue
-        try:
-            with session.begin_nested():
-                run_id = launch_agent(session, agent, triggered_by="scheduler")
+        if agent.owner_id is None:
+            if accounts_enabled():
+                continue
+            # Explicit legacy operator profile only.
+            run_id = _schedule_one(session, agent)
+        else:
+            from app.data_access import DataScope, ScopedSession
+            from app.data_context import bind_data_scope
+            from app.models import User
+
+            scope = DataScope(agent.owner_id, execution=True)
+            with ScopedSession(
+                bind=session.connection(), scope=scope, join_transaction_mode="create_savepoint"
+            ) as owned:
+                with bind_data_scope(scope):
+                    current = owned.get(Agent, agent.id)
+                    user = owned.get(User, agent.owner_id)
+                    if user is None or not user.enabled or user.bootstrap_pending:
+                        current.enabled, current.next_run_at, current.last_status = (
+                            False,
+                            None,
+                            "account_disabled",
+                        )
+                        run_id = None
+                    else:
+                        run_id = _schedule_one(owned, current)
+                    owned.commit()
+            session.expire(agent)
+        if run_id is not None:
             created.append(run_id)
-        except (ValueError, ProviderError):
-            agent.enabled, agent.next_run_at, agent.last_status = False, None, "misconfigured"
     from app.worktree_expiry import expire_due_worktrees
 
     created.extend(expire_due_worktrees(session))
     return created
+
+
+def _schedule_one(session, agent):
+    from app.data_access import DataAccessError
+
+    if active_run(session, agent.id):
+        # Coalesce missed recurring slots; never overlap or accumulate backlog.
+        if agent.trigger != "datetime":
+            agent.next_run_at = compute_next(agent)
+        return None
+    try:
+        with session.begin_nested():
+            return launch_agent(session, agent, triggered_by="scheduler")
+    except (ValueError, ProviderError, DataAccessError):
+        agent.enabled, agent.next_run_at, agent.last_status = False, None, "misconfigured"
+        return None

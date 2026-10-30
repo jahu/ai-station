@@ -6,7 +6,7 @@ import tempfile
 import time
 from pathlib import Path, PurePosixPath
 from typing import Annotated, Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
@@ -309,6 +309,7 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
         }:
             raise HTTPException(409, "This model already has a runtime; inspect it before loading again")
     instance = RuntimeInstance(
+        id=str(uuid4()),
         runtime_key="llama.cpp",
         name=model.filename,
         ownership="managed",
@@ -322,8 +323,6 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
             "projector_file_id": str(body.projector_file_id) if body.projector_file_id else None,
         },
     )
-    session.add(instance)
-    session.flush()
     task = task or create_task(
         session,
         title="Load " + model.filename,
@@ -354,12 +353,19 @@ def enqueue_load(body, session, *, task=None, allow_stopping=False, _fitted_cont
     )
     instance.endpoint = "llamacpp:" + instance.id
     instance.metadata_json = {**instance.metadata_json, "load_run_id": run.id, "operation_run_id": run.id}
+    from app.runtime_coordination import add_runtime_intent
+
+    add_runtime_intent(session, instance, run)
     return run
 
 
 def request_stop(session, instance, *, task=None, ignore_run_id=None):
     if instance is None or instance.ownership != "managed" or instance.runtime_key != "llama.cpp":
         raise HTTPException(404, "Managed llama.cpp runtime not found")
+    from app.runtime_coordination import foreign_runtime_work
+
+    if foreign_runtime_work(session, instance):
+        raise HTTPException(409, "Wait for the model's active work on another account before stopping it")
     active = session.scalars(
         select(Run).where(Run.executor_type.in_(["llama_load", "llama_stop"]), Run.status.not_in(TERMINAL))
     )
@@ -397,7 +403,11 @@ def active_instance_runs(session, instance_id, executors):
 @router.post("/{instance_id}/health", status_code=202)
 def health(instance_id: UUID, body: EmptyBody, session: DB):
     instance = managed_llama(session, instance_id)
-    if active_instance_runs(session, instance.id, ("llama_load", "llama_stop", "llama_health")):
+    from app.runtime_coordination import foreign_runtime_work
+
+    if foreign_runtime_work(
+        session, instance, operations=("llama_load", "llama_stop", "llama_health")
+    ) or active_instance_runs(session, instance.id, ("llama_load", "llama_stop", "llama_health")):
         raise HTTPException(409, "Cancel or wait for the current runtime operation first")
     task = create_task(
         session,
@@ -416,7 +426,10 @@ def health(instance_id: UUID, body: EmptyBody, session: DB):
         retry_class="safe",
         parameters={"instance_id": instance.id},
     )
-    instance.metadata_json = {**instance.metadata_json, "health_run_id": run.id}
+    from app.data_access import ScopedSession
+
+    if not isinstance(session, ScopedSession) or session.scope.administrator:
+        instance.metadata_json = {**instance.metadata_json, "health_run_id": run.id}
     session.commit()
     return run_dict(run)
 
@@ -426,10 +439,14 @@ def restart(instance_id: UUID, body: EmptyBody, session: DB):
     from app.dependencies import depend_on
 
     instance = managed_llama(session, instance_id)
+    from app.runtime_coordination import foreign_runtime_work
+
     if instance.status == "unknown":
         raise HTTPException(409, "Inspect the runtime before restarting it")
-    if instance.status in {"queued", "loading", "stopping"} or active_instance_runs(
-        session, instance.id, ("llama_load", "llama_stop", "llama_health")
+    if (
+        foreign_runtime_work(session, instance)
+        or instance.status in {"queued", "loading", "stopping"}
+        or active_instance_runs(session, instance.id, ("llama_load", "llama_stop", "llama_health"))
     ):
         raise HTTPException(409, "Cancel or wait for the current runtime operation first")
     meta = instance.metadata_json or {}
@@ -479,6 +496,9 @@ def enqueue_stop(session, instance, *, task=None):
         retry_class="inspect",
         parameters={"instance_id": instance.id},
     )
+    from app.runtime_coordination import register_runtime_stop
+
+    register_runtime_stop(session, instance, run)
     instance.status = "stopping"
     instance.metadata_json = {**instance.metadata_json, "operation_run_id": run.id}
     return run
@@ -542,8 +562,9 @@ def update_instance(session, instance, info):
     elif info["status"] == "failed" and _allocation_error(str(info.get("error") or "")):
         meta["context_fit"] = "too_large"
     instance.metadata_json = meta
-    if not info.get("alive") and info["status"] in {"stopped", "failed"}:
-        release_run_locks(session, instance.metadata_json["load_run_id"])
+    from app.runtime_coordination import release_runtime_allocation
+
+    release_runtime_allocation(session, instance, info)
 
 
 class LlamaExecutor:
@@ -695,9 +716,19 @@ class LlamaExecutor:
                     cancel_abandoned_restore(session, run)
                 canceled = run.status == "cancel_requested"
                 session.commit()
-                if canceled or time.monotonic() >= deadline:
+                from app.model_cancellation import foreign_demand, retain_ready
+
+                retained = (
+                    canceled
+                    and self.operation == "load"
+                    and time.monotonic() < deadline
+                    and foreign_demand(session, run, instance)
+                )
+                if (canceled and not retained) or time.monotonic() >= deadline:
                     info = runner.stop_llama(instance.id)
                 update_instance(session, instance, info)
+                if retained and retain_ready(session, run, instance, info):
+                    return "done"
                 if not info.get("alive") and info["status"] in {"stopped", "failed"}:
                     run.metadata_json = {**run.metadata_json, "process_confirmed_gone": True}
                     if canceled:
@@ -785,6 +816,9 @@ class LlamaHealthExecutor:
             return "done"
         if instance.status in {"ready", "loading", "unknown", "stopping"} or info.get("alive"):
             update_instance(session, instance, info)
+        from app.runtime_coordination import account_runtime_observation
+
+        info = account_runtime_observation(session, info)
         health = {
             "status": info.get("status"),
             "alive": bool(info.get("alive")),
@@ -817,8 +851,12 @@ class LlamaHealthExecutor:
 
 
 def reconcile(session, runner):
+    from app.runtime_coordination import foreign_runtime_work
+
     for instance in instances(session):
         if instance.status not in {"ready", "queued", "loading", "unknown", "stopping"}:
+            continue
+        if foreign_runtime_work(session, instance, operations=("llama_load", "llama_stop", "llama_health")):
             continue
         load = session.get(Run, instance.metadata_json.get("load_run_id"))
         operation = session.get(
@@ -887,6 +925,7 @@ def prepare_consumer(session, run):
     from app.coding_model_routing import MINIMUM_CONTEXT
     from app.dependencies import depend_on
     from app.providers import ProviderError
+    from app.runtime_coordination import runtime_load_facts
 
     if run.status == "canceled":
         return
@@ -895,9 +934,12 @@ def prepare_consumer(session, run):
         return
     file_id = model.removeprefix("llamacpp:")
     matching = [i for i in instances(session) if i.metadata_json.get("model_file_id") == file_id]
-    matching.sort(
-        key=lambda i: (session.get(Run, i.metadata_json["load_run_id"]).created_at, i.id), reverse=True
-    )
+    try:
+        matching.sort(
+            key=lambda item: (runtime_load_facts(session, item)["created_at"], item.id), reverse=True
+        )
+    except ValueError as exc:
+        raise ProviderError(str(exc)) from exc
     instance = next((i for i in matching if i.status in {"ready", "queued", "loading"}), None)
     coding = run.executor_type in {"local_proposal", "agent_data_generate"}
     target = 0
@@ -919,12 +961,16 @@ def prepare_consumer(session, run):
         )
     )
     if needs_upgrade:
+        from app.runtime_coordination import foreign_runtime_work
+
+        if foreign_runtime_work(session, instance):
+            raise ProviderError("Wait for the model's active work before preparing its larger Coding context")
         consumers = session.scalars(select(Run).where(Run.status.not_in(TERMINAL), Run.id != run.id))
         if any(r.parameters.get("endpoint") == instance.endpoint for r in consumers):
             raise ProviderError("Wait for the model's active work before preparing its larger Coding context")
         previous_load = session.get(Run, instance.metadata_json["load_run_id"])
         stop_run = enqueue_stop(session, instance, task=session.get(Task, run.task_id))
-        if previous_load.status not in TERMINAL:
+        if previous_load is not None and previous_load.status not in TERMINAL:
             depend_on(session, stop_run, previous_load)
         append_event(
             session,
@@ -960,10 +1006,18 @@ def prepare_consumer(session, run):
         for old in matching:
             if old.status == "stopping":
                 operation = session.get(Run, old.metadata_json["operation_run_id"])
+                if operation is None:
+                    from app.runtime_coordination import wait_for_runtime
+
+                    operation = wait_for_runtime(session, load_run, old, target="stopped")
                 depend_on(session, load_run, operation)
         instance = session.get(RuntimeInstance, load_run.parameters["instance_id"])
     if instance.status != "ready":
         loading = session.get(Run, instance.metadata_json["load_run_id"])
+        if loading is None:
+            from app.runtime_coordination import wait_for_runtime
+
+            loading = wait_for_runtime(session, run, instance)
         if loading.status in {"cancel_requested", "canceled", "failed", "interrupted"}:
             raise ProviderError("Wait for the selected model's canceled startup to finish before sending")
         depend_on(session, run, loading)
@@ -974,6 +1028,7 @@ def evict_idle_models(session, run, indexes, *, desired=None):
     """Queue owned idle runtime stops to make room; never touch external services."""
     from app.dependencies import depend_on
     from app.llama_handoff import eviction_needed
+    from app.runtime_coordination import foreign_runtime_work
 
     if not eviction_needed(session, run):
         return
@@ -982,6 +1037,8 @@ def evict_idle_models(session, run, indexes, *, desired=None):
     consumers = list(session.scalars(select(Run).where(Run.status.not_in(TERMINAL))))
     for instance in instances(session):
         if instance.status != "ready" or not desired.intersection(instance.metadata_json.get("gpus", [])):
+            continue
+        if foreign_runtime_work(session, instance):
             continue
         references = [
             r
