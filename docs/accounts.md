@@ -554,3 +554,15 @@ The final account gate passed 397 cases across 36 complete families; additional
 native/API/mutation checks passed 82 cases. The frontend's 928-case qualification
 and actual compiled browser checks are retained. Future capabilities must extend
 these ownership and operation policies instead of bypassing them.
+
+### Remember this device
+
+The sign-in form offers **Keep me logged in**. Selecting it issues an HttpOnly,
+SameSite=Strict cookie and a server-side device session with a maximum lifetime
+of 30 days, surviving browser closure and application restarts. Activity does not
+extend that absolute limit. Without the option, the existing 30-minute idle /
+12-hour absolute limits remain unchanged. These limits are stored per device;
+login, device lists and account actions all honor the selected session policy.
+Two-factor verification still applies at login. Sign out, device revocation,
+password changes and account disabling retain their existing authority checks.
+No credential or bearer token is stored in JavaScript-readable browser storage.
