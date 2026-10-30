@@ -196,6 +196,28 @@ real Alembic-created legacy schema before upgrading. They do not bypass the
 production prohibition on downgrading populated ownership. Legacy schemas and
 fixture data are checked for foreign-key integrity before the upgrade.
 
+## Offline account recovery in development
+
+Restoring older data must retain current account authority, rather than the
+backup's passwords, administrator roles, enabled flags, authenticator references,
+consumed time steps or recovery-code hashes. Recovery snapshots this authority
+read-only from the stopped current database and overlays it on the private staging
+copy. Accounts added since the backup are retained. Historical account IDs absent
+from current authority remain as disabled provenance owners with unusable old
+passwords. Restored device sessions are revoked and abandoned authenticator
+enrollments discarded. Current verification-attempt budgets are retained. The
+ordinary recovery receipt contains counts, never password hashes, setup keys or
+recovery hashes; the authority snapshot is held only in memory.
+
+Identity collisions and legacy backups whose newly migrated initial owner differs
+from the current identity fail before recovery is applied. Initial-owner mapping
+must be explicitly designed and verified before this case is enabled. Unreadable
+current authority cannot revive claimed accounts from a backup, even with the old
+operator-password recovery flag. A named administrator recovery flow must be
+provided for that case; the operator flag cannot silently replace an account's
+password or bypass MFA. These remaining paths keep the overall account cutover
+gate open. Missing authenticator files never turn off an enabled second factor.
+
 ## Remaining enablement gate
 
 - Add immutable owners/backfill to private roots and enforce them in repository

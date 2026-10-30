@@ -209,10 +209,20 @@ def current_security(path: Path) -> dict | None:
                     "SELECT key,value FROM settings WHERE key IN ('operator_auth','operator_login_budget','private_ui_access')"
                 )
             )
-            return {
+            security = {
                 key: json.loads(rows[key]) if key in rows else None
                 for key in ("operator_auth", "operator_login_budget", "private_ui_access")
             }
+            from station_recovery.accounts import current_authority
+
+            security["account_authority"] = current_authority(connection)
+            security["account_attempts"] = {
+                key: json.loads(value)
+                for key, value in connection.execute(
+                    "SELECT key,value FROM settings WHERE key IN ('account_attempts:login','account_attempts:security','account_attempts:admin')"
+                )
+            }
+            return security
     except RecoveryError:
         raise
     except (sqlite3.Error, ValueError, TypeError):
@@ -252,6 +262,11 @@ def normalize_copy(path: Path, security: dict | None, backup_id: str, *, passwor
     }
     try:
         with Session(engine) as session:
+            from station_recovery.accounts import preserve_authority
+
+            account_actions = preserve_authority(
+                session, (security or {}).get("account_authority"), now, password=password
+            )
             for agent in session.scalars(select(Agent)):
                 actions["agents_paused"] += int(agent.enabled)
                 agent.enabled, agent.next_run_at, agent.updated_at = False, None, now
@@ -336,6 +351,14 @@ def normalize_copy(path: Path, security: dict | None, backup_id: str, *, passwor
             for key, value in (security or {}).items():
                 if key in {"operator_auth", "operator_login_budget"} and value is not None:
                     session.add(Setting(key=key, value=value))
+            for key in ("account_attempts:login", "account_attempts:security", "account_attempts:admin"):
+                previous = session.get(Setting, key)
+                if previous is not None:
+                    session.delete(previous)
+            session.flush()
+            for key, value in (security or {}).get("account_attempts", {}).items():
+                if key in {"account_attempts:login", "account_attempts:security", "account_attempts:admin"}:
+                    session.add(Setting(key=key, value=value))
             if backup_private or current_private:
                 revisions = [p.get("revision", 0) for p in (backup_private, private_policy)]
                 number = max((v for v in revisions if type(v) is int and v >= 0), default=0) + 1
@@ -356,6 +379,11 @@ def normalize_copy(path: Path, security: dict | None, backup_id: str, *, passwor
             if password is not None:
                 save_secret(session, password)
             session.commit()
-        return {**actions, "operator_password_reset": password is not None, "automatic_replay": False}
+        return {
+            **actions,
+            **account_actions,
+            "operator_password_reset": password is not None,
+            "automatic_replay": False,
+        }
     finally:
         engine.dispose()
