@@ -305,7 +305,11 @@ def render(request, root, work, output):
         output.parent.mkdir(parents=True, exist_ok=True)
         if output.resolve() != output:
             raise ValueError("Timeline output traverses a symlink")
-        output.with_suffix(".json").write_text(json.dumps(report))
+        report_path = output.with_suffix(".json")
+        if report_path.resolve() != report_path:
+            raise ValueError("Timeline report traverses a symlink")
+        with report_path.open("x") as handle:
+            json.dump(report, handle)
         os.link(temporary, output)
         temporary.unlink()
         print("timeline.stage: completed", flush=True)

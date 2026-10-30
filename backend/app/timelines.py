@@ -7,6 +7,7 @@ import re
 import stat
 import wave
 from datetime import timedelta
+from pathlib import PurePosixPath
 from typing import Annotated
 from uuid import UUID
 
@@ -349,10 +350,19 @@ class TimelineExecutor(HostMediaExecutor):
         )
 
     def output_metadata(self, output):
-        path = safe_join(get_settings().data_dir, output).with_suffix(".json")
-        if path.stat().st_size > 32768:
-            raise ValueError("Timeline report exceeds its bound")
-        report = json.loads(path.read_text())
+        relative = str(PurePosixPath(output).with_suffix(".json"))
+        path = safe_join(get_settings().data_dir, relative)
+        if path != get_settings().data_dir.resolve() / relative:
+            raise ValueError("Timeline report traverses a symlink")
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, "rb") as handle:
+            info = os.fstat(handle.fileno())
+            if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or not 1 <= info.st_size <= 32768:
+                raise ValueError("Timeline report exceeds its bound or is not a regular owned file")
+            raw = handle.read(32769)
+        if len(raw) != info.st_size:
+            raise ValueError("Timeline report changed during inspection")
+        report = json.loads(raw)
         if report.get("verified") is not True:
             raise ValueError("Timeline export was not verified")
         return report

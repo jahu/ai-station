@@ -203,3 +203,24 @@ def test_original_video_audio_is_trimmed_faded_and_muted_independently(tmp_path)
     clip.muted = True
     muted, _ = job.mix_audio(av, np, request, paths, sources, 24)
     assert np.max(np.abs(muted)) == 0
+
+
+@pytest.mark.parametrize("symlink", [False, True])
+def test_existing_report_is_never_overwritten_or_followed(tmp_path, monkeypatch, symlink):
+    request = fixture(tmp_path)
+    work = tmp_path / "work"
+    work.mkdir()
+    (tmp_path / "memory.peak").write_text("4096")
+    monkeypatch.setattr(job, "current_group", lambda: tmp_path)
+    outside = tmp_path / "retained.json"
+    outside.write_text("retained report")
+    output = tmp_path / "artifacts/export.mp4"
+    report = output.with_suffix(".json")
+    if symlink:
+        report.symlink_to(outside)
+    else:
+        report.write_text("retained report")
+    with pytest.raises((ValueError, FileExistsError)):
+        job.render(request, tmp_path, work, output)
+    assert outside.read_text() == "retained report" and report.read_text() == "retained report"
+    assert not output.exists()

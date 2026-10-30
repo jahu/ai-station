@@ -208,3 +208,20 @@ def test_frame_progress_uses_recorded_total_and_has_no_fabricated_eta():
     value = projection(run, now=now)
     assert value["fraction"] == {"completed": 24, "total": 72, "unit": "frames"}
     assert value["estimate"] is None
+
+
+def test_renderer_report_rejects_symlink_escape_and_oversized_bytes(tmp_path):
+    from app.config import get_settings
+    from app.timelines import TimelineExecutor
+
+    path = get_settings().data_dir / "artifacts/qa-render.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    outside = tmp_path / "outside.json"
+    outside.write_text('{"verified": true}')
+    path.symlink_to(outside)
+    with pytest.raises(ValueError):
+        TimelineExecutor().output_metadata("artifacts/qa-render.mp4")
+    path.unlink()
+    path.write_bytes(b"x" * 32769)
+    with pytest.raises(ValueError, match="bound"):
+        TimelineExecutor().output_metadata("artifacts/qa-render.mp4")
