@@ -116,4 +116,5 @@ def test_fake_native_image_progress_survives_restart_and_is_private(accounts, br
     expected = "failed" if bad_output else "succeeded"
     assert view["status"] == expected and view["generation_progress"]["phase"] == expected
     assert view["generation_progress"]["estimate"] is None
+    assert "generation_progress_buffers" not in view["metadata"]
     assert bob.get("/api/runs/" + identity).status_code == 404

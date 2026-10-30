@@ -120,6 +120,18 @@ export interface ResourceWait {
   reserved_mib: number;
   headroom_mib: number;
 }
+export interface GenerationProgress {
+  phase: string;
+  fraction: { completed: number; total: number; unit: string } | null;
+  elapsed_seconds: number;
+  estimate: {
+    lower_seconds: number;
+    upper_seconds: number;
+    basis: string;
+    scope: string;
+    samples?: number;
+  } | null;
+}
 export interface Run {
   id: string;
   project_id: string | null;
@@ -136,6 +148,7 @@ export interface Run {
   actual_gpu: string | null;
   requested_gpu: string;
   resource_wait?: ResourceWait | null;
+  generation_progress?: GenerationProgress | null;
   parameters: Record<string, unknown>;
   effective_permissions: string[];
   summary: string;

@@ -652,6 +652,7 @@ function ImageForm({
                 <label>
                   {mode === "img2img" ? "Edit instruction" : "Prompt"}
                   <textarea
+                    aria-label={mode === "img2img" ? "Edit instruction" : "Prompt"}
                     required
                     maxLength={10000}
                     rows={6}

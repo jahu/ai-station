@@ -198,6 +198,7 @@ class HostMediaExecutor:
 
     def _poll(self, session, run, runner, output):
         offsets = {"stdout_offset": 0, "stderr_offset": 0}
+        progress_buffers = {}
         while True:
             session.refresh(run)
             cancel_expired_run(session, run.id)
@@ -209,7 +210,7 @@ class HostMediaExecutor:
             self.on_inspection(session, run, info)
             from app.generation_progress import observe
 
-            observe(session, run, info)
+            observe(session, run, info, buffers=progress_buffers)
             for stream in ("stdout", "stderr"):
                 text = info.get(stream, "")
                 if text:

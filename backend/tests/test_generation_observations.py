@@ -68,23 +68,27 @@ def test_split_cr_ansi_deduplication_and_monotonicity(monkeypatch):
         "app.generation_progress.append_event", lambda _db, _rid, _kind, payload: events.append(payload)
     )
     target = run()
-    observe(None, target, {"stderr": "\r4/8 - 9.5s/"})
+    buffers = {}
+    observe(None, target, {"stderr": "\r4/8 - 9.5s/"}, buffers=buffers)
     assert "generation_progress" not in target.metadata_json
-    observe(None, target, {"stderr": "it\x1b[K\r4/8 - 9.5s/it\r2/8 - 9.5s/it\n"})
+    observe(None, target, {"stderr": "it\x1b[K\r4/8 - 9.5s/it\r2/8 - 9.5s/it\n"}, buffers=buffers)
     assert len(events) == 1 and events[0]["completed"] == 4
     observe(None, target, {"stdout": "image.stage: decoding image on GPU\n"})
     observe(None, target, {"stderr": "6/8 - 9.5s/it\n"})
     assert target.metadata_json["generation_progress"]["phase"] == "finishing"
     assert target.status == "running"  # No parser can publish a successful Run.
-    observe(None, target, {"stdout": "z" * 100000})
-    assert len(target.metadata_json["generation_progress_buffers"]["stdout"]) == 512
+    observe(None, target, {"stdout": "z" * 100000}, buffers=buffers)
+    assert len(buffers["stdout"]) == 512
+    assert "generation_progress_buffers" not in target.metadata_json
+    assert "zzzz" not in str(target.metadata_json)
 
 
 def test_end_of_process_flushes_a_final_unterminated_counter(monkeypatch):
     monkeypatch.setattr("app.generation_progress.append_event", lambda *_: None)
     target = run()
-    observe(None, target, {"stderr": "8/8 - 2s/it"})
-    observe(None, target, {"alive": False, "exit_code": 0})
+    buffers = {}
+    observe(None, target, {"stderr": "8/8 - 2s/it"}, buffers=buffers)
+    observe(None, target, {"alive": False, "exit_code": 0}, buffers=buffers)
     assert target.metadata_json["generation_progress"]["phase"] == "finishing"
     assert target.status == "running"
 
@@ -126,3 +130,12 @@ def test_composition_and_unknown_progress_remain_indeterminate():
     values = active_progress([run(status="succeeded"), run(status="queued"), run("wan_video")])
     assert len(values) == 1 and values[0]["status"] == "running"
     assert len(active_progress([run() for _ in range(20)])) == 6
+
+
+def test_terminal_elapsed_time_is_frozen_at_finish():
+    now = utcnow()
+    target = run(
+        status="succeeded", started_at=now - timedelta(seconds=50), finished_at=now - timedelta(seconds=10)
+    )
+    assert projection(target, now=now)["elapsed_seconds"] == 40
+    assert projection(target, now=now + timedelta(days=10))["elapsed_seconds"] == 40

@@ -90,13 +90,15 @@ def parse_line(line, run):
     return None
 
 
-def observe(session, run, info):
+def observe(session, run, info, *, buffers=None):
     if run.executor_type not in EXECUTORS:
         return
     metadata = dict(run.metadata_json or {})
     previous = metadata.get("generation_progress") or {}
     current = dict(previous)
-    buffers = dict(metadata.get("generation_progress_buffers") or {})
+    # Only numeric observations are persistent. Polling replays from offset zero
+    # on recovery, so incomplete raw log lines need no database/API exposure.
+    buffers = {} if buffers is None else buffers
     for stream in ("stdout", "stderr"):
         text = info.get(stream, "")
         ended = (
@@ -131,7 +133,6 @@ def observe(session, run, info):
             current = {**candidate, "observed_at": utcnow().isoformat()}
     if info.get("alive") is False and info.get("exit_code") == 0:
         current = {"phase": "finishing", "observed_at": utcnow().isoformat()}
-    metadata["generation_progress_buffers"] = buffers
     if current != previous:
         metadata["generation_progress"] = current
         append_event(session, run.id, "generation.progress", current)
@@ -224,7 +225,8 @@ def projection(run, *, now=None):
     if not isinstance(observation, dict):
         observation = {}
     started = run.started_at
-    elapsed = max(0, (now - started).total_seconds()) if started else 0
+    end = getattr(run, "finished_at", None) or now
+    elapsed = max(0, (end - started).total_seconds()) if started else 0
     estimate = None
     fraction = None
     if phase == "running":

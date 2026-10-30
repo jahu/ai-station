@@ -19,6 +19,7 @@ import { ArtifactLineage } from "../../pages/ArtifactLineage";
 import LibraryActions from "../../pages/LibraryActions";
 import { PurgeActivity } from "../../pages/LibraryPurge";
 import PromptTranslation from "./PromptTranslation";
+import { MediaRunProgress } from "./GenerationProgress";
 
 const RETRYABLE = new Set(["failed", "canceled", "interrupted"]);
 
@@ -111,6 +112,9 @@ export default function MediaResult({
     kind === "audio" ? AudioLines : kind === "video" ? Film : ImageIcon;
   const result = artifacts.data?.find((a) => a.type === kind);
   const busy = mediaBusy(run);
+  const progressRuns = steps ?? (run ? [run] : []);
+  const measuredProgress =
+    busy && progressRuns.some((step) => step.generation_progress);
   const text =
     kind === "video" && videoMode === "scene"
       ? {
@@ -335,24 +339,30 @@ export default function MediaResult({
           className={`media-empty ${busy ? "is-working" : ""}`}
           aria-live="polite"
         >
-          <div className="media-empty-icon">
-            {waitingPromptReview ? (
-              <FileText size={32} />
-            ) : busy ? (
-              <LoaderCircle size={32} className="media-spinner" />
-            ) : (
-              <Icon size={36} />
-            )}
-          </div>
-          <h3>
-            {busy
-              ? statusText
-              : run && run.status !== "succeeded"
-                ? "Generation did not complete"
-                : run
-                  ? "Loading your result…"
-                  : text.idleTitle}
-          </h3>
+          {measuredProgress ? (
+            <MediaRunProgress runs={progressRuns} />
+          ) : (
+            <>
+              <div className="media-empty-icon">
+                {waitingPromptReview ? (
+                  <FileText size={32} />
+                ) : busy ? (
+                  <LoaderCircle size={32} className="media-spinner" />
+                ) : (
+                  <Icon size={36} />
+                )}
+              </div>
+              <h3>
+                {busy
+                  ? statusText
+                  : run && run.status !== "succeeded"
+                    ? "Generation did not complete"
+                    : run
+                      ? "Loading your result…"
+                      : text.idleTitle}
+              </h3>
+            </>
+          )}
           <p>
             {waitingPromptReview
               ? "Confirm the prepared prompt above to start generation."

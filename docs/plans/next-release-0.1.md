@@ -106,6 +106,10 @@ current single-operator service continues unchanged until that gate.
 
 ## Creative sessions and prompt preparation
 
+The next implementation contracts are [measured generation progress](generation-progress.md)
+and [optional local prompt enhancement](local-prompt-enhancement.md). Both extend
+the existing worker and media preparation lifecycle.
+
 Add owner-scoped `CreativeSession` and append-only `CreativeTurn` records with
 capability, title, saved draft/options, source/result IDs and Task links. A session
 is a UI/domain grouping, not another executor. Each generation/follow-up retains
@@ -296,6 +300,15 @@ desktop/mobile account UI checks passed with an audited temporary device, revoke
 after verification. Translation review/resource-wait controls retain their prior
 behavior; their final 32-case component families pass without unhandled errors.
 NR-01 is complete. NR-02 and the other remaining NR items stay open; this increment does not complete the full next-release scope.
+
+NR-02 has a qualified common progress/estimate candidate across creative history,
+direct results, full MediaJobs and Run details. It persists actual sampler/chunk
+observations and private comparable-job duration ranges, distinguishes final
+saving/checks from sampling completion and hides stale estimates. Existing Sonic
+global progress remains intact. The [progress contract](generation-progress.md)
+records baseline/final-family and real compiled browser evidence; review and
+workstation rollout remain separate. Optional prompt enhancement is staged on
+a separate dependent branch and is not yet deployed.
 
 NR-12 has an automatic-search candidate: the selected admitted Chat model
 prepares the first query before retrieval, with bounded ordinary-text follow-up

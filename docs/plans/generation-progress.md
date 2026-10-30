@@ -13,7 +13,10 @@ counters; its 1,000-token stopping ceiling is not a completion denominator. Soni
 retains its existing verified global-window observations and animation estimate.
 
 Persist changed observations with a timestamp, stage and actual units. Deduplicate
-repeated lines, bound split-line buffers and reject regressing/invalid counters.
+repeated lines, keep bounded split-line buffers only in worker memory and reject
+regressing/invalid counters. Recovery replays the owned logs from offset zero;
+raw log fragments never become Run metadata. Terminal elapsed time uses the saved
+finish timestamp, so it does not keep increasing after completion.
 Use observed step speed for a labelled sampling-only remaining range; hide stale
 estimates instead of counting down a stalled process. Decoding, saving and output
 verification remain separate indeterminate stages.
@@ -36,3 +39,15 @@ Qualify parsers with actual observed numeric log formats and malformed/split/ANS
 cases; test persistence/staleness, profile matching and private-owner denial.
 Exercise the real fake-native worker and compiled desktop/mobile UI before
 rollout. Real model quality is unchanged and is not requalified by synthetic work.
+
+The implemented candidate passes a complete 5,121-case Python/Runner baseline
+(5,112 passed, nine opt-in skips), followed by 98 complete changed-family checks
+after the final buffer/privacy and elapsed-time fixes. The complete 945-case UI
+baseline and final 74-case changed families pass, with lint/types/format/build,
+Docker and Compose checks. Compiled desktop/mobile checks use a real private API
+and separate synthetic worker: measured progress/ETA, exact-source editing,
+navigation/reload, Task-wide Stop, fixed terminal elapsed time and foreign-user
+denial pass. Read-only parsing also recognizes numeric/stage formats from recorded
+local image/Wan/Echo/speech/music jobs; this does not claim new real inference.
+Private evidence: `data/acceptance/generation-progress-20261030/`.
+Review and controlled production rollout are separate from these checks.

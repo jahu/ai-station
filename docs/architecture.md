@@ -18,6 +18,12 @@ Task-wide Stop and explicit administrator inspection share the existing private
 account boundaries. See [workspace contracts](creative-workspaces.md). Production
 rollout remains separate from qualification.
 
+The [common generation-progress candidate](plans/generation-progress.md) projects
+measured sampler/chunk observations and owner-scoped comparable-job timing through
+the existing Run DTO and MediaJob views. Counters cannot publish artifacts or
+change execution state. Queue, preparation, generation and final checks remain
+distinct; no new executor, permission or schema is introduced.
+
 The [whole-recording avatar plan](plans/whole-recording-avatars.md) evaluates a
 stable global-generation profile after the owner-reported Echo eye deformation.
 The optional configured Sonic adapter uses one version-two media plan and one

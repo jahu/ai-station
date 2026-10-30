@@ -169,6 +169,12 @@ two-factor authentication and administrator management. They are an explicit
 access-profile cutover; see [accounts and migration](docs/accounts.md). This does
 not declare the remaining 0.1.0 work complete.
 
+Development builds also retain creative sessions across Images, Video, Music,
+Speech and Avatars. Measured generation stages and scoped time estimates use
+saved observations rather than a simulated countdown. See
+[creative workspaces](docs/creative-workspaces.md) and
+[generation progress](docs/plans/generation-progress.md).
+
 ## 🌱 Where we're going
 
 The ambition is simple: **a person with a home GPU should be able to install
