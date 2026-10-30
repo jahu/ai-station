@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { Waves, Settings2, Sparkles } from "lucide-react";
-import { api, useHardware, type Run } from "../api";
+import { api, useHardware, type Run, type Artifact } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import MediaInput from "../components/media/MediaInput";
@@ -19,6 +19,8 @@ import {
   type TranslationOptions,
 } from "../components/media/PromptTranslation";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
+import SoundCueEditor from "../components/media/SoundCueEditor";
+import { cuesValid, type SoundCue } from "../components/media/sound-cues";
 import "./SoundEffects.css";
 
 type Ready = { available: boolean; readiness: string; reason?: string };
@@ -32,6 +34,16 @@ export default function SoundEffects() {
     String(restored.video_artifact_id ?? search.get("input") ?? ""),
   );
   const [prompt, setPrompt] = useState(String(restored.prompt ?? ""));
+  const [cues, setCues] = useState<SoundCue[]>(
+    Array.isArray(restored.cues) ? restored.cues : [],
+  );
+  const source = useQuery({
+    queryKey: ["artifact", video],
+    queryFn: () => api<Artifact>(`/artifacts/${video}`),
+    enabled: !!video,
+  });
+  const sourceFrames = Number(source.data?.metadata?.frames ?? 0);
+  const sourceFps = Number(source.data?.metadata?.fps ?? 0);
   const [negative, setNegative] = useState(
     String(restored.negative_prompt ?? "speech, music"),
   );
@@ -68,6 +80,7 @@ export default function SoundEffects() {
     video_artifact_id: video,
     prompt,
     negative_prompt: negative,
+    ...(cues.length ? { cues } : {}),
     steps,
     cfg,
     seed: seed === "" ? null : Number(seed),
@@ -112,7 +125,8 @@ export default function SoundEffects() {
           className="panel media-composer"
           onSubmit={(e) => {
             e.preventDefault();
-            if (!busy) generate.mutate();
+            if (!busy && !generate.isPending && cuesValid(cues, sourceFrames))
+              generate.mutate();
           }}
         >
           <div className="media-composer-heading">
@@ -126,7 +140,10 @@ export default function SoundEffects() {
               label="Source film"
               hint="Choose a completed film from Library · up to 5 minutes"
               value={video}
-              onChange={setVideo}
+              onChange={(id) => {
+                if (id !== video) setCues([]);
+                setVideo(id);
+              }}
               disabled={busy || generate.isPending}
               onBusy={() => {}}
             />
@@ -148,6 +165,13 @@ export default function SoundEffects() {
               creates a separate effects track. The preview uses it instead of
               the film's existing audio; the original stays in Library.
             </p>
+            <SoundCueEditor
+              value={cues}
+              onChange={setCues}
+              fps={sourceFps}
+              frames={sourceFrames}
+              disabled={busy || generate.isPending}
+            />
             <PromptTranslationControl
               value={translation}
               onChange={setTranslation}
@@ -219,6 +243,7 @@ export default function SoundEffects() {
               disabled={
                 !video ||
                 !prompt.trim() ||
+                !cuesValid(cues, sourceFrames) ||
                 !ready.data?.available ||
                 busy ||
                 generate.isPending

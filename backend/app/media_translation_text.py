@@ -54,14 +54,17 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
 
 
-def encode_fields(fields, protected_terms=()):
+def encode_fields(fields, protected_terms=(), *, max_fields=4):
     if (
         not fields
-        or len(fields) > 4
+        or max_fields not in (4, 18)
+        or len(fields) > max_fields
         or any(not isinstance(text, str) for text in fields.values())
         or sum(len(text) for text in fields.values()) > 30000
     ):
-        raise ValueError("Translate between one and four descriptive fields, at most 30,000 characters")
+        raise ValueError(
+            f"Translate between one and {max_fields} descriptive fields, at most 30,000 characters"
+        )
     if any(not isinstance(term, str) or not term.strip() or len(term) > 200 for term in protected_terms):
         raise ValueError("Protected names/tokens must contain 1–200 characters")
     terms = sorted(set(protected_terms), key=len, reverse=True)

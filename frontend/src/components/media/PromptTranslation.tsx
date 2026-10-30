@@ -173,15 +173,17 @@ export function PromptReceipt({
       {Object.entries(receipt.original).map(([key, original]) => (
         <div key={key}>
           <h4>
-            {key === "edit_prompt"
-              ? "Edit instruction"
-              : key === "negative" || key === "negative_prompt"
-                ? "Negative prompt"
-                : key === "caption"
-                  ? "Music description"
-                  : key === "video_prompt"
-                    ? "Motion prompt"
-                    : "Prompt"}
+            {/^cue_\d{1,2}$/.test(key)
+              ? `Scene ${Number(key.slice(4)) + 1} sound`
+              : key === "edit_prompt"
+                ? "Edit instruction"
+                : key === "negative" || key === "negative_prompt"
+                  ? "Negative prompt"
+                  : key === "caption"
+                    ? "Music description"
+                    : key === "video_prompt"
+                      ? "Motion prompt"
+                      : "Prompt"}
           </h4>
           <span className="eyebrow">YOUR ORIGINAL</span>
           <p>{original}</p>
@@ -436,8 +438,9 @@ export default function PromptTranslation({
             edited ??
               (review.data!.parameters.effective as Record<string, string>),
           ).map(([key, text]) => {
-            const fieldLabel =
-              key === "negative" || key === "negative_prompt"
+            const fieldLabel = /^cue_\d{1,2}$/.test(key)
+              ? `${enhancing ? "Prepared" : "Translated"} scene ${Number(key.slice(4)) + 1} sound`
+              : key === "negative" || key === "negative_prompt"
                 ? enhancing
                   ? "Prepared negative prompt"
                   : "Translated negative prompt"

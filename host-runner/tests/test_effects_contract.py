@@ -132,3 +132,21 @@ def test_effects_observation_checks_exact_source_weights_and_symlinks(tmp_path, 
     weight.symlink_to(outside)
     with pytest.raises((ValueError, PermissionError)):
         contract.installation_observation(runtime, models)
+
+
+@pytest.mark.parametrize(
+    "cues",
+    [
+        [{"start_frame": 12, "end_frame": 12, "prompt": "Wind"}],
+        [{"start_frame": 0, "end_frame": 34, "prompt": "Wind"}],
+        [{"start_frame": True, "end_frame": 24, "prompt": "Wind"}],
+        [
+            {"start_frame": 0, "end_frame": 24, "prompt": "Wind"},
+            {"start_frame": 12, "end_frame": 33, "prompt": "Bells"},
+        ],
+        [{"start_frame": 0, "end_frame": 24, "prompt": "Wind", "command": "sh"}],
+    ],
+)
+def test_native_cues_cannot_overlap_change_authority_or_exceed_the_film(tmp_path, cues):
+    with pytest.raises(ValidationError):
+        contract.EffectsRequest.model_validate({**request(tmp_path), "cues": cues})

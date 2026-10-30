@@ -215,3 +215,46 @@ production desktop/mobile readiness/form checks pass; the four Audio tabs use
 a readable two-column mobile layout. The trusted QA device was revoked. Private
 rollout and source-review evidence is in the acceptance directory above. These
 checks do not close the per-scene, perceptual or timeline work listed earlier.
+
+
+## Scene direction increment
+
+An optional ordered list of at most sixteen non-overlapping cues binds source
+start/end frames and a bounded sound description to the inspected film. Outside
+those ranges the overall description remains active. The UI accepts seconds
+and converts them using that source’s verified frame rate; source changes clear
+the old ranges. Drafts/versions retain every cue. There is no caller-controlled
+filter, script, model path or partial overwrite.
+
+Partition conditioning at cue boundaries. Eight-second contexts hold their last
+actual scene frame rather than seeing the next scene; overlap/crossfade occurs
+only within one direction interval. Short edge fades prevent clicks at direction
+changes, while absolute frame/sample endpoints retain the complete original
+film duration. One owned model load and ordinary effects Run produce the stem;
+the existing separate preview Run remains unchanged. The native child verifies
+the full source and the frozen cue list before publication.
+
+Local prompt preparation includes each scene description as a separate bounded
+field. The frozen source identity binds cue timings independently of editable
+text, so neither a model nor a reviewed prompt can move a cue. Retry/original
+recovery must restore scene wording as well as the overall description. Normal
+contracts and actual multi-cue inference precede rollout; the prior basic effects
+adapter stays deployed until those gates pass.
+
+Scene direction qualification passed on the actual adapter: a fifteen-second
+film used two explicit five-second scene directions and the overall description
+for its remaining five seconds. All three model contexts stayed within their
+own frame intervals, produced the requested distinct prompt records and exactly
+661500 output samples, followed by the verified MP4 preview. Generation took
+33.01s after loading/verification; measured peaks were 5073 MiB CUDA allocation
+and 15.25 GiB scoped RAM, within the existing 8/18-GiB profile. This proves actual
+conditioned execution and exact timeline coverage, not human auditory quality.
+Final normal qualification has 136 passing cases across twelve complete
+effects/native/translation/progress families and 55 UI cases across eight
+complete families. Review also caught the legacy four-field translation bound:
+scene preparation now explicitly permits eighteen exact fields, while other
+generators keep four, and all sixteen cues can be reviewed/prepared together. Compiled
+private desktop/mobile checks retain cue wording/times after generation,
+refresh and next-version restoration, pass it through the typed native request,
+compose a real preview and deny another account. Those browser checks substitute
+GPU inference. Evidence: `data/acceptance/scene-sound-cues-20261030/`.

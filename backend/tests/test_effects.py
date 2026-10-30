@@ -310,3 +310,104 @@ def test_local_enhancement_prepares_effects_prompt_without_changing_video_author
         assert current["parameters"]["prompt"] == "Wind" + SUFFIX
         assert current["parameters"]["video"] == run["parameters"]["video"]
         assert "mmaudio" in current["metadata"]["prompt_translation"]["policy"]["enhancement_template"]
+
+
+@pytest.mark.parametrize("cue_count,review", [(1, False), (16, True)])
+def test_sound_cues_keep_timing_through_enhancement_and_use_original_retry(
+    sound_bridge, monkeypatch, cue_count, review
+):
+    from app import media_translation
+    from app.effects import descriptive_fields
+    from test_media_translation import settings
+    from test_prompt_enhancement_workflows import SUFFIX
+
+    async def complete(session, params):
+        values = json.loads(params["messages"][-1]["content"])
+        yield json.dumps(
+            {k: v + SUFFIX if k == "prompt" or k.startswith("cue_") else v for k, v in values.items()}
+        )
+
+    monkeypatch.setattr("app.media_translation.completion_stream", complete)
+    with TestClient(app) as api:
+        settings(api)
+        source = source_video(api)
+        cue = {"start_frame": 12, "end_frame": 24, "prompt": "A small bell"}
+        cues = (
+            [cue]
+            if cue_count == 1
+            else [{"start_frame": i, "end_frame": i + 1, "prompt": "A small bell"} for i in range(cue_count)]
+        )
+        response = api.post(
+            "/api/audio/effects/runs",
+            json={
+                "video_artifact_id": source,
+                "prompt": "Wind",
+                "cues": cues,
+                "translation": {"mode": "off", "enhance": True, "review": review},
+            },
+        )
+        assert response.status_code == 202, response.text
+        rid = response.json()["id"]
+        for _ in range(8):
+            if work() is None:
+                break
+        if review:
+            queued = api.get("/api/runs/" + rid).json()
+            approval_id = queued["metadata"]["prompt_translation"]["review_run_id"]
+            approval = api.get("/api/runs/" + approval_id).json()
+            response = api.post(
+                "/api/generation/translations/" + approval_id + "/review",
+                json={
+                    "expected_hash": approval["approval"]["payload"]["effective_hash"],
+                    "effective": approval["parameters"]["effective"],
+                },
+            )
+            assert response.status_code == 200, response.text
+            for _ in range(8):
+                if work() is None:
+                    break
+        current = api.get("/api/runs/" + rid).json()
+        assert current["status"] == "succeeded", current["error_message"]
+        assert current["parameters"]["cues"] == [{**c, "prompt": c["prompt"] + SUFFIX} for c in cues]
+        receipt_path = sound_bridge["manager"].data_dir / f"runs/{rid}/effects-launch/request.json"
+        sent = json.loads(receipt_path.read_text())
+        assert sent["request"]["cues"] == current["parameters"]["cues"]
+        with control_session_factory()() as db:
+            run = db.get(Run, rid)
+            media_translation.validate_media_translation(db, run)
+            frozen = run.parameters
+            run.parameters = {**frozen, "cues": [{**frozen["cues"][0], "start_frame": 13}]}
+            with pytest.raises(ValueError):
+                media_translation.validate_media_translation(db, run)
+            run.parameters = frozen
+            task = create_task(db, title="Inspected retry", prompt="", capability="audio.effects")
+            retry = create_run(
+                db,
+                task,
+                run_type="audio",
+                capability="audio.effects",
+                executor_type="mmaudio_effects",
+                parameters=dict(run.parameters),
+            )
+            original = dict(run.metadata_json["prompt_translation"]["original"])
+            media_translation.prepare_retry(db, run, retry, "original")
+            assert descriptive_fields(retry.parameters) == original
+            assert retry.parameters["cues"] == cues
+
+
+@pytest.mark.parametrize(
+    "cue",
+    [
+        {"start_frame": 0, "end_frame": 34, "prompt": "Wind"},
+        {"start_frame": 12, "end_frame": 1, "prompt": "Wind"},
+        {"start_frame": 0, "end_frame": 24, "prompt": " "},
+    ],
+)
+def test_invalid_sound_cues_never_enqueue_a_child(sound_bridge, cue):
+    with TestClient(app) as api:
+        source = source_video(api)
+        response = api.post(
+            "/api/audio/effects/runs", json={"video_artifact_id": source, "prompt": "Wind", "cues": [cue]}
+        )
+        assert response.status_code == 422
+        assert not sound_bridge["launches"]

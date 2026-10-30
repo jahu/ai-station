@@ -13,13 +13,13 @@ def frame_indices(window, fps, target_fps):
     ]
 
 
-def conditioning(path, source):
+def conditioning(path, source, *, windows=None):
     import av
     import torch
     from torchvision.transforms import InterpolationMode
     from torchvision.transforms.v2 import functional as F
 
-    windows = effects_windows(source.frames, source.fps)
+    windows = windows if windows is not None else effects_windows(source.frames, source.fps)
     with av.open(str(path)) as container:
         if len(container.streams.video) != 1:
             raise ValueError("Choose a single video stream")

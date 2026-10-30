@@ -96,10 +96,13 @@ def render(request, runtime, weights, source, work):
     complete = np.zeros(samples, dtype=np.float32)
     parts = []
     started = time.monotonic()
-    from ai_station_runner.effects_timing import effects_windows
+    from ai_station_runner.effects_timing import cue_cuts, effects_windows, window_prompt
 
-    total = len(effects_windows(request.video.frames, request.video.fps))
-    for index, (window, clip, sync) in enumerate(conditioning(source, request.video)):
+    windows = effects_windows(
+        request.video.frames, request.video.fps, cuts=cue_cuts(request.video.frames, request.cues)
+    )
+    total = len(windows)
+    for index, (window, clip, sync) in enumerate(conditioning(source, request.video, windows=windows)):
         if time.time() >= request.deadline_at:
             raise ValueError("Effects deadline elapsed")
         print(f"effects.window.started {index + 1}/{total}", file=sys.__stdout__, flush=True)
@@ -113,7 +116,7 @@ def render(request, runtime, weights, source, work):
                 generate(
                     clip.unsqueeze(0),
                     sync.unsqueeze(0),
-                    [request.prompt],
+                    [window_prompt(window.first_frame, request.prompt, request.cues)],
                     negative_text=[request.negative_prompt],
                     feature_utils=features,
                     net=net,
@@ -140,12 +143,21 @@ def render(request, runtime, weights, source, work):
                 complete[window.first_sample : window.first_sample + overlap] * (1 - ramp)
                 + part[:overlap] * ramp
             )
+        if request.cues:
+            fade = min(220, count // 2)
+            if fade and window.first_frame == window.region_first_frame:
+                part[:fade] *= np.linspace(0, 1, fade, dtype=np.float32)
+            if fade and window.first_frame + window.frames == window.region_end_frame:
+                part[-fade:] *= np.linspace(1, 0, fade, dtype=np.float32)
         complete[window.first_sample : window.end_sample] = part
         name = f"part-{index:02d}.wav"
         sf.write(work / name, part, 44100, subtype="FLOAT")
         parts.append(
             {
                 "first_frame": window.first_frame,
+                "region_first_frame": window.region_first_frame,
+                "region_end_frame": window.region_end_frame,
+                "prompt": window_prompt(window.first_frame, request.prompt, request.cues),
                 "frames": window.frames,
                 "conditioning_frames": window.conditioning_frames,
                 "first_sample": window.first_sample,
@@ -179,7 +191,7 @@ def render(request, runtime, weights, source, work):
 
 
 def run(receipt):
-    if receipt.resolve() != receipt or receipt.stat().st_size > 32768:
+    if receipt.resolve() != receipt or receipt.stat().st_size > 65536:
         raise ValueError("Invalid internal effects receipt")
     record = json.loads(receipt.read_text())
     if set(record) != {"request", "runtime", "models", "python"}:
