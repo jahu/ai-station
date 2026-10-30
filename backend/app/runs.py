@@ -334,6 +334,7 @@ def request_cancel(session: Session, run: Run) -> Run:
 
 
 def run_dict(run: Run) -> dict[str, Any]:
+    from app.generation_progress import projection
     from app.resources import resource_wait
 
     def iso(value):
@@ -354,6 +355,7 @@ def run_dict(run: Run) -> dict[str, Any]:
         "started_at": iso(run.started_at),
         "finished_at": iso(run.finished_at),
         "resource_wait": resource_wait(run),
+        "generation_progress": projection(run),
         "requested_resources": run.requested_resources,
         "allocated_resources": run.allocated_resources,
         "requested_gpu": run.requested_gpu,

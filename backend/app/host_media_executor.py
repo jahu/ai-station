@@ -121,6 +121,9 @@ class HostMediaExecutor:
 
         verify_media_inputs(session, run)
         self.validate_inputs(session, run)
+        from app.generation_progress import begin_timing
+
+        begin_timing(session, run, hardware)
         output = f"artifacts/{run.id[:2]}/{run.id[2:4]}/{run.id}{self.suffix}"
         # Durable before sending: even a lost response may hide a live process.
         run.metadata_json = {**run.metadata_json, "dispatch_attempted": True}
@@ -195,6 +198,7 @@ class HostMediaExecutor:
 
     def _poll(self, session, run, runner, output):
         offsets = {"stdout_offset": 0, "stderr_offset": 0}
+        progress_buffers = {}
         while True:
             session.refresh(run)
             cancel_expired_run(session, run.id)
@@ -204,6 +208,9 @@ class HostMediaExecutor:
                 runner.cancel_process(run.id)
             info = runner.inspect_process(run.id, **offsets)
             self.on_inspection(session, run, info)
+            from app.generation_progress import observe
+
+            observe(session, run, info, buffers=progress_buffers)
             for stream in ("stdout", "stderr"):
                 text = info.get(stream, "")
                 if text:

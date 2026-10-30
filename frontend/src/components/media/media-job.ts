@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { api, type ResourceWait } from "../../api";
+import { api, type GenerationProgress, type ResourceWait } from "../../api";
 import type { TranslationOptions } from "./PromptTranslation";
 import type { AvatarGenerationProfile } from "./AvatarWholeProfile";
 
@@ -23,6 +23,11 @@ export type MediaRequest = {
   scenes?: { prompt: string; duration_seconds: number }[] | null;
 };
 export type MediaJob = {
+  active_generation_progress?: (GenerationProgress & {
+    run_id: string;
+    capability: string;
+    status: string;
+  })[];
   completed_stages?: number;
   total_stages?: number;
   whole_run_id?: string | null;

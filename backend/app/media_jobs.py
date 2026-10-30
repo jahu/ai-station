@@ -14,6 +14,7 @@ from app.config import get_settings
 from app.db import session_scope, utcnow
 from app.dependencies import depend_on
 from app.execution_limits import MAX_AGENT_RUNTIME
+from app.generation_progress import active_progress
 from app.host_media_executor import HostMediaExecutor
 from app.media_plan import duration_frames, timeline
 from app.models import Artifact, Run, Task
@@ -269,6 +270,7 @@ def job_view(session, task):
         active = [r.id for r in stages if r.status not in TERMINAL]
         return {
             "task_id": task.id,
+            "active_generation_progress": active_progress(stages),
             "request": plan["request"],
             "preview_artifact_id": None,
             "revision": plan["revision"],
@@ -323,6 +325,7 @@ def job_view(session, task):
         status = "queued"
     return {
         "task_id": task.id,
+        "active_generation_progress": active_progress(stages.values()),
         "request": plan["request"],
         "preview_artifact_id": preview_artifact(session, plan),
         "revision": plan["revision"],

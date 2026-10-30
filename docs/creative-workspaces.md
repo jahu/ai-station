@@ -53,5 +53,7 @@ selected-output editing, navigation/reload and another user's denial.
 
 These checks do not perform real model inference or requalify image/video quality.
 Private evidence is under `data/acceptance/creative-workspaces-20261030/`.
-Production rollout is tracked separately from implementation. General progress
-and ETA improvements remain NR-02 in the [release plan](plans/next-release-0.1.md).
+PRs #514/#515 are deployed on the development workstation after a preserved-data
+0038 → 0039 migration and compiled production desktop/mobile checks. The native
+Runner and loaded models were not restarted. General progress and ETA improvements
+remain NR-02 in the [release plan](plans/next-release-0.1.md).

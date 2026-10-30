@@ -26,6 +26,7 @@ import { randomId } from "../../lib/random-id";
 import { Badge, ErrorNotice, Loading, PageTitle } from "../common";
 import { Button } from "../ui/button";
 import MediaJobResult from "../media/MediaJobResult";
+import { MediaRunProgress } from "../media/GenerationProgress";
 import PromptTranslation from "../media/PromptTranslation";
 import ResourceWaitNotice from "../ResourceWaitNotice";
 import {
@@ -49,6 +50,12 @@ const terminal = new Set(["succeeded", "failed", "canceled", "interrupted"]);
 const status = (turn: CreativeTurn) =>
   turn.status ?? turn.run?.status ?? "interrupted";
 const busy = (turn: CreativeTurn) => !terminal.has(status(turn));
+const progressRuns = (turn: CreativeTurn) =>
+  turn.runs ?? (turn.run ? [turn.run] : []);
+const hasProgress = (turn: CreativeTurn) =>
+  progressRuns(turn).some(
+    (run) => run.generation_progress && !terminal.has(run.status),
+  );
 const json = (method: string, body: unknown, keepalive = false) => ({
   method,
   headers: { "Content-Type": "application/json" },
@@ -705,17 +712,25 @@ function SessionBody({
                 <ResourceWaitNotice wait={turn.run.resource_wait} />
               )}
               {!turn.job && busy(turn) && (
-                <div className="creative-working">
-                  <LoaderCircle size={18} />
-                  <span>
-                    {status(turn) === "waiting_for_approval"
-                      ? "Waiting for your prompt review"
-                      : status(turn) === "cancel_requested"
-                        ? "Stopping generation…"
-                        : status(turn) === "queued"
-                          ? "Queued · waiting to start"
-                          : "Creating your next version…"}
-                  </span>
+                <div
+                  className={`creative-working ${hasProgress(turn) ? "creative-measured" : ""}`}
+                >
+                  {hasProgress(turn) ? (
+                    <MediaRunProgress runs={progressRuns(turn)} />
+                  ) : (
+                    <>
+                      <LoaderCircle size={18} />
+                      <span>
+                        {status(turn) === "waiting_for_approval"
+                          ? "Waiting for your prompt review"
+                          : status(turn) === "cancel_requested"
+                            ? "Stopping generation…"
+                            : status(turn) === "queued"
+                              ? "Queued · waiting to start"
+                              : "Creating your next version…"}
+                      </span>
+                    </>
+                  )}
                   <Button
                     variant="ghost"
                     disabled={stop.isPending}
