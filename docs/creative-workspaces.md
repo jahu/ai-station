@@ -13,6 +13,11 @@ new input. Earlier versions remain available. Narration and lyrics are restored
 verbatim. Workspace names can be edited, and archiving retains history; restore
 an archived workspace to continue it.
 
+Prompt translation receipts and review controls remain available in the version
+history, including editing the prepared prompt before generation. Resource waits
+retain their existing explanation. A translation recovery that starts a separate
+attempt opens that attempt's Run inspector; the original history is retained.
+
 ## Execution and ownership
 
 Migration 0039 introduces an owner-scoped `CreativeSession` and append-only

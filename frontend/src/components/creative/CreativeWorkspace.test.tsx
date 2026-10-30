@@ -141,6 +141,18 @@ function fixture(
       if (path === "/api/media/jobs/task-one")
         return reply(state.turns.at(-1)?.job);
       if (path === "/api/runs/run-one") return reply(run);
+      if (path === "/api/runs/translation-prep")
+        return reply({ ...run, id: "translation-prep" });
+      if (path === "/api/runs/translation-review")
+        return reply({
+          ...run,
+          id: "translation-review",
+          status: "waiting_for_approval",
+          parameters: { effective: { prompt: "A red bicycle" } },
+          approval: { payload: { effective_hash: "reviewed-prompt-hash" } },
+        });
+      if (path === "/api/generation/translations/translation-review/review")
+        return reply({ status: "succeeded" });
       if (path.startsWith("/api/creative/sessions?")) return reply([state]);
       if (
         path === "/api/creative/sessions/workspace-one" &&
@@ -325,6 +337,49 @@ it("shows the artifact history and uses the exact selected image for an edit", a
       edit_prompt: "Give the landscape warmer sunlight",
     },
   });
+});
+
+it("retains translation review controls inside the saved workspace", async () => {
+  const backend = fixture({
+    turns: [
+      {
+        ...result,
+        status: "waiting_for_approval",
+        artifacts: [],
+        run: {
+          ...run,
+          status: "queued",
+          metadata: {
+            prompt_translation: {
+              status: "waiting_for_review",
+              preparation_run_id: "translation-prep",
+              review_run_id: "translation-review",
+              original: { prompt: "Czerwony rower" },
+              effective: { prompt: "A red bicycle" },
+              policy: { model: "local-translator", target_language: "en" },
+            },
+          },
+        },
+      },
+    ],
+  });
+  mount();
+  fireEvent.change(await screen.findByLabelText("Translated prompt"), {
+    target: { value: "A red bicycle near a garden" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Use translated prompt" }),
+  );
+  await waitFor(() => {
+    const request = backend.fetch.mock.calls.find(([path]) =>
+      String(path).endsWith("/translation-review/review"),
+    );
+    expect(JSON.parse(String(request?.[1]?.body))).toEqual({
+      expected_hash: "reviewed-prompt-hash",
+      effective: { prompt: "A red bicycle near a garden" },
+    });
+  });
+  expect(backend.submissions).toHaveLength(0);
 });
 
 it("restores a generation prompt when canonical edit_prompt is empty", async () => {

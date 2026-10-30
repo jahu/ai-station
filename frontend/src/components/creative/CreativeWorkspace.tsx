@@ -5,7 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Archive,
   ArrowDown,
@@ -26,6 +26,8 @@ import { randomId } from "../../lib/random-id";
 import { Badge, ErrorNotice, Loading, PageTitle } from "../common";
 import { Button } from "../ui/button";
 import MediaJobResult from "../media/MediaJobResult";
+import PromptTranslation from "../media/PromptTranslation";
+import ResourceWaitNotice from "../ResourceWaitNotice";
 import {
   CreativeContext,
   type CreativeCapability,
@@ -318,6 +320,7 @@ function SessionBody({
   children: ReactNode;
 }) {
   const cache = useQueryClient();
+  const navigate = useNavigate();
   const storageKey = accountStorageKey(`ai-station:creative:${row.id}`);
   const [initial] = useState(() => readDraft(storageKey) ?? row.draft);
   const [draft, setDraftState] = useState<CreativeDraft>(initial);
@@ -518,7 +521,7 @@ function SessionBody({
         onChanged();
         setTimeout(
           () =>
-            end.current?.scrollIntoView({
+            end.current?.scrollIntoView?.({
               block: "nearest",
               behavior:
                 typeof window.matchMedia === "function" &&
@@ -691,13 +694,27 @@ function SessionBody({
                   Details and logs <ArrowUpRight size={12} />
                 </Link>
               </div>
+              {!turn.job && !!turn.run?.metadata?.prompt_translation && (
+                <PromptTranslation
+                  key={turn.run.id}
+                  run={turn.run}
+                  onRetried={(next) => navigate(`/runs/${next.id}`)}
+                />
+              )}
+              {!turn.job && turn.run?.status === "queued" && (
+                <ResourceWaitNotice wait={turn.run.resource_wait} />
+              )}
               {!turn.job && busy(turn) && (
                 <div className="creative-working">
                   <LoaderCircle size={18} />
                   <span>
-                    {status(turn) === "queued"
-                      ? "Queued · waiting for resources"
-                      : "Creating your next version…"}
+                    {status(turn) === "waiting_for_approval"
+                      ? "Waiting for your prompt review"
+                      : status(turn) === "cancel_requested"
+                        ? "Stopping generation…"
+                        : status(turn) === "queued"
+                          ? "Queued · waiting to start"
+                          : "Creating your next version…"}
                   </span>
                   <Button
                     variant="ghost"
