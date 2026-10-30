@@ -1,12 +1,32 @@
 """Run only the configured speech CLI and publish complete compatible PCM parts."""
 
 import json
+import math
 import os
 import subprocess
 import sys
 import wave
 from contextlib import ExitStack
 from pathlib import Path
+
+
+def delivery_arguments(delivery):
+    if delivery is None:
+        return []
+    controls = {
+        "exaggeration": ("--exaggeration", 0, 1.5),
+        "cfg_weight": ("--cfg", 0, 1),
+        "temperature": ("--temperature", 0.05, 1.2),
+    }
+    if not isinstance(delivery, dict) or set(delivery) != set(controls):
+        raise ValueError("Invalid speech delivery controls")
+    arguments = []
+    for name, (flag, minimum, maximum) in controls.items():
+        value = delivery[name]
+        if type(value) not in (int, float) or not math.isfinite(value) or not minimum <= value <= maximum:
+            raise ValueError("Invalid speech delivery value")
+        arguments.extend((flag, str(float(value))))
+    return arguments
 
 
 def generate(config_path: Path) -> None:
@@ -16,6 +36,7 @@ def generate(config_path: Path) -> None:
     if output.exists() or output.is_symlink() or output.resolve() != output:
         raise ValueError("Inspect the existing speech output")
     parts = config["chunks"]
+    delivery = delivery_arguments(config.get("delivery"))
     if not 2 <= len(parts) <= 20 or any(not part or len(part) > 220 for part in parts):
         raise ValueError("Invalid bounded speech chunks")
     temporary = work / "complete.wav"
@@ -39,6 +60,7 @@ def generate(config_path: Path) -> None:
                     text,
                     "--out",
                     str(path),
+                    *delivery,
                 ],
                 check=True,
             )

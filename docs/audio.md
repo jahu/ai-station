@@ -1,5 +1,13 @@
 # Local speech
 
+Development builds offer **Shape the delivery** when the configured Chatterbox CLI
+supports its existing expression/guidance/temperature controls. Adjust Expression;
+use **Fine-tune the voice** for guidance and variation. The option starts off,
+keeps the spoken text exact and is saved with creative versions. A clean reference
+recording also shapes delivery. These controls do not claim named emotion/whisper
+support; that requires the separately qualified model described in the
+[expressive speech plan](plans/expressive-speech.md).
+
 The Audio workspace queues `audio.speech` Tasks and `chatterbox` Runs. It wraps an administrator-configured installation of `clone_pl.py`, using its inspected `--ref`, `--text` and `--out` arguments. The current adapter produces Polish speech; it does not pretend to support music or other languages.
 
 Uploads accept bounded, decoded PCM WAV references (mono/stereo, 8–96 kHz, 0.1–60 seconds, at most 20 MiB). Inputs and outputs are ordinary audio Artifacts with source lineage; Library, Audio results and the assistant inspect those sources and any derived video from the same graph. Text is bounded to 1000 characters. The Library can play and reuse a WAV. A finished Audio result offers the same Use as voice reference action in place; it stages that artifact as the next source, keeps the previous Run in the URL for the still-visible output, and does not queue a Run. Use as speech stages that WAV into Avatars without another Run. Text, parameters, GPU, logs and result remain inspectable in Runs. The GPU target radios reuse the shared list keyboard with unique Target GPU names; Space or Enter selects a row and does not queue a speech Run. There is no inspectable GPU-target Run.

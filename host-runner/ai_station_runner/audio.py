@@ -13,7 +13,16 @@ from pydantic import BaseModel, ConfigDict, Field
 from ai_station_runner.config import get_settings
 from ai_station_runner.security import resolve_child
 from ai_station_runner.speech_chunks import text_chunks
+from ai_station_runner.speech_chunks_job import delivery_arguments
+from ai_station_runner.speech_delivery import inspect_delivery
 from ai_station_runner.telemetry import collect
+
+
+class SpeechDelivery(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    exaggeration: float = Field(default=0.8, ge=0, le=1.5, strict=True, allow_inf_nan=False)
+    cfg_weight: float = Field(default=0.4, ge=0, le=1, strict=True, allow_inf_nan=False)
+    temperature: float = Field(default=0.6, ge=0.05, le=1.2, strict=True, allow_inf_nan=False)
 
 
 class AudioRequest(BaseModel):
@@ -24,6 +33,8 @@ class AudioRequest(BaseModel):
     reference_relative: str = Field(max_length=500)
     gpu: int = Field(ge=0)
     permissions: list[Literal["filesystem_read", "workspace_write"]] = Field(max_length=2)
+    delivery: SpeechDelivery | None = None
+    delivery_source_sha256: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
 
 def capabilities():
@@ -49,6 +60,7 @@ def capabilities():
         "reference_min_seconds": 0.1,
         "reference_max_seconds": 60,
         "offline": True,
+        "delivery": inspect_delivery(settings.chatterbox_script) if configured else None,
     }
 
 
@@ -65,6 +77,13 @@ def start_audio(manager, body):
         raise HTTPException(409, "Chatterbox Python or script is unavailable")
     if not Path(settings.chatterbox_cache).expanduser().is_dir():
         raise HTTPException(409, "Chatterbox cache is unavailable")
+    if body.delivery_source_sha256 and body.delivery is None:
+        raise HTTPException(422, "A delivery snapshot requires delivery settings")
+    delivery = body.delivery.model_dump() if body.delivery is not None else None
+    if delivery is not None:
+        inspected = inspect_delivery(settings.chatterbox_script)
+        if not inspected or inspected["source_sha256"] != body.delivery_source_sha256:
+            raise HTTPException(409, "Speech delivery runtime changed or does not support these controls")
     root = settings.host_data_dir().resolve()
     reference = resolve_child(root, body.reference_relative)
     if not body.reference_relative.startswith("artifacts/") or reference != root / body.reference_relative:
@@ -103,6 +122,7 @@ def start_audio(manager, body):
         body.text,
         "--out",
         str(output),
+        *delivery_arguments(delivery),
     ]
     chunks = text_chunks(body.text)
     if len(chunks) > 1:
@@ -118,6 +138,7 @@ def start_audio(manager, body):
                     "reference": str(reference),
                     "output": str(output),
                     "chunks": chunks,
+                    **({"delivery": delivery} if delivery is not None else {}),
                 },
                 ensure_ascii=False,
             )
