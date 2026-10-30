@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 from uuid import UUID
 
-APPROVED_LIMITS_MIB = frozenset({11264, 12288, 18432})
+APPROVED_LIMITS_MIB = frozenset({11264, 12288, 18432, 24576})
 
 
 def available() -> bool:

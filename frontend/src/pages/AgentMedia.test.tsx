@@ -362,58 +362,72 @@ it("reviews a pending speech draft, selects and removes its Library voice withou
   expect(fetch.mock.calls.every(([url]) => !url.includes("/runs"))).toBe(true);
 });
 
-it("shows speech playback with the existing voice/Avatar source actions", async () => {
-  responses([
-    {
-      id: "speech",
-      type: "audio",
-      mime_type: "audio/wav",
-      title: "Daily brief",
-      original_filename: "brief.wav",
-      relative_path: "artifacts/brief.wav",
-      size_bytes: 9600,
-      run_id: "speech-run",
-      metadata: { capability: "audio.speech", duration_seconds: 0.2 },
-      parent_artifact_ids: [],
-      created_at: "2026-10-23T10:00:00Z",
-    },
-  ]);
-  render(
-    <Frame>
-      <AgentMediaResult
-        runs={[
-          {
-            id: "speech-run",
-            task_id: "speech-task",
-            project_id: null,
-            parent_run_id: null,
-            execution_target: "host",
-            created_at: "2026-10-23T10:00:00Z",
-            started_at: null,
-            finished_at: null,
-            actual_gpu: "7",
-            requested_gpu: "auto",
-            effective_permissions: ["filesystem_read", "workspace_write"],
-            summary: "Speech generated",
-            error_type: "",
-            worker_id: null,
-            executor_type: "chatterbox",
-            capability: "audio.speech",
-            status: "succeeded",
-            parameters: { text: "Dzień dobry." },
-            metadata: {},
-            error_message: "",
-          },
-        ]}
-      />
-    </Frame>,
-  );
-  await waitFor(() =>
-    expect(screen.getByLabelText("Generated audio")).toBeTruthy(),
-  );
-  expect(screen.getByRole("link", { name: "Open in Library" })).toBeTruthy();
-  expect(screen.getByRole("link", { name: /^Use as speech/ })).toBeTruthy();
-});
+it.each(["chatterbox", "fish_speech"])(
+  "shows %s speech playback with the existing voice/Avatar source actions",
+  async (executor) => {
+    responses([
+      {
+        id: "speech",
+        type: "audio",
+        mime_type: "audio/wav",
+        title: "Daily brief",
+        original_filename: "brief.wav",
+        relative_path: "artifacts/brief.wav",
+        size_bytes: 9600,
+        run_id: "speech-run",
+        metadata: { capability: "audio.speech", duration_seconds: 0.2 },
+        parent_artifact_ids: [],
+        created_at: "2026-10-23T10:00:00Z",
+      },
+    ]);
+    render(
+      <Frame>
+        <AgentMediaResult
+          runs={[
+            {
+              id: "speech-run",
+              task_id: "speech-task",
+              project_id: null,
+              parent_run_id: null,
+              execution_target: "host",
+              created_at: "2026-10-23T10:00:00Z",
+              started_at: null,
+              finished_at: null,
+              actual_gpu: "7",
+              requested_gpu: "auto",
+              effective_permissions: ["filesystem_read", "workspace_write"],
+              summary: "Speech generated",
+              error_type: "",
+              worker_id: null,
+              executor_type: executor,
+              capability: "audio.speech",
+              status: "succeeded",
+              parameters: {
+                text: "Dzień dobry.",
+                ...(executor === "fish_speech"
+                  ? {
+                      backend: "fish_s2_pro",
+                      direction: "whisper",
+                      pace: "slow",
+                    }
+                  : {}),
+              },
+              metadata: {},
+              error_message: "",
+            },
+          ]}
+        />
+      </Frame>,
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText("Generated audio")).toBeTruthy(),
+    );
+    expect(screen.getByRole("link", { name: "Open in Library" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /^Use as speech/ })).toBeTruthy();
+    if (executor === "fish_speech")
+      expect(screen.getByText("Fish S2 Pro · Whisper")).toBeTruthy();
+  },
+);
 
 it("edits full video timing and storyboard without exposing a receipt or short-clip frames", async () => {
   responses();
@@ -778,4 +792,121 @@ it("rejects generated lyric authority outside a goal-based vocal scope", () => {
       request: { ...base.request, instrumental: true },
     }),
   ).toContain("vocals");
+});
+
+it("reviews expressive speech direction separately from exact words and clears controls on model switches", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url.endsWith("/audio/capabilities")
+          ? {
+              available: false,
+              engines: { fish_s2_pro: { available: true, readiness: "ready" } },
+            }
+          : url.includes("/hardware")
+            ? { gpus: [] }
+            : [],
+    })),
+  );
+  function Editor() {
+    const [value, setValue] = useState<AgentMediaScope>({
+      kind: "speech",
+      description_source: "fixed",
+      request: {
+        text: "Dokładne słowa.",
+        reference_artifact_id: "c23c77b2-e3d6-46ab-bc80-04108a4615c2",
+        delivery: { exaggeration: 1, cfg_weight: 0.4, temperature: 0.6 },
+      },
+    });
+    return (
+      <>
+        <AgentMediaScopeEditor
+          value={value}
+          goal="Speak"
+          disabled={false}
+          onChange={setValue}
+          onBusy={() => {}}
+          readiness={{
+            speech: { ready: false, reason: "Chatterbox unavailable" },
+          }}
+        />
+        <output aria-label="Reviewed speech">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  await waitFor(() =>
+    expect(
+      screen
+        .getByRole("option", { name: "Fish S2 Pro · Expressive" })
+        .hasAttribute("disabled"),
+    ).toBe(false),
+  );
+  fireEvent.change(screen.getByLabelText("Speech model"), {
+    target: { value: "fish_s2_pro" },
+  });
+  fireEvent.change(screen.getByLabelText("Voice direction"), {
+    target: { value: "whisper" },
+  });
+  fireEvent.change(screen.getByLabelText("Speaking pace"), {
+    target: { value: "slow" },
+  });
+  let saved = JSON.parse(
+    screen.getByLabelText("Reviewed speech").textContent || "{}",
+  );
+  expect(saved.request).toMatchObject({
+    engine: "fish_s2_pro",
+    direction: "whisper",
+    pace: "slow",
+    text: "Dokładne słowa.",
+  });
+  expect(saved.request.delivery).toBeUndefined();
+  const agent = {
+    enabled: false,
+    name: "Narrator",
+    goal: "Speak",
+    tools: ["create_media"],
+    media: saved,
+  };
+  const catalog = [
+    {
+      name: "create_media",
+      description: "Create",
+      operational: true,
+      required_permissions: [],
+      outputs: {
+        speech: { ready: false, engines: { fish_s2_pro: { ready: true } } },
+      },
+    },
+  ];
+  expect(activationBlock(agent, catalog).blocked).toBe(false);
+  catalog[0].outputs.speech.engines.fish_s2_pro.ready = false;
+  expect(activationBlock(agent, catalog).blocked).toBe(true);
+  expect(screen.queryByText(/Chatterbox unavailable/)).toBeNull();
+  expect(
+    agentSettingsPayload({
+      updated_at: "reviewed-version",
+      name: "Narrator",
+      goal: "Speak",
+      tools: ["create_media"],
+      media: saved,
+    }).media,
+  ).toEqual(saved);
+  fireEvent.change(screen.getByLabelText("Speech model"), {
+    target: { value: "" },
+  });
+  saved = JSON.parse(
+    screen.getByLabelText("Reviewed speech").textContent || "{}",
+  );
+  expect(saved.request.engine).toBeUndefined();
+  expect(saved.request.direction).toBeUndefined();
+  expect(saved.request.pace).toBeUndefined();
+  expect(saved.request.text).toBe("Dokładne słowa.");
+  expect(screen.queryByLabelText("Voice direction")).toBeNull();
 });

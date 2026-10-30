@@ -85,6 +85,7 @@ def emit_agent_notice(session: Session, run: Run, status: str) -> Notice | None:
         "photo_pipe",
         "ace_step_music",
         "chatterbox",
+        "fish_speech",
         "wan_video",
         "media_compose",
         "echomimic",

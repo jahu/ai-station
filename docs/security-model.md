@@ -34,6 +34,16 @@ numbers, never extra flags, instructions or paths. Read-only capability inspecti
 parses configured source without executing it. Controlled dispatch requires its
 frozen source hash; unsupported/changed CLIs fail instead of dropping settings.
 
+Optional expressive Fish speech accepts a fixed engine, bounded script, enum
+direction/pace, frozen owned WAV/transcript and two allocated GPU IDs. Runtime
+paths and weights are native configuration; callers cannot choose commands,
+imports, flags or model downloads. Background read-only readiness verifies the
+pinned source/weights; the owned child rechecks the full observation before
+imports. An actual 24-GiB, zero-swap user scope bounds load RAM; model weights
+stay on the allocated GPUs. Stop/recovery use the existing process journal.
+Reference transcription is account-bound and revalidated at dispatch/publication;
+partial, capped-without-EOS or canceled outputs never become Library artifacts.
+
 The [fixed Wan APG candidate](plans/wan-continuation-quality.md) binds a built-in
 guidance recipe and installed-source observation to new continuation plans.
 Native execution rechecks the snapshot; legacy plans retain their identities.

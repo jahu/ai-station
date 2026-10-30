@@ -30,6 +30,15 @@ configured CLI's existing expression, guidance and sampling arguments. A worker
 freezes the supported CLI hash; native dispatch rechecks it and passes the same
 bounded values to every chunk. Standard speech retains its original identity.
 
+The optional Fish S2 Pro adapter uses the same speech pipeline, with an ordinary
+offline transcription prerequisite for a voice reference. A checked same-owner
+transcript may be reused; requested TTS words are never treated as recognized
+speech. The frozen source/weight/wrapper observation, direction and pace follow
+each Run. The worker reserves two compatible GPUs and load RAM; a fixed native
+child owns the zero-swap scope, complete EOS-checked chunks and final WAV.
+Audio and reviewed media agents share model/direction controls and private
+creative history. No model service, new execution engine or schema is introduced.
+
 The [optional prompt enhancement](plans/local-prompt-enhancement.md) extends the
 existing local translation preparation/apply executors. Fixed generator/operation
 templates, original/effective receipts, same-owner source bindings and normal

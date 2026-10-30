@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Image,
   Music2,
@@ -11,7 +12,9 @@ import {
 } from "lucide-react";
 import MediaInput from "../components/media/MediaInput";
 import { Button } from "../components/ui/button";
-import { useHardware } from "../api";
+import { api, useHardware } from "../api";
+import SpeechEngineFields from "../components/media/SpeechEngineFields";
+import type { SpeechCapabilities } from "../components/media/speech-delivery";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import MusicScope from "./MusicScope";
 import AgentVideoScope from "./AgentVideoScope";
@@ -45,6 +48,25 @@ export default function AgentMediaScopeEditor({
   const hardware = useHardware();
   const wholeAvatar = useWholeAvatarCapabilities();
   const scope = value ?? newAgentMedia("image", goal);
+  const speech = useQuery({
+    queryKey: ["speech-capabilities"],
+    queryFn: () => api<SpeechCapabilities>("/audio/capabilities"),
+    enabled: scope.kind === "speech",
+    staleTime: 30000,
+    refetchInterval: (query) =>
+      query.state.data?.engines?.fish_s2_pro?.readiness === "checking"
+        ? 2000
+        : false,
+  });
+  const selectedReadiness =
+    scope.kind === "speech" && scope.request.engine === "fish_s2_pro"
+      ? {
+          ready: speech.data?.engines?.fish_s2_pro?.available === true,
+          reason:
+            speech.data?.engines?.fish_s2_pro?.reason ??
+            "Checking expressive speech setup…",
+        }
+      : readiness?.[scope.kind];
   const recordedWhole =
     scope.kind === "avatar" &&
     !!scope.request.generation_profile &&
@@ -88,9 +110,9 @@ export default function AgentMediaScopeEditor({
         The result appears in this workspace and Library. Review the creative
         direction and output settings before enabling.
       </p>
-      {readiness?.[scope.kind]?.ready === false && (
+      {selectedReadiness?.ready === false && (
         <p className="error" role="status">
-          {readiness[scope.kind]?.reason ||
+          {selectedReadiness.reason ||
             "The selected local media engine is unavailable."}{" "}
           You can save this draft and enable it after setup.
         </p>
@@ -351,6 +373,50 @@ export default function AgentMediaScopeEditor({
         )}
         {scope.kind === "speech" && (
           <>
+            <SpeechEngineFields
+              engine={scope.request.engine ?? ""}
+              direction={scope.request.direction ?? "natural"}
+              pace={scope.request.pace ?? "natural"}
+              capabilities={speech.data}
+              onEngine={(engine) => {
+                const request = { ...scope.request };
+                delete request.engine;
+                delete request.direction;
+                delete request.pace;
+                delete request.delivery;
+                onChange({
+                  ...scope,
+                  request: {
+                    ...request,
+                    ...(engine === "fish_s2_pro"
+                      ? {
+                          engine: "fish_s2_pro" as const,
+                          direction: "natural" as const,
+                          pace: "natural" as const,
+                        }
+                      : {}),
+                  },
+                });
+              }}
+              onDirection={(direction) =>
+                onChange({
+                  ...scope,
+                  request: {
+                    ...scope.request,
+                    direction: direction as typeof scope.request.direction,
+                  },
+                })
+              }
+              onPace={(pace) =>
+                onChange({
+                  ...scope,
+                  request: {
+                    ...scope.request,
+                    pace: pace as typeof scope.request.pace,
+                  },
+                })
+              }
+            />
             <p className="muted">
               Speech in Polish. Your selected recording provides the voice
               reference. Goal mode writes the spoken text; the voice stays
@@ -382,7 +448,9 @@ export default function AgentMediaScopeEditor({
                 Advanced speech settings
               </summary>
               <p className="muted">
-                Chatterbox · local · at most 1000 characters per execution.
+                {scope.request.engine === "fish_s2_pro"
+                  ? "Fish S2 Pro · local · Auto reserves two compatible GPUs."
+                  : "Chatterbox · local · at most 1000 characters per execution."}
               </p>
               <GpuTargetChoiceList
                 value={scope.request.gpu ?? "auto"}

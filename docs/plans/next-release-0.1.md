@@ -7,6 +7,13 @@ media profiles. Product version remains 0.0.2 until release preparation.
 
 ## Scope and acceptance
 
+Current NR-06 implementation adds an optional Fish S2 Pro voice alongside the
+existing Chatterbox path: Audio and reviewed speech agents expose model,
+direction and pace, restored in private creative history. Real integrated short,
+three-chunk long and scoped-cancellation tests pass on the local GPU pair.
+Audible style/fidelity acceptance remains open; this is not completion of NR-06
+or this release. See [the measured speech contract](expressive-speech.md).
+
 | ID | Requirement | Observable acceptance |
 | --- | --- | --- |
 | NR-01 | Persistent creative conversations in Images, Video, Music, Speech and Avatars | Start a job, navigate away, return to the same saved workspace, refresh/restart and retain history, inputs, progress and results. A follow-up creates a new linked variation with the feedback and chosen previous result; it never overwrites earlier work. |

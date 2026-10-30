@@ -38,6 +38,8 @@ class AudioRequest(BaseModel):
 
 
 def capabilities():
+    from ai_station_runner.fish_runtime import capabilities as fish_capabilities
+
     settings = get_settings()
     python = Path(settings.chatterbox_python).expanduser() if settings.chatterbox_python else None
     script = Path(settings.chatterbox_script).expanduser() if settings.chatterbox_script else None
@@ -61,6 +63,7 @@ def capabilities():
         "reference_max_seconds": 60,
         "offline": True,
         "delivery": inspect_delivery(settings.chatterbox_script) if configured else None,
+        "engines": {"fish_s2_pro": fish_capabilities()},
     }
 
 

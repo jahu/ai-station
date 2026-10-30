@@ -40,7 +40,11 @@ def require_profile(scope):
             profile = RunnerClient().request("GET", "/v1/audio/capabilities")
         except (RunnerError, RunnerUnavailable):
             profile = {}
-        ready = profile.get("available") and "pl" in profile.get("languages", [])
+        ready = (
+            profile.get("engines", {}).get("fish_s2_pro", {}).get("available")
+            if scope.request.engine == "fish_s2_pro"
+            else profile.get("available") and "pl" in profile.get("languages", [])
+        )
     elif scope.kind == "avatar":
         try:
             path = (
@@ -149,6 +153,13 @@ def runtime_readiness():
         },
         "speech": {
             "ready": speech_ready,
+            "engines": {
+                "fish_s2_pro": {
+                    "ready": bool(speech.get("engines", {}).get("fish_s2_pro", {}).get("available")),
+                    "reason": speech.get("engines", {}).get("fish_s2_pro", {}).get("reason")
+                    or "Expressive speech is unavailable or still being verified",
+                }
+            },
             "reason": None
             if speech_ready
             else "Speech agents are not available yet"

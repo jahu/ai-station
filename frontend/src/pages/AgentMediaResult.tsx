@@ -42,6 +42,7 @@ function AgentMediaOutput({ runs }: { runs: Run[] }) {
     (run) =>
       run.executor_type === "photo_pipe" ||
       run.executor_type === "ace_step_music" ||
+      run.executor_type === "fish_speech" ||
       run.executor_type === "chatterbox",
   );
   const preparation = current.find(

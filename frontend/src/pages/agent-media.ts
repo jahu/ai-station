@@ -62,6 +62,24 @@ export type AgentMediaScope =
       description_source: "fixed" | "goal";
       request: {
         text: string;
+        engine?: "fish_s2_pro";
+        direction?:
+          | "natural"
+          | "whisper"
+          | "happy"
+          | "sad"
+          | "afraid"
+          | "angry"
+          | "calm"
+          | "excited"
+          | "breathy"
+          | "sighing";
+        pace?: "natural" | "slow" | "fast";
+        delivery?: {
+          exaggeration: number;
+          cfg_weight: number;
+          temperature: number;
+        };
         reference_artifact_id: string | null;
         gpu?: string;
       };

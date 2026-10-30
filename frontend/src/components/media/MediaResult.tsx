@@ -1,4 +1,5 @@
 import ImageModelSelection from "./ImageModelSelection";
+import SpeechModelSelection from "./SpeechModelSelection";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -15,7 +16,7 @@ import { Badge, ErrorNotice } from "../common";
 import ResourceWaitNotice from "../ResourceWaitNotice";
 import { Button } from "../ui/button";
 
-import { mediaBusy } from "./media-run";
+import { mediaBusy, useMediaRun } from "./media-run";
 import { ArtifactLineage } from "../../pages/ArtifactLineage";
 import LibraryActions from "../../pages/LibraryActions";
 import { PurgeActivity } from "../../pages/LibraryPurge";
@@ -73,6 +74,13 @@ export default function MediaResult({
   allowRetry?: boolean;
 }) {
   const cache = useQueryClient();
+  const preparationId = run?.parameters?.reference_transcription_run_id;
+  const preparation = useMediaRun(
+    run?.parameters?.backend === "fish_s2_pro" &&
+      typeof preparationId === "string"
+      ? preparationId
+      : "",
+  );
   const [, setSearch] = useSearchParams();
   const artifacts = useQuery({
     queryKey: ["media-result", runId],
@@ -175,6 +183,7 @@ export default function MediaResult({
         {run && <Badge status={run.status} />}
       </div>
       <ImageModelSelection run={run} />
+      <SpeechModelSelection run={run} preparation={preparation.data} />
       <ErrorNotice
         error={error ?? artifacts.error ?? cancel.error ?? retry.error}
       />

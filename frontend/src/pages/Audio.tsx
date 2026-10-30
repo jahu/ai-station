@@ -19,9 +19,11 @@ import Transcription from "./Transcription";
 import Music from "./Music";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import SpeechDeliveryControls from "../components/media/SpeechDeliveryControls";
+import SpeechEngineFields from "../components/media/SpeechEngineFields";
 import {
   defaultSpeechDelivery,
   type SpeechDelivery,
+  type SpeechCapabilities,
 } from "../components/media/speech-delivery";
 
 export default function Audio({
@@ -133,20 +135,39 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
   );
   const [text, setText] = useState(String(restored.text ?? ""));
   const [gpu, setGpu] = useState(String(restored.gpu ?? "auto"));
+  const [engine, setEngine] = useState(String(restored.engine ?? ""));
+  const [direction, setDirection] = useState(
+    String(restored.direction ?? "natural"),
+  );
+  const [pace, setPace] = useState(String(restored.pace ?? "natural"));
+  const fish = engine === "fish_s2_pro";
   const [shapeDelivery, setShapeDelivery] = useState(!!restored.delivery);
   const [delivery, setDelivery] = useState<SpeechDelivery>(
     (restored.delivery as SpeechDelivery | undefined) ?? defaultSpeechDelivery,
   );
   const capabilities = useQuery({
     queryKey: ["speech-capabilities"],
-    queryFn: () =>
-      api<{ delivery?: { version: string } | null }>("/audio/capabilities"),
+    queryFn: () => api<SpeechCapabilities>("/audio/capabilities"),
     staleTime: 30000,
+    refetchInterval: (query) =>
+      query.state.data?.engines?.fish_s2_pro?.readiness === "checking"
+        ? 2000
+        : false,
   });
+  const fishReady = capabilities.data?.engines?.fish_s2_pro?.available === true;
   const supportsDelivery =
     capabilities.data?.delivery?.version === "chatterbox-controls-v1";
   useCreativeDraft({
-    formState: { reference, text, gpu, ...(shapeDelivery ? { delivery } : {}) },
+    formState: {
+      reference,
+      text,
+      gpu,
+      ...(fish
+        ? { engine, direction, pace }
+        : shapeDelivery
+          ? { delivery }
+          : {}),
+    },
   });
   const [uploading, setUploading] = useState(false);
   const hardware = useHardware();
@@ -154,7 +175,11 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
   const run = useMediaRun(runId);
   const generate = useMutation({
     mutationFn: async () => {
-      if (shapeDelivery && !supportsDelivery)
+      if (fish && !fishReady)
+        throw new Error(
+          "Expressive speech is unavailable or still being verified.",
+        );
+      if (!fish && shapeDelivery && !supportsDelivery)
         throw new Error(
           "Delivery controls are unavailable. Turn them off to use the standard voice.",
         );
@@ -162,7 +187,11 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
         text,
         gpu,
         reference_artifact_id: reference,
-        ...(shapeDelivery ? { delivery } : {}),
+        ...(fish
+          ? { engine, direction, pace }
+          : shapeDelivery
+            ? { delivery }
+            : {}),
       };
       if (creative)
         return creativeRun(
@@ -194,12 +223,12 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
         action={
           <span className="media-runtime">
             <i />
-            Chatterbox · Local
+            {fish ? "Fish S2 Pro" : "Chatterbox"} · Local
           </span>
         }
       >
-        Natural Polish speech, shaped by your voice reference. Listen and refine
-        right here.
+        Local speech, shaped by your voice reference. Listen and refine right
+        here.
       </PageTitle>
       <div className="media-workspace">
         <form
@@ -215,10 +244,23 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
             <span>01 / Voice & text</span>
           </div>
           <fieldset disabled={uploading || busy}>
+            <SpeechEngineFields
+              engine={engine}
+              direction={direction}
+              pace={pace}
+              capabilities={capabilities.data}
+              onEngine={setEngine}
+              onDirection={setDirection}
+              onPace={setPace}
+            />
             <MediaInput
               kind="audio"
               label="Voice reference"
-              hint="WAV · 0.1–60 sec · up to 20 MB"
+              hint={
+                fish
+                  ? "WAV · best with 5–15 sec of clear speech · up to 60 sec / 20 MB"
+                  : "WAV · 0.1–60 sec · up to 20 MB"
+              }
               value={reference}
               onChange={setReference}
               disabled={uploading || busy}
@@ -238,14 +280,16 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
                 placeholder="Write the words you want to hear…"
               />
             </label>
-            <SpeechDeliveryControls
-              enabled={shapeDelivery}
-              supported={supportsDelivery}
-              disabled={uploading || busy}
-              value={delivery}
-              onEnable={setShapeDelivery}
-              onChange={setDelivery}
-            />
+            {!fish && (
+              <SpeechDeliveryControls
+                enabled={shapeDelivery}
+                supported={supportsDelivery}
+                disabled={uploading || busy}
+                value={delivery}
+                onEnable={setShapeDelivery}
+                onChange={setDelivery}
+              />
+            )}
             <details className="media-advanced">
               <summary>
                 <Settings2 size={15} />
@@ -258,6 +302,11 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
                   gpus={hardware.data?.gpus ?? []}
                   disabled={uploading || busy}
                   onChange={setGpu}
+                  hint={
+                    fish
+                      ? "Auto reserves a compatible GPU pair. A specific GPU selects the primary device; AI Station allocates the second device."
+                      : undefined
+                  }
                 />
               </div>
               <ErrorNotice error={hardware.error} />
@@ -271,7 +320,7 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
                 !text.trim() ||
                 uploading ||
                 busy ||
-                (shapeDelivery && !supportsDelivery)
+                (fish ? !fishReady : shapeDelivery && !supportsDelivery)
               }
             >
               <Sparkles size={17} />
