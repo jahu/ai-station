@@ -40,6 +40,14 @@ installation. Native loopback development retains its direct setup path. These
 contracts are qualified on a disposable real Docker bridge and the compiled
 desktop/mobile account screen; they do not enable accounts in the live profile.
 
+When that profile is explicitly installed, private-network startup checks for an
+enabled, configured administrator with a valid bounded password record. It does
+not require or accept the retired operator credential as a substitute. Pending,
+disabled, ordinary-member and recovery-required identities cannot unlock startup.
+The dormant shipped profile retains its existing operator check, explicit origin
+allowlist and loopback publish default; account readiness never grants a public
+bind or configures a network service.
+
 Services leave commit/rollback to their caller. Account audit events commit with
 the successful operation. A downgrade refuses to discard identities after use;
 restore a reviewed, stopped-service backup rather than erasing live accounts.

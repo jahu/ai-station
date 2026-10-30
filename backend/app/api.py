@@ -83,8 +83,9 @@ DB = Annotated[Session, Depends(session_scope)]
 async def lifespan(_app):
     migrate()
     with control_session_factory()() as session:
-        refuse_non_loopback_bind(session)
-        if getattr(_app.state, "account_access_enabled", False):
+        accounts_active = getattr(_app.state, "account_access_enabled", False)
+        refuse_non_loopback_bind(session, accounts_active=accounts_active)
+        if accounts_active:
             from app.bootstrap_setup import ensure_setup_proof
 
             ensure_setup_proof(session)

@@ -26,6 +26,18 @@ RELATIVE_PATH = "secrets/bootstrap/local-setup"
 TOKEN = re.compile(r"[A-Za-z0-9_-]{43}")
 
 
+def administrator_configured(session) -> bool:
+    """Trusted startup checks account credentials, never the legacy operator key."""
+    from app.account_credentials import password_record_valid
+
+    records = session.scalars(
+        select(User.password_record).where(
+            User.is_admin.is_(True), User.enabled.is_(True), User.bootstrap_pending.is_(False)
+        )
+    )
+    return any(password_record_valid(record) for record in records)
+
+
 def pending_setup(session) -> bool:
     return session.scalar(select(User.id).where(User.bootstrap_pending.is_(True))) is not None
 
