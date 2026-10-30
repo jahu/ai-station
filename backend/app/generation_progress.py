@@ -13,7 +13,15 @@ from app.events import append_event
 from app.models import Run
 from app.state import TERMINAL
 
-EXECUTORS = {"photo_pipe", "wan_video", "echomimic", "chatterbox", "ace_step_music", "media_compose"}
+EXECUTORS = {
+    "photo_pipe",
+    "wan_video",
+    "echomimic",
+    "chatterbox",
+    "fish_speech",
+    "ace_step_music",
+    "media_compose",
+}
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 # tqdm's iteration display, and sd-cli's sampler display. Byte-loading bars do
 # not carry either iteration-speed unit and are deliberately ignored.
@@ -50,11 +58,16 @@ def parse_line(line, run):
     for prefix in prefixes.get(run.executor_type, ()):
         if line.startswith(prefix) and line[len(prefix) :] in STAGES:
             return {"phase": STAGES[line[len(prefix) :]]}
-    if run.executor_type == "chatterbox":
+    if run.executor_type in {"chatterbox", "fish_speech"}:
+        if run.executor_type == "fish_speech":
+            if line == "speech.model.loading":
+                return {"phase": "preparing"}
+            if re.fullmatch(r"speech\.chunk\.started \d{1,2}/\d{1,2}", line):
+                return {"phase": "generating"}
         chunk = CHUNK.fullmatch(line)
         if chunk:
             completed, total = map(int, chunk.groups())
-            if 2 <= total <= 20 and 0 < completed <= total:
+            if (1 if run.executor_type == "fish_speech" else 2) <= total <= 20 and 0 < completed <= total:
                 return {
                     "phase": "finishing" if completed == total else "generating",
                     "completed": completed,

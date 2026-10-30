@@ -34,6 +34,7 @@ from app.data_inputs import DataInspectionExecutor
 from app.email_delivery import EmailCheckExecutor, EmailSendExecutor
 from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
+from app.fish_speech import FishSpeechExecutor
 from app.github_connector import GithubReadExecutor
 from app.llama import LlamaExecutor, LlamaHealthExecutor
 from app.llama_handoff import LlamaResumeConsumerExecutor
@@ -335,6 +336,7 @@ EXECUTORS = {
     "llama_resume_consumer": LlamaResumeConsumerExecutor(),
     "photo_pipe": PhotoPipeExecutor(),
     "chatterbox": AudioExecutor(),
+    "fish_speech": FishSpeechExecutor(),
     "ace_step_music": MusicExecutor(),
     "whisper_transcribe": TranscriptionExecutor(),
     "echomimic": AvatarExecutor(),

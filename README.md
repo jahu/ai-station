@@ -44,6 +44,12 @@ more control. Start with an idea; keep the conversation, files and results toget
 | **Keep your creative work** | A shared Library, source lineage, downloads, metadata, Trash and confirmed permanent deletion. |
 | **Operate your workstation** | Owned llama.cpp models, GPU allocation, runtime health, memory, diagnostics and inspectable Runs. |
 
+On `develop`, optional [Fish S2 Pro speech](docs/plans/expressive-speech.md)
+adds a model choice, delivery directions and pacing in Audio and reviewed speech
+agents. It requires a configured two-GPU runtime and retains Fish Audio's separate
+model license. Chatterbox remains the default; this is next-release development,
+not a change to the published v0.0.2 package.
+
 <table>
 <tr>
 <td width="50%"><img src="docs/media/conversation.png" alt="AI Station conversation with a local model and an example film-planning discussion" /></td>

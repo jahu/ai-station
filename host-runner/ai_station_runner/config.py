@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     chatterbox_python: str = ""
     chatterbox_script: str = ""
     chatterbox_cache: str = ""
+    fish_speech_enabled: bool = False
+    fish_speech_python: str = ""
+    fish_speech_dir: str = ""
+    fish_speech_models: str = ""
     music_python: str = ""
     music_source_dir: str = ""
     music_model_dir: str = ""

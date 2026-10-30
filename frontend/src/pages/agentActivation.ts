@@ -60,6 +60,7 @@ export type AgentToolSpec = {
         speech_ready?: boolean;
         reason?: string | null;
         modes?: string[];
+        engines?: Record<string, { ready: boolean; reason?: string | null }>;
       }
     >
   >;
@@ -304,7 +305,15 @@ export function activationBlock(
   }
   const byName = new Map(catalog.map((tool) => [tool.name, tool]));
   if (names.includes("create_media") && agent.media) {
-    const output = byName.get("create_media")?.outputs?.[agent.media.kind];
+    const family = byName.get("create_media")?.outputs?.[agent.media.kind];
+    const output: typeof family =
+      agent.media.kind === "speech" &&
+      agent.media.request.engine === "fish_s2_pro"
+        ? (family?.engines?.fish_s2_pro ?? {
+            ready: false,
+            reason: "Expressive speech is unavailable or still being verified.",
+          })
+        : family;
     if (
       agent.media.kind === "avatar" &&
       agent.media.request.speech_text !== null &&

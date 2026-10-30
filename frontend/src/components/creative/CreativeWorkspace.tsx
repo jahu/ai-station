@@ -1,4 +1,5 @@
 import ImageModelSelection from "../media/ImageModelSelection";
+import SpeechModelSelection from "../media/SpeechModelSelection";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   useInfiniteQuery,
@@ -708,6 +709,14 @@ function SessionBody({
                 </Link>
               </div>
               <ImageModelSelection run={turn.run ?? undefined} />
+              <SpeechModelSelection
+                run={turn.run ?? undefined}
+                preparation={turn.runs?.find(
+                  (run) =>
+                    run.id ===
+                    turn.run?.parameters?.reference_transcription_run_id,
+                )}
+              />
               {!turn.job &&
                 progressRuns(turn)
                   .filter((run) => !!run.metadata?.prompt_translation)

@@ -220,3 +220,100 @@ it("turning delivery off restores the original speech request", async () => {
     reference_artifact_id: "voice",
   });
 });
+
+it("chooses expressive speech and sends voice direction without Chatterbox controls", async () => {
+  const writes: Record<string, unknown>[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, init?: RequestInit) => {
+      if (path === "/api/audio/runs" && init?.method === "POST")
+        writes.push(JSON.parse(String(init.body)));
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/audio/capabilities")
+            ? {
+                delivery: { version: "chatterbox-controls-v1" },
+                engines: {
+                  fish_s2_pro: {
+                    available: true,
+                    readiness: "ready",
+                    license_url: "https://huggingface.co/fishaudio/s2-pro",
+                  },
+                },
+              }
+            : path.endsWith("/hardware")
+              ? { gpus: [] }
+              : path.includes("/runs")
+                ? { id: "speech", status: "queued" }
+                : {
+                    id: "voice",
+                    type: "audio",
+                    mime_type: "audio/wav",
+                    original_filename: "voice.wav",
+                  },
+      };
+    }),
+  );
+  mount("/audio?input=voice");
+  fireEvent.click(
+    await screen.findByRole("checkbox", { name: /Shape the delivery/ }),
+  );
+  fireEvent.change(screen.getByLabelText("Expression"), {
+    target: { value: "1.1" },
+  });
+  fireEvent.change(screen.getByRole("combobox", { name: "Speech model" }), {
+    target: { value: "fish_s2_pro" },
+  });
+  expect(screen.queryByLabelText("Expression")).toBeNull();
+  fireEvent.change(screen.getByRole("combobox", { name: "Voice direction" }), {
+    target: { value: "whisper" },
+  });
+  fireEvent.change(screen.getByRole("combobox", { name: "Speaking pace" }), {
+    target: { value: "slow" },
+  });
+  fireEvent.change(screen.getByLabelText("Text to speak"), {
+    target: { value: "To są dokładne słowa." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Generate speech" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toEqual({
+    text: "To są dokładne słowa.",
+    gpu: "auto",
+    reference_artifact_id: "voice",
+    engine: "fish_s2_pro",
+    direction: "whisper",
+    pace: "slow",
+  });
+});
+
+it("keeps an unconfigured expressive engine unavailable instead of inventing readiness", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path.endsWith("/audio/capabilities")
+          ? {
+              engines: {
+                fish_s2_pro: { available: false, readiness: "unavailable" },
+              },
+            }
+          : path.endsWith("/hardware")
+            ? { gpus: [] }
+            : { id: "voice", type: "audio", mime_type: "audio/wav" },
+    })),
+  );
+  mount();
+  const option = await screen.findByRole("option", {
+    name: "Fish S2 Pro · Expressive · Not configured",
+  });
+  expect(option.hasAttribute("disabled")).toBe(true);
+  expect(
+    (
+      screen.getByRole("combobox", {
+        name: "Speech model",
+      }) as HTMLSelectElement
+    ).value,
+  ).toBe("");
+});

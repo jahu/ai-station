@@ -1,5 +1,14 @@
 # Local speech
 
+Development builds additionally offer **Fish S2 Pro · Expressive** in Speech
+model when its separate native runtime is configured and verified. Select voice
+direction and pace while keeping the spoken script unchanged; the reference is
+transcribed locally and saved creative versions retain the settings. Reviewed
+speech agents use the same controls. The optional two-GPU adapter, measured
+short/long/cancellation checks, configuration and outstanding audible-style
+acceptance are documented in the [expressive speech contract](plans/expressive-speech.md).
+Chatterbox remains the default.
+
 Development builds offer **Shape the delivery** when the configured Chatterbox CLI
 supports its existing expression/guidance/temperature controls. Adjust Expression;
 use **Fine-tune the voice** for guidance and variation. The option starts off,
