@@ -1,6 +1,6 @@
 # Optional local prompt enhancement (NR-04)
 
-Implementation follows NR-02, using the existing `media_translation.py` worker,
+Implementation uses the existing `media_translation.py` worker,
 dependency, review, model startup/eviction, receipt and recovery contracts. This
 plan does not expose an unimplemented checkbox or claim an engine is available.
 
@@ -68,3 +68,24 @@ No migration, additional executor or native runtime change is required.
 - Exercise the actual optional checkbox, saved-session restore and editable
   preparation on desktop/mobile. Review the diff and pass local checks before
   rollout; keep real-model quality comparisons separate from synthetic contracts.
+
+## Workstation acceptance, 2026-10-30
+
+PR #517 implements the supported preparation workflows. Its complete affected
+backend families pass 687 cases, with 951 frontend baseline cases and 37 final
+component-family cases. Compiled private desktop/mobile checks verify actual
+submission, review/edit, effective generator input, receipts and restored history.
+
+A real neutral image passed the full local path: Qwen3.5 9B Uncensored Q6_K
+prepared the description, optional review approved it, and LUSTIFY v10 Turbo Q4_0
+generated the image using that exact text. Original/effective receipts are saved
+with the private result. This verifies real use, not an A/B quality benchmark or
+a promise that every model will improve every request.
+
+That trial also exposed increasing SQLAlchemy owner-filter state during polling;
+PR #518 retains the scope filters without reapplying them on each refresh. Its
+490-case account/media gate plus one final regression pass. The final frontend
+follow-up covers enhancement by itself, with translation off and review disabled:
+40 complete component-family cases and the compiled desktop/mobile path pass.
+Private evidence remains under `data/acceptance/prompt-enhancement-20261030/`,
+`account-refresh-fix-20261030/` and `image-prompt-checkbox-20261030/`.

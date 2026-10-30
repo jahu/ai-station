@@ -110,6 +110,43 @@ async function mount(entry = "/images", catalog = imageCatalog) {
     ).not.toContain("Loading models…"),
   );
 }
+it("submits enhancement by itself with inherited translation off and no review", async () => {
+  const writes: Record<string, unknown>[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string, options?: RequestInit) => {
+      if (path === "/api/images/runs" && options?.method === "POST")
+        writes.push(JSON.parse(String(options.body)));
+      return {
+        ok: true,
+        json: async () =>
+          path.endsWith("/hardware")
+            ? { gpus: [] }
+            : path.endsWith("/generation/preferences")
+              ? {
+                  revision: 0,
+                  enabled: false,
+                  model: "local",
+                  target_language: "en",
+                }
+              : { id: "run-id", status: "queued" },
+      };
+    }),
+  );
+  await mount();
+  fireEvent.change(screen.getByLabelText("Prompt"), {
+    target: { value: "A red bicycle" },
+  });
+  fireEvent.click(
+    screen.getByRole("checkbox", { name: /Improve my prompt locally/ }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Queue generate" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0]).toMatchObject({
+    translation: { mode: "inherit", enhance: true, review: false },
+  });
+});
+
 it("queues Juggernaut parameters and keeps generation in the workspace", async () => {
   const fetch = vi.fn(async (path: string) => ({
     ok: true,
