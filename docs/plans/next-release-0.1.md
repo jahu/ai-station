@@ -327,7 +327,7 @@ requiring translation or review (40 component cases and compiled desktop/mobile
 flow). NR-04 functional acceptance is complete; this is not a broad model-quality
 benchmark. The remaining NR items stay in scope.
 
-NR-12 has an automatic-search candidate: the selected admitted Chat model
+NR-12 automatic search is implemented and qualified: the selected admitted Chat model
 prepares the first query before retrieval, with bounded ordinary-text follow-up
 context, recorded query/model provenance, visible Sources details and cancellable
 tools-free JSON generation. Manual queries, reviewed agent/image research and
@@ -336,3 +336,18 @@ separate from real-model relevance evidence. Explicitly selected external models
 reuse their existing permission grant and remain labelled external; no separate
 planner setting or hidden model load is introduced. See
 [search contracts](../web-search.md).
+
+The real selected-model NR-12 regression passed on 2026-10-30: the deployed
+unified assistant prepared both an ambiguous initial question and its short
+follow-up using the local 27B llama.cpp model. Each retrieved five relevant
+subject-specific sources and retained query/model/source provenance, without
+the previously reported generic or unrelated results. The actual QA model and
+temporary devices were cleaned up. See [search qualification](../web-search.md#selected-model-search-qualification-2026-10-30).
+This completes the functional NR-12 gate for the reported regression; it does
+not assert that search snippets independently verify every factual claim.
+
+NR-07 basic effects generation and saved sound workspaces are deployed after
+reviewed PR #524. Actual eight-second and fifteen-second/two-window inference,
+linked previews and scoped Stop pass. Per-scene descriptions, assistant/agent
+exposure and perceptual acceptance remain; NR-08 multitrack editing is still
+open. [Deployment and remaining contracts](synchronized-sound.md).

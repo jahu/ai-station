@@ -1,6 +1,6 @@
 # Optional Chat web search
 
-Web search starts enabled in ordinary Chat. The switch saves an operator preference across conversations and devices; turning it off keeps it off. Work starts without automatic search so coding, runtime control and task continuations retain their existing scopes. Each request still records its own search selection and network permission; API requests that omit search remain offline. It runs in the existing worker before local inference and records its query, results, timestamps and failures as Run events plus a JSON artifact. A visible Sources panel links the actual retrieved results independently of model-generated citations. The Search the web toggle is a keyboard sequence with a unique Search name; Space or Enter selects it and does not send. There is no inspectable search-toggle Run. Arrow keys, Home and End move through those cards; Enter opens the selected public URL. This is search, not browser automation. Regeneration reuses the user's explicit search intent. Cancellation closes the search request; an unavailable search service fails the Run rather than pretending the answer is current.
+Web search starts enabled in the unified assistant. The switch saves the current account’s preference across conversations and devices; turning it off keeps it off. This does not force a search for every instruction: known non-research actions retain their existing routing and permissions. Each request still records its own search selection and network permission; API requests that omit search remain offline. It runs in the existing worker before local inference and records its query, results, timestamps and failures as Run events plus a JSON artifact. A visible Sources panel links the actual retrieved results independently of model-generated citations. The Search the web toggle is a keyboard sequence with a unique Search name; Space or Enter selects it and does not send. There is no inspectable search-toggle Run. Arrow keys, Home and End move through those cards; Enter opens the selected public URL. This is search, not browser automation. Regeneration reuses the user's explicit search intent. Cancellation closes the search request; an unavailable search service fails the Run rather than pretending the answer is current.
 
 An explicit Search query is used exactly as entered, without history. Otherwise, a follow-up is resolved by the selected permission-bound model using at most six recent ordinary text messages (1200 characters each), before contacting a search engine. Only the resulting short query leaves for search; the full conversation, system prompt, pinned memory, summaries and attachment bodies are excluded. Replies based on private attachments, memory, summaries or other executors are excluded from query context. The actual query and original follow-up are recorded separately in source details. A failed or canceled topic resolution never searches the ambiguous raw instruction. Long messages use a bounded 4000-character question draft rather than imposing the search query limit on Chat. Queries are bounded. Retrieved titles/snippets are untrusted reference data, cannot grant tools/permissions, and are passed to the local model with citation instructions. The tool searches; it does not fetch arbitrary result pages, execute scripts or perform browser automation.
 
@@ -90,7 +90,7 @@ provider, preparation uses that same model and requires the Run's `external_ai`
 permission; both the events and Sources panel mark it external. This avoids an
 additional model/server setting or loading a hidden planner. Existing
 permission-bound follow-up resolution is preserved. Tests use synthetic
-model/search output; real-model relevance qualification remains a release gate.
+model/search output. Real-model relevance qualification is recorded below.
 
 ## Real search-informed image acceptance
 
@@ -116,3 +116,21 @@ would return results. Exact manually entered queries retain their explicit scope
 Topic resolution shares the existing provider permission, bounded generation,
 Stop and audited events; no extra tool, full-page fetching or model fact trust is
 introduced. Earlier model assertions are expressly unverified query context.
+
+## Selected-model search qualification (2026-10-30)
+
+The deployed development build completed the original ambiguous actor-question
+regression and a subject-free follow-up through the real unified assistant,
+ordinary worker, owned RVN 27B Q4 llama.cpp model and configured SearXNG search.
+Each Chat child recorded tools-free preparation with the selected local model,
+the effective query, five actual subject-specific sources and the final saved
+answer. Every returned title identified the subject or show; neither attempt
+returned the earlier dictionary/ranking or Downdetector results. The follow-up
+query explicitly recovered the actor’s name from bounded conversation context.
+This establishes relevance for those two regression cases, not independent
+verification of article claims or a guarantee for every future search.
+
+The model used the two discovered GPUs, Q8 cache and a 4096-token allocation for
+these short questions. The QA-owned instance was stopped afterward; temporary
+verification devices were revoked and no existing owner device or credentials
+were changed. Private evidence: `data/acceptance/search-preparation-20261030/`.
