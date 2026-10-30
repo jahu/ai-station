@@ -1,5 +1,5 @@
 {
-  "version": 15,
+  "version": 16,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -15,7 +15,10 @@
     "docs/plans/agent-draft-runtime-defaults.md",
     "docs/plans/wan-continuation-quality.md",
     "docs/plans/assisted-agent-drafts.md",
-    "docs/plans/notification-delivery.md"
+    "docs/plans/notification-delivery.md",
+    "docs/plans/media-timeline.md",
+    "docs/plans/synchronized-sound.md",
+    "docs/plans/next-release-0.1.md"
   ],
   "cases": [
     {
@@ -3690,6 +3693,120 @@
         "MVP-120",
         "UNIFIED-CHAT",
         "MARKET-DRAFT-CONDITION"
+      ]
+    },
+    {
+      "id": "VIDEO-101",
+      "area": "Wideo",
+      "title": "Zapisany montaż: klipy, niezależny dźwięk i eksport",
+      "priority": "P0",
+      "prerequisites": [
+        "Dwa własne, neutralne filmy z Library oraz własny WAV z mową, muzyką lub efektami. Dostępny renderer CPU."
+      ],
+      "steps": [
+        "Otwórz Video → Edit a film i utwórz nowy montaż. Dodaj dwa filmy i WAV z Library.",
+        "Przytnij klip, przesuń ścieżkę audio, zmień jej głośność i ustaw fade in/out. Wycisz oryginalny dźwięk jednego klipu. Zapisz edycję.",
+        "Uruchom Preview this edit, obejrzyj i odsłuchaj wynik. Pobierz Export film i odtwórz go na komputerze.",
+        "Odśwież stronę i wróć do tego montażu. Sprawdź ustawienia, wynik i pliki źródłowe w Library."
+      ],
+      "expected": [
+        "Montaż, osobne ścieżki i zmierzone fale dźwięku pozostają zapisane. Podgląd i eksport zawierają te same przycięcia, pozycje, wyciszenia i przejścia głośności. Oryginalne pliki pozostają niezmienione; odświeżenie nie dodaje klipu ponownie."
+      ],
+      "resources": "CPU; własne filmy/WAV; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-08"
+      ]
+    },
+    {
+      "id": "VIDEO-102",
+      "area": "Wideo",
+      "title": "Wcześniejszy montaż i zatrzymanie renderowania",
+      "priority": "P0",
+      "prerequisites": [
+        "Zapisany montaż i jego gotowy podgląd z VIDEO-101."
+      ],
+      "steps": [
+        "Zmień pozycję lub głośność ścieżki po wykonaniu podglądu.",
+        "Sprawdź oznaczenie wcześniejszego podglądu. Zapisz zmienioną wersję, następnie wybierz wcześniejszą w Saved edits.",
+        "Sprawdź odtworzenie ustawień i wcześniej wyrenderowanego filmu.",
+        "Dla dłuższego montażu uruchom nowy podgląd i kliknij Stop render, kiedy renderowanie trwa."
+      ],
+      "expected": [
+        "Zmiana montażu nie pozwala eksportować starego filmu jako nowej edycji. Wcześniejsze ustawienia i gotowy wynik dają się przywrócić. Stop zatrzymuje wyłącznie własne renderowanie; historia pozostaje, a częściowy film nie jest przedstawiony jako gotowy wynik."
+      ],
+      "resources": "CPU; bez nowego pobierania modeli",
+      "minutes": 7,
+      "requirements": [
+        "NR-08"
+      ]
+    },
+    {
+      "id": "AGENT-016",
+      "area": "Agenci",
+      "title": "Agent tworzący efekty dźwiękowe dla wybranego filmu",
+      "priority": "P0",
+      "prerequisites": [
+        "Własny neutralny film w Library; dostępny lokalny silnik Sound effects."
+      ],
+      "steps": [
+        "Utwórz wyłączonego agenta z narzędziem Create media i wyjściem Sound effects. Sprawdź, że nie można go aktywować bez filmu.",
+        "Wybierz film z Library, wpisz ogólny opis dźwięku i dodaj kierunek dla jednej sceny. Zapisz definicję.",
+        "Wybierz Use this exact description every time, aktywuj agenta i uruchom Run now.",
+        "Sprawdź oddzielny WAV, podgląd filmu z dźwiękiem oraz powrót do wyników po odświeżeniu. Przetestuj także Gated z ręcznym zatwierdzeniem."
+      ],
+      "expected": [
+        "Przed zgodą nie zaczyna się generowanie. Po wykonaniu dostępne są ścieżka efektów i zsynchronizowany podgląd, z zachowanym filmem źródłowym i kierunkami scen. Przy kolejnej pracy film i czasy scen pozostają wybrane przez użytkownika. Inne konto nie widzi definicji ani wyników."
+      ],
+      "resources": "Lokalny GPU; jeden krótki film; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-07",
+        "MVP-120"
+      ]
+    },
+    {
+      "id": "AUDIO-101",
+      "area": "Audio",
+      "title": "Jakość ekspresyjnej mowy: szept, emocje i tempo",
+      "priority": "P1",
+      "prerequisites": [
+        "Lokalny Fish S2 Pro i własna próbka głosu, do której masz prawa; spokojny odsłuch na słuchawkach."
+      ],
+      "steps": [
+        "W Audio → Speech wybierz Fish S2 Pro i tę samą własną próbkę głosu dla wszystkich prób.",
+        "Wygeneruj ten sam krótki tekst kolejno w stylach Natural, Whisper, Happy, Sad i Afraid; porównaj także tempo Slow i Fast.",
+        "Odsłuchaj całe próbki. Zapisz w wynikach konkretne słowa, momenty i kierunki, które brzmią robotycznie, nienaturalnie lub zmieniają tożsamość głosu."
+      ],
+      "expected": [
+        "Ustawienia wpływają na słyszalny sposób wypowiedzi, nie są czytane jako część tekstu. Tekst jest kompletny i zrozumiały, a dłuższa wypowiedź nie traci słów na połączeniach. Ocenę naturalności i podobieństwa głosu zapisuje użytkownik; samo ukończenie Run nie oznacza zaliczenia jakości."
+      ],
+      "resources": "Lokalny GPU; własna próbka głosu; bez płatnych API",
+      "minutes": 12,
+      "requirements": [
+        "NR-06"
+      ]
+    },
+    {
+      "id": "AUDIO-102",
+      "area": "Audio",
+      "title": "Zgodność odgłosów ze sceną i czasem filmu",
+      "priority": "P1",
+      "prerequisites": [
+        "Własny krótki neutralny film z widocznym ruchem lub wyraźną zmianą sceny; lokalny Sound effects."
+      ],
+      "steps": [
+        "W Audio → Sound effects wybierz film. Opisz pasujące odgłosy i dodaj co najmniej dwa różne kierunki scen z czasami odpowiadającymi filmowi.",
+        "Wygeneruj ścieżkę i odtwórz cały podgląd. Sprawdź pierwszą scenę, przejście i ostatnie sekundy.",
+        "Porównaj sam WAV i podgląd. Zapisz konkretne opóźnienia, niepasujące odgłosy, przerwy lub słyszalne łączenia, jeśli występują."
+      ],
+      "expected": [
+        "Ścieżka ma pełną długość filmu i nie ucina jego końca. Odgłosy pasują do scen i wskazanych przedziałów; nie pojawia się niezamówiona mowa lub muzyka. Ocenę zgodności dźwięku ze sceną zapisuje użytkownik, oddzielnie od technicznego ukończenia i poprawnego czasu pliku."
+      ],
+      "resources": "Lokalny GPU; jeden krótki film; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-07"
       ]
     }
   ]

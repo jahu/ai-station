@@ -192,6 +192,13 @@ class AgentSettings(BaseModel):
                 raise ValueError("Review media output settings before enabling this agent")
             if (
                 self.enabled
+                and self.media
+                and self.media.kind == "effects"
+                and self.media.request.video_artifact_id is None
+            ):
+                raise ValueError("Select and review a Library film before enabling sound effects")
+            if (
+                self.enabled
                 and self.media is not None
                 and self.media.kind == "speech"
                 and self.media.request.reference_artifact_id is None

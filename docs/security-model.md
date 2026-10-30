@@ -1039,3 +1039,11 @@ Migration 0041 preserves populated creative history; downgrade refuses to delete
 any timeline workspace/revision. The added 4096-MiB memory-scope allowlist entry
 preserves existing GPU executors' limits; it changes their wrapper identity and
 does not constitute a fresh GPU inference qualification.
+
+Film sound agents inherit the existing private agent/media scope. Natural drafts
+cannot invent a Library film ID or scene timings; an enabled scope requires an
+owned inspected source. Frozen file bytes and metadata are checked again before
+publication and execution. Goal preparation may replace only the description,
+with source and scene timings retained. Approval, cancellation, deadlines and
+idempotent receipts remain shared with other media agents. A completed stem does
+not authorize delivery of an unverified or failed film preview.

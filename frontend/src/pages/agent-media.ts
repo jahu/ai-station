@@ -46,7 +46,22 @@ export type AvatarMediaRequest = {
   seed?: number;
   gpu?: string;
 };
+export type EffectsMediaRequest = {
+  video_artifact_id: string | null;
+  prompt: string;
+  cues?: { start_frame: number; end_frame: number; prompt: string }[];
+  negative_prompt?: string;
+  steps?: number;
+  cfg?: number;
+  seed?: number | null;
+  gpu?: string;
+};
 export type AgentMediaScope =
+  | {
+      kind: "effects";
+      description_source: "fixed" | "goal";
+      request: EffectsMediaRequest;
+    }
   | {
       kind: "avatar";
       description_source: "fixed" | "goal";
@@ -104,6 +119,17 @@ export function newAgentMedia(
   goal: string,
   wholeAvatar = false,
 ): AgentMediaScope {
+  if (kind === "effects")
+    return {
+      kind,
+      description_source: "goal",
+      request: {
+        video_artifact_id: null,
+        prompt: goal.slice(0, 2000),
+        cues: [],
+        gpu: "auto",
+      },
+    };
   if (kind === "avatar")
     return {
       kind,
@@ -202,6 +228,29 @@ export function agentMediaIssue(
   options?: { allowMissingVoice?: boolean; allowMissingSources?: boolean },
 ): string | null {
   if (!scope) return "Choose the output and save its creative settings.";
+  if (scope.kind === "effects") {
+    if (!scope.request.video_artifact_id && !options?.allowMissingSources)
+      return "Choose a film from Library before enabling sound effects.";
+    if (!scope.request.prompt.trim() || scope.request.prompt.length > 2000)
+      return "Describe the sounds in 1–2000 characters.";
+    const cues = scope.request.cues ?? [];
+    if (
+      cues.length > 16 ||
+      cues.some(
+        (cue, i) =>
+          !Number.isInteger(cue.start_frame) ||
+          !Number.isInteger(cue.end_frame) ||
+          cue.start_frame < 0 ||
+          cue.end_frame <= cue.start_frame ||
+          cue.end_frame > 7500 ||
+          (i > 0 && cues[i - 1].end_frame > cue.start_frame) ||
+          !cue.prompt.trim() ||
+          cue.prompt.length > 500,
+      )
+    )
+      return "Keep scene sounds ordered, without overlap, inside the selected film.";
+    return null;
+  }
   if (scope.kind === "avatar") {
     const p = scope.request;
     if (

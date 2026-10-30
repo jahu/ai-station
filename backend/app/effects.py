@@ -6,16 +6,14 @@ import secrets
 import wave
 from datetime import timedelta
 from typing import Annotated
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, model_validator
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import session_scope, utcnow
+from app.effects_schema import EffectsRequest
 from app.host_media_executor import HostMediaExecutor
-from app.media_translation_text import TranslationOptions
 from app.models import Artifact, Run
 from app.paths import safe_join
 from app.python_execution import read_owned_file
@@ -28,41 +26,6 @@ RAM_MIB = 18432
 VRAM_MIB = 8192
 router = APIRouter(prefix="/api/audio/effects", tags=["sound effects"])
 DB = Annotated[Session, Depends(session_scope)]
-
-
-class SoundCue(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    start_frame: StrictInt = Field(ge=0, le=7499)
-    end_frame: StrictInt = Field(ge=1, le=7500)
-    prompt: str = Field(min_length=1, max_length=500)
-
-    @model_validator(mode="after")
-    def positive_interval(self):
-        if self.end_frame <= self.start_frame:
-            raise ValueError("A sound cue must end after it starts")
-        return self
-
-
-class EffectsRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
-    video_artifact_id: UUID
-    prompt: str = Field(min_length=1, max_length=2000)
-    cues: list[SoundCue] = Field(default_factory=list, max_length=16, exclude_if=lambda v: not v)
-    negative_prompt: str = Field(default="speech, music", max_length=2000)
-    steps: StrictInt = Field(default=25, ge=10, le=50)
-    cfg: float = Field(default=4.5, ge=1, le=10, strict=True, allow_inf_nan=False)
-    seed: StrictInt | None = Field(default=None, ge=0, le=2147483647)
-    gpu: str = Field(default="auto", pattern=r"^(auto|[0-9]{1,12})$")
-    translation: TranslationOptions | None = None
-
-    @model_validator(mode="after")
-    def ordered_cues(self):
-        previous = 0
-        for cue in self.cues:
-            if cue.start_frame < previous:
-                raise ValueError("Sound cues must be ordered without overlapping")
-            previous = cue.end_frame
-        return self
 
 
 def descriptive_fields(parameters):
@@ -158,16 +121,20 @@ def verify_source(session, run):
         raise ValueError("Frozen sound video changed")
 
 
-def create_effects_run(session, body, *, task=None, parent_run_id=None):
-    ready = capabilities()
-    if (
-        not ready.get("available")
-        or ready.get("profile") != PROFILE
-        or ready.get("ram_mib") != RAM_MIB
-        or ready.get("vram_mib") != VRAM_MIB
-        or not isinstance(ready.get("observation"), str)
-        or not re.fullmatch(r"[a-f0-9]{64}", ready["observation"])
-    ):
+def available_profile(ready):
+    return bool(
+        ready.get("available")
+        and ready.get("profile") == PROFILE
+        and ready.get("ram_mib") == RAM_MIB
+        and ready.get("vram_mib") == VRAM_MIB
+        and isinstance(ready.get("observation"), str)
+        and re.fullmatch(r"[a-f0-9]{64}", ready["observation"])
+    )
+
+
+def create_effects_run(session, body, *, task=None, parent_run_id=None, observed_profile=None):
+    ready = capabilities() if observed_profile is None else observed_profile
+    if not available_profile(ready):
         raise HTTPException(
             409, ready.get("reason", "Sound effects is not configured or still being verified")
         )
@@ -245,6 +212,10 @@ class EffectsExecutor(HostMediaExecutor):
         from app.media_translation import validate_media_translation
 
         validate_media_translation(session, run)
+        if run.parameters.get("media_inputs"):
+            from app.agent_media import verify_published_inputs
+
+            verify_published_inputs(session, run)
         verify_source(session, run)
         run.parameters = {
             **run.parameters,

@@ -1,5 +1,6 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "../ui/button";
+import NumberInput from "../timeline/NumberInput";
 
 import { cuesValid, type SoundCue } from "./sound-cues";
 
@@ -56,7 +57,7 @@ export default function SoundCueEditor({
           <div className="effects-cue-times">
             <label>
               From (seconds)
-              <input
+              <NumberInput
                 aria-label={`Scene ${index + 1} start in seconds`}
                 type="number"
                 min={0}
@@ -73,7 +74,7 @@ export default function SoundCueEditor({
             </label>
             <label>
               To (seconds)
-              <input
+              <NumberInput
                 aria-label={`Scene ${index + 1} end in seconds`}
                 type="number"
                 min={1 / fps}

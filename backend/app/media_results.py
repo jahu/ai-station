@@ -10,6 +10,7 @@ def final_media_executor(media):
     ):
         return "sonic_whole"
     return {
+        "effects": "effects_preview",
         "image": "photo_pipe",
         "music": "ace_step_music",
         "speech": "chatterbox",

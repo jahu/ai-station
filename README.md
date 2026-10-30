@@ -324,3 +324,14 @@ older preview and requires a new render before export. Source files and earlier
 results remain in Library. CPU rendering uses an owned four-GiB/zero-swap scope
 and does not unload GPU models. See [timeline contracts](docs/plans/media-timeline.md)
 for supported timing, private ownership and qualification gates.
+
+### Film sound agents
+
+In an agent's **Create media** settings choose **Sound effects**, select a film
+from your Library and describe what should be heard. Optional scene directions
+keep exact start/end times. Use the saved description each run, or let the
+selected local model write a new overall description from the reviewed goal.
+The film, scene directions and generation settings stay fixed. Review and enable
+the definition, then Run now or use its saved schedule. Each execution retains a
+separate effects WAV and a synchronized video preview; the original film remains
+unchanged. Missing sources or an unavailable local engine block activation.

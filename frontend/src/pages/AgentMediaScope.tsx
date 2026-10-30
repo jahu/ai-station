@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Image,
   Music2,
@@ -9,6 +9,7 @@ import {
   Settings2,
   Plus,
   X,
+  Waves,
 } from "lucide-react";
 import MediaInput from "../components/media/MediaInput";
 import { Button } from "../components/ui/button";
@@ -18,6 +19,7 @@ import type { SpeechCapabilities } from "../components/media/speech-delivery";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 import MusicScope from "./MusicScope";
 import AgentVideoScope from "./AgentVideoScope";
+import AgentEffectsScope from "./AgentEffectsScope";
 import AgentAvatarScope from "./AgentAvatarScope";
 import { useWholeAvatarCapabilities } from "../components/media/AvatarWholeProfile";
 import {
@@ -44,6 +46,7 @@ export default function AgentMediaScopeEditor({
     Record<AgentMediaScope["kind"], { ready: boolean; reason?: string | null }>
   >;
 }) {
+  const cache = useQueryClient();
   const [uploading, setUploading] = useState(false);
   const hardware = useHardware();
   const wholeAvatar = useWholeAvatarCapabilities();
@@ -58,6 +61,21 @@ export default function AgentMediaScopeEditor({
         ? 2000
         : false,
   });
+  const effects = useQuery({
+    queryKey: ["effects-capabilities"],
+    queryFn: () =>
+      api<{ available: boolean; readiness?: string; reason?: string }>(
+        "/audio/effects/capabilities",
+      ),
+    enabled: scope.kind === "effects",
+    staleTime: 30000,
+    refetchInterval: (q) =>
+      q.state.data?.readiness === "checking" ? 1000 : false,
+  });
+  useEffect(() => {
+    if (effects.data?.available)
+      void cache.invalidateQueries({ queryKey: ["agent-tools"] });
+  }, [effects.data?.available, cache]);
   const selectedReadiness =
     scope.kind === "speech" && scope.request.engine === "fish_s2_pro"
       ? {
@@ -66,7 +84,12 @@ export default function AgentMediaScopeEditor({
             speech.data?.engines?.fish_s2_pro?.reason ??
             "Checking expressive speech setup…",
         }
-      : readiness?.[scope.kind];
+      : scope.kind === "effects"
+        ? {
+            ready: effects.data?.available === true,
+            reason: effects.data?.reason ?? "Checking sound effects setup…",
+          }
+        : readiness?.[scope.kind];
   const recordedWhole =
     scope.kind === "avatar" &&
     !!scope.request.generation_profile &&
@@ -75,7 +98,7 @@ export default function AgentMediaScopeEditor({
   const caption =
     scope.kind === "avatar"
       ? (scope.request.speech_text ?? scope.request.prompt)
-      : scope.kind === "video"
+      : scope.kind === "video" || scope.kind === "effects"
         ? scope.request.prompt
         : scope.kind === "music"
           ? scope.request.caption
@@ -86,15 +109,17 @@ export default function AgentMediaScopeEditor({
               : (image?.prompt ?? "");
   const issue = agentMediaIssue(scope);
   const OutputIcon =
-    scope.kind === "avatar"
-      ? UserRound
-      : scope.kind === "video"
-        ? Film
-        : scope.kind === "speech"
-          ? AudioLines
-          : scope.kind === "music"
-            ? Music2
-            : Image;
+    scope.kind === "effects"
+      ? Waves
+      : scope.kind === "avatar"
+        ? UserRound
+        : scope.kind === "video"
+          ? Film
+          : scope.kind === "speech"
+            ? AudioLines
+            : scope.kind === "music"
+              ? Music2
+              : Image;
   function updateImage(patch: Partial<ImageMediaRequest>) {
     if (scope.kind === "image")
       onChange({ ...scope, request: { ...scope.request, ...patch } });
@@ -119,36 +144,41 @@ export default function AgentMediaScopeEditor({
       )}
       <fieldset disabled={disabled || uploading}>
         <div className="mode-tabs" aria-label="Media output type">
-          {(["image", "music", "speech", "video", "avatar"] as const).map(
-            (kind) => (
-              <button
-                type="button"
-                key={kind}
-                aria-pressed={scope.kind === kind}
-                className={scope.kind === kind ? "active" : ""}
-                onClick={() =>
-                  onChange({
-                    ...newAgentMedia(
-                      kind,
-                      goal,
-                      wholeAvatar.data?.available === true,
-                    ),
-                    description_source: scope.description_source,
-                  })
-                }
-              >
-                {kind === "avatar" ? (
-                  <UserRound size={16} />
-                ) : kind === "video" ? (
-                  <Film size={16} />
-                ) : kind === "image" ? (
-                  <Image size={16} />
-                ) : kind === "speech" ? (
-                  <AudioLines size={16} />
-                ) : (
-                  <Music2 size={16} />
-                )}
-                {kind === "avatar"
+          {(
+            ["image", "music", "speech", "video", "avatar", "effects"] as const
+          ).map((kind) => (
+            <button
+              type="button"
+              key={kind}
+              aria-pressed={scope.kind === kind}
+              className={scope.kind === kind ? "active" : ""}
+              onClick={() =>
+                onChange({
+                  ...newAgentMedia(
+                    kind,
+                    goal,
+                    wholeAvatar.data?.available === true,
+                  ),
+                  description_source: scope.description_source,
+                })
+              }
+            >
+              {kind === "effects" ? (
+                <Waves size={16} />
+              ) : kind === "avatar" ? (
+                <UserRound size={16} />
+              ) : kind === "video" ? (
+                <Film size={16} />
+              ) : kind === "image" ? (
+                <Image size={16} />
+              ) : kind === "speech" ? (
+                <AudioLines size={16} />
+              ) : (
+                <Music2 size={16} />
+              )}
+              {kind === "effects"
+                ? "Sound effects"
+                : kind === "avatar"
                   ? "Avatar"
                   : kind === "video"
                     ? "Video"
@@ -157,9 +187,8 @@ export default function AgentMediaScopeEditor({
                       : kind === "speech"
                         ? "Speech"
                         : "Music"}
-              </button>
-            ),
-          )}
+            </button>
+          ))}
         </div>
         {scope.kind === "avatar" && (
           <label>
@@ -285,7 +314,7 @@ export default function AgentMediaScopeEditor({
                       ? 512
                       : scope.kind === "speech"
                         ? 1000
-                        : scope.kind === "video"
+                        : scope.kind === "video" || scope.kind === "effects"
                           ? 2000
                           : 10000
                 }
@@ -301,7 +330,7 @@ export default function AgentMediaScopeEditor({
                             : { prompt: event.target.value }),
                         },
                       })
-                    : scope.kind === "video"
+                    : scope.kind === "effects"
                       ? onChange({
                           ...scope,
                           request: {
@@ -309,27 +338,35 @@ export default function AgentMediaScopeEditor({
                             prompt: event.target.value,
                           },
                         })
-                      : scope.kind === "speech"
+                      : scope.kind === "video"
                         ? onChange({
                             ...scope,
                             request: {
                               ...scope.request,
-                              text: event.target.value,
+                              prompt: event.target.value,
                             },
                           })
-                        : scope.kind === "music"
+                        : scope.kind === "speech"
                           ? onChange({
                               ...scope,
                               request: {
                                 ...scope.request,
-                                caption: event.target.value,
+                                text: event.target.value,
                               },
                             })
-                          : updateImage(
-                              image?.mode === "img2img"
-                                ? { edit_prompt: event.target.value }
-                                : { prompt: event.target.value },
-                            )
+                          : scope.kind === "music"
+                            ? onChange({
+                                ...scope,
+                                request: {
+                                  ...scope.request,
+                                  caption: event.target.value,
+                                },
+                              })
+                            : updateImage(
+                                image?.mode === "img2img"
+                                  ? { edit_prompt: event.target.value }
+                                  : { prompt: event.target.value },
+                              )
                 }
                 placeholder={
                   scope.kind === "speech"
@@ -354,6 +391,17 @@ export default function AgentMediaScopeEditor({
                     : scope.description_source,
               })
             }
+            onBusy={(busy) => {
+              setUploading(busy);
+              onBusy(busy);
+            }}
+          />
+        )}
+        {scope.kind === "effects" && (
+          <AgentEffectsScope
+            value={scope.request}
+            disabled={disabled || uploading}
+            onChange={(request) => onChange({ ...scope, request })}
             onBusy={(busy) => {
               setUploading(busy);
               onBusy(busy);
