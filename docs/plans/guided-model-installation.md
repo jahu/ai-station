@@ -206,3 +206,73 @@ The new runtime recipe/inspection module is not registered as an install API.
 No runtime install/pull capability is claimed until those contracts pass. Linux
 x86-64 CUDA qualification does not imply macOS/Metal or native Windows readiness;
 those routes and all multimodal/companion-file recipes remain required.
+
+### Runtime protocol checkpoint — 2026-10-31
+
+The next branch now implements a typed native preparation protocol and owned
+child, plus the gated control-plane Task API. Native preparation freezes the
+profile/hash/deadline, resolves the operator's effective **local Unix Docker
+context**, records daemon identity and disk headroom, and never accepts caller
+images, URLs or commands. A single owned child streams the fixed image pull
+through that Unix API. Structured per-layer observations supply byte progress;
+only exact digest/platform verification and an immutable-request receipt permit
+success. Cached images are re-inspected and do not launch a process. Metadata
+writes use exclusive temporary files, fsync and atomic replacement.
+
+The real Docker 29.1.3 qualification used an owned TLS loopback registry with an
+approximately 8-MiB neutral synthetic image. Stop closed its daemon-side transfer,
+left the byte count stable and did not publish the image. An explicit new attempt
+then survived SIGKILL/restart of the isolated Runner: the original process identity
+was inspected, completion was reconciled from its checked receipt despite a lost
+waitpid exit code, and cached replay created no new process. Only the uniquely
+labeled test image was removed afterward. No GPU, production state, drivers,
+Docker configuration or pre-existing images were changed. A separate actual
+inspection reconciled the already-installed pinned public llama.cpp image over
+the real local Docker API, without a fresh 2.4-GiB transfer. These are distinct
+claims; the synthetic test is not a fresh public-image clean-install smoke.
+
+Normal tests cover typed permission/source/deadline rejection, cancel-before-send,
+immutable replay, concurrent-profile exclusion, uncertain dispatch, saved log
+cursors, receipt reconciliation, filesystem boundaries, and private account-owned
+queue/Stop/Resume receipts. The control-plane API is gated by native
+`installation_available`, which remains false. The new native install router is
+not yet registered in the production Runner app. There is **no operational
+end-user runtime installation claim** at this checkpoint.
+
+Remaining integration, on the same feature branch:
+
+1. Add the runtime executor and register it only after contracts pass. It must
+   use the saved profile/hash and exact Run ID/deadline, retain structured byte
+   progress and log offsets, verify current administrator authority, and publish
+   only a checked private JSON receipt under the Task Stop fence. Lost claims
+   must not cancel a newer worker's operation or release its reservations.
+2. Extend worker-only revoked-operation cleanup, following
+   `revoked_private_access.py`, to cancel this exact native operation without
+   opening an execution scope for a disabled/demoted user. Preserve leases/RAM
+   until native cleanup is confirmed. Add actual admin/member and revocation
+   cases, including unavailable Runner and no duplicate pulls.
+3. Add the lifecycle executor to safe native-journal reattachment in
+   `recovery.py` and queued cancellation handling in `runs.py`; a dispatched
+   requeued Run still requires native Stop. Explicit Resume keeps the original
+   frozen recipe. Uncertain launches remain inspection-required.
+4. Make app-owned GGUF verify/load consistently use a prepared pinned image when
+   the operator's configured image is absent. Preserve configured images,
+   external model behavior and legacy request hashes. Do not retag an operator's
+   image. Qualify actual local model loading/inference with that fallback.
+5. Add the runtime step before weight downloads in the existing model setup UI:
+   ready existing runtime first, source/license/storage review, durable
+   preparation history/Stop/Resume and clear verified-image versus actual-first-
+   inference states. Do not introduce a second execution queue or mode switch.
+6. Finish native app route registration and availability, affected complete
+   test families, compiled private desktop/mobile/API/worker/native proof,
+   packaged image/Compose and exact source/bundle review before a `develop` PR
+   and preserving-data rollout. Full media/advanced-catalog/platform installers
+   and NR-06/07/09 release gates remain in scope.
+
+Docker's documented request-disconnection cancellation contract is described in
+[image pull](https://docs.docker.com/reference/cli/docker/image/pull/#cancel-a-pull).
+The pinned image's public OCI manifest/layer descriptors were inspected with
+SHA-256 verification; its Linux/amd64 child is
+`sha256:fd2e46908d509c497115bbec9372f0cc1d658c314b0394a4d190dff9f1c63827`.
+Its 13 layer/config objects total **2,589,389,163 bytes**. Private exact-source and
+qualification evidence is under `data/acceptance/guided-runtime-setup-20261031/`.
