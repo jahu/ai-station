@@ -129,12 +129,12 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
         },
     )
     if receipt and body.translation == "retry":
-        from app.media_translation import enqueue_translation
+        from app.media_translation import enqueue_translation, recovery_options
 
-        enqueue_translation(
-            session, retry, {**receipt.get("options", {}), "mode": "on"}, policy=receipt["policy"]
-        )
+        enqueue_translation(session, retry, recovery_options(receipt, "retry"), policy=receipt["policy"])
     elif receipt and body.translation == "original":
+        from app.media_translation import recovery_options
+
         original_receipt = {
             key: value
             for key, value in receipt.items()
@@ -142,7 +142,7 @@ def retry_image(run_id: UUID, session: DB, body: ImageRetry | None = None):
         }
         retry.parameters = {
             **retry.parameters,
-            "translation": {**receipt.get("options", {}), "mode": "off", "review": False},
+            "translation": {**recovery_options(receipt, "original"), "review": False},
         }
         retry.metadata_json = {
             **retry.metadata_json,

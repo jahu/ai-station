@@ -21,6 +21,11 @@ import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
 import MediaInput from "../components/media/MediaInput";
 import MediaResult from "../components/media/MediaResult";
+import {
+  PromptTranslationControl,
+  translationRequest,
+  type TranslationOptions,
+} from "../components/media/PromptTranslation";
 import AvatarWholeProfile, {
   useWholeAvatarCapabilities,
   WHOLE_AVATAR_PROFILE,
@@ -98,6 +103,17 @@ function AvatarForm({
   const [prompt, setPrompt] = useState(
     String(saved.prompt ?? "A person speaking naturally, static camera."),
   );
+  const [translation, setTranslation] = useState<TranslationOptions>(
+    (saved.translation as TranslationOptions | undefined) ?? {
+      mode: "off",
+      review: false,
+      protected_terms: [],
+    },
+  );
+  const promptPreparation =
+    translation.enhance || translation.mode !== "off" || translation.review
+      ? translationRequest(translation)
+      : {};
   const [size, setSize] = useState(Number(saved.size ?? 384));
   const [frames, setFrames] = useState(Number(saved.frames ?? 81));
   const [fullRecording, setFullRecording] = useState(
@@ -146,6 +162,7 @@ function AvatarForm({
       voiceMode,
       speechText,
       prompt,
+      translation,
       size,
       frames,
       fullRecording,
@@ -169,7 +186,13 @@ function AvatarForm({
         const body = {
           ...(wholeRecording
             ? { generation_profile: WHOLE_AVATAR_PROFILE }
-            : { ...profileParameters, prompt, size, steps }),
+            : {
+                ...profileParameters,
+                prompt,
+                size,
+                steps,
+                ...promptPreparation,
+              }),
           image_artifact_id: image,
           audio_artifact_id: audio,
           seed,
@@ -198,6 +221,7 @@ function AvatarForm({
               image_artifact_id: image,
               audio_artifact_id: audio,
               prompt,
+              ...promptPreparation,
               size,
               frames,
               steps,
@@ -216,6 +240,7 @@ function AvatarForm({
           image_artifact_id: image,
           audio_artifact_id: audio,
           prompt,
+          ...promptPreparation,
           size,
           frames,
           steps,
@@ -355,20 +380,27 @@ function AvatarForm({
             </Link>
             {wholeRecording && <AvatarWholeProfile checking={checkingWhole} />}
             {!wholeRecording && (
-              <label className="media-text-label">
-                <span>
-                  Scene & motion <small>Optional direction</small>
-                </span>
-                <textarea
-                  aria-label="Scene and motion"
-                  required
-                  maxLength={2000}
-                  rows={3}
-                  value={prompt}
-                  onChange={(event) => setPrompt(event.target.value)}
-                  placeholder="Describe the expression, motion or camera…"
+              <>
+                <label className="media-text-label">
+                  <span>
+                    Scene & motion <small>Optional direction</small>
+                  </span>
+                  <textarea
+                    aria-label="Scene and motion"
+                    required
+                    maxLength={2000}
+                    rows={3}
+                    value={prompt}
+                    onChange={(event) => setPrompt(event.target.value)}
+                    placeholder="Describe the expression, motion or camera…"
+                  />
+                </label>
+                <PromptTranslationControl
+                  value={translation}
+                  onChange={setTranslation}
+                  disabled={busy}
                 />
-              </label>
+              </>
             )}
             <div className="media-field-pair">
               {!wholeRecording && (

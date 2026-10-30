@@ -34,6 +34,9 @@ def recipe(run, *, translate):
     elif executor == "ace_step_music":
         identifier = f"{VERSION}:music"
         operation = "Describe a coherent musical style, mood, instrumentation, rhythm and arrangement. Lyrics are separate immutable inputs, never generated or rewritten here. "
+    elif executor == "echomimic":
+        identifier = f"{VERSION}:echo"
+        operation = "Clarify natural portrait motion, expression and camera behavior consistent with the request. The portrait and recording are separate references. Never change the narration or claim to have inspected their contents. "
     else:
         raise ValueError("This generator has no qualified descriptive enhancement contract")
     language = (

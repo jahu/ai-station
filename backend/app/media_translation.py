@@ -106,6 +106,8 @@ def save_preferences(body: PreferencesWrite, session: DB):
 
 def image_fields(run):
     params = run.parameters
+    if run.executor_type == "echomimic":
+        return {"prompt": params["prompt"]}
     if run.executor_type == "wan_video":
         return {key: params[key] for key in ["prompt", "negative_prompt"] if params.get(key)}
     if run.executor_type == "ace_step_music":
@@ -117,6 +119,19 @@ def image_fields(run):
 
 
 def source_hash(run, fields):
+    if run.executor_type == "echomimic":
+        return digest(
+            {
+                "executor": run.executor_type,
+                "fields": fields,
+                "gpu": run.requested_gpu,
+                "inputs": {
+                    key: value
+                    for key, value in run.parameters.items()
+                    if key not in {"prompt", "translation", "previous_video_run_id"}
+                },
+            }
+        )
     keys = {
         "wan_video": [
             "image_relative",
@@ -180,7 +195,7 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
     fields = image_fields(media)
     if not (enabled or options.enhance) or not fields:
         return None
-    if media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music"}:
+    if media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music", "echomimic"}:
         raise ValueError("Unsupported media translation consumer")
     system = SYSTEM
     template = None
@@ -201,7 +216,7 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
         key: 512
         if key == "caption"
         else 2000
-        if media.executor_type == "wan_video"
+        if media.executor_type in {"wan_video", "echomimic"}
         else FIELD_LIMITS.get(key, 10000)
         for key in fields
     }
@@ -284,7 +299,7 @@ def consumer(session, run):
         not media
         or media.status != "queued"
         or media.task_id != run.task_id
-        or media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music"}
+        or media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music", "echomimic"}
     ):
         raise ValueError("Translation has no matching media request")
     receipt = media.metadata_json.get(RECEIPT, {})
@@ -472,7 +487,7 @@ class MediaTranslationExecutor:
                     if (
                         not item
                         or item.task_id != media.task_id
-                        or item.executor_type != "wan_video"
+                        or item.executor_type not in {"wan_video", "echomimic"}
                         or not item.parameters.get("internal_media")
                         or item.status != "queued"
                     ):
@@ -742,6 +757,15 @@ def enqueue_groups(session, entries):
     return primary_ids
 
 
+def recovery_options(receipt, choice):
+    options = {**receipt.get("options", {}), "mode": "on" if choice == "retry" else "off"}
+    if receipt.get("options", {}).get("enhance"):
+        options["mode"] = receipt["options"].get("mode", "inherit") if choice == "retry" else "off"
+        if choice != "retry":
+            options["enhance"] = False
+    return options
+
+
 def prepare_retry(session, source, retry, choice):
     receipt = source.metadata_json.get(RECEIPT)
     if not receipt:
@@ -756,11 +780,7 @@ def prepare_retry(session, source, retry, choice):
         retry.metadata_json = {**retry.metadata_json, RECEIPT: receipt}
         return None
     retry.parameters = {**retry.parameters, **receipt["original"]}
-    options = {**receipt.get("options", {}), "mode": "on" if choice == "retry" else "off"}
-    if receipt.get("options", {}).get("enhance"):
-        options["mode"] = receipt["options"].get("mode", "inherit") if choice == "retry" else "off"
-        if choice != "retry":
-            options["enhance"] = False
+    options = recovery_options(receipt, choice)
     if choice == "retry":
         return retry, options, receipt["policy"]
     retry.parameters = {**retry.parameters, "translation": {**options, "review": False}}
@@ -794,7 +814,7 @@ def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
         from app.images import ImageRetry, retry_image
 
         return retry_image(run_id, session, ImageRetry.model_validate(body.model_dump()))
-    if not source or source.executor_type not in {"wan_video", "ace_step_music"}:
+    if not source or source.executor_type not in {"wan_video", "ace_step_music", "echomimic"}:
         raise HTTPException(404, "Media Run not found")
     if source.parameters.get("internal_media"):
         raise HTTPException(409, "Resume the whole film instead of an individual segment")

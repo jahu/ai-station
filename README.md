@@ -175,6 +175,13 @@ saved observations rather than a simulated countdown. See
 [creative workspaces](docs/creative-workspaces.md) and
 [generation progress](docs/plans/generation-progress.md).
 
+Development builds offer **Improve my prompt locally** in Images, Video, Music
+and Echo avatar workspaces. Choose your local preparation model in Settings →
+Generation, optionally review its wording, and keep the original beside the
+effective prompt. Lyrics and spoken scripts are preserved. Fixed Sonic and
+upscale operations have no descriptive prompt to enhance.
+[Prompt preparation contracts](docs/plans/local-prompt-enhancement.md).
+
 ## 🌱 Where we're going
 
 The ambition is simple: **a person with a home GPU should be able to install

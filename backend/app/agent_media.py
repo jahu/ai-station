@@ -413,6 +413,7 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
             parent_run_id=run.id,
             execution_deadline_at=run.parameters["execution_deadline_at"],
             observed_profile=profile,
+            _prepare_translation=False,
             appearance_snapshot={"whole_recipe": root.parameters.get("avatar_whole_recipe")}
             if prepared_scope.request.generation_profile
             else {"appearance_recipe": root.parameters.get("avatar_appearance_recipe")},
@@ -462,6 +463,10 @@ def publish_media(session, run, prepared_scope, profile, preparation_id):
         "agent_media_preparation_sha256": preparation_sha,
     }
     child.triggered_by = run.triggered_by
+    if prepared_scope.kind == "avatar":
+        from app.media_jobs import prepare_avatar_prompts
+
+        prepare_avatar_prompts(session, run.task)
     if prepared_scope.kind == "video":
         from app.media_translation import enqueue_groups
 

@@ -51,9 +51,9 @@ export default function GenerationSettings() {
       </div>
       <p className="muted">
         Choose a local model for prompt preparation. You can translate image,
-        video and music descriptions, or optionally improve them in each
-        workspace. Your original wording stays available. Quoted text and model
-        tokens are preserved.
+        video, music and Echo avatar descriptions, or optionally improve them in
+        each workspace. Your original wording stays available. Quoted text and
+        model tokens are preserved.
       </p>
       <form
         onSubmit={(event) => {
@@ -76,8 +76,8 @@ export default function GenerationSettings() {
             <strong>Translate media prompts</strong>
             <small>
               Images, Video and music descriptions, including media actions in
-              Chat/Work. Speech, lyrics and ordinary conversations stay in their
-              original language.
+              Chat. Echo avatar prompts can opt in from their workspace. Speech,
+              lyrics and ordinary conversations stay in their original language.
             </small>
           </span>
         </label>
