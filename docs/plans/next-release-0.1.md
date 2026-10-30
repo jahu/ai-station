@@ -289,9 +289,13 @@ navigation/reload and foreign-user denial. This is not real model inference.
 The complete 936-case UI baseline and final ten-case changed workspace family
 pass, with format/lint/typecheck/build and Compose checks. The real compiled
 UI check also caught and verified the fix for a fresh-cache submission conflict.
-Review and production rollout remain open; schema 0039 has not been applied to
-the live workstation. NR-02 and the other remaining NR
-items stay open; this increment does not complete the full next-release scope.
+PRs #514/#515 are reviewed, merged and deployed. The 0038 → 0039 rollout
+preserved all existing table contents and credentials with a fresh backup; native
+Runner, private access and loaded models were not restarted. Actual production
+desktop/mobile account UI checks passed with an audited temporary device, revoked
+after verification. Translation review/resource-wait controls retain their prior
+behavior; their final 32-case component families pass without unhandled errors.
+NR-01 is complete. NR-02 and the other remaining NR items stay open; this increment does not complete the full next-release scope.
 
 NR-12 has an automatic-search candidate: the selected admitted Chat model
 prepares the first query before retrieval, with bounded ordinary-text follow-up
