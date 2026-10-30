@@ -24,6 +24,16 @@ DB = Annotated[Session, Depends(session_scope)]
 MAX_BYTES = 20 * 1024 * 1024
 
 
+@router.get("/capabilities")
+def capabilities():
+    from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
+
+    try:
+        return RunnerClient().request("GET", "/v1/audio/capabilities")
+    except (RunnerError, RunnerUnavailable):
+        return {"available": False, "delivery": None}
+
+
 def wav_metadata(data, *, max_seconds=60):
     if len(data) > MAX_BYTES:
         raise ValueError("WAV must be at most 20 MiB")
@@ -96,6 +106,7 @@ def create_audio_run(session, body, *, task=None, parent_run_id=None):
             "reference_relative": reference.relative_path,
             "parent_artifact_ids": [reference.id],
             "backend": "chatterbox",
+            **({"delivery": body.delivery.model_dump()} if body.delivery is not None else {}),
         },
     )
     return run
@@ -108,6 +119,13 @@ class AudioExecutor(HostMediaExecutor):
     mime_type = "audio/wav"
 
     def validate_inputs(self, session, run):
+        if run.parameters.get("delivery") is not None and not run.parameters.get("delivery_source_sha256"):
+            from app.runner_client import RunnerClient
+
+            delivery = RunnerClient().request("GET", "/v1/audio/capabilities").get("delivery")
+            if not delivery or delivery.get("version") != "chatterbox-controls-v1":
+                raise ValueError("The configured speech runtime does not support delivery controls")
+            run.parameters = {**run.parameters, "delivery_source_sha256": delivery["source_sha256"]}
         if run.parameters.get("whole_avatar_sources"):
             from app.whole_avatars import verify_snapshots
 
@@ -118,6 +136,14 @@ class AudioExecutor(HostMediaExecutor):
             verify_published_inputs(session, run)
 
     def on_success(self, session, run, artifact):
+        if run.parameters.get("delivery") is not None:
+            artifact.metadata_json = {
+                **artifact.metadata_json,
+                "speech_delivery": {
+                    **run.parameters["delivery"],
+                    "source_sha256": run.parameters["delivery_source_sha256"],
+                },
+            }
         if run.parameters.get("whole_avatar_sources"):
             from app.whole_avatars import verify_snapshots
 
@@ -154,6 +180,14 @@ class AudioExecutor(HostMediaExecutor):
                 "reference_relative": run.parameters["reference_relative"],
                 "gpu": int(allocated),
                 "permissions": run.effective_permissions,
+                **(
+                    {
+                        "delivery": run.parameters["delivery"],
+                        "delivery_source_sha256": run.parameters["delivery_source_sha256"],
+                    }
+                    if run.parameters.get("delivery") is not None
+                    else {}
+                ),
                 **self.native_budget(run),
             },
         )

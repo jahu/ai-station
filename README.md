@@ -186,6 +186,11 @@ For edits, development builds also offer **Auto · match this edit** with a visi
 model recommendation. Pose changes and object removal can use Qwen while explicit
 LUSTIFY choices remain available. [Image workflows](docs/image-workflows.md).
 
+Speech development builds offer optional **Shape the delivery** controls for a
+compatible configured Chatterbox CLI. Expression, guidance and variation stay with
+each version; the spoken script and standard defaults remain intact.
+[Speech development](docs/plans/expressive-speech.md).
+
 ## 🌱 Where we're going
 
 The ambition is simple: **a person with a home GPU should be able to install

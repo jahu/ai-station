@@ -25,6 +25,11 @@ I/O runs there. The selected checkpoint/profile and reason are frozen with the
 Run. Retry never re-routes old work, explicit models remain authoritative, and
 legacy request serialization is unchanged when Auto is absent.
 
+Optional [speech delivery controls](plans/expressive-speech.md) use the inspected
+configured CLI's existing expression, guidance and sampling arguments. A worker
+freezes the supported CLI hash; native dispatch rechecks it and passes the same
+bounded values to every chunk. Standard speech retains its original identity.
+
 The [optional prompt enhancement](plans/local-prompt-enhancement.md) extends the
 existing local translation preparation/apply executors. Fixed generator/operation
 templates, original/effective receipts, same-owner source bindings and normal

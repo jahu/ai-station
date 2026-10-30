@@ -1,0 +1,66 @@
+.speech-delivery {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.speech-delivery .speech-delivery-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.media-composer .speech-delivery input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  margin-top: 2px;
+  padding: 0;
+  accent-color: var(--accent);
+}
+
+.speech-delivery-toggle > span {
+  display: grid;
+  gap: 4px;
+}
+
+.speech-delivery-toggle small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.speech-delivery-settings {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.speech-delivery-settings label {
+  display: grid;
+  gap: 8px;
+}
+
+.speech-delivery-settings label > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.media-composer .speech-delivery-settings input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  accent-color: var(--accent);
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+}
+
+.speech-delivery-settings output {
+  font-variant-numeric: tabular-nums;
+}
+
+.speech-delivery-settings details label {
+  margin-top: 14px;
+}

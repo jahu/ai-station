@@ -6,7 +6,7 @@ import {
 } from "../components/creative/creative-context";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import { AudioLines, Settings2, Sparkles } from "lucide-react";
 import { api, useHardware, type Run } from "../api";
@@ -18,6 +18,11 @@ import { mediaBusy, useMediaRun } from "../components/media/media-run";
 import Transcription from "./Transcription";
 import Music from "./Music";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
+import SpeechDeliveryControls from "../components/media/SpeechDeliveryControls";
+import {
+  defaultSpeechDelivery,
+  type SpeechDelivery,
+} from "../components/media/speech-delivery";
 
 export default function Audio({
   withCreativeSessions = false,
@@ -128,14 +133,37 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
   );
   const [text, setText] = useState(String(restored.text ?? ""));
   const [gpu, setGpu] = useState(String(restored.gpu ?? "auto"));
-  useCreativeDraft({ formState: { reference, text, gpu } });
+  const [shapeDelivery, setShapeDelivery] = useState(!!restored.delivery);
+  const [delivery, setDelivery] = useState<SpeechDelivery>(
+    (restored.delivery as SpeechDelivery | undefined) ?? defaultSpeechDelivery,
+  );
+  const capabilities = useQuery({
+    queryKey: ["speech-capabilities"],
+    queryFn: () =>
+      api<{ delivery?: { version: string } | null }>("/audio/capabilities"),
+    staleTime: 30000,
+  });
+  const supportsDelivery =
+    capabilities.data?.delivery?.version === "chatterbox-controls-v1";
+  useCreativeDraft({
+    formState: { reference, text, gpu, ...(shapeDelivery ? { delivery } : {}) },
+  });
   const [uploading, setUploading] = useState(false);
   const hardware = useHardware();
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
   const generate = useMutation({
     mutationFn: async () => {
-      const parameters = { text, gpu, reference_artifact_id: reference };
+      if (shapeDelivery && !supportsDelivery)
+        throw new Error(
+          "Delivery controls are unavailable. Turn them off to use the standard voice.",
+        );
+      const parameters = {
+        text,
+        gpu,
+        reference_artifact_id: reference,
+        ...(shapeDelivery ? { delivery } : {}),
+      };
       if (creative)
         return creativeRun(
           await creative.generate(parameters, {
@@ -210,6 +238,14 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
                 placeholder="Write the words you want to hear…"
               />
             </label>
+            <SpeechDeliveryControls
+              enabled={shapeDelivery}
+              supported={supportsDelivery}
+              disabled={uploading || busy}
+              value={delivery}
+              onEnable={setShapeDelivery}
+              onChange={setDelivery}
+            />
             <details className="media-advanced">
               <summary>
                 <Settings2 size={15} />
@@ -230,7 +266,13 @@ function SpeechForm({ initialInput }: { initialInput: string | null }) {
             <Button
               type="submit"
               className="media-generate"
-              disabled={!reference || !text.trim() || uploading || busy}
+              disabled={
+                !reference ||
+                !text.trim() ||
+                uploading ||
+                busy ||
+                (shapeDelivery && !supportsDelivery)
+              }
             >
               <Sparkles size={17} />
               {busy ? "Generating speech…" : "Generate speech"}
