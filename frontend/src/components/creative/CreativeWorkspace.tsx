@@ -521,7 +521,7 @@ function SessionBody({
         onChanged();
         setTimeout(
           () =>
-            end.current?.scrollIntoView({
+            end.current?.scrollIntoView?.({
               block: "nearest",
               behavior:
                 typeof window.matchMedia === "function" &&
