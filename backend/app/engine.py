@@ -85,6 +85,9 @@ def _execute_claimed(session, run, worker_id, executors):
             or not user.enabled
             or run.executor_type in host_account_executors
             and not user.is_admin
+            or run.executor_type == "memory_embed"
+            and run.capability == "memory.embed.prepare"
+            and not user.is_admin
         ):
             mark_failed(
                 session,

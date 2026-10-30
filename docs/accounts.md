@@ -187,9 +187,27 @@ workstation database and does not enable the profile on that installation.
 Shared embedding-model readiness exposes owner-filtered counts/activity and
 hides another account's Run IDs and machine credential references. Its fixed
 internal configuration read does not grant a member administrative Settings
-access. Per-owner embedding job bookkeeping and verified model-preparation writes
-remain part of the execution cutover gate; a readiness GET is not proof that all
-embedding execution paths are qualified.
+access. Preparation/health/index activity and learned dimensions are kept in
+account-owned preferences bound to the exact model/revision. An account may index
+or search its own memory while another account has an independent operation;
+model preparation itself uses a workstation-wide busy check without revealing
+the other account's Run identity. Shared model settings contain infrastructure
+metadata rather than user activity IDs.
+
+Only a running, owned preparation Run for the fixed approved CPU model can
+activate shared configuration. Activation rechecks the live administrator role,
+frozen revision/model identity and verified vector dimension. An execution session
+gets neither generic machine-setting write permission nor admin-wide context.
+Queued preparation also fails before dispatch after administrator demotion.
+User-visible Run parameters omit machine credential references; the worker
+resolves the current, revision-bound service credential internally.
+
+A controlled CPU child and real API/worker checks cover Alice/Bob preparation,
+private indexing/search/results, cross-account activity denial, shared busy
+coalescing, role demotion and owner-only cancellation. These are synthetic
+executor checks, not a claim that new embedding weights were downloaded or a
+particular installed model was benchmarked. The remaining runtime/tool/request
+audit is still required before enabling the overall account profile.
 
 Historical migration tests now materialize their synthetic unowned rows in a
 real Alembic-created legacy schema before upgrading. They do not bypass the

@@ -7,7 +7,12 @@ from sqlalchemy import select
 from app.data_access import ScopedSession
 from app.models import Setting, UserSetting
 
-KEYS = {"conversation_preferences", "media_prompt_translation", "image_model_defaults"}
+KEYS = {
+    "conversation_preferences",
+    "media_prompt_translation",
+    "image_model_defaults",
+    "memory_embedding_activity",
+}
 
 
 def preference_row(session, key: str, *, default: dict | None = None, lock: bool = False):

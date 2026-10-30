@@ -51,6 +51,22 @@ SETUP_FIELDS = (
 PROBE_TEXT = "ai-station embedding probe"
 MAX_INPUT = 8000
 INDEX_BATCH = 50
+ACTIVITY_KEY = "memory_embedding_activity"
+ACTIVITY_IDS = ("prepare_run_id", "last_health_run_id", "last_index_run_id")
+CONFIG_FIELDS = ("backend", "revision", "model_id", "endpoint", "model", "secret_ref")
+
+
+def _configuration(value):
+    return {
+        "backend": value.get("backend") or "endpoint",
+        "revision": value.get("revision") or 0,
+        "model_id": value.get("model_id"),
+        "endpoint": value.get("endpoint") or "",
+        "model": value.get("model") or "",
+        "secret_ref": value.get("secret_ref") or "",
+    }
+
+
 SEARCH_LIMIT = 30
 MIN_DIM = 8
 MAX_DIM = 4096
@@ -138,6 +154,7 @@ def cosine(left: list[float], right: list[float]) -> float | None:
 
 def load_setup(session) -> dict:
     from app.data_access import ScopedSession
+    from app.personal_settings import preference_row
 
     if isinstance(session, ScopedSession):
         # This one fixed model-service setting is machine configuration. Read
@@ -149,7 +166,7 @@ def load_setup(session) -> dict:
         row = session.get(Setting, SETUP_KEY)
         stored = row.value if row else None
     value = dict(stored) if isinstance(stored, dict) else {}
-    return {
+    result = {
         "backend": value.get("backend") or "endpoint",
         "revision": value.get("revision") or 0,
         "model_id": value.get("model_id"),
@@ -169,15 +186,118 @@ def load_setup(session) -> dict:
             )
         ),
     }
+    if isinstance(session, ScopedSession):
+        row = preference_row(session, ACTIVITY_KEY)
+        activity = row.value if row and isinstance(row.value, dict) else {}
+        if activity.get("revision") == result["revision"] and activity.get("identity") == vector_identity(
+            result
+        ):
+            result.update({key: activity.get(key) for key in (*ACTIVITY_IDS, "dimension")})
+        for key in ACTIVITY_IDS:
+            if result.get(key) and session.get(Run, result[key]) is None:
+                result[key] = None
+    return result
+
+
+def _save_activity(session, payload):
+    from app.data_access import DataAccessError
+    from app.personal_settings import preference_row
+
+    for key in ACTIVITY_IDS:
+        if payload.get(key):
+            run = session.get(Run, payload[key])
+            if run is None or run.owner_id != session.scope.user_id:
+                raise DataAccessError("Embedding activity must belong to the executing account")
+    row = preference_row(session, ACTIVITY_KEY, default={}, lock=True)
+    config = _configuration(payload)
+    row.value = {
+        "revision": config["revision"],
+        "identity": vector_identity(config),
+        **{key: payload.get(key) for key in (*ACTIVITY_IDS, "dimension")},
+    }
+    session.flush()
 
 
 def save_setup(session, payload: dict) -> dict:
+    from app.data_access import DataAccessError, ScopedSession
+
+    if isinstance(session, ScopedSession):
+        if _configuration(payload) != _configuration(load_setup(session)):
+            if not session.scope.administrator or session.scope.execution or session.scope.read_only:
+                raise DataAccessError("Embedding model configuration requires an administrator request")
+            row = session.get(Setting, SETUP_KEY)
+            if row is None:
+                row = Setting(key=SETUP_KEY, value={})
+                session.add(row)
+            # Shared configuration contains model service metadata only. Run
+            # identities and learned per-account dimensions stay private.
+            row.value = {**_configuration(payload), "dimension": payload.get("dimension")}
+        _save_activity(session, payload)
+        return load_setup(session)
     row = session.get(Setting, SETUP_KEY)
     if row is None:
         row = Setting(key=SETUP_KEY, value={})
         session.add(row)
     row.value = {key: payload.get(key) for key in SETUP_FIELDS}
     session.flush()
+    return load_setup(session)
+
+
+def _activate_prepared_model(session, run, payload):
+    from sqlalchemy.orm import object_session
+
+    from app.data_access import DataAccessError, ScopedSession
+    from app.models import User
+
+    if not isinstance(session, ScopedSession):
+        return save_setup(session, payload)
+    scope = session.scope
+    user = session.get(User, scope.user_id, populate_existing=True)
+    session.refresh(run)
+    if (
+        not scope.execution
+        or scope.read_only
+        or object_session(run) is not session
+        or run.owner_id != scope.user_id
+        or run.executor_type != "memory_embed"
+        or run.capability != "memory.embed.prepare"
+        or run.status != "running"
+        or user is None
+        or not user.enabled
+        or not user.is_admin
+        or user.bootstrap_pending
+        or run.parameters.get("requested_model_id") != MODEL_ID
+    ):
+        raise DataAccessError("Only an authorized owned preparation Run can activate an embedding model")
+    stored = session.connection().scalar(
+        select(Setting.value).where(Setting.key == SETUP_KEY).with_for_update()
+    )
+    current = _configuration(stored if isinstance(stored, dict) else {})
+    expected = {
+        "backend": "local_cpu",
+        "revision": current["revision"] + 1,
+        "model_id": MODEL_ID,
+        "endpoint": "",
+        "model": MODEL_ID,
+        "secret_ref": "",
+    }
+    if (
+        current["revision"] != run.parameters["revision"]
+        or vector_identity(current) != run.parameters["embedding_identity"]
+        or _configuration(payload) != expected
+        or payload.get("dimension") != DIMENSION
+    ):
+        raise DataAccessError("The verified preparation no longer matches the shared model configuration")
+    # One fixed, role/owner/revision-checked infrastructure write; the execution
+    # session never acquires arbitrary access to machine settings.
+    values = {**expected, "dimension": DIMENSION}
+    table = Setting.__table__
+    connection = session.connection()
+    if stored is None:
+        connection.execute(table.insert().values(key=SETUP_KEY, value=values))
+    else:
+        connection.execute(table.update().where(table.c.key == SETUP_KEY).values(value=values))
+    _save_activity(session, payload)
     return load_setup(session)
 
 
@@ -287,13 +407,25 @@ def put_setup(body: SetupBody, session: DB):
 
 
 def _enqueue(session, *, capability, title, extra, setup, task=None, parent=None):
-    if session.scalar(
-        select(Run.id).where(
+    from app.data_access import ScopedSession
+
+    busy = (
+        select(Run.id)
+        .where(
             Run.executor_type == "memory_embed",
             Run.capability == capability,
             Run.status.in_(ACTIVE),
         )
-    ):
+        .limit(1)
+    )
+    # Model preparation is shared infrastructure. Expose only a busy boolean,
+    # while ordinary health/index/search coalescing remains owner-scoped.
+    active = (
+        session.connection().scalar(busy)
+        if isinstance(session, ScopedSession) and capability == "memory.embed.prepare"
+        else session.scalar(busy)
+    )
+    if active:
         raise HTTPException(409, "Cancel the active embeddings Run before starting another")
     task = task or create_task(session, title=title, prompt=title, capability=capability)
     run = create_run(
@@ -306,7 +438,7 @@ def _enqueue(session, *, capability, title, extra, setup, task=None, parent=None
         parameters={
             "endpoint": setup["endpoint"],
             "model": setup["model"],
-            "secret_ref": setup["secret_ref"],
+            "secret_ref": "" if isinstance(session, ScopedSession) else setup["secret_ref"],
             "backend": setup["backend"],
             "model_id": setup["model_id"],
             "revision": setup["revision"],
@@ -501,7 +633,7 @@ class MemoryEmbedExecutor:
             async with asyncio.timeout(remaining):
                 if run.capability == "memory.embed.prepare":
                     return await self._prepare(session, run)
-                validate_binding(session, run)
+                bound = validate_binding(session, run)
                 if run.parameters.get("backend") == "local_cpu":
                     cpu = CpuEmbeddingProcess(session, run, get_settings().data_dir)
 
@@ -517,7 +649,7 @@ class MemoryEmbedExecutor:
                                 run.parameters["endpoint"],
                                 run.parameters["model"],
                                 text,
-                                run.parameters.get("secret_ref") or "",
+                                bound["secret_ref"],
                             )
                         )
 
@@ -597,7 +729,7 @@ class MemoryEmbedExecutor:
             "prepare_run_id": run.id,
             "last_health_run_id": run.id,
         }
-        save_setup(session, setup)
+        _activate_prepared_model(session, run, setup)
         saved = load_setup(session)
         indexed = _enqueue(
             session,
