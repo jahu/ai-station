@@ -249,9 +249,9 @@ def login(
     return grant
 
 
-def _actor(session: Session, principal: Principal, *, admin: bool = False) -> User:
-    user = session.get(User, principal.user_id, populate_existing=True)
-    device = session.get(UserSession, principal.session_id, populate_existing=True)
+def _actor(session: Session, principal: Principal, *, admin: bool = False, lock: bool = False) -> User:
+    user = session.get(User, principal.user_id, populate_existing=True, with_for_update=lock)
+    device = session.get(UserSession, principal.session_id, populate_existing=True, with_for_update=lock)
     now = utcnow()
     if (
         user is None

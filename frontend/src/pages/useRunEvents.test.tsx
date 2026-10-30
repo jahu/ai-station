@@ -61,3 +61,58 @@ it("resumes after initial history and merges streamed events without refetching 
   expect(streams[0].close).toHaveBeenCalled();
   unmount();
 });
+
+it("drops pending private events and requests login when streaming authority ends", async () => {
+  const row = (sequence: number): RunEvent => ({
+    id: String(sequence),
+    sequence,
+    event_type: "agent.delta",
+    payload: { text: "Synthetic private token" },
+    created_at: "2026-10-30T00:00:00Z",
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: true, json: async () => [row(1)] })),
+  );
+  const streams: FakeSource[] = [];
+  class FakeSource {
+    onmessage: ((event: { data: string }) => void) | null = null;
+    end: ((event: Event) => void) | null = null;
+    close = vi.fn();
+    constructor() {
+      streams.push(this);
+    }
+    addEventListener(_name: string, handler: (event: Event) => void) {
+      this.end = handler;
+    }
+  }
+  vi.stubGlobal("EventSource", FakeSource);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const expired = vi.fn();
+  window.addEventListener("ai-station:session-expired", expired);
+  const { unmount } = renderHook(() => useRunEvents("private-run"), {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    ),
+  });
+  try {
+    await waitFor(() => expect(streams).toHaveLength(1));
+    act(() => {
+      streams[0].onmessage?.({ data: JSON.stringify(row(2)) });
+      streams[0].end?.(
+        new MessageEvent("end", {
+          data: JSON.stringify({ authentication_required: true }),
+        }),
+      );
+    });
+    expect(expired).toHaveBeenCalledTimes(1);
+    expect(streams[0].close).toHaveBeenCalled();
+    expect(client.getQueryData(["events", "private-run"])).toEqual([row(1)]);
+    unmount();
+    expect(client.getQueryData(["events", "private-run"])).toEqual([row(1)]);
+  } finally {
+    window.removeEventListener("ai-station:session-expired", expired);
+  }
+});

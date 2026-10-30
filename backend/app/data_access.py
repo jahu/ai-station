@@ -25,6 +25,7 @@ class DataScope:
     administrator: bool = False
     read_only: bool = False
     execution: bool = False
+    session_id: str | None = None
 
     def __post_init__(self):
         if self.inspect_all:
@@ -151,7 +152,13 @@ def data_session_for(principal, *, inspect_all: bool = False) -> ScopedSession:
 
     with control_session_factory()() as auth:
         user = _actor(auth, principal, admin=inspect_all)
-        scope = DataScope(user.id, inspect_all, administrator=user.is_admin, read_only=inspect_all)
+        scope = DataScope(
+            user.id,
+            inspect_all,
+            administrator=user.is_admin,
+            read_only=inspect_all,
+            session_id=principal.session_id,
+        )
     return ScopedSession(bind=get_engine(), scope=scope, expire_on_commit=False)
 
 

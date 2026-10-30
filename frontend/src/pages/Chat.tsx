@@ -11,6 +11,7 @@ import CreationContextNotice, {
 } from "./CreationContextNotice";
 import { browserTimezone } from "./AgentCronFields";
 import { copyText } from "../lib/clipboard";
+import { streamNeedsAuthentication } from "../api";
 import { accountStorageKey, accountEpoch } from "../lib/account-storage";
 import { useConversationAttachmentUpload } from "./attachment-upload";
 import { useDataInputs, type ConversationDataScope } from "./useDataInputs";
@@ -426,7 +427,13 @@ export default function Chat({ assistant = false }: { assistant?: boolean }) {
       void cache.invalidateQueries({ queryKey: ["conversation", id] });
     };
     source.onmessage = refresh;
-    source.addEventListener("end", () => {
+    source.addEventListener("end", (event) => {
+      if (streamNeedsAuthentication(event)) {
+        source.close();
+        if (epoch === accountEpoch())
+          window.dispatchEvent(new Event("ai-station:session-expired"));
+        return;
+      }
       refresh();
       source.close();
       if (epoch !== accountEpoch()) return;

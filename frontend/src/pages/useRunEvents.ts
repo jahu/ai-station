@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, type RunEvent } from "../api";
+import { api, streamNeedsAuthentication, type RunEvent } from "../api";
 import { accountEpoch } from "../lib/account-storage";
 
 export function useRunEvents(id: string | undefined) {
@@ -69,7 +69,15 @@ export function useRunEvents(id: string | undefined) {
       }
       timer ??= setTimeout(flush, 250);
     };
-    source.addEventListener("end", () => {
+    source.addEventListener("end", (event) => {
+      if (streamNeedsAuthentication(event)) {
+        clearTimeout(timer);
+        pending = [];
+        source.close();
+        if (epoch === accountEpoch())
+          window.dispatchEvent(new Event("ai-station:session-expired"));
+        return;
+      }
       flush();
       source.close();
       if (epoch !== accountEpoch()) return;

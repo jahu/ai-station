@@ -114,6 +114,14 @@ depend on an ambient user session. Each owned workload still executes inside its
 frozen owner scope. Removing the remaining legacy unbound/ownerless paths is a
 separate final cutover gate.
 
+HTTP-derived scopes retain the authenticated device identity in memory only.
+Every SSE batch revalidates device revocation, idle/absolute expiry, password/MFA
+changes and current administrator authority for all-account inspection in the
+same transaction as reading events. Terminated authority ends the stream with a
+login-required transport notice; it does not change or cancel the durable Run.
+The browser closes the connection, discards buffered events and opens the
+existing sign-in boundary without flushing late private tokens.
+
 The explicit request-session factory rechecks the real account role and current
 device, rather than accepting a caller's administrative flag. The worker factory
 verifies the persisted Run against its frozen owner and rejects disabled accounts;

@@ -139,7 +139,14 @@ async def local_requests(request: Request, call_next):
             return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
         principal = request.state.account_principal
         scope = (
-            DataScope(principal.user_id, inspect_all, administrator=principal.is_admin) if principal else None
+            DataScope(
+                principal.user_id,
+                inspect_all,
+                administrator=principal.is_admin,
+                session_id=principal.session_id,
+            )
+            if principal
+            else None
         )
         with bind_data_scope(scope):
             response = await call_next(request)
@@ -286,8 +293,21 @@ def events(run_id: UUID, session: DB, after: int = Query(0, ge=0)):
 
 
 def read_event_batch(run_id: str, cursor: int):
-    # The thread owns and closes its session before yielding anything to SSE.
+    from app.accounts import Principal, _actor
+    from app.data_access import DataScope
+    from app.data_context import current_data_scope
+
+    scope = current_data_scope()
+    # Authority and events share one transaction: revocation cannot slip into
+    # a gap between checking a device and reading the next private event batch.
     with session_factory()() as current:
+        if isinstance(scope, DataScope) and scope.session_id:
+            _actor(
+                current,
+                Principal(scope.user_id, scope.session_id, scope.administrator),
+                admin=scope.inspect_all,
+                lock=True,
+            )
         rows = [event_dict(row) for row in list_events(current, run_id, cursor)]
         run = current.get(Run, run_id)
         return rows, run is None or run.status in TERMINAL
@@ -304,11 +324,17 @@ def stream(
     session.rollback()
 
     async def replay():
+        from app.accounts import AccountError
+
         cursor = max(after, last_event_id or 0)
         while True:
             # SQLite may wait on another request's writer reservation. Keep that
             # wait off the HTTP event loop so response/dependency cleanup can run.
-            rows, terminal = await asyncio.to_thread(read_event_batch, str(run_id), cursor)
+            try:
+                rows, terminal = await asyncio.to_thread(read_event_batch, str(run_id), cursor)
+            except AccountError:
+                yield 'event: end\ndata: {"authentication_required": true}\n\n'
+                return
             for row in rows:
                 cursor = row["sequence"]
                 yield f"id: {cursor}\ndata: {json.dumps(row)}\n\n"

@@ -15,6 +15,17 @@ function requireCurrentAccount(epoch: number) {
     throw new Error("Account changed; previous request discarded.");
 }
 
+export function streamNeedsAuthentication(event?: Event) {
+  try {
+    return (
+      JSON.parse((event as MessageEvent<string>)?.data ?? "{}")
+        .authentication_required === true
+    );
+  } catch {
+    return false;
+  }
+}
+
 async function privateResponse(path: string, options?: RequestInit) {
   const epoch = accountEpoch();
   const owner = activeStorageAccount();
