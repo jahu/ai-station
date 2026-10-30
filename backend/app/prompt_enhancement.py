@@ -28,6 +28,9 @@ def recipe(run, *, translate):
         if operation is None:
             raise ValueError("This image operation has no descriptive enhancement prompt")
         identifier = f"{VERSION}:image:{parameters.get('backend')}:{mode}"
+    elif executor == "mmaudio_effects":
+        identifier = f"{VERSION}:mmaudio"
+        operation = "Describe audible events, texture, ambience, spatial distance and timing consistent with the request. Do not add speech or music unless explicitly requested. The video is a separate reference; never claim to have inspected its contents. Keep each field below 2000 characters. "
     elif executor == "wan_video":
         identifier = f"{VERSION}:wan"
         operation = "Describe coherent subject motion, camera movement, environment and temporal continuity. Avoid contradictory cuts in a continuous shot. "

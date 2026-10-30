@@ -31,6 +31,7 @@ from app.conversation_agent_control import AgentControlExecutor
 from app.cursor_executor import CursorProposalExecutor
 from app.data_agents import DataGenerateExecutor, DataResultExecutor
 from app.data_inputs import DataInspectionExecutor
+from app.effects import EffectsExecutor, EffectsPreviewExecutor
 from app.email_delivery import EmailCheckExecutor, EmailSendExecutor
 from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
@@ -337,6 +338,8 @@ EXECUTORS = {
     "photo_pipe": PhotoPipeExecutor(),
     "chatterbox": AudioExecutor(),
     "fish_speech": FishSpeechExecutor(),
+    EffectsExecutor.name: EffectsExecutor(),
+    EffectsPreviewExecutor.name: EffectsPreviewExecutor(),
     "ace_step_music": MusicExecutor(),
     "whisper_transcribe": TranscriptionExecutor(),
     "echomimic": AvatarExecutor(),

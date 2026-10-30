@@ -1,5 +1,6 @@
 import ImageModelSelection from "./ImageModelSelection";
 import SpeechModelSelection from "./SpeechModelSelection";
+import AddSoundLink from "./AddSoundLink";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -70,7 +71,7 @@ export default function MediaResult({
   error: Error | null;
   steps?: Run[];
   videoMode?: "scene" | "avatar";
-  audioMode?: "speech" | "music";
+  audioMode?: "speech" | "music" | "effects";
   allowRetry?: boolean;
 }) {
   const cache = useQueryClient();
@@ -134,16 +135,25 @@ export default function MediaResult({
           idleBody:
             "Describe a scene or choose a first frame. Your video will appear here.",
         }
-      : kind === "audio" && audioMode === "music"
+      : kind === "audio" && audioMode === "effects"
         ? {
             ...copy.audio,
-            title: "Your music, ready to play",
-            label: "Generated music",
-            idleTitle: "Set the mood. Find your sound.",
+            title: "Your effects track",
+            label: "Generated sound effects",
+            idleTitle: "Let your film be heard",
             idleBody:
-              "Describe a style, instruments and atmosphere. Your music will appear here.",
+              "Choose a film and describe its sounds. Your effects and video preview will appear here.",
           }
-        : copy[kind];
+        : kind === "audio" && audioMode === "music"
+          ? {
+              ...copy.audio,
+              title: "Your music, ready to play",
+              label: "Generated music",
+              idleTitle: "Set the mood. Find your sound.",
+              idleBody:
+                "Describe a style, instruments and atmosphere. Your music will appear here.",
+            }
+          : copy[kind];
   const translation = run?.metadata?.prompt_translation as
     { status: string } | undefined;
   const waitingPromptReview =
@@ -284,6 +294,7 @@ export default function MediaResult({
               </section>
             )}
           <div className="media-result-actions">
+            <AddSoundLink artifact={result} />
             <Button asChild variant="secondary">
               <Link to={`/library/${result.id}`}>
                 <ArrowUpRight size={15} />

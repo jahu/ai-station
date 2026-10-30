@@ -12,8 +12,8 @@ video and text. Source is pinned for qualification at
 `974010a026c731054592d8f777218bd9d85a6c24` (MIT code); the
 [publisher checkpoints](https://huggingface.co/hkchengrex/MMAudio) are separately
 CC BY-NC 4.0. The first candidate is `large_44k_v2`, BF16, one discovered CUDA GPU.
-Its actual VRAM/RAM consumption is not yet measured here; do not advertise it as
-ready based on file size or the authors' hardware measurements.
+Actual local measurements and integrated qualification are recorded below;
+readiness requires the configured pinned runtime, not merely a matching filename.
 
 The independently installed, project-owned runtime is separate from Fish,
 Chatterbox, the control-plane image and existing user model trees. Public assets
@@ -146,3 +146,56 @@ actually exceeded it. Actual scoped generation/cancellation/recovery for that
 final profile and private API/worker/UI integration still precede availability.
 Private reports: `qualification.private.json` and `qualification-eight.private.json`
 in the acceptance directory above; both native processes completed successfully.
+
+
+## Integrated adapter and saved workspace
+
+Audio → **Sound effects** accepts a completed AI Station film from Library,
+a description and optional local prompt enhancement. Advanced controls contain
+negative sounds, seed, steps, guidance and GPU. **Add sound** on a completed film
+stages that exact source. Saved private workspaces retain the request, feedback,
+versions, output and task-wide Stop. Each result keeps a separate WAV stem and a
+verified MP4 preview; the preview replaces audio only in the new output, leaving
+the original intact. Effects are not offered as voice references.
+
+Configure the native Runner with `AI_STATION_MMAUDIO_ENABLED=true` and the
+`AI_STATION_MMAUDIO_PYTHON`, `AI_STATION_MMAUDIO_DIR`,
+`AI_STATION_MMAUDIO_MODELS` paths. The isolated Python runtime also needs Pydantic
+v2 for the typed wrapper. Inference dependencies are pinned in the private freeze
+record: Torch/vision/audio 2.8/0.23/2.8 CUDA12.6, OpenCLIP2.32, timm1.0.30,
+PyAV16.1 and NumPy2.0.2. The seven published assets are materialized as direct
+verified files under the configured model root (`flow.pth`, `vae.pth`, `sync.pth`,
+`clip/` and `vocoder/`). Constructors load those exact local files with networking
+disabled; inference never follows mutable Hub aliases.
+
+The worker uses **8 GiB VRAM / 18 GiB load RAM**, a 30-minute absolute deadline
+and inspect-before-retry recovery. The native request repeats admission and binds
+the code/model/wrapper observation. Every conditioning window is exactly eight
+seconds: short tails hold their last actual frame. All source frames are decoded
+and checked for constant 24/25 FPS timing, dimensions and complete coverage.
+Windows share approximately 250ms of the same timeline for an equal-time
+crossfade. Their absolute 44.1-kHz PCM endpoints produce the exact film interval,
+including fractional-sample frame boundaries. Up to five minutes/1280×704 are
+bounded by validation; full five-minute hardware generation has not been run.
+
+Ordinary API → worker → owned native tests generated complete eight-second and
+15-second/two-window effects, then verified video previews. Actual loading Stop
+inside the final 18-GiB/zero-swap scope released the owned process/GPU reservation
+without publishing partial output. These reports are `real-api-r2.private.json`
+and `real-long.private.json`. The initial attempt failed before model import due
+to a missing wrapper dependency; that environment dependency was installed and
+the failure record retained. Standalone measurements above are not substituted
+for these integration checks.
+
+Normal fake contracts cover RAM/VRAM admission, strict inputs, changed source,
+idempotent dispatch/deadline, lost acknowledgements, account A/B history/files,
+local prompt preparation and separate linked outputs. Migration 0040 preserves
+populated creative sessions/turns with foreign keys enforced. Compiled private
+desktop/mobile checks use a real API, separate worker, typed native adapter,
+synthetic GPU inference and real CPU composition. Final release packaging and
+production rollout are recorded separately.
+
+The full NR-07/08 scope remains open: per-scene instruction editing, agent/assistant
+exposure, perceptual synchronization acceptance and the saved multitrack editor
+still require implementation/qualification. An available basic effects generator
+is not a claim that the entire release or timeline editor is complete.

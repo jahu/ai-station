@@ -108,7 +108,7 @@ def image_fields(run):
     params = run.parameters
     if run.executor_type == "echomimic":
         return {"prompt": params["prompt"]}
-    if run.executor_type == "wan_video":
+    if run.executor_type in {"wan_video", "mmaudio_effects"}:
         return {key: params[key] for key in ["prompt", "negative_prompt"] if params.get(key)}
     if run.executor_type == "ace_step_music":
         return {"caption": params["caption"]}
@@ -133,6 +133,17 @@ def source_hash(run, fields):
             }
         )
     keys = {
+        "mmaudio_effects": [
+            "video",
+            "video_artifact_id",
+            "profile",
+            "observation",
+            "steps",
+            "cfg",
+            "seed",
+            "backend",
+            "parent_artifact_ids",
+        ],
         "wan_video": [
             "image_relative",
             "parent_artifact_ids",
@@ -195,7 +206,13 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
     fields = image_fields(media)
     if not (enabled or options.enhance) or not fields:
         return None
-    if media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music", "echomimic"}:
+    if media.executor_type not in {
+        "photo_pipe",
+        "wan_video",
+        "ace_step_music",
+        "echomimic",
+        "mmaudio_effects",
+    }:
         raise ValueError("Unsupported media translation consumer")
     system = SYSTEM
     template = None
@@ -216,7 +233,7 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
         key: 512
         if key == "caption"
         else 2000
-        if media.executor_type in {"wan_video", "echomimic"}
+        if media.executor_type in {"wan_video", "echomimic", "mmaudio_effects"}
         else FIELD_LIMITS.get(key, 10000)
         for key in fields
     }
@@ -299,7 +316,8 @@ def consumer(session, run):
         not media
         or media.status != "queued"
         or media.task_id != run.task_id
-        or media.executor_type not in {"photo_pipe", "wan_video", "ace_step_music", "echomimic"}
+        or media.executor_type
+        not in {"photo_pipe", "wan_video", "ace_step_music", "echomimic", "mmaudio_effects"}
     ):
         raise ValueError("Translation has no matching media request")
     receipt = media.metadata_json.get(RECEIPT, {})
@@ -814,7 +832,12 @@ def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
         from app.images import ImageRetry, retry_image
 
         return retry_image(run_id, session, ImageRetry.model_validate(body.model_dump()))
-    if not source or source.executor_type not in {"wan_video", "ace_step_music", "echomimic"}:
+    if not source or source.executor_type not in {
+        "wan_video",
+        "ace_step_music",
+        "echomimic",
+        "mmaudio_effects",
+    }:
         raise HTTPException(404, "Media Run not found")
     if source.parameters.get("internal_media"):
         raise HTTPException(409, "Resume the whole film instead of an individual segment")
@@ -857,6 +880,11 @@ def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
     from app.media_retry_intent import finish_retry, task_for_retry
 
     task = task_for_retry(session, source, body.translation)
+    retry_parameters = dict(source.parameters)
+    if source.executor_type == "mmaudio_effects" and source.agent_id is None:
+        # An inspected new manual attempt gets its own execution budget. Repeated
+        # dispatch of one Run still cannot extend that Run's native deadline.
+        retry_parameters.pop("execution_deadline_at", None)
     retry = create_run(
         session,
         task,
@@ -864,7 +892,7 @@ def retry_media(run_id: UUID, body: TranslationRetry, session: DB):
         capability=source.capability,
         executor_type=source.executor_type,
         execution_target=source.execution_target,
-        parameters=dict(source.parameters),
+        parameters=retry_parameters,
         requested_gpu=source.requested_gpu,
         requested_resources=dict(source.requested_resources),
         permissions=list(source.effective_permissions),

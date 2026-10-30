@@ -21,6 +21,8 @@ const labels: Record<string, string> = {
   "avatar.animate": "Avatar",
   "audio.speech": "Speech",
   "audio.music": "Music",
+  "audio.effects": "Sound effects",
+  "video.effects_preview": "Sound preview",
 };
 function duration(value: number) {
   const seconds = Math.max(1, Math.ceil(value));

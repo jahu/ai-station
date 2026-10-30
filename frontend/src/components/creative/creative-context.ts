@@ -3,7 +3,7 @@ import type { Artifact, Run } from "../../api";
 import type { MediaJob } from "../media/media-job";
 
 export type CreativeCapability =
-  "images" | "video" | "music" | "speech" | "avatars";
+  "images" | "video" | "music" | "speech" | "avatars" | "effects";
 export type CreativeDraft = Record<string, unknown>;
 export interface CreativeSession {
   id: string;

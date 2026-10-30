@@ -77,13 +77,14 @@ def verified_path(root, body, *, verify_hash=True):
     return path
 
 
-def start_composition(manager, body):
+def start_composition(manager, body, *, effects_preview=False):
     if set(body.permissions) != {"filesystem_read", "workspace_write"}:
         raise HTTPException(403, "Media read/write permissions are required")
     settings = get_settings()
-    if not settings.video_python:
+    configured_python = settings.video_python or (settings.mmaudio_python if settings.mmaudio_enabled else "")
+    if not configured_python:
         raise HTTPException(409, "Configure the existing video Python environment with PyAV")
-    python = Path(settings.video_python).expanduser().absolute()
+    python = Path(configured_python).expanduser().absolute()
     if not python.is_file() or not os.access(python, os.X_OK):
         raise HTTPException(409, "Video Python is unavailable")
     root = settings.host_data_dir().resolve()
@@ -121,7 +122,7 @@ def start_composition(manager, body):
         run_id=run_id,
         argv=[str(python), str(Path(__file__).with_name("media_compose_job.py")), str(config)],
         cwd=work,
-        executor="media_compose",
+        executor="effects_preview" if effects_preview else "media_compose",
         env=environment,
         **({"deadline_at": body.deadline_at} if body.deadline_at is not None else {}),
     )

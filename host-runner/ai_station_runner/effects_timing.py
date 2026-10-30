@@ -17,8 +17,8 @@ def effects_windows(frames: int, fps: int) -> list[EffectsWindow]:
     """Cover the inspected film with <=8s windows, retaining its entire tail.
 
     Consecutive windows share about 250ms of the same source timeline for a
-    later equal-time crossfade. A short window can repeat its final conditioning
-    frame up to one second; only its actual source interval is published. PCM
+    later equal-time crossfade. Short windows hold their last frame through the
+    model's fixed eight-second context; only the real interval is published. PCM
     endpoints always derive from absolute frame positions, preventing cumulative
     rounding drift at 44.1kHz/24fps.
     """
@@ -39,7 +39,7 @@ def effects_windows(frames: int, fps: int) -> list[EffectsWindow]:
             EffectsWindow(
                 first_frame=first,
                 frames=end - first,
-                conditioning_frames=max(fps, end - first),
+                conditioning_frames=maximum,
                 first_sample=first_sample,
                 end_sample=end_sample,
                 overlap_samples=max(0, previous_end_sample - first_sample),

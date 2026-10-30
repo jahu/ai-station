@@ -32,3 +32,14 @@ def test_half_sample_frame_boundary_does_not_accumulate_per_window_rounding():
 def test_invalid_or_unbounded_film_timing_is_rejected(frames, fps):
     with pytest.raises(ValueError):
         effects_windows(frames, fps)
+
+
+@pytest.mark.parametrize("fps,frames", [(24, 33), (25, 53), (24, 192), (25, 200)])
+def test_fixed_context_encodes_every_source_frame_including_the_tail(fps, frames):
+    from ai_station_runner.effects_video import frame_indices
+
+    window = effects_windows(frames, fps)[0]
+    assert window.conditioning_frames == fps * 8
+    indices = frame_indices(window, fps, 25)
+    assert len(indices) == 200 and indices[-1] == frames - 1
+    assert set(indices) == set(range(frames))
