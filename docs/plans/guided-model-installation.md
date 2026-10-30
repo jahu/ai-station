@@ -170,3 +170,39 @@ coverage and pinned publisher metadata but no fresh full download/inference
 qualification. Required remaining NR-13/14 work includes runtime preparation for
 a clean installation, media/companion recipes, advanced model discovery, desktop
 packaging and actual Windows/macOS clean-install/update/uninstall qualification.
+
+### Next implementation: clean-machine runtime preparation
+
+The next feature branch starts from deployed PR #530. A private read-only probe
+first separates a missing image, an unreachable Docker daemon, a mismatched
+manifest/platform and an actually present pinned image. It never equates image
+presence with working GPU inference. The first Linux NVIDIA recipe pins the
+exact `ghcr.io/ggml-org/llama.cpp@sha256:95cdc1510dbc5bc15735529353d72ace9fc96b9aeb0dd6c4cdaf1a6b3f70776f`
+manifest used by the real guided-model qualification. Unknown image IDs, source
+URLs, commands and mutable tags cannot be supplied by API clients.
+
+Complete the following before publishing an installation action:
+
+- An administrator reviews the native recipe, runtime license, expected storage
+  and network use. An owned ordinary Task/Run freezes its recipe hash, deadline,
+  effective permissions and idempotent receipt; existing download/account history
+  and Task Stop are reused. Inspection stays distinct from mutation.
+- Only the native Runner may prepare the fixed pinned image. It must not retag,
+  replace or remove an operator's configured image, alter Docker/driver settings,
+  change external runtimes or receive arbitrary image/CLI arguments.
+- A subprocess PID is not enough to prove that Docker's daemon-side transfer has
+  stopped. Qualify actual request cancellation/daemon completion and lost-response
+  recovery before exposing the adapter. Reconcile a completed digest instead of
+  pulling again; uncertain operations require inspection. Normal tests use tiny
+  synthetic results and managed fake processes; real network tests are opt in.
+- Native verification/load resolve a prepared recipe consistently while retaining
+  existing configured-image behavior and legacy request hashes. Newly prepared
+  image presence is followed by actual GPU capability/load/first-result checks.
+- UI shows runtime preparation before weights on a clean station, durable progress,
+  Stop/Resume and an understandable failure/recovery path. Preserve all existing
+  models, account data and device credentials across upgrades.
+
+The new runtime recipe/inspection module is not registered as an install API.
+No runtime install/pull capability is claimed until those contracts pass. Linux
+x86-64 CUDA qualification does not imply macOS/Metal or native Windows readiness;
+those routes and all multimodal/companion-file recipes remain required.
