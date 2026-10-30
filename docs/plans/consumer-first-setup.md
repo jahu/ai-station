@@ -32,3 +32,9 @@ update and data preservation. Existing Linux/NVIDIA qualification is not blanket
 AMD/Intel/Windows/macOS support. Each new integration must meet the same permission,
 owned-process, recovery and storage contracts. This is planned work, not a claim
 that a one-click consumer installer or automatic model setup already ships.
+
+The concrete [guided installation contract](guided-model-installation.md) now
+tracks the catalog/download/Runner adoption/onboarding/launcher sequence. Its
+initial branch has an unpublished resumable, pinned-file primitive and verified
+starter metadata; the end-user installation flow and platform qualification
+remain required.
