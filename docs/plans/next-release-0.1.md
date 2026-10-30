@@ -113,6 +113,18 @@ ordinary Task → Run → Events → Artifacts and immutable input/profile snaps
 Resume the exact session route after navigation; an explicit New action opens a
 fresh session. Show in-flight jobs, feedback and prior versions together.
 
+Implementation uses one shared history/draft UI around the existing five forms;
+generation stays typed and transactional with its saved turn. Preserve both
+short direct Runs and the existing full-film/full-recording MediaJob variants
+(`media_jobs.py`); the new UI must not narrow Video or Sonic avatar functionality.
+History progress and Stop follow the complete owned Task graph, including speech,
+translation, continuation and composition children. A preparation Run succeeding
+does not mark the complete turn successful. Reuse the existing Task cancellation
+service. Draft saves are versioned and serialized; navigation/reload flushes pending
+changes without allowing a late save to cross accounts or overwrite a new turn.
+Source/variation controls restore validated request fields, not arbitrary Run
+parameters, and preserve exact narration/lyrics unless the user explicitly edits them.
+
 A follow-up names its selected version and retains all earlier artifacts. Only
 permitted inspected inputs and bounded relevant turns enter an LLM prompt. A
 thumbnail/reference is not automatically a textual description of its content.
@@ -248,24 +260,38 @@ format/lint/types/build, Docker/Compose and actual isolated image/worker/API and
 compiled desktop/mobile browser checks. Private evidence:
 `data/acceptance/release-0.1-foundation-20261029/`. Deployment is tracked separately.
 NR-10's model-freedom/responsibility README update is also merged to `develop`.
-NR-11 is in active implementation: staged ownership, private request/execution
-sessions, account/security UI, recovery, shared-model coordination, Docker-local
-first-admin setup and account-aware private-connection operations have separate
-synthetic/local qualifications. The shipped application still uses its existing
-operator profile. Administrator inspection now has a staged selected-account,
-read-only UI with collection/detail/message/event and media access; its complete
-profile qualification remains part of cutover. The complete operation audit,
-remaining legacy execution-path removal and final preserved-data cutover remain
-enablement gates; see [account contracts](../accounts.md). The opt-in account
-profile now installs strict API/worker/scheduler ownership without test wrappers,
-refuses unbound data access and ownerless execution, and preserves current
-operator credentials/devices during its one-time activation. A private copy of
-the live 0036 database passed migration to 0038 with all existing table content,
-private root ownership and credentials preserved; no live switch occurred.
-The latest inventory
-contains 222 HTTP operations (214 API) and 35 ORM tables; enumeration alone is
-not an isolation pass. Other NR items remain open and research candidates remain
-unqualified. These increments do not complete the full next-release scope.
+NR-11 is qualified, reviewed, merged in PR #512 and deployed on the workstation.
+Private roots, inherited records, credentials, preferences, workers, schedules,
+files/SSE and browser state are account-bound; models and physical resources stay
+shared. Login/devices/TOTP/recovery, administrator management and explicit read-only
+workspace inspection are operational. The account profile refuses unbound/ownerless
+execution and operator fallback after activation. Its 397-case complete account
+gate, 82 additional native/API regressions, 928-case frontend qualification,
+compiled desktop/mobile checks and packaged API/separate-worker tests passed.
+The actual 0036 → 0038 cutover preserved existing content, credentials and private
+owners with a fresh backup, without restarting the native Runner or models.
+See [account contracts](../accounts.md) and the [surface review](../account-boundary-review.md).
+
+NR-01 now has migration 0039, private sessions, bounded versioned drafts,
+ordered append-only turns and atomic idempotent generation through all five
+existing typed builders. Shared history, exact selected-source editing,
+autosaved/restored forms, archive/restore and whole-Task Stop cover Images,
+Video, Music, Speech and Avatars. Full films and whole-recording Sonic avatars
+retain the existing MediaJob variants. Administrator inspection remains explicit
+and read-only. [Workspace contracts](../creative-workspaces.md).
+
+The frozen complete normal Python/Runner baseline passed: 5,092 cases with nine
+opt-in skips across four disjoint complete-file cohorts. The 28-case final
+creative/workflow/inspector families also pass after the subsequent backend
+changes. Compiled desktop/mobile checks pass against a real account API and a
+separate synthetic generation worker, including exact-source follow-up,
+navigation/reload and foreign-user denial. This is not real model inference.
+The complete 936-case UI baseline and final ten-case changed workspace family
+pass, with format/lint/typecheck/build and Compose checks. The real compiled
+UI check also caught and verified the fix for a fresh-cache submission conflict.
+Review and production rollout remain open; schema 0039 has not been applied to
+the live workstation. NR-02 and the other remaining NR
+items stay open; this increment does not complete the full next-release scope.
 
 NR-12 has an automatic-search candidate: the selected admitted Chat model
 prepares the first query before retrieval, with bounded ordinary-text follow-up

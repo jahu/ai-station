@@ -9,11 +9,13 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm import object_session
 
 from app import models as m
 from app import serialize as s
 from app.accounts import _actor, public_user
 from app.accounts_api import DB, Actor
+from app.creative_sessions import session_detail
 from app.data_access import ScopedSession, data_session_for
 from app.events import event_dict
 from app.personal_settings import KEYS
@@ -32,6 +34,7 @@ Category = Literal[
     "approvals",
     "providers",
     "connectors",
+    "creative",
 ]
 # Models, search columns and serializers are code-owned, not caller-supplied.
 COLLECTIONS = {
@@ -45,6 +48,11 @@ COLLECTIONS = {
     "approvals": (m.Approval, (m.Approval.action, m.Approval.reason), s.approval_dict),
     "providers": (m.ChatProvider, (m.ChatProvider.name,), None),
     "connectors": (m.Connector, (m.Connector.name,), None),
+    "creative": (
+        m.CreativeSession,
+        (m.CreativeSession.title,),
+        lambda row: session_detail(object_session(row), row),
+    ),
 }
 
 

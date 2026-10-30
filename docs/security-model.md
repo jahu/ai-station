@@ -1,14 +1,14 @@
 The [next-release account boundary](plans/next-release-0.1.md#accounts-and-data-ownership)
 requires private resource ownership, owner-bound workers/tools, protected file
-and event access, per-account browser state and optional TOTP. The current
-single-operator access model remains in place until migration/preservation and
-the full A/B/admin denial matrix pass. Shared models/GPUs never imply shared
+and event access, per-account browser state and optional TOTP. These boundaries
+are qualified and active on the workstation after PR #512's preserved-data
+cutover. Shared models/GPUs never imply shared
 prompts, memory, files, credentials or execution logs.
 
-Staged [account services](accounts.md) preserve legacy credential/session material,
+[Account services](accounts.md) preserve legacy credential/session material,
 isolate device revocation and validate optional TOTP with replay protection and
-one-use recovery codes. They are not connected to public authentication routes
-until the complete private-resource ownership boundary is qualified.
+one-use recovery codes. Authentication routes are registered by the explicit
+account profile; an activated installation refuses operator fallback.
 
 The [whole-recording Sonic adapter](plans/whole-recording-avatars.md) accepts only
 frozen source hashes, a configured recipe, allocated GPUs and an absolute

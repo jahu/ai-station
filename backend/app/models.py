@@ -97,6 +97,45 @@ class AccountEvent(Base):
     created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow, index=True)
 
 
+class CreativeSession(Owned, Base):
+    __tablename__ = "creative_sessions"
+    __table_args__ = (
+        CheckConstraint(
+            "capability IN ('images','video','music','speech','avatars')", name="ck_creative_capability"
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    capability: Mapped[str] = mapped_column(String(20), index=True)
+    title: Mapped[str] = mapped_column(String(160))
+    draft: Mapped[dict] = mapped_column(JSON, default=dict)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    updated_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+    archived_at: Mapped[Any | None] = mapped_column(UTCDateTime, nullable=True)
+
+
+class CreativeTurn(Base):
+    __tablename__ = "creative_turns"
+    __table_args__ = (
+        UniqueConstraint("session_id", "client_request_id", name="uq_creative_turn_receipt"),
+        UniqueConstraint("session_id", "position", name="uq_creative_turn_position"),
+        CheckConstraint("position > 0", name="ck_creative_turn_position"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    session_id: Mapped[str] = mapped_column(ForeignKey("creative_sessions.id"), index=True)
+    task_id: Mapped[str] = mapped_column(ForeignKey("tasks.id"), index=True)
+    run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"), unique=True)
+    parent_turn_id: Mapped[str | None] = mapped_column(ForeignKey("creative_turns.id"), nullable=True)
+    client_request_id: Mapped[str] = mapped_column(String(36))
+    request_sha256: Mapped[str] = mapped_column(String(64))
+    position: Mapped[int] = mapped_column(Integer)
+    feedback: Mapped[str] = mapped_column(Text, default="")
+    request_parameters: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[Any] = mapped_column(UTCDateTime, default=utcnow)
+
+
 class Task(Owned, Base):
     __tablename__ = "tasks"
 

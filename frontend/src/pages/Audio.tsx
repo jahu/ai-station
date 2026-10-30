@@ -1,3 +1,10 @@
+import CreativeWorkspace from "../components/creative/CreativeWorkspace";
+import {
+  useCreative,
+  useCreativeDraft,
+  creativeRun,
+} from "../components/creative/creative-context";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
@@ -12,7 +19,11 @@ import Transcription from "./Transcription";
 import Music from "./Music";
 import { GpuTargetChoiceList } from "./GpuTargetChoiceList";
 
-export default function Audio() {
+export default function Audio({
+  withCreativeSessions = false,
+}: {
+  withCreativeSessions?: boolean;
+}) {
   const [search, setSearch] = useSearchParams();
   // Remount when Library or a finished result chooses a different voice, not
   // when a generation Run is recorded in the URL.
@@ -22,6 +33,13 @@ export default function Audio() {
     search.get("mode") === "music" ||
     current.data?.capability === "audio.music";
   const speech = search.get("mode") !== "transcribe" && !music;
+  function wrap(capability: "music" | "speech", child: ReactNode) {
+    return withCreativeSessions ? (
+      <CreativeWorkspace capability={capability}>{child}</CreativeWorkspace>
+    ) : (
+      child
+    );
+  }
   return (
     <>
       <nav className="mode-tabs audio-mode-tabs" aria-label="Audio mode">
@@ -63,39 +81,73 @@ export default function Audio() {
         </button>
       </nav>
       {music ? (
-        <Music
-          key={`${current.data?.id ?? ""}:${current.data ? "restored" : ""}`}
-          initialRun={current.data}
-        />
+        wrap(
+          "music",
+          <Music
+            key={`${current.data?.id ?? ""}:${current.data ? "restored" : ""}`}
+            initialRun={current.data}
+          />,
+        )
       ) : search.get("mode") === "transcribe" ? (
         <Transcription key={search.get("input") ?? ""} />
       ) : (
-        <AudioForm
-          key={search.get("input") ?? ""}
-          initialInput={search.get("input")}
-        />
+        wrap(
+          "speech",
+          <AudioForm
+            key={search.get("input") ?? ""}
+            initialInput={search.get("input")}
+          />,
+        )
       )}
     </>
   );
 }
 
 function AudioForm({ initialInput }: { initialInput: string | null }) {
+  const creative = useCreative();
+  return (
+    <SpeechForm
+      key={creative?.formKey ?? initialInput ?? "legacy"}
+      initialInput={initialInput}
+    />
+  );
+}
+function SpeechForm({ initialInput }: { initialInput: string | null }) {
+  const creative = useCreative();
+  const [initial] = useState(() => creative?.draft ?? {});
+  const restored = (initial.formState ?? initial) as Record<string, unknown>;
   const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
-  const [reference, setReference] = useState(initialInput ?? "");
-  const [text, setText] = useState("");
-  const [gpu, setGpu] = useState("auto");
+  const [reference, setReference] = useState(
+    String(
+      restored.reference ??
+        restored.reference_artifact_id ??
+        initialInput ??
+        "",
+    ),
+  );
+  const [text, setText] = useState(String(restored.text ?? ""));
+  const [gpu, setGpu] = useState(String(restored.gpu ?? "auto"));
+  useCreativeDraft({ formState: { reference, text, gpu } });
   const [uploading, setUploading] = useState(false);
   const hardware = useHardware();
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
   const generate = useMutation({
-    mutationFn: () =>
-      api<Run>("/audio/runs", {
+    mutationFn: async () => {
+      const parameters = { text, gpu, reference_artifact_id: reference };
+      if (creative)
+        return creativeRun(
+          await creative.generate(parameters, {
+            feedback: creative.draft._creative_parent_turn_id ? text : "",
+          }),
+        );
+      return api<Run>("/audio/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, gpu, reference_artifact_id: reference }),
-      }),
+        body: JSON.stringify(parameters),
+      });
+    },
     onSuccess: (result) => {
       cache.setQueryData(["run", result.id], result);
       setSearch((current) => {
@@ -188,12 +240,14 @@ function AudioForm({ initialInput }: { initialInput: string | null }) {
             </p>
           </fieldset>
         </form>
-        <MediaResult
-          kind="audio"
-          runId={runId}
-          run={run.data}
-          error={run.error}
-        />
+        {!creative && (
+          <MediaResult
+            kind="audio"
+            runId={runId}
+            run={run.data}
+            error={run.error}
+          />
+        )}
       </div>
     </>
   );

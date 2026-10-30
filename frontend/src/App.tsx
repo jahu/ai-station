@@ -50,6 +50,7 @@ import Video from "./pages/Video";
 import Dashboard from "./pages/Dashboard";
 import { RunDetail, Runs } from "./pages/Runs";
 import ImagesWorkspace from "./pages/Images";
+import CreativeWorkspace from "./components/creative/CreativeWorkspace";
 import { Library, ArtifactDetail } from "./pages/Library";
 import { SystemRoute, SystemDiagnostics } from "./pages/System";
 import Settings from "./pages/Settings";
@@ -379,7 +380,14 @@ export default function App() {
             />
             <Route path="/chat" element={<Chat assistant />} />
             <Route path="/chat/:id" element={<Chat assistant />} />
-            <Route path="/images" element={<ImagesWorkspace />} />
+            <Route
+              path="/images"
+              element={
+                <CreativeWorkspace capability="images">
+                  <ImagesWorkspace />
+                </CreativeWorkspace>
+              }
+            />
             <Route path="/library" element={<Library />} />
             <Route path="/library/:id" element={<ArtifactDetail />} />
             <Route
@@ -418,9 +426,16 @@ export default function App() {
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/new" element={<NewProject />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
-            <Route path="/audio" element={<Audio />} />
-            <Route path="/avatars" element={<Avatars />} />
-            <Route path="/video" element={<Video />} />
+            <Route path="/audio" element={<Audio withCreativeSessions />} />
+            <Route
+              path="/avatars"
+              element={
+                <CreativeWorkspace capability="avatars">
+                  <Avatars />
+                </CreativeWorkspace>
+              }
+            />
+            <Route path="/video" element={<Video withCreativeSessions />} />
             <Route path="*" element={<Unavailable />} />
           </Routes>
         </main>

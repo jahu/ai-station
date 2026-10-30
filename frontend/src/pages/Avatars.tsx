@@ -1,3 +1,9 @@
+import {
+  useCreative,
+  useCreativeDraft,
+  creativeRun,
+  creativeJob,
+} from "../components/creative/creative-context";
 import MediaJobResult from "../components/media/MediaJobResult";
 import {
   useMediaJob,
@@ -36,13 +42,14 @@ import {
 
 export default function Avatars({ video = false }: { video?: boolean }) {
   const [search] = useSearchParams();
+  const creative = useCreative();
   const current = useMediaJob(search.get("job") ?? "");
   const saved = current.data?.request;
   // Remount when Library or a finished result chooses a portrait or speech,
   // not when a generation Run is recorded in the URL.
   return (
     <AvatarForm
-      key={`${search.get("image") ?? saved?.image_artifact_id ?? ""}|${search.get("audio") ?? saved?.audio_artifact_id ?? ""}|${search.get("job") ?? ""}|${saved ? "restored" : ""}`}
+      key={`${creative?.formKey ?? ""}|${search.get("image") ?? saved?.image_artifact_id ?? ""}|${search.get("audio") ?? saved?.audio_artifact_id ?? ""}|${search.get("job") ?? ""}|${saved ? "restored" : ""}`}
       video={video}
       initialImage={search.get("image") ?? saved?.image_artifact_id ?? null}
       initialAudio={search.get("audio") ?? saved?.audio_artifact_id ?? null}
@@ -62,32 +69,53 @@ function AvatarForm({
   initialAudio: string | null;
   initialRequest?: MediaRequest;
 }) {
+  const creative = useCreative();
+  const [initial] = useState(() => creative?.draft ?? {});
+  const saved = (
+    Object.keys(initial).length
+      ? (initial.formState ?? initial)
+      : (initialRequest ?? {})
+  ) as Record<string, unknown>;
+  const hasSavedSettings = Object.keys(saved).length > 0;
+  const savedGeneration = saved.wholeRecording
+    ? WHOLE_AVATAR_PROFILE
+    : saved.generation_profile;
   const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
-  const [image, setImage] = useState(initialImage ?? "");
-  const [audio, setAudio] = useState(initialAudio ?? "");
+  const [image, setImage] = useState(
+    String(saved.image ?? saved.image_artifact_id ?? initialImage ?? ""),
+  );
+  const [audio, setAudio] = useState(
+    String(saved.audio ?? saved.audio_artifact_id ?? initialAudio ?? ""),
+  );
   const [voiceMode, setVoiceMode] = useState<"recording" | "text">(
-    initialRequest?.speech_text ? "text" : "recording",
+    saved.voiceMode === "text" || saved.speech_text ? "text" : "recording",
   );
   const [speechText, setSpeechText] = useState(
-    initialRequest?.speech_text ?? "",
+    String(saved.speechText ?? saved.speech_text ?? ""),
   );
   const [uploading, setUploading] = useState(false);
   const [prompt, setPrompt] = useState(
-    initialRequest?.prompt ?? "A person speaking naturally, static camera.",
+    String(saved.prompt ?? "A person speaking naturally, static camera."),
   );
-  const [size, setSize] = useState(initialRequest?.size ?? 384);
-  const [frames, setFrames] = useState(81);
-  const [fullRecording, setFullRecording] = useState(true);
-  const [steps, setSteps] = useState(initialRequest?.steps ?? 8);
-  const [seed, setSeed] = useState(initialRequest?.seed ?? 43);
-  const [gpu, setGpu] = useState(initialRequest?.gpu ?? "auto");
+  const [size, setSize] = useState(Number(saved.size ?? 384));
+  const [frames, setFrames] = useState(Number(saved.frames ?? 81));
+  const [fullRecording, setFullRecording] = useState(
+    saved.fullRecording !== undefined
+      ? Boolean(saved.fullRecording)
+      : saved._creative_request_kind
+        ? saved._creative_request_kind === "job"
+        : true,
+  );
+  const [steps, setSteps] = useState(Number(saved.steps ?? 8));
+  const [seed, setSeed] = useState(Number(saved.seed ?? 43));
+  const [gpu, setGpu] = useState(String(saved.gpu ?? "auto"));
   const capability = useAvatarCapabilities();
   const whole = useWholeAvatarCapabilities();
-  const savedLegacy = !!initialRequest && !initialRequest.generation_profile;
+  const savedLegacy = hasSavedSettings && !savedGeneration;
   const wholeRecording =
     fullRecording &&
-    (!!initialRequest?.generation_profile ||
+    (!!savedGeneration ||
       (!savedLegacy &&
         (whole.isPending ||
           whole.isError ||
@@ -99,7 +127,9 @@ function AvatarForm({
     ? whole.data?.available === true && !whole.isError
     : capability.data?.available === true && !capability.isError;
   const [chosenProfile, setChosenProfile] = useState<AvatarProfile | null>(
-    initialRequest ? (initialRequest.memory_profile ?? "default") : null,
+    (saved.chosenProfile ??
+      saved.memory_profile ??
+      (initialRequest ? "default" : null)) as AvatarProfile | null,
   );
   const supportedProfile = size === 384 && steps >= 8;
   const memoryProfile =
@@ -109,6 +139,23 @@ function AvatarForm({
       : "default");
   const profileParameters =
     memoryProfile === "default" ? {} : { memory_profile: memoryProfile };
+  useCreativeDraft({
+    formState: {
+      image,
+      audio,
+      voiceMode,
+      speechText,
+      prompt,
+      size,
+      frames,
+      fullRecording,
+      wholeRecording,
+      steps,
+      seed,
+      gpu,
+      chosenProfile: capability.data ? memoryProfile : chosenProfile,
+    },
+  });
   const hardware = useHardware();
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
@@ -129,6 +176,13 @@ function AvatarForm({
           gpu,
           ...(voiceMode === "text" ? { speech_text: speechText } : {}),
         };
+        if (creative)
+          return creativeJob(
+            await creative.generate(body, {
+              kind: "job",
+              feedback: creative.draft._creative_parent_turn_id ? prompt : "",
+            }),
+          );
         const key = await chatRequestId("avatar-job", JSON.stringify(body));
         return api<MediaJob>("/media/jobs/avatar", {
           method: "POST",
@@ -136,6 +190,24 @@ function AvatarForm({
           body: JSON.stringify({ ...body, client_request_id: key }),
         });
       }
+      if (creative)
+        return creativeRun(
+          await creative.generate(
+            {
+              ...profileParameters,
+              image_artifact_id: image,
+              audio_artifact_id: audio,
+              prompt,
+              size,
+              frames,
+              steps,
+              seed,
+              gpu,
+              ...(voiceMode === "text" ? { speech_text: speechText } : {}),
+            },
+            { feedback: creative.draft._creative_parent_turn_id ? prompt : "" },
+          ),
+        );
       return api<Run>("/avatars/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -439,17 +511,18 @@ function AvatarForm({
             </p>
           </fieldset>
         </form>
-        {jobId ? (
-          <MediaJobResult id={jobId} job={job.data} error={job.error} />
-        ) : (
-          <MediaResult
-            kind="video"
-            runId={activeRun?.id ?? runId}
-            run={activeRun}
-            steps={workflow.data?.steps}
-            error={run.error ?? workflow.error}
-          />
-        )}
+        {!creative &&
+          (jobId ? (
+            <MediaJobResult id={jobId} job={job.data} error={job.error} />
+          ) : (
+            <MediaResult
+              kind="video"
+              runId={activeRun?.id ?? runId}
+              run={activeRun}
+              steps={workflow.data?.steps}
+              error={run.error ?? workflow.error}
+            />
+          ))}
       </div>
     </>
   );

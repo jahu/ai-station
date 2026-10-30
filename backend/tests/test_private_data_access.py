@@ -262,6 +262,7 @@ def test_all_private_root_families_are_filtered(users):
                     m.MemoryEntry(scope="global", content="Private memory"),
                     m.Connector(key="same-personal-connector", name="Private connector"),
                     m.ChatProvider(key="same-personal-provider", name="Private provider"),
+                    m.CreativeSession(capability="images", title="Private creative workspace"),
                 ]
             )
             current.commit()

@@ -32,6 +32,7 @@ from app.codex_coding import router as codex_router
 from app.coding_sessions import router as coding_sessions_router
 from app.config import get_settings
 from app.connectors import router as connector_router
+from app.creative_sessions import router as creative_router
 from app.cursor_coding import router as cursor_coding_router
 from app.dashboard import router as dashboard_router
 from app.data_inputs import router as data_inputs_router
@@ -477,6 +478,7 @@ app.include_router(runtime_router)
 app.include_router(llama_router)
 app.include_router(browser_router)
 app.include_router(site_preview_router)
+app.include_router(creative_router)
 
 if get_settings().access_profile == "accounts":
     from app.account_http import install_account_access

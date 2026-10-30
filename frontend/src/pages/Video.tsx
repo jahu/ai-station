@@ -1,3 +1,11 @@
+import CreativeWorkspace from "../components/creative/CreativeWorkspace";
+import {
+  useCreative,
+  useCreativeDraft,
+  creativeRun,
+  creativeJob,
+} from "../components/creative/creative-context";
+import type { ReactNode } from "react";
 import MediaJobResult from "../components/media/MediaJobResult";
 import {
   useMediaJob,
@@ -33,7 +41,11 @@ import {
   type SceneDraft,
 } from "../components/media/video-scenes";
 
-export default function Video() {
+export default function Video({
+  withCreativeSessions = false,
+}: {
+  withCreativeSessions?: boolean;
+}) {
   const [search, setSearch] = useSearchParams();
   const currentRun = useMediaRun(search.get("run") ?? "");
   const currentJob = useMediaJob(search.get("job") ?? "");
@@ -45,6 +57,13 @@ export default function Video() {
     search.get("mode") === "avatar" ||
     !!search.get("audio") ||
     currentJob.data?.kind === "avatar";
+  function wrap(capability: "video" | "avatars", child: ReactNode) {
+    return withCreativeSessions ? (
+      <CreativeWorkspace capability={capability}>{child}</CreativeWorkspace>
+    ) : (
+      child
+    );
+  }
   return (
     <>
       <nav className="mode-tabs" aria-label="Video type">
@@ -67,64 +86,98 @@ export default function Video() {
           Talking avatar
         </button>
       </nav>
-      {avatar ? (
-        <Avatars video />
-      ) : (
-        <VideoForm
-          key={`${search.get("input") ?? currentJob.data?.request?.image_artifact_id ?? ""}|${search.get("job") ?? ""}|${currentJob.data?.request ? "restored" : ""}`}
-          initialImage={
-            search.get("input") ??
-            currentJob.data?.request?.image_artifact_id ??
-            ""
-          }
-          initialRequest={currentJob.data?.request}
-        />
-      )}
+      {avatar
+        ? wrap("avatars", <Avatars video />)
+        : wrap(
+            "video",
+            <VideoForm
+              key={`${search.get("input") ?? currentJob.data?.request?.image_artifact_id ?? ""}|${search.get("job") ?? ""}|${currentJob.data?.request ? "restored" : ""}`}
+              initialImage={
+                search.get("input") ??
+                currentJob.data?.request?.image_artifact_id ??
+                ""
+              }
+              initialRequest={currentJob.data?.request}
+            />,
+          )}
     </>
   );
 }
 
-function VideoForm({
+function VideoForm(props: {
+  initialImage: string;
+  initialRequest?: MediaRequest;
+}) {
+  const creative = useCreative();
+  return <SceneForm key={creative?.formKey ?? "legacy"} {...props} />;
+}
+function SceneForm({
   initialImage,
   initialRequest,
 }: {
   initialImage: string;
   initialRequest?: MediaRequest;
 }) {
+  const creative = useCreative();
+  const [initial] = useState(() => creative?.draft ?? {});
+  const saved = (
+    Object.keys(initial).length
+      ? (initial.formState ?? initial)
+      : (initialRequest ?? {})
+  ) as Record<string, unknown>;
   const [search, setSearch] = useSearchParams();
   const cache = useQueryClient();
-  const [mode, setMode] = useState(initialImage ? "animate" : "generate");
-  const [image, setImage] = useState(initialImage);
-  const [prompt, setPrompt] = useState(initialRequest?.prompt ?? "");
+  const [mode, setMode] = useState(
+    String(
+      saved.mode ??
+        ((saved.image_artifact_id ?? initialImage) ? "animate" : "generate"),
+    ),
+  );
+  const [image, setImage] = useState(
+    String(saved.image ?? saved.image_artifact_id ?? initialImage),
+  );
+  const [prompt, setPrompt] = useState(String(saved.prompt ?? ""));
   const [translation, setTranslation] = useState<TranslationOptions>(
-    initialRequest?.translation ?? {
+    (saved.translation as TranslationOptions | undefined) ?? {
       mode: "inherit",
       review: false,
       protected_terms: [],
     },
   );
   const [negative, setNegative] = useState(
-    initialRequest?.negative_prompt ?? "",
+    String(saved.negative ?? saved.negative_prompt ?? ""),
   );
   const [resolution, setResolution] = useState(
-    initialRequest?.width && initialRequest?.height
-      ? `${initialRequest.width}x${initialRequest.height}`
-      : "1280x704",
+    String(
+      saved.resolution ??
+        (saved.width && saved.height
+          ? `${saved.width}x${saved.height}`
+          : "1280x704"),
+    ),
   );
   const [duration, setDuration] = useState(
-    initialRequest?.duration_seconds
-      ? `${initialRequest.duration_seconds}s`
-      : "49",
+    String(
+      saved.duration ??
+        (saved.duration_seconds
+          ? `${saved.duration_seconds}s`
+          : (saved.frames ?? "49")),
+    ),
   );
   const [compositionMode, setCompositionMode] = useState<
     "continuous" | "shots"
-  >(initialRequest?.composition_mode ?? "continuous");
+  >(
+    (saved.compositionMode ?? saved.composition_mode ?? "continuous") as
+      "continuous" | "shots",
+  );
   const [scenePlanning, setScenePlanning] = useState(
-    !!initialRequest?.scenes?.length,
+    Boolean(
+      saved.scenePlanning ??
+      (Array.isArray(saved.scenes) && saved.scenes.length),
+    ),
   );
   const [scenes, setScenes] = useState<SceneDraft[]>(
     () =>
-      initialRequest?.scenes?.map((scene, index) => ({
+      (saved.scenes as SceneDraft[] | undefined)?.map((scene, index) => ({
         ...scene,
         key: `saved-${index}`,
       })) ?? [{ key: "first", prompt: "", duration_seconds: 5 }],
@@ -136,12 +189,14 @@ function VideoForm({
     0,
   );
   const sceneError = planningScenes ? scenePlanError(prompt, scenes) : "";
-  const [steps, setSteps] = useState(initialRequest?.steps ?? 20);
+  const [steps, setSteps] = useState(Number(saved.steps ?? 20));
   const [profileChoice, setProfileChoice] = useState<VideoProfile | null>(
-    initialRequest ? (initialRequest.memory_profile ?? "default") : null,
+    (saved.profileChoice ??
+      saved.memory_profile ??
+      (initialRequest ? "default" : null)) as VideoProfile | null,
   );
-  const [seed, setSeed] = useState(initialRequest?.seed ?? 43);
-  const [gpu, setGpu] = useState(initialRequest?.gpu ?? "auto");
+  const [seed, setSeed] = useState(Number(saved.seed ?? 43));
+  const [gpu, setGpu] = useState(String(saved.gpu ?? "auto"));
   const [uploading, setUploading] = useState(false);
   const capability = useQuery({
     queryKey: ["video-capabilities"],
@@ -158,6 +213,24 @@ function VideoForm({
     capability.data.recommended_memory_profile === "bounded_11g"
       ? "bounded_11g"
       : "default");
+  useCreativeDraft({
+    formState: {
+      mode,
+      image,
+      prompt,
+      translation,
+      negative,
+      resolution,
+      duration,
+      compositionMode,
+      scenePlanning,
+      scenes,
+      steps,
+      profileChoice: capability.data ? memoryProfile : profileChoice,
+      seed,
+      gpu,
+    },
+  });
   const hardware = useHardware();
   const runId = search.get("run") ?? "";
   const run = useMediaRun(runId);
@@ -196,6 +269,13 @@ function VideoForm({
               }
             : {}),
         };
+        if (creative)
+          return creativeJob(
+            await creative.generate(body, {
+              kind: "job",
+              feedback: creative.draft._creative_parent_turn_id ? prompt : "",
+            }),
+          );
         const key = await chatRequestId("video-job", JSON.stringify(body));
         return api<MediaJob>("/media/jobs/video", {
           method: "POST",
@@ -203,6 +283,13 @@ function VideoForm({
           body: JSON.stringify({ ...body, client_request_id: key }),
         });
       }
+      if (creative)
+        return creativeRun(
+          await creative.generate(
+            { ...values, frames: Number(duration) },
+            { feedback: creative.draft._creative_parent_turn_id ? prompt : "" },
+          ),
+        );
       return api<Run>("/video/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -535,17 +622,18 @@ function VideoForm({
             </p>
           </fieldset>
         </form>
-        {jobId ? (
-          <MediaJobResult id={jobId} job={job.data} error={job.error} />
-        ) : (
-          <MediaResult
-            kind="video"
-            videoMode="scene"
-            runId={runId}
-            run={run.data}
-            error={run.error}
-          />
-        )}
+        {!creative &&
+          (jobId ? (
+            <MediaJobResult id={jobId} job={job.data} error={job.error} />
+          ) : (
+            <MediaResult
+              kind="video"
+              videoMode="scene"
+              runId={runId}
+              run={run.data}
+              error={run.error}
+            />
+          ))}
       </div>
     </>
   );

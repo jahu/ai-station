@@ -10,6 +10,10 @@ import { ImagePlus, Sparkles, X } from "lucide-react";
 import { api, useHardware, type Artifact, type Run } from "../api";
 import { ErrorNotice, PageTitle } from "../components/common";
 import { Button } from "../components/ui/button";
+import {
+  useCreative,
+  useCreativeDraft,
+} from "../components/creative/creative-context";
 import LibraryPicker from "../components/media/LibraryPicker";
 import MediaResult from "../components/media/MediaResult";
 import {
@@ -105,11 +109,12 @@ function SourceStrip({
 
 export default function Images() {
   const [search] = useSearchParams();
+  const creative = useCreative();
   // Remount when Library chooses a different operation or source, not when a
   // generation Run is recorded in the URL.
   return (
     <ImageForm
-      key={`${search.get("mode") ?? ""}|${search.get("input") ?? ""}|${search.get("model") ?? ""}`}
+      key={`${creative?.formKey ?? ""}|${search.get("mode") ?? ""}|${search.get("input") ?? ""}|${search.get("model") ?? ""}`}
       initialMode={search.get("mode") ?? "t2i"}
       initialInput={search.get("input")}
       initialModel={search.get("model")}
@@ -125,28 +130,46 @@ function ImageForm({
   initialInput: string | null;
   initialModel: string | null;
 }) {
+  const creative = useCreative();
+  const [initial] = useState(() => creative?.draft ?? {});
+  const restored = (initial.formState ?? initial) as Record<string, unknown>;
+  const startingMode = String(restored.mode ?? initialMode);
   const [mode, setMode] = useState<Mode>(
-    Object.hasOwn(modes, initialMode) ? (initialMode as Mode) : "t2i",
+    Object.hasOwn(modes, startingMode) ? (startingMode as Mode) : "t2i",
   );
   const [choices, setChoices] = useState<Partial<Record<Mode, string>>>(
-    initialModel
-      ? {
-          [Object.hasOwn(modes, initialMode) ? initialMode : "t2i"]:
-            initialModel,
-        }
-      : {},
+    restored.choices
+      ? (restored.choices as Partial<Record<Mode, string>>)
+      : initialModel
+        ? {
+            [Object.hasOwn(modes, startingMode) ? startingMode : "t2i"]:
+              initialModel,
+          }
+        : {},
   );
   const catalog = useQuery({
     queryKey: ["image-models"],
     queryFn: () => api<ImageModelCatalog>("/images/models"),
   });
-  const [translation, setTranslation] = useState<TranslationOptions>({
-    mode: "inherit",
-    review: false,
-    protected_terms: [],
-  });
+  const [translation, setTranslation] = useState<TranslationOptions>(
+    (restored.translation as TranslationOptions | undefined) ?? {
+      mode: "inherit",
+      review: false,
+      protected_terms: [],
+    },
+  );
+  const restoredChoice = initial.model_id
+    ? (catalog.data?.items.find(
+        (item) => item.definition_id === initial.model_id,
+      )?.id ?? `unavailable:${String(initial.model_id)}`)
+    : initial.backend
+      ? startingMode === "upscale"
+        ? "realesrgan"
+        : String(initial.backend)
+      : undefined;
   const choiceId =
     choices[mode] ??
+    (mode === startingMode ? restoredChoice : undefined) ??
     catalog.data?.defaults.choices[mode] ??
     (mode === "upscale" ? "realesrgan" : "qwen");
   const selectedModel = catalog.data?.items.find(
@@ -157,9 +180,20 @@ function ImageForm({
   const settingsKey = `${mode}:${choiceId}`;
   const [overrides, setOverrides] = useState<
     Record<string, Partial<ImageSettings>>
-  >({});
+  >(
+    (restored.overrides as
+      Record<string, Partial<ImageSettings>> | undefined) ?? {},
+  );
+  const restoredSettings = Object.fromEntries(
+    Object.keys(imageSettings(selectedModel, mode))
+      .filter((key) => initial[key] !== undefined)
+      .map((key) => [key, initial[key]]),
+  ) as Partial<ImageSettings>;
   const settings = {
     ...imageSettings(selectedModel, mode),
+    ...(mode === startingMode && choiceId === restoredChoice
+      ? restoredSettings
+      : {}),
     ...overrides[settingsKey],
   };
   const { width, height, steps, cfg, seed, max_side: maxSide } = settings;
@@ -172,13 +206,52 @@ function ImageForm({
       [settingsKey]: { ...current[settingsKey], [key]: value },
     }));
   }
-  const [prompt, setPrompt] = useState("");
-  const [negative, setNegative] = useState("");
-  const [gpu, setGpu] = useState("auto");
-  const [upscaleResult, setUpscaleResult] = useState(false);
-  const [portraitStyling, setPortraitStyling] = useState(false);
-  const [classicEdit, setClassicEdit] = useState(false);
-  const [ids, setIds] = useState<string[]>(initialInput ? [initialInput] : []);
+  const [prompt, setPrompt] = useState(
+    String(
+      startingMode === "t2i"
+        ? (restored.prompt ?? "")
+        : (restored.edit_prompt ?? restored.prompt ?? ""),
+    ),
+  );
+  const [negative, setNegative] = useState(String(restored.negative ?? ""));
+  const [gpu, setGpu] = useState(String(restored.gpu ?? "auto"));
+  const [upscaleResult, setUpscaleResult] = useState(
+    Boolean(restored.upscaleResult ?? restored.upscale_result),
+  );
+  const [portraitStyling, setPortraitStyling] = useState(
+    Boolean(
+      restored.portraitStyling ??
+      (mode === "t2i" && initial.prompt_style === "pipeline"),
+    ),
+  );
+  const [classicEdit, setClassicEdit] = useState(
+    Boolean(
+      restored.classicEdit ??
+      (mode !== "t2i" && initial.prompt_style === "pipeline"),
+    ),
+  );
+  const [ids, setIds] = useState<string[]>(
+    (restored.ids ??
+      restored.input_artifact_ids ??
+      (initialInput ? [initialInput] : [])) as string[],
+  );
+  useCreativeDraft({
+    formState: {
+      mode,
+      choices: selectedModel ? { ...choices, [mode]: choiceId } : choices,
+      overrides: selectedModel
+        ? { ...overrides, [settingsKey]: settings }
+        : overrides,
+      prompt,
+      negative,
+      gpu,
+      upscaleResult,
+      portraitStyling,
+      classicEdit,
+      ids,
+      translation,
+    },
+  });
   const [localError, setLocalError] = useState<Error | null>(null);
   const hardware = useHardware();
   const [search, setSearch] = useSearchParams();
@@ -254,7 +327,7 @@ function ImageForm({
     upload.mutate(files);
   }
   const create = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       if (!selectedModel?.available || !selectedModel.modes.includes(mode))
         throw new Error("Choose an available model for this operation.");
       const parameters: Record<string, unknown> = {
@@ -294,6 +367,16 @@ function ImageForm({
           reference_layout: settings.reference_layout,
           grounding_px: settings.grounding_px,
         });
+      if (creative) {
+        const turn = await creative.generate(parameters, {
+          feedback: creative.draft._creative_parent_turn_id ? prompt : "",
+        });
+        if (!turn.run)
+          throw new Error(
+            "Generation was queued; refresh its workspace to inspect the result.",
+          );
+        return turn.run;
+      }
       return api<Run>("/images/runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -893,14 +976,18 @@ function ImageForm({
             </aside>
           </fieldset>
         </form>
-        <MediaResult
-          kind={activeRun?.capability === "video.generate" ? "video" : "image"}
-          videoMode="scene"
-          runId={activeRun?.id ?? runId}
-          run={activeRun}
-          steps={workflow.data?.steps}
-          error={run.error ?? workflow.error}
-        />
+        {!creative && (
+          <MediaResult
+            kind={
+              activeRun?.capability === "video.generate" ? "video" : "image"
+            }
+            videoMode="scene"
+            runId={activeRun?.id ?? runId}
+            run={activeRun}
+            steps={workflow.data?.steps}
+            error={run.error ?? workflow.error}
+          />
+        )}
       </div>
     </>
   );

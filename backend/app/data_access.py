@@ -46,6 +46,7 @@ ROOTS = (
     m.MemoryEntry,
     m.Connector,
     m.ChatProvider,
+    m.CreativeSession,
 )
 SHARED = (m.ModelFile, m.ModelDefinition, m.Runtime, m.RuntimeInstance, m.TelemetrySample)
 ADMIN = (m.Setting, m.StationNode, m.WorkerRow)
@@ -53,6 +54,7 @@ ACCOUNTS = (m.User, m.UserSession, m.UserSetting, m.AccountEvent)
 
 # Each inherited record is visible only through all of its private parents.
 PARENTS = {
+    m.CreativeTurn: (("session_id", m.CreativeSession), ("task_id", m.Task), ("run_id", m.Run)),
     m.ResourceLock: (("run_id", m.Run),),
     m.RunDependency: (("run_id", m.Run), ("prerequisite_id", m.Run)),
     m.RunEvent: (("run_id", m.Run),),
@@ -323,6 +325,9 @@ def _check_changes(session: ScopedSession, _context, _instances):
     ):
         raise DataAccessError("Administrative inspection is read-only")
     for row in set(session.new) | set(session.dirty) | set(session.deleted):
+        if isinstance(row, m.CreativeTurn) and row not in session.new:
+            if row in session.deleted or session.is_modified(row):
+                raise DataAccessError("Creative history is append-only")
         if isinstance(row, m.Owned):
             state = inspect(row)
             if row in session.new:

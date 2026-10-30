@@ -33,6 +33,9 @@ def workspaces(accounts):  # noqa: F811 - imported pytest fixture
                 )
                 append_event(session, run.id, "private.event", {"text": f"{name} event {index}"})
             rows = {
+                "creative": m.CreativeSession(
+                    owner_id=user_id, capability="images", title=f"{name} creative workspace"
+                ),
                 "conversations": conversation,
                 "tasks": task,
                 "runs": run,
