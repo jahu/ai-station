@@ -12,12 +12,14 @@ export type TranslationOptions = {
   mode: "inherit" | "on" | "off";
   review: boolean;
   protected_terms: string[];
+  enhance?: boolean;
 };
 export type TranslationRecovery = "reuse" | "retry" | "original";
 
 export function translationRequest(value: TranslationOptions) {
   return value.mode !== "inherit" ||
     value.review ||
+    value.enhance ||
     value.protected_terms.length
     ? { translation: value }
     : {};
@@ -30,6 +32,7 @@ export type TranslationReceipt = {
   effective?: Record<string, string>;
   policy: { model: string; model_label?: string; target_language: string };
   artifact_id?: string;
+  options?: { enhance?: boolean };
 };
 
 export function PromptTranslationControl({
@@ -76,18 +79,41 @@ export function PromptTranslationControl({
           <option value="off">Keep original</option>
         </select>
       </label>
+      <label className="image-workflow-option">
+        <input
+          type="checkbox"
+          checked={!!value.enhance}
+          disabled={disabled}
+          onChange={(event) =>
+            onChange({ ...value, enhance: event.target.checked })
+          }
+        />
+        <span>
+          Improve my prompt locally
+          <small>
+            Prepare clearer instructions for this generator. Your original,
+            quoted text and lyrics are retained.
+          </small>
+        </span>
+      </label>
+      {value.enhance && (
+        <p className="muted">
+          Uses your <Link to="/settings/generation">local prompt model</Link>.
+          Review before generation is available below.
+        </p>
+      )}
       <details>
         <summary>Translation options</summary>
         <p className="muted">
-          Only descriptive instructions are translated. The original is
-          retained; quoted text, lyrics, numbers and model tokens stay
+          Only descriptive instructions are translated or improved. The original
+          is retained; quoted text, lyrics, numbers and model tokens stay
           unchanged.{" "}
           <Link to="/settings/generation">Choose local translator</Link>
         </p>
         <label className="image-workflow-option">
           <input
             type="checkbox"
-            disabled={disabled || !enabled}
+            disabled={disabled || (!enabled && !value.enhance)}
             checked={value.review}
             onChange={(event) =>
               onChange({ ...value, review: event.target.checked })
@@ -105,7 +131,7 @@ export function PromptTranslationControl({
           <textarea
             rows={2}
             maxLength={6432}
-            disabled={disabled || !enabled}
+            disabled={disabled || (!enabled && !value.enhance)}
             placeholder="One name or token per line"
             value={names}
             onChange={(event) => {
@@ -140,7 +166,7 @@ export function PromptReceipt({
       <p className="muted">
         {receipt.status === "original"
           ? "Original used by your choice"
-          : `Local translation · ${receipt.policy.model_label || receipt.policy.model} · ${receipt.policy.target_language.toUpperCase()}`}
+          : `${receipt.options?.enhance ? "Local prompt enhancement" : "Local translation"} · ${receipt.policy.model_label || receipt.policy.model} · ${receipt.policy.target_language.toUpperCase()}`}
       </p>
       {Object.entries(receipt.original).map(([key, original]) => (
         <div key={key}>
@@ -204,6 +230,7 @@ export default function PromptTranslation({
 }) {
   const receipt = run.metadata?.prompt_translation as
     TranslationReceipt | undefined;
+  const enhancing = !!receipt?.options?.enhance;
   const prep = useMediaRun(receipt?.preparation_run_id ?? "");
   const review = useMediaRun(receipt?.review_run_id ?? "");
   const [edited, setEdited] = useState<Record<string, string> | null>(null);
@@ -313,7 +340,9 @@ export default function PromptTranslation({
         <p role="status">
           {receipt.status === "waiting_for_review"
             ? "Applying your reviewed prompt before generation…"
-            : "Translating your prompt locally before generation…"}
+            : enhancing
+              ? "Improving your prompt locally before generation…"
+              : "Translating your prompt locally before generation…"}
         </p>
       )}
       <ErrorNotice
@@ -327,7 +356,9 @@ export default function PromptTranslation({
       {failed && !ready && (
         <>
           <p role="alert">
-            Translation did not complete.{" "}
+            {enhancing
+              ? "Prompt improvement did not complete."
+              : "Translation did not complete."}{" "}
             {prep.data?.error_message || review.data?.error_message}
           </p>
           <div className="row">
@@ -337,7 +368,7 @@ export default function PromptTranslation({
               disabled={resolve.isPending}
               onClick={() => resolve.mutate("retry")}
             >
-              Retry translation
+              {enhancing ? "Retry prompt improvement" : "Retry translation"}
             </Button>
             <Button
               type="button"
@@ -404,8 +435,12 @@ export default function PromptTranslation({
                 : key === "caption"
                   ? "Translated music description"
                   : key === "edit_prompt"
-                    ? "Translated edit instruction"
-                    : "Translated prompt"}
+                    ? enhancing
+                      ? "Prepared edit instruction"
+                      : "Translated edit instruction"
+                    : enhancing
+                      ? "Prepared prompt"
+                      : "Translated prompt"}
               <textarea
                 rows={3}
                 maxLength={Number(
@@ -434,7 +469,7 @@ export default function PromptTranslation({
               disabled={approve.isPending || resolve.isPending}
               onClick={() => approve.mutate()}
             >
-              Use translated prompt
+              {enhancing ? "Use prepared prompt" : "Use translated prompt"}
             </Button>
             <Button
               type="button"

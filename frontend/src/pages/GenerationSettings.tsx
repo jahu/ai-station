@@ -50,9 +50,10 @@ export default function GenerationSettings() {
         <h2>Write naturally. Keep control.</h2>
       </div>
       <p className="muted">
-        Optionally translate image, video and music descriptions to English with
-        a local LLM before generation. Your original wording stays available.
-        Quoted text and model tokens are preserved.
+        Choose a local model for prompt preparation. You can translate image,
+        video and music descriptions, or optionally improve them in each
+        workspace. Your original wording stays available. Quoted text and model
+        tokens are preserved.
       </p>
       <form
         onSubmit={(event) => {
@@ -81,12 +82,13 @@ export default function GenerationSettings() {
           </span>
         </label>
         <details className="generation-advanced" open={!values.model}>
-          <summary>Translator and language</summary>
+          <summary>Local prompt model and language</summary>
           <p className="muted">
             Choose an installed llama.cpp model or your configured local server.
             Managed llama.cpp models load when needed and use automatic GPU
-            handoff. Translation finishes before generation; existing external
-            model servers remain under your control and are never stopped.
+            handoff. Prompt preparation finishes before generation; existing
+            external model servers remain under your control and are never
+            stopped.
           </p>
           <UnifiedModelPicker
             allowedProvider="local-openai-compatible"

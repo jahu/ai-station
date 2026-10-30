@@ -12,6 +12,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import type { Run } from "../../api";
 import PromptTranslation, {
   PromptTranslationControl,
+  translationRequest,
   type TranslationOptions,
 } from "./PromptTranslation";
 import GenerationSettings from "../../pages/GenerationSettings";
@@ -245,6 +246,38 @@ it("uses the typed media retry endpoint for standalone failed music translation"
   await waitFor(() => expect(state.writes).toHaveLength(1));
   expect(state.writes[0].path).toBe("/api/generation/media/media/retry");
   expect(state.writes[0].body?.translation).toBe("original");
+});
+
+it("allows optional local enhancement and review while translation stays off", async () => {
+  const state = mount({ control: true });
+  await screen.findByRole("option", {
+    name: "Station default · Keep original",
+  });
+  const improve = screen.getByRole("checkbox", {
+    name: /Improve my prompt locally/,
+  }) as HTMLInputElement;
+  expect(improve.checked).toBe(false);
+  fireEvent.click(improve);
+  fireEvent.change(screen.getByRole("combobox", { name: "Prompt language" }), {
+    target: { value: "off" },
+  });
+  const review = screen.getByRole("checkbox", {
+    name: /Review before generation/,
+  });
+  expect(review.hasAttribute("disabled")).toBe(false);
+  fireEvent.click(review);
+  const options = JSON.parse(
+    screen.getByLabelText("Translation options snapshot").textContent!,
+  ) as TranslationOptions;
+  expect(translationRequest(options)).toEqual({
+    translation: {
+      mode: "off",
+      review: true,
+      protected_terms: [],
+      enhance: true,
+    },
+  });
+  expect(state.writes).toHaveLength(0);
 });
 
 it("keeps inherited translation off, supports explicit overrides and retains multiline names", async () => {
