@@ -137,8 +137,18 @@ def cosine(left: list[float], right: list[float]) -> float | None:
 
 
 def load_setup(session) -> dict:
-    row = session.get(Setting, SETUP_KEY)
-    value = dict(row.value) if row and isinstance(row.value, dict) else {}
+    from app.data_access import ScopedSession
+
+    if isinstance(session, ScopedSession):
+        # This one fixed model-service setting is machine configuration. Read
+        # its value internally, without granting access to the Settings table
+        # or attaching a mutable administrative record to the user's session.
+        session.scope
+        stored = session.connection().scalar(select(Setting.value).where(Setting.key == SETUP_KEY))
+    else:
+        row = session.get(Setting, SETUP_KEY)
+        stored = row.value if row else None
+    value = dict(stored) if isinstance(stored, dict) else {}
     return {
         "backend": value.get("backend") or "endpoint",
         "revision": value.get("revision") or 0,
@@ -182,6 +192,8 @@ def require_setup(session) -> dict:
 
 
 def setup_view(session, setup=None):
+    from app.data_access import ScopedSession
+
     setup = setup or load_setup(session)
     pairs = session.execute(
         select(MemoryEmbedding, MemoryEntry)
@@ -199,14 +211,25 @@ def setup_view(session, setup=None):
         run = session.get(Run, setup[key]) if setup.get(key) else None
         return run_dict(run) if run else None
 
+    health_run, index_run = operation("last_health_run_id"), operation("last_index_run_id")
+    credentials = public_secret(setup["secret_ref"])
+    if isinstance(session, ScopedSession):
+        # Shared model readiness never reveals the administrator's configured
+        # secret reference or another account's private health/index Run IDs.
+        credentials = {
+            **credentials,
+            "secret_ref": "",
+            "secret_source": "station" if setup["secret_ref"] else "none",
+        }
+
     return {
         **{
             key: setup[key]
             for key in ("backend", "revision", "endpoint", "model", "model_id", "configured", "dimension")
         },
-        **public_secret(setup["secret_ref"]),
-        "last_health_run_id": setup["last_health_run_id"],
-        "last_index_run_id": setup["last_index_run_id"],
+        **credentials,
+        "last_health_run_id": health_run["id"] if health_run else None,
+        "last_index_run_id": index_run["id"] if index_run else None,
         "indexed_count": indexed,
         "memory_count": memories,
         "local_model": {
@@ -216,8 +239,8 @@ def setup_view(session, setup=None):
             "reason": local["reason"],
         },
         "prepare_run": operation("prepare_run_id"),
-        "index_run": operation("last_index_run_id"),
-        "health_run": operation("last_health_run_id"),
+        "index_run": index_run,
+        "health_run": health_run,
     }
 
 

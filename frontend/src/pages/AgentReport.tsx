@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { Artifact } from "../api";
+import { apiText, type Artifact } from "../api";
 import { ErrorNotice, Loading } from "../components/common";
 
 export default function AgentReport({
@@ -18,11 +18,7 @@ export default function AgentReport({
   const report = useQuery({
     queryKey: ["agent-report", artifact?.id],
     enabled: !!artifact,
-    queryFn: async () => {
-      const response = await fetch(`/api/artifacts/${artifact!.id}/file`);
-      if (!response.ok) throw new Error("Could not load the agent report");
-      return response.text();
-    },
+    queryFn: () => apiText(`/artifacts/${artifact!.id}/file`),
   });
   if (!artifact) return null;
   return (

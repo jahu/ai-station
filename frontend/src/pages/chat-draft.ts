@@ -1,13 +1,14 @@
 import { useRef, useState } from "react";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { randomId } from "../lib/random-id";
+import { accountStorageKey } from "../lib/account-storage";
 
 const prefix = "ai-station:chat-draft:";
 const defaultMaxCharacters = 32000;
 
 function read(scope: string, maxCharacters: number) {
   try {
-    const value = sessionStorage.getItem(prefix + scope);
+    const value = sessionStorage.getItem(accountStorageKey(prefix + scope));
     return value && value.length <= maxCharacters ? value : "";
   } catch {
     return "";
@@ -16,7 +17,7 @@ function read(scope: string, maxCharacters: number) {
 
 export function clearChatDraft(scope: string) {
   try {
-    sessionStorage.removeItem(prefix + scope);
+    sessionStorage.removeItem(accountStorageKey(prefix + scope));
   } catch {
     // Storage may be disabled; the composer continues to work in memory.
   }
@@ -35,7 +36,7 @@ export function useChatDraft(
     setValue(next);
     setRestored(false);
     try {
-      if (next) sessionStorage.setItem(prefix + scope, next);
+      if (next) sessionStorage.setItem(accountStorageKey(prefix + scope), next);
       else clearChatDraft(scope);
     } catch {
       // Quota/private-browser failures must never prevent typing or Send.
@@ -64,7 +65,8 @@ export async function chatRequestId(scope: string, body: string) {
   let id = randomId();
   try {
     const previous = JSON.parse(
-      sessionStorage.getItem(requestPrefix + scope) || "null",
+      sessionStorage.getItem(accountStorageKey(requestPrefix + scope)) ||
+        "null",
     );
     if (
       previous?.hash === hash &&
@@ -72,7 +74,10 @@ export async function chatRequestId(scope: string, body: string) {
       /^[0-9a-f-]{36}$/.test(previous.id)
     )
       id = previous.id;
-    sessionStorage.setItem(requestPrefix + scope, JSON.stringify({ hash, id }));
+    sessionStorage.setItem(
+      accountStorageKey(requestPrefix + scope),
+      JSON.stringify({ hash, id }),
+    );
   } catch {
     // Existing in-memory identity remains the fallback when storage is blocked.
   }
@@ -81,7 +86,7 @@ export async function chatRequestId(scope: string, body: string) {
 
 export function clearChatRequest(scope: string) {
   try {
-    sessionStorage.removeItem(requestPrefix + scope);
+    sessionStorage.removeItem(accountStorageKey(requestPrefix + scope));
   } catch {
     /* unavailable storage */
   }

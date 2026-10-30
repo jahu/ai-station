@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type RunEvent } from "../api";
+import { accountEpoch } from "../lib/account-storage";
 
 export function useRunEvents(id: string | undefined) {
   const cache = useQueryClient();
@@ -19,11 +20,17 @@ export function useRunEvents(id: string | undefined) {
     const key = ["events", id];
     const cursor = cache.getQueryData<RunEvent[]>(key)?.at(-1)?.sequence ?? 0;
     const source = new EventSource(`/api/runs/${id}/stream?after=${cursor}`);
+    const epoch = accountEpoch();
     let pending: RunEvent[] = [];
     let timer: ReturnType<typeof setTimeout> | undefined;
     function flush() {
       clearTimeout(timer);
       timer = undefined;
+      if (epoch !== accountEpoch()) {
+        pending = [];
+        source.close();
+        return;
+      }
       const batch = pending;
       pending = [];
       if (!batch.length) return;
@@ -51,6 +58,10 @@ export function useRunEvents(id: string | undefined) {
         void cache.invalidateQueries({ queryKey: ["run-artifacts", id] });
     }
     source.onmessage = (event) => {
+      if (epoch !== accountEpoch()) {
+        source.close();
+        return;
+      }
       try {
         pending.push(JSON.parse(event.data) as RunEvent);
       } catch {
@@ -61,6 +72,7 @@ export function useRunEvents(id: string | undefined) {
     source.addEventListener("end", () => {
       flush();
       source.close();
+      if (epoch !== accountEpoch()) return;
       void cache.invalidateQueries({ queryKey: ["run", id] });
       void cache.invalidateQueries({ queryKey: ["run-artifacts", id] });
     });

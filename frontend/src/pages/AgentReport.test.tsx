@@ -46,7 +46,10 @@ it("renders a complete Markdown report with links but never fetches remote image
     screen.getByRole("link", { name: "Source" }).getAttribute("href"),
   ).toBe("https://example.org/paper");
   expect(screen.queryByRole("img")).toBeNull();
-  expect(fetch).toHaveBeenCalledExactlyOnceWith("/api/artifacts/report/file");
+  expect(fetch).toHaveBeenCalledExactlyOnceWith(
+    "/api/artifacts/report/file",
+    undefined,
+  );
 });
 
 it("links an explicitly retained excerpt to inspectable memory", async () => {

@@ -157,6 +157,45 @@ boundaries, complete the route matrix and deliver the account-aware browser UI.
 Do not deploy migration 0038 or enable the account profile on the workstation
 before those gates pass.
 
+## Browser integration in development
+
+The staged frontend has first-admin setup, username/password and optional
+authenticator/recovery-code login. Account settings provide password rotation,
+locally generated authenticator QR codes, one-time recovery-code display and
+individual device sign-out. Administrators have a user directory, account
+creation, role/access changes and reauthenticated password/MFA reset. Both server
+and UI preserve the last enabled administrator. Access changes explicitly explain
+that devices are revoked, agents paused and queued/active work canceled.
+
+Account changes unmount the previous workspace, clear private query/mutation
+caches and browser drafts, and establish an account-specific storage namespace.
+An epoch fences late JSON/text responses and buffered SSE events. Requests bind
+to the expected browser account as well as the authenticated cookie, so an old
+tab cannot accidentally write or sign out a newly logged-in account. Other tabs
+lock on account-change events and recheck authentication. Unrelated application
+storage is retained; passwords, setup keys and recovery codes are never persisted
+in browser storage. Only an absent account API permits the old operator UI;
+server/network failures show a reconnect state instead of falling back.
+
+The account router is installed before a built-frontend catch-all mount. A real
+compiled browser check on disposable SQLite exercises Alice/Bob login, reload,
+private-state cleanup, administrator create/disable/reset, actual local QR/TOTP
+enrollment and recovery login. Desktop and 390-pixel mobile layouts were inspected
+with no horizontal overflow or JavaScript errors. This check never opens the live
+workstation database and does not enable the profile on that installation.
+
+Shared embedding-model readiness exposes owner-filtered counts/activity and
+hides another account's Run IDs and machine credential references. Its fixed
+internal configuration read does not grant a member administrative Settings
+access. Per-owner embedding job bookkeeping and verified model-preparation writes
+remain part of the execution cutover gate; a readiness GET is not proof that all
+embedding execution paths are qualified.
+
+Historical migration tests now materialize their synthetic unowned rows in a
+real Alembic-created legacy schema before upgrading. They do not bypass the
+production prohibition on downgrading populated ownership. Legacy schemas and
+fixture data are checked for foreign-key integrity before the upgrade.
+
 ## Remaining enablement gate
 
 - Add immutable owners/backfill to private roots and enforce them in repository
@@ -164,7 +203,9 @@ before those gates pass.
 - Bind workers/schedules/tools to the frozen owner while sharing only approved
   physical resources/models. Disable host-owner credential paths for ordinary users.
 - Deliver bootstrap/login/admin/security UI, durable login/MFA attempt throttling,
-  admin recovery, account-aware cookies and safe per-device logout.
+  admin recovery, account-aware cookies and safe per-device logout. The staged
+  UI and service/browser checks above are implemented; final profile enablement
+  and offline administrator recovery are still pending.
 - Preserve current credentials/MFA while offline recovery revokes old sessions.
 - Namespace and clear browser queries, drafts, previews and object URLs between
   accounts; never briefly render the previous account's cached data.

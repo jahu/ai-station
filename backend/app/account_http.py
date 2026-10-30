@@ -80,7 +80,22 @@ def install_account_access(app) -> None:
 
     if getattr(app.state, "account_access_enabled", False):
         return
+    # The built frontend is a catch-all root Mount. Account APIs must retain
+    # priority even when this staged profile is installed after app creation.
+    from starlette.routing import Mount
+
+    previous = list(app.router.routes)
     app.include_router(router)
+    added = app.router.routes[len(previous) :]
+    index = next(
+        (
+            index
+            for index, route in enumerate(previous)
+            if isinstance(route, Mount) and route.path in {"", "/"}
+        ),
+        len(previous),
+    )
+    app.router.routes[:] = previous[:index] + added + previous[index:]
     app.add_exception_handler(AccountError, account_error)
     app.add_exception_handler(DataAccessError, lambda _request, error: _denied(403, str(error)))
     app.state.account_access_enabled = True
@@ -167,6 +182,15 @@ def require_account_session(request: Request) -> JSONResponse | None:
     if principal is None and (COOKIE in request.cookies or LEGACY_COOKIE in request.cookies):
         request.state.account_cookie_invalid = True
     if principal is not None:
+        expected = request.headers.get("x-ai-station-account")
+        if (
+            expected
+            and expected != principal.user_id
+            and path not in (PUBLIC_GET | PUBLIC_POST) - {"/api/auth/logout"}
+        ):
+            response = _denied(409, "Account changed. Refresh before continuing.")
+            response.headers["X-AI-Station-Account-Changed"] = "true"
+            return response
         if path.startswith("/api/operator-auth"):
             return _denied(410, "Use account sign-in and account security settings")
         if administrator_operation(request) and not principal.is_admin:

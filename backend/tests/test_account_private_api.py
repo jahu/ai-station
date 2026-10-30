@@ -76,6 +76,65 @@ def test_public_health_and_anonymous_private_denial(private_app):
         assert response.status_code == 401 and response.headers["cache-control"] == "no-store", path
 
 
+def test_member_workspace_catalogs_and_private_settings_are_usable(accounts):
+    _, alice, _ = accounts
+    failures = {}
+    for path in (
+        "/api/chat/providers",
+        "/api/chat/model-catalog",
+        "/api/chat/preferences",
+        "/api/generation/preferences",
+        "/api/images/models",
+        "/api/agents/tools",
+        "/api/skills",
+        "/api/audio/music/capabilities",
+        "/api/video/capabilities",
+        "/api/avatars/capabilities",
+        "/api/llama",
+        "/api/memory/embeddings/setup",
+        "/api/dashboard",
+    ):
+        response = alice.get(path)
+        if response.status_code != 200:
+            failures[path] = {"status": response.status_code, "detail": response.text[:250]}
+    assert failures == {}
+
+
+def test_shared_embedding_model_readiness_hides_foreign_activity_and_credential_references(accounts):
+    from app.models import Setting
+
+    owner, alice, _ = accounts
+    private_run = run(owner, "Private administrator embedding check")
+    assert (
+        alice.post("/api/memory", json={"content": "Alice private fact", "scope": "global"}).status_code
+        == 201
+    )
+    with control_session_factory()() as session:
+        session.add(
+            Setting(
+                key="memory_embeddings",
+                value={
+                    "endpoint": "http://127.0.0.1:1/v1",
+                    "model": "shared-embedding-model",
+                    "dimension": 3,
+                    "secret_ref": "env:SYNTHETIC_EMBED_SECRET",
+                    "last_health_run_id": private_run,
+                    "last_index_run_id": private_run,
+                },
+            )
+        )
+        session.commit()
+    response = alice.get("/api/memory/embeddings/setup")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["configured"] and body["model"] == "shared-embedding-model" and body["memory_count"] == 1
+    assert body["last_health_run_id"] is body["last_index_run_id"] is None
+    assert body["health_run"] is body["index_run"] is None
+    assert private_run not in response.text and "SYNTHETIC_EMBED_SECRET" not in response.text
+    assert alice.put("/api/memory/embeddings/setup", json={"clear": True}).status_code == 403
+    assert alice.post("/api/memory/embeddings/prepare", json={"expected_revision": 0}).status_code == 403
+
+
 def test_run_list_detail_events_and_sse_are_owner_scoped(accounts):
     _, alice, bob = accounts
     ids = [run(alice, "Private Alice task"), run(bob, "Private Bob task")]
