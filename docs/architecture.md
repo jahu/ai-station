@@ -1,13 +1,19 @@
 The [next-release contract](plans/next-release-0.1.md), owner direction
 2026-10-29, plans private accounts and shared machine resources, persistent
 creative sessions, local prompt/search preparation, expressive sound/editing and
-guided cross-platform installation. It preserves the existing execution engine;
-these planned account/session boundaries are not yet operational.
+guided cross-platform installation. It preserves the existing execution engine.
 
-The staged [account services](accounts.md) add identity/session storage and local
-credential/TOTP verification without exposing additional users. Private-resource
-ownership, HTTP cutover and account-aware worker/browser state remain an explicit
-enablement gate; the existing operator boundary continues to serve the workstation.
+The [account services](accounts.md), qualified and deployed after PR #512, provide
+private ownership, username/password/device sessions, optional TOTP, administrator
+management/inspection and owner-bound workers and browser state. Shared physical
+models/resources do not share user content. `AI_STATION_ACCESS_PROFILE=accounts`
+is explicit and cannot revert to operator access after activation.
+
+The creative-workspace candidate adds owner-scoped sessions and append-only turns
+through migration 0039. One atomic submission uses the existing typed generator
+builder, ordinary Task/Run and an idempotent receipt; no new executor is introduced.
+Its generation/draft/history API is under qualification; the five workspace UIs
+and follow-up UX remain in progress and are not deployed yet.
 
 The [whole-recording avatar plan](plans/whole-recording-avatars.md) evaluates a
 stable global-generation profile after the owner-reported Echo eye deformation.

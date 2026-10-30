@@ -248,24 +248,26 @@ format/lint/types/build, Docker/Compose and actual isolated image/worker/API and
 compiled desktop/mobile browser checks. Private evidence:
 `data/acceptance/release-0.1-foundation-20261029/`. Deployment is tracked separately.
 NR-10's model-freedom/responsibility README update is also merged to `develop`.
-NR-11 is in active implementation: staged ownership, private request/execution
-sessions, account/security UI, recovery, shared-model coordination, Docker-local
-first-admin setup and account-aware private-connection operations have separate
-synthetic/local qualifications. The shipped application still uses its existing
-operator profile. Administrator inspection now has a staged selected-account,
-read-only UI with collection/detail/message/event and media access; its complete
-profile qualification remains part of cutover. The complete operation audit,
-remaining legacy execution-path removal and final preserved-data cutover remain
-enablement gates; see [account contracts](../accounts.md). The opt-in account
-profile now installs strict API/worker/scheduler ownership without test wrappers,
-refuses unbound data access and ownerless execution, and preserves current
-operator credentials/devices during its one-time activation. A private copy of
-the live 0036 database passed migration to 0038 with all existing table content,
-private root ownership and credentials preserved; no live switch occurred.
-The latest inventory
-contains 222 HTTP operations (214 API) and 35 ORM tables; enumeration alone is
-not an isolation pass. Other NR items remain open and research candidates remain
-unqualified. These increments do not complete the full next-release scope.
+NR-11 is qualified, reviewed, merged in PR #512 and deployed on the workstation.
+Private roots, inherited records, credentials, preferences, workers, schedules,
+files/SSE and browser state are account-bound; models and physical resources stay
+shared. Login/devices/TOTP/recovery, administrator management and explicit read-only
+workspace inspection are operational. The account profile refuses unbound/ownerless
+execution and operator fallback after activation. Its 397-case complete account
+gate, 82 additional native/API regressions, 928-case frontend qualification,
+compiled desktop/mobile checks and packaged API/separate-worker tests passed.
+The actual 0036 → 0038 cutover preserved existing content, credentials and private
+owners with a fresh backup, without restarting the native Runner or models.
+See [account contracts](../accounts.md) and the [surface review](../account-boundary-review.md).
+
+NR-01 is in progress on a new branch: migration 0039, private sessions, bounded
+versioned drafts, ordered append-only turns and atomic idempotent generation
+through the five existing typed capability builders. Nine API/service cases pass,
+including restart/navigation history, paging, versions, A/B denial, concurrent
+duplicate submission, rollback and real image-adapter/fake-process execution.
+The five workspace UIs, chosen-source feedback flow and full qualification remain
+open. The new history schema/API are not deployed. Other NR items remain open;
+these increments do not complete the full next-release scope.
 
 NR-12 has an automatic-search candidate: the selected admitted Chat model
 prepares the first query before retrieval, with bounded ordinary-text follow-up

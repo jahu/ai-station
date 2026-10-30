@@ -42,6 +42,7 @@ def seed(session):
         m.MemoryEntry(scope="global", content="Legacy memory"),
         m.Connector(key="legacy", name="Legacy connector"),
         m.ChatProvider(key="legacy", name="Legacy provider"),
+        m.CreativeSession(capability="images", title="Legacy creative workspace"),
     ]
     session.add_all(rows)
     session.add(

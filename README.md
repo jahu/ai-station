@@ -163,6 +163,12 @@ private accounts, persistent creative workspaces, prompt/search improvements,
 expressive audio, timeline editing and guided setup. These remain development
 targets rather than features claimed for v0.0.2.
 
+Private accounts are now implemented and qualified on `develop`: per-user
+conversations, Library, memory and agents, with shared models/hardware, optional
+two-factor authentication and administrator management. They are an explicit
+access-profile cutover; see [accounts and migration](docs/accounts.md). This does
+not declare the remaining 0.1.0 work complete.
+
 ## 🌱 Where we're going
 
 The ambition is simple: **a person with a home GPU should be able to install

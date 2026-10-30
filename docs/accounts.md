@@ -1,10 +1,20 @@
 # Accounts and private data
 
-Implementation for [NR-11](plans/next-release-0.1.md) is in progress. The opt-in
+Implementation for [NR-11](plans/next-release-0.1.md) is qualified and deployed
+on the development workstation after PR #512 (2026-10-30). The opt-in
 `AI_STATION_ACCESS_PROFILE=accounts` registers the account API and strict ownership
 boundary in the real application, worker and scheduler. The production default
-remains `operator` until the final preservation and privacy gates pass; the live
-installation has not been switched. A partial migration is not a release.
+remains `operator` for existing release compatibility; the workstation explicitly
+uses `accounts`. The existing owner signs in as `admin` with the same password.
+The full 0.1.0 release remains in development.
+
+The cutover preserved all existing table content and private owners through the
+0036 → 0038 migration, with a fresh backup and unchanged native Runner, loaded
+models and private-access service. The real desktop/mobile UI, account catalogs,
+retired operator endpoints and temporary-device revocation passed production
+checks. Local/LAN health and the private proxy's backend Host were verified;
+the workstation could not resolve the private tailnet hostname for an independent
+external-network probe. No real password was read or changed for these checks.
 
 ## Identity migration
 
@@ -47,7 +57,7 @@ The committed initial identity closes setup permanently; the proof file is
 removed after success, and leftover files cannot reopen a configured or recovery
 installation. Native loopback development retains its direct setup path. These
 contracts are qualified on a disposable real Docker bridge and the compiled
-desktop/mobile account screen; they do not enable accounts in the live profile.
+desktop/mobile account screen. The later controlled cutover is recorded above.
 
 When that profile is explicitly installed, private-network startup checks for an
 enabled, configured administrator with a valid bounded password record. It does
@@ -162,7 +172,7 @@ key checks cover that relationship. Multi-user databases with ambiguous legacy
 ownership are rejected instead of guessed. Downgrade is allowed only on an empty,
 unused bootstrap installation; populated ownership cannot be discarded.
 
-The account profile uses `ScopedSession`, while the live operator profile retains
+The account profile uses `ScopedSession`, while the compatibility operator profile retains
 its legacy session behavior. A scoped session binds an
 immutable data scope, filters roots and dependent records before counts/limits,
 and validates private references and writes. Missing scopes, raw SQL, bulk writes
@@ -211,8 +221,8 @@ within the same transaction. Search retains ownership filtering before limits.
 
 Repository tests alone are not the HTTP privacy gate. The account-profile HTTP
 tests exercise authentication, worker/session lifetime, personal credentials,
-settings and FTS. The complete route/execution audit and production switch remain
-separate acceptance steps. The live installation still uses operator access.
+settings and FTS. The separate route/execution review and controlled production
+switch are recorded in the current qualification section above.
 
 ## HTTP and execution integration in development
 
@@ -247,11 +257,10 @@ GPU availability and total RAM reservations remain workstation-wide. Typed
 admission helpers expose physical GPU keys and aggregate RAM, not another
 account's Run IDs or prompts. Reservation records and release stay owner-scoped.
 
-The final cutover must remove the transitional unbound-session/ownerless-execution
-paths, integrate the remaining typed model/configuration/recovery and tool
-boundaries, complete the route matrix and deliver the account-aware browser UI.
-Do not deploy migration 0038 or enable the account profile on the workstation
-before those gates pass.
+The completed cutover removed unbound-session/ownerless-execution fallback from
+the account profile, qualified typed configuration/recovery and tool boundaries,
+and delivered the account-aware browser UI. Migration 0038 was deployed only after
+those gates passed; the explicit operator profile remains for release compatibility.
 
 ## Browser integration in development
 
@@ -531,6 +540,10 @@ The exact operation authentication/member-denial matrix complements the private
 root/reference/FTS tests and dedicated A/B/admin lifecycle tests. A copy of the
 actual live 0036 database passed preservation checks through migration 0038.
 
-Final source qualification and production activation remain separate steps.
-Do not infer a live switch from internal service tests or from this document;
-the deployment receipt must identify its actual image, profile and backup.
+Source qualification and production activation have separate receipts:
+`data/acceptance/account-ownership-20261030/account-cutover-reviewed.private.json`,
+`account-deployment.private.json` and `account-production-smoke.private.json`.
+The final account gate passed 397 cases across 36 complete families; additional
+native/API/mutation checks passed 82 cases. The frontend's 928-case qualification
+and actual compiled browser checks are retained. Future capabilities must extend
+these ownership and operation policies instead of bypassing them.
