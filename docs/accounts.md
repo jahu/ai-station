@@ -288,6 +288,10 @@ runtime or changing its endpoint, model, name or other machine configuration.
 Public runtime projections omit inaccessible operation provenance and raw server
 error logs. Ready-model source and startup sorting use a minimal infrastructure
 projection rather than loading another user's complete initiating Run.
+Auto local-code selection uses the same shared source/device observations and a
+fixed projection of measured context from the exact startup event. This includes
+retained proof for a stopped model; no foreign prompt, full Run parameters or
+event payload becomes available. The 100k/context-fit checks remain in place.
 
 An account selecting a model another account is loading receives its own
 `runtime.wait` Run. Only that private waiter is a consumer prerequisite; no foreign

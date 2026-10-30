@@ -48,7 +48,6 @@ def select_coding_model(session):
             )
         )
     }
-    loaded_at = {rid: values[0] for rid, values in loads.items()}
     load_observations = {}
     for rid, payload in session.execute(
         select(RunEvent.run_id, RunEvent.payload)
@@ -56,6 +55,28 @@ def select_coding_model(session):
         .order_by(RunEvent.sequence.desc())
     ):
         load_observations.setdefault(rid, payload)
+    # The model is shared, while its initiating Run and event stream are private.
+    # Project only source/device/context facts; never broaden the ORM data scope.
+    from app.data_access import ScopedSession
+    from app.runtime_coordination import runtime_coding_facts
+
+    if isinstance(session, ScopedSession):
+        for instance in history:
+            loader_id = instance.metadata_json.get("load_run_id")
+            if loader_id is None or loader_id in loads:
+                continue
+            try:
+                facts = runtime_coding_facts(session, instance)
+            except ValueError:
+                continue
+            loads[loader_id] = (
+                facts["created_at"],
+                facts["status"],
+                {"instance_id": instance.id, "gpus": facts["gpus"], **facts["source"]},
+                "llama_load",
+            )
+            load_observations[loader_id] = facts["ready_observation"]
+    loaded_at = {rid: values[0] for rid, values in loads.items()}
     candidates = []
     for model in session.scalars(
         select(ModelFile).where(

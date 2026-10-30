@@ -277,7 +277,7 @@ def runtime_load_facts(session, instance):
         raise ValueError("Model source requires a managed llama.cpp instance")
     fields = [Run.created_at, Run.status]
     fields.extend(
-        Run.parameters[key].label(key) for key in ("model_path", "size_bytes", "mtime", "projector")
+        Run.parameters[key].label(key) for key in ("model_path", "size_bytes", "mtime", "projector", "gpus")
     )
     result = (
         session.connection()
@@ -304,7 +304,40 @@ def runtime_load_facts(session, instance):
         and not isinstance(source["projector"], dict)
     ):
         raise ValueError("The managed model source observation is incomplete")
-    return {"created_at": result["created_at"], "status": result["status"], "source": source}
+    return {
+        "created_at": result["created_at"],
+        "status": result["status"],
+        "source": source,
+        "gpus": result["gpus"],
+    }
+
+
+def runtime_coding_facts(session, instance):
+    """Verified public allocation proof for Auto selection, including stopped models."""
+    from app.models import RunEvent
+
+    facts = runtime_load_facts(session, instance)
+    gpus = facts["gpus"]
+    if not isinstance(gpus, list) or any(type(index) is not int or index < 0 for index in gpus):
+        raise ValueError("The model has no verified device observation")
+    ready = (
+        session.connection()
+        .execute(
+            select(
+                *(RunEvent.payload[key].label(key) for key in ("instance_id", "gpus", "cache_type", "n_ctx"))
+            )
+            .where(
+                RunEvent.run_id == instance.metadata_json.get("load_run_id"),
+                RunEvent.event_type == "runtime.ready",
+                RunEvent.payload["instance_id"].as_string() == instance.id,
+            )
+            .order_by(RunEvent.sequence.desc())
+            .limit(1)
+        )
+        .mappings()
+        .first()
+    )
+    return {**facts, "ready_observation": dict(ready) if ready else {}}
 
 
 def runtime_stop_facts(session, instance):
