@@ -113,6 +113,18 @@ ordinary Task → Run → Events → Artifacts and immutable input/profile snaps
 Resume the exact session route after navigation; an explicit New action opens a
 fresh session. Show in-flight jobs, feedback and prior versions together.
 
+Implementation uses one shared history/draft UI around the existing five forms;
+generation stays typed and transactional with its saved turn. Preserve both
+short direct Runs and the existing full-film/full-recording MediaJob variants
+(`media_jobs.py`); the new UI must not narrow Video or Sonic avatar functionality.
+History progress and Stop follow the complete owned Task graph, including speech,
+translation, continuation and composition children. A preparation Run succeeding
+does not mark the complete turn successful. Reuse the existing Task cancellation
+service. Draft saves are versioned and serialized; navigation/reload flushes pending
+changes without allowing a late save to cross accounts or overwrite a new turn.
+Source/variation controls restore validated request fields, not arbitrary Run
+parameters, and preserve exact narration/lyrics unless the user explicitly edits them.
+
 A follow-up names its selected version and retains all earlier artifacts. Only
 permitted inspected inputs and bounded relevant turns enter an LLM prompt. A
 thumbnail/reference is not automatically a textual description of its content.
@@ -262,11 +274,14 @@ See [account contracts](../accounts.md) and the [surface review](../account-boun
 
 NR-01 is in progress on a new branch: migration 0039, private sessions, bounded
 versioned drafts, ordered append-only turns and atomic idempotent generation
-through the five existing typed capability builders. Nine API/service cases pass,
+through the five existing typed direct-generation builders. Ten API/service cases pass,
 including restart/navigation history, paging, versions, A/B denial, concurrent
 duplicate submission, rollback and real image-adapter/fake-process execution.
 The five workspace UIs, chosen-source feedback flow and full qualification remain
-open. The new history schema/API are not deployed. Other NR items remain open;
+open, including the full MediaJob variants and complete Task progress/Stop. A new
+full 5,101-case normal Python/Runner check is running in four disjoint file cohorts;
+its final result is not yet claimed. The new history schema/API are not deployed.
+Other NR items remain open;
 these increments do not complete the full next-release scope.
 
 NR-12 has an automatic-search candidate: the selected admitted Chat model
