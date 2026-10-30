@@ -84,6 +84,10 @@ async def lifespan(_app):
     migrate()
     with control_session_factory()() as session:
         accounts_active = getattr(_app.state, "account_access_enabled", False)
+        from app.account_profile import prepare_profile
+
+        prepare_profile(session, accounts_active=accounts_active)
+        session.commit()
         refuse_non_loopback_bind(session, accounts_active=accounts_active)
         if accounts_active:
             from app.bootstrap_setup import ensure_setup_proof
@@ -473,6 +477,11 @@ app.include_router(runtime_router)
 app.include_router(llama_router)
 app.include_router(browser_router)
 app.include_router(site_preview_router)
+
+if get_settings().access_profile == "accounts":
+    from app.account_http import install_account_access
+
+    install_account_access(app)
 
 dist = get_settings().frontend_dist
 if dist and Path(dist).is_dir():

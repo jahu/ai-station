@@ -356,10 +356,16 @@ def due_agents(session: Session):
 
 
 def scheduler_tick(session: Session) -> list[str]:
+    from app.account_profile import accounts_enabled, waiting_for_first_admin
+
+    if waiting_for_first_admin(session):
+        return []
     created = []
     for agent in due_agents(session):
         if agent.owner_id is None:
-            # Transitional legacy service path, removed at the account cutover.
+            if accounts_enabled():
+                continue
+            # Explicit legacy operator profile only.
             run_id = _schedule_one(session, agent)
         else:
             from app.data_access import DataScope, ScopedSession

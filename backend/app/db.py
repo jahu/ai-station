@@ -110,6 +110,12 @@ def _context_session() -> Session:
 
     scope = current_data_scope()
     if scope is UNBOUND:
+        from app.account_profile import accounts_enabled
+
+        if accounts_enabled():
+            from app.data_access import DataAccessError
+
+            raise DataAccessError("An explicit owner scope or trusted control session is required")
         # Existing worker/startup code remains in place during the staged
         # cutover. Bound requests, including missing principals, never use it.
         return control_session_factory()()

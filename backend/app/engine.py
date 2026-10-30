@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import socket
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import utcnow
@@ -47,6 +48,11 @@ def tick(
 ) -> str | None:
     executors: dict[str, Executor] = EXECUTORS if executors is None else executors
     ensure_worker(session, worker_id)
+    from app.account_profile import accounts_enabled, waiting_for_first_admin
+
+    if waiting_for_first_admin(session):
+        session.commit()
+        return None
     recover_stale(session, runner)
     session.commit()
     run = claim_next(session, worker_id)
@@ -95,8 +101,38 @@ def tick(
         finally:
             session.expire_all()
         return run.id
-    # Transitional legacy service path. The final account cutover must reject
-    # ownerless Runs; no additional-account API is enabled in the live app yet.
+    if accounts_enabled():
+        from app.models import ResourceLock
+
+        reserved = session.scalar(
+            select(ResourceLock.resource_key)
+            .where(ResourceLock.run_id == run.id, ResourceLock.released_at.is_(None))
+            .limit(1)
+        )
+        if (
+            reserved
+            or run.metadata_json.get("dispatch_attempted")
+            or run.started_at
+            or run.pid
+            or run.process_group_id
+        ):
+            from app.runs import transition
+            from app.state import RunStatus
+
+            run.metadata_json = {**run.metadata_json, "cleanup_requires_inspection": True}
+            transition(
+                session,
+                run,
+                RunStatus.INTERRUPTED,
+                event_type="recovery.inspection_required",
+                payload={"reason": "The Run has no verified execution owner"},
+            )
+        else:
+            mark_failed(session, run, "OwnerUnavailable", "The Run has no verified execution owner")
+            release_run_locks(session, run.id)
+        session.commit()
+        return run.id
+    # Explicit legacy operator profile; account-mode workers never enter it.
     return _execute_claimed(session, run, worker_id, executors)
 
 

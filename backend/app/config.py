@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     data_dir: Path = Field(default=Path("./data"))
     data_host_path: Path | None = None
     database_url: str = ""
+    access_profile: Literal["operator", "accounts"] = "operator"
     runner_socket: str = Field(default_factory=default_runner_socket)
     bind_host: str = "127.0.0.1"
     lan_host: str = ""

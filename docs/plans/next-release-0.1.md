@@ -256,7 +256,13 @@ operator profile. Administrator inspection now has a staged selected-account,
 read-only UI with collection/detail/message/event and media access; its complete
 profile qualification remains part of cutover. The complete operation audit,
 remaining legacy execution-path removal and final preserved-data cutover remain
-enablement gates; see [account contracts](../accounts.md). The latest inventory
+enablement gates; see [account contracts](../accounts.md). The opt-in account
+profile now installs strict API/worker/scheduler ownership without test wrappers,
+refuses unbound data access and ownerless execution, and preserves current
+operator credentials/devices during its one-time activation. A private copy of
+the live 0036 database passed migration to 0038 with all existing table content,
+private root ownership and credentials preserved; no live switch occurred.
+The latest inventory
 contains 222 HTTP operations (214 API) and 35 ORM tables; enumeration alone is
 not an isolation pass. Other NR items remain open and research candidates remain
 unqualified. These increments do not complete the full next-release scope.

@@ -41,6 +41,11 @@ def worker_loop(identity: str) -> None:
 
 def main() -> None:
     migrate()
+    from app.account_profile import prepare_profile
+
+    with control_session_factory()() as session:
+        prepare_profile(session)
+        session.commit()
     slots = get_settings().worker_slots
     identity = worker_id()
     # Spawn avoids inheriting the migration connection or sharing executor state.

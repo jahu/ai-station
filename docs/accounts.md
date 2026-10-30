@@ -1,10 +1,10 @@
 # Accounts and private data
 
-Implementation for [NR-11](plans/next-release-0.1.md) is in progress. The identity,
-credential, session and optional authenticator services below are internal only.
-The account API/profile is exercised on the real application in tests but is not
-registered in the shipped application yet. Additional accounts remain inaccessible
-until the complete ownership gate passes; a partial migration is not a release.
+Implementation for [NR-11](plans/next-release-0.1.md) is in progress. The opt-in
+`AI_STATION_ACCESS_PROFILE=accounts` registers the account API and strict ownership
+boundary in the real application, worker and scheduler. The production default
+remains `operator` until the final preservation and privacy gates pass; the live
+installation has not been switched. A partial migration is not a release.
 
 ## Identity migration
 
@@ -14,6 +14,15 @@ On an existing installation it copies the operator's PBKDF2 password record and
 hashed device sessions, preserving their expiry. No plaintext password or bearer
 token is recovered or stored. A malformed existing credential requires explicit
 local recovery; it must never open first-admin setup to a new claimant.
+
+First activation refreshes that staged identity from the current operator
+password and devices, since operator logins or password changes may have occurred
+after migration 0037. Removed or replaced devices are revoked; a replaced token
+gets a new device ID, while unchanged devices retain their identity and expiry.
+An explicitly revoked device stays revoked. Disabled accounts and administrative
+roles are preserved. A missing or invalid legacy credential quarantines the
+identity rather than opening setup. This refresh runs once, atomically with
+ownership adoption; account-native credentials are never overwritten.
 
 On a fresh installation the reserved administrator is disabled and pending setup.
 Local first-admin setup supplies its username/password exactly once. Login names
@@ -153,7 +162,8 @@ key checks cover that relationship. Multi-user databases with ambiguous legacy
 ownership are rejected instead of guessed. Downgrade is allowed only on an empty,
 unused bootstrap installation; populated ownership cannot be discarded.
 
-`ScopedSession` is staged separately from the live session factory. It binds an
+The account profile uses `ScopedSession`, while the live operator profile retains
+its legacy session behavior. A scoped session binds an
 immutable data scope, filters roots and dependent records before counts/limits,
 and validates private references and writes. Missing scopes, raw SQL, bulk writes
 and unknown model policies fail closed. Ownerless transitional rows stay
@@ -174,8 +184,8 @@ writes remain denied to scoped requests and executors.
 Worker and scheduler entrypoints request trusted coordination sessions explicitly;
 their global claims, leases, due-agent enumeration and machine sampling do not
 depend on an ambient user session. Each owned workload still executes inside its
-frozen owner scope. Removing the remaining legacy unbound/ownerless paths is a
-separate final cutover gate.
+frozen owner scope. The account profile rejects unbound repository access and
+ownerless execution; only the explicit operator profile retains those legacy paths.
 
 HTTP-derived scopes retain the authenticated device identity in memory only.
 Every SSE batch revalidates device revocation, idle/absolute expiry, password/MFA
@@ -188,8 +198,8 @@ existing sign-in boundary without flushing late private tokens.
 The explicit request-session factory rechecks the real account role and current
 device, rather than accepting a caller's administrative flag. The worker factory
 verifies the persisted Run against its frozen owner and rejects disabled accounts;
-it does not grant admin inspection to an admin-owned agent. These factories still
-need to replace the old request/worker session lifetimes at the cutover.
+it does not grant admin inspection to an admin-owned agent. The opt-in account
+profile uses these factories for request and worker lifetimes.
 
 Personal provider/connector credentials use account-and-record namespaces. A
 scoped user cannot select another record's file, an authenticator secret or a host
@@ -199,10 +209,10 @@ service credential; changing its endpoint cannot carry that credential elsewhere
 FTS mutation uses a small typed index-maintenance helper after an owner lookup,
 within the same transaction. Search retains ownership filtering before limits.
 
-These repository tests are not the HTTP privacy gate. The existing factory is
-deliberately unchanged until authentication, worker/session lifetime, per-owner
-credentials/settings, raw FTS mutations and the complete route inventory are
-integrated. Additional user accounts remain unavailable through the application.
+Repository tests alone are not the HTTP privacy gate. The account-profile HTTP
+tests exercise authentication, worker/session lifetime, personal credentials,
+settings and FTS. The complete route/execution audit and production switch remain
+separate acceptance steps. The live installation still uses operator access.
 
 ## HTTP and execution integration in development
 
@@ -396,6 +406,28 @@ by private sessions. A real A/B HTTP regression checks both source/derived
 directions and proves that newer foreign children cannot consume a private page.
 
 ## Remaining enablement gate
+
+The strict startup candidate uses `AI_STATION_ACCESS_PROFILE=accounts` consistently
+for API, worker and scheduler (including the shared Compose environment). It
+installs the account routes without a custom app wrapper and refuses unbound
+repository sessions. The default remains `operator` while qualification is in
+progress; this is not a production rollout instruction.
+
+Activation is one trusted lifecycle transaction, recorded as an account event
+and a fixed profile receipt. A sole existing identity adopts ownerless legacy
+roots, including records written after ownership migration while the operator
+profile was still active. IDs, content, parameters, timestamps and file paths are
+preserved. Ambiguous multi-user ownership blocks activation rather than guessing.
+Once a receipt exists, later ownerless records are never adopted automatically.
+Operator startup is refused for an activated or multi-user database.
+
+Workers keep their heartbeat but do not claim/recover work before first-admin
+setup finishes. Afterwards, an ownerless queued Run fails without execution;
+uncertain dispatch/PID or active reservations instead require inspection and keep
+their allocations. Released reservations do not block it. Ownerless schedules are
+not enqueued. The explicit operator profile retains legacy behavior for migration
+qualification. These contracts do not replace the remaining operation/sandbox
+audit or authorize deployment of an incomplete private-data boundary.
 
 Shared llama.cpp stop/restart, operation coalescing, context upgrades and idle
 eviction now check a fixed cross-account busy projection. It returns only a

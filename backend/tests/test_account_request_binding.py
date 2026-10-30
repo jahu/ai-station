@@ -6,7 +6,13 @@ from fastapi.testclient import TestClient
 from starlette.staticfiles import StaticFiles
 
 
-def test_expected_account_binding_rejects_stale_requests_without_revoking_the_new_device(tmp_path):
+def test_expected_account_binding_rejects_stale_requests_without_revoking_the_new_device(
+    tmp_path, monkeypatch
+):
+    from app.config import clear_settings_cache
+
+    monkeypatch.setenv("AI_STATION_ACCESS_PROFILE", "accounts")
+    clear_settings_cache()
     routes, handlers = list(app.router.routes), dict(app.exception_handlers)
     previous = getattr(app.state, "account_access_enabled", False)
     app.middleware_stack = None

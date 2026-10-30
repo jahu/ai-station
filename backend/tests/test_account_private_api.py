@@ -15,7 +15,11 @@ PASSWORD = "synthetic private account password"
 
 
 @pytest.fixture
-def private_app():
+def private_app(monkeypatch):
+    from app.config import clear_settings_cache
+
+    monkeypatch.setenv("AI_STATION_ACCESS_PROFILE", "accounts")
+    clear_settings_cache()
     routes = list(app.router.routes)
     handlers = dict(app.exception_handlers)
     previous = getattr(app.state, "account_access_enabled", False)

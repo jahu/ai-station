@@ -14,6 +14,11 @@ from app.telemetry_store import record_sample
 
 def main() -> None:
     migrate()
+    from app.account_profile import prepare_profile
+
+    with control_session_factory()() as session:
+        prepare_profile(session)
+        session.commit()
     factory = control_session_factory()
     runner = RunnerClient(timeout=8)
     while True:

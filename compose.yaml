@@ -12,6 +12,7 @@ x-control-plane: &control-plane
   tmpfs:
     - /tmp:rw,noexec,nosuid,size=128m
   environment: &environment
+    AI_STATION_ACCESS_PROFILE: ${AI_STATION_ACCESS_PROFILE:-operator}
     AI_STATION_LAN_HOST: ${AI_STATION_LAN_HOST:-}
     AI_STATION_ACCESS_ORIGINS: ${AI_STATION_ACCESS_ORIGINS:-}
     AI_STATION_PORT: ${AI_STATION_PORT:-8765}
