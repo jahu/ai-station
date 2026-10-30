@@ -312,7 +312,10 @@ def test_local_enhancement_prepares_effects_prompt_without_changing_video_author
         assert "mmaudio" in current["metadata"]["prompt_translation"]["policy"]["enhancement_template"]
 
 
-def test_sound_cues_keep_timing_through_enhancement_and_use_original_retry(sound_bridge, monkeypatch):
+@pytest.mark.parametrize("cue_count,review", [(1, False), (16, True)])
+def test_sound_cues_keep_timing_through_enhancement_and_use_original_retry(
+    sound_bridge, monkeypatch, cue_count, review
+):
     from app import media_translation
     from app.effects import descriptive_fields
     from test_media_translation import settings
@@ -329,13 +332,18 @@ def test_sound_cues_keep_timing_through_enhancement_and_use_original_retry(sound
         settings(api)
         source = source_video(api)
         cue = {"start_frame": 12, "end_frame": 24, "prompt": "A small bell"}
+        cues = (
+            [cue]
+            if cue_count == 1
+            else [{"start_frame": i, "end_frame": i + 1, "prompt": "A small bell"} for i in range(cue_count)]
+        )
         response = api.post(
             "/api/audio/effects/runs",
             json={
                 "video_artifact_id": source,
                 "prompt": "Wind",
-                "cues": [cue],
-                "translation": {"mode": "off", "enhance": True},
+                "cues": cues,
+                "translation": {"mode": "off", "enhance": True, "review": review},
             },
         )
         assert response.status_code == 202, response.text
@@ -343,9 +351,24 @@ def test_sound_cues_keep_timing_through_enhancement_and_use_original_retry(sound
         for _ in range(8):
             if work() is None:
                 break
+        if review:
+            queued = api.get("/api/runs/" + rid).json()
+            approval_id = queued["metadata"]["prompt_translation"]["review_run_id"]
+            approval = api.get("/api/runs/" + approval_id).json()
+            response = api.post(
+                "/api/generation/translations/" + approval_id + "/review",
+                json={
+                    "expected_hash": approval["approval"]["payload"]["effective_hash"],
+                    "effective": approval["parameters"]["effective"],
+                },
+            )
+            assert response.status_code == 200, response.text
+            for _ in range(8):
+                if work() is None:
+                    break
         current = api.get("/api/runs/" + rid).json()
         assert current["status"] == "succeeded", current["error_message"]
-        assert current["parameters"]["cues"] == [{**cue, "prompt": cue["prompt"] + SUFFIX}]
+        assert current["parameters"]["cues"] == [{**c, "prompt": c["prompt"] + SUFFIX} for c in cues]
         receipt_path = sound_bridge["manager"].data_dir / f"runs/{rid}/effects-launch/request.json"
         sent = json.loads(receipt_path.read_text())
         assert sent["request"]["cues"] == current["parameters"]["cues"]
@@ -369,7 +392,7 @@ def test_sound_cues_keep_timing_through_enhancement_and_use_original_retry(sound
             original = dict(run.metadata_json["prompt_translation"]["original"])
             media_translation.prepare_retry(db, run, retry, "original")
             assert descriptive_fields(retry.parameters) == original
-            assert retry.parameters["cues"] == [cue]
+            assert retry.parameters["cues"] == cues
 
 
 @pytest.mark.parametrize(

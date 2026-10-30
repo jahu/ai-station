@@ -84,3 +84,13 @@ def test_long_multiline_quoted_image_text_is_protected_as_one_literal():
     assert literal not in encoded["prompt"]
     reply = {"prompt": encoded["prompt"].replace("napis", "text")}
     assert decode_fields(json.dumps(reply), original, tokens) == {"prompt": "text " + literal}
+
+
+def test_scene_preparation_explicitly_expands_fields_while_other_consumers_keep_their_bound():
+    fields = {f"cue_{i}": "A bell" for i in range(18)}
+    with pytest.raises(ValueError):
+        encode_fields(fields)
+    encoded, tokens = encode_fields(fields, max_fields=18)
+    assert decode_fields(json.dumps(encoded), fields, tokens) == fields
+    with pytest.raises(ValueError):
+        encode_fields({**fields, "unexpected": "Extra"}, max_fields=18)

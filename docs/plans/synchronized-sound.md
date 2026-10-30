@@ -249,8 +249,11 @@ own frame intervals, produced the requested distinct prompt records and exactly
 33.01s after loading/verification; measured peaks were 5073 MiB CUDA allocation
 and 15.25 GiB scoped RAM, within the existing 8/18-GiB profile. This proves actual
 conditioned execution and exact timeline coverage, not human auditory quality.
-Normal qualification has 64 effects/native cases and 70 related translation/
-progress cases; seven complete UI families have 43 passing cases. Compiled
+Final normal qualification has 136 passing cases across twelve complete
+effects/native/translation/progress families and 55 UI cases across eight
+complete families. Review also caught the legacy four-field translation bound:
+scene preparation now explicitly permits eighteen exact fields, while other
+generators keep four, and all sixteen cues can be reviewed/prepared together. Compiled
 private desktop/mobile checks retain cue wording/times after generation,
 refresh and next-version restoration, pass it through the typed native request,
 compose a real preview and deny another account. Those browser checks substitute

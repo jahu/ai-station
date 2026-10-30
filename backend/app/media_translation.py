@@ -264,7 +264,9 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
         raise ValueError("Translation group exceeds its unique consumer bound")
     validate_model(session, policy["model"])
     policy.setdefault("model_label", translator_label(session, policy["model"]))
-    encoded, tokens = encode_fields(fields, options.protected_terms)
+    encoded, tokens = encode_fields(
+        fields, options.protected_terms, max_fields=18 if media.executor_type == "mmaudio_effects" else 4
+    )
     provider = ensure_builtin(session)
     child = create_run(
         session,
@@ -295,7 +297,9 @@ def enqueue_translation(session, media, options=None, *, policy=None, additional
             "options": options.model_dump(),
             "temperature": 0.0,
             "system_prompt": system,
-            "max_tokens": 4096,
+            "max_tokens": 8192
+            if media.executor_type == "mmaudio_effects" and media.parameters.get("cues")
+            else 4096,
             "json_output": True,
             "require_complete": True,
         },
@@ -950,7 +954,7 @@ def cancel_translation_startup(session, consumer):
 class ReviewWrite(BaseModel):
     model_config = ConfigDict(extra="forbid")
     expected_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
-    effective: dict[str, str] = Field(min_length=1, max_length=4)
+    effective: dict[str, str] = Field(min_length=1, max_length=18)
 
 
 @router.post("/translations/{run_id}/review")
