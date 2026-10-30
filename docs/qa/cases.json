@@ -1,5 +1,5 @@
 {
-  "version": 16,
+  "version": 17,
   "status": "Versioned operator QA catalog; release-specific exports distinguish final handoff from drafts and preserve untested answers.",
   "sources": [
     "docs/product-completion.md",
@@ -3807,6 +3807,52 @@
       "minutes": 10,
       "requirements": [
         "NR-07"
+      ]
+    },
+    {
+      "id": "CHAT-101",
+      "area": "Chat",
+      "title": "Dźwięk filmu z rozmowy i ponowne otwarcie miksu",
+      "priority": "P1",
+      "prerequisites": [
+        "Własny krótki film w Library, najlepiej z oryginalną mową lub muzyką; gotowy lokalny Sound effects."
+      ],
+      "steps": [
+        "W rozmowie otwórz Attach files & choose tools → Add film sound. Wybierz film i opisz odgłosy. Zostaw Keep and mix with the new effects.",
+        "Wyślij; po zakończeniu odtwórz film i osobny WAV. Odśwież stronę, kliknij Edit sound mix i sprawdź źródłowy klip oraz niezależny poziom efektów.",
+        "W tej samej rozmowie wyślij w Auto: Dodaj do tego filmu dźwięk ptaków. Sprawdź, że źródłem jest właśnie poprzedni gotowy film."
+      ],
+      "expected": [
+        "Film zachowuje oryginalny dźwięk, a WAV zawiera osobne efekty. Miks można dalej edytować; oryginał i wcześniejsze wyniki pozostają w Library. Inne konto nie widzi tych plików ani montażu. Ocena zgodności odgłosów z obrazem jest zapisywana osobno."
+      ],
+      "resources": "Lokalny GPU i CPU; własny krótki film; bez płatnych API",
+      "minutes": 10,
+      "requirements": [
+        "NR-07",
+        "NR-08"
+      ]
+    },
+    {
+      "id": "CHAT-102",
+      "area": "Chat",
+      "title": "Nowy film z opisanym dźwiękiem jako jedno zadanie",
+      "priority": "P1",
+      "prerequisites": [
+        "Gotowy lokalny Wan oraz Sound effects; zasoby na krótki film."
+      ],
+      "steps": [
+        "W rozmowie wybierz Generate video, długość 15 seconds i Add sound to this film. Opisz obraz w wiadomości, a odgłosy w Sound description.",
+        "Wyślij i obserwuj etapy filmu, generacji dźwięku i miksu. Odśwież stronę w trakcie.",
+        "Po zakończeniu odtwórz cały film; sprawdź osobny WAV i Edit sound mix. Przy osobnej próbie zatrzymaj zadanie przed generacją dźwięku i sprawdź brak późniejszej pracy."
+      ],
+      "expected": [
+        "Jedno zadanie kończy się dopiero po zweryfikowaniu filmu z dźwiękiem; niemy pośredni film nie jest prezentowany jako wynik końcowy. Etapy i źródła można przejrzeć, Stop obejmuje całość, a powrót do rozmowy zachowuje wynik."
+      ],
+      "resources": "Lokalny GPU; krótki film oraz efekty; bez płatnych API",
+      "minutes": 15,
+      "requirements": [
+        "NR-07",
+        "NR-08"
       ]
     }
   ]

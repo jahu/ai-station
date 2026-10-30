@@ -607,12 +607,15 @@ def submit_message(conversation_id, body, session, *, commit=True):
     work_context = session.get(ChatWorkContext, row.id)
     if work_context is None or not work_context.task_id:
         body = prepare_file_creation(body, mode)
+    from app.conversation_effects import prepare_turn as prepare_effects_turn
+
+    body, effects_reference = prepare_effects_turn(session, row, body, mode)
     if mode in {"chat", "work", "orchestrator"}:
         body = prepare_turn(body)
     from app.conversation_media import resolve_result_reference
 
     body, result_reference = resolve_result_reference(session, row, body, mode)
-    result_reference = data_reference or result_reference
+    result_reference = effects_reference or data_reference or result_reference
     from app.work_web_policy import prepare_turn as prepare_work_web
 
     body = prepare_work_web(body, mode)

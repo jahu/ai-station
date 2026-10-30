@@ -335,3 +335,15 @@ The film, scene directions and generation settings stay fixed. Review and enable
 the definition, then Run now or use its saved schedule. Each execution retains a
 separate effects WAV and a synchronized video preview; the original film remains
 unchanged. Missing sources or an unavailable local engine block activation.
+
+
+### Film sound in the conversation
+
+Ask **“Add sound to this film: rain on the leaves”** after a completed film,
+or choose **Attach files & choose tools → Add film sound** and select it from
+Library. Original audio is kept by default; replacing it is an explicit option.
+For a new film, choose **Generate video → Add sound to this film** and describe
+what should be heard. The conversation retains a synchronized movie, separate
+WAV and **Edit sound mix** link to its saved timeline. Film, effects and mixing
+share one inspectable, stoppable task. This uses the optional configured MMAudio
+runtime above; narration and music remain separate capabilities.

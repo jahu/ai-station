@@ -258,6 +258,12 @@ def preview_artifact(session, plan):
 
 
 def job_view(session, task):
+    from app.film_sound import overlay
+
+    return overlay(session, task, video_job_view(session, task))
+
+
+def video_job_view(session, task):
     plan = task.metadata_json["media_plan"]
     if plan.get("version") == 2 and plan.get("kind") == "avatar":
         from app.whole_avatar_jobs import view
@@ -588,6 +594,10 @@ def resume(task_id: UUID, body: ResumeRequest, session: DB):
         raise HTTPException(409, "Media plan changed; refresh before resuming")
     if not view["resume_allowed"] or plan["revision"] >= 20:
         raise HTTPException(409, "Inspect active/completed work before resuming")
+    if task.metadata_json.get("soundtrack_plan") and video_job_view(session, task)["status"] == "succeeded":
+        from app.film_sound import resume_sound
+
+        return resume_sound(session, task, body, receipts, key, plan)
     if plan.get("version") == 2 and plan.get("kind") == "avatar":
         from app.whole_avatar_jobs import resume as resume_whole
 
@@ -780,6 +790,23 @@ def save_resume(session, task, plan, updated, receipts, key, body):
         "media_plan": updated,
         RESOURCE_WAIT_KEY: None,
     }
+    sound = task.metadata_json.get("soundtrack_plan")
+    if sound and sound["source_run_id"] != updated.get("compose_run_id"):
+        from app.film_sound import enqueue
+
+        old = session.get(Run, sound["prepare_run_id"])
+        task.metadata_json = {
+            **task.metadata_json,
+            "soundtrack_revisions": [*task.metadata_json.get("soundtrack_revisions", []), sound],
+        }
+        enqueue(
+            session,
+            session.get(Run, sound["root_run_id"]),
+            updated["compose_run_id"],
+            old.parameters["profile"],
+            old.parameters["renderer"],
+            revision=sound["revision"] + 1,
+        )
     result = job_view(session, task)
     task.metadata_json = {
         **task.metadata_json,

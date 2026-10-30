@@ -349,7 +349,11 @@ not assert that search snippets independently verify every factual claim.
 NR-07 basic effects generation and saved sound workspaces are deployed after
 reviewed PR #524. Actual eight-second and fifteen-second/two-window inference,
 linked previews and scoped Stop pass. Per-scene descriptions are deployed in
-PR #526; assistant/agent exposure and perceptual acceptance remain.
+PR #526. Reviewed media-agent output is deployed in PR #528, with private film
+selection, saved scene cues, ordinary effects/preview Runs and existing workflow
+approvals/Stop. Conversation existing/new-film orchestration and default original-audio layering
+are implemented in the current candidate; review/deployment and perceptual
+acceptance remain. See the conversation delivery contract below.
 NR-08 multitrack editing is reviewed, merged in PR #527 and deployed. Private
 revisions, trim/move/reorder, audio gain/fades/mute, measured waveforms and verified
 CPU preview/export pass API/worker/native and compiled desktop/mobile qualification.

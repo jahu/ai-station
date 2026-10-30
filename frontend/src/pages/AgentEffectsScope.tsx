@@ -11,7 +11,11 @@ export default function AgentEffectsScope({
   onChange,
   disabled,
   onBusy,
+  label = "Agent source film",
+  description,
 }: {
+  label?: string;
+  description?: string;
   value: EffectsMediaRequest;
   onChange: (request: EffectsMediaRequest) => void;
   disabled: boolean;
@@ -28,14 +32,18 @@ export default function AgentEffectsScope({
   return (
     <div className="agent-video-settings">
       <p className="muted">
-        Create an effects and ambience track for this film. The original stays
-        in Library; a separate WAV and synchronized preview are saved each run.
-        The preview plays the new effects track. Use Video → Edit a film to mix
-        it with original speech or music.
+        {description ?? (
+          <>
+            Create an effects and ambience track for this film. The original
+            stays in Library; a separate WAV and synchronized preview are saved
+            each run. The preview plays the new effects track. Use Video → Edit
+            a film to mix it with original speech or music.
+          </>
+        )}
       </p>
       <MediaInput
         kind="video"
-        label="Agent source film"
+        label={label}
         hint="Choose an inspected film from Library · up to 5 minutes. Changing the film clears scene timings."
         value={value.video_artifact_id ?? ""}
         onChange={(video_artifact_id) =>

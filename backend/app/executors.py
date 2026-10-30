@@ -35,6 +35,7 @@ from app.effects import EffectsExecutor, EffectsPreviewExecutor
 from app.email_delivery import EmailCheckExecutor, EmailSendExecutor
 from app.embeddings import MemoryEmbedExecutor
 from app.events import append_event
+from app.film_sound import FilmSoundExecutor
 from app.fish_speech import FishSpeechExecutor
 from app.github_connector import GithubReadExecutor
 from app.llama import LlamaExecutor, LlamaHealthExecutor
@@ -341,6 +342,7 @@ EXECUTORS = {
     "chatterbox": AudioExecutor(),
     "fish_speech": FishSpeechExecutor(),
     EffectsExecutor.name: EffectsExecutor(),
+    FilmSoundExecutor.name: FilmSoundExecutor(),
     TimelineExecutor.name: TimelineExecutor(),
     WaveformExecutor.name: WaveformExecutor(),
     EffectsPreviewExecutor.name: EffectsPreviewExecutor(),

@@ -7,6 +7,9 @@ import AgentCodeResearch from "./AgentCodeResearch";
 import type { ConversationDataScope } from "./useDataInputs";
 import RecordingButton from "../components/media/RecordingButton";
 import MusicScope from "./MusicScope";
+import ConversationEffectsScope, {
+  type EffectsOptions,
+} from "./ConversationEffectsScope";
 import PromptTranslation from "../components/media/PromptTranslation";
 import { randomId } from "../lib/random-id";
 import {
@@ -21,6 +24,7 @@ import GithubSnapshotResult, {
   type GithubSnapshot,
 } from "./GithubSnapshotResult";
 import MediaJobResult from "../components/media/MediaJobResult";
+import GenerationProgress from "../components/media/GenerationProgress";
 import type { MediaJob } from "../components/media/media-job";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -92,6 +96,7 @@ export type AssistantOptions = {
   media_translation?: TranslationOptions;
   data?: ConversationDataScope | null;
   music?: MusicScopeOptions | null;
+  effects?: EffectsOptions | null;
   github?: GithubScope | null;
   action: string;
   image_artifact_ids: string[];
@@ -121,6 +126,8 @@ type TaskStep = {
   location: string;
 };
 export type ActionResult = {
+  sound_edits?: { session_id: string; run_id: string }[];
+  sound_runs?: Run[];
   media_runs?: Run[];
   media_retry_errors?: string[];
   data_runs?: Run[];
@@ -299,6 +306,102 @@ function InspectedImageSources({ artifact }: { artifact: Artifact }) {
   );
 }
 
+function SoundEdits({ edits }: { edits?: ActionResult["sound_edits"] }) {
+  return edits?.length ? (
+    <div className="row" aria-label="Film sound edits">
+      {edits.map((edit) => (
+        <Link
+          className="button secondary"
+          key={edit.session_id}
+          to={`/video?mode=edit&session=${edit.session_id}`}
+        >
+          Edit sound mix
+        </Link>
+      ))}
+    </div>
+  ) : null;
+}
+
+function FilmSoundResult({
+  result,
+  movie = true,
+}: {
+  result: ActionResult;
+  movie?: boolean;
+}) {
+  const film = result.artifacts?.find((a) => a.type === "video");
+  const stem = result.artifacts?.filter((a) => a.type === "audio").at(-1);
+  const current = result.sound_runs?.at(-1);
+  const failure = ["failed", "interrupted", "canceled"].includes(
+    result.task_status ?? "",
+  )
+    ? result.steps?.filter((step) => step.error_message).at(-1)
+    : undefined;
+  return (
+    <section className="assistant-results" aria-label="Film sound result">
+      {movie && (
+        <div className="row">
+          <strong>Film sound</strong>
+          {result.task_status && <Badge status={result.task_status} />}
+        </div>
+      )}
+      {current && (
+        <>
+          <GenerationProgress
+            status={current.status}
+            progress={current.generation_progress}
+            label="Sound effects"
+          />
+          <PromptTranslation run={current} />
+        </>
+      )}
+      {failure?.error_message && (
+        <p role="alert" className="notice">
+          {failure.error_message}
+        </p>
+      )}
+      {movie && film && (
+        <video
+          controls
+          preload="metadata"
+          aria-label="Film with sound"
+          src={`/api/artifacts/${film.id}/file`}
+          style={{ width: "100%", maxHeight: "65vh" }}
+        />
+      )}
+      {stem && (
+        <div>
+          <p className="muted">Separate sound effects track</p>
+          <audio
+            controls
+            preload="none"
+            aria-label="Generated sound effects"
+            src={`/api/artifacts/${stem.id}/file`}
+            style={{ width: "100%" }}
+          />
+        </div>
+      )}
+      <div className="row">
+        {movie && film && (
+          <Link to={`/library/${film.id}`}>Open film in Library</Link>
+        )}
+        {stem && (
+          <a href={`/api/artifacts/${stem.id}/file`} download>
+            Download effects WAV
+          </a>
+        )}
+      </div>
+      <SoundEdits edits={result.sound_edits} />
+      {movie && (
+        <details>
+          <summary>Execution details</summary>
+          <TaskSteps steps={result.steps ?? []} />
+        </details>
+      )}
+    </section>
+  );
+}
+
 export function AssistantResults({
   result,
   executionNote,
@@ -324,10 +427,17 @@ export function AssistantResults({
     updated_at: string;
   }) => void;
 }) {
+  const hasFilmSound = result.steps?.some((step) =>
+    ["audio.effects", "audio.effects.prepare"].includes(step.capability),
+  );
   if (result.media_job)
     return (
-      <MediaJobResult id={result.media_job.task_id} job={result.media_job} />
+      <div className="assistant-results">
+        <MediaJobResult id={result.media_job.task_id} job={result.media_job} />
+        {hasFilmSound && <FilmSoundResult result={result} movie={false} />}
+      </div>
     );
+  if (hasFilmSound) return <FilmSoundResult result={result} />;
   if (!result.steps) return null;
   const dataRoot = result.data_runs?.find(
     (run) => run.executor_type === "orchestrator",
@@ -348,6 +458,7 @@ export function AssistantResults({
   );
   return (
     <div className="assistant-results">
+      <SoundEdits edits={result.sound_edits} />
       <div className="row">
         <strong>Task</strong>
         {result.task_status && <Badge status={result.task_status} />}
@@ -1029,6 +1140,26 @@ export default function AssistantActions({
       });
       return;
     }
+    if (action === "audio.effects") {
+      onChange({
+        action,
+        effects: { video_artifact_id: null, preview_mode: "mix" },
+        image_artifact_ids: [],
+        audio_artifact_id: null,
+        coding: null,
+        new_project: null,
+        commit: null,
+        publish: null,
+        load: null,
+        stop: null,
+        media: null,
+        music: null,
+        github: null,
+        speech_text: null,
+        upscale_result: false,
+      });
+      return;
+    }
     if (action === "audio.music") {
       onChange({
         action,
@@ -1065,6 +1196,7 @@ export default function AssistantActions({
         upscale_result: false,
         speech_text: null,
         music: null,
+        effects: null,
       });
       return;
     }
@@ -1095,6 +1227,7 @@ export default function AssistantActions({
         new_project: null,
         github: undefined,
         music: null,
+        effects: null,
         action,
         upscale_result: false,
         speech_text: null,
@@ -1206,6 +1339,7 @@ export default function AssistantActions({
       action,
       media: action === "video.generate" ? value.media : null,
       music: null,
+      effects: null,
       commit: null,
       publish: null,
       load: null,
@@ -1316,7 +1450,9 @@ export default function AssistantActions({
             onChange={(data) => onChange({ ...value, data })}
           />
         )}
-        {(["auto", "video.generate", "audio.music"].includes(value.action) ||
+        {(["auto", "video.generate", "audio.music", "audio.effects"].includes(
+          value.action,
+        ) ||
           value.action.startsWith("image.")) && (
           <details
             className="conversation-media-language"
@@ -1397,7 +1533,7 @@ export default function AssistantActions({
           value.action !== "system.inspect" &&
           value.action !== "github.inspect" &&
           value.action !== "data.analyze" &&
-          value.action !== "audio.music" &&
+          !["audio.music", "audio.effects"].includes(value.action) &&
           value.action !== "image.generate_video" &&
           value.action !== "project.create" &&
           value.action !== "project.create_code" && (
@@ -1501,7 +1637,7 @@ export default function AssistantActions({
           value.action !== "project.create" &&
           value.action !== "project.create_code" &&
           value.action !== "data.analyze" &&
-          value.action !== "audio.music" &&
+          !["audio.music", "audio.effects"].includes(value.action) &&
           value.action !== "github.inspect") ||
           value.image_artifact_ids.length > 0) && (
           <div
@@ -1585,6 +1721,14 @@ export default function AssistantActions({
             <ErrorNotice error={repositories.error} />
           </label>
         )}
+        {value.action === "audio.effects" && (
+          <ConversationEffectsScope
+            value={value.effects ?? { video_artifact_id: null }}
+            disabled={busy}
+            onBusy={onUploading}
+            onChange={(effects) => onChange({ ...value, effects })}
+          />
+        )}
         {value.action === "audio.music" && (
           <MusicScope
             value={value.music ?? {}}
@@ -1640,6 +1784,40 @@ export default function AssistantActions({
               <option value="60">60 seconds</option>
             </select>
           </label>
+        )}
+        {value.action === "video.generate" && (
+          <section className="agent-media-scope" aria-label="New film sound">
+            <label>
+              <input
+                type="checkbox"
+                checked={!!value.effects}
+                disabled={busy}
+                onChange={(e) =>
+                  onChange({
+                    ...value,
+                    effects: e.target.checked
+                      ? {
+                          prompt: "",
+                          preview_mode: "mix",
+                          video_artifact_id: null,
+                        }
+                      : null,
+                  })
+                }
+              />{" "}
+              Add sound to this film
+            </label>
+            {value.effects && (
+              <ConversationEffectsScope
+                newFilm
+                frames={(value.media?.duration_seconds ?? 0) * 24}
+                value={value.effects}
+                disabled={busy}
+                onBusy={onUploading}
+                onChange={(effects) => onChange({ ...value, effects })}
+              />
+            )}
+          </section>
         )}
         {value.action === "project.create_code" && (
           <NewProjectBuild

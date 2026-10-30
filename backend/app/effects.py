@@ -260,6 +260,11 @@ class EffectsExecutor(HostMediaExecutor):
         expected = video["frames"] * 44100 // video["fps"]
         if artifact.metadata_json.get("samples") != expected:
             raise ValueError("Effects sample count differs from the source timeline")
+        if run.parameters.get("effects_mix"):
+            from app.effects_mix import publish
+
+            publish(session, run, artifact)
+            return
         child = create_run(
             session,
             run.task,

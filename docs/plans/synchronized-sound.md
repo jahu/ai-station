@@ -294,3 +294,82 @@ across stages. When a source contains speech/music, make replacement versus
 layering visible and use the saved timeline mix to retain existing sound rather
 than silently dropping it. These conversation flows are not claimed by the
 media-agent delivery above.
+
+### Conversation implementation checkpoints
+
+1. Extend the typed assistant envelope with an optional effects scope, preserving
+   legacy receipts when it is absent. Direct effects need no conversational text
+   model. Reject mixed coding/data/runtime/music inputs and explicit simultaneous
+   web research; ordinary default web is disabled for the admitted media action.
+2. Bind only a manually selected owned film or one unambiguous completed film
+   visibly produced in this conversation. Do not search arbitrary Library rows,
+   guess between segments/finals or skip a latest unfinished/failed video task
+   to reuse an older film. Snapshot its source identity before dispatch. Model
+   routing alone cannot grant film access or initiate an unrequested operation.
+3. Publish through EffectsRequest/create_effects_run, recording source binding,
+   description/cues, child IDs and ordinary result artifacts in the conversation.
+   Preserve approval, account, deadline, cancellation and recovery contracts.
+4. Add the new-film flow through the existing video Task/Run dependency graph:
+   complete/verify the film first, then admit its sound generation and final
+   preview/mix. Never present a silent intermediate as the requested final film.
+   Show progress and standalone stems, and retain prior/source artifacts.
+5. Layer onto source speech/music through the existing saved timeline renderer
+   with inspectable tracks/gains and a reopenable edit; expose replacement as a
+   deliberate choice. Keep ordinary fixed-voice/music flows and receipts intact.
+6. Qualify direct selection, referential follow-up, ambiguity/unavailable source,
+   changed source, unsupported/unavailable engine, cross-account denial, Stop,
+   lost acknowledgement and new-film→sound completion through real private
+   API/worker/native boundaries and compiled desktop/mobile UI. Normal inference
+   remains fake; perceptual/real-model acceptance is reported separately.
+
+
+### Conversation delivery
+
+The current candidate implements `audio.effects` in the unified conversation.
+Choose **Attach files & choose tools → Add film sound**, select your private
+Library film and describe its sounds. Auto also accepts explicit follow-ups such
+as “Add sound to this film: rain on the leaves”. It binds the one completed film
+shown in this conversation, including a verified linked media-agent result;
+latest unfinished/ambiguous results never fall back to an older Library film.
+The source identity is frozen before queueing and rechecked before native work.
+Questions, quoted instructions, requests for an agent/prompt and unrelated scopes
+do not grant generation or source access.
+
+The default preview preserves original sound and layers the new WAV through a
+saved timeline. **Original sound → Replace audio in the new preview** is an
+explicit alternative. Independent levels, scene cues and advanced sampling remain
+typed. **Edit sound mix** reopens the exact private timeline, its first saved
+revision, render and creation-history turn; earlier/source files remain intact.
+The conversation shows the film, a separately playable/downloadable effects WAV
+and that editor link, with execution details collapsed rather than speech-clone
+or destructive Library controls.
+
+For new films, choose **Generate video → Add sound to this film** and enter the
+sound description. Select a length to add precise scene directions. An explicit
+Auto command can instead say “Generate a 15 second forest film with sound: rain
+on the leaves”. The visual prompt and sound description are separate. This is
+video-conditioned effects/ambience; narration and music remain distinct tools.
+The existing Wan/segmented-composition graph publishes a container
+`film_sound_prepare` Run dependent on the verified final film. It checks the
+original reviewed scope, source bytes and frozen runtime observations, then
+atomically publishes the normal effects Run. Sound and timeline capabilities
+are inspected before child-publication transactions.
+
+The final-film projection remains active until the sound-bearing render succeeds;
+a silent segment/composition is never labelled as that requested final movie.
+Task-wide Stop covers every stage. Explicit Resume on a full-film job whose
+video already succeeded repeats sound preparation/generation only, retaining the
+completed video. Resuming failed video stages rebinds sound to the new final
+composition; old graph revisions and receipts remain inspectable. Uncertain owned
+processes require inspection and are never blindly replayed. Ordinary effects
+native cancellation/recovery and zero-swap resource limits are unchanged.
+
+Qualification evidence is private under
+`data/acceptance/conversation-effects-20261030/`. Normal inference is synthetic.
+The compiled desktop/mobile conversation passes through a real private account
+API, separate worker and native journal, with an actual scoped 4-GiB CPU timeline
+render of 192 frames and 384,000 audio samples. Source/result privacy, reload and
+editor reopening pass. This is not a new GPU-inference or perceptual-quality
+claim. Review/merge/deployment are recorded separately. NR-06/07 audible and
+scene-correspondence acceptance, naming and guided installation/catalog remain
+part of the complete release objective.

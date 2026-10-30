@@ -23,6 +23,8 @@ export type MediaRequest = {
   scenes?: { prompt: string; duration_seconds: number }[] | null;
 };
 export type MediaJob = {
+  soundtrack_status?:
+    "waiting_for_film" | "generating" | "mixing" | "succeeded" | "failed";
   active_generation_progress?: (GenerationProgress & {
     run_id: string;
     capability: string;
