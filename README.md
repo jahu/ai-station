@@ -197,6 +197,12 @@ compatible configured Chatterbox CLI. Expression, guidance and variation stay wi
 each version; the spoken script and standard defaults remain intact.
 [Speech development](docs/plans/expressive-speech.md).
 
+Development builds also offer **Sound effects** in Audio: choose a completed
+film, describe its sounds and keep both a reusable WAV track and a synchronized
+video preview. **Add sound** on a film opens the saved workspace with that source.
+The optional offline MMAudio runtime uses one GPU and retains its separate
+noncommercial model license. [Configuration and qualification](docs/plans/synchronized-sound.md).
+
 ## 🌱 Where we're going
 
 The ambition is simple: **a person with a home GPU should be able to install

@@ -613,7 +613,13 @@ export function ArtifactDetail() {
                 )}
               {prompt && (
                 <>
-                  <h3>{a.type === "audio" ? "Spoken text" : "Prompt"}</h3>
+                  <h3>
+                    {a.metadata?.capability === "audio.effects"
+                      ? "Sound description"
+                      : a.type === "audio"
+                        ? "Spoken text"
+                        : "Prompt"}
+                  </h3>
                   <p className="prompt-text">{prompt}</p>
                   <Button
                     variant="ghost"

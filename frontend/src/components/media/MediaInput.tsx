@@ -83,7 +83,8 @@ export default function MediaInput({
             !!a.metadata?.frames &&
             [24, 25].includes(Number(a.metadata?.fps)))) &&
         (kind !== "audio" ||
-          (a.metadata?.capability !== "audio.effects" &&
+          ((audioMode === "transcription" ||
+            a.metadata?.capability !== "audio.effects") &&
             audioTypes.includes(a.mime_type) &&
             (a.metadata?.duration_seconds === undefined ||
               a.metadata.duration_seconds <= maxAudioSeconds))) &&
@@ -141,6 +142,22 @@ export default function MediaInput({
               source.data?.original_filename ||
               "Loading reference…"}
           </span>
+          {kind === "video" &&
+            !!source.data?.metadata?.frames &&
+            !!source.data.metadata.fps && (
+              <small className="muted">
+                {new Intl.NumberFormat(undefined, {
+                  maximumFractionDigits: 2,
+                }).format(
+                  Number(source.data.metadata.frames) /
+                    Number(source.data.metadata.fps),
+                )}{" "}
+                s
+                {source.data.metadata.width && source.data.metadata.height
+                  ? ` · ${source.data.metadata.width} × ${source.data.metadata.height}`
+                  : ""}
+              </small>
+            )}
         </div>
       ) : kind === "video" ? (
         <div className="media-upload">

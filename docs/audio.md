@@ -1,4 +1,15 @@
-# Local speech
+# Local audio
+
+Development builds include **Sound effects** beside Speech and Music. Choose an
+inspected completed film from Library, describe what should be heard, then retain
+a WAV stem and a separate video preview. The preview replaces audio only in the
+new film; the original remains available. **Add sound** from Library stages that
+exact video. Saved workspaces retain sources, descriptions and variations. The
+optional offline MMAudio adapter requires a configured runtime, at least 8 GiB
+free VRAM and 18 GiB load RAM; it stays unavailable until verified. See
+[setup, model licensing and actual qualification](plans/synchronized-sound.md).
+
+## Speech
 
 Development builds additionally offer **Fish S2 Pro · Expressive** in Speech
 model when its separate native runtime is configured and verified. Select voice
