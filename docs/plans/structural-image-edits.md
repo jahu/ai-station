@@ -34,3 +34,27 @@ Compiled desktop/mobile checks cover actual selection and saved variations. Real
 neutral same-source object-removal and pose fixtures compare model-appropriate
 presets and record whether the requested change occurred. A finished Run alone
 is not visual acceptance. Existing scripts/models and private media stay untouched.
+
+## Recorded qualification, 2026-10-30
+
+One neutral 768×1024 source shows a fictional, fully clothed adult standing beside
+an empty bench and holding a red book. Each operation uses the same source and
+instruction, with existing model-appropriate presets: Qwen Image 2.1 at 30 steps;
+LUSTIFY Turbo Q4_0 at 8 steps with aligned references/strength 4.
+
+| Requested change | Observed Qwen result | Observed LUSTIFY result |
+| --- | --- | --- |
+| Remove book and lower empty hand | Book removed; empty hand lowered; identity, clothing and scene retained. | Book removed, but hand remains raised with unclear/fused fingers; texture changes more strongly. |
+| Sit on the bench, retain book | Subject seated on original bench with feet on ground and book retained. | Subject remains standing; requested pose is not performed. |
+
+These are actual generated outputs inspected visually, not conclusions from Run
+status. They qualify the Qwen recommendation for these fixtures, not every
+possible instruction or LUSTIFY preset. No private images are published in Git.
+
+The 280-case complete affected-family baseline passes. Final serialization changes
+have 104 passing complete-family cases, followed by 44 model/routing/private cases
+after preserving custom Qwen selection. The UI's 953-case baseline and final
+31-case Images/workspace families pass, along with types/lint/format/build. Saved
+Auto intent round-trips without injecting provisional backend/default controls.
+Compiled desktop/mobile acceptance and final rollout are recorded separately in
+`data/acceptance/image-structural-edits-20261030/`.
