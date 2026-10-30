@@ -41,6 +41,7 @@ export interface CreativeController {
   formKey: string;
   draft: CreativeDraft;
   setDraft: (value: CreativeDraft) => void;
+  sourceRun?: Run;
   generate: (
     parameters: CreativeDraft,
     options?: { kind?: "direct" | "job"; feedback?: string },

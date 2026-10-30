@@ -18,6 +18,13 @@ Task-wide Stop and explicit administrator inspection share the existing private
 account boundaries. See [workspace contracts](creative-workspaces.md). Production
 rollout remains separate from qualification.
 
+The [structural edit selector](plans/structural-image-edits.md) is an opt-in typed
+model resolution before ordinary image enqueue. A read-only owner-scoped preview
+uses bounded deterministic intent and personal defaults; no inference or native
+I/O runs there. The selected checkpoint/profile and reason are frozen with the
+Run. Retry never re-routes old work, explicit models remain authoritative, and
+legacy request serialization is unchanged when Auto is absent.
+
 The [optional prompt enhancement](plans/local-prompt-enhancement.md) extends the
 existing local translation preparation/apply executors. Fixed generator/operation
 templates, original/effective receipts, same-owner source bindings and normal

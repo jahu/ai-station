@@ -1,4 +1,24 @@
-# Image generation followed by Upscale
+# Image workflows
+
+## Automatic model choice for edits
+
+In development builds, **Auto · match this edit** is available in Edit and
+Recompose. The preview shows the chosen model and why. Direct English/Polish
+pose/orientation and object-removal instructions recommend the configured Qwen
+path; other edits retain your personal default. A configured Qwen checkpoint is
+preserved. Too many references for the default model select Qwen's larger bound.
+
+Explicit LUSTIFY choices remain unchanged. A recommendation offers **Use Auto
+for this edit**; you can keep the selected model and its advanced controls.
+Auto uses direct edit instructions and each model's quality presets. Image
+geometry carries into a variation; model-specific steps/CFG do not accidentally
+carry from a different model. The chosen model/reason is retained in history and
+artifact metadata, and ordinary Retry reuses the frozen selection.
+
+The existing typed executor, source validation, progress, Stop and recovery
+remain in use. [Contracts and real comparison](plans/structural-image-edits.md).
+
+## Image generation followed by Upscale
 
 Images offers **Upscale result 4×** for Generate, Edit and Recompose. The Platform assistant offers the same option and recognizes an explicit final instruction such as “Generate an image of a forest, then upscale it” or “Zmień kolor, a następnie powiększ wynik”. That final instruction is removed from the generation/edit prompt. An ordinary mention of upscaling inside a scene does not add an operation. Other assistant actions cannot use the option to acquire image capabilities.
 

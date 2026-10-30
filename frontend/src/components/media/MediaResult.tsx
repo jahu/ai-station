@@ -1,3 +1,4 @@
+import ImageModelSelection from "./ImageModelSelection";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -173,6 +174,7 @@ export default function MediaResult({
         </div>
         {run && <Badge status={run.status} />}
       </div>
+      <ImageModelSelection run={run} />
       <ErrorNotice
         error={error ?? artifacts.error ?? cancel.error ?? retry.error}
       />

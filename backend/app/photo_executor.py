@@ -49,6 +49,11 @@ class PhotoPipeExecutor(HostMediaExecutor):
         return super().reserve_devices(session, run, indexes)
 
     def on_success(self, session, run, artifact):
+        if run.metadata_json.get("image_model_selection"):
+            artifact.metadata_json = {
+                **artifact.metadata_json,
+                "image_model_selection": run.metadata_json["image_model_selection"],
+            }
         if run.parameters.get("video_prompt"):
             self.queue_video(session, run, artifact)
             return

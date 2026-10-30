@@ -182,6 +182,10 @@ effective prompt. Lyrics and spoken scripts are preserved. Fixed Sonic and
 upscale operations have no descriptive prompt to enhance.
 [Prompt preparation contracts](docs/plans/local-prompt-enhancement.md).
 
+For edits, development builds also offer **Auto · match this edit** with a visible
+model recommendation. Pose changes and object removal can use Qwen while explicit
+LUSTIFY choices remain available. [Image workflows](docs/image-workflows.md).
+
 ## 🌱 Where we're going
 
 The ambition is simple: **a person with a home GPU should be able to install
