@@ -390,6 +390,11 @@ writes, disabled subjects, revoked/demoted actors, range streaming and symlink
 escape. These tests and the dedicated UI checks qualify this inspector only;
 they do not activate accounts or replace the complete application audit below.
 
+Library lineage uses an ORM-mapped JSON parent join, preserving selected-owner
+filtering before distinct/order/limit. It no longer relies on raw SQL rejected
+by private sessions. A real A/B HTTP regression checks both source/derived
+directions and proves that newer foreign children cannot consume a private page.
+
 ## Remaining enablement gate
 
 Shared llama.cpp stop/restart, operation coalescing, context upgrades and idle

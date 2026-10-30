@@ -6,7 +6,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import or_, select, text
+from sqlalchemy import func, or_, select, true
 from sqlalchemy.orm import Session
 
 from app.db import session_scope, utcnow
@@ -28,18 +28,18 @@ def _artifacts_in_order(session: Session, ids: list[str]) -> list[Artifact]:
 
 
 def derived_artifact_ids(session: Session, artifact_id: str, limit: int = DERIVED_LIMIT) -> list[str]:
-    rows = session.execute(
-        text(
-            "SELECT artifacts.id FROM artifacts, "
-            "json_each(artifacts.parent_artifact_ids) AS parent "
-            "WHERE parent.value = :artifact_id AND artifacts.id != :artifact_id "
-            "GROUP BY artifacts.id "
-            "ORDER BY MAX(artifacts.created_at) DESC, artifacts.id "
-            "LIMIT :limit"
-        ),
-        {"artifact_id": artifact_id, "limit": limit},
+    parents = func.json_each(Artifact.parent_artifact_ids).table_valued("value")
+    # Keep the Artifact mapper in the statement so owner restrictions apply
+    # before ordering/limiting. Raw text would bypass the scoped ORM policy.
+    rows = session.scalars(
+        select(Artifact.id, Artifact.created_at)
+        .join(parents, true())
+        .where(parents.c.value == artifact_id, Artifact.id != artifact_id)
+        .distinct()
+        .order_by(Artifact.created_at.desc(), Artifact.id)
+        .limit(limit)
     )
-    return [row[0] for row in rows]
+    return list(rows)
 
 
 def lineage_dict(session: Session, artifact: Artifact) -> dict:
