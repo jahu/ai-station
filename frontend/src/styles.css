@@ -8336,3 +8336,33 @@ section:has(> .memory-grid) > .dashboard-note {
     font-size: 16px;
   }
 }
+
+.account-form .account-remember {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  cursor: pointer;
+}
+.account-form .account-remember input {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+.account-remember span {
+  display: grid;
+  gap: 4px;
+}
+.account-remember strong {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 500;
+}
+.account-remember small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}

@@ -340,3 +340,59 @@ it("discards an old account's late request result instead of repopulating privat
   finish(response([{ title: "PRIVATE OLD RESULT" }]));
   await expect(pending).rejects.toThrow("Account changed");
 });
+
+it.each([false, true])(
+  "only requests a remembered login after selecting the option (%s)",
+  async (remember) => {
+    const bodies: Record<string, unknown>[] = [];
+    const fetch = vi.fn(async (path: string, options?: RequestInit) => {
+      if (path === "/api/auth") return response(signedOut);
+      if (path === "/api/auth/login") {
+        bodies.push(JSON.parse(String(options?.body)));
+        return response(signedIn);
+      }
+      return response({});
+    });
+    mount(fetch);
+    await screen.findByRole("heading", { name: "Welcome back." });
+    credentials();
+    const checkbox = screen.getByRole("checkbox", {
+      name: /Keep me logged in/,
+    });
+    expect((checkbox as HTMLInputElement).checked).toBe(false);
+    if (remember) fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+    await screen.findByRole("heading", { name: "Private workspace for Alice" });
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0].remember_me).toBe(remember ? true : undefined);
+  },
+);
+
+it("retains the remembered-device choice through the second-factor challenge", async () => {
+  const bodies: Record<string, unknown>[] = [];
+  mount(
+    vi.fn(async (path: string, options?: RequestInit) => {
+      if (path === "/api/auth") return response(signedOut);
+      if (path === "/api/auth/login") {
+        bodies.push(JSON.parse(String(options?.body)));
+        return bodies.length === 1
+          ? response({ detail: "Additional verification is required" }, 403)
+          : response(signedIn);
+      }
+      return response({});
+    }),
+  );
+  await screen.findByRole("heading", { name: "Welcome back." });
+  credentials();
+  fireEvent.click(screen.getByRole("checkbox", { name: /Keep me logged in/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+  fireEvent.change(
+    await screen.findByLabelText(/Authenticator or recovery code/),
+    { target: { value: "123456" } },
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+  await screen.findByRole("heading", { name: "Private workspace for Alice" });
+  expect(bodies).toHaveLength(2);
+  expect(bodies.every((body) => body.remember_me === true)).toBe(true);
+  expect(bodies[1].second_factor).toBe("123456");
+});
