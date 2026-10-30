@@ -101,6 +101,51 @@ it("shows actual source links and partial results independently of the model ans
   expect(screen.getByText(/Some search engines did not respond/)).toBeTruthy();
 });
 
+it("shows the actual locally prepared query alongside the user's original question", () => {
+  render(
+    <SearchSources
+      result={{
+        query: "Breaking Bad actor death report fact check",
+        original_query: "A question about an actor",
+        query_preparation: { location: "local", model: "local-fixture" },
+        searched_at: "2026-10-30T00:00:00Z",
+        partial: false,
+        sources: [],
+      }}
+    />,
+  );
+  expect(
+    screen.getByText(/Searched: Breaking Bad actor death report fact check/),
+  ).toBeTruthy();
+  expect(screen.getByText("Question: A question about an actor")).toBeTruthy();
+  expect(
+    screen.getByText("Query prepared locally · local-fixture"),
+  ).toBeTruthy();
+});
+
+it("labels preparation by an explicitly selected external model", () => {
+  render(
+    <SearchSources
+      result={{
+        query: "public query",
+        query_preparation: {
+          location: "external",
+          model: "chosen-cloud-model",
+        },
+        searched_at: "2026-10-30T00:00:00Z",
+        partial: false,
+        sources: [],
+      }}
+    />,
+  );
+  expect(
+    screen.getByText(
+      "Query prepared with selected external model · chosen-cloud-model",
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText(/Query prepared locally/)).toBeNull();
+});
+
 it("moves through search sources with arrow keys", () => {
   render(
     <SearchSources
