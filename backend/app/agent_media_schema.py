@@ -8,6 +8,7 @@ from pydantic.json_schema import SkipJsonSchema
 
 from app.audio_schema import SpeechRequest
 from app.avatar_schema import FullAvatarSettings
+from app.effects_schema import EffectsRequest
 from app.image_schema import ImageRequest
 from app.music_schema import MusicOptions, MusicSettings
 from app.video_schema import LongVideoSettings
@@ -102,8 +103,25 @@ class AgentAvatarScope(BaseModel):
         return self
 
 
+class AgentEffectsRequest(EffectsRequest):
+    # Disabled drafts have no authority to invent a film reference.
+    video_artifact_id: UUID | None = None
+
+
+class AgentEffectsScope(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["effects"]
+    request: AgentEffectsRequest
+    description_source: Literal["fixed", "goal"] = "fixed"
+
+
 AgentMediaScope = Annotated[
-    AgentImageScope | AgentMusicScope | AgentSpeechScope | AgentVideoScope | AgentAvatarScope,
+    AgentImageScope
+    | AgentMusicScope
+    | AgentSpeechScope
+    | AgentVideoScope
+    | AgentAvatarScope
+    | AgentEffectsScope,
     Field(discriminator="kind"),
 ]
 

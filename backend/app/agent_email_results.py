@@ -74,9 +74,16 @@ def verified_result(session, source, root, definition, *, media_metadata_only=Fa
         if source.executor_type != expected or source.metadata_json.get("upscale_run_id"):
             raise ValueError("Media preparation or an intermediate segment is not a final result")
         family = "media"
-        types = {"image": "image", "music": "audio", "speech": "audio", "video": "video", "avatar": "video"}
+        types = {
+            "effects": "video",
+            "image": "image",
+            "music": "audio",
+            "speech": "audio",
+            "video": "video",
+            "avatar": "video",
+        }
         artifacts = [item for item in artifacts if item.artifact_type == types[kind]]
-        if expected in {"media_compose", "sonic_whole"} and any(
+        if expected in {"media_compose", "sonic_whole", "effects_preview"} and any(
             not item.metadata_json.get("verified") for item in artifacts
         ):
             raise ValueError("The assembled media has not passed final verification")

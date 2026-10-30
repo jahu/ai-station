@@ -258,3 +258,39 @@ private desktop/mobile checks retain cue wording/times after generation,
 refresh and next-version restoration, pass it through the typed native request,
 compose a real preview and deny another account. Those browser checks substitute
 GPU inference. Evidence: `data/acceptance/scene-sound-cues-20261030/`.
+
+## Assistant and media-agent delivery (remaining NR-07)
+
+Use the existing `EffectsRequest` and `create_effects_run` as the single source
+of validation, admission, observations and source lineage. The unified assistant
+must bind an explicitly selected or unambiguous owned film; text-only mentions
+never authorize an arbitrary Library source. Expose the prompt, optional ordered
+scene directions and resulting reusable effects WAV/linked preview in the same
+conversation. Require ordinary media permissions and operational engine checks.
+
+Media-agent definitions must display that same frozen film and sound settings
+for review before activation. Their existing preparation, child Run dependencies,
+approval, cancellation and recovery apply; do not add an implicit HTTP, shell,
+external model or cross-account capability. Scheduled executions keep ordinary
+Task/Run/Event/Artifact history. Test source ambiguity, Bob/admin inspection,
+changed/unavailable sources, unavailable engine, approval, Stop and lost
+acknowledgement before marking these entry points available. Shared native SFX
+qualification is retained; human perceptual sound synchronization remains a
+separate acceptance item. The timeline editor itself is deployed in PR #527.
+
+The media-agent entry point is implemented in PR #528:
+pure shared EffectsRequest schema, reviewed optional-until-activation film
+selection, fixed/goal preparation with immutable scene timing, ordinary effects
+and verified-preview children, existing approvals/Stop/receipts and private
+results. Synthetic inference plus the real CPU compositor passed the compiled
+desktop/mobile review/save/enable/run/refresh flow; this does not repeat or claim
+new GPU inference/perceptual synchronization. Conversation source binding is the
+next distinct delivery and remains in scope.
+
+The remaining conversation delivery must cover both a reviewed existing film and
+a newly requested film followed by its described effects on the same Task. Bind
+explicit, unambiguous source authority; retain separate stems and cancellation
+across stages. When a source contains speech/music, make replacement versus
+layering visible and use the saved timeline mix to retain existing sound rather
+than silently dropping it. These conversation flows are not claimed by the
+media-agent delivery above.

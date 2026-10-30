@@ -1022,3 +1022,10 @@ The native renderer verifies source hashes, timing and output coverage before
 publishing a general video Artifact. Preview and export reuse the same verified
 result; changed drafts cannot export an earlier mix as their current edit.
 See [timeline plan](plans/media-timeline.md).
+
+Sound-effect media agents reuse the shared pure `EffectsRequest` contract and
+existing `create_effects_run` service. Agent preparation freezes the selected film
+and cues, and passes its trusted engine preflight into transactional child
+publication. GPU sound generation and CPU preview remain ordinary existing Runs;
+no agent-specific process or separate execution engine is introduced. Final
+media-result summaries recognize only the verified effects preview.

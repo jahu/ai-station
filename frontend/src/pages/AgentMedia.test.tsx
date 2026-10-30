@@ -910,3 +910,82 @@ it("reviews expressive speech direction separately from exact words and clears c
   expect(saved.request.text).toBe("Dokładne słowa.");
   expect(screen.queryByLabelText("Voice direction")).toBeNull();
 });
+
+it("reviews a Library film and exact scene sounds for a local effects agent", async () => {
+  const film = {
+    id: "11111111-1111-4111-8111-111111111111",
+    type: "video",
+    mime_type: "video/mp4",
+    original_filename: "Quiet garden.mp4",
+    metadata: { frames: 72, fps: 24, width: 1280, height: 704 },
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (path: string) => ({
+      ok: true,
+      json: async () =>
+        path.endsWith("/audio/effects/capabilities")
+          ? { available: true }
+          : path.includes("/hardware")
+            ? { gpus: [] }
+            : path === "/api/artifacts"
+              ? [film]
+              : path === "/api/artifacts/" + film.id
+                ? film
+                : [],
+    })),
+  );
+  function Editor() {
+    const [value, setValue] = useState<AgentMediaScope>(
+      newAgentMedia("effects", "Wind in the trees"),
+    );
+    return (
+      <>
+        <AgentMediaScopeEditor
+          value={value}
+          goal="Wind in the trees"
+          disabled={false}
+          onChange={setValue}
+          onBusy={() => {}}
+        />
+        <output aria-label="Media scope">{JSON.stringify(value)}</output>
+      </>
+    );
+  }
+  render(
+    <Frame>
+      <Editor />
+    </Frame>,
+  );
+  expect(screen.queryByLabelText("Upload speech")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Choose from Library" }));
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: "Choose Quiet garden.mp4 11111111",
+    }),
+  );
+  await waitFor(() =>
+    expect(screen.getByLabelText("Agent source film preview")).toBeTruthy(),
+  );
+  fireEvent.click(
+    screen.getByText("Change sounds over time", { exact: false }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Add scene direction" }));
+  fireEvent.change(screen.getByLabelText("Scene 1 sound description"), {
+    target: { value: "A bird calls in the trees" },
+  });
+  const saved = JSON.parse(screen.getByLabelText("Media scope").textContent!);
+  expect(saved.kind).toBe("effects");
+  expect(saved.request.video_artifact_id).toBe(film.id);
+  expect(saved.request.prompt).toBe("Wind in the trees");
+  expect(saved.request.cues).toEqual([
+    { start_frame: 0, end_frame: 72, prompt: "A bird calls in the trees" },
+  ]);
+  expect(agentMediaIssue(saved)).toBeNull();
+  expect(
+    agentMediaIssue({
+      ...saved,
+      request: { ...saved.request, video_artifact_id: null },
+    }),
+  ).toMatch(/Choose a film/);
+});

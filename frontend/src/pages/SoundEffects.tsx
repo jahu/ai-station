@@ -118,7 +118,8 @@ export default function SoundEffects() {
         }
       >
         Give your film an atmosphere. Keep the effects track and a synchronized
-        video preview.
+        video preview. The preview plays the new effects track; use Edit a film
+        to mix it with original speech or music.
       </PageTitle>
       <div className="media-workspace effects-workspace">
         <form

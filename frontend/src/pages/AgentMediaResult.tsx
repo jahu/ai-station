@@ -33,6 +33,38 @@ export default function AgentMediaResult({ runs }: { runs: Run[] }) {
 function AgentMediaOutput({ runs }: { runs: Run[] }) {
   const task = runs[0]?.task_id;
   const current = runs.filter((run) => run.task_id === task);
+  const effects = current.find(
+    (run) => run.executor_type === "mmaudio_effects",
+  );
+  const preview = current.find(
+    (run) => run.executor_type === "effects_preview",
+  );
+  if (effects)
+    return (
+      <>
+        <MediaResult
+          kind="audio"
+          audioMode="effects"
+          runId={effects.id}
+          run={effects}
+          allowRetry={false}
+          error={
+            effects.error_message ? new Error(effects.error_message) : null
+          }
+        />
+        {preview && (
+          <MediaResult
+            kind="video"
+            runId={preview.id}
+            run={preview}
+            allowRetry={false}
+            error={
+              preview.error_message ? new Error(preview.error_message) : null
+            }
+          />
+        )}
+      </>
+    );
   const film = current.find(
     (run) =>
       run.executor_type === "media_compose" ||
