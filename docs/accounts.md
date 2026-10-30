@@ -182,6 +182,13 @@ still validate ownership. Administrative inspection can read all owned private
 data; it cannot silently create a new execution referencing another owner.
 Worker execution uses a plain owner scope, without the admin inspection flag.
 
+SQLAlchemy carries each scope's filters and a scope marker into refreshes and
+relationship loaders. The SELECT hook validates the mapped operation every time,
+but does not append duplicate filters when the same fixed scope is already
+present. This bounds repeated worker polling without dropping criteria from
+joined, select-in or lazy relationship loads. Newly created instances without
+inherited filters receive the full policy on their first load.
+
 Versioned private mutations select and refresh the exact owner-filtered row under
 a write lock before comparing the expected version. They change ordinary ORM
 fields, retaining immutable-owner/reference validation on flush. Conversation

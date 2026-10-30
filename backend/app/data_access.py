@@ -9,9 +9,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from sqlalchemy import and_, event, inspect, select
-from sqlalchemy.orm import Session, with_loader_criteria
+from sqlalchemy.orm import Session, UserDefinedOption, with_loader_criteria
 
 from app import models as m
+
+
+class _OwnerCriteria(UserDefinedOption):
+    """Mark the fixed scope carried with its SQLAlchemy loader criteria."""
+
+    propagate_to_loaders = True
 
 
 class DataAccessError(PermissionError):
@@ -256,14 +262,28 @@ def _filter(execute):
             raise DataAccessError("No data ownership policy exists for this record")
         if mapper.class_ in ADMIN and not scope.administrator:
             raise DataAccessError("Machine administration requires administrator access")
+    # SQLAlchemy propagates both the criteria and this marker to relationship
+    # loads and refreshes. Reapplying fresh options there grows query trees on
+    # every poll. Retain the inherited filters, including joined eager loads;
+    # newly constructed instances without a marker still receive all policies.
+    if any(
+        isinstance(option, _OwnerCriteria) and option.payload == scope
+        for option in execute.user_defined_options
+    ):
+        return
     options = [
         with_loader_criteria(model, _criterion(model, scope), include_aliases=True)
         for model in (*ROOTS, *PARENTS)
     ]
+    options.insert(0, _OwnerCriteria(scope))
     options.extend(
         [
             with_loader_criteria(m.User, m.User.id == scope.user_id, include_aliases=True),
-            with_loader_criteria(m.UserSession, m.UserSession.user_id == scope.user_id, include_aliases=True),
+            with_loader_criteria(
+                m.UserSession,
+                m.UserSession.user_id == scope.user_id,
+                include_aliases=True,
+            ),
             with_loader_criteria(
                 m.UserSetting,
                 and_(
@@ -273,7 +293,9 @@ def _filter(execute):
                 include_aliases=True,
             ),
             with_loader_criteria(
-                m.AccountEvent, m.AccountEvent.subject_user_id == scope.user_id, include_aliases=True
+                m.AccountEvent,
+                m.AccountEvent.subject_user_id == scope.user_id,
+                include_aliases=True,
             ),
         ]
     )
