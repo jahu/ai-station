@@ -151,6 +151,8 @@ def transition(
 
 
 def claim_next(session: Session, worker_id: str) -> Run | None:
+    from app.runtime_coordination import runtime_ready_condition
+
     settings = get_settings()
     now = utcnow()
     prerequisite = aliased(Run)
@@ -161,7 +163,12 @@ def claim_next(session: Session, worker_id: str) -> Run | None:
     )
     candidate = session.scalar(
         select(Run)
-        .where(Run.status == RunStatus.QUEUED.value, Run.id.not_in(blocked), resource_ready_condition(now))
+        .where(
+            Run.status == RunStatus.QUEUED.value,
+            Run.id.not_in(blocked),
+            resource_ready_condition(now),
+            runtime_ready_condition(now),
+        )
         .order_by(Run.queued_at, Run.created_at)
         .limit(1)
     )
@@ -170,7 +177,12 @@ def claim_next(session: Session, worker_id: str) -> Run | None:
     lease = now + timedelta(seconds=settings.lease_seconds)
     result = session.execute(
         update(Run)
-        .where(Run.id == candidate.id, Run.status == RunStatus.QUEUED.value, resource_ready_condition(now))
+        .where(
+            Run.id == candidate.id,
+            Run.status == RunStatus.QUEUED.value,
+            resource_ready_condition(now),
+            runtime_ready_condition(now),
+        )
         .values(
             status=RunStatus.CLAIMED.value,
             worker_id=worker_id,

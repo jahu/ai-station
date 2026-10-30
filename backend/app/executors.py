@@ -59,6 +59,7 @@ from app.python_execution import PythonExecutor
 from app.resources import release_run_locks
 from app.runner_client import RunnerClient, RunnerError, RunnerUnavailable
 from app.runs import mark_failed, touch_lease, transition
+from app.runtime_coordination import LlamaWaitExecutor
 from app.runtime_registry import RuntimeObservationExecutor
 from app.site_preview_executor import PreviewActionExecutor, PreviewCloseExecutor, PreviewExecutor
 from app.state import RunStatus
@@ -330,6 +331,7 @@ EXECUTORS = {
     "llama_load": LlamaExecutor("load"),
     "llama_stop": LlamaExecutor("stop"),
     "llama_health": LlamaHealthExecutor(),
+    "llama_wait": LlamaWaitExecutor(),
     "llama_resume_consumer": LlamaResumeConsumerExecutor(),
     "photo_pipe": PhotoPipeExecutor(),
     "chatterbox": AudioExecutor(),

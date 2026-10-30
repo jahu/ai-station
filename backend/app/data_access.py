@@ -298,6 +298,11 @@ def _check_changes(session: ScopedSession, _context, _instances):
             # Execution scopes never carry this administrative capability.
             continue
         else:
+            if isinstance(row, m.RuntimeInstance):
+                from app.runtime_coordination import consume_runtime_intent, consume_runtime_stop
+
+                if consume_runtime_intent(session, row) or consume_runtime_stop(session, row):
+                    continue
             # Authentication/admin services have their own explicit gates;
             # ordinary task execution cannot mutate identities or machine state.
             raise DataAccessError("Use the account or machine administration service")

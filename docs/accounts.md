@@ -274,18 +274,41 @@ boolean for the selected managed model; it never loads another account's Run or
 returns its ID, prompt, task, logs or dependency graph. Owner-only ORM views must
 not make another account's active consumer look like an idle runtime.
 
-The remaining shared-runtime work must preserve both usability and privacy:
+Model-load intent may create one queued shared runtime from an owner-local load
+Run. A request-scoped grant names that exact new ORM object and freezes its
+generated fields; flush rechecks the owning Run, approved model observation and
+fixed managed-runtime shape. It grants neither updates to an existing runtime nor
+general shared-model/settings writes. Instance UUID planning precedes enqueue;
+the worker still performs every host operation. A member's health request queues
+an owner-local Run; shared health metadata changes when the worker completes.
+Automatic preparation can plan a typed stop using a separate one-use grant:
+only status and the exact owner-local stop reference may change. Direct HTTP
+Stop/Restart remain administrator operations. Neither grant permits deleting a
+runtime or changing its endpoint, model, name or other machine configuration.
+Public runtime projections omit inaccessible operation provenance and raw server
+error logs. Ready-model source and startup sorting use a minimal infrastructure
+projection rather than loading another user's complete initiating Run.
 
-- Bind ready model use to verified shared model observations, not a foreign
-  private startup Run lookup. Filter operation provenance from public runtime
-  projections when the requesting owner cannot inspect that Run.
-- When another owner is loading a selected model, create a bounded owner-local
-  waiting Run/dependency. Observe shared readiness/failure without attaching a
-  private cross-owner dependency or canceling the producer on local cancellation.
-- After confirmed managed-runtime shutdown, release only that exact physical
-  allocation through typed coordination. Do not grant arbitrary foreign Run,
-  resource, event or metadata writes. Test cross-owner load/use/stop/eviction,
-  cancellation and recovery before enabling the account profile.
+An account selecting a model another account is loading receives its own
+`runtime.wait` Run. Only that private waiter is a consumer prerequisite; no foreign
+producer ID or dependency enters the private graph. It freezes the model source
+observation, instance and startup time, yields the worker with a two-second
+backoff, and has a maximum ten-minute deadline bounded by the consumer's earlier
+deadline. Failure, cancellation, replacement or expiry cannot replay the foreign
+startup. Waiter cancellation never signals the model process. Recovery resumes
+read-only observation without process inspection. Task Stop on the original
+producer retains startup needed by another account.
+
+After confirmed managed-runtime shutdown (`alive: false` and stopped/failed),
+typed coordination releases only the exact loader's approved GPU and RAM
+reservations. Another account's loader, Task, events and unrelated reservations
+are untouched. Missing or live observations retain reservations. Synthetic
+account/worker tests cover ready and pending shared-model consumption, server-log
+redaction, cancellation/backoff/recovery/deadlines, Task retention and physical
+release. This is not real multi-account GPU inference qualification.
+
+The remaining profile gate includes the complete operation inventory, larger
+context/reload/handoff combinations and adversarial shared-resource qualification:
 
 - Add immutable owners/backfill to private roots and enforce them in repository
   operations, inherited child access, FTS, files, SSE, previews and cross-references.

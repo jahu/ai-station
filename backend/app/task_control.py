@@ -16,6 +16,7 @@ def lock_task(session, task):
 
 def cancel_task(session, task):
     from app.runs import request_cancel
+    from app.runtime_coordination import shared_load_in_use
 
     lock_task(session, task)
     active = list(
@@ -38,15 +39,18 @@ def cancel_task(session, task):
             run.executor_type == "llama_load"
             or run.executor_type == "llama_stop"
             and run.parameters.get("evicted_for_run_id")
-        ) and session.scalar(
-            select(Run.id)
-            .join(RunDependency, RunDependency.run_id == Run.id)
-            .where(
-                RunDependency.prerequisite_id == run.id,
-                Run.task_id != task.id,
-                Run.status.not_in(TERMINAL),
+        ) and (
+            shared_load_in_use(session, run)
+            or session.scalar(
+                select(Run.id)
+                .join(RunDependency, RunDependency.run_id == Run.id)
+                .where(
+                    RunDependency.prerequisite_id == run.id,
+                    Run.task_id != task.id,
+                    Run.status.not_in(TERMINAL),
+                )
+                .limit(1)
             )
-            .limit(1)
         ):
             append_event(session, run.id, "task.stop_shared_runtime_retained", {"task_id": task.id})
             retained.append(run.id)
