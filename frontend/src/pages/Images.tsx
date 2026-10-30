@@ -340,6 +340,7 @@ function ImageForm({
       if (
         mode !== "upscale" &&
         (translation.mode !== "inherit" ||
+          translation.enhance ||
           translation.review ||
           translation.protected_terms.length)
       )
